@@ -46,6 +46,7 @@ import { persistFulfillmentTrackings } from "@/lib/shopify/persistFulfillmentTra
 import { upsertSignalRows } from "@/lib/fraudIntel/signalWriter";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
+import { scheduleBlockedBuildReplay } from "@/lib/billing/replayBlockedBuilds";
 
 /** Default `read_orders` window when `read_all_orders` is not granted.
  *  Shopify Admin returns the trailing 60 days for unscoped order
@@ -321,6 +322,15 @@ export async function backfillShopOrders(
           priority: 70,
         });
       }
+      // The order history is now whole, so any pack build that was blocked
+      // on credits AND deferred while this walk was running can safely go
+      // ahead. Without this the deferral in `replayBlockedBuilds` would be
+      // permanent: the credit grant that would have re-triggered it already
+      // happened, hours ago.
+      await scheduleBlockedBuildReplay({
+        shopId,
+        reference: `import_complete:${shopId}:${processed}`,
+      });
       return { status: "complete", ordersProcessed: processed };
     }
     cursor = page.endCursor;
