@@ -1780,8 +1780,8 @@
           "awaitingForward": "{strengthReason} Shopify har paketet och vidarebefordrar det till ditt kortnätverk. DisputeDesk kan bekräfta att bevisen sparades i Shopify, men kan inte oberoende verifiera när vidarebefordran sker.",
           "submittedToNetwork": "{strengthReason} Kortnätverket granskar detta försvar. Utfallet publiceras vanligen om 30–75 dagar.",
           "submittedToNetworkWithDate": "Skickat till ditt kortnätverk den {submittedDate}. Utfallet publiceras vanligen om 30–75 dagar.",
-          "closedWon": "Utfall: vunnen{submittedDate, select, none {} other { (beslutat den {submittedDate})}}.",
-          "closedLost": "Utfall: förlorad{submittedDate, select, none {} other { (beslutat den {submittedDate})}}.",
+          "closedWon": "Utfall: vunnen{decisionDate, select, none {} other { (beslutat den {decisionDate})}}.",
+          "closedLost": "Utfall: förlorad{decisionDate, select, none {} other { (beslutat den {decisionDate})}}.",
           "closedUnknown": "Utfall rapporterat av Shopify: {outcome}."
         }
       },

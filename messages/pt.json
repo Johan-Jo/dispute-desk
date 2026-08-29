@@ -1305,8 +1305,8 @@
           "awaitingForward": "{strengthReason} O Shopify tem o pacote e o encaminhará à sua rede de cartões. O DisputeDesk pode confirmar que as provas foram salvas no Shopify, mas não pode verificar independentemente quando o encaminhamento ocorre.",
           "submittedToNetwork": "{strengthReason} A rede de cartões está analisando esta defesa. O resultado costuma ser publicado em 30–75 dias.",
           "submittedToNetworkWithDate": "Enviado à sua rede de cartões em {submittedDate}. O resultado costuma ser publicado em 30–75 dias.",
-          "closedWon": "Resultado: vencida{submittedDate, select, none {} other { (decidida em {submittedDate})}}.",
-          "closedLost": "Resultado: perdida{submittedDate, select, none {} other { (decidida em {submittedDate})}}.",
+          "closedWon": "Resultado: vencida{decisionDate, select, none {} other { (decidida em {decisionDate})}}.",
+          "closedLost": "Resultado: perdida{decisionDate, select, none {} other { (decidida em {decisionDate})}}.",
           "closedUnknown": "Resultado informado pelo Shopify: {outcome}."
         }
       },
