@@ -48,6 +48,10 @@ import {
   hasDefiniteAddressNonMatch,
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
+import {
+  compareOrderAddresses,
+  type OrderAddressComparison,
+} from "@/lib/argument/internalSignals";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { asLocalized, type Localized } from "@/lib/i18n/localized";
 import type { I18nToken } from "@/lib/i18n/token";
@@ -428,7 +432,15 @@ const AVS_CVV_RESULT_KEY: Record<string, string> = {
 /** Exported for test — the client mirror of `lib/argument/internalSignals.ts`.
  *  The two must agree, so both are asserted against the same matrix in
  *  `tests/unit/avsCitationLanguage.test.ts`. */
-export function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
+export function classifyAvsCvv(
+  payload: unknown,
+  t: Translate,
+  /** The order's OWN billing-vs-shipping comparison, when known. Supplied so a
+   *  definite address failure can explain why the suppressed "addresses agree"
+   *  note is absent — see `orderAddressesAgreeButIssuerSaysNo`. Optional: the
+   *  AVS warning is complete without it. */
+  orderAddresses?: OrderAddressComparison | null,
+): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
   const verification = readPaymentVerification(payload);
   const avs = verification.avs.code;
@@ -486,10 +498,27 @@ export function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalVi
     sentences.push(t(`${NS}.outcomeNothingCited`));
   }
 
+  // THE WITHHELD NOTE'S REPLACEMENT (2026-08-29). Mirrors
+  // `lib/argument/internalSignals.ts`. On a definite address non-match the
+  // "addresses agree" note is suppressed; where it WOULD have fired, say so
+  // here rather than letting it vanish with no explanation.
+  if (avsFailed && orderAddresses?.kind === "agree") {
+    sentences.push(t(`${NS}.outcomeOrderAddressesAgreeButIssuerSaysNo`));
+  }
+
   return {
     id: "internal:avs_cvv_mismatch",
-    // Factual title: something DID pass, whether or not it may be cited.
-    title: avsMatched || cvvMatched ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
+    // "PARTIALLY PASSED" IS NOT A HEADLINE FOR AN ADDRESS FAILURE
+    // (2026-08-29). The old ternary read `avsMatched || cvvMatched`, so a
+    // CVV-only match on a definite address non-match — the 72-case prod
+    // pattern, every one CVV `M` — was titled "partially passed", using the
+    // reassuring half of a two-part fact to summarise the alarming half. A
+    // security-code match is not an address match (PR-C2 decision 1).
+    title: avsFailed
+      ? t(`${NS}.titleAddressFailed`)
+      : avsMatched || cvvMatched
+        ? t(`${NS}.titlePartial`)
+        : t(`${NS}.title`),
     explanation: sentences.join(" "),
   };
 }
@@ -750,7 +779,13 @@ function deriveInternalOnlySignals(
   const unmappedAvs = classifyUnmappedAvsCode(byField.get("avs_cvv_match"), t);
   if (unmappedAvs) out.push(unmappedAvs);
 
-  const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t);
+  // The order's own address comparison, shared by the AVS warning (to explain
+  // a suppressed agreement note) and the operational note itself.
+  const orderAddresses = compareOrderAddresses(
+    effectiveChecklist.find((i) => i.field === "order_confirmation")?.payload,
+  );
+
+  const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t, orderAddresses);
   if (avs) out.push(avs);
 
   const nameMismatch = classifyCardholderName(

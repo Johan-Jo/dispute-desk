@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { buildInternalSignalsByField } from "@/lib/argument/internalSignals";
-import { classifyBillingShippingAgreement } from "@/app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections";
+import {
+  buildInternalSignalsByField,
+  compareOrderAddresses,
+} from "@/lib/argument/internalSignals";
+import {
+  classifyAvsCvv,
+  classifyBillingShippingAgreement,
+} from "@/app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections";
 import type { EvidenceItemWithStrength } from "@/app/(embedded)/app/disputes/[id]/workspace-components/types";
 
 /**
@@ -101,5 +107,140 @@ describe("the MISMATCH half is never suppressed", () => {
         (s) => s.id === "internal:billing_address_mismatch",
       ),
     ).toBe(true);
+  });
+});
+
+/**
+ * THE SUPPRESSION IS NOT SILENT (2026-08-29).
+ *
+ * Withholding the agreement note without saying anything would break the
+ * Internal-only section's own promise — it is "always rendered, even when
+ * empty, so the merchant always has a definitive answer to 'is anything being
+ * held back?'" (`docs/technical.md`). Worse, a merchant who saw the note
+ * before the change would find it gone with no explanation.
+ *
+ * So where the note WOULD have fired, the AVS warning gains a sentence
+ * reconciling the two facts, and the title stops calling an address failure
+ * "partially passed".
+ */
+describe("suppression is explained, not silent", () => {
+  const AVS_N = {
+    avsCvvStatus: "available", avsResultCode: "N",
+    cvvResultCode: "M", cardCompany: "Mastercard",
+  };
+  const AGREE = {
+    billingAddress: { city: "NYC", countryCode: "US", zipPrefix: "100" },
+    shippingAddress: { city: "NYC", countryCode: "US", zipPrefix: "100" },
+  };
+
+  function avsSignal(order: unknown, avs: unknown) {
+    const map = new Map<string, unknown>([
+      ["order_confirmation", order],
+      ["avs_cvv_match", avs],
+    ]);
+    return (buildInternalSignalsByField(map).get("avs_cvv_match") ?? []).find(
+      (s) => s.id === "internal:avs_cvv_mismatch",
+    );
+  }
+
+  it("explains the withheld note on the 72-case pattern", () => {
+    const s = avsSignal(AGREE, AVS_N);
+    expect(s?.reason).toContain("comparison of two addresses you hold");
+    expect(s?.reason).toContain("not a check by the bank");
+  });
+
+  it("titles a definite address failure as a failure, NOT 'partially passed'", () => {
+    // The regression: `avsMatched || cvvMatched` titled every one of the 72
+    // cases (all CVV `M`) "Card security check partially passed".
+    const s = avsSignal(AGREE, AVS_N);
+    expect(s?.label).toBe("The bank's address check did not match");
+    expect(s?.label).not.toMatch(/partially passed/i);
+  });
+
+  it("still says the security code matched — the fact is not suppressed, only the headline", () => {
+    const s = avsSignal(AGREE, AVS_N);
+    expect(s?.reason).toContain("security code");
+  });
+
+  it("does NOT add the explanation when the order's addresses did not agree", () => {
+    // Nothing was withheld, so there is nothing to explain. Adding it here
+    // would assert an agreement the order record does not show.
+    const s = avsSignal(
+      {
+        billingAddress: { city: "NYC", countryCode: "US" },
+        shippingAddress: { city: "LA", countryCode: "US" },
+      },
+      AVS_N,
+    );
+    expect(s?.reason).not.toContain("do agree with each other");
+  });
+
+  it("does NOT add the explanation when AVS did not definitely fail", () => {
+    const s = avsSignal(AGREE, {
+      avsCvvStatus: "available", avsResultCode: "U", cvvResultCode: "N",
+    });
+    expect(s?.reason).not.toContain("do agree with each other");
+    expect(s?.label).not.toBe("The bank's address check did not match");
+  });
+
+  it("keeps 'partially passed' where it is still accurate — AVS matched, CVV failed", () => {
+    const s = avsSignal(AGREE, {
+      avsCvvStatus: "available", avsResultCode: "Y",
+      cvvResultCode: "N", cardCompany: "Visa",
+    });
+    expect(s?.label).toBe("Card security check partially passed");
+  });
+});
+
+/**
+ * The title change must land on BOTH mirrors. The server one is asserted
+ * above; this pins the client one and that the two agree, since a merchant
+ * reads whichever surface they happen to be on.
+ */
+describe("the address-failure title reaches the client mirror too", () => {
+  function clientSignal(order: unknown, avs: unknown) {
+    const row = (field: string, payload: unknown): EvidenceItemWithStrength => ({
+      field, label: field, status: "available", priority: "critical",
+      blocking: false, source: "auto_shopify", strength: "moderate",
+      impact: "critical", content: null,
+      payload: payload as EvidenceItemWithStrength["payload"],
+    });
+    return classifyAvsCvv(
+      avs,
+      (k: string) => k,
+      compareOrderAddresses(order),
+    );
+  }
+
+  const AGREE = {
+    billingAddress: { city: "NYC", countryCode: "US", zipPrefix: "100" },
+    shippingAddress: { city: "NYC", countryCode: "US", zipPrefix: "100" },
+  };
+
+  it("uses the address-failed title key on a definite non-match", () => {
+    const s = clientSignal(AGREE, {
+      avsCvvStatus: "available", avsResultCode: "N",
+      cvvResultCode: "M", cardCompany: "Mastercard",
+    });
+    // The fake translator returns the key, so this asserts key selection.
+    expect(s?.title).toBe("internalSignals.avsCvvMismatch.titleAddressFailed");
+  });
+
+  it("explains the withheld note on the client mirror", () => {
+    const s = clientSignal(AGREE, {
+      avsCvvStatus: "available", avsResultCode: "N",
+      cvvResultCode: "M", cardCompany: "Mastercard",
+    });
+    expect(s?.explanation).toContain(
+      "outcomeOrderAddressesAgreeButIssuerSaysNo",
+    );
+  });
+
+  it("keeps the partial title where it is still accurate", () => {
+    const s = clientSignal(AGREE, {
+      avsCvvStatus: "available", avsResultCode: "Y",
+      cvvResultCode: "N", cardCompany: "Visa",
+    });
+    expect(s?.title).toBe("internalSignals.avsCvvMismatch.titlePartial");
   });
 });

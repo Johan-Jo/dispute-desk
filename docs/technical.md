@@ -5355,6 +5355,24 @@ blume-box** (44 still open), **88 kept** across 6a8848-dd (53), surasvenne (15) 
 pinned against drift by `tests/unit/billingAgreeAvsSuppression.test.ts`, which asserts they agree
 case-for-case rather than trusting the lockstep comment.
 
+**The suppression is explained, never silent.** Withholding the note on its own would break this
+section's own promise — it is *"always rendered, even when empty, so the merchant always has a
+definitive answer to 'is anything being held back?'"* — and a merchant who saw the note before the
+change would find it simply gone. So where the note WOULD have fired, the AVS warning gains a
+sentence reconciling the two facts (`avsCvvMismatch.outcomeOrderAddressesAgreeButIssuerSaysNo`, six
+locales): the order's own addresses do agree, but that compares two addresses the merchant holds,
+not the check the bank performed. The order comparison itself moved to one owner,
+`compareOrderAddresses`, because both the AVS warning and the note now need it.
+
+**"Partially passed" is not a headline for an address failure.** The title ternary read
+`avsMatched || cvvMatched`, so a CVV-only match on a definite address non-match — the 72-case
+pattern, **every one of them CVV `M`** — was titled *"Card security check partially passed"*, using
+the reassuring half of a two-part fact to summarise the alarming half. A definite non-match now
+titles `avsCvvMismatch.titleAddressFailed` (*"The bank's address check did not match"*) on both
+mirrors. `titlePartial` survives where it is still accurate, e.g. AVS matched with a failed security
+code. The CVV fact itself is unchanged in the body — only the headline stops borrowing it. This is
+the same principle as PR-C2 decision 1, applied to the title rather than the citation.
+
 **Where the retirement takes effect.** `reconcileChecklistWithCollectedFields` drops the row — it is
 the one function both build time and every read pass through, so all 112 existing packs stop
 scoring it on the next page load with no rebuild, no backfill and no `pack_json` rewrite.

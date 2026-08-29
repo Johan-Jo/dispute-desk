@@ -1752,7 +1752,9 @@
         "outcomeNothingCited": "Aucun de ces résultats n'a été cité comme preuve dans la réponse au litige — seuls les résultats qui renforcent le dossier sont envoyés à la banque.",
         "outcomeSingleNotCited": "Il n'a pas été cité comme preuve — il affaiblirait la réponse au litige.",
         "outcomeCvvOnlyNotCited": "Le code de sécurité correspondant est conservé comme information interne — il n'est pas cité comme preuve dans la réponse au litige, car un code de sécurité correspondant n'est pas une correspondance d'adresse.",
-        "outcomeAvsMatchedNotCitable": "L'adresse correspondante compte dans l'évaluation de votre dossier, mais elle n'est pas citée dans la réponse au litige : nous ne citons un résultat d'adresse que lorsque les règles du réseau de cartes le reconnaissent comme preuve, ce qui n'est pas le cas ici."
+        "outcomeAvsMatchedNotCitable": "L'adresse correspondante compte dans l'évaluation de votre dossier, mais elle n'est pas citée dans la réponse au litige : nous ne citons un résultat d'adresse que lorsque les règles du réseau de cartes le reconnaissent comme preuve, ce qui n'est pas le cas ici.",
+        "titleAddressFailed": "La vérification d'adresse de la banque n'a pas correspondu",
+        "outcomeOrderAddressesAgreeButIssuerSaysNo": "Les adresses de facturation et de livraison de votre propre enregistrement de commande correspondent bien entre elles, mais il s'agit d'une comparaison de deux adresses que vous détenez — pas d'une vérification par la banque. La banque a comparé l'adresse de facturation de cette commande à l'adresse enregistrée du titulaire de la carte, et celles-ci ne correspondaient pas."
       },
       "billingAddress": {
         "title": "Les adresses de facturation et de livraison ne correspondent pas",
