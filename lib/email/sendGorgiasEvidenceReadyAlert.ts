@@ -20,13 +20,12 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
+import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 // Read env at call time (not module load) so it's robust to test module
 // caching and to env set after import.
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const REPLY_TO =
-  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const FROM_EMAIL = DEFAULT_FROM_EMAIL;
+const REPLY_TO = DEFAULT_REPLY_TO;
 
 export interface GorgiasEvidenceReadyAlertContext {
   shopId: string;

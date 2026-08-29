@@ -44,18 +44,15 @@ import {
   resolveHeldState,
   type HeldState,
 } from "@/lib/disputes/heldState";
+import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 // Env vars are read lazily so tests can stub `process.env.RESEND_API_KEY`
 // in beforeEach() and have the new value picked up — the previous module-
 // level `const` captured the value at import time, which made test stubs
 // silently no-op against the real env.
 const getResendApiKey = (): string | undefined => process.env.RESEND_API_KEY;
-const getFromEmail = (): string =>
-  process.env.EMAIL_FROM ??
-  "DisputeDesk <notifications@mail.disputedesk.app>";
-const getReplyTo = (): string =>
-  process.env.EMAIL_REPLY_TO ??
-  "DisputeDesk <notifications@mail.disputedesk.app>";
+const getFromEmail = (): string => DEFAULT_FROM_EMAIL;
+const getReplyTo = (): string => DEFAULT_REPLY_TO;
 
 export interface NewDisputeAlertContext {
   shopId: string;

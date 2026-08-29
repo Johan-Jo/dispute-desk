@@ -4,10 +4,10 @@
  */
 
 import { Resend } from "resend";
+import { DEFAULT_FROM_EMAIL } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const FROM_EMAIL = DEFAULT_FROM_EMAIL;
 
 export interface PartialGenerationAlertOptions {
   to: string;

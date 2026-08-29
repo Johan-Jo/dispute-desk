@@ -32,19 +32,25 @@ function readProd(key) {
   const m = prodEnv.match(new RegExp("^" + key + "=(.*)$", "m"));
   return m ? m[1].trim().replace(/^["']|["']$/g, "") : null;
 }
-const SUPABASE_URL = readProd("NEW_SUPABASE_URL");
-const SERVICE_ROLE_KEY = readProd("NEW_SUPABASE_SERVICE_ROLE_KEY");
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// The cutover-era NEW_* names were retired once prod became the only project
+// in this file; fall back to them so an older .env.production.local still works.
+const SUPABASE_URL =
+  readProd("SUPABASE_URL") ||
+  readProd("NEXT_PUBLIC_SUPABASE_URL") ||
+  readProd("NEW_SUPABASE_URL");
+const SERVICE_ROLE_KEY =
+  readProd("SUPABASE_SERVICE_ROLE_KEY") || readProd("NEW_SUPABASE_SERVICE_ROLE_KEY");
+const RESEND_API_KEY = readProd("RESEND_API_KEY") || process.env.RESEND_API_KEY;
 const FROM_EMAIL =
   process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL ?? "oi@johan.com.br";
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("Missing NEW_SUPABASE_URL / NEW_SUPABASE_SERVICE_ROLE_KEY in .env.production.local");
+  console.error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in .env.production.local");
   process.exit(1);
 }
 if (!RESEND_API_KEY) {
-  console.error("Missing RESEND_API_KEY in .env.local");
+  console.error("Missing RESEND_API_KEY in .env.production.local or .env.local");
   process.exit(1);
 }
 
