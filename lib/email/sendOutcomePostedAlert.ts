@@ -45,12 +45,11 @@ import {
   outcomeExplanationToken,
   resolveOutcomeExplanation,
 } from "@/lib/disputes/outcomeExplanation";
+import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const REPLY_TO =
-  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const FROM_EMAIL = DEFAULT_FROM_EMAIL;
+const REPLY_TO = DEFAULT_REPLY_TO;
 
 export type OutcomeVariant = "won" | "lost" | "accepted";
 

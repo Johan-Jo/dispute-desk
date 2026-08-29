@@ -12,14 +12,13 @@ import {
   getWelcomeSubject,
   type WelcomeEmailVariables,
 } from "./templates";
+import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 /** Use verified sending subdomain in Resend (mail.disputedesk.app). Set EMAIL_FROM to override. */
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const FROM_EMAIL = DEFAULT_FROM_EMAIL;
 /** Reply-To (avoid no-reply; helps deliverability). Defaults to same as FROM. */
-const REPLY_TO =
-  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const REPLY_TO = DEFAULT_REPLY_TO;
 
 function getDashboardUrl(): string {
   return `${getPublicSiteBaseUrl()}/portal/dashboard`;

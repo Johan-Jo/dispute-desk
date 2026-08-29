@@ -390,10 +390,19 @@ HaveIBeenPwned password toggle) are tracked as P1/P2 hygiene.
 
 All transactional email is sent via **Resend** using branded table-based HTML templates (indigo header, CTA button, footer) with plain-text fallbacks. Supabase's built-in email is **not used** — every auth email goes through our own routes. All six app locales are supported (`en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE`); locale is resolved from the `dd_locale` cookie, then `Accept-Language` header, then `en-US`. The same resolution drives **on-screen copy** for `/auth/*` (sign-in, sign-up, password reset, magic-link, set new password): `app/(auth)/layout.tsx` + `messages/*/auth.*` (see **Portal Auth** in API Surface).
 
-- **Env:** `RESEND_API_KEY` (required for sending). `EMAIL_FROM` defaults to
-  `DisputeDesk <notifications@mail.disputedesk.app>` (sending subdomain). The
-  domain must be verified in Resend. `EMAIL_REPLY_TO` sets Reply-To (defaults
-  to same as FROM). `ADMIN_NOTIFY_EMAIL` overrides the admin notification
+- **Env:** `RESEND_API_KEY` (required for sending). Both addresses resolve
+  through **`lib/email/addresses.ts`** — the single source of truth; senders
+  must never re-declare them or read the env vars directly (a vitest case in
+  `lib/email/__tests__/addresses.test.ts` fails the build if one does).
+  `EMAIL_FROM` defaults to `DisputeDesk <notifications@mail.disputedesk.app>`,
+  the verified Resend sending subdomain. `EMAIL_REPLY_TO` defaults to
+  **`DisputeDesk Support <support@disputedesk.app>`** — deliberately DIFFERENT
+  from FROM: `notifications@` is a verified sender but an unmonitored mailbox,
+  while `support@` is the monitored ops inbox. Until 2026-08-29 the default was
+  the same as FROM, duplicated across seventeen senders, so merchant replies
+  went nowhere even though several emails invite one ("just reply to this email
+  — it reaches a person"). Never set a `no-reply` address here; it hurts
+  deliverability. `ADMIN_NOTIFY_EMAIL` overrides the admin notification
   recipient (default: `oi@johan.com.br`). **Resources Hub autopilot** publish
   notifications (`lib/email/sendPublishNotification.ts`) use the same env vars.
 - **Deliverability:** Set `NEXT_PUBLIC_APP_URL=https://disputedesk.app` so all

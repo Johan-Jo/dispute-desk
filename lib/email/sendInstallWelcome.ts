@@ -35,13 +35,12 @@ import {
   generateInstallWelcomeEmailText,
   getInstallWelcomeSubject,
 } from "./installWelcomeTemplate";
+import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const FROM_EMAIL = DEFAULT_FROM_EMAIL;
 /** Reply-To is a real inbox: the copy tells merchants replying reaches a person. */
-const REPLY_TO =
-  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const REPLY_TO = DEFAULT_REPLY_TO;
 
 export interface SendInstallWelcomeOptions {
   /** Internal `shops.id` — used for the idempotency claim. */

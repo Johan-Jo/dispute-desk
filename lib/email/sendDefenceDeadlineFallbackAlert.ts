@@ -23,16 +23,15 @@
 import { Resend } from "resend";
 import { getServiceClient } from "@/lib/supabase/server";
 import type { PackageUnsafeReason } from "@/lib/defence/packageSafety";
+import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 // Read lazily so a test can stub `process.env.RESEND_API_KEY` in beforeEach and
 // have the new value picked up. A module-level `const` captures the value at
 // import time, which silently no-ops every stub — the same trap already
 // documented in sendNewDisputeAlert.ts.
 const getResendApiKey = (): string | undefined => process.env.RESEND_API_KEY;
-const getFromEmail = (): string =>
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const getReplyTo = (): string =>
-  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+const getFromEmail = (): string => DEFAULT_FROM_EMAIL;
+const getReplyTo = (): string => DEFAULT_REPLY_TO;
 
 export interface DefenceDeadlineFallbackContext {
   shopId: string;
