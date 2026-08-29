@@ -44,7 +44,10 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
-import { readPaymentVerification } from "@/lib/argument/paymentVerification";
+import {
+  hasDefiniteAddressNonMatch,
+  readPaymentVerification,
+} from "@/lib/argument/paymentVerification";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { asLocalized, type Localized } from "@/lib/i18n/localized";
 import type { I18nToken } from "@/lib/i18n/token";
@@ -594,7 +597,21 @@ export function classifyBillingShippingAgreement(
   // agreement, in either direction: a missing city yields neither note, and
   // the mismatch branch below is unchanged (differing countries still read as
   // a mismatch whatever the city data).
-  if (!countryMismatch && haveCities && !cityMismatch) {
+  // THE ISSUER OVERRULES THE ORDER RECORD (2026-08-29). Mirrors the same gate
+  // in `lib/argument/internalSignals.ts`. A definite AVS `no_match` withholds
+  // the agreement note: this comparison runs on city + `zipPrefix` from the
+  // redacted order payload and cannot see the street lines the issuer
+  // compared, so on a `no_match` it would affirm an agreement the
+  // authoritative check has denied. Only the agreement half is gated — the
+  // mismatch half already agrees with the issuer.
+  const avsPayload = effectiveChecklist.find(
+    (i) => i.field === "avs_cvv_match",
+  )?.payload;
+  const avsSaysNoMatch =
+    isPlainObject(avsPayload) &&
+    hasDefiniteAddressNonMatch(readPaymentVerification(avsPayload));
+
+  if (!countryMismatch && haveCities && !cityMismatch && !avsSaysNoMatch) {
     return {
       id: "internal:billing_shipping_agree",
       title: t("internalSignals.billingShippingAgree.title"),

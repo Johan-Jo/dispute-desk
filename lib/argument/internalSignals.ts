@@ -15,7 +15,10 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "./nameMismatch";
-import { readPaymentVerification } from "./paymentVerification";
+import {
+  hasDefiniteAddressNonMatch,
+  readPaymentVerification,
+} from "./paymentVerification";
 
 /* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
  * code — nobody but a bank knows what a bare AVS letter indicates. ONE
@@ -263,7 +266,18 @@ export function buildInternalSignalsByField(
         // did not hold. Absence is not agreement, in either direction: the
         // mismatch branch below is unaffected, and a missing city produces
         // neither note.
-        if (!countryMismatch && haveCities && !cityMismatch) {
+        // THE ISSUER OVERRULES THE ORDER RECORD (2026-08-29). When AVS
+        // returned a definite `no_match`, the agreement note is withheld — see
+        // `hasDefiniteAddressNonMatch` for the prod measurement. The note is
+        // computed from city + `zipPrefix` on the redacted order payload and
+        // cannot see the street lines the issuer compared, so on a `no_match`
+        // it affirms an agreement the authoritative check has denied. Only the
+        // AGREEMENT half is gated; the mismatch half below already agrees with
+        // the issuer.
+        const avsSaysNoMatch =
+          isPlainObject(avsPayload) &&
+          hasDefiniteAddressNonMatch(readPaymentVerification(avsPayload));
+        if (!countryMismatch && haveCities && !cityMismatch && !avsSaysNoMatch) {
           push("order_confirmation", {
             id: "internal:billing_shipping_agree",
             label: "Billing and shipping addresses on the order agree",
