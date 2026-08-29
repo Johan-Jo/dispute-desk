@@ -1069,10 +1069,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 {outcomeLearningList.length > 0 ? (
                   <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "rgba(255,255,255,0.62)" }}>
                     <Text as="p" variant="bodySm" fontWeight="semibold">
-                      {tRoot("outcomeExplanation.learning.title")}
+                      {tRoot("disputes.outcomeExplanation.learning.title")}
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      {tRoot("outcomeExplanation.learning.caveat")}
+                      {tRoot("disputes.outcomeExplanation.learning.caveat")}
                     </Text>
                     <ul style={{ margin: "8px 0", paddingLeft: 20, color: heroTone.bodyColor }}>
                       {outcomeLearningList.slice(0, 4).map((factor) => (
@@ -1083,7 +1083,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     </ul>
                     {resolveReasonFamily(dispute.reason ?? null) === "fraud" ? (
                       <Text as="p" variant="bodySm">
-                        {tRoot("outcomeExplanation.learning.fraudRecommendation")}
+                        {tRoot("disputes.outcomeExplanation.learning.fraudRecommendation")}
                       </Text>
                     ) : null}
                   </div>
