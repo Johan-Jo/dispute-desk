@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/server";
+import { scheduleBlockedBuildReplay } from "@/lib/billing/replayBlockedBuilds";
 
 export interface ConsumePackResult {
   ok: boolean;
@@ -86,11 +87,32 @@ export async function grantCredits(params: {
   reference?: string | null;
 }): Promise<void> {
   const sb = getServiceClient();
-  await sb.from("pack_credits_ledger").insert({
+  const { error } = await sb.from("pack_credits_ledger").insert({
     shop_id: params.shopId,
     source: params.source,
     packs: params.packs,
     expires_at: params.expiresAt ?? null,
     reference: params.reference ?? null,
+  });
+
+  // Previously unchecked: a failed grant returned silently, so callers
+  // reported success while the ledger stayed empty and every pack build
+  // stayed blocked. Callers that treat a duplicate `reference` as benign
+  // already catch 23505 (see tryGrantMonthlyCredits).
+  if (error) {
+    throw new Error(`grantCredits failed for ${params.shopId}: ${error.message}`);
+  }
+
+  // Credits just arrived. Any dispute this shop had that was blocked on
+  // quota took a TERMINAL pipeline exit — the dispatcher's effect claim is
+  // already burnt, so nothing in the normal ingest path will retry it, and
+  // neither rebuild cron creates a first pack. Sweep the still-actionable
+  // ones (live deadline only) back through the pipeline.
+  //
+  // Fire-and-forget by design: a sweep failure must never fail the grant
+  // that already succeeded.
+  void scheduleBlockedBuildReplay({
+    shopId: params.shopId,
+    reference: params.reference ?? `${params.source}:${params.packs}`,
   });
 }

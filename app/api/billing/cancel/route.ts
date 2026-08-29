@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase/server";
+import { grantCredits } from "@/lib/billing/consumePack";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { validateBody } from "@/lib/middleware/validate";
@@ -157,11 +158,15 @@ export async function POST(req: NextRequest) {
       .select("id", { count: "exact", head: true })
       .eq("shop_id", shop_id);
     const usage = usageCount ?? 0;
-    await sb.from("pack_credits_ledger").insert({
-      shop_id,
+    // Must go through grantCredits, not a direct insert: that is the single
+    // chokepoint where the credit-arrival replay is scheduled, so a shop
+    // downgrading with quota-blocked disputes gets them swept back through
+    // the pipeline. A direct insert silently skips it.
+    await grantCredits({
+      shopId: shop_id,
       source: "admin_adjustment",
       packs: usage + FRESH_START_PACKS,
-      expires_at: null,
+      expiresAt: null,
       reference: downgradeRef,
     });
   }

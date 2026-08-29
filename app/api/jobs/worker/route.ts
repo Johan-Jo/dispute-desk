@@ -13,6 +13,7 @@ import { handleBackfillFraudDailyMetrics } from "@/lib/jobs/handlers/backfillFra
 import { handleReconcileMissingOrder } from "@/lib/jobs/handlers/reconcileMissingOrderJob";
 import { handleEnrichGorgiasComms } from "@/lib/jobs/handlers/enrichGorgiasCommsJob";
 import { handleIntelligenceRun } from "@/lib/jobs/handlers/intelligenceRunJob";
+import { handleReplayBlockedBuilds } from "@/lib/jobs/handlers/replayBlockedBuildsJob";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
@@ -109,6 +110,9 @@ async function runWorker(req: NextRequest) {
           break;
         case "intel_run":
           handlerResult = await handleIntelligenceRun(job);
+          break;
+        case "replay_blocked_builds":
+          await handleReplayBlockedBuilds(job);
           break;
         default:
           throw new Error(`Unknown job type: ${job.jobType}`);
