@@ -82,6 +82,7 @@ function snapshot(
     submittedPackage: {
       packageId: "p-1",
       version: 1,
+      submittedToPlatformAt: "2026-07-10T00:00:00.000Z",
       contentRevision: 1,
       pdfSha256: "abc",
       pdfPath: "packs/p-1.pdf",

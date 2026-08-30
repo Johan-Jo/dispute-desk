@@ -7513,3 +7513,21 @@ All service-role only, RLS enabled with no policies.
 **Two shared owners, not local re-spellings.** `inclusionEligible` calls `isBankIncludedFact` from `lib/defence/bankInclusion.ts` (widened to a structural `BankInclusionFlags` so a `facts_json` parse can use it). Package queries route through `fetchCandidateRows` in `lib/defence/candidateVersions.ts`. Both are enforced by existing CI invariants, and both caught real defects in the first draft — an inclusion rule that admitted `submissionRisk` facts, and a raw `.order("version")` of the shape that once let an aborted build shadow a filed package.
 
 **Shadow runner.** `npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local` builds a snapshot per decided dispute and reports the level split, confirmation sources and reconstruction gaps. Read-only; writes nothing. Against prod it reproduces the audited split exactly — 47 `FULL_POST_OUTCOME`, 1 `PACKAGE_INTEGRITY_ONLY` (the sole win, saved but never forwarded), 2 data-integrity limitations, zero contract errors, 50 unique snapshot hashes, avg 10.8 evidence items and 5.5 assertions.
+
+### Stage 2 — lifecycle and submission checks
+
+`lib/postOutcome/checks/lifecycle.ts`. Pure; reads only the snapshot. Against the 50 prod cases it emits **4 findings** — 2 `PROCEDURAL_OR_SUBMISSION_FAILURE` (saved, never forwarded) and 2 `DATA_INTEGRITY_FAILURE` (forwarded package unidentifiable) — all schema-valid.
+
+**The deadline check reads OUR timestamp, and that distinction is worth 41 false findings.** `raw_snapshot.evidenceSentOn` is when *Shopify forwarded*; `defence_packages.submitted_at` is when *we handed over*. Measured on prod 2026-08-30:
+
+| | |
+|---|---|
+| we submitted after the deadline | **0 / 53** |
+| we saved after the deadline | 0 / 53 |
+| Shopify forwarded after the deadline | **41 / 53** |
+| mean lead time we gave | 147 h (min 4.4 h) |
+| mean lag Shopify added | 47 h |
+
+A deadline check reading the platform's timestamp as ours reports 41 late filings that never happened, against a pipeline that filed a median six days early. `SnapshotSubmittedPackage.submittedToPlatformAt` exists to keep the two apart (contract v2).
+
+**Findings vs observations.** A finding asserts a defect and names an owner; an observation asserts neither. The platform forwarding evidence after its own deadline (40 of 50 cases) is real and worth an admin's attention, but it is not ours to fix and no outcome can be attributed to it — so it is a `LifecycleObservation`, not a finding. `lib/postOutcome/findings.ts` holds both types plus `validateFinding`, which refuses causal language (plan §9), refuses `DEFINITE`/`HIGH` findings with no provenance, and refuses win-only categories on a case whose analysis level cannot support an evidence-effectiveness claim.

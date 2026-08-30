@@ -517,6 +517,7 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
       ? {
           packageId: pkg.id,
           version: pkg.version,
+          submittedToPlatformAt: pkg.submitted_at,
           contentRevision: pkg.content_revision,
           pdfSha256: null,
           pdfPath: pkg.pdf_path,

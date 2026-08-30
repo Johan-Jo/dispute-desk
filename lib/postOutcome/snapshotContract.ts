@@ -102,6 +102,18 @@ export interface SnapshotLifecycle {
 export interface SnapshotSubmittedPackage {
   packageId: string;
   version: number;
+  /**
+   * When WE handed the package to the platform. Distinct from
+   * `lifecycle.submittedAt`, which is when the PLATFORM forwarded it onward.
+   *
+   * Conflating the two is not a nicety. Measured on prod 2026-08-30: we
+   * submitted a median 6 days before the evidence deadline and were late zero
+   * times out of 53, while Shopify's own forwarding lagged us by an average of
+   * 47 hours and landed after the deadline in 41 of those 53. A deadline check
+   * reading the platform's timestamp as ours reports 41 late filings that
+   * never happened.
+   */
+  submittedToPlatformAt: string | null;
   contentRevision: number | null;
   /** SHA-256 of the PDF bytes. Distinct from `evidenceHash`. */
   pdfSha256: string | null;
@@ -169,8 +181,13 @@ export interface PostOutcomeSourceSnapshot {
   reconstructionGaps: string[];
 }
 
-/** Current shape version. Bump when a field is added, removed, or re-meant. */
-export const SNAPSHOT_CONTRACT_VERSION = 1;
+/**
+ * Current shape version. Bump when a field is added, removed, or re-meant.
+ *
+ * v2 — added `submittedToPlatformAt`, separating our submission from the
+ *      platform's forwarding. See the field's own note.
+ */
+export const SNAPSHOT_CONTRACT_VERSION = 2;
 
 /**
  * Deterministic identity of a snapshot.

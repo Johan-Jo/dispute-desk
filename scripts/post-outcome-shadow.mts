@@ -46,6 +46,8 @@ console.log(`[shadow] ${envFile} → ${url}`);
 const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts");
+const { runLifecycleChecks } = await import("../lib/postOutcome/checks/lifecycle.ts");
+const { validateFinding, selectPrimaryFinding } = await import("../lib/postOutcome/findings.ts");
 
 const DISPUTE_COLUMNS =
   "id, shop_id, phase, reason, network_reason_code, amount, currency_code, initiated_at, closed_at, final_outcome, outcome_source, submission_state, submitted_at, evidence_saved_to_shopify_at, due_at, dispute_evidence_gid, order_gid, raw_snapshot";
@@ -76,6 +78,10 @@ console.log(`[shadow] ${disputes.length} decided disputes with a submitted packa
 
 const levels = {};
 const gaps = {};
+const findingCounts = {};
+const findingTitles = {};
+const observationCounts = {};
+let invalidFindings = 0;
 const rows = [];
 let contractErrorCount = 0;
 
@@ -128,7 +134,27 @@ for (const dispute of disputes) {
     console.log(`  ✗ ${dispute.id}: ${result.contractErrors.join("; ")}`);
   }
 
+  const checks = runLifecycleChecks(result.snapshot, result.level);
+  for (const f of checks.findings) {
+    findingCounts[f.category] = (findingCounts[f.category] ?? 0) + 1;
+    findingTitles[f.title] = (findingTitles[f.title] ?? 0) + 1;
+    const errs = validateFinding(f, {
+      outcome: result.snapshot.outcome.finalOutcome,
+      analysisLevel: result.level.level,
+    });
+    if (errs.length) {
+      invalidFindings += 1;
+      console.log(`  ! invalid finding on ${dispute.id}: ${errs.join("; ")}`);
+    }
+  }
+  for (const o of checks.observations) {
+    observationCounts[o.key] = (observationCounts[o.key] ?? 0) + 1;
+  }
+  const primary = selectPrimaryFinding(checks.findings);
+
   rows.push({
+    primaryCategory: primary?.category ?? null,
+    findings: checks.findings.length,
     disputeId: dispute.id,
     reason: dispute.reason,
     outcome: dispute.final_outcome,
@@ -173,7 +199,22 @@ for (const [k, v] of Object.entries(gaps).sort((a, b) => b[1] - a[1])) {
 
 const withLate = rows.filter((r) => r.evidenceLate > 0).length;
 const uniqueHashes = new Set(rows.map((r) => r.hash)).size;
+console.log("\n── Stage 2 findings ──");
+if (Object.keys(findingCounts).length === 0) console.log("  (none)");
+for (const [k, v] of Object.entries(findingCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  ${k}`);
+}
+for (const [k, v] of Object.entries(findingTitles).sort((a, b) => b[1] - a[1])) {
+  console.log(`        - ${v}x ${k}`);
+}
+
+console.log("\n── Stage 2 observations ──");
+for (const [k, v] of Object.entries(observationCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  ${k}`);
+}
+
 console.log("\n── Health ──");
+console.log(`  invalid findings (schema):  ${invalidFindings}`);
 console.log(`  contract errors:            ${contractErrorCount}`);
 console.log(`  disputes w/ late evidence:  ${withLate}`);
 console.log(`  unique snapshot hashes:     ${uniqueHashes} / ${rows.length}`);
