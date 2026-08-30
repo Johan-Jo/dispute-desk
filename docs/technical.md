@@ -1327,7 +1327,7 @@ Bucket semantics that the dashboard tooltip copy commits to:
 - `orders_fulfilled_high_risk`: subset of `orders_high` where `fulfillment_status` ∈ `{FULFILLED, PARTIAL, PARTIALLY_FULFILLED}`. Drives the high-risk fulfillment-rate KPI (critical metric per PRD §13).
 - `fraud_disputes`: count of disputes initiated on this UTC day with `reason = 'FRAUDULENT'` (Shopify's canonical code post the 2026-04 normalization migration).
 - `chargebacks`: subset of total disputes with `phase = 'chargeback'`.
-- `fully_protected_value`: sum of `order_total` where `fraud_protection_level = 'PROTECTED'`.
+- `fully_protected_value`: sum of `order_total` where `fraud_protection_level` is a **covered** status — `COVERED_STATUSES` (`{PROTECTED, ACTIVE}`) **imported from `lib/packs/sources/coverageSource.ts`**, not redeclared. Until 2026-08-29 this was a local `new Set(["PROTECTED"])`, which disagreed with the Coverage Gate: a shop whose Protect orders were all `ACTIVE` saw *"Shopify Protect coverage 0%"* for the very orders the pipeline refuses to auto-save **because** they are covered. Numerator and denominator must never drift again — pinned by `snapshotFraudDailyMetrics.test.ts`.
 - `eligible_protected_value`: sum of `order_total` where `fraud_protection_level` ∈ `{PROTECTED, ACTIVE, PENDING}` — orders Shopify Protect could underwrite if a chargeback lands.
 
 `backfillFraudDailyMetrics(shopId)` is the bulk-backfill path: bounded scan of distinct UTC dates with rows in `shopify_orders`, snapshot each one. Triggered automatically by the order-backfill orchestrator when it flips `historical_import_status = 'complete'` — guarantees the dashboard window selectors have rollup data the moment the banner unlocks.
@@ -2296,6 +2296,34 @@ Package versions on those disputes: draft 4, stale 4, submitted 7, failed 2, sup
 ### Risk Assessment Collection
 
 Risk assessment collection removed (2026-04-20). `Order.riskAssessments` does not exist on Shopify Admin API `2026-01` and caused every pack build with an `order_gid` to fail. The `risk_analysis` field is no longer emitted by the collector; it was `recommended`/`blocking: false`, so its absence does not affect completeness scoring. Migration to `orderRisks` is a follow-up.
+
+### Unobservable ≠ zero (Risk Intelligence tiles)
+
+A rate whose signal we have no way to capture must render `—`, never `0%`. Two tiles on `/app/insights/initial-analysis` were asserting facts they could not know:
+
+- **Signed for at delivery.** `shopify_orders.signed_by_name` is written **only** by the carrier-lookup layer (`lib/carriers/lookupCache.ts`), and the adapter registry currently holds **DHL alone**. A shop shipping via YunExpress / SUNYOU / CNE therefore never gets a lookup — on one merchant, **142,093 tracking rows with zero resolved lookups**, rendered as a confident `0%`. The insights route now runs one cheap existence check (`shopify_fulfillment_trackings` with `last_carrier_lookup_at IS NOT NULL`) and returns **`signedForObservable: false`** with a `null` rate, so the tile shows `—` plus *"Not available for your carriers"*. Adding a carrier adapter flips this on automatically — no per-shop configuration.
+- **High-risk fulfilled.** A `null` rate here means a **zero denominator** (no high-risk orders to fulfil), which is *good news*. The generic *"no prior period"* caption made it read as a data gap on a shop with 4,543 prior-window orders. `KpiTile`/`DeltaPill` now accept `noComparisonLabel` so the tile says *"no high-risk orders"* instead.
+
+The general rule: **distinguish "we measured zero" from "we cannot measure"**, and never let our own coverage gaps read as merchant facts.
+
+### PaymentDetails union coverage (silent-data-loss trap)
+
+`OrderTransaction.paymentDetails` is a **GraphQL union**. An inline-fragment spread only matches the members it names, and a member with **no matching fragment returns a bare `{ __typename }`** — no GraphQL error, no warning, just silently absent fields. This is the single most dangerous shape in the orders schema, because a partial spread looks exactly like "this order had no payment data".
+
+The four concrete members (introspected live against Admin API 2026-01) are pinned in **`TYPED_PAYMENT_DETAILS_MEMBERS`** (`lib/shopify/queries/ordersForBackfill.ts`):
+
+| Member | Fields | Notes |
+|---|---|---|
+| `CardPaymentDetails` | `avsResultCode`, `cvvResultCode`, `bin`, `company`, `wallet`, … | The only member carrying card signals |
+| `LocalPaymentMethodsPaymentDetails` | `paymentMethodName` | Klarna, iDEAL, Bancontact, … |
+| `PaypalWalletPaymentDetails` | `paymentMethodName` | **PayPal settled through Shopify Payments** |
+| `ShopPayInstallmentsPaymentDetails` | `paymentMethodName` | Shopify's own BNPL |
+
+**Three queries must spread all four, always:** `ORDERS_FOR_BACKFILL_QUERY`, `ORDER_FOR_INGEST_QUERY` (webhook path), `ORDER_DETAIL_QUERY` (per-dispute pack build). `lib/shopify/queries/__tests__/paymentDetailsUnion.test.ts` fails CI if any query drops a member, or if the canonical list changes without the queries following.
+
+**The incident (2026-08-29).** Only the first two members were spread. `paymentGatewayNames` reads `"shopify_payments"` for PayPal orders too, so nothing looked wrong — but `pickPaymentMethod` fell through to `null` and every PayPal order persisted `payment_method = NULL` **plus an entirely empty `shopify_order_risk_signals` row** (no AVS, CVV, BIN, or card brand). On one merchant that was **2,577 of 3,583 Shopify Payments orders in 30 days — 72% of payment volume** — starving both the Risk Intelligence KPIs and the fraud-signal layer. It surfaced only as a suspiciously clean Risk Intelligence page (`3-DS auth 1%`, `high-risk 0.0%`, `acceptance 100%`).
+
+**Two rules that follow.** (1) `pickPaymentMethod` and `derivePaymentContext` key the two wallet/installments members off **`__typename`, not `paymentMethodName`** — the live API returned the name as absent, so the union member itself is the only reliable signal. (2) `paypal` and `shop_pay_installments` are members of `NON_CARD_FAMILIES` in `lib/disputes/paymentContext.ts`: PayPal carries **no card network and no AVS/CVV/3DS**, so the card-scheme paths (CE 3.0, FPT) must treat it as not-applicable exactly as they do Klarna. Before the fix a PayPal dispute fell through to the gateway fallback and could be mistaken for a card sale.
 
 ### 3-D Secure Collection
 
