@@ -47,6 +47,7 @@ const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts");
 const { runLifecycleChecks } = await import("../lib/postOutcome/checks/lifecycle.ts");
+const { runEvidenceComparison } = await import("../lib/postOutcome/checks/evidenceComparison.ts");
 const { validateFinding, selectPrimaryFinding } = await import("../lib/postOutcome/findings.ts");
 
 const DISPUTE_COLUMNS =
@@ -81,6 +82,7 @@ const gaps = {};
 const findingCounts = {};
 const findingTitles = {};
 const observationCounts = {};
+const classificationCounts = {};
 let invalidFindings = 0;
 const rows = [];
 let contractErrorCount = 0;
@@ -134,7 +136,15 @@ for (const dispute of disputes) {
     console.log(`  ✗ ${dispute.id}: ${result.contractErrors.join("; ")}`);
   }
 
-  const checks = runLifecycleChecks(result.snapshot, result.level);
+  const lifecycleChecks = runLifecycleChecks(result.snapshot, result.level);
+  const evidenceChecks = runEvidenceComparison(result.snapshot);
+  for (const [k, v] of Object.entries(evidenceChecks.counts)) {
+    classificationCounts[k] = (classificationCounts[k] ?? 0) + (v as number);
+  }
+  const checks = {
+    findings: [...lifecycleChecks.findings, ...evidenceChecks.findings],
+    observations: lifecycleChecks.observations,
+  };
   for (const f of checks.findings) {
     findingCounts[f.category] = (findingCounts[f.category] ?? 0) + 1;
     findingTitles[f.title] = (findingTitles[f.title] ?? 0) + 1;
@@ -206,6 +216,11 @@ for (const [k, v] of Object.entries(findingCounts).sort((a, b) => b[1] - a[1])) 
 }
 for (const [k, v] of Object.entries(findingTitles).sort((a, b) => b[1] - a[1])) {
   console.log(`        - ${v}x ${k}`);
+}
+
+console.log("\n── Stage 3 evidence classifications ──");
+for (const [k, v] of Object.entries(classificationCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  ${k}`);
 }
 
 console.log("\n── Stage 2 observations ──");

@@ -293,7 +293,11 @@ function factsToEvidence(
     // facts carrying submissionRisk — the exact class of divergence
     // lib/defence/bankInclusion.ts exists to prevent (C-1).
     inclusionEligible: isBankIncludedFact(f),
-    presentInSubmittedPackage: true,
+    // "Present" means it reached the ISSUER-FACING content, not merely that it
+    // sits in facts_json. An internal-only or submission-risk fact is recorded
+    // in the package and deliberately withheld from the bank; calling it
+    // present would claim the issuer saw evidence we intentionally held back.
+    presentInSubmittedPackage: isBankIncludedFact(f),
   }));
 }
 
@@ -309,7 +313,6 @@ function factsToEvidence(
 function gorgiasToEvidence(
   rows: RawGorgiasRow[],
   submissionInstant: string | null,
-  includedFactIds: ReadonlySet<string>,
 ): {
   before: SnapshotEvidenceItem[];
   after: SnapshotEvidenceItem[];
@@ -330,7 +333,12 @@ function gorgiasToEvidence(
       // Only an approved passage was ever eligible for the package. A pending
       // one absent from the PDF is correct behaviour, not a defect.
       inclusionEligible: approved,
-      presentInSubmittedPackage: includedFactIds.has(`gorgias:${row.id}`),
+      // Always false, and deliberately so: a passage enters a package as ONE
+      // aggregate `customer_communication` fact with `sourceRef: null`, so no
+      // per-passage inclusion flag can be derived. Stage 3 reads the absence of
+      // a linkage as INCLUSION_UNVERIFIABLE rather than as an omission —
+      // claiming inclusion here would be inventing the link.
+      presentInSubmittedPackage: false,
     };
 
     if (!submissionInstant) {
@@ -438,7 +446,7 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
   const factEvidence = factsToEvidence(facts, submissionInstant);
   const factIds = new Set(factEvidence.map((e) => e.id));
 
-  const gorgias = gorgiasToEvidence(inputs.gorgias, submissionInstant, factIds);
+  const gorgias = gorgiasToEvidence(inputs.gorgias, submissionInstant);
 
   // The outcome must be a real won/lost. `outcome_source` being absent does not
   // by itself make it unreliable — Shopify is the source for every prod case —

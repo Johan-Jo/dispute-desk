@@ -63,7 +63,12 @@ export interface SnapshotEvidenceItem {
   approvedAt: string | null;
   /** Was it eligible for inclusion in a bank-facing package at submission? */
   inclusionEligible: boolean;
-  /** Did it appear in the exact submitted package? */
+  /**
+   * Did it reach the ISSUER-FACING content of the exact submitted package?
+   *
+   * Not "does it appear in facts_json" — a package records internal-only and
+   * submission-risk facts that are deliberately withheld from the bank.
+   */
   presentInSubmittedPackage: boolean;
   /** Assigned in Stage 3. Absent on a freshly built snapshot. */
   classification?: EvidenceClassification;

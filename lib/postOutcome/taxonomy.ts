@@ -213,6 +213,22 @@ export const EVIDENCE_CLASSIFICATIONS = [
   "ARRIVED_AFTER_SUBMISSION",
   "UNAVAILABLE",
   "AVAILABILITY_UNKNOWN",
+  /**
+   * Available and eligible, but whether it reached the package cannot be
+   * determined from the retained record.
+   *
+   * NOT the same as `AVAILABILITY_UNKNOWN`, where we cannot tell the item
+   * existed. Here availability is certain and only inclusion is opaque.
+   *
+   * It exists because the record forced it. A Gorgias passage enters a package
+   * as a single aggregate `customer_communication` fact — `sourceRef: null`,
+   * `messageCount: null`, no per-message linkage — so a dispute with five
+   * approved passages and one such fact cannot be resolved into "which four
+   * were left out". Calling that `INCLUDED_ACCURATELY` issues a false clean
+   * bill; calling it `AVAILABLE_BUT_OMITTED` is a false accusation against the
+   * pipeline. Neither is what the record supports.
+   */
+  "INCLUSION_UNVERIFIABLE",
   "IRRELEVANT_TO_REASON",
 ] as const;
 export type EvidenceClassification = (typeof EVIDENCE_CLASSIFICATIONS)[number];
