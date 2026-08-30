@@ -138,7 +138,7 @@ function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
 
 function ruleChargebackRateEcm(input: CheckpointInput): Checkpoint | null {
   const rate = input.chargebackRate90d;
-  const count = input.chargebackOrders90d;
+  const count = input.chargebackCount90d;
   if (rate === null) return null;
   // ECM requires BOTH ratio AND ≥100 disputes/month. We have a 90-day
   // count so we approximate monthly as count/3. If monthly is below

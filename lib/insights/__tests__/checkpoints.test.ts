@@ -6,7 +6,7 @@ import type { CheckpointInput } from "../checkpoints.types";
 // observation — used as a starting point each test mutates.
 const baseline: CheckpointInput = {
   chargebackRate90d: 0.4,
-  chargebackOrders90d: 30,
+  chargebackCount90d: 30,
   fraudDisputeRatePct: 0.3,
   fulfilledHighRiskPct: 20,
   threeDsAuthRatePct: 40,
@@ -27,7 +27,7 @@ describe("evaluateCheckpoints — VAMP rule", () => {
     const r = evaluateCheckpoints({
       ...baseline,
       chargebackRate90d: 0.9,
-      chargebackOrders90d: 30,
+      chargebackCount90d: 30,
     });
     const v = r.find((c) => c.id === "chargeback_rate_vs_vamp");
     expect(v?.severity).toBe("consider");
@@ -37,7 +37,7 @@ describe("evaluateCheckpoints — VAMP rule", () => {
     const r = evaluateCheckpoints({
       ...baseline,
       chargebackRate90d: 1.5,
-      chargebackOrders90d: 30,
+      chargebackCount90d: 30,
     });
     const v = r.find((c) => c.id === "chargeback_rate_vs_vamp");
     expect(v?.severity).toBe("breach");
@@ -58,7 +58,7 @@ describe("evaluateCheckpoints — Mastercard ECM rule", () => {
     const r1 = evaluateCheckpoints({
       ...baseline,
       chargebackRate90d: 1.6,
-      chargebackOrders90d: 30, // 10/month
+      chargebackCount90d: 30, // 10/month
     });
     expect(
       r1.find((c) => c.id === "chargeback_rate_vs_ecm")?.severity,
@@ -68,10 +68,41 @@ describe("evaluateCheckpoints — Mastercard ECM rule", () => {
     const r2 = evaluateCheckpoints({
       ...baseline,
       chargebackRate90d: 1.6,
-      chargebackOrders90d: 400, // ≈133/month
+      chargebackCount90d: 400, // ≈133/month
     });
     expect(r2.find((c) => c.id === "chargeback_rate_vs_ecm")?.severity).toBe(
       "breach",
+    );
+  });
+
+  // Regression: the input is a DISPUTE count, never an order count.
+  // The in-app page used to pass the 90d order denominator here, so a
+  // merchant with 14,635 orders and 300 chargebacks was told they average
+  // ~4,878 chargebacks/month against a true ~100 — a 49x overstatement, on
+  // the one number where precision decides the verdict (ECM's floor is
+  // exactly 100/month). Pinning the rendered value is what catches a
+  // future caller re-crossing the two.
+  it("reports monthlyEstimate from the dispute count, not the order count", () => {
+    const r = evaluateCheckpoints({
+      ...baseline,
+      chargebackRate90d: 2.05, // 300 / 14,635
+      chargebackCount90d: 300, // NOT 14_635
+    });
+    const ecm = r.find((c) => c.id === "chargeback_rate_vs_ecm");
+    expect(ecm?.values.monthlyEstimate).toBe(100);
+    // An order count in this slot would read 4,878 and flip the verdict
+    // to breach on volume the merchant does not have.
+    expect(ecm?.values.monthlyEstimate).not.toBe(4878);
+  });
+
+  it("does not breach on volume when the true dispute count is below the ECM floor", () => {
+    const r = evaluateCheckpoints({
+      ...baseline,
+      chargebackRate90d: 1.6, // ratio is breached
+      chargebackCount90d: 297, // 99/month — just under the 100 floor
+    });
+    expect(r.find((c) => c.id === "chargeback_rate_vs_ecm")?.severity).toBe(
+      "consider",
     );
   });
 });
@@ -170,7 +201,7 @@ describe("evaluateCheckpoints — sort + cap", () => {
     const r = evaluateCheckpoints({
       ...baseline,
       chargebackRate90d: 1.6,
-      chargebackOrders90d: 400, // VAMP breach + ECM breach
+      chargebackCount90d: 400, // VAMP breach + ECM breach
       fulfilledHighRiskPct: 70,  // consider
       signedForRatePct: 10,      // consider
       threeDsAuthRatePct: 38,    // healthy
@@ -188,7 +219,7 @@ describe("evaluateCheckpoints — sort + cap", () => {
     const r = evaluateCheckpoints({
       ...baseline,
       chargebackRate90d: 1.6,
-      chargebackOrders90d: 400,
+      chargebackCount90d: 400,
       fulfilledHighRiskPct: 70,
       signedForRatePct: 10,
       threeDsAuthRatePct: 5,
@@ -209,7 +240,7 @@ describe("evaluateCheckpoints — surasvenne current-state sanity", () => {
   it("produces a stable mix for realistic dev-shop data", () => {
     const r = evaluateCheckpoints({
       chargebackRate90d: 0.7,
-      chargebackOrders90d: 18,
+      chargebackCount90d: 18,
       fraudDisputeRatePct: 3.0,
       fulfilledHighRiskPct: 64,
       threeDsAuthRatePct: 38,

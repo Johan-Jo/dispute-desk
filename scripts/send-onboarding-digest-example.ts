@@ -171,7 +171,7 @@ async function main() {
     to: teamEmail,
     ordersAnalyzedTotal: ordersAnalyzedTotal ?? 0,
     chargebackRate90dPct,
-    chargebackOrders90d: chargebacks90d ?? 0,
+    chargebackCount90d: chargebacks90d ?? 0,
     last30d: {
       ordersTotal: tot,
       highRiskPct: tot > 0 ? (high / tot) * 100 : null,

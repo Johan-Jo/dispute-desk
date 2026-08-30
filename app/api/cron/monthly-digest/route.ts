@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
         to: teamEmail,
         periodLabel,
         chargebackRate90dPct,
-        chargebackOrders90d: chargebacks90d ?? 0,
+        chargebackCount90d: chargebacks90d ?? 0,
         current30d: cur,
         prior30d: prior,
         disputeActivity,

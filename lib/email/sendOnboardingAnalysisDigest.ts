@@ -60,7 +60,8 @@ export interface OnboardingDigestData {
   ordersAnalyzedTotal: number;
   /** 90-day chargeback rate, percent. */
   chargebackRate90dPct: number | null;
-  chargebackOrders90d: number;
+  /** 90-day CHARGEBACK count (not orders). Feeds the ECM rule. */
+  chargebackCount90d: number;
   /** Last 30d snapshot — used to populate the operational checkpoints
    *  and the at-a-glance table. */
   last30d: OnboardingSnapshotMetrics;
@@ -91,7 +92,7 @@ export function renderOnboardingAnalysisDigest(
   const checkpoints = evaluateCheckpoints(
     {
       chargebackRate90d: cb,
-      chargebackOrders90d: d.chargebackOrders90d,
+      chargebackCount90d: d.chargebackCount90d,
       fraudDisputeRatePct: m.fraudDisputeRatePct,
       fulfilledHighRiskPct: m.fulfilledHighRiskPct,
       threeDsAuthRatePct: m.threeDsAuthRatePct,
