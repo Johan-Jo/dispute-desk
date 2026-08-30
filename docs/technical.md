@@ -5418,6 +5418,55 @@ says so. The misleading **evidence** label `disputes.signalLabel.billing_match` 
 repurposed**, along with `whyText` / `sourceCaption` / the line-item `notIncluded` reason in all six
 locales. The mismatch note is unchanged.
 
+**The issuer overrules the order record (2026-08-29).** The agreement half is **withheld when AVS
+returned a definite `no_match`** (`N`/`Z`/`C` — `hasDefiniteAddressNonMatch` in
+`lib/argument/paymentVerification.ts`, the single predicate surface). The table above already showed
+the shape — 70 of 116 packs carried an issuer `N` — and retiring the *evidence field* did not stop
+the surviving *note* from appearing beside those non-matches.
+
+Why it is wrong to show both: the note is computed from `city` + `zipPrefix` on the **redacted**
+order payload and cannot see the street lines the issuer compared. Measured on prod (2026-08-29,
+read-only, `scripts/sql/blume-street-vs-avs.sql`): of 87 blume-box packs carrying an AVS code, **72**
+paired a definite `N` with an order whose billing and shipping "agreed" on that coarse comparison.
+Pulling the full addresses from the live Admin API on a 12-order sample showed those agreeing orders
+billed and shipped to **different states** (e.g. Milton FL 32571 billing vs Woodbridge VA 22192
+shipping). The codes are genuine — 11 of 12 reproduced live, across 29 distinct BINs, with the same
+BIN sometimes returning `Y`, so the variable is the order, not the issuer or our collection. The
+universal CVV `M` on those cases does not rescue the address question: a security-code match is not
+an address match (PR-C2 decision 1). Those cases are 71/75 FRAUDULENT-reason, 30 lost, 0 won.
+
+The issuer is authoritative on the address question; when it says no, the merchant-side note is
+withheld rather than printed as reassurance beside it. Nothing is lost by withholding — the note is
+not evidence in either direction — and **absence is never a negative signal**: `U`, `S`, `R`,
+`not_applicable` (non-card: PayPal/Klarna), an unmapped code, and a missing AVS row all leave the
+note showing. The **mismatch** half is deliberately NOT gated: it already agrees with the issuer, and
+suppressing it would hide a warning.
+
+Fleet impact, current packs (`scripts/sql/suppression-impact.sql`): **72 notes suppressed, all
+blume-box** (44 still open), **88 kept** across 6a8848-dd (53), surasvenne (15) and cay-collective
+(11). Display-only — no scoring, no citation, no claim input, no pack rewrite. Both mirrors
+(`buildInternalSignalsByField`, `classifyBillingShippingAgreement`) read the same predicate and are
+pinned against drift by `tests/unit/billingAgreeAvsSuppression.test.ts`, which asserts they agree
+case-for-case rather than trusting the lockstep comment.
+
+**The suppression is explained, never silent.** Withholding the note on its own would break this
+section's own promise — it is *"always rendered, even when empty, so the merchant always has a
+definitive answer to 'is anything being held back?'"* — and a merchant who saw the note before the
+change would find it simply gone. So where the note WOULD have fired, the AVS warning gains a
+sentence reconciling the two facts (`avsCvvMismatch.outcomeOrderAddressesAgreeButIssuerSaysNo`, six
+locales): the order's own addresses do agree, but that compares two addresses the merchant holds,
+not the check the bank performed. The order comparison itself moved to one owner,
+`compareOrderAddresses`, because both the AVS warning and the note now need it.
+
+**"Partially passed" is not a headline for an address failure.** The title ternary read
+`avsMatched || cvvMatched`, so a CVV-only match on a definite address non-match — the 72-case
+pattern, **every one of them CVV `M`** — was titled *"Card security check partially passed"*, using
+the reassuring half of a two-part fact to summarise the alarming half. A definite non-match now
+titles `avsCvvMismatch.titleAddressFailed` (*"The bank's address check did not match"*) on both
+mirrors. `titlePartial` survives where it is still accurate, e.g. AVS matched with a failed security
+code. The CVV fact itself is unchanged in the body — only the headline stops borrowing it. This is
+the same principle as PR-C2 decision 1, applied to the title rather than the citation.
+
 **Where the retirement takes effect.** `reconcileChecklistWithCollectedFields` drops the row — it is
 the one function both build time and every read pass through, so all 112 existing packs stop
 scoring it on the next page load with no rebuild, no backfill and no `pack_json` rewrite.

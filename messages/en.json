@@ -1084,7 +1084,9 @@
         "outcomeNothingCited": "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
         "outcomeSingleNotCited": "It was not cited as evidence — it would weaken the dispute response.",
         "outcomeCvvOnlyNotCited": "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match.",
-        "outcomeAvsMatchedNotCitable": "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered."
+        "outcomeAvsMatchedNotCitable": "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered.",
+        "titleAddressFailed": "The bank's address check did not match",
+        "outcomeOrderAddressesAgreeButIssuerSaysNo": "The billing and shipping addresses on your own order record do agree with each other, but that is a comparison of two addresses you hold — not a check by the bank. The bank compared this order's billing address against the cardholder's address on file, and those did not match."
       },
       "billingAddress": {
         "title": "Billing and shipping addresses do not match",

@@ -1761,7 +1761,9 @@
         "outcomeNothingCited": "Ninguno de los resultados se citó como prueba en la respuesta a la disputa: solo se envían al banco los resultados que refuerzan el caso.",
         "outcomeSingleNotCited": "No se citó como prueba: debilitaría la respuesta a la disputa.",
         "outcomeCvvOnlyNotCited": "El código de seguridad coincidente se mantiene como registro interno: no se cita en la respuesta a la disputa, porque que coincida el código de seguridad no equivale a que coincida la dirección.",
-        "outcomeAvsMatchedNotCitable": "La dirección coincidente cuenta para la evaluación de tu caso, pero no se cita en la respuesta a la disputa: solo citamos un resultado de dirección cuando las reglas de la red de tarjetas lo reconocen como prueba, y este no está contemplado."
+        "outcomeAvsMatchedNotCitable": "La dirección coincidente cuenta para la evaluación de tu caso, pero no se cita en la respuesta a la disputa: solo citamos un resultado de dirección cuando las reglas de la red de tarjetas lo reconocen como prueba, y este no está contemplado.",
+        "titleAddressFailed": "La verificación de dirección del banco no coincidió",
+        "outcomeOrderAddressesAgreeButIssuerSaysNo": "Las direcciones de facturación y envío de su propio registro de pedido sí coinciden entre sí, pero esa es una comparación de dos direcciones que usted mantiene, no una verificación del banco. El banco comparó la dirección de facturación de este pedido con la dirección registrada del titular de la tarjeta, y esas no coincidieron."
       },
       "billingAddress": {
         "title": "Las direcciones de facturación y envío no coinciden",

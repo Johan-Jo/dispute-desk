@@ -1761,7 +1761,9 @@
         "outcomeNothingCited": "Keines der Ergebnisse wurde in der Antwort als Nachweis angeführt – nur Ergebnisse, die den Fall stärken, gehen an die Bank.",
         "outcomeSingleNotCited": "Es wurde nicht als Nachweis angeführt – es würde die Antwort schwächen.",
         "outcomeCvvOnlyNotCited": "Die übereinstimmende Sicherheitszahl wird als interner Vermerk gehalten — sie wird in der Antwort nicht als Nachweis angeführt, denn ein übereinstimmender Prüfwert ist keine Adressübereinstimmung.",
-        "outcomeAvsMatchedNotCitable": "Die übereinstimmende Adresse zählt für die Bewertung Ihres Falls, wird in der Antwort aber nicht als Nachweis angeführt — ein Adressergebnis führen wir nur an, wenn die Regeln des Kartensystems dieses Ergebnis als Nachweis anerkennen, und das ist hier nicht der Fall."
+        "outcomeAvsMatchedNotCitable": "Die übereinstimmende Adresse zählt für die Bewertung Ihres Falls, wird in der Antwort aber nicht als Nachweis angeführt — ein Adressergebnis führen wir nur an, wenn die Regeln des Kartensystems dieses Ergebnis als Nachweis anerkennen, und das ist hier nicht der Fall.",
+        "titleAddressFailed": "Die Adressprüfung der Bank ergab keine Übereinstimmung",
+        "outcomeOrderAddressesAgreeButIssuerSaysNo": "Die Rechnungs- und Lieferadresse in Ihrem eigenen Bestelldatensatz stimmen zwar miteinander überein, doch das ist ein Vergleich zweier Adressen, die Sie selbst führen — keine Prüfung durch die Bank. Die Bank verglich die Rechnungsadresse dieser Bestellung mit der hinterlegten Adresse des Karteninhabers, und diese stimmten nicht überein."
       },
       "billingAddress": {
         "title": "Rechnungs- und Lieferadresse stimmen nicht überein",

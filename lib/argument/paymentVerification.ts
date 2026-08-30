@@ -298,6 +298,38 @@ export function hasCitableAddressMatch(v: PaymentVerification): boolean {
   return v.citableAddressVerified;
 }
 
+/**
+ * The issuer returned a DEFINITE address non-match — `no_match`, and nothing
+ * softer. `unavailable`, `not_checked` and `unknown` are absences, and absence
+ * of verification is never a negative signal (`avsCodeMap.ts`).
+ *
+ * WHY THIS PREDICATE EXISTS (2026-08-29). It gates the merchant-facing
+ * "billing and shipping addresses on the order agree" internal note. Measured
+ * on prod: of 87 blume-box cases carrying an AVS code, **72** paired a
+ * definite `N` with an order whose billing and shipping agreed on the coarse
+ * city + `zipPrefix` comparison that note is computed from. The pack redacts
+ * street lines, so that comparison cannot see what the issuer saw; pulling the
+ * full addresses from the live Admin API on a 12-case sample showed billing
+ * and shipping in DIFFERENT STATES on `N` cases whose city+zip-prefix
+ * "agreed" (e.g. Milton FL 32571 billing vs Woodbridge VA 22192 shipping).
+ *
+ * The codes are real — 11 of those 12 orders returned the identical code live,
+ * across 29 distinct BINs, with the same BIN sometimes returning `Y`. So the
+ * issuer is answering the address question correctly and our note was
+ * answering a different, coarser question while looking like an answer to the
+ * same one. On 71/75 FRAUDULENT-reason cases (30 already lost, 0 won) the
+ * merchant read a reassuring address line beside an issuer non-match.
+ *
+ * The issuer is authoritative on the address question. When it says no, the
+ * merchant-side agreement note is withheld — it is not evidence either way
+ * (PR-C4 / C-14), so nothing is lost by withholding it, and the misread it
+ * invites is real. The MISMATCH half is unaffected: it already agrees with the
+ * issuer, and suppressing it would hide a warning.
+ */
+export function hasDefiniteAddressNonMatch(v: PaymentVerification): boolean {
+  return v.avs.normalized === "no_match";
+}
+
 /* ── Citation ──────────────────────────────────────────────────────────── */
 
 /**

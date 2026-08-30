@@ -221,7 +221,13 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
       (w) => w.id === "internal:avs_cvv_mismatch",
     );
     expect(avsWarning).toBeDefined();
-    expect(avsWarning!.label).toBe("Card security check partially passed");
+    // TITLE CHANGED 2026-08-29. This is AVS `N` + CVV `M` — a definite address
+    // non-match, the exact 72-case prod pattern. It used to title as
+    // "partially passed" because the ternary read `avsMatched || cvvMatched`,
+    // letting a security-code match summarise an address failure. A CVV match
+    // is not an address match (PR-C2 decision 1), in the headline as in the
+    // citation.
+    expect(avsWarning!.label).toBe("The bank's address check did not match");
     // Plain-language rule: describe WHAT happened, codes in parentheses
     // at the end — never lead with a bare gateway code.
     // PR-C2 (C-12) decision 1: the security-code match is NOT cited. The
@@ -274,7 +280,9 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
       (x) => x.id === "internal:avs_cvv_mismatch",
     );
     expect(w).toBeDefined();
-    expect(w!.label).toBe("Card security check did not fully pass");
+    // Both halves failed, so the address failed: same title as any other
+    // definite address non-match (2026-08-29).
+    expect(w!.label).toBe("The bank's address check did not match");
     expect(w!.reason).toBe(
       "Neither the address nor the card's security code matched the issuer's records (AVS N, CVV N). " +
         "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",

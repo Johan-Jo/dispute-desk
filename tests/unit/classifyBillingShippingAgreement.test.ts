@@ -252,3 +252,124 @@ describe("classifyBillingShippingAgreement", () => {
     expect(result).toBeNull();
   });
 });
+
+/**
+ * THE ISSUER OVERRULES THE ORDER RECORD (2026-08-29).
+ *
+ * Measured on prod: of 87 blume-box cases carrying an AVS code, 72 paired a
+ * definite `N` with an order whose billing and shipping agreed on the coarse
+ * city + `zipPrefix` comparison this note is computed from. Pulling the full
+ * addresses live showed those "agreeing" orders billed and shipped to
+ * different STATES — the pack redacts street lines, so the comparison cannot
+ * see what the issuer compared. The codes are real (11/12 reproduced live,
+ * across 29 BINs, same BIN sometimes returning `Y`), so the note was
+ * affirming an agreement the authoritative check had denied, on cases that
+ * were 71/75 FRAUDULENT-reason and 30 lost / 0 won.
+ *
+ * Only the AGREEMENT half is gated. The mismatch half already agrees with the
+ * issuer and suppressing it would hide a warning.
+ */
+describe("classifyBillingShippingAgreement — AVS no_match suppression", () => {
+  function avsRow(
+    payload: Record<string, unknown> | null,
+  ): EvidenceItemWithStrength {
+    return {
+      field: "avs_cvv_match",
+      label: "Payment Verification (AVS & CVV)",
+      status: "available",
+      priority: "critical",
+      blocking: false,
+      source: "auto_shopify",
+      strength: "moderate",
+      impact: "critical",
+      content: null,
+      payload,
+    };
+  }
+
+  /** The agreeing order the note fires on, absent any AVS contradiction. */
+  const AGREEING_ORDER = orderRow({
+    billingAddress: { city: "NYC", countryCode: "US" },
+    shippingAddress: { city: "NYC", countryCode: "US" },
+  });
+
+  it("withholds the agreement note when AVS returned a definite N", () => {
+    // The exact prod shape: Mastercard, AVS N, CVV M — the 72-case pattern.
+    const result = classifyBillingShippingAgreement([
+      AGREEING_ORDER,
+      avsRow({
+        avsCvvStatus: "available",
+        avsResultCode: "N",
+        cvvResultCode: "M",
+        cardCompany: "Mastercard",
+      }),
+    ], fakeT);
+    expect(result).toBeNull();
+  });
+
+  it("withholds the agreement note on Z — a component failed, so it reads no_match", () => {
+    const result = classifyBillingShippingAgreement([
+      AGREEING_ORDER,
+      avsRow({
+        avsCvvStatus: "available",
+        avsResultCode: "Z",
+        cvvResultCode: "M",
+        cardCompany: "Mastercard",
+      }),
+    ], fakeT);
+    expect(result).toBeNull();
+  });
+
+  it("still emits the agreement note when AVS MATCHED", () => {
+    const result = classifyBillingShippingAgreement([
+      AGREEING_ORDER,
+      avsRow({
+        avsCvvStatus: "available",
+        avsResultCode: "Y",
+        cvvResultCode: "M",
+        cardCompany: "Mastercard",
+      }),
+    ], fakeT);
+    expect(result?.id).toBe("internal:billing_shipping_agree");
+  });
+
+  // ABSENCE IS NEVER A NEGATIVE SIGNAL (`avsCodeMap.ts`). Only a definite
+  // `no_match` suppresses; an issuer that did not answer has not denied
+  // anything, and a non-card order has no AVS to consult at all.
+  const NON_SUPPRESSING: Array<{ name: string; payload: Record<string, unknown> | null }> = [
+    { name: "U — issuer supplied no result", payload: { avsCvvStatus: "available", avsResultCode: "U", cvvResultCode: "M" } },
+    { name: "S — issuer does not support AVS", payload: { avsCvvStatus: "available", avsResultCode: "S", cvvResultCode: "M" } },
+    { name: "R — issuer system unavailable", payload: { avsCvvStatus: "available", avsResultCode: "R", cvvResultCode: "M" } },
+    { name: "not_applicable — non-card payment (PayPal/Klarna)", payload: { avsCvvStatus: "not_applicable", avsResultCode: null, cvvResultCode: null, gateway: "shopify_payments" } },
+    { name: "an unmapped code credits and denies nothing", payload: { avsCvvStatus: "available", avsResultCode: "Q", cvvResultCode: "M" } },
+    { name: "no AVS payload at all", payload: null },
+  ];
+
+  for (const c of NON_SUPPRESSING) {
+    it(`still emits the agreement note — ${c.name}`, () => {
+      const result = classifyBillingShippingAgreement(
+        [AGREEING_ORDER, avsRow(c.payload)],
+        fakeT,
+      );
+      expect(result?.id).toBe("internal:billing_shipping_agree");
+    });
+  }
+
+  it("still emits the agreement note when there is no AVS ROW at all", () => {
+    const result = classifyBillingShippingAgreement([AGREEING_ORDER], fakeT);
+    expect(result?.id).toBe("internal:billing_shipping_agree");
+  });
+
+  it("the MISMATCH half is NOT suppressed by an AVS no_match", () => {
+    // Both say the address is wrong. Suppressing here would hide a warning
+    // the issuer corroborates.
+    const result = classifyBillingShippingAgreement([
+      orderRow({
+        billingAddress: { city: "NYC", countryCode: "US" },
+        shippingAddress: { city: "LA", countryCode: "US" },
+      }),
+      avsRow({ avsCvvStatus: "available", avsResultCode: "N", cvvResultCode: "M" }),
+    ], fakeT);
+    expect(result?.id).toBe("internal:billing_address_mismatch");
+  });
+});

@@ -15,7 +15,10 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "./nameMismatch";
-import { readPaymentVerification } from "./paymentVerification";
+import {
+  hasDefiniteAddressNonMatch,
+  readPaymentVerification,
+} from "./paymentVerification";
 
 /* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
  * code — nobody but a bank knows what a bare AVS letter indicates. ONE
@@ -58,6 +61,16 @@ const OUTCOME_EN = {
   // what the system now does.
   cvvOnlyNotCited:
     "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match.",
+  /* THE SENTENCE THAT REPLACES THE WITHHELD AGREEMENT NOTE (2026-08-29).
+   * Appended only when the issuer returned a definite address non-match AND
+   * the order's own billing/shipping addresses agree — the 72-case prod
+   * pattern. Without it the agreement note simply vanishes and the merchant is
+   * told nothing about why, which breaks the Internal-only section's promise
+   * that they always get a definitive answer to "is anything being held back?"
+   * Names the distinction that makes the two facts compatible: comparing two
+   * addresses you hold is not the check the bank performed. */
+  orderAddressesAgreeButIssuerSaysNo:
+    "The billing and shipping addresses on your own order record do agree with each other, but that is a comparison of two addresses you hold — not a check by the bank. The bank compared this order's billing address against the cardholder's address on file, and those did not match.",
   onlyAvsCited:
     "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
   avsCitedClean: "The matching address was cited as evidence in the dispute response.",
@@ -78,6 +91,57 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 function readString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
+}
+
+/**
+ * How the order's OWN billing and shipping addresses compare — the merchant's
+ * record, never the issuer's check.
+ *
+ * ONE OWNER (2026-08-29). Two blocks below need this answer: the AVS warning,
+ * to explain why an agreeing order still failed the bank's address check, and
+ * the operational note itself. Computing it twice is how the `F`/`Z` drift in
+ * `paymentVerification.ts` began, so it is computed once here.
+ *
+ * `null` where we cannot tell. ALL FOUR VALUES ARE REQUIRED for `agree` —
+ * absence is not agreement in either direction.
+ */
+export type OrderAddressComparison =
+  | { kind: "agree" }
+  | { kind: "country_mismatch"; billingCountry: string; shippingCountry: string }
+  | { kind: "city_mismatch" };
+
+export function compareOrderAddresses(
+  orderPayload: unknown,
+): OrderAddressComparison | null {
+  if (!isPlainObject(orderPayload)) return null;
+  const billing = orderPayload.billingAddress;
+  const shipping = orderPayload.shippingAddress;
+  if (!isPlainObject(billing) || !isPlainObject(shipping)) return null;
+
+  const billingCountry = readString(billing.countryCode);
+  const shippingCountry = readString(shipping.countryCode);
+  const billingCity = readString(billing.city);
+  const shippingCity = readString(shipping.city);
+
+  const haveCountries =
+    billingCountry !== null && billingCountry !== "" &&
+    shippingCountry !== null && shippingCountry !== "";
+  if (!haveCountries) return null;
+
+  const haveCities =
+    billingCity !== null && billingCity !== "" &&
+    shippingCity !== null && shippingCity !== "";
+
+  if (billingCountry !== shippingCountry) {
+    return {
+      kind: "country_mismatch",
+      billingCountry: billingCountry as string,
+      shippingCountry: shippingCountry as string,
+    };
+  }
+  if (haveCities && billingCity !== shippingCity) return { kind: "city_mismatch" };
+  if (haveCities) return { kind: "agree" };
+  return null;
 }
 
 /* Match semantics: `lib/argument/paymentVerification.ts` (PR-C2). */
@@ -106,6 +170,12 @@ export function buildInternalSignalsByField(
     if (existing) existing.push(signal);
     else out.set(field, [signal]);
   };
+
+  // Both the AVS block and the operational note below read the order's own
+  // address comparison, so it is fetched once, up here, and compared once via
+  // `compareOrderAddresses`.
+  const orderPayload = payloadByField.get("order_confirmation");
+  const orderAddresses = compareOrderAddresses(orderPayload);
 
   // AVS/CVV mismatch → anchor on avs_cvv_match
   const avsPayload = payloadByField.get("avs_cvv_match");
@@ -173,10 +243,28 @@ export function buildInternalSignalsByField(
         } else if (avsB === "no_match" || cvvB === "no_match") {
           sentences.push(OUTCOME_EN.nothingCited);
         }
+        // THE WITHHELD NOTE'S REPLACEMENT (2026-08-29). On a definite address
+        // non-match the operational "addresses agree" note is suppressed
+        // (`hasDefiniteAddressNonMatch`). Where that note WOULD have fired,
+        // say so here instead of letting it vanish silently — the merchant is
+        // owed the reason, and the two facts need reconciling or they read as
+        // a contradiction.
+        if (avsFailed && orderAddresses?.kind === "agree") {
+          sentences.push(OUTCOME_EN.orderAddressesAgreeButIssuerSaysNo);
+        }
         push("avs_cvv_match", {
           id: "internal:avs_cvv_mismatch",
-          label:
-            avsMatched || cvvMatched
+          // "PARTIALLY PASSED" IS NOT A HEADLINE FOR AN ADDRESS FAILURE
+          // (2026-08-29). The old ternary read `avsMatched || cvvMatched`, so a
+          // CVV-only match on a definite address non-match — the 72-case prod
+          // pattern, every one of them CVV `M` — was titled "partially
+          // passed". That is the reassuring half of a two-part fact used as the
+          // summary of the alarming half. A security-code match is not an
+          // address match (PR-C2 decision 1), so it cannot soften an address
+          // failure in the title any more than it can in the citation.
+          label: avsFailed
+            ? "The bank's address check did not match"
+            : avsMatched || cvvMatched
               ? "Card security check partially passed"
               : "Card security check did not fully pass",
           reason: sentences.join(" "),
@@ -236,54 +324,45 @@ export function buildInternalSignalsByField(
   // they do not. It is never scored, never cited, never a claim input, and it
   // carries its own label so it can never again be read as address
   // verification — that lives on `avs_cvv_match` (PR-C2 + PR-C3).
-  const orderPayload = payloadByField.get("order_confirmation");
-  if (isPlainObject(orderPayload)) {
-    const billing = orderPayload.billingAddress;
-    const shipping = orderPayload.shippingAddress;
-    if (isPlainObject(billing) && isPlainObject(shipping)) {
-      const billingCountry = readString(billing.countryCode);
-      const shippingCountry = readString(shipping.countryCode);
-      const billingCity = readString(billing.city);
-      const shippingCity = readString(shipping.city);
-      const haveCountries =
-        billingCountry !== null && billingCountry !== "" &&
-        shippingCountry !== null && shippingCountry !== "";
-      if (haveCountries) {
-        const haveCities =
-          billingCity !== null && billingCity !== "" &&
-          shippingCity !== null && shippingCity !== "";
-        const countryMismatch = billingCountry !== shippingCountry;
-        const cityMismatch = haveCities && billingCity !== shippingCity;
-        // THE AGREEMENT HALF NEEDS ALL FOUR VALUES. Both countries and both
-        // cities must be present and equal — the same predicate the retired
-        // collector used to decide the field was collectable at all. An earlier
-        // revision of this PR asserted agreement whenever the countries matched
-        // and no city MISMATCH could be shown, so an order with one city
-        // missing read as "same city and country" on the strength of data we
-        // did not hold. Absence is not agreement, in either direction: the
-        // mismatch branch below is unaffected, and a missing city produces
-        // neither note.
-        if (!countryMismatch && haveCities && !cityMismatch) {
-          push("order_confirmation", {
-            id: "internal:billing_shipping_agree",
-            label: "Billing and shipping addresses on the order agree",
-            reason:
-              "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence: it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row.",
-            severity: "info",
-          });
-        }
-        if (countryMismatch || cityMismatch) {
-          const detail = countryMismatch
-            ? `Billing country ${billingCountry} differs from shipping country ${shippingCountry}.`
-            : "Billing city differs from shipping city.";
-          push("order_confirmation", {
-            id: "internal:billing_address_mismatch",
-            label: "Billing and shipping addresses do not match",
-            reason: `${detail} This mismatch is kept internal because it could weaken an unauthorized response — it is not cited as a positive bank argument, though the underlying order record is still included as supporting context.`,
-            severity: "warning",
-          });
-        }
-      }
+  // Computed once, above, by `compareOrderAddresses`.
+  //
+  // THE ISSUER OVERRULES THE ORDER RECORD (2026-08-29). When AVS returned a
+  // definite `no_match`, the AGREEMENT note is withheld — see
+  // `hasDefiniteAddressNonMatch` for the prod measurement. This note is
+  // computed from city + `zipPrefix` on the redacted order payload and cannot
+  // see the street lines the issuer compared, so on a `no_match` it would
+  // affirm an agreement the authoritative check has denied. It is not silently
+  // dropped: the AVS warning above gains a sentence saying the order's own
+  // addresses agree and why that is not the bank's check.
+  //
+  // The MISMATCH half is never gated — it already agrees with the issuer, and
+  // suppressing it would hide a warning.
+  if (orderAddresses !== null) {
+    const avsSaysNoMatch =
+      isPlainObject(avsPayload) &&
+      hasDefiniteAddressNonMatch(readPaymentVerification(avsPayload));
+
+    if (orderAddresses.kind === "agree" && !avsSaysNoMatch) {
+      push("order_confirmation", {
+        id: "internal:billing_shipping_agree",
+        label: "Billing and shipping addresses on the order agree",
+        reason:
+          "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence: it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row.",
+        severity: "info",
+      });
+    }
+
+    if (orderAddresses.kind !== "agree") {
+      const detail =
+        orderAddresses.kind === "country_mismatch"
+          ? `Billing country ${orderAddresses.billingCountry} differs from shipping country ${orderAddresses.shippingCountry}.`
+          : "Billing city differs from shipping city.";
+      push("order_confirmation", {
+        id: "internal:billing_address_mismatch",
+        label: "Billing and shipping addresses do not match",
+        reason: `${detail} This mismatch is kept internal because it could weaken an unauthorized response — it is not cited as a positive bank argument, though the underlying order record is still included as supporting context.`,
+        severity: "warning",
+      });
     }
   }
 
