@@ -225,11 +225,16 @@ export function validateSnapshotContract(
     }
   }
 
-  // Forwarding confirmation without a package is incoherent: there is nothing
-  // that could have been forwarded.
+  // Forwarding confirmation without a package is incoherent — EXCEPT when the
+  // package is ambiguous. "Shopify forwarded evidence on this dispute at time
+  // T, and we cannot say which of several submitted packages went" is a real
+  // state, not a contradiction: the forwarding fact is about the dispute, the
+  // ambiguity is about the package. One prod dispute (3 submitted packages) is
+  // exactly this, and rejecting it would discard a true timestamp.
   if (
     snapshot.submittedPackage === null &&
-    snapshot.lifecycle.submittedAt !== null
+    snapshot.lifecycle.submittedAt !== null &&
+    snapshot.provider.packageEvidenceTie !== "AMBIGUOUS_MULTIPLE_PACKAGES"
   ) {
     errors.push(
       "lifecycle.submittedAt is set but no submitted package was captured",

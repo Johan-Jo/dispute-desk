@@ -38,8 +38,24 @@ import type { EvidenceFact } from "./types";
  *   ¬submissionRisk         — unless the merchant explicitly overrode it, which
  *                             is what `includeInBankNarrative` then records.
  */
-export function isBankIncludedFact(fact: EvidenceFact): boolean {
+export function isBankIncludedFact(fact: BankInclusionFlags): boolean {
   return fact.bankEligible && fact.includeInBankNarrative && !fact.submissionRisk;
+}
+
+/**
+ * The three flags the predicate reads, and nothing else.
+ *
+ * `EvidenceFact` satisfies this structurally, so every existing caller is
+ * unchanged. It exists because post-outcome analysis reconstructs facts from a
+ * frozen `defence_packages.facts_json` blob rather than from a live
+ * `EvidenceFact` — that parse cannot produce the full type, and without a
+ * narrow signature it would have had to re-spell the rule. Re-spelling it is
+ * exactly what C-1 was.
+ */
+export interface BankInclusionFlags {
+  bankEligible: boolean;
+  includeInBankNarrative: boolean;
+  submissionRisk: boolean;
 }
 
 /** The same predicate over a list. Every caller filters; none re-spells it. */

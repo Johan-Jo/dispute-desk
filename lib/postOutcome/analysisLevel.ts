@@ -102,21 +102,22 @@ export function resolveAnalysisLevel(
     };
   }
 
-  if (!inputs.hasSubmittedPackage || !inputs.exactPackageReconstructable) {
+  if (!inputs.hasSubmittedPackage) {
     return {
       level: "OUTCOME_METADATA_ONLY",
       dataIntegrityLimitation: false,
-      blockingReasons: [
-        inputs.hasSubmittedPackage
-          ? "The exact submitted package could not be reconstructed."
-          : "No submitted package exists for this dispute.",
-      ],
+      blockingReasons: ["No submitted package exists for this dispute."],
     };
   }
 
-  // Condition 2. Several submitted packages with no identifiable forwarded one
-  // is a defect in its own right, not a reason to guess. Plan §4.4 requires a
-  // data-integrity limitation rather than a silent promotion.
+  // Condition 2, checked BEFORE reconstructability.
+  //
+  // Ordering matters here and the obvious order is wrong. With several
+  // submitted packages, no single "exact package" can be reconstructed — so a
+  // reconstructability check placed first sends the case to
+  // OUTCOME_METADATA_ONLY and the data-integrity limitation is silently lost.
+  // Plan §4.4 wants the opposite: "we submitted something and cannot say what"
+  // is a defect to surface, not a case to quietly downgrade to counting.
   if (inputs.packageEvidenceTie === "AMBIGUOUS_MULTIPLE_PACKAGES") {
     return {
       level: "PACKAGE_INTEGRITY_ONLY",
@@ -126,6 +127,15 @@ export function resolveAnalysisLevel(
       ],
     };
   }
+
+  if (!inputs.exactPackageReconstructable) {
+    return {
+      level: "OUTCOME_METADATA_ONLY",
+      dataIntegrityLimitation: false,
+      blockingReasons: ["The exact submitted package could not be reconstructed."],
+    };
+  }
+
   if (inputs.packageEvidenceTie === "NONE") {
     return {
       level: "PACKAGE_INTEGRITY_ONLY",

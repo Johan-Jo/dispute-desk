@@ -197,3 +197,28 @@ describe("the prod population, bucketed", () => {
     ).toHaveLength(1);
   });
 });
+
+describe("gate ordering", () => {
+  it("reports ambiguity even when no single exact package is reconstructable", () => {
+    // Regression: a reconstructability check placed before the tie check sent
+    // multi-package disputes to OUTCOME_METADATA_ONLY and dropped the
+    // data-integrity limitation. "We submitted something and cannot say what"
+    // must surface as a defect, not be downgraded to counting.
+    const decision = resolveAnalysisLevel({
+      ...forwardedCase(),
+      packageEvidenceTie: "AMBIGUOUS_MULTIPLE_PACKAGES",
+      exactPackageReconstructable: false,
+    });
+    expect(decision.level).toBe("PACKAGE_INTEGRITY_ONLY");
+    expect(decision.dataIntegrityLimitation).toBe(true);
+  });
+
+  it("still reports metadata-only when a lone package is unreconstructable", () => {
+    const decision = resolveAnalysisLevel({
+      ...forwardedCase(),
+      exactPackageReconstructable: false,
+    });
+    expect(decision.level).toBe("OUTCOME_METADATA_ONLY");
+    expect(decision.dataIntegrityLimitation).toBe(false);
+  });
+});

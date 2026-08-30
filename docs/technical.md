@@ -7499,3 +7499,17 @@ All service-role only, RLS enabled with no policies.
 `ANALYZER_VERSION` in `lib/postOutcome/analyzerVersion.ts` — bump on any change that could alter output for an unchanged snapshot. Reason modules version independently so shipping one does not invalidate analyses from another. `REASON_MODULE_VERSIONS` currently holds `FRAUDULENT` only: it covers 47 of the 50 analyzable prod cases, where the plan's original `PRODUCT_UNACCEPTABLE` choice covers exactly one.
 
 `reason_specific_status` distinguishes `NOT_YET_SUPPORTED` (no module for this reason) from `NOT_RECONSTRUCTABLE` (module exists, this case's facts are absent). Only the first is fixed by shipping code.
+
+### Snapshot builder
+
+`lib/postOutcome/buildSnapshot.ts` is pure and synchronous — every classification rule lives there, unit-testable against fixtures. `lib/postOutcome/loadSnapshotInputs.ts` is the only part that touches the database. The split is deliberate: the rules are the risky part (a rule that mistakes a late arrival for an omission is a false accusation against the pipeline), the queries are the boring part.
+
+**The submission instant.** Evidence is dated against Shopify's `evidenceSentOn`, else `disputes.submitted_at`, else the package's own `submitted_at`. Everything at or before it is available; everything after is `arrivedAfterSubmission`. Get it wrong and approved evidence legitimately captured post-filing becomes a phantom omission.
+
+`lifecycle.submittedAt` is set only when forwarding is confirmed **and** we hold at least one package of our own. Shopify auto-files its own scrape, so `disputes.submitted_at` is set on 688 decided disputes while only 50 have a package of ours; attributing that timestamp to our submission would put a forwarding time on ~888 historical imports.
+
+**Ambiguity is detected, never resolved by guessing.** More than one submitted package means we cannot say which Shopify sent. Picking "the newest" would be a plausible-sounding fabrication. The gate checks the tie *before* reconstructability — otherwise a multi-package dispute falls through to `OUTCOME_METADATA_ONLY` and the data-integrity limitation is silently lost. A true forwarding timestamp is still kept in that state: the forwarding fact is about the dispute, the ambiguity is about the package.
+
+**Two shared owners, not local re-spellings.** `inclusionEligible` calls `isBankIncludedFact` from `lib/defence/bankInclusion.ts` (widened to a structural `BankInclusionFlags` so a `facts_json` parse can use it). Package queries route through `fetchCandidateRows` in `lib/defence/candidateVersions.ts`. Both are enforced by existing CI invariants, and both caught real defects in the first draft — an inclusion rule that admitted `submissionRisk` facts, and a raw `.order("version")` of the shape that once let an aborted build shadow a filed package.
+
+**Shadow runner.** `npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local` builds a snapshot per decided dispute and reports the level split, confirmation sources and reconstruction gaps. Read-only; writes nothing. Against prod it reproduces the audited split exactly — 47 `FULL_POST_OUTCOME`, 1 `PACKAGE_INTEGRITY_ONLY` (the sole win, saved but never forwarded), 2 data-integrity limitations, zero contract errors, 50 unique snapshot hashes, avg 10.8 evidence items and 5.5 assertions.
