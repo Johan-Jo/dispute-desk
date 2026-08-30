@@ -146,9 +146,22 @@ interface PeriodWindow {
   /** Signed-for rate. Numerator: orders with signed_by_name set.
    *  Denominator: orders with carrier-confirmed delivery (so we don't
    *  dilute by orders still in transit). Strongest dispute-defense
-   *  signal we capture — bank rebuttals cite the signature name. */
+   *  signal we capture — bank rebuttals cite the signature name.
+   *
+   *  NULL — not 0 — when the shop ships exclusively via carriers we
+   *  have no adapter for. `signed_by_name` is written only by the
+   *  carrier-lookup layer, so on such a shop the rate is UNOBSERVABLE,
+   *  and rendering a hard "0%" asserted as fact something we never had
+   *  the ability to measure (2026-08-29: a store shipping YunExpress /
+   *  SUNYOU / CNE showed "Signed for at delivery 0%" across 142,093
+   *  tracking rows on which zero lookups had ever run). */
   signedForRatePct: number | null;
   signedForOrders: number;
+  /** True when at least one carrier lookup has actually resolved for
+   *  this shop — i.e. the signed-for rate is measurable at all. The UI
+   *  uses this to distinguish "genuinely nobody signed" from "we
+   *  cannot see signatures for this shop's carriers". */
+  signedForObservable: boolean;
 }
 
 interface RiskConversionBucket {
@@ -212,6 +225,7 @@ function compute3dsAndFulfillment(
   rows: OrderForKpi[],
   fromIso: string,
   toExclusiveIso: string,
+  signatureObservable: boolean,
 ): {
   threeDsAuthRatePct: number | null;
   threeDsAuthOrders: number;
@@ -223,6 +237,7 @@ function compute3dsAndFulfillment(
   fulfilledForDeliveryCount: number;
   signedForRatePct: number | null;
   signedForOrders: number;
+  signedForObservable: boolean;
 } {
   let authEligible = 0;
   let authPositive = 0;
@@ -278,8 +293,14 @@ function compute3dsAndFulfillment(
     confirmedDeliveryRatePct: rate(confirmedDelivered, fulfilledForDelivery),
     confirmedDeliveryOrders: confirmedDelivered,
     fulfilledForDeliveryCount: fulfilledForDelivery,
-    signedForRatePct: rate(signedForCount, confirmedDelivered),
+    // A 0% signature rate on a shop whose carriers we cannot look up is
+    // an artifact of our own coverage, not a fact about the merchant's
+    // deliveries — report it as unknown so the UI can say so.
+    signedForRatePct: signatureObservable
+      ? rate(signedForCount, confirmedDelivered)
+      : null,
     signedForOrders: signedForCount,
+    signedForObservable: signatureObservable,
   };
 }
 
@@ -293,6 +314,7 @@ function aggregateWindow(
   orderRows: OrderForKpi[],
   fromIso: string,
   toExclusiveIso: string,
+  signatureObservable: boolean,
 ): PeriodWindow {
   let ordersTotal = 0;
   let ordersLow = 0;
@@ -327,7 +349,12 @@ function aggregateWindow(
   }
 
   const acceptanceDenom = ordersTotal - ordersPending;
-  const tdsAndFul = compute3dsAndFulfillment(orderRows, fromIso, toExclusiveIso);
+  const tdsAndFul = compute3dsAndFulfillment(
+    orderRows,
+    fromIso,
+    toExclusiveIso,
+    signatureObservable,
+  );
   return {
     ordersTotal,
     acceptanceRatePct: rate(ordersLow + ordersMedium + ordersNone, acceptanceDenom),
@@ -469,15 +496,35 @@ export async function GET(req: NextRequest) {
   }
   const orderRowsForKpi = await fetchOrderRowsFor90d();
 
+  // ── Is a signature rate measurable for this shop at all? ───────
+  // `signed_by_name` is written ONLY by the carrier-lookup layer
+  // (lib/carriers/lookupCache.ts). A shop whose carriers have no
+  // registered adapter never gets a lookup, so its signature rate is
+  // structurally unobservable and must render as "—", not "0%".
+  // One cheap existence check: has ANY lookup ever resolved here?
+  const { count: resolvedLookupCount } = await sb
+    .from("shopify_fulfillment_trackings")
+    .select("shopify_fulfillment_id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .not("last_carrier_lookup_at", "is", null)
+    .limit(1);
+  const signatureObservable = (resolvedLookupCount ?? 0) > 0;
+
   const fraud = (fraudRows ?? []) as FraudRollupRow[];
   const daily = (dailyRows ?? []) as DailyRow[];
 
   // ── 90d aggregate (kept for the dashboard strip) ───────────────
-  const win90 = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart90d, todayIso);
+  const win90 = aggregateWindow(
+    fraud, daily, orderRowsForKpi, windowStart90d, todayIso, signatureObservable,
+  );
 
   // ── 30d current vs prior 30d ───────────────────────────────────
-  const current30d = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart30d, todayIso);
-  const prior30d = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d);
+  const current30d = aggregateWindow(
+    fraud, daily, orderRowsForKpi, windowStart30d, todayIso, signatureObservable,
+  );
+  const prior30d = aggregateWindow(
+    fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d, signatureObservable,
+  );
 
   // ── 8-week weekly sparkline (chargeback rate) ──────────────────
   const chargebackRateSparklineWeekly = weeklySparkline(daily);

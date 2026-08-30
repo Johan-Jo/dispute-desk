@@ -47,6 +47,8 @@ export type PaymentMethodFamily =
   | "klarna"
   | "affirm"
   | "bnpl"
+  | "paypal"
+  | "shop_pay_installments"
   | "wallet"
   | "local_payment_method"
   | "manual"
@@ -98,6 +100,13 @@ const NON_CARD_FAMILIES: ReadonlySet<PaymentMethodFamily> = new Set([
   "affirm",
   "bnpl",
   "local_payment_method",
+  // PayPal settles through Shopify Payments but carries NO card network
+  // and no AVS/CVV/3DS signals — the card-scheme paths must treat it as
+  // not-applicable exactly like Klarna. Before the union fragment was
+  // added these orders resolved to the gateway fallback and could be
+  // mistaken for card.
+  "paypal",
+  "shop_pay_installments",
 ]);
 
 /** True for Klarna/Affirm/other BNPL & local methods — the set that gets
@@ -308,6 +317,31 @@ export function derivePaymentContext(
       family: "local_payment_method",
       raw: name,
       label: name,
+      cardNetwork: null,
+      klarnaSubProduct: null,
+    };
+  }
+
+  // ── PayPal via Shopify Payments ──────────────────────────────────
+  // Own union member, no card signals. `paymentMethodName` is queried
+  // but may be null — the typename is the authoritative signal.
+  if (pd.__typename === "PaypalWalletPaymentDetails") {
+    return {
+      family: "paypal",
+      raw: pd.paymentMethodName?.trim().toLowerCase() || "paypal",
+      label: "PayPal",
+      cardNetwork: null,
+      klarnaSubProduct: null,
+    };
+  }
+
+  // ── Shop Pay Installments (Shopify's own BNPL) ───────────────────
+  if (pd.__typename === "ShopPayInstallmentsPaymentDetails") {
+    return {
+      family: "shop_pay_installments",
+      raw:
+        pd.paymentMethodName?.trim().toLowerCase() || "shop_pay_installments",
+      label: "Shop Pay Installments",
       cardNetwork: null,
       klarnaSubProduct: null,
     };

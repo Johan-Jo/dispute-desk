@@ -37,8 +37,21 @@ export interface CoverageSummary {
   isCovered: boolean;
 }
 
-/** Statuses where Shopify is actively underwriting the dispute. */
-const COVERED_STATUSES = new Set<string>(["PROTECTED", "ACTIVE"]);
+/** Statuses where Shopify is actively underwriting the dispute.
+ *
+ *  THE canonical definition of "covered" for the whole app. Exported so
+ *  the insights fraud rollup uses the same set instead of maintaining a
+ *  parallel one — on 2026-08-29 the rollup counted only "PROTECTED" in
+ *  its numerator while putting "ACTIVE" in the denominator, so a shop
+ *  whose Protect orders were all ACTIVE saw "Shopify Protect coverage
+ *  0%" for orders the Coverage Gate treats as fully covered.
+ *
+ *  Never widen beyond PROTECTED and ACTIVE — PENDING falls through to
+ *  normal flow until Shopify decides (PRD v1.1 §4). */
+export const COVERED_STATUSES: ReadonlySet<string> = new Set<string>([
+  "PROTECTED",
+  "ACTIVE",
+]);
 
 export function summarizeCoverage(
   order: OrderDetailNode | null,
