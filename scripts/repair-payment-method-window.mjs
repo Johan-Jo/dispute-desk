@@ -82,6 +82,23 @@ if (!session) {
 // refresh through the canonical path rather than trusting stored ciphertext.
 session = (await ensureFreshSession(session)) ?? session;
 
+/**
+ * Refresh before every page, not just at startup.
+ *
+ * Expiring offline tokens carry a ~1-hour TTL. A repair over several
+ * months of history runs longer than that, so a once-at-startup refresh
+ * dies mid-walk — observed on this shop at page 187 (18,700 orders in):
+ * `ShopifyAuthInvalidError: Invalid API key or access token`.
+ *
+ * ensureFreshSession is a no-op unless the token is inside its refresh
+ * skew window, so calling it per page costs nothing on the common path
+ * and removes the wall-clock ceiling on a run.
+ */
+async function freshSession() {
+  session = (await ensureFreshSession(session)) ?? session;
+  return session;
+}
+
 // `is_cross_border` is derived from the store's own country, so the repair
 // must resolve it the same way the ingest does (Shop.billingAddress) or it
 // would rewrite that column from a different basis. fetchShopPrimaryCountry
@@ -111,7 +128,7 @@ let seen = 0;
 const methodTally = new Map();
 
 for (;;) {
-  const res = await fetchOrdersBackfillPage(session, {
+  const res = await fetchOrdersBackfillPage(await freshSession(), {
     fromDateIso: fromDate,
     toExclusiveDateIso: toDate,
     after: cursor,
