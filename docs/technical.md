@@ -157,14 +157,43 @@ write fails) returns the original session so the caller's own
 background code funnels through (directly, or via `makeAuthedRequest`) —
 calls `ensureFreshSession` before returning, which covers the large
 majority of Shopify Admin API traffic without touching individual call
-sites. The two remaining direct `loadSession(shopId,"offline")` callers
+sites. The remaining direct `loadSession(shopId,"offline")` callers
 that hit Shopify themselves (`app/api/cron/orders-reconciliation`,
-`app/api/webhooks/shop-update`) call `ensureFreshSession` explicitly.
+`app/api/webhooks/shop-update`, `lib/disputes/syncDisputes.ts`) call
+`ensureFreshSession` explicitly.
+
+> **`syncDisputes` was NOT on this list until 2026-08-30.** It read
+> `shop_sessions` directly and used whatever ciphertext it found,
+> ignoring `expires_at` entirely — see *Session-health watchdog* below
+> for the outage that caused. Any new code path that talks to the Admin
+> API must go through `getShopBackgroundSession`/`makeAuthedRequest`, or
+> call `ensureFreshSession` itself. A raw `.from("shop_sessions")` read
+> feeding a Shopify call is a bug; `tests/unit/sessionHealthWatchdog.test.ts`
+> pins this for `syncDisputes`.
 Belt-and-suspenders: `makeAuthedRequest` detects an auth-invalid response
 (`detectAuthInvalidReason`, shared with `assertNotAuthInvalid`) on an
 expiring-token session and forces exactly one refresh + retry — covers
 clock skew / early Shopify-side invalidation that slips past the
 proactive 5-minute skew window.
+
+### Session-health watchdog (`/api/cron/session-health`)
+
+Hourly at **:20** (`vercel.json`), offset from `sync-disputes` at :00 so every token is renewed *between* syncs. It sweeps every installed shop and:
+
+1. **Refreshes proactively.** Runs each offline session through `ensureFreshSession()`. Tokens live 60 minutes and `needsRefresh()` fires at 5 minutes of headroom, so an hourly sweep renews around mid-life. **A shop with zero Shopify traffic now stays connected on this sweep alone** — previously refresh only ever happened as a side effect of *other* traffic.
+2. **Proves the token works.** One `webhookSubscriptions` query doubles as the liveness probe. `ensureFreshSession` never throws — on failure it logs and returns the *stale* session — so a refresh "succeeding" is not evidence of anything. Only a live 200 is.
+3. **Verifies webhooks against Shopify.** Re-registers any missing `ORDERS_CREATE`/`ORDERS_UPDATED` via `registerOrderWebhooks`, then **re-reads** to confirm it stuck. Registration at install is fire-and-forget (the OAuth callback logs failures and continues), so "we called create once" is never evidence a subscription exists.
+4. **Is loud.** Anything unresolved writes an `audit_events` row (`session_health_alert`) *and* emails ops.
+
+**The outage this closes (2026-08-30, Mein Maison / `6a8848-dd`).** Two silent faults compounded and nothing alerted for ~20 hours:
+
+- Its expiring token hit its 1-hour expiry and **nothing ever refreshed it**, because it received no order webhooks and therefore no traffic on any refresh-carrying path. `syncDisputes` then authenticated with a dead token on ~50% of hourly runs.
+- Those runs still recorded **`succeeded`**: `syncDisputes` *collects* GraphQL errors into `SyncResult.errors` rather than throwing, and the job handler ignored the return value. Vercel showed zero runtime errors throughout.
+- Separately, its `ORDERS_CREATE`/`ORDERS_UPDATED` subscriptions were **missing entirely** (4 of 8 live shops were), so no order data arrived at all — and the dead token made that impossible to even diagnose, since reading subscriptions requires a working token.
+
+Three fixes, each closing one layer: `syncDisputes` now refreshes (cause), the job handler now throws when `errors.length > 0` (why it was invisible), and this watchdog (so neither can recur unnoticed). Pinned by `tests/unit/sessionHealthWatchdog.test.ts`.
+
+**Operator tooling.** `scripts/shopify/check-tokens.mjs` health-checks every shop's stored token against the live API; `scripts/shopify/check-webhooks.mjs` reports actual subscriptions; `scripts/shopify/refresh-session.ts` and `scripts/shopify/repair-order-webhooks.ts` repair one shop or all, using the app's own code paths.
 
 **Migrating the installed base:** the token-exchange route no longer
 skips the exchange when an offline session already exists — it only
