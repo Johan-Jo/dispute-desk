@@ -48,6 +48,7 @@ const sb = createClient(url, key, { auth: { persistSession: false } });
 const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts");
 const { runLifecycleChecks } = await import("../lib/postOutcome/checks/lifecycle.ts");
 const { runEvidenceComparison } = await import("../lib/postOutcome/checks/evidenceComparison.ts");
+const { runAssertionIntegrity } = await import("../lib/postOutcome/checks/assertionIntegrity.ts");
 const { validateFinding, selectPrimaryFinding } = await import("../lib/postOutcome/findings.ts");
 
 const DISPUTE_COLUMNS =
@@ -83,6 +84,7 @@ const findingCounts = {};
 const findingTitles = {};
 const observationCounts = {};
 const classificationCounts = {};
+const assertionCounts = {};
 let invalidFindings = 0;
 const rows = [];
 let contractErrorCount = 0;
@@ -141,9 +143,17 @@ for (const dispute of disputes) {
   for (const [k, v] of Object.entries(evidenceChecks.counts)) {
     classificationCounts[k] = (classificationCounts[k] ?? 0) + (v as number);
   }
+  const assertionChecks = runAssertionIntegrity(result.snapshot);
+  for (const a of assertionChecks.assertions) {
+    assertionCounts[a.classification] = (assertionCounts[a.classification] ?? 0) + 1;
+  }
   const checks = {
-    findings: [...lifecycleChecks.findings, ...evidenceChecks.findings],
-    observations: lifecycleChecks.observations,
+    findings: [
+      ...lifecycleChecks.findings,
+      ...evidenceChecks.findings,
+      ...assertionChecks.findings,
+    ],
+    observations: [...lifecycleChecks.observations, ...assertionChecks.observations],
   };
   for (const f of checks.findings) {
     findingCounts[f.category] = (findingCounts[f.category] ?? 0) + 1;
@@ -220,6 +230,11 @@ for (const [k, v] of Object.entries(findingTitles).sort((a, b) => b[1] - a[1])) 
 
 console.log("\n── Stage 3 evidence classifications ──");
 for (const [k, v] of Object.entries(classificationCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  ${k}`);
+}
+
+console.log("\n── Stage 4 assertion classifications ──");
+for (const [k, v] of Object.entries(assertionCounts).sort((a, b) => b[1] - a[1])) {
   console.log(`  ${String(v).padStart(4)}  ${k}`);
 }
 

@@ -7541,3 +7541,24 @@ A deadline check reading the platform's timestamp as ours reports 41 late filing
 **`INCLUSION_UNVERIFIABLE` is a new classification the data forced.** A Gorgias passage enters a package as one aggregate `customer_communication` fact — `sourceRef: null`, `messageCount: null`, no per-message linkage. On a dispute with five approved passages and one such fact, the record cannot say whether four were dropped or all five were summarised. `INCLUDED_ACCURATELY` would issue a false clean bill; `AVAILABLE_BUT_OMITTED` would be a false accusation. It is distinct from `AVAILABILITY_UNKNOWN`, where we cannot tell the item existed at all — here availability is certain and only inclusion is opaque. The gap itself raises a `DATA_QUALITY` finding, because until per-passage provenance is recorded this stage can never answer the plan's central question for communications evidence.
 
 **`AVAILABLE_EVIDENCE_OMITTED` names its mechanism.** Two are possible and they have different owners: *never carried* (no fact from that source exists) and *built, withheld* (a fact was derived then not cleared for issuer-facing use). The live example is prod dispute #345617 — two approved passages (`delivery_recognition`, `resolution_attempt`), one derived Gorgias fact carrying `bankEligible: false`. The absence is proven, so the finding is `DEFINITE`; whether it was a mistake is a review decision, so severity stays `MEDIUM` and the text says so. This is *not* the deliberate refund/cancellation exclusion (PR#352) — neither message is in those categories.
+
+### Stage 4 — assertion and rule integrity
+
+`lib/postOutcome/checks/assertionIntegrity.ts`. Checks each narrative section's declared `usedFactIds` against the package's own facts. The prose itself is not checked — deciding whether a sentence overstates its evidence needs reading, not joins — so an assertion is `UNSUPPORTED` only when a cited fact is absent, and `NOT_MACHINE_VERIFIABLE` otherwise. Plan §7 Stage 4: inability to verify is not evidence of falsehood.
+
+Measured across the 53 submitted packages of decided prod disputes:
+
+| | |
+|---|---|
+| narrative sections | 308 |
+| sections with no declared support | 0 |
+| citations to a fact not in the package | 0 |
+| citations to an internal-only fact | 0 |
+| citations to a fact the Evidence Basis suppresses | **370**, across 53/53 packages |
+| sections whose support is **entirely** suppressed | **63** |
+
+The build-time validator's `unknown_fact_id` and `internal_only_fact_referenced` rules are holding. Those checks are kept regardless — a rule that currently never fires is exactly the one that quietly stops being enforced.
+
+**The 370 are C-1**, the known divergence documented in `lib/defence/bankInclusion.ts`: the generator's input filter (`reachesLlmPayloadLegacy`) admits facts that `isBankIncludedFact` refuses, so the narrative can argue from a fact the appendix will not list. Convergence is deliberately deferred there pending "its own measured delta" — so this is recorded as an **observation**, not re-reported as 53 defects. The measured delta is now available: `neverShouldHaveSeen: 0`, and the divergence is cited 370 times across every filed package, concentrated in `order_record` (151), `ip_location` (110) and `payment_authentication` (59).
+
+**The 63 do get a finding.** A section whose entire declared support is suppressed argues to the issuer with no listed evidence behind it — 26 of them `paymentAuthenticationArgument`, 25 `transactionOverviewArgument`. Confidence is `MODERATE`, because what the record proves is the absence of listed support, not that the prose overstates. Across the 50 analyzable disputes this raises 27 `UNSUPPORTED_OR_OVERSTATED_ASSERTION` findings.

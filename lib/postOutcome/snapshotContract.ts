@@ -79,8 +79,18 @@ export interface SnapshotAssertion {
   id: string;
   /** The claim as rendered. Checked against FORBIDDEN_CAUSAL_PATTERNS downstream. */
   text: string;
-  /** Evidence item ids the assertion depends on, if determinable. */
+  /** Evidence item ids the assertion depends on that EXIST in the snapshot. */
   supportingEvidenceIds: string[];
+  /**
+   * Fact ids the narrative cited that the package's own `facts_json` does not
+   * contain.
+   *
+   * Kept rather than dropped: a citation to a fact that is not there is the
+   * single most checkable integrity defect in a package, and silently filtering
+   * it out is how it stays invisible. `validateNarrative` calls the same thing
+   * `unknown_fact_id` at build time.
+   */
+  unresolvedEvidenceIds: string[];
   /** Rule identifier + version when the statement is rule-generated. */
   ruleRef: { id: string; version: number } | null;
   /** Did it survive into the exact submitted PDF, or only the draft narrative? */
@@ -191,8 +201,11 @@ export interface PostOutcomeSourceSnapshot {
  *
  * v2 — added `submittedToPlatformAt`, separating our submission from the
  *      platform's forwarding. See the field's own note.
+ * v3 — added `SnapshotAssertion.unresolvedEvidenceIds`, so a citation to a
+ *      fact the package does not carry survives into Stage 4 instead of being
+ *      filtered away by the builder.
  */
-export const SNAPSHOT_CONTRACT_VERSION = 2;
+export const SNAPSHOT_CONTRACT_VERSION = 3;
 
 /**
  * Deterministic identity of a snapshot.

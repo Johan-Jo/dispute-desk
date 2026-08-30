@@ -190,6 +190,7 @@ describe("validateSnapshotContract", () => {
             id: "a-1",
             text: "Delivery was confirmed.",
             supportingEvidenceIds: ["e-missing"],
+            unresolvedEvidenceIds: [],
             ruleRef: null,
             presentInSubmittedPdf: true,
           },

@@ -383,14 +383,14 @@ export function narrativeToAssertions(
       ? section.usedFactIds.filter((v): v is string => typeof v === "string")
       : [];
 
+    const referenced = usedFactIds.map((id) => `fact:${id}`);
     assertions.push({
       id: `section:${key}`,
       text,
-      // Reference only facts the snapshot actually holds. A dangling id is a
-      // finding for Stage 4, not a reason to fail contract validation here.
-      supportingEvidenceIds: usedFactIds
-        .map((id) => `fact:${id}`)
-        .filter((id) => knownFactIds.has(id)),
+      supportingEvidenceIds: referenced.filter((id) => knownFactIds.has(id)),
+      // A dangling citation is Stage 4's most checkable defect. Recording it
+      // here rather than filtering it away is the whole point.
+      unresolvedEvidenceIds: referenced.filter((id) => !knownFactIds.has(id)),
       ruleRef: null,
       presentInSubmittedPdf: true,
     });
