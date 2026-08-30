@@ -3,6 +3,7 @@ import {
   aggregateOrderCounts,
   backfillFraudDailyMetrics,
 } from "@/lib/disputes/snapshotFraudDailyMetrics";
+import { COVERED_STATUSES } from "@/lib/packs/sources/coverageSource";
 
 /**
  * Unit tests for the pure aggregation core of the fraud-rollup
@@ -91,13 +92,44 @@ describe("aggregateOrderCounts — fulfilled high-risk", () => {
 });
 
 describe("aggregateOrderCounts — Protect coverage value", () => {
-  it("sums PROTECTED order totals into fullyProtectedValue", () => {
+  it("sums COVERED order totals into fullyProtectedValue", () => {
     const out = aggregateOrderCounts([
       row({ fraud_protection_level: "PROTECTED", order_total: 100 }),
       row({ fraud_protection_level: "PROTECTED", order_total: 50 }),
       row({ fraud_protection_level: "NOT_PROTECTED", order_total: 999 }),
     ]);
     expect(out.fullyProtectedValue).toBe(150);
+  });
+
+  /**
+   * Regression pin (2026-08-29). The numerator was a local
+   * `new Set(["PROTECTED"])` while the Coverage Gate treats
+   * {PROTECTED, ACTIVE} as covered. A shop whose Protect orders were
+   * ALL "ACTIVE" therefore saw "Shopify Protect coverage 0%" for
+   * orders the pipeline refuses to auto-save precisely BECAUSE they
+   * are covered — the app contradicting itself on one screen.
+   */
+  it("counts ACTIVE as covered, matching the Coverage Gate", () => {
+    const out = aggregateOrderCounts([
+      row({ fraud_protection_level: "ACTIVE", order_total: 40 }),
+    ]);
+    expect(out.fullyProtectedValue).toBe(40);
+    // Numerator and denominator agree → 100%, not 0%.
+    expect(out.eligibleProtectedValue).toBe(40);
+  });
+
+  it("keeps PENDING eligible but NOT covered (Shopify has not decided)", () => {
+    const out = aggregateOrderCounts([
+      row({ fraud_protection_level: "PENDING", order_total: 70 }),
+    ]);
+    expect(out.fullyProtectedValue).toBe(0);
+    expect(out.eligibleProtectedValue).toBe(70);
+  });
+
+  it("derives its numerator from the Coverage Gate's exported set", () => {
+    // Not a redeclared copy — importing the canonical set is what stops
+    // the two definitions drifting apart again.
+    expect([...COVERED_STATUSES].sort()).toEqual(["ACTIVE", "PROTECTED"]);
   });
 
   it("counts PROTECTED, ACTIVE, and PENDING toward eligibleProtectedValue", () => {
