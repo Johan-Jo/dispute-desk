@@ -109,6 +109,10 @@ interface PeriodWindow {
   fulfilledForDeliveryCount: number;
   signedForRatePct: number | null;
   signedForOrders: number;
+  /** False when the shop ships only via carriers we have no adapter
+   *  for — signatures are then unobservable, so the tile must say so
+   *  rather than assert a misleading 0%. */
+  signedForObservable?: boolean;
 }
 
 interface RiskConversionBucket {
@@ -146,6 +150,7 @@ function DeltaPill({
   prior,
   inverse = false,
   unit = "pp",
+  noComparisonLabel,
   t,
 }: {
   current: number | null;
@@ -154,12 +159,17 @@ function DeltaPill({
   /** Unit suffix on the delta — "pp" (percentage points) for rate
    *  metrics, "h" for time-in-hours, custom for anything else. */
   unit?: "pp" | "h";
+  /** Overrides the generic "no prior period" caption. A null rate has
+   *  two very different causes — an empty comparison window, or a zero
+   *  DENOMINATOR in a window full of orders — and conflating them makes
+   *  good news ("you had no high-risk orders") look like a data gap. */
+  noComparisonLabel?: string;
   t: ReturnType<typeof useTranslations>;
 }) {
   if (current === null || prior === null) {
     return (
       <span style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
-        {t("fraudIntel.deltaNoComparison")}
+        {noComparisonLabel ?? t("fraudIntel.deltaNoComparison")}
       </span>
     );
   }
@@ -262,6 +272,7 @@ function KpiTile({
   prior,
   inverseDelta,
   deltaUnit,
+  noComparisonLabel,
   context,
   t,
 }: {
@@ -274,6 +285,7 @@ function KpiTile({
   prior: number | null;
   inverseDelta?: boolean;
   deltaUnit?: "pp" | "h";
+  noComparisonLabel?: string;
   context?: string;
   t: ReturnType<typeof useTranslations>;
 }) {
@@ -299,6 +311,7 @@ function KpiTile({
         prior={prior}
         inverse={inverseDelta}
         unit={deltaUnit}
+        noComparisonLabel={noComparisonLabel}
         t={t}
       />
       {context ? <div className={styles.kpiTileContext}>{context}</div> : null}
@@ -812,6 +825,15 @@ export default function InitialAnalysisPage() {
                   current={current30d.fulfilledHighRiskPct}
                   prior={prior30d.fulfilledHighRiskPct}
                   inverseDelta
+                  // A null rate here means ZERO high-risk orders to
+                  // fulfil — not a missing comparison window. Saying
+                  // "no prior period" on a shop with 4,543 prior-window
+                  // orders reads as a data gap when it is good news.
+                  noComparisonLabel={
+                    current30d.highRiskPct === 0 && prior30d.highRiskPct === 0
+                      ? t("fraudIntel.kpiHighRiskFulfilledNone")
+                      : undefined
+                  }
                   t={t}
                 />
                 <KpiTile
@@ -832,10 +854,14 @@ export default function InitialAnalysisPage() {
                   value={formatPct(current30d.signedForRatePct)}
                   current={current30d.signedForRatePct}
                   prior={prior30d.signedForRatePct}
-                  context={t("fraudIntel.kpiSignedForContext", {
-                    num: current30d.signedForOrders.toLocaleString(),
-                    den: current30d.confirmedDeliveryOrders.toLocaleString(),
-                  })}
+                  context={
+                    current30d.signedForObservable === false
+                      ? t("fraudIntel.kpiSignedForUnavailable")
+                      : t("fraudIntel.kpiSignedForContext", {
+                          num: current30d.signedForOrders.toLocaleString(),
+                          den: current30d.confirmedDeliveryOrders.toLocaleString(),
+                        })
+                  }
                   t={t}
                 />
               </div>

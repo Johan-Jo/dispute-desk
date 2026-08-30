@@ -29,7 +29,8 @@
  *   - total_disputes: count of all disputes initiated on this date.
  *   - chargebacks: subset of total_disputes where phase='chargeback'.
  *   - fully_protected_value: sum of order_total where
- *     fraud_protection_level='PROTECTED'.
+ *     fraud_protection_level is a COVERED status (PROTECTED or ACTIVE
+ *     — the Coverage Gate's canonical set, imported not redeclared).
  *   - eligible_protected_value: sum of order_total where
  *     fraud_protection_level IN ('PROTECTED','ACTIVE','PENDING') —
  *     the orders Shopify Protect could underwrite if a dispute lands.
@@ -40,6 +41,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { COVERED_STATUSES } from "@/lib/packs/sources/coverageSource";
 
 export interface FraudSnapshotResult {
   shopId: string;
@@ -60,7 +62,12 @@ export interface FraudSnapshotResult {
 const DB_PAGE_SIZE = 1000;
 
 const FULFILLED_STATUSES = new Set<string>(["FULFILLED", "PARTIAL", "PARTIALLY_FULFILLED"]);
-const PROTECTED_STATUSES = new Set<string>(["PROTECTED"]);
+/** Numerator for the Protect-coverage KPI. Imported from the Coverage
+ *  Gate rather than redeclared: this used to be a local
+ *  `new Set(["PROTECTED"])`, which disagreed with the gate's
+ *  {PROTECTED, ACTIVE} and reported 0% coverage for orders the pipeline
+ *  refuses to auto-save BECAUSE they are covered. */
+const PROTECTED_STATUSES = COVERED_STATUSES;
 const ELIGIBLE_PROTECTED_STATUSES = new Set<string>([
   "PROTECTED",
   "ACTIVE",
