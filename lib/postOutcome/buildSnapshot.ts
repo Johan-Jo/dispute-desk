@@ -246,6 +246,7 @@ interface ParsedFact {
   includeInBankNarrative: boolean;
   submissionRisk: boolean;
   internalOnly: boolean;
+  value: Record<string, unknown> | null;
 }
 
 /** Defensive parse — `facts_json` is stored JSON, not a validated type. */
@@ -264,6 +265,10 @@ export function parseFacts(factsJson: unknown): ParsedFact[] {
       includeInBankNarrative: f.includeInBankNarrative === true,
       submissionRisk: f.submissionRisk === true,
       internalOnly: f.internalOnly === true,
+      value:
+        f.value && typeof f.value === "object" && !Array.isArray(f.value)
+          ? (f.value as Record<string, unknown>)
+          : null,
     });
   }
   return out;
@@ -298,6 +303,7 @@ function factsToEvidence(
     // in the package and deliberately withheld from the bank; calling it
     // present would claim the issuer saw evidence we intentionally held back.
     presentInSubmittedPackage: isBankIncludedFact(f),
+    signalValue: f.value,
   }));
 }
 
@@ -332,6 +338,7 @@ function gorgiasToEvidence(
       approvedAt: row.approved_at,
       // Only an approved passage was ever eligible for the package. A pending
       // one absent from the PDF is correct behaviour, not a defect.
+      signalValue: null,
       inclusionEligible: approved,
       // Always false, and deliberately so: a passage enters a package as ONE
       // aggregate `customer_communication` fact with `sourceRef: null`, so no

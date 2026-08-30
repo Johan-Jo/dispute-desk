@@ -26,6 +26,7 @@ function evidence(
     category: "delivery",
     availableAt: "2026-07-01T00:00:00.000Z",
     approvedAt: "2026-07-02T00:00:00.000Z",
+    signalValue: null,
     inclusionEligible: true,
     presentInSubmittedPackage: true,
     ...overrides,

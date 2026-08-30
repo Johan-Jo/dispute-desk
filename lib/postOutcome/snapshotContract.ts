@@ -70,6 +70,15 @@ export interface SnapshotEvidenceItem {
    * submission-risk facts that are deliberately withheld from the bank.
    */
   presentInSubmittedPackage: boolean;
+  /**
+   * The fact's own `value` object, frozen as filed.
+   *
+   * A reason module cannot work without it: "we held an AVS result" and "we
+   * held an AVS result that MATCHED" are different facts about the case, and
+   * only the second is evidence for the merchant. Null for items with no
+   * structured value (a Gorgias passage carries prose, not fields).
+   */
+  signalValue: Record<string, unknown> | null;
   /** Assigned in Stage 3. Absent on a freshly built snapshot. */
   classification?: EvidenceClassification;
 }
@@ -204,8 +213,11 @@ export interface PostOutcomeSourceSnapshot {
  * v3 — added `SnapshotAssertion.unresolvedEvidenceIds`, so a citation to a
  *      fact the package does not carry survives into Stage 4 instead of being
  *      filtered away by the builder.
+ * v4 — added `SnapshotEvidenceItem.signalValue`. Reason modules judge signal
+ *      polarity (an AVS that matched vs one that did not), which the item's
+ *      metadata alone cannot express.
  */
-export const SNAPSHOT_CONTRACT_VERSION = 3;
+export const SNAPSHOT_CONTRACT_VERSION = 4;
 
 /**
  * Deterministic identity of a snapshot.

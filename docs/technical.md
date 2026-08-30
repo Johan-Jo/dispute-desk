@@ -7562,3 +7562,25 @@ The build-time validator's `unknown_fact_id` and `internal_only_fact_referenced`
 **The 370 are C-1**, the known divergence documented in `lib/defence/bankInclusion.ts`: the generator's input filter (`reachesLlmPayloadLegacy`) admits facts that `isBankIncludedFact` refuses, so the narrative can argue from a fact the appendix will not list. Convergence is deliberately deferred there pending "its own measured delta" — so this is recorded as an **observation**, not re-reported as 53 defects. The measured delta is now available: `neverShouldHaveSeen: 0`, and the divergence is cited 370 times across every filed package, concentrated in `order_record` (151), `ip_location` (110) and `payment_authentication` (59).
 
 **The 63 do get a finding.** A section whose entire declared support is suppressed argues to the issuer with no listed evidence behind it — 26 of them `paymentAuthenticationArgument`, 25 `transactionOverviewArgument`. Confidence is `MODERATE`, because what the record proves is the absence of listed support, not that the prose overstates. Across the 50 analyzable disputes this raises 27 `UNSUPPORTED_OR_OVERSTATED_ASSERTION` findings.
+
+### Stage 5 — the FRAUDULENT reason module
+
+`lib/postOutcome/reasons/fraudulent.ts`. Ships first because that is where the cases are: 45 of the 47 fully-analyzable prod disputes are FRAUDULENT losses, against one for the plan's original `PRODUCT_UNACCEPTABLE` pick.
+
+Every case in the cohort is a loss, so nothing here may claim a configuration would have worked. The module reports only what the record proves: a supporting signal was held and not shown; an adverse signal *was* shown; an element was absent.
+
+**Signal polarity is the whole job.** "We held an AVS result" and "we held an AVS result that matched" are different facts, and only the second is evidence for the merchant. Withholding a *failed* AVS is correct — a bank-facing rebuttal never volunteers a weakness. A module counting only presence would flag 27 correct suppressions as defects and miss the 14 real disclosures. Unrecognised payloads are `NEUTRAL`; the module never guesses polarity from a shape it does not know.
+
+Measured across the 50 FRAUDULENT/lost submitted packages:
+
+| element | held | shown | note |
+|---|---|---|---|
+| `ip_location` | 50 | **0** | 45 of them `same_country` |
+| `payment_authentication` | 49 | 22 | shown `avs=N` ×14, `avs=Y/Z` ×7; withheld ×27 are Mastercard with null codes |
+| `prior_customer_history` | 50 | 12 | |
+| `delivery_proof` | 35 | 35 | 15 packages hold none |
+| `customer_communication` | 15 | 2 | |
+
+Two patterns worth naming. `ip_location` is held on every package and shown on none, though 45 carry `same_country` — an order placed from the cardholder's own country is corroboration on an unauthorised-transaction claim. And `avs=N` reached the issuer 14 times: all built under prompt v9–v10 (2026-07-22 → 2026-08-09). From prompt v13 / validator v1 (2026-08-12) the codes are null, because the `citable` gate in `factClassifier` closed it. So the module's most severe finding is, on today's data, a **confirmation that a shipped fix changed filed output**. It still fires and carries the prompt version, so a reviewer sees the boundary instead of chasing a closed defect.
+
+Across the 45 cases the module raises 14 `INCORRECT_EVIDENCE_INTERPRETATION` (adverse disclosed, DEFINITE/HIGH), 44 `INCORRECT_EVIDENCE_INTERPRETATION` (supporting withheld, MODERATE/MEDIUM), and 39 `MISSING_ACQUIRABLE_EVIDENCE`. Zero schema-invalid.

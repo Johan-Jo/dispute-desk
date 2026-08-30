@@ -49,6 +49,8 @@ const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts")
 const { runLifecycleChecks } = await import("../lib/postOutcome/checks/lifecycle.ts");
 const { runEvidenceComparison } = await import("../lib/postOutcome/checks/evidenceComparison.ts");
 const { runAssertionIntegrity } = await import("../lib/postOutcome/checks/assertionIntegrity.ts");
+const { runFraudulentModule } = await import("../lib/postOutcome/reasons/fraudulent.ts");
+const { hasReasonModule } = await import("../lib/postOutcome/analyzerVersion.ts");
 const { validateFinding, selectPrimaryFinding } = await import("../lib/postOutcome/findings.ts");
 
 const DISPUTE_COLUMNS =
@@ -86,6 +88,7 @@ const observationCounts = {};
 const classificationCounts = {};
 const assertionCounts = {};
 let invalidFindings = 0;
+let reasonRan = 0;
 const rows = [];
 let contractErrorCount = 0;
 
@@ -147,13 +150,24 @@ for (const dispute of disputes) {
   for (const a of assertionChecks.assertions) {
     assertionCounts[a.classification] = (assertionCounts[a.classification] ?? 0) + 1;
   }
+  const runReason =
+    hasReasonModule(dispute.reason) && result.level.level === "FULL_POST_OUTCOME";
+  const reasonChecks = runReason
+    ? runFraudulentModule(result.snapshot)
+    : { findings: [], observations: [], elements: [] };
+  if (runReason) reasonRan++;
   const checks = {
     findings: [
       ...lifecycleChecks.findings,
       ...evidenceChecks.findings,
       ...assertionChecks.findings,
+      ...reasonChecks.findings,
     ],
-    observations: [...lifecycleChecks.observations, ...assertionChecks.observations],
+    observations: [
+      ...lifecycleChecks.observations,
+      ...assertionChecks.observations,
+      ...reasonChecks.observations,
+    ],
   };
   for (const f of checks.findings) {
     findingCounts[f.category] = (findingCounts[f.category] ?? 0) + 1;
@@ -244,6 +258,7 @@ for (const [k, v] of Object.entries(observationCounts).sort((a, b) => b[1] - a[1
 }
 
 console.log("\n── Health ──");
+console.log(`  reason module ran on:       ${reasonRan}`);
 console.log(`  invalid findings (schema):  ${invalidFindings}`);
 console.log(`  contract errors:            ${contractErrorCount}`);
 console.log(`  disputes w/ late evidence:  ${withLate}`);
