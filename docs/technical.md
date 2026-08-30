@@ -7454,3 +7454,48 @@ Enforced structurally by `branchBoundary.test.ts`.
 Terminal disputes use `lib/disputes/outcomeExplanation.ts` for a merchant-only explanation of the recorded outcome. The filing sentence continues to use the submitted defence-package timestamp, but a lost case's **What likely weakened this case** panel evaluates the complete workspace evidence map (`pack.evidenceItemsByField`), not only `defencePackage.bankFacing.facts_json`. This distinction is intentional: AVS failures, cardholder/buyer name mismatches, prior chargebacks and risky IP signals are correctly withheld from the issuer-facing response, yet remain essential learning for the merchant after a decision.
 
 Fraud-loss factors are ranked by operational relevance: payment-verification failure, cardholder/buyer mismatch, prior chargebacks, location/network risk, then delivery gaps. The panel shows up to four observed or carefully qualified signals and a prevention recommendation. It explicitly states that the issuer does not disclose its exact reasoning; no factor is presented as proven causation. This path is display-only and must never feed `narrative_json`, a PDF, or a Shopify evidence mutation.
+
+## Post-outcome analysis foundation (internal admin — schema + contracts only)
+
+Plan: `docs/plans/post-outcome-evidence-analysis.plan.md`. This section covers what has shipped so far — the taxonomy, the analysis-level gate, the immutable snapshot contract, and the tables. There is no analyzer, no job and no admin page yet; nothing writes to these tables in production.
+
+Related but distinct from **Post-decision merchant learning** above: that path explains a decided case *to the merchant* and is display-only. This one analyses the package DisputeDesk actually filed, for *internal product learning*, and merchants have no access to it.
+
+### Saved to Shopify is not sent to the network
+
+The load-bearing distinction. `defence_packages.shopify_response` proves Shopify **stored** the evidence and read it back (`verified`, `finalStatus: saved_to_shopify_verified`, `evidenceGid`, `fileGid`). It does **not** prove Shopify forwarded anything to the issuer or card network. Neither does `defence_packages.status = 'submitted'`, which means submitted *to Shopify*.
+
+Measured in prod 2026-08-30 across the 53 submitted packages on decided disputes:
+
+| `submission_state` | `status` | `verified` | `disputes.submitted_at` | Packages |
+|---|---|---|---|---|
+| `submitted_confirmed` | `submitted` | true | present | 49 |
+| `saved_to_shopify` | `submitted` | true | **NULL** | 4 |
+
+Those four read as "submitted" by both the package status and the save confirmation while Shopify never reported forwarding them — and one of them is the platform's only decided win. So `platform_save_confirmation` and `submission_confirmation_source` are separate columns, and a check constraint forbids the first satisfying the second.
+
+Forwarding confirmation is `submitted_confirmed` plus a `submitted_at` whose provenance is Shopify's own `evidenceSentOn`. The absence of a `submission_logs` row is **not** disqualifying — that table is empty platform-wide; provenance of the timestamp matters, not a separate log id.
+
+### Analysis levels
+
+`lib/postOutcome/analysisLevel.ts` resolves how much the analyzer may conclude. `FULL_POST_OUTCOME` requires all four: the exact package is reconstructable; it ties to the saved platform evidence (`shopify_response.evidenceGid` = `disputes.dispute_evidence_gid`); forwarding is confirmed; the outcome is reliable. A verified save with no forwarding report is `PACKAGE_INTEGRITY_ONLY`. Several submitted packages with no identifiable forwarded one is a data-integrity limitation, never a promotion. Shopify Payments is `PARTIAL_CASE_FILE` at the provider level permanently — we never receive the buyer's narrative or the adjudicator's rationale. Klarna and PayPal stay outcome-only until a real connector supplies their case records.
+
+### Snapshot contract
+
+`lib/postOutcome/snapshotContract.ts` types the immutable submission-time record. Evidence sits in exactly one of `availableBeforeSubmission`, `arrivedAfterSubmission` or `availabilityUnknown` — enforced by `validateSnapshotContract`, because that split is what separates a real omission finding from blaming the pipeline for a time-travel failure.
+
+The inventory is reconstructed from `defence_packages.facts_json` / `narrative_json`, **not** `defence_evidence_facts` (zero rows for all 50 analyzable disputes). The package JSON is already frozen at build time, which is the immutability the contract needs.
+
+Hashing goes through `lib/hashing/canonicalJson.ts`, extracted from `computeEvidenceHash` so the two cannot drift. The drop set is a parameter: `computeEvidenceHash` drops volatile timestamps, snapshots drop **nothing** — there, `created_at` is the evidence. `lib/hashing/__tests__/canonicalJson.test.ts` pins byte-equivalence with the pre-extraction implementation, since every stored `evidence_hash` was produced by it and drift would silently mark live packages stale.
+
+### Tables
+
+`post_outcome_analyses` (unique on `dispute_id, analyzer_version, source_snapshot_sha256` — retries resume, new analyzer versions add rows, nothing overwrites), `post_outcome_findings` (one primary per analysis; `DEFINITE`/`HIGH` must carry evidence or rule refs, by constraint), `post_outcome_analysis_reviews` (append-only; an `EDITED`/`REJECTED` review must state a reason), `merchant_niche_classifications` (append-only, table only — benchmarking needs 3+ peer merchants per matched cohort and prod has 3 shops with analyzable decided cases, so the panel is deferred).
+
+All service-role only, RLS enabled with no policies.
+
+### Versioning
+
+`ANALYZER_VERSION` in `lib/postOutcome/analyzerVersion.ts` — bump on any change that could alter output for an unchanged snapshot. Reason modules version independently so shipping one does not invalidate analyses from another. `REASON_MODULE_VERSIONS` currently holds `FRAUDULENT` only: it covers 47 of the 50 analyzable prod cases, where the plan's original `PRODUCT_UNACCEPTABLE` choice covers exactly one.
+
+`reason_specific_status` distinguishes `NOT_YET_SUPPORTED` (no module for this reason) from `NOT_RECONSTRUCTABLE` (module exists, this case's facts are absent). Only the first is fixed by shipping code.
