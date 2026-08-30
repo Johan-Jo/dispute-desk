@@ -24,9 +24,18 @@ export type CheckpointSeverity =
 export interface CheckpointInput {
   /** 90-day chargeback rate as a percent (e.g. 0.7 = 0.7%). */
   chargebackRate90d: number | null;
-  /** 90-day chargeback count — needed for ECM rule (ECM requires
-   *  both ratio AND 100+ disputes/month). */
-  chargebackOrders90d: number;
+  /** 90-day CHARGEBACK count — needed for the ECM rule, which requires
+   *  both the ratio AND 100+ disputes/month.
+   *
+   *  Named `...Count...`, not `...Orders...`, deliberately. The field was
+   *  previously `chargebackOrders90d`, which reads like an order count —
+   *  and the in-app page duly passed the order denominator, so a merchant
+   *  with 14,635 orders and 300 chargebacks was told they average ~4,878
+   *  chargebacks a month against a true ~100 (49x). The two digests passed
+   *  the correct value, so the same merchant saw contradictory figures in
+   *  the app and in their email. The name is the fix: a count and a
+   *  denominator must not share one. */
+  chargebackCount90d: number;
   /** 30-day fraud-dispute rate as a percent. */
   fraudDisputeRatePct: number | null;
   /** % of HIGH-risk orders that were still fulfilled (last 30 days). */

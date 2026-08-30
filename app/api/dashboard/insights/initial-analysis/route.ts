@@ -49,7 +49,16 @@ interface InsightsResponse {
   chargebackRate90d: number | null;
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
   chargebackHealthAvailable: boolean;
+  /** ORDER count for the 90d window. Despite the legacy name this is
+   *  the denominator, not the chargeback count — it backs the
+   *  "we've observed {count} orders" insufficient-volume copy. */
   chargebackOrders90d: number;
+  /** Actual 90d CHARGEBACK count. Mastercard's ECM rule needs a dispute
+   *  count, not an order count, and passing the wrong one told a
+   *  merchant they averaged 4,878 chargebacks/month against a true ~100
+   *  (49x). The value was computed but never serialized, so the client
+   *  could not send the right one even in principle. */
+  chargebackCount90d: number;
 
   // ── 30d current + prior 30d (MoM comparison) ─────────────────────
   // Each "Window" carries the aggregate metrics for its date range.
@@ -596,6 +605,7 @@ export async function GET(req: NextRequest) {
     chargebackHealth: classifyChargebackHealth(win90.chargebackRatePct),
     chargebackHealthAvailable: win90.chargebackOrders >= CHARGEBACK_VERDICT_MIN_ORDERS,
     chargebackOrders90d: win90.chargebackOrders,
+    chargebackCount90d: win90.chargebackCount,
 
     windowStart30d,
     windowStart30dPrior,

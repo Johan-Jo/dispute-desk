@@ -63,6 +63,7 @@ interface InsightsResponse {
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
   chargebackHealthAvailable: boolean;
   chargebackOrders90d: number;
+  chargebackCount90d: number;
 
   windowStart30d: string;
   windowStart30dPrior: string;
@@ -960,7 +961,7 @@ export default function InitialAnalysisPage() {
           <OperationalCheckpoints
             checkpoints={evaluateCheckpoints({
               chargebackRate90d: data.chargebackRate90d,
-              chargebackOrders90d: data.chargebackOrders90d,
+              chargebackCount90d: data.chargebackCount90d,
               fraudDisputeRatePct: current30d.fraudDisputeRatePct,
               fulfilledHighRiskPct: current30d.fulfilledHighRiskPct,
               threeDsAuthRatePct: current30d.threeDsAuthRatePct,

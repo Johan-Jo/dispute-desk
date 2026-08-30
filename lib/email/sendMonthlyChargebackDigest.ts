@@ -73,7 +73,8 @@ export interface DigestData {
   periodLabel: string;
   /** 90-day chargeback rate, percent (e.g. 1.91). */
   chargebackRate90dPct: number | null;
-  chargebackOrders90d: number;
+  /** 90-day CHARGEBACK count (not orders). Feeds the ECM rule. */
+  chargebackCount90d: number;
   current30d: DigestPeriodMetrics;
   prior30d: DigestPeriodMetrics;
   /** Real dispute activity for the period — opened, closed, open
@@ -244,7 +245,7 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
   const checkpoints = evaluateCheckpoints(
     {
       chargebackRate90d: cb,
-      chargebackOrders90d: d.chargebackOrders90d,
+      chargebackCount90d: d.chargebackCount90d,
       fraudDisputeRatePct: cur.fraudDisputeRatePct,
       fulfilledHighRiskPct: cur.fulfilledHighRiskPct,
       threeDsAuthRatePct: cur.threeDsAuthRatePct,
