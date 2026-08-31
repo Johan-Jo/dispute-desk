@@ -1476,3 +1476,51 @@ state is neither:
 
 Recommended sequence is unchanged from §25.7: this is a reviewed-finding
 decision, not an unreviewed rule change (plan §17).
+
+### 26.4 Correction: the 14 "adverse signal disclosed" findings were false
+
+Asked what specifically was wrong on those cases, the answer turned out to be
+**nothing**. The finding was ours, not the pipeline's.
+
+The filed text on #349144 (prompt v10) reads:
+
+> "At the time of authorization, the card verification code matched the issuer's
+> records. The order IP geolocated to the same country as the billing address…"
+
+No mention of the address result. `verificationSummary` on the fact says the same:
+*"the card verification code matched the issuer's records."* And
+`evidenceBasisRows.ts` derives every word from the codes — *"a fact whose address
+half is missing or uncitable contributes nothing here, whatever its stored summary
+says."* With `avs=N`, `citableAddressVerified` is false, so the appendix renders
+nothing about the address either.
+
+**The failed AVS never reached the issuer, in prose or in the appendix.**
+
+The module's error was to treat a fact as atomic. One `payment_authentication`
+fact carries BOTH an address result and a code result. Reading `avsResult` gave
+the fact a single adverse polarity, and `bankEligible` was read as "the whole
+fact was shown" — when the renderer cites only the half that is citable. What
+those 14 packages told the issuer is the matching CVV.
+
+Fixed by routing through `readPaymentVerification` — the single owner of AVS/CVV
+semantics — instead of the raw codes. Polarity is now per signal, and an
+uncitable adverse result is not a disclosure because it was never rendered.
+`INCORRECT_EVIDENCE_INTERPRETATION` falls 58 → 44, and the DEFINITE/HIGH
+"adverse disclosure" class now fires **zero** times across the 50 — which matches
+what the packages actually say.
+
+**The invariant that should have caught this did not.**
+`tests/unit/paymentVerificationSingleOwner.test.ts` scans `lib/` for exactly this
+defect: a declared AVS code list plus membership tests, outside the owner. It
+classifies a declaration as a code list only when *every* element is in its
+`AVS_LETTERS` set of 14. The module's sets included `F`, `B`, `P` and `I` —
+genuine AVS codes absent from that set — so each list failed the `every` check
+and the scan passed. Being more complete about AVS made the violation invisible.
+
+Widening `AVS_LETTERS` would close the hole; it is the test's own letter set and
+changing it may surface other call sites, so it is left as a flagged decision
+rather than an unreviewed edit.
+
+This is the second false positive manual QA has caught in this module, after the
+delivery-on-unfulfilled-orders one (§26.2). Both were found by asking what a
+finding actually meant on a specific case rather than trusting the aggregate.

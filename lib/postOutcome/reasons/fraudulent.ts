@@ -48,6 +48,7 @@
  * see the boundary rather than chase a closed defect.
  */
 
+import { readPaymentVerification } from "@/lib/argument/paymentVerification";
 import type { DraftFinding, LifecycleObservation } from "../findings";
 import type {
   PostOutcomeSourceSnapshot,
@@ -74,11 +75,6 @@ export interface FraudModuleResult {
   observations: LifecycleObservation[];
 }
 
-/** AVS codes that evidence an address match. Z = postal only, A = street only. */
-const AVS_SUPPORTING = new Set(["Y", "X", "D", "M", "F"]);
-const AVS_PARTIAL = new Set(["Z", "A", "B", "P", "W"]);
-const AVS_ADVERSE = new Set(["N", "C", "G", "I", "R", "S"]);
-
 function str(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -104,30 +100,42 @@ export function fraudSignalPolarity(item: SnapshotEvidenceItem): {
 
   switch (item.category) {
     case "payment_authentication": {
-      const avs = str(v.avsResult)?.toUpperCase() ?? null;
-      const cvv = str(v.cvvResult)?.toUpperCase() ?? null;
-      if (!avs && !cvv) {
-        return { polarity: "NEUTRAL", detail: "No AVS or CVV result was recorded." };
-      }
-      if (avs && AVS_ADVERSE.has(avs)) {
-        return {
-          polarity: "UNDERCUTS_MERCHANT",
-          detail: `Address verification did not match (AVS ${avs}).`,
-        };
-      }
-      if (avs && AVS_SUPPORTING.has(avs)) {
-        return { polarity: "SUPPORTS_MERCHANT", detail: `Address verification matched (AVS ${avs}).` };
-      }
-      if (avs && AVS_PARTIAL.has(avs)) {
+      // Through THE owner of AVS/CVV semantics, never the raw codes.
+      //
+      // Reading `avsResult` directly produced 14 false DEFINITE findings:
+      // an AVS of "N" made the fact look adverse, and because the fact was
+      // bank-included the module concluded the failure had been shown to the
+      // issuer. It had not. One payment_authentication fact carries BOTH an
+      // address result and a code result, and the renderer cites only the
+      // half that is citable — for AVS "N" that is nothing at all. The prose
+      // on those 14 packages cites the matching CVV and never mentions the
+      // address.
+      //
+      // So polarity is read per SIGNAL, and an uncitable adverse result is not
+      // a disclosure because it was never rendered.
+      const verification = readPaymentVerification(v);
+      if (verification.citableAddressVerified) {
         return {
           polarity: "SUPPORTS_MERCHANT",
-          detail: `Address verification partially matched (AVS ${avs}).`,
+          detail: "Address verification matched and is citable to the issuer.",
         };
       }
-      if (cvv === "M") {
-        return { polarity: "SUPPORTS_MERCHANT", detail: "Security code matched." };
+      if (verification.securityCodeVerified) {
+        return {
+          polarity: "SUPPORTS_MERCHANT",
+          detail: "The security code matched the issuer's records.",
+        };
       }
-      return { polarity: "NEUTRAL", detail: "Verification result is not conclusive either way." };
+      if (!verification.avs.present && !verification.cvv.present) {
+        return { polarity: "NEUTRAL", detail: "No verification result was recorded." };
+      }
+      // An unmatched address is a weakness we hold and do not cite. That is
+      // correct behaviour, so it is neutral here rather than adverse — there is
+      // nothing for the issuer to have seen.
+      return {
+        polarity: "NEUTRAL",
+        detail: "No verification result that supports the merchant is citable.",
+      };
     }
 
     case "ip_location": {

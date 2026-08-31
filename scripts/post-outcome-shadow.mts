@@ -49,7 +49,7 @@ const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts")
 const { composeAnalysis } = await import("../lib/postOutcome/composeAnalysis.ts");
 
 const DISPUTE_COLUMNS =
-  "id, shop_id, phase, reason, network_reason_code, amount, currency_code, initiated_at, closed_at, final_outcome, outcome_source, submission_state, submitted_at, evidence_saved_to_shopify_at, due_at, dispute_evidence_gid, order_gid, raw_snapshot";
+  "id, shop_id, order_name, phase, reason, network_reason_code, amount, currency_code, initiated_at, closed_at, final_outcome, outcome_source, submission_state, submitted_at, evidence_saved_to_shopify_at, due_at, dispute_evidence_gid, order_gid, raw_snapshot";
 const PACKAGE_COLUMNS =
   "id, dispute_id, version, content_revision, status, submitted_at, generated_at, pdf_path, evidence_hash, prompt_version, validator_version, reason_code_module, facts_json, narrative_json, shopify_response";
 
@@ -73,6 +73,7 @@ const { data: disputes, error: dErr } = await sb
   .in("id", [...byDispute.keys()]);
 if (dErr) throw dErr;
 
+
 console.log(`[shadow] ${disputes.length} decided disputes with a submitted package\n`);
 
 const levels = {};
@@ -89,6 +90,10 @@ const primaryCounts = {};
 const statusCounts = {};
 const reasonStatusCounts = {};
 const rows = [];
+const detailed = [];
+const shopNames = new Map();
+const { data: shopRows } = await sb.from("shops").select("id, shop_domain");
+for (const s of shopRows ?? []) shopNames.set(s.id, s.shop_domain);
 let contractErrorCount = 0;
 
 for (const dispute of disputes) {
@@ -164,6 +169,14 @@ for (const dispute of disputes) {
   reasonStatusCounts[analysis.reasonSpecificStatus] =
     (reasonStatusCounts[analysis.reasonSpecificStatus] ?? 0) + 1;
   if (analysis.actionable) actionableCount++;
+
+  // Kept whole for --report; the console summary only needs the projection below.
+  detailed.push({
+    orderName: dispute.order_name,
+    shopId: dispute.shop_id,
+    analysis,
+    snapshot: result.snapshot,
+  });
 
   rows.push({
     primaryCategory: analysis.primaryCategory,
@@ -268,4 +281,124 @@ if (jsonOut) {
   const { writeFileSync } = await import("node:fs");
   writeFileSync(jsonOut, JSON.stringify(rows, null, 2));
   console.log(`\n[shadow] wrote ${jsonOut}`);
+}
+
+/* ─────────────────────────── Human-readable report ─────────────────────────
+ * `--report <path>` writes the full picture for someone to READ, not to parse.
+ * The console summary above answers "is the analyser behaving"; this answers
+ * "what did we actually file, and what is worth deciding about".
+ * ------------------------------------------------------------------------ */
+const reportOut = arg("--report");
+if (reportOut) {
+  const { writeFileSync } = await import("node:fs");
+  const L = [];
+  const shopName = (id) => shopNames.get(id) ?? id.slice(0, 8);
+  const forwardedSources = new Set(["SHOPIFY_EVIDENCE_SENT_ON", "PROVIDER_LOG"]);
+
+  L.push("# Post-outcome analysis — shadow run");
+  L.push("");
+  L.push(
+    `Generated ${new Date().toISOString().slice(0, 19).replace("T", " ")} UTC · production data · **nothing was written**.`,
+  );
+  L.push("");
+  L.push(
+    "Every finding below is an automated **hypothesis**. None has been reviewed by a person, and nothing here has changed a rule, template or weight.",
+  );
+  L.push("");
+
+  L.push("## What was analysed");
+  L.push("");
+  L.push("| | |");
+  L.push("|---|---|");
+  L.push(`| Decided disputes carrying a package we filed | ${detailed.length} |`);
+  L.push(
+    `| Won / lost | ${rows.filter((r) => r.outcome === "won").length} / ${rows.filter((r) => r.outcome === "lost").length} |`,
+  );
+  for (const [k, v] of Object.entries(levels).sort((a, b) => b[1] - a[1])) {
+    L.push(`| ${k} | ${v} |`);
+  }
+  L.push(`| Actionable | ${actionableCount} |`);
+  L.push(`| Findings refused by the schema gate | ${invalidFindings} |`);
+  L.push("");
+
+  L.push("## Findings by category");
+  L.push("");
+  L.push("| Category | Analyses |");
+  L.push("|---|---|");
+  for (const [k, v] of Object.entries(findingCounts).sort((a, b) => b[1] - a[1])) {
+    L.push(`| ${k} | ${v} |`);
+  }
+  L.push("");
+
+  L.push("## The distinct findings, most severe first");
+  L.push("");
+  const bySignature = new Map();
+  for (const d of detailed) {
+    for (const f of d.analysis.findings) {
+      const key = `${f.category}|${f.confidence}|${f.severity}|${f.actionClass}`;
+      const entry = bySignature.get(key) ?? { finding: f, cases: [] };
+      entry.cases.push(d.orderName ?? d.analysis.disputeId.slice(0, 8));
+      bySignature.set(key, entry);
+    }
+  }
+  const sevRank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+  const confRank = { DEFINITE: 0, HIGH: 1, MODERATE: 2, LOW: 3 };
+  const distinct = [...bySignature.values()].sort((a, b) => {
+    const s = (sevRank[a.finding.severity] ?? 9) - (sevRank[b.finding.severity] ?? 9);
+    return s !== 0
+      ? s
+      : (confRank[a.finding.confidence] ?? 9) - (confRank[b.finding.confidence] ?? 9);
+  });
+  for (const { finding, cases } of distinct) {
+    L.push(
+      `### ${finding.category} — ${finding.severity.toLowerCase()}, ${finding.confidence.toLowerCase()} confidence`,
+    );
+    L.push("");
+    L.push(`**Affects ${cases.length} case(s).** Owner: \`${finding.actionClass}\`.`);
+    L.push("");
+    L.push(finding.description);
+    L.push("");
+    if (finding.counterfactualImprovement) {
+      L.push(`*Potential improvement:* ${finding.counterfactualImprovement}`);
+      L.push("");
+    }
+    L.push(
+      `Cases: ${cases.slice(0, 12).join(", ")}${cases.length > 12 ? `, +${cases.length - 12} more` : ""}`,
+    );
+    L.push("");
+  }
+
+  L.push("## Observations (real, but not defects)");
+  L.push("");
+  L.push("| Observation | Cases |");
+  L.push("|---|---|");
+  for (const [k, v] of Object.entries(observationCounts).sort((a, b) => b[1] - a[1])) {
+    L.push(`| ${k} | ${v} |`);
+  }
+  L.push("");
+
+  L.push("## Every case");
+  L.push("");
+  L.push(
+    "| Order | Merchant | Outcome | Reason | Forwarded | Level | Primary finding | Confidence |",
+  );
+  L.push("|---|---|---|---|---|---|---|---|");
+  const ordered = [...detailed].sort(
+    (a, b) => b.analysis.findings.length - a.analysis.findings.length,
+  );
+  for (const d of ordered) {
+    const a = d.analysis;
+    L.push(
+      `| ${d.orderName ?? a.disputeId.slice(0, 8)} | ${shopName(d.shopId)} | ${a.summary.outcome} | ${a.summary.reason ?? "—"} | ${forwardedSources.has(a.summary.submissionConfirmationSource) ? "yes" : "**no**"} | ${a.analysisLevel.replace(/_/g, " ").toLowerCase()}${a.dataIntegrityLimitation ? " (limited)" : ""} | ${a.primaryCategory} | ${a.primaryConfidence} |`,
+    );
+  }
+  L.push("");
+  L.push("---");
+  L.push("");
+  L.push(
+    "*Findings are unreviewed. Only a reviewed finding may prioritise a product change, calibrate case strength, or justify a learning action.*",
+  );
+
+  writeFileSync(reportOut, L.join("\n"), "utf8");
+  console.log(`\n[shadow] wrote report to ${reportOut}`);
 }

@@ -222,6 +222,9 @@ describe("primary selection", () => {
   });
 
   it("puts an adverse disclosure above a merely withheld signal", () => {
+    // Adverse disclosure is exercised through order origin: a failed AVS is
+    // never rendered to the issuer, so it cannot be a disclosure (see the
+    // 14-case false positive corrected in reasons/fraudulent.ts).
     const analysis = composeAnalysis(
       assembleSnapshot(
         inputs({
@@ -230,9 +233,9 @@ describe("primary selection", () => {
               facts_json: [
                 {
                   id: "f1",
-                  category: "payment_authentication",
-                  source: "shopify_order",
-                  value: { avsResult: "N", cvvResult: "M" },
+                  category: "ip_location",
+                  source: "ipinfo_io",
+                  value: { locationMatch: "different_country" },
                   bankEligible: true,
                   includeInBankNarrative: true,
                   submissionRisk: false,
@@ -240,9 +243,9 @@ describe("primary selection", () => {
                 },
                 {
                   id: "f2",
-                  category: "ip_location",
-                  source: "ipinfo_io",
-                  value: { locationMatch: "same_country" },
+                  category: "prior_customer_history",
+                  source: "shopify_order",
+                  value: { priorOrderCount: 3 },
                   bankEligible: false,
                   includeInBankNarrative: false,
                   submissionRisk: false,

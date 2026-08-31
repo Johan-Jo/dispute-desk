@@ -96,21 +96,21 @@ function snapshot(facts: SnapshotEvidenceItem[]): PostOutcomeSourceSnapshot {
 }
 
 describe("signal polarity", () => {
-  it("reads a failed AVS as undercutting the merchant", () => {
-    const { polarity } = fraudSignalPolarity(
+  it("does not call an uncitable failed AVS a disclosure", () => {
+    // Regression: reading avsResult directly produced 14 false DEFINITE
+    // findings. A payment_authentication fact carries BOTH results, and the
+    // renderer cites only the citable half — for AVS "N" that is nothing. The
+    // matching CVV is what those packages actually told the issuer.
+    const { polarity, detail } = fraudSignalPolarity(
       fact("payment_authentication", { avsResult: "N", cvvResult: "M" }, true),
     );
-    expect(polarity).toBe("UNDERCUTS_MERCHANT");
+    expect(polarity).toBe("SUPPORTS_MERCHANT");
+    expect(detail).toMatch(/security code matched/i);
   });
 
   it("reads a matched AVS as supporting", () => {
     expect(
       fraudSignalPolarity(fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true))
-        .polarity,
-    ).toBe("SUPPORTS_MERCHANT");
-    // Z = postal-only match. Partial, but not adverse.
-    expect(
-      fraudSignalPolarity(fact("payment_authentication", { avsResult: "Z", cvvResult: "M" }, true))
         .polarity,
     ).toBe("SUPPORTS_MERCHANT");
   });
@@ -120,6 +120,15 @@ describe("signal polarity", () => {
     // fact is correct; a presence-only module would call it a suppression.
     const { polarity } = fraudSignalPolarity(
       fact("payment_authentication", { network: "mastercard", avsResult: null, cvvResult: null }, false),
+    );
+    expect(polarity).toBe("NEUTRAL");
+  });
+
+  it("is neutral when no supporting result is citable", () => {
+    // Address failed AND no code match: we hold a weakness and cite nothing.
+    // Nothing reached the issuer, so there is no disclosure to report.
+    const { polarity } = fraudSignalPolarity(
+      fact("payment_authentication", { avsResult: "N", cvvResult: "N" }, true),
     );
     expect(polarity).toBe("NEUTRAL");
   });
@@ -154,10 +163,13 @@ describe("signal polarity", () => {
 });
 
 describe("adverse signal disclosed to the issuer", () => {
-  it("raises a DEFINITE finding and names the prompt version", () => {
-    // The 14 real cases: avs=N shown, all built under prompt v9-v10.
+  it("fires only when an undercutting signal actually reached the issuer", () => {
+    // Exercised with order origin, because payment verification can no longer
+    // produce this state: an uncitable AVS is never rendered, so it cannot be
+    // disclosed. On prod this finding now fires zero times, which matches what
+    // the filed packages actually say.
     const { findings } = runFraudulentModule(
-      snapshot([fact("payment_authentication", { avsResult: "N", cvvResult: "M" }, true)]),
+      snapshot([fact("ip_location", { locationMatch: "different_country" }, true)]),
     );
     const finding = findings.find((f) => f.title.includes("undercut the merchant"));
     expect(finding?.confidence).toBe("DEFINITE");
@@ -167,9 +179,16 @@ describe("adverse signal disclosed to the issuer", () => {
   });
 
   it("does not fire when the adverse signal was withheld", () => {
-    // Withholding a failed AVS is correct: a rebuttal never volunteers a weakness.
     const { findings } = runFraudulentModule(
-      snapshot([fact("payment_authentication", { avsResult: "N", cvvResult: "M" }, false)]),
+      snapshot([fact("ip_location", { locationMatch: "different_country" }, false)]),
+    );
+    expect(findings.filter((f) => f.title.includes("undercut the merchant"))).toHaveLength(0);
+  });
+
+  it("does not fire on a failed AVS, because nothing was rendered", () => {
+    // The 14-case false positive, pinned so it cannot return.
+    const { findings } = runFraudulentModule(
+      snapshot([fact("payment_authentication", { avsResult: "N", cvvResult: "M" }, true)]),
     );
     expect(findings.filter((f) => f.title.includes("undercut the merchant"))).toHaveLength(0);
   });
