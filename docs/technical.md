@@ -7642,3 +7642,18 @@ A test runs the real production shape (47 blume-box + 1 cay-collective + 1 suras
 **Review notes are required in three places.** `EDITED` and `REJECTED` need a note — the button is disabled without one, the API rejects it, and a check constraint refuses it. Three layers for a text box is deliberate: that note is the only record of why a reviewer disagreed with the analyzer, and a rejection with no reason is indistinguishable afterwards from a mis-click.
 
 Benchmarking is absent by design, with a footer saying so: it needs three peer merchants in a matched cohort and the current population cannot form one.
+
+### The `section_support_not_bank_citable` rule
+
+`lib/defence/validateNarrative.ts` gained a rule for the defect the post-outcome analyzer surfaced: a narrative section whose *entire* declared support consists of facts the Evidence Basis will not list, so the argument reaches the issuer with nothing behind it.
+
+**It is a warning, not an error, and `SUPPORT_CITABILITY_BLOCKING = false` is the switch.** The defect is real — 63 such sections across the 53 filed packages on decided disputes, and 45 of those packages carry bank-facing IP prose past the gate `deviceLocationEligibility.ts` centralises. But `validateNarrative` failing means `status: "failed"`, no PDF, and the next version number — the state in which an aborted build shadowed a validated package and a dispute went to forfeit. On today's population a blocking rule would fail roughly 45 of 53 fraud packages, so the merchant would file *nothing*, which is worse than filing an unevidenced paragraph.
+
+Promoting it needs one of two upstream changes first, so the sections gain support rather than disappearing:
+
+- supporting-tier facts become citable, so the Evidence Basis lists them; or
+- the narrative writer stops being fed facts it may not cite, so the sections are omitted at generation instead of failed at validation.
+
+`VALIDATOR_VERSION` is deliberately **not** bumped. Pass/fail behaviour is unchanged, and a bump makes previously-failed packages eligible for a rebuild — spending model budget to reach the same answer. Bump it when the switch flips.
+
+`ValidationResult.warnings` is optional: it is purely additive, and a caller or test double that predates it is still a valid result. Warnings are recorded per build as a `defence_package_validation_warning` audit event, so the rule is measurable on live traffic before anyone decides to enforce it.

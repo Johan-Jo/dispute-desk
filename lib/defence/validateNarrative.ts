@@ -25,6 +25,7 @@ import {
   deriveClaimCapabilities,
 } from "./claimCapabilities";
 import { FACT_PREDICATES } from "./factPredicates";
+import { isBankIncludedFact } from "./bankInclusion";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
@@ -335,8 +336,42 @@ export function runPhraseAndGuardChecks(
   return errors;
 }
 
+/**
+ * Whether a section resting entirely on non-citable support FAILS the package.
+ *
+ * FALSE, deliberately, and flipping it is a product decision rather than a
+ * tidy-up.
+ *
+ * What the rule catches is real: measured across the 53 filed packages on
+ * decided prod disputes, 63 sections declare support consisting only of facts
+ * the Evidence Basis will not list — 26 of them `paymentAuthenticationArgument`,
+ * 25 `transactionOverviewArgument`. Those arguments reach the issuer with no
+ * listed evidence behind them, and 45 of the packages carry bank-facing IP
+ * prose past the gate `lib/argument/deviceLocationEligibility.ts` centralises.
+ *
+ * What blocking would cost is also real. `validateNarrative` failing means
+ * `status: "failed"`, no PDF, and the next version number — the state in which
+ * an aborted build shadowed a validated package and a dispute went to forfeit
+ * (see `lib/defence/candidateVersions.ts`). On today's population this rule
+ * would fail roughly 45 of 53 fraud packages: the merchant would file nothing
+ * at all, which is plainly worse than filing an unevidenced paragraph.
+ *
+ * So the rule is emitted as a warning and measured. Promoting it needs one of:
+ *   - the supporting-tier facts becoming citable, so the sections gain real
+ *     support rather than disappearing; or
+ *   - the narrative writer no longer being fed facts it may not cite, so the
+ *     sections are omitted at generation rather than failed at validation.
+ *
+ * Either is a reviewed change with a measured delta. Bump VALIDATOR_VERSION
+ * when this flips — not before, because a bump makes previously-failed packages
+ * eligible for a rebuild, and rebuilding them under unchanged pass/fail rules
+ * spends model budget to reach the same answer.
+ */
+export const SUPPORT_CITABILITY_BLOCKING = false;
+
 export function validateNarrative(input: ValidateNarrativeInput): ValidationResult {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
   const approvedFactIds = new Set(input.approvedFacts.map((f) => f.id));
   const internalOnlyIds = new Set(input.internalOnlyFactIds ?? []);
 
@@ -404,7 +439,33 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
     }
   }
 
-  return { ok: errors.length === 0, errors };
+  // 5. Sections whose declared support is entirely non-citable.
+  //
+  // Uses THE bank-inclusion predicate rather than a local re-spelling; that
+  // rule has one owner for the reason C-1 exists (lib/defence/bankInclusion.ts).
+  const citableFactIds = new Set(
+    input.approvedFacts.filter(isBankIncludedFact).map((f) => f.id),
+  );
+  for (const sectionKey of SECTION_KEYS) {
+    const section = input.narrative[sectionKey];
+    if (!section.text.trim()) continue;
+    if (section.usedFactIds.length === 0) continue;
+    const citable = section.usedFactIds.filter((id) => citableFactIds.has(id));
+    if (citable.length > 0) continue;
+
+    const finding: ValidationError = {
+      section: sectionKey,
+      rule: "section_support_not_bank_citable",
+      message: `${sectionKey} rests entirely on facts the Evidence Basis will not list`,
+      checkedFactIds: [...section.usedFactIds],
+      layer: "narrative",
+      severity: SUPPORT_CITABILITY_BLOCKING ? "error" : "warning",
+    };
+    if (SUPPORT_CITABILITY_BLOCKING) errors.push(finding);
+    else warnings.push(finding);
+  }
+
+  return { ok: errors.length === 0, errors, warnings };
 }
 
 // ── Composed-document validator (Phase 1.5) ──────────────────────────
@@ -465,7 +526,9 @@ export function validateComposedDocument(
       }),
     );
   }
-  return { ok: errors.length === 0, errors };
+  // The composed-document pass has no warning-class rules of its own; the
+  // citability check runs once, on the narrative.
+  return { ok: errors.length === 0, errors, warnings: [] };
 }
 
 /** Build a human-readable summary suitable for `failure_reason`. Lists
