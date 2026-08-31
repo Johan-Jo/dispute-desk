@@ -1,5 +1,13 @@
 -- Frozen comparable-cohort definitions and their results (plan §11, §23 step 11).
 --
+-- RENUMBERED from 20260831090000, which collided with
+-- `20260831090000_shops_onboarding_digest_sent_at` on another branch. The
+-- collision is worth naming because it fails silently in the worst direction:
+-- dev had already recorded that version, so a later `db push` would have seen
+-- 20260831090000 as applied and SKIPPED this file entirely. The table exists on
+-- dev only because its DDL was run by hand — prod would never have received it,
+-- and nothing would have complained.
+--
 -- WHY FREEZE A COHORT AT ALL. A benchmark computed live re-answers itself every
 -- time the underlying data moves, so a number quoted on Monday cannot be
 -- reproduced on Friday and a learning action evaluated against "the cohort"

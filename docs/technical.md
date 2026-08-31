@@ -7681,3 +7681,26 @@ Verified against dev — each of these is refused: approving with zero findings,
 **Verdicts stay inside the evidence.** `INSUFFICIENT` yields `INSUFFICIENT_SAMPLE` however good the numbers look — plan §18 forbids a percentage claim below the thresholds, and "promising" off four cases is that claim in a different word. A `DIRECTIONAL` sample can say "no clear change" but never "promising". A guardrail regression outranks any improvement.
 
 `ROLL_BACK` is reachable from every post-deployment state, without a detour through `MEASURING`: the moment you need a rollback is the moment something is wrong, and a state machine that makes you route around it is one that gets bypassed.
+
+### Migration version collisions
+
+`supabase db push` keys on the version prefix, not the filename. Two branches that
+independently pick the same timestamp produce a collision that fails in the worst
+direction: whichever version reaches an environment's history first wins, and the
+other file is silently **skipped** as already-applied.
+
+That happened here. `20260831090000_outcome_cohort_snapshots.sql` collided with
+`20260831090000_shops_onboarding_digest_sent_at.sql` on another branch. Dev had
+already recorded that version, so a later push would have skipped the cohort
+migration entirely — the table existed on dev only because its DDL had been run
+by hand, and prod would never have received it with nothing complaining. Renumbered
+to `20260831150000`.
+
+Before adding a migration on a shared dev database, check the version is free:
+
+```sql
+select version, name from supabase_migrations.schema_migrations
+where version >= '<your prefix>' order by version;
+```
+
+A name in that list that is not your file is a collision, not a coincidence.
