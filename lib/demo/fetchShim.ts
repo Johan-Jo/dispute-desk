@@ -375,6 +375,7 @@ const HANDLERS: Handler[] = [
         chargebackHealth: "good",
         chargebackHealthAvailable: true,
         chargebackOrders90d: 6,
+        chargebackCount90d: 1,
         windowStart30d: "2025-12-17T00:00:00Z",
         windowStart30dPrior: "2025-11-17T00:00:00Z",
         current30d: periodWindow,

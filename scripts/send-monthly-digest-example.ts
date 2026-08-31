@@ -241,7 +241,7 @@ const result = await sendMonthlyChargebackDigest({
   to: teamEmail,
   periodLabel,
   chargebackRate90dPct,
-  chargebackOrders90d: chargebacks90d ?? 0,
+  chargebackCount90d: chargebacks90d ?? 0,
   current30d,
   prior30d,
   disputeActivity,

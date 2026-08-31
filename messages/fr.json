@@ -5031,7 +5031,11 @@
       "breach": "Seuil dépassé"
     },
     "weeklyChargebackRateAria": "Taux hebdomadaire de rétrofacturations, 8 dernières semaines",
-    "noData": "Aucune donnée"
+    "noData": "Aucune donnée",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Le programme Visa ne s'applique pas à vos litiges.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Seuls {cardShare} de vos litiges passent par un réseau de cartes. Le VAMP de Visa comptabilise les chargebacks de carte et ne mesure donc pas le reste de votre volume — il n'y a pas de verdict VAMP à vous donner ici.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Le programme Mastercard ne s'applique pas à vos litiges.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Seuls {cardShare} de vos litiges passent par un réseau de cartes. L'ECM de Mastercard comptabilise les chargebacks de carte ; vos autres litiges relèvent des règles du prestataire qui les a traités."
   },
   "consent": {
     "ariaLabel": "Choix relatifs aux cookies et à la confidentialité",

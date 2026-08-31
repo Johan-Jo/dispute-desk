@@ -5031,7 +5031,11 @@
       "info": "Info",
       "consider": "Att beakta",
       "breach": "Tröskel överskriden"
-    }
+    },
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Visas program gäller inte dina ärenden.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Visas VAMP räknar kort-chargebacks och mäter därför inte din övriga ärendevolym — det finns inget VAMP-utlåtande att ge här.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Mastercards program gäller inte dina ärenden.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Mastercards ECM räknar kort-chargebacks; dina övriga ärenden avgörs enligt reglerna hos den leverantör som hanterade dem."
   },
   "consent": {
     "ariaLabel": "Inställningar för cookies och integritet",
