@@ -5166,7 +5166,11 @@
       "info": "Info",
       "consider": "Consider",
       "breach": "Breach"
-    }
+    },
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Visa's programme does not apply to your disputes.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Visa's VAMP counts card chargebacks, so it does not measure the rest of your dispute volume — there is no VAMP verdict to give you here.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Mastercard's programme does not apply to your disputes.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Mastercard's ECM counts card chargebacks, so your other disputes are settled under the rules of the provider that handled them instead."
   },
   "consent": {
     "ariaLabel": "Cookie and privacy choices",

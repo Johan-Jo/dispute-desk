@@ -5031,7 +5031,11 @@
       "breach": "Schwellenwert überschritten"
     },
     "weeklyChargebackRateAria": "Wöchentliche Rückbuchungsrate, letzte 8 Wochen",
-    "noData": "Keine Daten"
+    "noData": "Keine Daten",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Das Visa-Programm gilt nicht für Ihre Fälle.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Nur {cardShare} Ihrer Fälle laufen über ein Kartennetzwerk. Visas VAMP zählt Karten-Chargebacks und misst daher Ihr übriges Fallvolumen nicht — es gibt hier kein VAMP-Urteil.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Das Mastercard-Programm gilt nicht für Ihre Fälle.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Nur {cardShare} Ihrer Fälle laufen über ein Kartennetzwerk. Mastercards ECM zählt Karten-Chargebacks; Ihre übrigen Fälle werden nach den Regeln des jeweiligen Anbieters entschieden."
   },
   "consent": {
     "ariaLabel": "Cookie- und Datenschutzeinstellungen",

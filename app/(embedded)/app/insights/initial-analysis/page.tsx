@@ -64,6 +64,19 @@ interface InsightsResponse {
   chargebackHealthAvailable: boolean;
   chargebackOrders90d: number;
   chargebackCount90d: number;
+  rail?: {
+    cardOrders: number;
+    cardDisputes: number;
+    cardRatePct: number | null;
+    altOrders: number;
+    altDisputes: number;
+    altRatePct: number | null;
+    unknownOrders: number;
+    unknownDisputes: number;
+    cardDisputeShare: number | null;
+    cardFramingApplies: boolean;
+    unknownShare: number;
+  };
 
   windowStart30d: string;
   windowStart30dPrior: string;
@@ -962,6 +975,13 @@ export default function InitialAnalysisPage() {
             checkpoints={evaluateCheckpoints({
               chargebackRate90d: data.chargebackRate90d,
               chargebackCount90d: data.chargebackCount90d,
+              // Rail context. Without it the VAMP/ECM rules grade every
+              // merchant against Visa and Mastercard, including the ones
+              // whose disputes never touch a card network.
+              cardChargebackRate90d: data.rail?.cardRatePct,
+              cardChargebackCount90d: data.rail?.cardDisputes,
+              cardDisputeShare: data.rail?.cardDisputeShare,
+              cardFramingApplies: data.rail?.cardFramingApplies,
               fraudDisputeRatePct: current30d.fraudDisputeRatePct,
               fulfilledHighRiskPct: current30d.fulfilledHighRiskPct,
               threeDsAuthRatePct: current30d.threeDsAuthRatePct,
