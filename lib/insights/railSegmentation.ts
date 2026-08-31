@@ -31,6 +31,8 @@
  * alike, which is exactly how PayPal was mistaken for card in the first place.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 
 /** Minimum orders on a rail before a rate derived from it is worth showing.
@@ -180,4 +182,72 @@ export function segmentByRail(
       o.card >= RAIL_MIN_ORDERS_FOR_RATE,
     unknownShare,
   };
+}
+
+/**
+ * Fetch + segment a window straight from the database.
+ *
+ * The insights route already holds its order rows in memory and calls
+ * `segmentByRail` directly. The digest crons do not, and re-implementing the
+ * join there is how the page and the email drifted apart in the first place
+ * (they still compute their headline rate two different ways). This is the
+ * one place that turns a shop + window into a rail split.
+ *
+ * `sb` is the Supabase service client.
+ */
+export async function railSegmentationFor(
+  sb: SupabaseClient,
+  shopId: string,
+  from: Date,
+  toExclusive: Date,
+): Promise<RailSegmentation> {
+  // Orders, paginated. PostgREST caps an un-ranged select at 1000 rows, and
+  // silently — a shop with 17k orders in the window would otherwise be
+  // segmented from its first thousand and report a confident wrong mix.
+  const orders: RailOrderRow[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data } = await sb
+      .from("shopify_orders")
+      .select("payment_method")
+      .eq("shop_id", shopId)
+      .gte("created_at_shopify", from.toISOString())
+      .lt("created_at_shopify", toExclusive.toISOString())
+      .range(offset, offset + 999);
+    const rows = (data ?? []) as RailOrderRow[];
+    orders.push(...rows);
+    if (rows.length < 1000) break;
+  }
+
+  const { data: disputeRows } = await sb
+    .from("disputes")
+    .select("order_gid")
+    .eq("shop_id", shopId)
+    .gte("initiated_at", from.toISOString())
+    .lt("initiated_at", toExclusive.toISOString());
+
+  const gids = ((disputeRows ?? []) as Array<{ order_gid: string | null }>)
+    .map((d) => d.order_gid)
+    .filter((g): g is string => !!g);
+
+  // Chunked: a long `.in()` list blows URL limits and the row cap.
+  const methodByGid = new Map<string, string | null>();
+  for (let i = 0; i < gids.length; i += 200) {
+    const { data } = await sb
+      .from("shopify_orders")
+      .select("shopify_order_id, payment_method")
+      .eq("shop_id", shopId)
+      .in("shopify_order_id", gids.slice(i, i + 200));
+    for (const r of (data ?? []) as Array<{
+      shopify_order_id: string;
+      payment_method: string | null;
+    }>) {
+      methodByGid.set(r.shopify_order_id, r.payment_method);
+    }
+  }
+
+  // A dispute we could not join resolves to `unknown`, never to card.
+  return segmentByRail(
+    orders,
+    gids.map((g) => ({ payment_method: methodByGid.get(g) ?? null })),
+  );
 }

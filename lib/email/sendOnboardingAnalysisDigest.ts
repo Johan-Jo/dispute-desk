@@ -62,6 +62,15 @@ export interface OnboardingDigestData {
   chargebackRate90dPct: number | null;
   /** 90-day CHARGEBACK count (not orders). Feeds the ECM rule. */
   chargebackCount90d: number;
+  /** Payment-rail context — see sendMonthlyChargebackDigest. This is the
+   *  FIRST email a merchant receives, so promising them a Visa/Mastercard
+   *  standing they are not measured by sets the wrong frame from day one. */
+  rail?: {
+    cardRatePct: number | null;
+    cardDisputes: number;
+    cardDisputeShare: number | null;
+    cardFramingApplies: boolean;
+  };
   /** Last 30d snapshot — used to populate the operational checkpoints
    *  and the at-a-glance table. */
   last30d: OnboardingSnapshotMetrics;
@@ -86,6 +95,10 @@ export function renderOnboardingAnalysisDigest(
   const cb = d.chargebackRate90dPct;
   const m = d.last30d;
 
+  // Undefined means the caller predates rail awareness — keep the old
+  // behaviour rather than downgrading a real card breach.
+  const cardFraming = d.rail?.cardFramingApplies !== false;
+
   // Operational checkpoints — top 3. Onboarding doesn't have a prior
   // window to compare fulfillment hours against, so we pass `null`
   // for the prior — the fulfillment-baseline rule self-suppresses.
@@ -93,6 +106,10 @@ export function renderOnboardingAnalysisDigest(
     {
       chargebackRate90d: cb,
       chargebackCount90d: d.chargebackCount90d,
+      cardChargebackRate90d: d.rail?.cardRatePct,
+      cardChargebackCount90d: d.rail?.cardDisputes,
+      cardDisputeShare: d.rail?.cardDisputeShare,
+      cardFramingApplies: d.rail?.cardFramingApplies,
       fraudDisputeRatePct: m.fraudDisputeRatePct,
       fulfilledHighRiskPct: m.fulfilledHighRiskPct,
       threeDsAuthRatePct: m.threeDsAuthRatePct,
@@ -130,7 +147,7 @@ export function renderOnboardingAnalysisDigest(
       : "#1D4ED8";
 
   const subject = `Your DisputeDesk analysis is ready · ${d.ordersAnalyzedTotal.toLocaleString()} orders analyzed`;
-  const previewText = `${d.ordersAnalyzedTotal.toLocaleString()} historical orders analyzed · here's where you stand on the chargeback rules at Visa and Mastercard`;
+  const previewText = `${d.ordersAnalyzedTotal.toLocaleString()} historical orders analyzed · ${cardFraming ? "here's where you stand on the chargeback rules at Visa and Mastercard" : "here's what your dispute activity looks like"}`;
 
   // ── Last-30d snapshot table (no deltas — this is first analysis) ─
   const snapshotTable = `<table style="width:100%;border-collapse:collapse">
@@ -149,7 +166,7 @@ export function renderOnboardingAnalysisDigest(
     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 8px">${merchantDisplay}</div>
     <h1 style="font-size:26px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.2;letter-spacing:-0.01em">Your DisputeDesk analysis is ready</h1>
     <p style="font-size:14px;color:#6B7280;margin:0 0 28px;line-height:1.6">
-      We finished analyzing your historical Shopify orders. Below is a snapshot of where your store sits today on the operational signals that drive chargebacks — and where you stand on the published rules at Visa and Mastercard.
+      We finished analyzing your historical Shopify orders. Below is a snapshot of where your store sits today on the operational signals that drive disputes${cardFraming ? " — and where you stand on the published rules at Visa and Mastercard" : ". Most of your disputes are settled by the payment provider that handled them rather than by a card network, so the Visa and Mastercard programmes do not measure them"}.
     </p>
 
     ${heroNumber({
@@ -185,7 +202,9 @@ export function renderOnboardingAnalysisDigest(
     innerHtml: inner,
     previewText,
     footerText:
-      "Pulled from your historical Shopify orders and disputes. Thresholds verified against published Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11. You received this because the historical analysis on your store just completed.",
+      cardFraming
+        ? "Pulled from your historical Shopify orders and disputes. Thresholds verified against published Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11. You received this because the historical analysis on your store just completed."
+        : "Pulled from your historical Shopify orders and disputes. Card-network thresholds are shown for reference only — most of your disputes are not settled on a card network. You received this because the historical analysis on your store just completed.",
   });
 
   // ── Plain text fallback ───────────────────────────────────────
@@ -219,7 +238,7 @@ The Chargeback Exposure page has the full picture — monthly trends, risk-to-di
 Open Chargeback Exposure: ${dashboardUrl}
 
 ---
-Pulled from your historical Shopify orders and disputes. Thresholds verified against Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11.
+Pulled from your historical Shopify orders and disputes. ${cardFraming ? "Thresholds verified against Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11." : "Card-network thresholds are shown for reference only - most of your disputes are not settled on a card network."}
 `;
 
   return { subject, html, text };
