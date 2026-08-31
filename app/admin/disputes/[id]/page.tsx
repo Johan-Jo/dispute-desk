@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { PostOutcomeInsights } from "@/components/admin/PostOutcomeInsights";
 import {
   ArrowLeft,
   RefreshCw,
@@ -180,6 +181,10 @@ export default function AdminDisputeDetailPage() {
           Resync
         </button>
       </div>
+
+      {/* Post-outcome analysis for a decided dispute (plan §14.3). Additive:
+          the merchant-facing Review and Forward surfaces are untouched. */}
+      <PostOutcomeInsights disputeId={id} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Timeline + Summary */}

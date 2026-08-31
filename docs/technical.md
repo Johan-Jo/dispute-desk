@@ -7657,3 +7657,13 @@ Promoting it needs one of two upstream changes first, so the sections gain suppo
 `VALIDATOR_VERSION` is deliberately **not** bumped. Pass/fail behaviour is unchanged, and a bump makes previously-failed packages eligible for a rebuild — spending model budget to reach the same answer. Bump it when the switch flips.
 
 `ValidationResult.warnings` is optional: it is purely additive, and a caller or test double that predates it is still a valid result. Warnings are recorded per build as a `defence_package_validation_warning` audit event, so the rule is measurable on live traffic before anyone decides to enforce it.
+
+### Step 13 — compact integration into shop and dispute detail
+
+`components/admin/PostOutcomeInsights.tsx`, fed by `GET /api/admin/outcome-analysis/summary`, appears on `/admin/shops/[id]` (plan §14.2) and internal dispute detail (plan §14.3). Both are additive — the merchant-facing Review and Forward surfaces are untouched.
+
+**It is not a second findings table.** Plan §14.2 says the shop page must not become another Outcome Analysis surface; two tables over the same data drift the moment one is edited. This shows counts and links out.
+
+**"Confirmed" counts reviewed findings only.** An unreviewed finding is a hypothesis (plan §17), and a card labelled *confirmed* that counted hypotheses would be precisely the failure this feature exists to prevent. When nothing is reviewed the panel says so, rather than showing zero without explanation.
+
+The dispute-level view repeats the forwarding caveat: if the platform stored the evidence but never reported forwarding it, the panel withholds conclusions about what the issuer saw rather than presenting the analysis as settled. "Nothing analysed" renders an explicit message, since it is a common and legitimate state — most decided disputes carry no package of ours — and an empty shell would read as a loading failure.
