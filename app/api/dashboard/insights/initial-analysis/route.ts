@@ -26,6 +26,7 @@ import {
 import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendPlan";
 import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
+import { segmentByRail } from "@/lib/insights/railSegmentation";
 
 export const runtime = "nodejs";
 
@@ -49,7 +50,36 @@ interface InsightsResponse {
   chargebackRate90d: number | null;
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
   chargebackHealthAvailable: boolean;
+  /** ORDER count for the 90d window. Despite the legacy name this is
+   *  the denominator, not the chargeback count — it backs the
+   *  "we've observed {count} orders" insufficient-volume copy. */
   chargebackOrders90d: number;
+  /** Actual 90d CHARGEBACK count. Mastercard's ECM rule needs a dispute
+   *  count, not an order count, and passing the wrong one told a
+   *  merchant they averaged 4,878 chargebacks/month against a true ~100
+   *  (49x). The value was computed but never serialized, so the client
+   *  could not send the right one even in principle. */
+  chargebackCount90d: number;
+
+  /** Payment-rail split of the 90d window. VDMP/ECM govern card
+   *  chargebacks only, and two of four prod shops have dispute books that
+   *  are almost entirely non-card (cay-collective 100% Klarna, Mein Maison
+   *  92.3% PayPal). The client passes these into evaluateCheckpoints so the
+   *  card-programme rules can say "not applicable" instead of grading a
+   *  merchant against a threshold that does not measure them. */
+  rail: {
+    cardOrders: number;
+    cardDisputes: number;
+    cardRatePct: number | null;
+    altOrders: number;
+    altDisputes: number;
+    altRatePct: number | null;
+    unknownOrders: number;
+    unknownDisputes: number;
+    cardDisputeShare: number | null;
+    cardFramingApplies: boolean;
+    unknownShare: number;
+  };
 
   // ── 30d current + prior 30d (MoM comparison) ─────────────────────
   // Each "Window" carries the aggregate metrics for its date range.
@@ -146,9 +176,22 @@ interface PeriodWindow {
   /** Signed-for rate. Numerator: orders with signed_by_name set.
    *  Denominator: orders with carrier-confirmed delivery (so we don't
    *  dilute by orders still in transit). Strongest dispute-defense
-   *  signal we capture — bank rebuttals cite the signature name. */
+   *  signal we capture — bank rebuttals cite the signature name.
+   *
+   *  NULL — not 0 — when the shop ships exclusively via carriers we
+   *  have no adapter for. `signed_by_name` is written only by the
+   *  carrier-lookup layer, so on such a shop the rate is UNOBSERVABLE,
+   *  and rendering a hard "0%" asserted as fact something we never had
+   *  the ability to measure (2026-08-29: a store shipping YunExpress /
+   *  SUNYOU / CNE showed "Signed for at delivery 0%" across 142,093
+   *  tracking rows on which zero lookups had ever run). */
   signedForRatePct: number | null;
   signedForOrders: number;
+  /** True when at least one carrier lookup has actually resolved for
+   *  this shop — i.e. the signed-for rate is measurable at all. The UI
+   *  uses this to distinguish "genuinely nobody signed" from "we
+   *  cannot see signatures for this shop's carriers". */
+  signedForObservable: boolean;
 }
 
 interface RiskConversionBucket {
@@ -212,6 +255,7 @@ function compute3dsAndFulfillment(
   rows: OrderForKpi[],
   fromIso: string,
   toExclusiveIso: string,
+  signatureObservable: boolean,
 ): {
   threeDsAuthRatePct: number | null;
   threeDsAuthOrders: number;
@@ -223,6 +267,7 @@ function compute3dsAndFulfillment(
   fulfilledForDeliveryCount: number;
   signedForRatePct: number | null;
   signedForOrders: number;
+  signedForObservable: boolean;
 } {
   let authEligible = 0;
   let authPositive = 0;
@@ -278,8 +323,14 @@ function compute3dsAndFulfillment(
     confirmedDeliveryRatePct: rate(confirmedDelivered, fulfilledForDelivery),
     confirmedDeliveryOrders: confirmedDelivered,
     fulfilledForDeliveryCount: fulfilledForDelivery,
-    signedForRatePct: rate(signedForCount, confirmedDelivered),
+    // A 0% signature rate on a shop whose carriers we cannot look up is
+    // an artifact of our own coverage, not a fact about the merchant's
+    // deliveries — report it as unknown so the UI can say so.
+    signedForRatePct: signatureObservable
+      ? rate(signedForCount, confirmedDelivered)
+      : null,
     signedForOrders: signedForCount,
+    signedForObservable: signatureObservable,
   };
 }
 
@@ -293,6 +344,7 @@ function aggregateWindow(
   orderRows: OrderForKpi[],
   fromIso: string,
   toExclusiveIso: string,
+  signatureObservable: boolean,
 ): PeriodWindow {
   let ordersTotal = 0;
   let ordersLow = 0;
@@ -327,7 +379,12 @@ function aggregateWindow(
   }
 
   const acceptanceDenom = ordersTotal - ordersPending;
-  const tdsAndFul = compute3dsAndFulfillment(orderRows, fromIso, toExclusiveIso);
+  const tdsAndFul = compute3dsAndFulfillment(
+    orderRows,
+    fromIso,
+    toExclusiveIso,
+    signatureObservable,
+  );
   return {
     ordersTotal,
     acceptanceRatePct: rate(ordersLow + ordersMedium + ordersNone, acceptanceDenom),
@@ -469,15 +526,77 @@ export async function GET(req: NextRequest) {
   }
   const orderRowsForKpi = await fetchOrderRowsFor90d();
 
+  // ── Is a signature rate measurable for this shop at all? ───────
+  // `signed_by_name` is written ONLY by the carrier-lookup layer
+  // (lib/carriers/lookupCache.ts). A shop whose carriers have no
+  // registered adapter never gets a lookup, so its signature rate is
+  // structurally unobservable and must render as "—", not "0%".
+  // One cheap existence check: has ANY lookup ever resolved here?
+  const { count: resolvedLookupCount } = await sb
+    .from("shopify_fulfillment_trackings")
+    .select("shopify_fulfillment_id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .not("last_carrier_lookup_at", "is", null)
+    .limit(1);
+  const signatureObservable = (resolvedLookupCount ?? 0) > 0;
+
   const fraud = (fraudRows ?? []) as FraudRollupRow[];
   const daily = (dailyRows ?? []) as DailyRow[];
 
   // ── 90d aggregate (kept for the dashboard strip) ───────────────
-  const win90 = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart90d, todayIso);
+  const win90 = aggregateWindow(
+    fraud, daily, orderRowsForKpi, windowStart90d, todayIso, signatureObservable,
+  );
 
   // ── 30d current vs prior 30d ───────────────────────────────────
-  const current30d = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart30d, todayIso);
-  const prior30d = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d);
+  const current30d = aggregateWindow(
+    fraud, daily, orderRowsForKpi, windowStart30d, todayIso, signatureObservable,
+  );
+  const prior30d = aggregateWindow(
+    fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d, signatureObservable,
+  );
+
+  // ── Payment-rail segmentation (90d) ────────────────────────────
+  // VDMP and ECM govern card chargebacks only. Two of our four prod shops
+  // have dispute books that are almost entirely NOT card — cay-collective is
+  // 100% Klarna, Mein Maison 92.3% PayPal — and both were being shown Visa
+  // and Mastercard verdicts. This resolves each disputed order's rail so the
+  // checkpoint rules can tell whether those programmes apply at all.
+  //
+  // Order rows are already in memory. The dispute side needs a join, done in
+  // chunks because `.in()` on a long id list is what the 1000-row cap and
+  // URL-length limits punish; the same chunked pattern as lib/admin/shopRisk.
+  const railSeg = await (async () => {
+    const { data: disputeRows } = await sb
+      .from("disputes")
+      .select("order_gid")
+      .eq("shop_id", shopId)
+      .gte("created_at", windowStart90dIso);
+    const gids = (disputeRows ?? [])
+      .map((d) => (d as { order_gid: string | null }).order_gid)
+      .filter((g): g is string => !!g);
+
+    const methodByGid = new Map<string, string | null>();
+    for (let i = 0; i < gids.length; i += 200) {
+      const { data } = await sb
+        .from("shopify_orders")
+        .select("shopify_order_id, payment_method")
+        .eq("shop_id", shopId)
+        .in("shopify_order_id", gids.slice(i, i + 200));
+      for (const r of data ?? []) {
+        const row = r as { shopify_order_id: string; payment_method: string | null };
+        methodByGid.set(row.shopify_order_id, row.payment_method);
+      }
+    }
+
+    // A dispute whose order we never ingested resolves to `null`, which
+    // classifies as `unknown` — not as card. That distinction is the whole
+    // point: an unjoined dispute is a coverage gap, not a card chargeback.
+    return segmentByRail(
+      orderRowsForKpi.map((o) => ({ payment_method: o.payment_method })),
+      gids.map((g) => ({ payment_method: methodByGid.get(g) ?? null })),
+    );
+  })();
 
   // ── 8-week weekly sparkline (chargeback rate) ──────────────────
   const chargebackRateSparklineWeekly = weeklySparkline(daily);
@@ -549,6 +668,20 @@ export async function GET(req: NextRequest) {
     chargebackHealth: classifyChargebackHealth(win90.chargebackRatePct),
     chargebackHealthAvailable: win90.chargebackOrders >= CHARGEBACK_VERDICT_MIN_ORDERS,
     chargebackOrders90d: win90.chargebackOrders,
+    chargebackCount90d: win90.chargebackCount,
+    rail: {
+      cardOrders: railSeg.card.orders,
+      cardDisputes: railSeg.card.disputes,
+      cardRatePct: railSeg.card.ratePct,
+      altOrders: railSeg.alt.orders,
+      altDisputes: railSeg.alt.disputes,
+      altRatePct: railSeg.alt.ratePct,
+      unknownOrders: railSeg.unknown.orders,
+      unknownDisputes: railSeg.unknown.disputes,
+      cardDisputeShare: railSeg.cardDisputeShare,
+      cardFramingApplies: railSeg.cardFramingApplies,
+      unknownShare: railSeg.unknownShare,
+    },
 
     windowStart30d,
     windowStart30dPrior,

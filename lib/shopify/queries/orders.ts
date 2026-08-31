@@ -168,6 +168,17 @@ export const ORDER_DETAIL_QUERY = `
             ... on LocalPaymentMethodsPaymentDetails {
               paymentMethodName
             }
+            # PayPal-through-Shopify-Payments and Shop Pay Installments
+            # are their own union members. Without these, a PayPal
+            # dispute's payment context fell through to the gateway
+            # fallback ("Shopify Payments") instead of resolving to
+            # PayPal. Parity with TYPED_PAYMENT_DETAILS_MEMBERS.
+            ... on PaypalWalletPaymentDetails {
+              paymentMethodName
+            }
+            ... on ShopPayInstallmentsPaymentDetails {
+              paymentMethodName
+            }
           }
         }
         customer {
@@ -318,6 +329,24 @@ export interface LocalPaymentMethodsPaymentDetails {
   paymentMethodName: string | null;
 }
 
+/**
+ * PayPal settled through Shopify Payments. Its own union member — NOT
+ * CardPaymentDetails (no card signals exist) and NOT
+ * LocalPaymentMethodsPaymentDetails. `paymentGatewayNames` reads
+ * "shopify_payments" for these, so this typename is the only reliable
+ * way to tell a PayPal order from a card one.
+ */
+export interface PaypalWalletPaymentDetails {
+  __typename: "PaypalWalletPaymentDetails";
+  paymentMethodName: string | null;
+}
+
+/** Shop Pay Installments (Shopify's own BNPL). Own union member. */
+export interface ShopPayInstallmentsPaymentDetails {
+  __typename: "ShopPayInstallmentsPaymentDetails";
+  paymentMethodName: string | null;
+}
+
 export interface OrderTransaction {
   id: string;
   kind: string;
@@ -336,6 +365,8 @@ export interface OrderTransaction {
   paymentDetails:
     | CardPaymentDetails
     | LocalPaymentMethodsPaymentDetails
+    | PaypalWalletPaymentDetails
+    | ShopPayInstallmentsPaymentDetails
     | { __typename: string }
     | null;
 }

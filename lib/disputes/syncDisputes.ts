@@ -22,7 +22,8 @@ import {
   type DisputeListNode,
   type DisputeListResponse,
 } from "@/lib/shopify/queries/disputes";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import { loadSession } from "@/lib/shopify/sessionStorage";
+import { ensureFreshSession } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
 import { sendUnknownReasonAlert } from "@/lib/email/sendUnknownReasonAlert";
 import { recordReconcileOutcome } from "./reconcileSchedule";
@@ -115,17 +116,6 @@ function redactPII(node: DisputeListNode): Record<string, unknown> {
   return snapshot;
 }
 
-function decryptAccessToken(encryptedToken: string): string {
-  try {
-    const payload = deserializeEncrypted(encryptedToken);
-    return decrypt(payload);
-  } catch {
-    // If the token isn't in encrypted format, return as-is
-    // (development / migration scenarios)
-    return encryptedToken;
-  }
-}
-
 /**
  * Sync all disputes for a shop from Shopify.
  */
@@ -153,18 +143,18 @@ export async function syncDisputes(
   // flooding the merchant with one alert per historical dispute.
   const isBackfillImport = shop.last_reconciled_at == null;
 
-  const { data: session } = await sb
-    .from("shop_sessions")
-    .select("access_token_encrypted, key_version, shop_domain")
-    .eq("shop_id", shopId)
-    .eq("session_type", "offline")
-    .is("user_id", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!session) throw new Error(`No offline session for shop ${shopId}`);
-
-  const accessToken = decryptAccessToken(session.access_token_encrypted);
+  // Load through loadSession + ensureFreshSession rather than reading
+  // shop_sessions directly. Expiring offline tokens live ONE HOUR; this
+  // function used to grab whatever ciphertext was stored and use it
+  // regardless of `expires_at`. On a shop with no other Shopify traffic
+  // to trigger a refresh, that meant every sync after the first hour
+  // authenticated with a dead token — ~50% of runs failing for 20 hours
+  // on 6a8848-dd (2026-08-30) while still reporting "succeeded", because
+  // the GraphQL error lands in `result.errors` instead of throwing.
+  const stored = await loadSession(shopId, "offline");
+  if (!stored) throw new Error(`No offline session for shop ${shopId}`);
+  const session = await ensureFreshSession(stored);
+  const accessToken = session.accessToken;
 
   const result: SyncResult = { synced: 0, created: 0, updated: 0, errors: [] };
   let hasNextPage = true;

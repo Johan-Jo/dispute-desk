@@ -7,6 +7,8 @@ import {
   extractShopId,
   extractShopIdFromBody,
 } from "@/lib/middleware/extractShopId";
+import { logAuditEvent } from "@/lib/audit/logEvent";
+import { verifyImpersonation } from "@/lib/admin/impersonation";
 
 /**
  * GET /api/automation/settings?shop_id=...
@@ -69,7 +71,46 @@ export async function PATCH(req: NextRequest) {
   );
 
   try {
+    // Read BEFORE writing so the audit event records the actual transition,
+    // not just the new value. `shop_settings.updated_at` covers the whole
+    // row, so without a before/after diff there is no way to tell which
+    // field a given change touched.
+    const before = await getShopSettings(shop_id);
     const settings = await updateShopSettings(shop_id, filtered);
+
+    // Who did it. An admin using "View as merchant" and the merchant
+    // themselves both arrive here as an ordinary embedded request; the
+    // impersonation cookie is the only thing that distinguishes them, and it
+    // carries `adminUserId` explicitly for this purpose.
+    const imp = await verifyImpersonation(req);
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    for (const key of Object.keys(filtered)) {
+      const from = (before as unknown as Record<string, unknown>)[key];
+      const to = (settings as unknown as Record<string, unknown>)[key];
+      if (from !== to) changes[key] = { from, to };
+    }
+
+    // Only log real transitions. The settings page PATCHes all three fields
+    // on every save, so logging unconditionally would bury an
+    // auto-build-off event under no-op writes.
+    if (Object.keys(changes).length > 0) {
+      try {
+        await logAuditEvent({
+          shopId: shop_id,
+          actorType: imp ? "system" : "merchant",
+          actorId: imp?.adminUserId ?? null,
+          eventType: "automation_settings_changed",
+          eventPayload: { changes, impersonated: !!imp },
+        });
+      } catch (auditErr) {
+        // Never fail the save because the audit write failed —
+        // logAuditEvent throws, and a merchant losing a settings change to
+        // an audit outage is worse than a missing log line.
+        console.error("[automation-settings] audit write failed", auditErr);
+      }
+    }
+
     return NextResponse.json(settings);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -155,7 +155,18 @@ export type EventType =
   | "review_approved"
   | "review_conceded"
   | "review_cleared"
-  | "review_resurfaced_by_reminder";
+  | "review_resurfaced_by_reminder"
+  // Automation settings changed — PATCH /api/automation/settings.
+  // Payload `{ changes: { field: { from, to } }, impersonated }`.
+  //
+  // Added 2026-08-31 because these writes were completely untracked.
+  // `shop_settings` carries no actor column and nothing logged the change, so
+  // when a merchant's `auto_build_enabled` was found false — silently halting
+  // pack generation, with two disputes a day from their deadline and no pack
+  // built — there was no way to tell who turned it off, when, or whether it
+  // was the merchant or someone on our side using impersonation. `updated_at`
+  // covers the whole row, so it could not even confirm WHICH field changed.
+  | "automation_settings_changed";
 
 export interface AuditLogInput {
   shopId: string;

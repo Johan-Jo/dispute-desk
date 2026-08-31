@@ -5012,6 +5012,7 @@
     "kpiFraudDisputeRate": "Fraud dispute rate",
     "tooltipFraudDisputeRate": "Share of orders that became a Shopify Payments fraud dispute (reason = FRAUDULENT) in this window.",
     "kpiHighRiskFulfilled": "High-risk fulfilled",
+    "kpiHighRiskFulfilledNone": "no high-risk orders",
     "tooltipHighRiskFulfilled": "Of orders classified HIGH risk, the share that still reached a fulfilled state. A high number can signal operational exposure.",
     "kpiProtectCoverage": "Shopify Protect coverage",
     "tooltipProtectCoverage": "Of order value Shopify Protect was eligible to underwrite, the share marked PROTECTED.",
@@ -5099,6 +5100,7 @@
     "kpiConfirmedDeliveryContext": "{num} of {den} fulfilled orders",
     "kpiSignedFor": "Signed for at delivery",
     "kpiSignedForContext": "{num} of {den} delivered",
+    "kpiSignedForUnavailable": "Not available for your carriers",
     "gauge90dLabel": "90-day chargeback rate",
     "gaugeBandGood": "Good < 0.4%",
     "gaugeBandAtRisk": "At risk 0.4–0.6%",
@@ -5164,7 +5166,11 @@
       "info": "Info",
       "consider": "Consider",
       "breach": "Breach"
-    }
+    },
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Visa's programme does not apply to your disputes.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Visa's VAMP counts card chargebacks, so it does not measure the rest of your dispute volume — there is no VAMP verdict to give you here.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Mastercard's programme does not apply to your disputes.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Mastercard's ECM counts card chargebacks, so your other disputes are settled under the rules of the provider that handled them instead."
   },
   "consent": {
     "ariaLabel": "Cookie and privacy choices",
@@ -5369,7 +5375,8 @@
         "fptWins": "FPT wins",
         "fptWinsHelper": "Mastercard 4837 / 4863 disputes won via First-Party Trust"
       },
-      "estimateNotice": "Ratios are calculated estimates from your Shopify data. Your acquirer holds the authoritative numbers used for compliance enforcement."
+      "estimateNotice": "Ratios are calculated estimates from your Shopify data. Your acquirer holds the authoritative numbers used for compliance enforcement.",
+      "notApplicable": "No card volume this period — this programme does not measure your disputes."
     }
   },
   "playbook": {

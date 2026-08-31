@@ -4877,6 +4877,7 @@
     "kpiFraudDisputeRate": "Frekvens bedrägeritvister",
     "tooltipFraudDisputeRate": "Andel ordrar som blev en Shopify Payments-bedrägeritvist (orsak = FRAUDULENT) under denna period.",
     "kpiHighRiskFulfilled": "Högrisk uppfyllda",
+    "kpiHighRiskFulfilledNone": "inga högriskordrar",
     "tooltipHighRiskFulfilled": "Av ordrar klassade som HÖG risk, andelen som ändå nådde uppfyllt-status. En hög siffra kan signalera operativ exponering.",
     "kpiProtectCoverage": "Shopify Protect-täckning",
     "tooltipProtectCoverage": "Av ordervärdet som Shopify Protect var berättigad att täcka, andelen som markerades som PROTECTED.",
@@ -4964,6 +4965,7 @@
     "kpiConfirmedDeliveryContext": "{num} av {den} uppfyllda ordrar",
     "kpiSignedFor": "Signerad vid leverans",
     "kpiSignedForContext": "{num} av {den} levererade",
+    "kpiSignedForUnavailable": "Inte tillgängligt för dina transportörer",
     "gauge90dLabel": "90-dagars chargeback-frekvens",
     "gaugeBandGood": "Bra < 0,4 %",
     "gaugeBandAtRisk": "Risk 0,4–0,6 %",
@@ -5029,7 +5031,11 @@
       "info": "Info",
       "consider": "Att beakta",
       "breach": "Tröskel överskriden"
-    }
+    },
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Visas program gäller inte dina ärenden.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Visas VAMP räknar kort-chargebacks och mäter därför inte din övriga ärendevolym — det finns inget VAMP-utlåtande att ge här.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Mastercards program gäller inte dina ärenden.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Mastercards ECM räknar kort-chargebacks; dina övriga ärenden avgörs enligt reglerna hos den leverantör som hanterade dem."
   },
   "consent": {
     "ariaLabel": "Inställningar för cookies och integritet",
@@ -5370,7 +5376,8 @@
         "fptWins": "FPT-vinster",
         "fptWinsHelper": "Mastercard 4837 / 4863-tvister vunna via First-Party Trust"
       },
-      "estimateNotice": "Nyckeltal är beräknade uppskattningar från dina Shopify-data. Din inlösare har de auktoritativa siffrorna som används för efterlevnadskontroll."
+      "estimateNotice": "Nyckeltal är beräknade uppskattningar från dina Shopify-data. Din inlösare har de auktoritativa siffrorna som används för efterlevnadskontroll.",
+      "notApplicable": "Ingen kortvolym denna period — detta program mäter inte dina ärenden."
     }
   },
   "playbook": {

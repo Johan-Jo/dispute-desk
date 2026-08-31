@@ -4875,6 +4875,7 @@
     "kpiFraudDisputeRate": "Taxa de disputas por fraude",
     "tooltipFraudDisputeRate": "Porcentagem de pedidos que se tornaram uma disputa por fraude do Shopify Payments (motivo = FRAUDULENT) neste período.",
     "kpiHighRiskFulfilled": "Alto risco atendidos",
+    "kpiHighRiskFulfilledNone": "sem pedidos de alto risco",
     "tooltipHighRiskFulfilled": "Dos pedidos classificados como ALTO risco, a porcentagem que ainda assim foi atendida. Um número alto pode indicar exposição operacional.",
     "kpiProtectCoverage": "Cobertura do Shopify Protect",
     "tooltipProtectCoverage": "Do valor dos pedidos elegíveis para a cobertura do Shopify Protect, a parcela marcada como PROTECTED.",
@@ -4962,6 +4963,7 @@
     "kpiConfirmedDeliveryContext": "{num} de {den} pedidos atendidos",
     "kpiSignedFor": "Assinada na entrega",
     "kpiSignedForContext": "{num} de {den} entregues",
+    "kpiSignedForUnavailable": "Indisponível para as suas transportadoras",
     "gauge90dLabel": "Taxa de chargebacks em 90 dias",
     "gaugeBandGood": "Bom < 0,4 %",
     "gaugeBandAtRisk": "Risco 0,4–0,6 %",
@@ -5029,7 +5031,11 @@
       "breach": "Limite ultrapassado"
     },
     "weeklyChargebackRateAria": "Taxa semanal de estornos, últimas 8 semanas",
-    "noData": "Sem dados"
+    "noData": "Sem dados",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "O programa da Visa não se aplica às suas disputas.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O VAMP da Visa conta chargebacks de cartão, portanto não mede o resto do seu volume — não há veredicto VAMP a dar aqui.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "O programa da Mastercard não se aplica às suas disputas.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O ECM da Mastercard conta chargebacks de cartão; as restantes seguem as regras do fornecedor que as tratou."
   },
   "consent": {
     "ariaLabel": "Preferências de cookies e privacidade",
@@ -5370,7 +5376,8 @@
         "fptWins": "Vitórias FPT",
         "fptWinsHelper": "Disputas Mastercard 4837 / 4863 vencidas via First-Party Trust"
       },
-      "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade."
+      "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade.",
+      "notApplicable": "Sem volume de cartão neste período — este programa não mede as suas disputas."
     }
   },
   "playbook": {

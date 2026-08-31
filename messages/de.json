@@ -4875,6 +4875,7 @@
     "kpiFraudDisputeRate": "Betrugs-Chargeback-Rate",
     "tooltipFraudDisputeRate": "Anteil der Bestellungen, die in diesem Zeitraum zu einem Shopify-Payments-Betrugs-Chargeback (Grund = FRAUDULENT) wurden.",
     "kpiHighRiskFulfilled": "Hochrisiko erfüllt",
+    "kpiHighRiskFulfilledNone": "keine Hochrisiko-Bestellungen",
     "tooltipHighRiskFulfilled": "Von den als HOCH-Risiko eingestuften Bestellungen der Anteil, der trotzdem den Status erfüllt erreicht hat. Ein hoher Wert kann auf operative Exposition hindeuten.",
     "kpiProtectCoverage": "Shopify Protect-Abdeckung",
     "tooltipProtectCoverage": "Vom Bestellwert, für den Shopify Protect zur Übernahme berechtigt war, der Anteil, der als PROTECTED markiert wurde.",
@@ -4962,6 +4963,7 @@
     "kpiConfirmedDeliveryContext": "{num} von {den} erfüllten Bestellungen",
     "kpiSignedFor": "Bei Zustellung unterzeichnet",
     "kpiSignedForContext": "{num} von {den} zugestellt",
+    "kpiSignedForUnavailable": "Für Ihre Versanddienstleister nicht verfügbar",
     "gauge90dLabel": "90-Tage-Chargeback-Quote",
     "gaugeBandGood": "Gut < 0,4 %",
     "gaugeBandAtRisk": "Risiko 0,4–0,6 %",
@@ -5029,7 +5031,11 @@
       "breach": "Schwellenwert überschritten"
     },
     "weeklyChargebackRateAria": "Wöchentliche Rückbuchungsrate, letzte 8 Wochen",
-    "noData": "Keine Daten"
+    "noData": "Keine Daten",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Das Visa-Programm gilt nicht für Ihre Fälle.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Nur {cardShare} Ihrer Fälle laufen über ein Kartennetzwerk. Visas VAMP zählt Karten-Chargebacks und misst daher Ihr übriges Fallvolumen nicht — es gibt hier kein VAMP-Urteil.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Das Mastercard-Programm gilt nicht für Ihre Fälle.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Nur {cardShare} Ihrer Fälle laufen über ein Kartennetzwerk. Mastercards ECM zählt Karten-Chargebacks; Ihre übrigen Fälle werden nach den Regeln des jeweiligen Anbieters entschieden."
   },
   "consent": {
     "ariaLabel": "Cookie- und Datenschutzeinstellungen",
@@ -5370,7 +5376,8 @@
         "fptWins": "FPT-Erfolge",
         "fptWinsHelper": "Mastercard-4837/4863-Streitfälle via First-Party Trust gewonnen"
       },
-      "estimateNotice": "Kennzahlen sind berechnete Schätzungen aus Ihren Shopify-Daten. Ihr Acquirer hält die maßgeblichen Zahlen für die Compliance-Durchsetzung."
+      "estimateNotice": "Kennzahlen sind berechnete Schätzungen aus Ihren Shopify-Daten. Ihr Acquirer hält die maßgeblichen Zahlen für die Compliance-Durchsetzung.",
+      "notApplicable": "Kein Kartenvolumen in diesem Zeitraum — dieses Programm misst Ihre Fälle nicht."
     }
   },
   "playbook": {

@@ -8,6 +8,7 @@
     { "path": "/api/cron/defence-package-deadline-rebuild", "schedule": "0 6 * * *" },
     { "path": "/api/cron/defence-package-deadline-submit", "schedule": "0 8 * * *" },
     { "path": "/api/cron/check-shopify-reasons", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/session-health", "schedule": "20 * * * *" },
     { "path": "/api/cron/sync-disputes", "schedule": "0 * * * *" },
     { "path": "/api/cron/reconcile-billing-cycles", "schedule": "0 * * * *" },
     { "path": "/api/cron/snapshot-daily-metrics", "schedule": "30 0 * * *" },
