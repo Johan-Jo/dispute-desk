@@ -1,12 +1,18 @@
 /**
  * Shadow-run the snapshot builder over decided disputes (plan §20 Phase 1).
  *
- * READ-ONLY. Builds a snapshot per dispute, reports the analysis-level split
- * and reconstruction gaps, and writes nothing. Use it to check the builder
- * against reality before any backfill writes a row.
+ * Read-only BY DEFAULT: builds a snapshot per dispute and reports the
+ * analysis-level split, reconstruction gaps and findings, writing nothing. Use
+ * it that way to check the builder against reality.
  *
- *   npx tsx scripts/post-outcome-shadow.mjs --env-file .env.production.local
- *   npx tsx scripts/post-outcome-shadow.mjs --env-file .env.production.local --json out.json
+ * `--persist` turns it into the backfill — it stores each analysis so the admin
+ * page and the review queue have something to read. That flag exists because
+ * the page shipped to production over an empty table: the sweep had only ever
+ * been run in report mode, and a report is not a record.
+ *
+ *   npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local
+ *   npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local --json out.json
+ *   npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local --persist --limit 3
  */
 
 import { readFileSync } from "node:fs";
@@ -48,6 +54,34 @@ const sb = createClient(url, key, { auth: { persistSession: false } });
 const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts");
 const { composeAnalysis } = await import("../lib/postOutcome/composeAnalysis.ts");
 
+/**
+ * `--persist` writes each composed analysis to `post_outcome_analyses`.
+ *
+ * Without it this script is a pure read, which is how every run before
+ * 2026-08-31 was done — and why the admin page shipped to production over an
+ * empty table. Reading and reporting is not the same as storing, and a review
+ * queue cannot review what was never written.
+ *
+ * `persistAnalysis` builds its own client through `getServiceClient()`, which
+ * reads `process.env` rather than the parsed env file, so the credentials for
+ * the environment named by `--env-file` are promoted before it is imported.
+ * The insert is keyed on (dispute_id, analyzer_version, source_snapshot_sha256)
+ * and returns the existing row on conflict, so re-running is safe.
+ */
+const persist = process.argv.includes("--persist");
+let persistAnalysis = null;
+if (persist) {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = url;
+  process.env.SUPABASE_URL = url;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = key;
+  ({ persistAnalysis } = await import("../lib/postOutcome/persistAnalysis.ts"));
+  console.log(`[shadow] --persist ON — writing analyses to ${url}`);
+}
+let persistedNew = 0;
+let persistedExisting = 0;
+let persistFailed = 0;
+let persistedFindings = 0;
+
 const DISPUTE_COLUMNS =
   "id, shop_id, order_name, phase, reason, network_reason_code, amount, currency_code, initiated_at, closed_at, final_outcome, outcome_source, submission_state, submitted_at, evidence_saved_to_shopify_at, due_at, dispute_evidence_gid, order_gid, raw_snapshot";
 const PACKAGE_COLUMNS =
@@ -73,6 +107,12 @@ const { data: disputes, error: dErr } = await sb
   .in("id", [...byDispute.keys()]);
 if (dErr) throw dErr;
 
+
+// `--limit N` runs the first N only. Once --persist exists this script writes,
+// and a write wants a canary: three cases read back beat fifty found wrong
+// afterwards.
+const limitArg = arg("--limit");
+if (limitArg) disputes.length = Math.min(disputes.length, Number(limitArg));
 
 console.log(`[shadow] ${disputes.length} decided disputes with a submitted package\n`);
 
@@ -164,6 +204,21 @@ for (const dispute of disputes) {
   for (const o of analysis.observations) {
     observationCounts[o.key] = (observationCounts[o.key] ?? 0) + 1;
   }
+  if (persist) {
+    try {
+      const r = await persistAnalysis(analysis, result.snapshot);
+      if (r.alreadyExisted) persistedExisting++;
+      else {
+        persistedNew++;
+        persistedFindings += r.findingsWritten;
+      }
+    } catch (e) {
+      // Never abort the sweep: one unwritable case must not cost the other 49.
+      persistFailed++;
+      console.log(`  ✗ persist ${dispute.id}: ${e?.message ?? e}`);
+    }
+  }
+
   primaryCounts[analysis.primaryCategory] = (primaryCounts[analysis.primaryCategory] ?? 0) + 1;
   statusCounts[analysis.analysisStatus] = (statusCounts[analysis.analysisStatus] ?? 0) + 1;
   reasonStatusCounts[analysis.reasonSpecificStatus] =
@@ -267,6 +322,12 @@ console.log(`  reason module ran on:       ${reasonRan}`);
 console.log(`  findings REJECTED by gate:  ${invalidFindings}`);
 console.log(`  actionable analyses:        ${actionableCount}`);
 console.log(`  contract errors:            ${contractErrorCount}`);
+if (persist) {
+  console.log(`  persisted (new):            ${persistedNew}`);
+  console.log(`  persisted (already there):  ${persistedExisting}`);
+  console.log(`  findings written:           ${persistedFindings}`);
+  console.log(`  persist failures:           ${persistFailed}`);
+}
 console.log(`  disputes w/ late evidence:  ${withLate}`);
 console.log(`  unique snapshot hashes:     ${uniqueHashes} / ${rows.length}`);
 console.log(
