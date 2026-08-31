@@ -46,12 +46,7 @@ console.log(`[shadow] ${envFile} → ${url}`);
 const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const { assembleSnapshot } = await import("../lib/postOutcome/buildSnapshot.ts");
-const { runLifecycleChecks } = await import("../lib/postOutcome/checks/lifecycle.ts");
-const { runEvidenceComparison } = await import("../lib/postOutcome/checks/evidenceComparison.ts");
-const { runAssertionIntegrity } = await import("../lib/postOutcome/checks/assertionIntegrity.ts");
-const { runFraudulentModule } = await import("../lib/postOutcome/reasons/fraudulent.ts");
-const { hasReasonModule } = await import("../lib/postOutcome/analyzerVersion.ts");
-const { validateFinding, selectPrimaryFinding } = await import("../lib/postOutcome/findings.ts");
+const { composeAnalysis } = await import("../lib/postOutcome/composeAnalysis.ts");
 
 const DISPUTE_COLUMNS =
   "id, shop_id, phase, reason, network_reason_code, amount, currency_code, initiated_at, closed_at, final_outcome, outcome_source, submission_state, submitted_at, evidence_saved_to_shopify_at, due_at, dispute_evidence_gid, order_gid, raw_snapshot";
@@ -89,6 +84,10 @@ const classificationCounts = {};
 const assertionCounts = {};
 let invalidFindings = 0;
 let reasonRan = 0;
+let actionableCount = 0;
+const primaryCounts = {};
+const statusCounts = {};
+const reasonStatusCounts = {};
 const rows = [];
 let contractErrorCount = 0;
 
@@ -141,54 +140,34 @@ for (const dispute of disputes) {
     console.log(`  ✗ ${dispute.id}: ${result.contractErrors.join("; ")}`);
   }
 
-  const lifecycleChecks = runLifecycleChecks(result.snapshot, result.level);
-  const evidenceChecks = runEvidenceComparison(result.snapshot);
-  for (const [k, v] of Object.entries(evidenceChecks.counts)) {
+  const analysis = composeAnalysis(result);
+  for (const [k, v] of Object.entries(analysis.summary.evidenceCounts)) {
     classificationCounts[k] = (classificationCounts[k] ?? 0) + (v as number);
   }
-  const assertionChecks = runAssertionIntegrity(result.snapshot);
-  for (const a of assertionChecks.assertions) {
-    assertionCounts[a.classification] = (assertionCounts[a.classification] ?? 0) + 1;
+  for (const [k, v] of Object.entries(analysis.summary.assertionCounts)) {
+    assertionCounts[k] = (assertionCounts[k] ?? 0) + (v as number);
   }
-  const runReason =
-    hasReasonModule(dispute.reason) && result.level.level === "FULL_POST_OUTCOME";
-  const reasonChecks = runReason
-    ? runFraudulentModule(result.snapshot)
-    : { findings: [], observations: [], elements: [] };
-  if (runReason) reasonRan++;
-  const checks = {
-    findings: [
-      ...lifecycleChecks.findings,
-      ...evidenceChecks.findings,
-      ...assertionChecks.findings,
-      ...reasonChecks.findings,
-    ],
-    observations: [
-      ...lifecycleChecks.observations,
-      ...assertionChecks.observations,
-      ...reasonChecks.observations,
-    ],
-  };
-  for (const f of checks.findings) {
+  if (analysis.summary.stagesRun.some((x) => x.startsWith("reason:"))) reasonRan++;
+  for (const f of analysis.findings) {
     findingCounts[f.category] = (findingCounts[f.category] ?? 0) + 1;
     findingTitles[f.title] = (findingTitles[f.title] ?? 0) + 1;
-    const errs = validateFinding(f, {
-      outcome: result.snapshot.outcome.finalOutcome,
-      analysisLevel: result.level.level,
-    });
-    if (errs.length) {
-      invalidFindings += 1;
-      console.log(`  ! invalid finding on ${dispute.id}: ${errs.join("; ")}`);
-    }
   }
-  for (const o of checks.observations) {
+  for (const r of analysis.rejectedFindings) {
+    invalidFindings += 1;
+    console.log(`  ! rejected on ${dispute.id}: ${r.errors.join("; ")}`);
+  }
+  for (const o of analysis.observations) {
     observationCounts[o.key] = (observationCounts[o.key] ?? 0) + 1;
   }
-  const primary = selectPrimaryFinding(checks.findings);
+  primaryCounts[analysis.primaryCategory] = (primaryCounts[analysis.primaryCategory] ?? 0) + 1;
+  statusCounts[analysis.analysisStatus] = (statusCounts[analysis.analysisStatus] ?? 0) + 1;
+  reasonStatusCounts[analysis.reasonSpecificStatus] =
+    (reasonStatusCounts[analysis.reasonSpecificStatus] ?? 0) + 1;
+  if (analysis.actionable) actionableCount++;
 
   rows.push({
-    primaryCategory: primary?.category ?? null,
-    findings: checks.findings.length,
+    primaryCategory: analysis.primaryCategory,
+    findings: analysis.findings.length,
     disputeId: dispute.id,
     reason: dispute.reason,
     outcome: dispute.final_outcome,
@@ -247,6 +226,19 @@ for (const [k, v] of Object.entries(classificationCounts).sort((a, b) => b[1] - 
   console.log(`  ${String(v).padStart(4)}  ${k}`);
 }
 
+console.log("\n── Primary finding per analysis ──");
+for (const [k, v] of Object.entries(primaryCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  ${k}`);
+}
+
+console.log("\n── Analysis status / reason-module status ──");
+for (const [k, v] of Object.entries(statusCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  ${k}`);
+}
+for (const [k, v] of Object.entries(reasonStatusCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(v).padStart(4)}  reason: ${k}`);
+}
+
 console.log("\n── Stage 4 assertion classifications ──");
 for (const [k, v] of Object.entries(assertionCounts).sort((a, b) => b[1] - a[1])) {
   console.log(`  ${String(v).padStart(4)}  ${k}`);
@@ -259,7 +251,8 @@ for (const [k, v] of Object.entries(observationCounts).sort((a, b) => b[1] - a[1
 
 console.log("\n── Health ──");
 console.log(`  reason module ran on:       ${reasonRan}`);
-console.log(`  invalid findings (schema):  ${invalidFindings}`);
+console.log(`  findings REJECTED by gate:  ${invalidFindings}`);
+console.log(`  actionable analyses:        ${actionableCount}`);
 console.log(`  contract errors:            ${contractErrorCount}`);
 console.log(`  disputes w/ late evidence:  ${withLate}`);
 console.log(`  unique snapshot hashes:     ${uniqueHashes} / ${rows.length}`);

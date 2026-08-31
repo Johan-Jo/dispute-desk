@@ -7584,3 +7584,15 @@ Measured across the 50 FRAUDULENT/lost submitted packages:
 Two patterns worth naming. `ip_location` is held on every package and shown on none, though 45 carry `same_country` — an order placed from the cardholder's own country is corroboration on an unauthorised-transaction claim. And `avs=N` reached the issuer 14 times: all built under prompt v9–v10 (2026-07-22 → 2026-08-09). From prompt v13 / validator v1 (2026-08-12) the codes are null, because the `citable` gate in `factClassifier` closed it. So the module's most severe finding is, on today's data, a **confirmation that a shipped fix changed filed output**. It still fires and carries the prompt version, so a reviewer sees the boundary instead of chasing a closed defect.
 
 Across the 45 cases the module raises 14 `INCORRECT_EVIDENCE_INTERPRETATION` (adverse disclosed, DEFINITE/HIGH), 44 `INCORRECT_EVIDENCE_INTERPRETATION` (supporting withheld, MODERATE/MEDIUM), and 39 `MISSING_ACQUIRABLE_EVIDENCE`. Zero schema-invalid.
+
+### Step 8 — bounded synthesis and the schema gate
+
+`lib/postOutcome/composeAnalysis.ts` runs every stage over one snapshot and assembles the record the admin page reads: one primary finding, a status, a structured summary.
+
+**It is deterministic, in a codebase that has an LLM, on purpose.** Plan §12 forbids the synthesis layer from changing deterministic classifications, inventing evidence, assigning a bank rationale, or marking a finding `DEFINITE` without deterministic support. A template-driven composer satisfies all four by construction; a generative one would have to be policed into satisfying them, and that policing (`findCausalLanguageViolations`) is a backstop, not a licence. Nothing here writes prose — every sentence a reviewer reads was authored by a check that had the structured facts in hand.
+
+**A finding that fails the gate is dropped, not softened.** `validateFinding` runs on every produced finding; failures land in `rejectedFindings` and never reach `findings`. The gate refuses causal language, `DEFINITE`/`HIGH` findings with no provenance, and win-only categories on a case whose level cannot support an evidence-effectiveness claim.
+
+**"Found nothing" is distinguished from "could not look."** At `FULL_POST_OUTCOME` or `PACKAGE_INTEGRITY_ONLY`, silence means the stages ran and the record showed no material gap → `NO_MATERIAL_GAP_OBSERVED`. At `OUTCOME_METADATA_ONLY` there was nothing to read → `INDETERMINATE`. `summary.stagesRun` records which stages executed, so an empty result can always be told from a skipped one. `reason_specific_status` separates `NOT_YET_SUPPORTED` (no module), `BLOCKED` (level too low), and `NOT_RECONSTRUCTABLE` (module ran, this case's facts absent).
+
+Composed over the 50 prod cases: **50 `COMPLETED`, 0 findings rejected, 49 actionable**, one `NO_MATERIAL_GAP_OBSERVED`. Primary findings: 24 `UNSUPPORTED_OR_OVERSTATED_ASSERTION`, 20 `INCORRECT_EVIDENCE_INTERPRETATION`, 2 `PROCEDURAL_OR_SUBMISSION_FAILURE`, 2 `DATA_INTEGRITY_FAILURE`, 1 `AVAILABLE_EVIDENCE_OMITTED`. Reason module: 45 `SUPPORTED`, 3 `NOT_YET_SUPPORTED`, 2 `BLOCKED`.
