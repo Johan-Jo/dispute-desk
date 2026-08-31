@@ -7596,3 +7596,17 @@ Across the 45 cases the module raises 14 `INCORRECT_EVIDENCE_INTERPRETATION` (ad
 **"Found nothing" is distinguished from "could not look."** At `FULL_POST_OUTCOME` or `PACKAGE_INTEGRITY_ONLY`, silence means the stages ran and the record showed no material gap → `NO_MATERIAL_GAP_OBSERVED`. At `OUTCOME_METADATA_ONLY` there was nothing to read → `INDETERMINATE`. `summary.stagesRun` records which stages executed, so an empty result can always be told from a skipped one. `reason_specific_status` separates `NOT_YET_SUPPORTED` (no module), `BLOCKED` (level too low), and `NOT_RECONSTRUCTABLE` (module ran, this case's facts absent).
 
 Composed over the 50 prod cases: **50 `COMPLETED`, 0 findings rejected, 49 actionable**, one `NO_MATERIAL_GAP_OBSERVED`. Primary findings: 24 `UNSUPPORTED_OR_OVERSTATED_ASSERTION`, 20 `INCORRECT_EVIDENCE_INTERPRETATION`, 2 `PROCEDURAL_OR_SUBMISSION_FAILURE`, 2 `DATA_INTEGRITY_FAILURE`, 1 `AVAILABLE_EVIDENCE_OMITTED`. Reason module: 45 `SUPPORTED`, 3 `NOT_YET_SUPPORTED`, 2 `BLOCKED`.
+
+### Step 9 — persistence and review
+
+`lib/postOutcome/persistAnalysis.ts` writes a composed analysis; `lib/postOutcome/reviews.ts` handles the append-only review flow.
+
+**Idempotency comes from one index**, `UNIQUE(dispute_id, analyzer_version, source_snapshot_sha256)`, which gives all four plan §13 behaviours with no bookkeeping: a retry conflicts and returns the existing row; a new analyzer version writes a new row; a repaired snapshot moves the hash and writes a new row; an unchanged re-run does nothing. Nothing here UPDATEs an analysis — a completed analysis is immutable, and superseding is an insert plus a pointer.
+
+**Findings are written immediately after the parent, and a failure deletes it.** An analysis with no findings and one whose findings failed to insert look identical afterwards, and the second is a silent lie — the admin page would read "no material gap observed" from a case that had six. Supabase offers no client-side transaction, so the compensating delete is the honest approximation; it is safe because the parent is worthless without its children.
+
+**Reviews are append-only and the current state is derived, never stored.** A reviewer who changes their mind leaves both decisions in the record. Overrides apply from the latest review only, so a superseded edit cannot leak back into the effective values. Ties on `created_at` break by `id`: Postgres `now()` is transaction time, so same-transaction inserts tie exactly, and an audit surface that shows a different answer on each refresh is worse than one that picks a stable winner.
+
+**Authorisation lives next to the write.** `assertReviewer` checks the active `internal_admin_grants` row itself rather than trusting the calling route — a route that forgot `hasAdminSession` would otherwise write an unauthorised confirmation indistinguishable from a real one. A review is what promotes a hypothesis into something allowed to drive a rule change (plan §17), so the check belongs at that boundary.
+
+Exercised against dev: analysis insert, save-vs-forwarding stored as separate columns, primary-finding uniqueness, `REJECTED`-without-notes refusal, append-only history retained, and cascade delete of findings and reviews.
