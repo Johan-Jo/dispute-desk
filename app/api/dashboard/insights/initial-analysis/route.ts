@@ -26,6 +26,7 @@ import {
 import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendPlan";
 import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
+import { segmentByRail } from "@/lib/insights/railSegmentation";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,26 @@ interface InsightsResponse {
    *  (49x). The value was computed but never serialized, so the client
    *  could not send the right one even in principle. */
   chargebackCount90d: number;
+
+  /** Payment-rail split of the 90d window. VDMP/ECM govern card
+   *  chargebacks only, and two of four prod shops have dispute books that
+   *  are almost entirely non-card (cay-collective 100% Klarna, Mein Maison
+   *  92.3% PayPal). The client passes these into evaluateCheckpoints so the
+   *  card-programme rules can say "not applicable" instead of grading a
+   *  merchant against a threshold that does not measure them. */
+  rail: {
+    cardOrders: number;
+    cardDisputes: number;
+    cardRatePct: number | null;
+    altOrders: number;
+    altDisputes: number;
+    altRatePct: number | null;
+    unknownOrders: number;
+    unknownDisputes: number;
+    cardDisputeShare: number | null;
+    cardFramingApplies: boolean;
+    unknownShare: number;
+  };
 
   // ── 30d current + prior 30d (MoM comparison) ─────────────────────
   // Each "Window" carries the aggregate metrics for its date range.
@@ -535,6 +556,48 @@ export async function GET(req: NextRequest) {
     fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d, signatureObservable,
   );
 
+  // ── Payment-rail segmentation (90d) ────────────────────────────
+  // VDMP and ECM govern card chargebacks only. Two of our four prod shops
+  // have dispute books that are almost entirely NOT card — cay-collective is
+  // 100% Klarna, Mein Maison 92.3% PayPal — and both were being shown Visa
+  // and Mastercard verdicts. This resolves each disputed order's rail so the
+  // checkpoint rules can tell whether those programmes apply at all.
+  //
+  // Order rows are already in memory. The dispute side needs a join, done in
+  // chunks because `.in()` on a long id list is what the 1000-row cap and
+  // URL-length limits punish; the same chunked pattern as lib/admin/shopRisk.
+  const railSeg = await (async () => {
+    const { data: disputeRows } = await sb
+      .from("disputes")
+      .select("order_gid")
+      .eq("shop_id", shopId)
+      .gte("created_at", windowStart90dIso);
+    const gids = (disputeRows ?? [])
+      .map((d) => (d as { order_gid: string | null }).order_gid)
+      .filter((g): g is string => !!g);
+
+    const methodByGid = new Map<string, string | null>();
+    for (let i = 0; i < gids.length; i += 200) {
+      const { data } = await sb
+        .from("shopify_orders")
+        .select("shopify_order_id, payment_method")
+        .eq("shop_id", shopId)
+        .in("shopify_order_id", gids.slice(i, i + 200));
+      for (const r of data ?? []) {
+        const row = r as { shopify_order_id: string; payment_method: string | null };
+        methodByGid.set(row.shopify_order_id, row.payment_method);
+      }
+    }
+
+    // A dispute whose order we never ingested resolves to `null`, which
+    // classifies as `unknown` — not as card. That distinction is the whole
+    // point: an unjoined dispute is a coverage gap, not a card chargeback.
+    return segmentByRail(
+      orderRowsForKpi.map((o) => ({ payment_method: o.payment_method })),
+      gids.map((g) => ({ payment_method: methodByGid.get(g) ?? null })),
+    );
+  })();
+
   // ── 8-week weekly sparkline (chargeback rate) ──────────────────
   const chargebackRateSparklineWeekly = weeklySparkline(daily);
 
@@ -606,6 +669,19 @@ export async function GET(req: NextRequest) {
     chargebackHealthAvailable: win90.chargebackOrders >= CHARGEBACK_VERDICT_MIN_ORDERS,
     chargebackOrders90d: win90.chargebackOrders,
     chargebackCount90d: win90.chargebackCount,
+    rail: {
+      cardOrders: railSeg.card.orders,
+      cardDisputes: railSeg.card.disputes,
+      cardRatePct: railSeg.card.ratePct,
+      altOrders: railSeg.alt.orders,
+      altDisputes: railSeg.alt.disputes,
+      altRatePct: railSeg.alt.ratePct,
+      unknownOrders: railSeg.unknown.orders,
+      unknownDisputes: railSeg.unknown.disputes,
+      cardDisputeShare: railSeg.cardDisputeShare,
+      cardFramingApplies: railSeg.cardFramingApplies,
+      unknownShare: railSeg.unknownShare,
+    },
 
     windowStart30d,
     windowStart30dPrior,

@@ -5031,7 +5031,11 @@
       "breach": "Limite ultrapassado"
     },
     "weeklyChargebackRateAria": "Taxa semanal de estornos, últimas 8 semanas",
-    "noData": "Sem dados"
+    "noData": "Sem dados",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "O programa da Visa não se aplica às suas disputas.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O VAMP da Visa conta chargebacks de cartão, portanto não mede o resto do seu volume — não há veredicto VAMP a dar aqui.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "O programa da Mastercard não se aplica às suas disputas.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O ECM da Mastercard conta chargebacks de cartão; as restantes seguem as regras do fornecedor que as tratou."
   },
   "consent": {
     "ariaLabel": "Preferências de cookies e privacidade",

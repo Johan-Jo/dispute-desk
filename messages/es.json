@@ -5031,7 +5031,11 @@
       "breach": "Umbral superado"
     },
     "weeklyChargebackRateAria": "Tasa semanal de contracargos, últimas 8 semanas",
-    "noData": "Sin datos"
+    "noData": "Sin datos",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "El programa de Visa no se aplica a tus disputas.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Solo el {cardShare} de tus disputas llega por una red de tarjetas. El VAMP de Visa cuenta contracargos de tarjeta, así que no mide el resto de tu volumen de disputas: aquí no hay veredicto VAMP.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "El programa de Mastercard no se aplica a tus disputas.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Solo el {cardShare} de tus disputas llega por una red de tarjetas. El ECM de Mastercard cuenta contracargos de tarjeta; el resto se resuelve según las reglas del proveedor que las gestionó."
   },
   "consent": {
     "ariaLabel": "Opciones de cookies y privacidad",

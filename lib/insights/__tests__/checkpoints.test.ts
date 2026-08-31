@@ -255,3 +255,78 @@ describe("evaluateCheckpoints — surasvenne current-state sanity", () => {
     expect(r.find((c) => c.severity === "breach")).toBeUndefined();
   });
 });
+
+describe("evaluateCheckpoints — card programmes only apply to card disputes", () => {
+  // The failure this prevents: cay-collective's 76 disputes are 100% Klarna
+  // and Mein Maison's are 92.3% PayPal, yet both were shown Visa VAMP and
+  // Mastercard ECM verdicts. Neither merchant is measured by either
+  // programme. `healthy` was as wrong as `breach` — it told them they were
+  // fine against a threshold that does not apply to them.
+  const klarnaShop: CheckpointInput = {
+    ...baseline,
+    chargebackRate90d: 5.56, // blended, and meaningless here
+    cardChargebackRate90d: null,
+    cardChargebackCount90d: 0,
+    cardDisputeShare: 0,
+    cardFramingApplies: false,
+  };
+
+  it("emits a not-applicable observation instead of a VAMP verdict", () => {
+    const r = evaluateCheckpoints(klarnaShop);
+    const vamp = r.find((c) => c.id === "chargeback_rate_vs_vamp");
+    expect(vamp?.severity).toBe("info");
+    expect(vamp?.titleKey).toContain("not_applicable");
+    // Crucially NOT "breach" — and equally not "healthy".
+    expect(vamp?.severity).not.toBe("breach");
+    expect(vamp?.severity).not.toBe("healthy");
+  });
+
+  it("emits a not-applicable observation instead of an ECM verdict", () => {
+    const r = evaluateCheckpoints(klarnaShop);
+    const ecm = r.find((c) => c.id === "chargeback_rate_vs_ecm");
+    expect(ecm?.severity).toBe("info");
+    expect(ecm?.titleKey).toContain("not_applicable");
+  });
+
+  it("judges a card merchant on the CARD rate, not the blended one", () => {
+    // Mein Maison shape: blended 2.05% would breach VAMP; the card-rail rate
+    // is 1.22%. If this shop were card-framed it must still be judged on the
+    // card figure, never the rail-mixed one.
+    const r = evaluateCheckpoints({
+      ...baseline,
+      chargebackRate90d: 2.05,
+      cardChargebackRate90d: 1.22,
+      cardChargebackCount90d: 40,
+      cardDisputeShare: 0.9,
+      cardFramingApplies: true,
+    });
+    const vamp = r.find((c) => c.id === "chargeback_rate_vs_vamp");
+    // 1.22% is over VAMP_EXCESSIVE (1.5%)? No — it is under, so consider.
+    expect(vamp?.values.current).toBe("1.22%");
+    expect(vamp?.severity).toBe("consider");
+  });
+
+  it("feeds ECM a card-rail count, so the 100/month floor means card chargebacks", () => {
+    const r = evaluateCheckpoints({
+      ...baseline,
+      chargebackRate90d: 4.0,
+      cardChargebackRate90d: 2.0,
+      cardChargebackCount90d: 60, // 20/month — below the ECM floor
+      cardDisputeShare: 0.95,
+      cardFramingApplies: true,
+    });
+    const ecm = r.find((c) => c.id === "chargeback_rate_vs_ecm");
+    expect(ecm?.values.monthlyEstimate).toBe(20);
+    // Ratio breached but the card count is under the floor → consider.
+    expect(ecm?.severity).toBe("consider");
+  });
+
+  it("keeps the old behaviour when a caller has not been taught about rails", () => {
+    // Back-compat: an un-updated caller must not lose a real breach warning
+    // to a plumbing gap. Absence of rail data means "unknown", not "suppress".
+    const r = evaluateCheckpoints({ ...baseline, chargebackRate90d: 2.0 });
+    expect(r.find((c) => c.id === "chargeback_rate_vs_vamp")?.severity).toBe(
+      "breach",
+    );
+  });
+});
