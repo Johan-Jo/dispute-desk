@@ -7610,3 +7610,17 @@ Composed over the 50 prod cases: **50 `COMPLETED`, 0 findings rejected, 49 actio
 **Authorisation lives next to the write.** `assertReviewer` checks the active `internal_admin_grants` row itself rather than trusting the calling route — a route that forgot `hasAdminSession` would otherwise write an unauthorised confirmation indistinguishable from a real one. A review is what promotes a hypothesis into something allowed to drive a rule change (plan §17), so the check belongs at that boundary.
 
 Exercised against dev: analysis insert, save-vs-forwarding stored as separate columns, primary-finding uniqueness, `REJECTED`-without-notes refusal, append-only history retained, and cascade delete of findings and reviews.
+
+### Step 11 — comparable cohorts and sufficiency gates
+
+`lib/postOutcome/cohorts.ts` plus the `outcome_cohort_snapshots` table. No UI reads either yet (plan §25.6 defers the benchmark panel); the gates ship now because they are what stops a misleading average the day the data arrives.
+
+**The gates are enforced by the type, not a flag.** The obvious shape — `{ winRate, sufficient }` — makes every caller responsible for checking, and the one that forgets renders a percentage from four cases. `CohortResult` is a discriminated union instead: rates exist *only* on the `SUFFICIENT` variant. An insufficient cohort carries raw counts and its blocking dimensions, and is structurally incapable of yielding a percentage.
+
+Floors (plan §15.6): 3 peer merchants excluding the subject, 30 peer cases, 10 subject cases. `>=`, so exactly-at-floor passes — pinned by test, since a later "tighten by one" would change a product promise silently. The same floors are a check constraint on the table, because an application-layer typo that relaxes them would otherwise ship unnoticed.
+
+**Refusals are stored, not discarded.** `status` may be `INSUFFICIENT_SAMPLE` or `NO_COMPARABLE_COHORT`, and a non-sufficient row must carry blockers. Those rows are the point: with 3 merchants holding analyzable cases, every benchmark today correctly refuses, and recording the refusal makes "when did this become answerable?" a query rather than a guess.
+
+**Dimension rules that matter on this data.** `UNKNOWN` card network never merges with a known one — 49 of 50 prod cases carry an unknown network, so a merge would pool nearly everything. An unclassified niche cannot enter a niche benchmark in either direction. The subject is excluded from its own peer set structurally, by passing peers and subject through separate predicates rather than one filter someone can drop.
+
+A test runs the real production shape (47 blume-box + 1 cay-collective + 1 surasvenne, no niches classified) and asserts every benchmark refuses with no rate property present. A gate that only works on synthetic data is not a gate.
