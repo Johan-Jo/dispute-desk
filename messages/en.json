@@ -564,6 +564,7 @@
     "csvDueDate": "Due date",
     "csvNormalizedStatus": "Normalized Status",
     "csvSubmissionState": "Submission State",
+    "csvDisputeDate": "Dispute Initiated",
     "csvSubmittedAt": "Submitted At",
     "csvClosedAt": "Closed At",
     "csvOutcome": "Final Outcome",

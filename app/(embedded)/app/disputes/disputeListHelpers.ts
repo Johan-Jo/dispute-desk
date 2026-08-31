@@ -727,3 +727,16 @@ export function figmaKpis(
     earliestOverdue,
   };
 }
+
+/* CSV field escaping, RFC-4180.
+ *
+ * Quote when the value contains a comma, a double quote, CR or LF, and double
+ * any embedded quote. The disputes export previously quoted on comma alone and
+ * never escaped an embedded quote, so a single customer name containing one
+ * would shift every subsequent column on that row — silent corruption in a
+ * file merchants reconcile against processor statements.
+ *
+ * Exported for test; `page.tsx` holds the only caller. */
+export function csvEscape(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
