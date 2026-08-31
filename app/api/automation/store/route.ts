@@ -13,6 +13,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { logAuditEvent } from "@/lib/audit/logEvent";
+import { verifyImpersonation } from "@/lib/admin/impersonation";
 import { checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import {
@@ -176,8 +178,10 @@ export async function PUT(req: NextRequest) {
   try {
     // Omission preserves: read what's stored and pass it straight back, so a
     // mode-only write leaves the overrides exactly as they were.
-    const effectiveGroups =
-      groups ?? (await readStoreAutomation(shopId)).groups;
+    // Read the whole prior config, not just groups: it is both the
+    // omission-preserving source AND the before-image for the audit diff.
+    const previous = await readStoreAutomation(shopId);
+    const effectiveGroups = groups ?? previous.groups;
 
     const saved = await writeStoreAutomation(shopId, {
       mode,
@@ -187,6 +191,43 @@ export async function PUT(req: NextRequest) {
       },
       groups: effectiveGroups,
     });
+
+    // This is the store-wide save switch — the other half of the pair that
+    // decides whether anything reaches a bank. It was as untracked as
+    // auto_build_enabled: no actor column, no audit event, so a merchant
+    // found on "review" could not be traced to who set it or when.
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    if (previous.mode !== saved.mode) {
+      changes.mode = { from: previous.mode, to: saved.mode };
+    }
+    if (
+      previous.safeguard.enabled !== saved.safeguard.enabled ||
+      previous.safeguard.amount !== saved.safeguard.amount
+    ) {
+      changes.safeguard = { from: previous.safeguard, to: saved.safeguard };
+    }
+    for (const g of Object.keys(saved.groups)) {
+      const from = previous.groups[g as keyof typeof previous.groups];
+      const to = saved.groups[g as keyof typeof saved.groups];
+      if (from !== to) changes[`group:${g}`] = { from, to };
+    }
+
+    if (Object.keys(changes).length > 0) {
+      const imp = await verifyImpersonation(req);
+      try {
+        await logAuditEvent({
+          shopId,
+          actorType: imp ? "system" : "merchant",
+          actorId: imp?.adminUserId ?? null,
+          eventType: "automation_settings_changed",
+          eventPayload: { changes, impersonated: !!imp, surface: "store" },
+        });
+      } catch (auditErr) {
+        // Audit failure must never lose a merchant's settings change.
+        console.error("[automation-store] audit write failed", auditErr);
+      }
+    }
+
     return NextResponse.json({ ok: true, ...saved });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
