@@ -152,12 +152,16 @@ describe("signal polarity", () => {
     );
   });
 
-  it("counts prior orders only when there are some", () => {
+  it("counts prior orders only when the history is also dispute-free", () => {
     expect(
-      fraudSignalPolarity(fact("prior_customer_history", { priorOrderCount: 4 }, false)).polarity,
+      fraudSignalPolarity(
+        fact("prior_customer_history", { priorOrderCount: 4, disputeFreeHistory: true }, false),
+      ).polarity,
     ).toBe("SUPPORTS_MERCHANT");
     expect(
-      fraudSignalPolarity(fact("prior_customer_history", { priorOrderCount: 0 }, false)).polarity,
+      fraudSignalPolarity(
+        fact("prior_customer_history", { priorOrderCount: 0, disputeFreeHistory: true }, false),
+      ).polarity,
     ).toBe("NEUTRAL");
   });
 });
@@ -306,5 +310,60 @@ describe("delivery evidence is only acquirable if something shipped", () => {
       snapshot([fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true)]),
     );
     expect(findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE")).toBeDefined();
+  });
+});
+
+describe("qualifiers decide polarity, not headline numbers", () => {
+  it("does not call a disputed prior history supporting", () => {
+    // 7 false findings on prod: 4 cases at count 1 and 3 at count 4, all with
+    // disputeFreeHistory false and all correctly suppressed by the classifier.
+    const { polarity, detail } = fraudSignalPolarity(
+      fact("prior_customer_history", { priorOrderCount: 4, disputeFreeHistory: false }, false),
+    );
+    expect(polarity).toBe("NEUTRAL");
+    expect(detail).toMatch(/not dispute-free/i);
+  });
+
+  it("calls a dispute-free prior history supporting", () => {
+    expect(
+      fraudSignalPolarity(
+        fact("prior_customer_history", { priorOrderCount: 1, disputeFreeHistory: true }, true),
+      ).polarity,
+    ).toBe("SUPPORTS_MERCHANT");
+  });
+
+  it("treats a missing disputeFreeHistory as not established", () => {
+    expect(
+      fraudSignalPolarity(fact("prior_customer_history", { priorOrderCount: 3 }, false)).polarity,
+    ).toBe("NEUTRAL");
+  });
+});
+
+describe("communication absence is not an acquisition gap", () => {
+  it("does not advise capturing communication that was already searched for", () => {
+    // Enrichment ran on 33 of the 35 prod packages holding no comms evidence,
+    // against shops with a live integration, and matched zero tickets. On a
+    // fraud claim the cardholder often never makes contact at all.
+    const { findings } = runFraudulentModule(
+      snapshot([
+        fact("order_record", { fulfillmentStatus: "FULFILLED" }, false, "fact:order"),
+        fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true),
+        fact("delivery_proof", {}, true),
+        fact("shipping_tracking", {}, true),
+      ]),
+    );
+    expect(findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE")).toBeUndefined();
+  });
+
+  it("still reports delivery evidence missing on a fulfilled order", () => {
+    const { findings } = runFraudulentModule(
+      snapshot([
+        fact("order_record", { fulfillmentStatus: "FULFILLED" }, false, "fact:order"),
+        fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true),
+      ]),
+    );
+    const missing = findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE");
+    expect(missing?.observedFact).toMatch(/Delivery confirmation/);
+    expect(missing?.observedFact).not.toMatch(/Customer communication/);
   });
 });
