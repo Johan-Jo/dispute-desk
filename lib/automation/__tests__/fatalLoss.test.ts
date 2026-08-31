@@ -219,6 +219,75 @@ describe("detectFatalLoss — inr_no_fulfillment trigger", () => {
     });
     expect(detectFatalLoss(order, null, 100).triggered).toBe(false);
   });
+
+  /* The class, not the instance.
+   *
+   * This gate twice shipped a `displayFulfillmentStatus` allow-list that was
+   * missing a member: `ON_HOLD` (six blume-box disputes, 2026-08-13) and then
+   * `IN_PROGRESS` (blume-box #360499, 2026-08-31 — committed to a fulfillment
+   * order that was never created, so nothing shipped and no tracking existed).
+   * The rule is now "no fulfillment row = nothing shipped", independent of the
+   * status name, and these cases pin every status prod actually emits so a
+   * third omission cannot regress it.
+   */
+  const NEVER_SHIPPED_STATUSES = [
+    "UNFULFILLED",
+    "ON_HOLD",
+    "IN_PROGRESS",
+    "CANCELLED",
+    "REQUEST_DECLINED",
+  ] as const;
+
+  it.each(NEVER_SHIPPED_STATUSES)(
+    "fires for INR with zero fulfillments regardless of status (%s)",
+    (status) => {
+      const order = makeOrder({
+        displayFulfillmentStatus: status,
+        fulfillments: [],
+      });
+      const r = detectFatalLoss(order, "PRODUCT_NOT_RECEIVED", 100);
+      expect(r.triggered).toBe(true);
+      expect(r.reason).toBe("inr_no_fulfillment");
+    },
+  );
+
+  it("fires when displayFulfillmentStatus is missing entirely but nothing shipped", () => {
+    const order = makeOrder({
+      displayFulfillmentStatus: null as never,
+      fulfillments: [],
+    });
+    expect(detectFatalLoss(order, "PRODUCT_NOT_RECEIVED", 100).reason).toBe(
+      "inr_no_fulfillment",
+    );
+  });
+
+  /* The other half of the contract: a fulfillment row always suppresses the
+   * trigger, whatever the status says. Production 2026-08-31 has a fulfillment
+   * on 866/866 PARTIALLY_FULFILLED and 470,488/470,490 FULFILLED orders, so
+   * dropping the status list cannot newly fire on something that shipped. */
+  it.each(["FULFILLED", "PARTIALLY_FULFILLED", "IN_PROGRESS", "ON_HOLD"])(
+    "does NOT fire when a fulfillment exists (%s)",
+    (status) => {
+      const order = makeOrder({
+        displayFulfillmentStatus: status,
+        fulfillments: [{ id: "gid://1" } as never],
+      });
+      expect(detectFatalLoss(order, "PRODUCT_NOT_RECEIVED", 100).triggered).toBe(
+        false,
+      );
+    },
+  );
+
+  it("reproduces blume-box #360499: IN_PROGRESS, no fulfillment, unrefunded", () => {
+    const order = makeOrder({
+      displayFulfillmentStatus: "IN_PROGRESS",
+      fulfillments: [],
+      totalRefundedSet: { shopMoney: { amount: "0.0", currencyCode: "USD" } },
+    });
+    const r = detectFatalLoss(order, "PRODUCT_NOT_RECEIVED", 85.41, null, "chargeback");
+    expect(r.triggered).toBe(true);
+    expect(r.reason).toBe("inr_no_fulfillment");
+  });
 });
 
 describe("detectFatalLoss — guards", () => {
