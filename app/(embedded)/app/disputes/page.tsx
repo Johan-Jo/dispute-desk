@@ -45,6 +45,7 @@ import {
   formatCurrency,
   formatDueDate,
   formatShortId,
+  csvEscape,
   orderLabel,
   parseListDeepLink,
   resolveSort,
@@ -177,6 +178,9 @@ export default function DisputesListPage() {
   const initialUrlFilters = useMemo(() => parseListDeepLink(searchParams), []);
 
   const [loading, setLoading] = useState(true);
+  /* Export walks every page, so it is not instant on a large shop. The button
+   * reflects that rather than appearing dead. */
+  const [exporting, setExporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [statusFilter] = useState<string[]>([]);
   const [phaseFilter, setPhaseFilter] = useState<string[]>([]);
@@ -300,31 +304,42 @@ export default function DisputesListPage() {
     };
   }, []);
 
+  /* The filter half of the query string, WITHOUT page/per_page.
+   *
+   * Extracted so the CSV export sends the identical filter set the table is
+   * showing. When the export built its own params (or, worse, reused only the
+   * rows already in memory) the two could disagree, and a merchant who
+   * filtered to "Under review" could export something else entirely. One
+   * builder, two callers. */
+  const buildFilterParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
+    if (phaseFilter.length === 1) params.set("phase", phaseFilter[0]);
+    if (normalizedStatusFilter.length > 0)
+      params.set("normalized_status", normalizedStatusFilter.join(","));
+    const outcomes = outcomeFilter.length > 0 ? outcomeFilter : outcomeDropdownFilter;
+    if (outcomes.length > 0) params.set("final_outcome", outcomes.join(","));
+    if (submissionStateFilter.length > 0)
+      params.set("submission_state", submissionStateFilter.join(","));
+    if (attentionParam) params.set("attention", attentionParam);
+    if (strengthFilter) params.set("strength", strengthFilter);
+    if (activeTab === "active") {
+      params.set("closed", "false");
+    } else if (activeTab === "closed") {
+      params.set("closed", "true");
+    }
+    const { sort, sort_dir } = resolveSort(sortMode, activeTab);
+    params.set("sort", sort);
+    params.set("sort_dir", sort_dir);
+    return params;
+  }, [statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, outcomeDropdownFilter, submissionStateFilter, attentionParam, strengthFilter, activeTab, sortMode]);
+
   const fetchDisputes = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        per_page: "25",
-      });
-      if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
-      if (phaseFilter.length === 1) params.set("phase", phaseFilter[0]);
-      if (normalizedStatusFilter.length > 0)
-        params.set("normalized_status", normalizedStatusFilter.join(","));
-      const outcomes = outcomeFilter.length > 0 ? outcomeFilter : outcomeDropdownFilter;
-      if (outcomes.length > 0) params.set("final_outcome", outcomes.join(","));
-      if (submissionStateFilter.length > 0)
-        params.set("submission_state", submissionStateFilter.join(","));
-      if (attentionParam) params.set("attention", attentionParam);
-      if (strengthFilter) params.set("strength", strengthFilter);
-      if (activeTab === "active") {
-        params.set("closed", "false");
-      } else if (activeTab === "closed") {
-        params.set("closed", "true");
-      }
-      const { sort, sort_dir } = resolveSort(sortMode, activeTab);
-      params.set("sort", sort);
-      params.set("sort_dir", sort_dir);
+      const params = buildFilterParams();
+      params.set("page", String(page));
+      params.set("per_page", "25");
       const res = await fetch(`/api/disputes?${params}`);
       const json: DisputesResponse = await res.json();
       setDisputes(json.disputes ?? []);
@@ -345,7 +360,7 @@ export default function DisputesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, outcomeDropdownFilter, submissionStateFilter, attentionParam, strengthFilter, activeTab, sortMode]);
+  }, [page, buildFilterParams]);
 
   useEffect(() => {
     fetchDisputes();
@@ -376,62 +391,122 @@ export default function DisputesListPage() {
     setSyncing(false);
   };
 
+  /* The search box filters in the browser and is never sent to the API, so the
+   * CSV export has to apply the SAME predicate to the rows it fetches —
+   * otherwise a merchant who searched "Fred" would export every dispute in the
+   * shop. Shared here so the two cannot drift. */
+  const matchesQuery = useCallback(
+    (d: Dispute, rawQuery: string) => {
+      const q = rawQuery.toLowerCase();
+      const short = formatShortId(d.id).toLowerCase();
+      return (
+        d.dispute_gid.toLowerCase().includes(q) ||
+        d.id.toLowerCase().includes(q) ||
+        short.includes(q) ||
+        (d.reason ?? "").toLowerCase().includes(q) ||
+        (d.order_gid ?? "").toLowerCase().includes(q) ||
+        (d.order_name ?? "").toLowerCase().includes(q) ||
+        (d.customer_display_name ?? "").toLowerCase().includes(q)
+      );
+    },
+    [],
+  );
+
   const visibleDisputes = queryValue
-    ? disputes.filter((d) => {
-        const q = queryValue.toLowerCase();
-        const short = formatShortId(d.id).toLowerCase();
-        return (
-          d.dispute_gid.toLowerCase().includes(q) ||
-          d.id.toLowerCase().includes(q) ||
-          short.includes(q) ||
-          (d.reason ?? "").toLowerCase().includes(q) ||
-          (d.order_gid ?? "").toLowerCase().includes(q) ||
-          (d.order_name ?? "").toLowerCase().includes(q) ||
-          (d.customer_display_name ?? "").toLowerCase().includes(q)
-        );
-      })
+    ? disputes.filter((d) => matchesQuery(d, queryValue))
     : disputes;
 
-  const exportCsv = () => {
-    const esc = (v: string) => (v.includes(",") ? `"${v}"` : v);
-    const rows = visibleDisputes.map((d) =>
-      [
-        esc(orderLabel(d)),
-        formatShortId(d.id),
-        esc(d.customer_display_name ?? ""),
-        formatCurrency(d.amount, d.currency_code, numberLocale),
-        esc(translateReason(d.reason, t)),
-        esc(translateFamily(d.reason, t)),
-        d.phase ?? "",
-        statusLabelForCsv(d.status, t),
-        d.normalized_status ?? "",
-        d.submission_state ?? "",
-        formatDueDate(d.due_at, dateLocale),
-        formatDueDate(d.submitted_at ?? null, dateLocale),
-        formatDueDate(d.closed_at ?? null, dateLocale),
-        d.final_outcome ?? "",
-        d.outcome_amount_recovered != null ? String(d.outcome_amount_recovered) : "",
-        d.outcome_amount_lost != null ? String(d.outcome_amount_lost) : "",
-        formatDueDate(d.last_event_at ?? null, dateLocale),
-      ].join(","),
-    );
-    const csvHeader = [
-      t("disputes.csvOrder"), t("disputes.csvId"), t("disputes.csvCustomer"),
-      t("disputes.csvAmount"), t("disputes.csvReason"), t("disputes.csvFamily"),
-      t("disputes.csvPhase"), t("disputes.csvStatus"),
-      t("disputes.csvNormalizedStatus"), t("disputes.csvSubmissionState"),
-      t("disputes.csvDueDate"), t("disputes.csvSubmittedAt"), t("disputes.csvClosedAt"),
-      t("disputes.csvOutcome"), t("disputes.csvRecovered"), t("disputes.csvLost"),
-      t("disputes.csvLastEvent"),
-    ].join(",");
-    const csv = [csvHeader, ...rows].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-    );
-    a.download = "disputes.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+  /* Export EVERY dispute matching the current filters, not the 25 rows the
+   * table happens to be showing.
+   *
+   * Two defects, reported by a merchant 2026-08-31:
+   *
+   *   1. It exported `visibleDisputes` — the current PAGE. A merchant with
+   *      1,125 disputes clicked Export and got 25 rows with no indication the
+   *      other 1,100 were missing. A truncated export is worse than a failed
+   *      one: it looks complete, so it gets used for reconciliation.
+   *   2. It had no dispute-opened date. `initiated_at` is the date the
+   *      cardholder actually filed the chargeback, is what the table sorts and
+   *      renders, and is the first thing anyone reconciling against a
+   *      processor statement needs. Every other date was present.
+   *
+   * The API caps per_page at 100, so this walks the pages. The filter params
+   * come from the SAME builder the table uses, so the file always matches what
+   * the merchant is looking at. */
+  const exportCsv = async () => {
+    /* RFC-4180 escaping lives in disputeListHelpers so it can be unit-tested;
+     * the old inline version quoted on comma alone and never escaped an
+     * embedded quote. */
+    const esc = csvEscape;
+
+    setExporting(true);
+    try {
+      const all: Dispute[] = [];
+      const PER_PAGE = 100;
+      /* Hard stop so a pagination bug can never spin forever in the merchant's
+       * browser. 200 pages x 100 = 20,000 disputes, far above any real shop. */
+      for (let p = 1; p <= 200; p++) {
+        const params = buildFilterParams();
+        params.set("page", String(p));
+        params.set("per_page", String(PER_PAGE));
+        const res = await fetch(`/api/disputes?${params}`);
+        if (!res.ok) break;
+        const json: DisputesResponse = await res.json();
+        const batch = json.disputes ?? [];
+        all.push(...batch);
+        if (batch.length < PER_PAGE) break;
+        if (json.pagination && p >= json.pagination.total_pages) break;
+      }
+
+      const exportRows = queryValue
+        ? all.filter((d) => matchesQuery(d, queryValue))
+        : all;
+
+      const rows = exportRows.map((d) =>
+        [
+          esc(orderLabel(d)),
+          formatShortId(d.id),
+          esc(d.customer_display_name ?? ""),
+          formatCurrency(d.amount, d.currency_code, numberLocale),
+          esc(translateReason(d.reason, t)),
+          esc(translateFamily(d.reason, t)),
+          d.phase ?? "",
+          statusLabelForCsv(d.status, t),
+          d.normalized_status ?? "",
+          d.submission_state ?? "",
+          esc(formatDueDate(d.initiated_at, dateLocale)),
+          esc(formatDueDate(d.due_at, dateLocale)),
+          esc(formatDueDate(d.submitted_at ?? null, dateLocale)),
+          esc(formatDueDate(d.closed_at ?? null, dateLocale)),
+          d.final_outcome ?? "",
+          d.outcome_amount_recovered != null ? String(d.outcome_amount_recovered) : "",
+          d.outcome_amount_lost != null ? String(d.outcome_amount_lost) : "",
+          esc(formatDueDate(d.last_event_at ?? null, dateLocale)),
+        ].join(","),
+      );
+      const csvHeader = [
+        t("disputes.csvOrder"), t("disputes.csvId"), t("disputes.csvCustomer"),
+        t("disputes.csvAmount"), t("disputes.csvReason"), t("disputes.csvFamily"),
+        t("disputes.csvPhase"), t("disputes.csvStatus"),
+        t("disputes.csvNormalizedStatus"), t("disputes.csvSubmissionState"),
+        t("disputes.csvDisputeDate"),
+        t("disputes.csvDueDate"), t("disputes.csvSubmittedAt"), t("disputes.csvClosedAt"),
+        t("disputes.csvOutcome"), t("disputes.csvRecovered"), t("disputes.csvLost"),
+        t("disputes.csvLastEvent"),
+      ].map((h) => esc(h)).join(",");
+      /* BOM so Excel reads it as UTF-8 — without it, accented customer names
+       * render as mojibake on the merchant's machine. */
+      const csv = "\uFEFF" + [csvHeader, ...rows].join("\r\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(
+        new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      );
+      a.download = "disputes.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } finally {
+      setExporting(false);
+    }
   };
 
   // KPIs for the Figma 4-card row + red urgent banner.
@@ -907,7 +982,7 @@ export default function DisputesListPage() {
                   </div>
                   {filterPopover}
                   {sortPopover}
-                  <Button icon={ExportIcon} onClick={exportCsv}>
+                  <Button icon={ExportIcon} onClick={exportCsv} loading={exporting} disabled={exporting}>
                     {t("disputes.export")}
                   </Button>
                 </InlineStack>

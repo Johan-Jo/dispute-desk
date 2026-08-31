@@ -563,6 +563,7 @@
     "csvDueDate": "Fecha límite",
     "csvNormalizedStatus": "Estado Normalizado",
     "csvSubmissionState": "Estado de Envío",
+    "csvDisputeDate": "Disputa iniciada el",
     "csvSubmittedAt": "Enviado el",
     "csvClosedAt": "Cerrado el",
     "csvOutcome": "Resultado Final",

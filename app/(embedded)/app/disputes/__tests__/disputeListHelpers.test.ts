@@ -4,6 +4,7 @@ import {
   resolveSort,
   figmaStatus,
   figmaReviewChip,
+  csvEscape,
   type Dispute,
 } from "../disputeListHelpers";
 
@@ -177,5 +178,38 @@ describe("resolveSort", () => {
 
   it("maps 'closed_desc' to closed_at descending", () => {
     expect(resolveSort("closed_desc", "closed")).toEqual({ sort: "closed_at", sort_dir: "desc" });
+  });
+});
+
+
+/* The disputes CSV export is reconciled against processor statements, so a
+ * silently shifted column is worse than a visible failure. A merchant reported
+ * the export truncating to one page on 2026-08-31; these pin the escaping half
+ * of that fix. */
+describe("csvEscape", () => {
+  it("leaves an ordinary value untouched", () => {
+    expect(csvEscape("Fred Vitus")).toBe("Fred Vitus");
+    expect(csvEscape("")).toBe("");
+  });
+
+  it("quotes a value containing a comma", () => {
+    expect(csvEscape("Vitus, Fred")).toBe('\"Vitus, Fred\"');
+  });
+
+  it("quotes AND doubles an embedded quote — the old version did neither", () => {
+    // The previous inline escaper only quoted on comma, so this value passed
+    // through raw and broke every column after it on the row.
+    expect(csvEscape('Fred \"Bunny\" Vitus')).toBe(
+      '\"Fred \"\"Bunny\"\" Vitus\"',
+    );
+  });
+
+  it("quotes values containing CR or LF", () => {
+    expect(csvEscape("line1\nline2")).toBe('\"line1\nline2\"');
+    expect(csvEscape("line1\rline2")).toBe('\"line1\rline2\"');
+  });
+
+  it("round-trips a value that is both quoted and comma-bearing", () => {
+    expect(csvEscape('a,\"b')).toBe('\"a,\"\"b\"');
   });
 });
