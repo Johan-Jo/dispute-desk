@@ -181,14 +181,14 @@ describe("ip_location_check", () => {
     ).toBe("moderate");
   });
 
-  it("clean same-country match → supporting (bank-facing, not decisive)", () => {
+  it("clean same-country match → moderate, so the Evidence Basis can list it", () => {
     expect(
       categorizeEvidenceField("ip_location_check", {
         bankEligible: true,
         locationMatch: "same_country",
         ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
       }),
-    ).toBe("supporting");
+    ).toBe("moderate");
   });
 
   it("bankEligible false → supporting", () => {
