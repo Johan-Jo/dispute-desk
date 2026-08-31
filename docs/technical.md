@@ -7667,3 +7667,17 @@ Promoting it needs one of two upstream changes first, so the sections gain suppo
 **"Confirmed" counts reviewed findings only.** An unreviewed finding is a hypothesis (plan §17), and a card labelled *confirmed* that counted hypotheses would be precisely the failure this feature exists to prevent. When nothing is reviewed the panel says so, rather than showing zero without explanation.
 
 The dispute-level view repeats the forwarding caveat: if the platform stored the evidence but never reported forwarding it, the panel withholds conclusions about what the issuer saw rather than presenting the analysis as settled. "Nothing analysed" renders an explicit message, since it is a common and legitimate state — most decided disputes carry no package of ours — and an empty shell would read as a loading failure.
+
+### Step 15 — learning actions
+
+`learning_actions`, `learning_action_evidence`, `learning_action_evaluations`, plus the lifecycle state machine in `lib/postOutcome/learningActions.ts`. **Nothing can be approved today** — zero findings have been reviewed, so every approval path refuses. The contract ships ahead of the data deliberately: it is easier to fix a rule before anyone depends on it than to tighten one afterwards.
+
+**This never deploys anything.** `deployment_ref` records *which release* performed a change; making the change stays a separate authorised act. An approval workflow that can also ship the change is one that will eventually ship a change nobody approved.
+
+**The approval gate is a trigger, not a check constraint**, because the rule needs a subquery: every backing finding must carry a `CONFIRMED` or `EDITED` review. A `REJECTED` review counts as reviewed but is not support. This is the line between "a human confirmed this pattern" and "an automated hypothesis changed production" (plan §17), so it is enforced in the database as well as in `checkTransition`.
+
+Verified against dev — each of these is refused: approving with zero findings, approving on an unreviewed finding, approving on a rejected review, an approved row with no approver, a deployment with no release pointer, a `PLATFORM`-scoped action backed by one finding, a `PROMISING` verdict on an insufficient sample, and a `PROMISING` verdict alongside a guardrail regression. Approving on a confirmed review is accepted.
+
+**Verdicts stay inside the evidence.** `INSUFFICIENT` yields `INSUFFICIENT_SAMPLE` however good the numbers look — plan §18 forbids a percentage claim below the thresholds, and "promising" off four cases is that claim in a different word. A `DIRECTIONAL` sample can say "no clear change" but never "promising". A guardrail regression outranks any improvement.
+
+`ROLL_BACK` is reachable from every post-deployment state, without a detour through `MEASURING`: the moment you need a rollback is the moment something is wrong, and a state machine that makes you route around it is one that gets bypassed.
