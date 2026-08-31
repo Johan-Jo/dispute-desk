@@ -4,6 +4,7 @@ import { sendMonthlyChargebackDigest } from "@/lib/email/sendMonthlyChargebackDi
 import type { DigestPeriodMetrics } from "@/lib/email/sendMonthlyChargebackDigest";
 import { gatherDisputeActivity } from "@/lib/email/digestDisputeActivity";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import { railSegmentationFor } from "@/lib/insights/railSegmentation";
 
 export const runtime = "nodejs";
 // Some shops are large enough that gathering metrics + sending takes
@@ -106,10 +107,18 @@ export async function GET(req: NextRequest) {
       const cur = await windowMetrics(sb, shop.id, w30, anchor);
       const prior = await windowMetrics(sb, shop.id, w60, w30);
 
+      // `phase = 'chargeback'` matters: without it this counted inquiries
+      // too and the email's headline "90-day chargeback rate" was inflated
+      // by them — 461 vs 299 on Mein Maison (+54%), 16 vs 1 on
+      // cay-collective (16x). The in-app page reads
+      // shop_daily_metrics.chargeback_count, which has always been
+      // chargebacks only, so the two surfaces disagreed for the same
+      // merchant in the same week.
       const { count: chargebacks90d } = await sb
         .from("disputes")
         .select("id", { count: "exact", head: true })
         .eq("shop_id", shop.id)
+        .eq("phase", "chargeback")
         .gte("initiated_at", w90.toISOString())
         .lt("initiated_at", anchor.toISOString());
 
@@ -124,6 +133,14 @@ export async function GET(req: NextRequest) {
         orders90d && orders90d > 0
           ? ((chargebacks90d ?? 0) / orders90d) * 100
           : null;
+
+      // ── Payment rail ─────────────────────────────────────────────
+      // The digest calls the same VAMP/ECM rules as the page, so it needs
+      // the same rail context or it will keep telling a Klarna-only or
+      // PayPal-heavy merchant where they stand against Visa and
+      // Mastercard. Orders and disputes are both re-read here rather than
+      // shared with the page, because this cron runs independently.
+      const rail = await railSegmentationFor(sb, shop.id, w90, anchor);
 
       // Don't email a shop with no recent activity — they'd see a
       // table full of "—" and lose trust in the digest.
@@ -154,6 +171,12 @@ export async function GET(req: NextRequest) {
         periodLabel,
         chargebackRate90dPct,
         chargebackCount90d: chargebacks90d ?? 0,
+        rail: {
+          cardRatePct: rail.card.ratePct,
+          cardDisputes: rail.card.disputes,
+          cardDisputeShare: rail.cardDisputeShare,
+          cardFramingApplies: rail.cardFramingApplies,
+        },
         current30d: cur,
         prior30d: prior,
         disputeActivity,
