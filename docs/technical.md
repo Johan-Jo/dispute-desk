@@ -7624,3 +7624,21 @@ Floors (plan §15.6): 3 peer merchants excluding the subject, 30 peer cases, 10 
 **Dimension rules that matter on this data.** `UNKNOWN` card network never merges with a known one — 49 of 50 prod cases carry an unknown network, so a merge would pool nearly everything. An unclassified niche cannot enter a niche benchmark in either direction. The subject is excluded from its own peer set structurally, by passing peers and subject through separate predicates rather than one filter someone can drop.
 
 A test runs the real production shape (47 blume-box + 1 cay-collective + 1 surasvenne, no niches classified) and asserts every benchmark refuses with no rate property present. A gate that only works on synthetic data is not a gate.
+
+### Step 12 — the Outcome Analysis admin page
+
+`/admin/outcome-analysis` (list) and `/admin/outcome-analysis/[id]` (detail), with `POST /api/admin/outcome-analysis/[id]/review`. Internal admin only; merchants have no access. Nav entry sits beside Intelligence, deliberately apart from Operations/Exceptions — the question here is "what should we change", never "what should someone do about this dispute today".
+
+**Every metric names its denominator.** Outcome rates use decided disputes, finding rates use eligible analysed disputes, and `summarise()` returns counts rather than pre-computed percentages — a stored rate is how a denominator gets lost between the query and the card. Summary cards are computed from the same filtered rows as the table, so a card can never disagree with the table beneath it.
+
+**Chargebacks by default.** Phase defaults to `chargeback` rather than "all", so a blended inquiry/chargeback figure requires someone to ask for it explicitly (plan §15.2).
+
+**"Saved only" is never rendered as submitted.** The Submitted column shows the confirmation *source*, and the detail page leads with lifecycle — because whether the package was forwarded bounds what everything below it is allowed to mean. A non-forwarded case carries an explicit banner withholding conclusions about what the issuer saw.
+
+**Findings are labelled hypotheses.** A banner states that automated findings are unreviewed until a human confirms them and that nothing on the page changes rules, templates or scoring on its own (plan §17).
+
+**Default ordering encodes what the page is for**: unreviewed actionable findings first (by confidence), then failures and integrity limitations, then by date. Sorting by date alone would bury the one `DEFINITE` omission under 47 routine analyses.
+
+**Review notes are required in three places.** `EDITED` and `REJECTED` need a note — the button is disabled without one, the API rejects it, and a check constraint refuses it. Three layers for a text box is deliberate: that note is the only record of why a reviewer disagreed with the analyzer, and a rejection with no reason is indistinguishable afterwards from a mis-click.
+
+Benchmarking is absent by design, with a footer saying so: it needs three peer merchants in a matched cohort and the current population cannot form one.
