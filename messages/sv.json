@@ -563,6 +563,7 @@
     "csvDueDate": "Förfallodatum",
     "csvNormalizedStatus": "Normaliserad status",
     "csvSubmissionState": "Inlämningsstatus",
+    "csvDisputeDate": "Tvist initierad",
     "csvSubmittedAt": "Inskickad",
     "csvClosedAt": "Stängd",
     "csvOutcome": "Slutresultat",
