@@ -5376,7 +5376,8 @@
         "fptWins": "Victoires FPT",
         "fptWinsHelper": "Litiges Mastercard 4837 / 4863 gagnés via First-Party Trust"
       },
-      "estimateNotice": "Les ratios sont des estimations calculées à partir de vos données Shopify. Votre acquéreur détient les chiffres faisant autorité pour l'application des règles."
+      "estimateNotice": "Les ratios sont des estimations calculées à partir de vos données Shopify. Votre acquéreur détient les chiffres faisant autorité pour l'application des règles.",
+      "notApplicable": "Aucun volume carte sur cette période — ce programme ne mesure pas vos litiges."
     }
   },
   "playbook": {
