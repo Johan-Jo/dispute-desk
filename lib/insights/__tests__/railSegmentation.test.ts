@@ -210,3 +210,38 @@ describe("segmentByRail — thin denominators", () => {
     expect(seg.unknownShare).toBe(1);
   });
 });
+
+describe("classifyRail — the CARD_RAIL_METHODS contract", () => {
+  // lib/liabilityShift/ratios/calculate.ts filters its Visa/Mastercard
+  // settlement denominator with a literal CARD_RAIL_METHODS array, because a
+  // PostgREST `.in()` cannot call this function. The two must agree: if a
+  // method is card here but missing there, the VAMP denominator silently
+  // loses orders and the ratio inflates.
+  const CARD_RAIL_METHODS = [
+    "card",
+    "apple_pay",
+    "google_pay",
+    "shop_pay",
+    "shopify_pay",
+  ];
+
+  it("classifies every CARD_RAIL_METHODS entry as card", () => {
+    for (const m of CARD_RAIL_METHODS) {
+      expect(classifyRail(m)).toBe("card");
+    }
+  });
+
+  it("classifies nothing outside that list as card", () => {
+    for (const m of [
+      "paypal",
+      "klarna",
+      "shop_pay_installments",
+      "tiktok_shop",
+      "shop_cash",
+      "gift_card",
+      null,
+    ]) {
+      expect(classifyRail(m)).not.toBe("card");
+    }
+  });
+});

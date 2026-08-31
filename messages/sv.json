@@ -5376,7 +5376,8 @@
         "fptWins": "FPT-vinster",
         "fptWinsHelper": "Mastercard 4837 / 4863-tvister vunna via First-Party Trust"
       },
-      "estimateNotice": "Nyckeltal är beräknade uppskattningar från dina Shopify-data. Din inlösare har de auktoritativa siffrorna som används för efterlevnadskontroll."
+      "estimateNotice": "Nyckeltal är beräknade uppskattningar från dina Shopify-data. Din inlösare har de auktoritativa siffrorna som används för efterlevnadskontroll.",
+      "notApplicable": "Ingen kortvolym denna period — detta program mäter inte dina ärenden."
     }
   },
   "playbook": {

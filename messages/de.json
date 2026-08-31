@@ -5376,7 +5376,8 @@
         "fptWins": "FPT-Erfolge",
         "fptWinsHelper": "Mastercard-4837/4863-Streitfälle via First-Party Trust gewonnen"
       },
-      "estimateNotice": "Kennzahlen sind berechnete Schätzungen aus Ihren Shopify-Daten. Ihr Acquirer hält die maßgeblichen Zahlen für die Compliance-Durchsetzung."
+      "estimateNotice": "Kennzahlen sind berechnete Schätzungen aus Ihren Shopify-Daten. Ihr Acquirer hält die maßgeblichen Zahlen für die Compliance-Durchsetzung.",
+      "notApplicable": "Kein Kartenvolumen in diesem Zeitraum — dieses Programm misst Ihre Fälle nicht."
     }
   },
   "playbook": {

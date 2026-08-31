@@ -5376,7 +5376,8 @@
         "fptWins": "Vitórias FPT",
         "fptWinsHelper": "Disputas Mastercard 4837 / 4863 vencidas via First-Party Trust"
       },
-      "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade."
+      "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade.",
+      "notApplicable": "Sem volume de cartão neste período — este programa não mede as suas disputas."
     }
   },
   "playbook": {
