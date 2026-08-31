@@ -156,11 +156,27 @@ export function fraudSignalPolarity(item: SnapshotEvidenceItem): {
     }
 
     case "prior_customer_history": {
+      // The order COUNT alone does not decide polarity; `disputeFreeHistory`
+      // does. A customer with four prior orders of which some were disputed is
+      // not evidence for the merchant — citing "they have ordered before" when
+      // those orders were charged back argues against yourself, and the
+      // classifier withholds it for exactly that reason.
+      //
+      // Reading only the count produced 7 false "supporting signal withheld"
+      // findings on prod: 4 cases at count 1 and 3 at count 4, all with
+      // disputeFreeHistory false and all correctly suppressed.
       const count = num(v.priorOrderCount);
-      if (count !== null && count > 0) {
+      const disputeFree = v.disputeFreeHistory === true;
+      if (count !== null && count > 0 && disputeFree) {
         return {
           polarity: "SUPPORTS_MERCHANT",
-          detail: `${count} earlier order(s) from the same customer.`,
+          detail: `${count} earlier dispute-free order(s) from the same customer.`,
+        };
+      }
+      if (count !== null && count > 0) {
+        return {
+          polarity: "NEUTRAL",
+          detail: `${count} earlier order(s), but the history is not dispute-free.`,
         };
       }
       if (count === 0) {
@@ -207,7 +223,19 @@ const TRACKED: Array<{ category: string; label: string; acquirable: boolean }> =
   { category: "prior_customer_history", label: "Prior customer history", acquirable: false },
   { category: "delivery_proof", label: "Delivery confirmation", acquirable: true },
   { category: "shipping_tracking", label: "Shipment tracking", acquirable: true },
-  { category: "customer_communication", label: "Customer communication", acquirable: true },
+  // NOT acquirable, despite being the kind of thing a merchant could in
+  // principle go and fetch.
+  //
+  // The acquisition path already runs by itself: enrichment executed on 33 of
+  // the 35 prod packages that hold no communication evidence, against shops
+  // with a live integration, and matched zero tickets. On an unauthorised-
+  // transaction claim the cardholder frequently never contacts the merchant at
+  // all, so the absence is a fact about the case rather than a gap a future
+  // process closes. "Capture customer communication before the deadline" is
+  // advice with nothing behind it, and plan §8 requires that
+  // MISSING_ACQUIRABLE_EVIDENCE mean evidence a future process could
+  // reasonably obtain.
+  { category: "customer_communication", label: "Customer communication", acquirable: false },
 ];
 
 export function runFraudulentModule(

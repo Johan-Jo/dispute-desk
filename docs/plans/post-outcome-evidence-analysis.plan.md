@@ -1524,3 +1524,76 @@ rather than an unreviewed edit.
 This is the second false positive manual QA has caught in this module, after the
 delivery-on-unfulfilled-orders one (§26.2). Both were found by asking what a
 finding actually meant on a specific case rather than trusting the aggregate.
+
+## 27. Case-level review of the three largest finding classes (2026-08-31)
+
+Each class checked the way §26.4 checked the AVS one: pull the underlying data
+for real cases and ask whether the finding survives contact with them.
+
+### 27.1 UNSUPPORTED_OR_OVERSTATED_ASSERTION (27) — **holds**
+
+Four filed section texts read in full. They make substantive claims —
+*"the order IP geolocated to the same country as the billing address, with no
+VPN, proxy, or datacenter signals detected"* — and cite only facts the Evidence
+Basis filters out. Confirmed end to end: `DefencePackageDocument.tsx` renders
+`paymentAuthenticationArgument` into the filed PDF, and `evidenceBasisRows.ts`
+lists none of its supporting facts. The section reaches the issuer with nothing
+behind it.
+
+Driven by `payment_authentication` (38 citations), `ip_location` (36) and
+`order_record` (32).
+
+### 27.2 INCORRECT_EVIDENCE_INTERPRETATION (44) — **partly false**
+
+Two signals drove it. One was wrong.
+
+`prior_customer_history` was read on `priorOrderCount` alone. The qualifier is
+`disputeFreeHistory`:
+
+| value | strength | shown |
+|---|---|---|
+| `count: 1, disputeFreeHistory: true` | strong | yes |
+| `count: 1, disputeFreeHistory: false` | supporting | withheld |
+| `count: 4, disputeFreeHistory: false` | supporting | withheld |
+
+A customer with four prior orders of which some were disputed is not evidence
+for the merchant — citing it argues against yourself, and the classifier
+withholds it correctly. 7 false signals across the cohort. Fixed.
+
+`ip_location same_country` (45 cases) stands, and is the genuine open question
+already recorded in §26.3.
+
+### 27.3 MISSING_ACQUIRABLE_EVIDENCE (31) — **false, now zero**
+
+The remaining element after the fulfilment fix was customer communication. But
+the acquisition path already runs by itself: enrichment executed on **33 of the
+35** packages holding no communication evidence, against shops with a live
+integration, and matched **zero** tickets. On an unauthorised-transaction claim
+the cardholder frequently never contacts the merchant at all.
+
+So the absence is a fact about the case, not a gap a future process closes —
+which is what plan §8 requires the category to mean. Marked not acquirable; the
+finding no longer fires anywhere.
+
+### 27.4 The pattern behind all four false positives
+
+| # | Finding | What was misread |
+|---|---|---|
+| 1 | delivery evidence "missing" | ignored `fulfillmentStatus` — nothing shipped |
+| 2 | failed AVS "disclosed" | a fact has two halves; only the citable one renders |
+| 3 | communication "acquirable" | the search already ran and found nothing |
+| 4 | prior history "supporting" | ignored `disputeFreeHistory` |
+
+Every one is the same error: **reading one field of a multi-field fact and
+reporting the result as a defect without checking the qualifier that decides
+it.** Three of the four were caught only by pulling a specific case; none was
+visible in the aggregate.
+
+Findings fell from 131 → 78 across the three corrections. **Roughly 40% of what
+the analyser originally produced was wrong**, and the survivors are concentrated
+in one place: the divergence between what the narrative may argue from and what
+the Evidence Basis will list.
+
+That number is the argument for plan §17. An unreviewed finding is a hypothesis,
+and on this evidence a hypothesis from this analyser is wrong about four times in
+ten.
