@@ -7511,3 +7511,253 @@ Enforced structurally by `branchBoundary.test.ts`.
 Terminal disputes use `lib/disputes/outcomeExplanation.ts` for a merchant-only explanation of the recorded outcome. The filing sentence continues to use the submitted defence-package timestamp, but a lost case's **What likely weakened this case** panel evaluates the complete workspace evidence map (`pack.evidenceItemsByField`), not only `defencePackage.bankFacing.facts_json`. This distinction is intentional: AVS failures, cardholder/buyer name mismatches, prior chargebacks and risky IP signals are correctly withheld from the issuer-facing response, yet remain essential learning for the merchant after a decision.
 
 Fraud-loss factors are ranked by operational relevance: payment-verification failure, cardholder/buyer mismatch, prior chargebacks, location/network risk, then delivery gaps. The panel shows up to four observed or carefully qualified signals and a prevention recommendation. It explicitly states that the issuer does not disclose its exact reasoning; no factor is presented as proven causation. This path is display-only and must never feed `narrative_json`, a PDF, or a Shopify evidence mutation.
+
+## Post-outcome analysis foundation (internal admin — schema + contracts only)
+
+Plan: `docs/plans/post-outcome-evidence-analysis.plan.md`. This section covers what has shipped so far — the taxonomy, the analysis-level gate, the immutable snapshot contract, and the tables. There is no analyzer, no job and no admin page yet; nothing writes to these tables in production.
+
+Related but distinct from **Post-decision merchant learning** above: that path explains a decided case *to the merchant* and is display-only. This one analyses the package DisputeDesk actually filed, for *internal product learning*, and merchants have no access to it.
+
+### Saved to Shopify is not sent to the network
+
+The load-bearing distinction. `defence_packages.shopify_response` proves Shopify **stored** the evidence and read it back (`verified`, `finalStatus: saved_to_shopify_verified`, `evidenceGid`, `fileGid`). It does **not** prove Shopify forwarded anything to the issuer or card network. Neither does `defence_packages.status = 'submitted'`, which means submitted *to Shopify*.
+
+Measured in prod 2026-08-30 across the 53 submitted packages on decided disputes:
+
+| `submission_state` | `status` | `verified` | `disputes.submitted_at` | Packages |
+|---|---|---|---|---|
+| `submitted_confirmed` | `submitted` | true | present | 49 |
+| `saved_to_shopify` | `submitted` | true | **NULL** | 4 |
+
+Those four read as "submitted" by both the package status and the save confirmation while Shopify never reported forwarding them — and one of them is the platform's only decided win. So `platform_save_confirmation` and `submission_confirmation_source` are separate columns, and a check constraint forbids the first satisfying the second.
+
+Forwarding confirmation is `submitted_confirmed` plus a `submitted_at` whose provenance is Shopify's own `evidenceSentOn`. The absence of a `submission_logs` row is **not** disqualifying — that table is empty platform-wide; provenance of the timestamp matters, not a separate log id.
+
+### Analysis levels
+
+`lib/postOutcome/analysisLevel.ts` resolves how much the analyzer may conclude. `FULL_POST_OUTCOME` requires all four: the exact package is reconstructable; it ties to the saved platform evidence (`shopify_response.evidenceGid` = `disputes.dispute_evidence_gid`); forwarding is confirmed; the outcome is reliable. A verified save with no forwarding report is `PACKAGE_INTEGRITY_ONLY`. Several submitted packages with no identifiable forwarded one is a data-integrity limitation, never a promotion. Shopify Payments is `PARTIAL_CASE_FILE` at the provider level permanently — we never receive the buyer's narrative or the adjudicator's rationale. Klarna and PayPal stay outcome-only until a real connector supplies their case records.
+
+### Snapshot contract
+
+`lib/postOutcome/snapshotContract.ts` types the immutable submission-time record. Evidence sits in exactly one of `availableBeforeSubmission`, `arrivedAfterSubmission` or `availabilityUnknown` — enforced by `validateSnapshotContract`, because that split is what separates a real omission finding from blaming the pipeline for a time-travel failure.
+
+The inventory is reconstructed from `defence_packages.facts_json` / `narrative_json`, **not** `defence_evidence_facts` (zero rows for all 50 analyzable disputes). The package JSON is already frozen at build time, which is the immutability the contract needs.
+
+Hashing goes through `lib/hashing/canonicalJson.ts`, extracted from `computeEvidenceHash` so the two cannot drift. The drop set is a parameter: `computeEvidenceHash` drops volatile timestamps, snapshots drop **nothing** — there, `created_at` is the evidence. `lib/hashing/__tests__/canonicalJson.test.ts` pins byte-equivalence with the pre-extraction implementation, since every stored `evidence_hash` was produced by it and drift would silently mark live packages stale.
+
+### Tables
+
+`post_outcome_analyses` (unique on `dispute_id, analyzer_version, source_snapshot_sha256` — retries resume, new analyzer versions add rows, nothing overwrites), `post_outcome_findings` (one primary per analysis; `DEFINITE`/`HIGH` must carry evidence or rule refs, by constraint), `post_outcome_analysis_reviews` (append-only; an `EDITED`/`REJECTED` review must state a reason), `merchant_niche_classifications` (append-only, table only — benchmarking needs 3+ peer merchants per matched cohort and prod has 3 shops with analyzable decided cases, so the panel is deferred).
+
+All service-role only, RLS enabled with no policies.
+
+### Versioning
+
+`ANALYZER_VERSION` in `lib/postOutcome/analyzerVersion.ts` — bump on any change that could alter output for an unchanged snapshot. Reason modules version independently so shipping one does not invalidate analyses from another. `REASON_MODULE_VERSIONS` currently holds `FRAUDULENT` only: it covers 47 of the 50 analyzable prod cases, where the plan's original `PRODUCT_UNACCEPTABLE` choice covers exactly one.
+
+`reason_specific_status` distinguishes `NOT_YET_SUPPORTED` (no module for this reason) from `NOT_RECONSTRUCTABLE` (module exists, this case's facts are absent). Only the first is fixed by shipping code.
+
+### Snapshot builder
+
+`lib/postOutcome/buildSnapshot.ts` is pure and synchronous — every classification rule lives there, unit-testable against fixtures. `lib/postOutcome/loadSnapshotInputs.ts` is the only part that touches the database. The split is deliberate: the rules are the risky part (a rule that mistakes a late arrival for an omission is a false accusation against the pipeline), the queries are the boring part.
+
+**The submission instant.** Evidence is dated against Shopify's `evidenceSentOn`, else `disputes.submitted_at`, else the package's own `submitted_at`. Everything at or before it is available; everything after is `arrivedAfterSubmission`. Get it wrong and approved evidence legitimately captured post-filing becomes a phantom omission.
+
+`lifecycle.submittedAt` is set only when forwarding is confirmed **and** we hold at least one package of our own. Shopify auto-files its own scrape, so `disputes.submitted_at` is set on 688 decided disputes while only 50 have a package of ours; attributing that timestamp to our submission would put a forwarding time on ~888 historical imports.
+
+**Ambiguity is detected, never resolved by guessing.** More than one submitted package means we cannot say which Shopify sent. Picking "the newest" would be a plausible-sounding fabrication. The gate checks the tie *before* reconstructability — otherwise a multi-package dispute falls through to `OUTCOME_METADATA_ONLY` and the data-integrity limitation is silently lost. A true forwarding timestamp is still kept in that state: the forwarding fact is about the dispute, the ambiguity is about the package.
+
+**Two shared owners, not local re-spellings.** `inclusionEligible` calls `isBankIncludedFact` from `lib/defence/bankInclusion.ts` (widened to a structural `BankInclusionFlags` so a `facts_json` parse can use it). Package queries route through `fetchCandidateRows` in `lib/defence/candidateVersions.ts`. Both are enforced by existing CI invariants, and both caught real defects in the first draft — an inclusion rule that admitted `submissionRisk` facts, and a raw `.order("version")` of the shape that once let an aborted build shadow a filed package.
+
+**Shadow runner.** `npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local` builds a snapshot per decided dispute and reports the level split, confirmation sources and reconstruction gaps. Read-only; writes nothing. Against prod it reproduces the audited split exactly — 47 `FULL_POST_OUTCOME`, 1 `PACKAGE_INTEGRITY_ONLY` (the sole win, saved but never forwarded), 2 data-integrity limitations, zero contract errors, 50 unique snapshot hashes, avg 10.8 evidence items and 5.5 assertions.
+
+### Stage 2 — lifecycle and submission checks
+
+`lib/postOutcome/checks/lifecycle.ts`. Pure; reads only the snapshot. Against the 50 prod cases it emits **4 findings** — 2 `PROCEDURAL_OR_SUBMISSION_FAILURE` (saved, never forwarded) and 2 `DATA_INTEGRITY_FAILURE` (forwarded package unidentifiable) — all schema-valid.
+
+**The deadline check reads OUR timestamp, and that distinction is worth 41 false findings.** `raw_snapshot.evidenceSentOn` is when *Shopify forwarded*; `defence_packages.submitted_at` is when *we handed over*. Measured on prod 2026-08-30:
+
+| | |
+|---|---|
+| we submitted after the deadline | **0 / 53** |
+| we saved after the deadline | 0 / 53 |
+| Shopify forwarded after the deadline | **41 / 53** |
+| mean lead time we gave | 147 h (min 4.4 h) |
+| mean lag Shopify added | 47 h |
+
+A deadline check reading the platform's timestamp as ours reports 41 late filings that never happened, against a pipeline that filed a median six days early. `SnapshotSubmittedPackage.submittedToPlatformAt` exists to keep the two apart (contract v2).
+
+**Findings vs observations.** A finding asserts a defect and names an owner; an observation asserts neither. The platform forwarding evidence after its own deadline (40 of 50 cases) is real and worth an admin's attention, but it is not ours to fix and no outcome can be attributed to it — so it is a `LifecycleObservation`, not a finding. `lib/postOutcome/findings.ts` holds both types plus `validateFinding`, which refuses causal language (plan §9), refuses `DEFINITE`/`HIGH` findings with no provenance, and refuses win-only categories on a case whose analysis level cannot support an evidence-effectiveness claim.
+
+### Stage 3 — evidence inventory comparison
+
+`lib/postOutcome/checks/evidenceComparison.ts`. Classifies every snapshot item against the exact submitted package. Across the 50 prod cases: 367 `AVAILABLE_BUT_NOT_APPROVED`, 152 `INCLUDED_ACCURATELY`, 12 `PENDING_AND_CORRECTLY_EXCLUDED`, 6 `INCLUSION_UNVERIFIABLE`, 2 `AVAILABLE_BUT_OMITTED`, 1 `ARRIVED_AFTER_SUBMISSION`.
+
+**"Present" means it reached the issuer**, not that it sits in `facts_json`. A package records internal-only and submission-risk facts that are deliberately withheld from the bank; counting those as present would claim the issuer saw evidence we intentionally held back. Presence is also checked *before* eligibility — an eligibility-first ordering labelled 367 prod facts "pending and correctly excluded", including ones that were in the issuer-facing package.
+
+**`INCLUSION_UNVERIFIABLE` is a new classification the data forced.** A Gorgias passage enters a package as one aggregate `customer_communication` fact — `sourceRef: null`, `messageCount: null`, no per-message linkage. On a dispute with five approved passages and one such fact, the record cannot say whether four were dropped or all five were summarised. `INCLUDED_ACCURATELY` would issue a false clean bill; `AVAILABLE_BUT_OMITTED` would be a false accusation. It is distinct from `AVAILABILITY_UNKNOWN`, where we cannot tell the item existed at all — here availability is certain and only inclusion is opaque. The gap itself raises a `DATA_QUALITY` finding, because until per-passage provenance is recorded this stage can never answer the plan's central question for communications evidence.
+
+**`AVAILABLE_EVIDENCE_OMITTED` names its mechanism.** Two are possible and they have different owners: *never carried* (no fact from that source exists) and *built, withheld* (a fact was derived then not cleared for issuer-facing use). The live example is prod dispute #345617 — two approved passages (`delivery_recognition`, `resolution_attempt`), one derived Gorgias fact carrying `bankEligible: false`. The absence is proven, so the finding is `DEFINITE`; whether it was a mistake is a review decision, so severity stays `MEDIUM` and the text says so. This is *not* the deliberate refund/cancellation exclusion (PR#352) — neither message is in those categories.
+
+### Stage 4 — assertion and rule integrity
+
+`lib/postOutcome/checks/assertionIntegrity.ts`. Checks each narrative section's declared `usedFactIds` against the package's own facts. The prose itself is not checked — deciding whether a sentence overstates its evidence needs reading, not joins — so an assertion is `UNSUPPORTED` only when a cited fact is absent, and `NOT_MACHINE_VERIFIABLE` otherwise. Plan §7 Stage 4: inability to verify is not evidence of falsehood.
+
+Measured across the 53 submitted packages of decided prod disputes:
+
+| | |
+|---|---|
+| narrative sections | 308 |
+| sections with no declared support | 0 |
+| citations to a fact not in the package | 0 |
+| citations to an internal-only fact | 0 |
+| citations to a fact the Evidence Basis suppresses | **370**, across 53/53 packages |
+| sections whose support is **entirely** suppressed | **63** |
+
+The build-time validator's `unknown_fact_id` and `internal_only_fact_referenced` rules are holding. Those checks are kept regardless — a rule that currently never fires is exactly the one that quietly stops being enforced.
+
+**The 370 are C-1**, the known divergence documented in `lib/defence/bankInclusion.ts`: the generator's input filter (`reachesLlmPayloadLegacy`) admits facts that `isBankIncludedFact` refuses, so the narrative can argue from a fact the appendix will not list. Convergence is deliberately deferred there pending "its own measured delta" — so this is recorded as an **observation**, not re-reported as 53 defects. The measured delta is now available: `neverShouldHaveSeen: 0`, and the divergence is cited 370 times across every filed package, concentrated in `order_record` (151), `ip_location` (110) and `payment_authentication` (59).
+
+**The 63 do get a finding.** A section whose entire declared support is suppressed argues to the issuer with no listed evidence behind it — 26 of them `paymentAuthenticationArgument`, 25 `transactionOverviewArgument`. Confidence is `MODERATE`, because what the record proves is the absence of listed support, not that the prose overstates. Across the 50 analyzable disputes this raises 27 `UNSUPPORTED_OR_OVERSTATED_ASSERTION` findings.
+
+### Stage 5 — the FRAUDULENT reason module
+
+`lib/postOutcome/reasons/fraudulent.ts`. Ships first because that is where the cases are: 45 of the 47 fully-analyzable prod disputes are FRAUDULENT losses, against one for the plan's original `PRODUCT_UNACCEPTABLE` pick.
+
+Every case in the cohort is a loss, so nothing here may claim a configuration would have worked. The module reports only what the record proves: a supporting signal was held and not shown; an adverse signal *was* shown; an element was absent.
+
+**Signal polarity is the whole job.** "We held an AVS result" and "we held an AVS result that matched" are different facts, and only the second is evidence for the merchant. Withholding a *failed* AVS is correct — a bank-facing rebuttal never volunteers a weakness. A module counting only presence would flag 27 correct suppressions as defects and miss the 14 real disclosures. Unrecognised payloads are `NEUTRAL`; the module never guesses polarity from a shape it does not know.
+
+Measured across the 50 FRAUDULENT/lost submitted packages:
+
+| element | held | shown | note |
+|---|---|---|---|
+| `ip_location` | 50 | **0** | 45 of them `same_country` |
+| `payment_authentication` | 49 | 22 | shown `avs=N` ×14, `avs=Y/Z` ×7; withheld ×27 are Mastercard with null codes |
+| `prior_customer_history` | 50 | 12 | |
+| `delivery_proof` | 35 | 35 | 15 packages hold none |
+| `customer_communication` | 15 | 2 | |
+
+Two patterns worth naming. `ip_location` is held on every package and shown on none, though 45 carry `same_country` — an order placed from the cardholder's own country is corroboration on an unauthorised-transaction claim. And `avs=N` reached the issuer 14 times: all built under prompt v9–v10 (2026-07-22 → 2026-08-09). From prompt v13 / validator v1 (2026-08-12) the codes are null, because the `citable` gate in `factClassifier` closed it. So the module's most severe finding is, on today's data, a **confirmation that a shipped fix changed filed output**. It still fires and carries the prompt version, so a reviewer sees the boundary instead of chasing a closed defect.
+
+Across the 45 cases the module raises 14 `INCORRECT_EVIDENCE_INTERPRETATION` (adverse disclosed, DEFINITE/HIGH), 44 `INCORRECT_EVIDENCE_INTERPRETATION` (supporting withheld, MODERATE/MEDIUM), and 39 `MISSING_ACQUIRABLE_EVIDENCE`. Zero schema-invalid.
+
+### Step 8 — bounded synthesis and the schema gate
+
+`lib/postOutcome/composeAnalysis.ts` runs every stage over one snapshot and assembles the record the admin page reads: one primary finding, a status, a structured summary.
+
+**It is deterministic, in a codebase that has an LLM, on purpose.** Plan §12 forbids the synthesis layer from changing deterministic classifications, inventing evidence, assigning a bank rationale, or marking a finding `DEFINITE` without deterministic support. A template-driven composer satisfies all four by construction; a generative one would have to be policed into satisfying them, and that policing (`findCausalLanguageViolations`) is a backstop, not a licence. Nothing here writes prose — every sentence a reviewer reads was authored by a check that had the structured facts in hand.
+
+**A finding that fails the gate is dropped, not softened.** `validateFinding` runs on every produced finding; failures land in `rejectedFindings` and never reach `findings`. The gate refuses causal language, `DEFINITE`/`HIGH` findings with no provenance, and win-only categories on a case whose level cannot support an evidence-effectiveness claim.
+
+**"Found nothing" is distinguished from "could not look."** At `FULL_POST_OUTCOME` or `PACKAGE_INTEGRITY_ONLY`, silence means the stages ran and the record showed no material gap → `NO_MATERIAL_GAP_OBSERVED`. At `OUTCOME_METADATA_ONLY` there was nothing to read → `INDETERMINATE`. `summary.stagesRun` records which stages executed, so an empty result can always be told from a skipped one. `reason_specific_status` separates `NOT_YET_SUPPORTED` (no module), `BLOCKED` (level too low), and `NOT_RECONSTRUCTABLE` (module ran, this case's facts absent).
+
+Composed over the 50 prod cases: **50 `COMPLETED`, 0 findings rejected, 49 actionable**, one `NO_MATERIAL_GAP_OBSERVED`. Primary findings: 24 `UNSUPPORTED_OR_OVERSTATED_ASSERTION`, 20 `INCORRECT_EVIDENCE_INTERPRETATION`, 2 `PROCEDURAL_OR_SUBMISSION_FAILURE`, 2 `DATA_INTEGRITY_FAILURE`, 1 `AVAILABLE_EVIDENCE_OMITTED`. Reason module: 45 `SUPPORTED`, 3 `NOT_YET_SUPPORTED`, 2 `BLOCKED`.
+
+### Step 9 — persistence and review
+
+`lib/postOutcome/persistAnalysis.ts` writes a composed analysis; `lib/postOutcome/reviews.ts` handles the append-only review flow.
+
+**Idempotency comes from one index**, `UNIQUE(dispute_id, analyzer_version, source_snapshot_sha256)`, which gives all four plan §13 behaviours with no bookkeeping: a retry conflicts and returns the existing row; a new analyzer version writes a new row; a repaired snapshot moves the hash and writes a new row; an unchanged re-run does nothing. Nothing here UPDATEs an analysis — a completed analysis is immutable, and superseding is an insert plus a pointer.
+
+**Findings are written immediately after the parent, and a failure deletes it.** An analysis with no findings and one whose findings failed to insert look identical afterwards, and the second is a silent lie — the admin page would read "no material gap observed" from a case that had six. Supabase offers no client-side transaction, so the compensating delete is the honest approximation; it is safe because the parent is worthless without its children.
+
+**Reviews are append-only and the current state is derived, never stored.** A reviewer who changes their mind leaves both decisions in the record. Overrides apply from the latest review only, so a superseded edit cannot leak back into the effective values. Ties on `created_at` break by `id`: Postgres `now()` is transaction time, so same-transaction inserts tie exactly, and an audit surface that shows a different answer on each refresh is worse than one that picks a stable winner.
+
+**Authorisation lives next to the write.** `assertReviewer` checks the active `internal_admin_grants` row itself rather than trusting the calling route — a route that forgot `hasAdminSession` would otherwise write an unauthorised confirmation indistinguishable from a real one. A review is what promotes a hypothesis into something allowed to drive a rule change (plan §17), so the check belongs at that boundary.
+
+Exercised against dev: analysis insert, save-vs-forwarding stored as separate columns, primary-finding uniqueness, `REJECTED`-without-notes refusal, append-only history retained, and cascade delete of findings and reviews.
+
+### Step 11 — comparable cohorts and sufficiency gates
+
+`lib/postOutcome/cohorts.ts` plus the `outcome_cohort_snapshots` table. No UI reads either yet (plan §25.6 defers the benchmark panel); the gates ship now because they are what stops a misleading average the day the data arrives.
+
+**The gates are enforced by the type, not a flag.** The obvious shape — `{ winRate, sufficient }` — makes every caller responsible for checking, and the one that forgets renders a percentage from four cases. `CohortResult` is a discriminated union instead: rates exist *only* on the `SUFFICIENT` variant. An insufficient cohort carries raw counts and its blocking dimensions, and is structurally incapable of yielding a percentage.
+
+Floors (plan §15.6): 3 peer merchants excluding the subject, 30 peer cases, 10 subject cases. `>=`, so exactly-at-floor passes — pinned by test, since a later "tighten by one" would change a product promise silently. The same floors are a check constraint on the table, because an application-layer typo that relaxes them would otherwise ship unnoticed.
+
+**Refusals are stored, not discarded.** `status` may be `INSUFFICIENT_SAMPLE` or `NO_COMPARABLE_COHORT`, and a non-sufficient row must carry blockers. Those rows are the point: with 3 merchants holding analyzable cases, every benchmark today correctly refuses, and recording the refusal makes "when did this become answerable?" a query rather than a guess.
+
+**Dimension rules that matter on this data.** `UNKNOWN` card network never merges with a known one — 49 of 50 prod cases carry an unknown network, so a merge would pool nearly everything. An unclassified niche cannot enter a niche benchmark in either direction. The subject is excluded from its own peer set structurally, by passing peers and subject through separate predicates rather than one filter someone can drop.
+
+A test runs the real production shape (47 blume-box + 1 cay-collective + 1 surasvenne, no niches classified) and asserts every benchmark refuses with no rate property present. A gate that only works on synthetic data is not a gate.
+
+### Step 12 — the Outcome Analysis admin page
+
+`/admin/outcome-analysis` (list) and `/admin/outcome-analysis/[id]` (detail), with `POST /api/admin/outcome-analysis/[id]/review`. Internal admin only; merchants have no access. Nav entry sits beside Intelligence, deliberately apart from Operations/Exceptions — the question here is "what should we change", never "what should someone do about this dispute today".
+
+**Every metric names its denominator.** Outcome rates use decided disputes, finding rates use eligible analysed disputes, and `summarise()` returns counts rather than pre-computed percentages — a stored rate is how a denominator gets lost between the query and the card. Summary cards are computed from the same filtered rows as the table, so a card can never disagree with the table beneath it.
+
+**Chargebacks by default.** Phase defaults to `chargeback` rather than "all", so a blended inquiry/chargeback figure requires someone to ask for it explicitly (plan §15.2).
+
+**"Saved only" is never rendered as submitted.** The Submitted column shows the confirmation *source*, and the detail page leads with lifecycle — because whether the package was forwarded bounds what everything below it is allowed to mean. A non-forwarded case carries an explicit banner withholding conclusions about what the issuer saw.
+
+**Findings are labelled hypotheses.** A banner states that automated findings are unreviewed until a human confirms them and that nothing on the page changes rules, templates or scoring on its own (plan §17).
+
+**Default ordering encodes what the page is for**: unreviewed actionable findings first (by confidence), then failures and integrity limitations, then by date. Sorting by date alone would bury the one `DEFINITE` omission under 47 routine analyses.
+
+**Review notes are required in three places.** `EDITED` and `REJECTED` need a note — the button is disabled without one, the API rejects it, and a check constraint refuses it. Three layers for a text box is deliberate: that note is the only record of why a reviewer disagreed with the analyzer, and a rejection with no reason is indistinguishable afterwards from a mis-click.
+
+Benchmarking is absent by design, with a footer saying so: it needs three peer merchants in a matched cohort and the current population cannot form one.
+
+### The `section_support_not_bank_citable` rule
+
+`lib/defence/validateNarrative.ts` gained a rule for the defect the post-outcome analyzer surfaced: a narrative section whose *entire* declared support consists of facts the Evidence Basis will not list, so the argument reaches the issuer with nothing behind it.
+
+**It is a warning, not an error, and `SUPPORT_CITABILITY_BLOCKING = false` is the switch.** The defect is real — 63 such sections across the 53 filed packages on decided disputes, and 45 of those packages carry bank-facing IP prose past the gate `deviceLocationEligibility.ts` centralises. But `validateNarrative` failing means `status: "failed"`, no PDF, and the next version number — the state in which an aborted build shadowed a validated package and a dispute went to forfeit. On today's population a blocking rule would fail roughly 45 of 53 fraud packages, so the merchant would file *nothing*, which is worse than filing an unevidenced paragraph.
+
+Promoting it needs one of two upstream changes first, so the sections gain support rather than disappearing:
+
+- supporting-tier facts become citable, so the Evidence Basis lists them; or
+- the narrative writer stops being fed facts it may not cite, so the sections are omitted at generation instead of failed at validation.
+
+`VALIDATOR_VERSION` is deliberately **not** bumped. Pass/fail behaviour is unchanged, and a bump makes previously-failed packages eligible for a rebuild — spending model budget to reach the same answer. Bump it when the switch flips.
+
+`ValidationResult.warnings` is optional: it is purely additive, and a caller or test double that predates it is still a valid result. Warnings are recorded per build as a `defence_package_validation_warning` audit event, so the rule is measurable on live traffic before anyone decides to enforce it.
+
+### Step 13 — compact integration into shop and dispute detail
+
+`components/admin/PostOutcomeInsights.tsx`, fed by `GET /api/admin/outcome-analysis/summary`, appears on `/admin/shops/[id]` (plan §14.2) and internal dispute detail (plan §14.3). Both are additive — the merchant-facing Review and Forward surfaces are untouched.
+
+**It is not a second findings table.** Plan §14.2 says the shop page must not become another Outcome Analysis surface; two tables over the same data drift the moment one is edited. This shows counts and links out.
+
+**"Confirmed" counts reviewed findings only.** An unreviewed finding is a hypothesis (plan §17), and a card labelled *confirmed* that counted hypotheses would be precisely the failure this feature exists to prevent. When nothing is reviewed the panel says so, rather than showing zero without explanation.
+
+The dispute-level view repeats the forwarding caveat: if the platform stored the evidence but never reported forwarding it, the panel withholds conclusions about what the issuer saw rather than presenting the analysis as settled. "Nothing analysed" renders an explicit message, since it is a common and legitimate state — most decided disputes carry no package of ours — and an empty shell would read as a loading failure.
+
+### Step 15 — learning actions
+
+`learning_actions`, `learning_action_evidence`, `learning_action_evaluations`, plus the lifecycle state machine in `lib/postOutcome/learningActions.ts`. **Nothing can be approved today** — zero findings have been reviewed, so every approval path refuses. The contract ships ahead of the data deliberately: it is easier to fix a rule before anyone depends on it than to tighten one afterwards.
+
+**This never deploys anything.** `deployment_ref` records *which release* performed a change; making the change stays a separate authorised act. An approval workflow that can also ship the change is one that will eventually ship a change nobody approved.
+
+**The approval gate is a trigger, not a check constraint**, because the rule needs a subquery: every backing finding must carry a `CONFIRMED` or `EDITED` review. A `REJECTED` review counts as reviewed but is not support. This is the line between "a human confirmed this pattern" and "an automated hypothesis changed production" (plan §17), so it is enforced in the database as well as in `checkTransition`.
+
+Verified against dev — each of these is refused: approving with zero findings, approving on an unreviewed finding, approving on a rejected review, an approved row with no approver, a deployment with no release pointer, a `PLATFORM`-scoped action backed by one finding, a `PROMISING` verdict on an insufficient sample, and a `PROMISING` verdict alongside a guardrail regression. Approving on a confirmed review is accepted.
+
+**Verdicts stay inside the evidence.** `INSUFFICIENT` yields `INSUFFICIENT_SAMPLE` however good the numbers look — plan §18 forbids a percentage claim below the thresholds, and "promising" off four cases is that claim in a different word. A `DIRECTIONAL` sample can say "no clear change" but never "promising". A guardrail regression outranks any improvement.
+
+`ROLL_BACK` is reachable from every post-deployment state, without a detour through `MEASURING`: the moment you need a rollback is the moment something is wrong, and a state machine that makes you route around it is one that gets bypassed.
+
+### Migration version collisions
+
+`supabase db push` keys on the version prefix, not the filename. Two branches that
+independently pick the same timestamp produce a collision that fails in the worst
+direction: whichever version reaches an environment's history first wins, and the
+other file is silently **skipped** as already-applied.
+
+That happened here. `20260831090000_outcome_cohort_snapshots.sql` collided with
+`20260831090000_shops_onboarding_digest_sent_at.sql` on another branch. Dev had
+already recorded that version, so a later push would have skipped the cohort
+migration entirely — the table existed on dev only because its DDL had been run
+by hand, and prod would never have received it with nothing complaining. Renumbered
+to `20260831150000`.
+
+Before adding a migration on a shared dev database, check the version is free:
+
+```sql
+select version, name from supabase_migrations.schema_migrations
+where version >= '<your prefix>' order by version;
+```
+
+A name in that list that is not your file is a collision, not a coincidence.

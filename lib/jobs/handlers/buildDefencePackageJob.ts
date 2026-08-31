@@ -580,6 +580,25 @@ export async function handleBuildDefencePackage(
     extraHardPhrases: hardPhrases,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
+  // Non-blocking findings are recorded whether or not the package passes.
+  // Without this the rule is invisible on live traffic, and "detect first,
+  // block later" needs the detection to actually land somewhere.
+  const validationWarnings = validation.warnings ?? [];
+  if (validationWarnings.length > 0) {
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_validation_warning",
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        warnings: validationWarnings,
+      },
+    });
+  }
+
   if (!validation.ok) {
     const feedback = validation.errors.map(
       (e) =>
