@@ -173,6 +173,25 @@ export function fraudSignalPolarity(item: SnapshotEvidenceItem): {
   }
 }
 
+/**
+ * Was anything actually shipped?
+ *
+ * Read from the `order_record` fact's own frozen value, so it reflects
+ * submission time rather than the order's state today.
+ *
+ * This gates whether delivery evidence counts as ACQUIRABLE. It is not a
+ * nicety: the first version of this module reported "capture delivery
+ * confirmation before the deadline" on 15 prod packages whose orders were
+ * 10x UNFULFILLED and 5x ON_HOLD. There was no delivery to confirm, and the
+ * advice was simply wrong. Manual QA caught it (plan §20 Phase 1).
+ */
+export function wasFulfilled(items: readonly SnapshotEvidenceItem[]): boolean | null {
+  const orderRecord = items.find((e) => e.category === "order_record");
+  const status = str(orderRecord?.signalValue?.fulfillmentStatus);
+  if (!status) return null;
+  return status.toUpperCase() === "FULFILLED";
+}
+
 /** Elements a 10.4-style unauthorised-transaction defence turns on. */
 const TRACKED: Array<{ category: string; label: string; acquirable: boolean }> = [
   { category: "payment_authentication", label: "Payment verification (AVS/CVV)", acquirable: false },
@@ -193,6 +212,10 @@ export function runFraudulentModule(
   const held = [...snapshot.availableBeforeSubmission];
   const promptVersion = snapshot.submittedPackage?.promptVersion ?? "unknown";
 
+  // Delivery evidence is only acquirable if something shipped.
+  const fulfilled = wasFulfilled(held);
+  const deliveryDependsOnFulfilment = new Set(["delivery_proof", "shipping_tracking"]);
+
   const withheldSupporting: Array<{ id: string; label: string; detail: string }> = [];
   const disclosedAdverse: Array<{ id: string; label: string; detail: string }> = [];
   const absent: string[] = [];
@@ -208,7 +231,9 @@ export function runFraudulentModule(
         polarity: "NEUTRAL",
         detail: "Not held at submission time.",
       });
-      if (tracked.acquirable) absent.push(tracked.label);
+      const notAcquirableHere =
+        deliveryDependsOnFulfilment.has(tracked.category) && fulfilled === false;
+      if (tracked.acquirable && !notAcquirableHere) absent.push(tracked.label);
       continue;
     }
 
@@ -285,6 +310,15 @@ export function runFraudulentModule(
       actionClass: "EVIDENCE_ACQUISITION",
       evidenceRefs: [],
       ruleRefs: [{ id: "fraud.element_absent", version: FRAUDULENT_MODULE_VERSION }],
+    });
+  }
+
+  if (fulfilled === false) {
+    observations.push({
+      key: "order_never_fulfilled",
+      summary: "Nothing was shipped on this order",
+      detail:
+        "The order was not fulfilled at submission time, so delivery and tracking evidence could not exist. Their absence is not an acquisition gap.",
     });
   }
 

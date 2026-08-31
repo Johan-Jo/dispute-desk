@@ -1401,3 +1401,78 @@ The 2 ambiguous disputes should surface as `DATA_INTEGRITY_FAILURE` findings wit
 `PIPELINE_RELIABILITY` action class — being unable to say which of several submitted packages was
 forwarded is itself a defect worth fixing, and it is a real Stage 2 detection with live examples to
 test against.
+
+## 26. Phase 1 — shadow backfill and manual QA (2026-08-31)
+
+Run over the 50 analyzable prod disputes. **Nothing was written**: the tables
+exist on dev, the data is on prod, and prod must not receive the schema before
+the code merges. So this is a true shadow — analyse, report, verify by hand.
+
+### 26.1 Findings verified
+
+| finding class | n | verdict |
+|---|---|---|
+| `PROCEDURAL_OR_SUBMISSION_FAILURE` (saved, never forwarded) | 2 | **true** — `submission_state`, null `evidenceSentOn` |
+| `DATA_INTEGRITY_FAILURE` (forwarded package unidentifiable) | 2 | **true** — 3 and 2 submitted packages |
+| `INCORRECT_EVIDENCE_INTERPRETATION` (adverse AVS disclosed) | 14 | **true**, all prompt v9–v10; closed at v13 |
+| `AVAILABLE_EVIDENCE_OMITTED` | 1 | **true** — #345617, mechanism named, not the PR#352 exclusion |
+| `UNSUPPORTED_OR_OVERSTATED_ASSERTION` | 24 | **true** — four section texts read in full, see §26.3 |
+| `NO_MATERIAL_GAP_OBSERVED` | 1 | consistent |
+
+### 26.2 One false positive, found and fixed
+
+`MISSING_ACQUIRABLE_EVIDENCE` advised *"capture delivery confirmation before the
+deadline"* on 15 packages. Checking the orders: **10 `UNFULFILLED`, 5 `ON_HOLD`,
+zero fulfilled, no tracking rows.** Nothing shipped, so there was no delivery to
+confirm and the advice was simply wrong.
+
+Fixed by gating delivery acquirability on `order_record.value.fulfillmentStatus`,
+read from the frozen fact so it reflects submission time. No contract change was
+needed — `signalValue` (v4) already carried it. Findings fell 39 → 31; the
+disputes that kept one are missing something genuinely acquirable. Unknown
+fulfilment still asks, rather than assuming.
+
+This is what Phase 1 is for. Plan §21 targets a zero false-`AVAILABLE_EVIDENCE_OMITTED`
+rate after rollout; the same discipline applied here before any row was stored.
+
+### 26.3 A defect the analyzer found: the IP eligibility gate is bypassed
+
+`lib/argument/deviceLocationEligibility.ts` centralises one rule:
+
+> The IP / city / region / country / ISP / ASN may appear in bank-facing text
+> ONLY when the source section explicitly sets `bankEligible === true`. Anything
+> else means omit completely. **The gate must be applied at every site that
+> produces bank-facing IP narrative.**
+
+Measured over the 53 filed packages on decided disputes:
+
+| | |
+|---|---|
+| hold an `ip_location` fact | 53 |
+| with `bankEligible: true` | **1** |
+| whose narrative contains bank-facing IP text | 45 |
+| …of those, with `bankEligible: false` | **45** |
+| …also using VPN/proxy/datacenter language | 45 |
+
+Filed packages tell the issuer things like *"the order IP geolocated to the same
+country as the billing and shipping address, with no VPN, proxy, or datacenter
+signals detected"* while the Evidence Basis lists no IP fact at all — because
+`ip_location` is `strength: supporting`, and `bankEligible = strength ∈ {strong,
+moderate}` (`factClassifier.ts:217`). The narrative writer is the third site the
+module's own docstring warns about.
+
+**The adverse case has not leaked**: 0 of the 5 `different_country` packages
+mention IP in bank-facing text. But nothing structural prevents it — the only
+thing between us and *"the IP was in a different country"* inside a fraud
+rebuttal is the model's discretion.
+
+This also corrects §25's earlier read. The `same_country → supporting` tier looked
+like a defensible weak-evidence threshold; it is not defensible while the
+narrative already argues from it. Two coherent positions exist, and the current
+state is neither:
+
+- the IP evidence is good enough to argue from → list it in the Evidence Basis; or
+- it is not → stop feeding it to the narrative writer.
+
+Recommended sequence is unchanged from §25.7: this is a reviewed-finding
+decision, not an unreviewed rule change (plan §17).

@@ -235,3 +235,57 @@ describe("no causal claims on an all-loss cohort", () => {
     }
   });
 });
+
+describe("delivery evidence is only acquirable if something shipped", () => {
+  const orderRecord = (status: string) =>
+    fact("order_record", { fulfillmentStatus: status }, false, "fact:order");
+
+  it("does not ask for delivery proof on an unfulfilled order", () => {
+    // Manual QA regression: the first version advised "capture delivery
+    // confirmation" on 15 prod packages whose orders were 10x UNFULFILLED and
+    // 5x ON_HOLD. There was no delivery to confirm.
+    const { findings, observations } = runFraudulentModule(
+      snapshot([
+        orderRecord("UNFULFILLED"),
+        fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true),
+        fact("prior_customer_history", { priorOrderCount: 2 }, true),
+        fact("customer_communication", {}, true),
+      ]),
+    );
+    const missing = findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE");
+    expect(missing).toBeUndefined();
+    expect(observations.some((o) => o.key === "order_never_fulfilled")).toBe(true);
+  });
+
+  it("treats ON_HOLD the same as unfulfilled", () => {
+    const { findings } = runFraudulentModule(
+      snapshot([
+        orderRecord("ON_HOLD"),
+        fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true),
+        fact("prior_customer_history", { priorOrderCount: 2 }, true),
+        fact("customer_communication", {}, true),
+      ]),
+    );
+    expect(findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE")).toBeUndefined();
+  });
+
+  it("still asks for delivery proof when the order WAS fulfilled", () => {
+    const { findings } = runFraudulentModule(
+      snapshot([
+        orderRecord("FULFILLED"),
+        fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true),
+        fact("prior_customer_history", { priorOrderCount: 2 }, true),
+        fact("customer_communication", {}, true),
+      ]),
+    );
+    const missing = findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE");
+    expect(missing?.observedFact).toMatch(/Delivery confirmation/);
+  });
+
+  it("keeps asking when fulfilment state is unknown rather than assuming", () => {
+    const { findings } = runFraudulentModule(
+      snapshot([fact("payment_authentication", { avsResult: "Y", cvvResult: "M" }, true)]),
+    );
+    expect(findings.find((f) => f.category === "MISSING_ACQUIRABLE_EVIDENCE")).toBeDefined();
+  });
+});
