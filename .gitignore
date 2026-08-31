@@ -102,3 +102,4 @@ embedded-app-all-code.txt
 # on every build; committing it would mean the file goes stale every
 # time DefencePackageDocument.tsx or its deps change.
 /scripts/pdf-worker/defence-package-document.bundle.mjs
+tmp/

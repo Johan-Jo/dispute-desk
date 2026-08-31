@@ -21,6 +21,7 @@ import {
   Package,
 } from "lucide-react";
 import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
+import { PostOutcomeInsights } from "@/components/admin/PostOutcomeInsights";
 import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
 
 interface ShopDetail {
@@ -185,6 +186,10 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       <ShopRiskProfile shopId={shop.id} />
+
+      {/* Compact post-outcome context (plan §14.2). Counts and a link, never a
+          second findings table — two tables over the same data drift. */}
+      <PostOutcomeInsights shopId={shop.id} />
 
       {/* Quick Stats footer — Figma `shop-detail.tsx:418-449` */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

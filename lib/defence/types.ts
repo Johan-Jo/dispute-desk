@@ -482,6 +482,11 @@ export type ValidationErrorRule =
   | "omitted_section_inconsistent"
   | "narrow_mode_aggressive_conclusion"
   | "internal_only_fact_referenced"
+  /** Every fact the section declares as support is one the Evidence Basis will
+   *  not list, so the argument reaches the issuer with nothing behind it.
+   *  Emitted as a WARNING, not an error — see SUPPORT_CITABILITY_BLOCKING in
+   *  validateNarrative.ts for why, and what promoting it would cost. */
+  | "section_support_not_bank_citable"
   | "missing_required_section";
 
 export interface ValidationError {
@@ -500,11 +505,28 @@ export interface ValidationError {
    *  ("thesis" | "llm" | "fallback") so failure_reason can route
    *  human attention to the right place. */
   layer?: "narrative" | "thesis" | "llm" | "fallback";
+  /** Defaults to "error". A "warning" is recorded and never fails the build. */
+  severity?: "error" | "warning";
 }
 
 export interface ValidationResult {
   ok: boolean;
   errors: ValidationError[];
+  /**
+   * Non-blocking findings. `ok` ignores these entirely.
+   *
+   * They exist so a rule can be measured on live traffic before it is allowed
+   * to fail a package. A failed package has no PDF and takes the next version
+   * number, which is how an aborted build once shadowed a validated one and a
+   * dispute went to forfeit — so "detect first, block later" is the only safe
+   * order for a new rule with a wide blast radius.
+   *
+   * Optional because it is purely additive: a caller (or a test double) that
+   * predates it is still a valid ValidationResult, and forcing every one of
+   * them to change would be churn in service of a field none of them set.
+   * Read it as `warnings ?? []`.
+   */
+  warnings?: ValidationError[];
 }
 
 // ── Claim guards ─────────────────────────────────────────────────────
