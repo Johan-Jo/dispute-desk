@@ -140,12 +140,7 @@ describe("the Visa module's IP rule", () => {
   });
 
   it("the cached module block was re-versioned", () => {
-    // `toBeGreaterThanOrEqual`, not `toBe`. The invariant is "this block was
-    // versioned when its content changed and never regresses below that",
-    // which an equality pin cannot express: it fails on the NEXT legitimate
-    // bump too, as it did on 2026-09-01. Matches the sibling assertion in
-    // avsClaimGenerationContract.test.ts.
-    expect(visa_10_4_fraud.version).toBeGreaterThanOrEqual(10);
+    expect(visa_10_4_fraud.version).toBe(10);
   });
 
   it("no runtime prompt asserts a relationship between the two order addresses", () => {

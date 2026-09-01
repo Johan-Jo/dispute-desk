@@ -48,5 +48,5 @@ export const duplicate_processing: ReasonCodeGuidance = {
     "billing_match",
     "manual_evidence",
   ],
-  version: 3,
+  version: 2,
 };

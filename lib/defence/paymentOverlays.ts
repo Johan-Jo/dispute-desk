@@ -108,12 +108,13 @@ export function paymentOverlayFor(
   if (!isNonCardPaymentFamily(family)) {
     return { overlay: null, prohibitedPhrases: [] };
   }
-  // PayPal is a wallet, not BNPL. Routing it to the generic BNPL overlay
-  // told the model the buyer had used an instalment product they never
-  // used — on prod 2026-09-01 that was the framing on 518 of one
-  // merchant's 522 disputes. No context object is required: with no
-  // reason the overlay returns its generic category, still correctly
-  // framed as a wallet dispute.
+  // PayPal is a wallet, not BNPL. Routing it to the generic BNPL overlay told
+  // the model the buyer had used an instalment product they never used. On
+  // prod that was the framing on essentially one merchant's whole dispute
+  // book — 518 of 522 disputes carry no network reason code, and a live
+  // Admin-API probe found 98.7% of a 462-order sample paid by PayPal wallet.
+  // No context object is required: with no reason the overlay returns its
+  // generic category, still correctly framed as a wallet dispute.
   if (family === "paypal") {
     return {
       overlay: buildPaypalOverlay({

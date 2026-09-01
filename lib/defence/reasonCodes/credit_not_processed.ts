@@ -54,5 +54,5 @@ export const credit_not_processed: ReasonCodeGuidance = {
     "order_record",
     "manual_evidence",
   ],
-  version: 3,
+  version: 2,
 };

@@ -54,5 +54,5 @@ export const inr_product_not_received: ReasonCodeGuidance = {
     "policy_shipping",
     "manual_evidence",
   ],
-  version: 4,
+  version: 3,
 };

@@ -51,5 +51,5 @@ export const canceled_recurring: ReasonCodeGuidance = {
     "order_record",
     "manual_evidence",
   ],
-  version: 3,
+  version: 2,
 };

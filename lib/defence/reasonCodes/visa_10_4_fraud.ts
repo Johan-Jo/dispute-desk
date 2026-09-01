@@ -146,5 +146,5 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
    * example; it was filling a gap. The fact now carries one approved sentence
    * (`bankLocationSummary`) and this rule requires a verbatim copy or
    * silence, the same contract that works for `verificationSummary`. */
-  version: 11,
+  version: 10,
 };

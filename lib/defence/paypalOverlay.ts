@@ -9,11 +9,15 @@
  * dispute process is buyer protection rather than instalment-credit
  * arbitration, and its taxonomy is its own.
  *
- * That mis-framing is not cosmetic here. Measured on prod 2026-09-01, 518 of
- * one merchant's 522 disputes are PayPal-wallet disputes settling through
- * Shopify Payments — so the generic BNPL overlay was the framing on
- * essentially that merchant's entire dispute book, telling the model the buyer
- * had used an instalment product they never used.
+ * That mis-framing is not cosmetic here. On prod, one merchant's dispute book
+ * is overwhelmingly non-card — 518 of 522 disputes carry no
+ * `network_reason_code` (measured 2026-09-01) — and a live Admin-API probe of
+ * 462 of those disputed orders found 456 (98.7%) paid by PayPal wallet
+ * (2026-08-30). The two measurements are separate: the first establishes
+ * "not card", the second establishes "PayPal". Together they mean the generic
+ * BNPL overlay was the framing on essentially that merchant's entire dispute
+ * book, telling the model the buyer had used an instalment product they never
+ * used.
  *
  * WHAT THIS DOES NOT DO
  * ---------------------

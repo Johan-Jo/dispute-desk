@@ -68,5 +68,5 @@ export const generic_fallback: ReasonCodeGuidance = {
     "account_history",
     "manual_evidence",
   ],
-  version: 3,
+  version: 2,
 };
