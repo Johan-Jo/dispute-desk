@@ -4311,6 +4311,34 @@ reader *can* observe, evidence drift, is exactly what the model and payload
 terms carry. A pack with no persisted fingerprint yields no current hash, and an
 unverifiable snapshot is not a fresh one.
 
+**Naming which term moved (2026-09-01).** `evaluateFreshness` answers one
+boolean over model + gates + payloads, so a mismatch could say only "something
+changed". A merchant was shown *"the evidence on this case changed after it was
+last assessed"* on a case whose snapshot re-derived byte-identically from
+`pack_json`, and nothing on the row could narrow it down. Two things closed
+that gap:
+
+- `assessmentInputHashTerms()` (`lib/evidence/model/assessmentSnapshot.ts`)
+  returns a short digest per term. It calls the SAME three private fingerprint
+  functions the composite hash calls, so it cannot drift from the predicate it
+  explains, and nothing branches on it — `evaluateFreshness` is still the only
+  freshness authority.
+- `buildPack` persists the write-time digests at
+  `pack_json.case_assessment_hash_terms`, so the reader has something to
+  compare against. The workspace route logs `movedTerms` on mismatch **only**;
+  the healthy path costs nothing. Packs built before this field report
+  `movedTerms: null` — which means "cannot attribute yet", never "no term
+  moved", since the composite hash already disagreed.
+
+**The workspace response is never cached.** `app/api/disputes/[id]/workspace`
+sets `dynamic = "force-dynamic"` and the client fetch sends
+`cache: "no-store"`. This is a correctness rule, not a performance one: the
+response carries `needsRecalculation`, the strength band, the completeness
+score and whether the case may be filed, and Shopify Admin keeps the embedded
+iframe alive for hours. A cached copy is precisely the "stale number rendered
+as current" this layer exists to prevent, and it defeats the refetch-on-focus
+mitigation. Both halves are set deliberately rather than relying on either.
+
 **The list checks the two staleness dimensions it can check truthfully** —
 policy version, and `rebuild_pending` — and withholds a band otherwise. It never
 falls back to the legacy `case_strength` summary, which carries no freshness of

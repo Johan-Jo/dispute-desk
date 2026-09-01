@@ -23,6 +23,7 @@ import {
   ASSESSMENT_POLICY_VERSION,
   ASSESSMENT_VERSION,
   buildCaseAssessmentSnapshot,
+  assessmentInputHashTerms,
   computeAssessmentInputHash,
   resolveGateDecision,
 } from "../assessmentSnapshot";
@@ -326,5 +327,96 @@ describe("resolveGateDecision", () => {
 
   it("is null when both gates are stated and neither fires", () => {
     expect(resolveGateDecision(gatesWith({ coverage: null, fatalLoss: null }))).toBeNull();
+  });
+});
+
+/**
+ * The mismatch has to name its own cause.
+ *
+ * `evaluateFreshness` answers one boolean over model + gates + payloads, so a
+ * stale verdict cannot say which term moved. On 2026-09-01 a merchant was told
+ * "the evidence on this case changed after it was last assessed" on a case
+ * whose snapshot re-derived byte-identically from `pack_json`, and there was
+ * nothing on the row or in a log to narrow it. These tests pin the attribution
+ * so the next occurrence is a one-line diagnosis.
+ *
+ * The property: perturb exactly ONE term and exactly that term's digest moves.
+ * The second half is what makes it useful — a digest that changed when its
+ * term did not would point at the wrong half of the pipeline.
+ */
+describe("assessmentInputHashTerms — attribution", () => {
+  const model = modelFor(BASE_SECTIONS, "PRODUCT_NOT_RECEIVED");
+
+  it("is stable for identical inputs", () => {
+    const a = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    const b = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    expect(a).toEqual(b);
+  });
+
+  it("moves ONLY the model term when the evidence model changes", () => {
+    const base = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    const changed = assessmentInputHashTerms({
+      // One section dropped — a real evidence change.
+      model: modelFor([ORDER], "PRODUCT_NOT_RECEIVED"),
+      gates: NO_GATES,
+      payloadSource: undefined,
+    });
+    expect(changed.model).not.toBe(base.model);
+    expect(changed.gates).toBe(base.gates);
+    expect(changed.payloads).toBe(base.payloads);
+  });
+
+  it("moves ONLY the gates term when a gate changes", () => {
+    const base = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    const changed = assessmentInputHashTerms({
+      model,
+      gates: gatesWith({
+        nameMismatch: {
+          triggered: true,
+          cardholderName: "A. Buyer",
+          customerName: "B. Other",
+        },
+      }),
+      payloadSource: undefined,
+    });
+    expect(changed.gates).not.toBe(base.gates);
+    expect(changed.model).toBe(base.model);
+    expect(changed.payloads).toBe(base.payloads);
+  });
+
+  it("moves ONLY the payloads term when a payload changes", () => {
+    const withPayload = (proofType: string): EvidencePayloadSource => ({
+      kind: "list",
+      items: [{ payload: { fieldsProvided: ["delivery_proof"], proofType } }],
+    });
+    const base = assessmentInputHashTerms({
+      model,
+      gates: NO_GATES,
+      payloadSource: withPayload("delivered_confirmed"),
+    });
+    const changed = assessmentInputHashTerms({
+      model,
+      gates: NO_GATES,
+      payloadSource: withPayload("delivered_unverified"),
+    });
+    expect(changed.payloads).not.toBe(base.payloads);
+    expect(changed.model).toBe(base.model);
+    expect(changed.gates).toBe(base.gates);
+  });
+
+  it("agrees with the composite hash about WHETHER anything moved", () => {
+    // The attribution is only trustworthy if it cannot claim "all three equal"
+    // on inputs the real predicate calls stale, or the reverse.
+    const a = { model, gates: NO_GATES, payloadSource: undefined };
+    const b = {
+      model: modelFor([ORDER], "PRODUCT_NOT_RECEIVED"),
+      gates: NO_GATES,
+      payloadSource: undefined,
+    };
+    const termsEqual =
+      JSON.stringify(assessmentInputHashTerms(a)) ===
+      JSON.stringify(assessmentInputHashTerms(b));
+    const hashEqual = computeAssessmentInputHash(a) === computeAssessmentInputHash(b);
+    expect(termsEqual).toBe(hashEqual);
   });
 });
