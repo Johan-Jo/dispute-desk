@@ -336,6 +336,47 @@ export function computeAssessmentInputHash(inputs: AssessmentInputs): InputHash 
   });
 }
 
+/**
+ * WHICH of the three terms moved — for diagnosis only, never for a decision.
+ *
+ * ── WHY THIS EXISTS ───────────────────────────────────────────────────
+ *
+ * `evaluateFreshness` collapses model + gates + payloads into ONE equality,
+ * so a mismatch says only "something changed". On 2026-09-01 a merchant was
+ * shown "the evidence on this case changed after it was last assessed" on a
+ * case whose snapshot re-derived byte-identically from `pack_json` — and the
+ * composite hash could not say which half of the comparison was lying. The
+ * whole investigation was spent reconstructing, by hand, what this function
+ * returns in one line.
+ *
+ * Per-term SUB-HASHES, not the terms themselves: a term is the full evidence
+ * payload for the case, and this value reaches a log. A 16-char prefix is
+ * enough to say "the model term moved and the other two did not", which is
+ * the only question being asked, and it cannot leak merchant content.
+ *
+ * NOT A SECOND HASH. It calls the same three private fingerprint functions
+ * `computeAssessmentInputHash` calls, so it cannot drift from the predicate it
+ * explains. Nothing branches on the result — `evaluateFreshness` remains the
+ * one freshness authority.
+ */
+export interface AssessmentHashTermDigests {
+  model: string;
+  gates: string;
+  payloads: string;
+}
+
+export function assessmentInputHashTerms(
+  inputs: AssessmentInputs,
+): AssessmentHashTermDigests {
+  const fieldKeys = Object.values(inputs.model.fields).map((f) => f.fieldKey);
+  const short = (v: unknown) => sha256(v).slice(0, 16);
+  return {
+    model: short(modelFingerprint(inputs.model)),
+    gates: short(gateFingerprint(inputs.gates)),
+    payloads: short(payloadFingerprint(inputs.payloadSource, fieldKeys)),
+  };
+}
+
 /* ── the snapshot ──────────────────────────────────────────────────── */
 
 /**

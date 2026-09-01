@@ -1969,7 +1969,7 @@
       "notAssessed": {
         "title": "Not assessed yet",
         "bodyAbsent": "DisputeDesk has not assessed this case yet, so there is no case strength or completeness to show. It is assessed automatically once the evidence pack is built — nothing is needed from you.",
-        "bodyStale": "The evidence on this case changed after it was last assessed, so the previous case strength and completeness no longer describe it. DisputeDesk reassesses it automatically — nothing is needed from you.",
+        "bodyStale": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence. DisputeDesk reassesses the case automatically before the response deadline — nothing is needed from you.",
         "actionsHidden": "Sending is unavailable until this case has been assessed."
       }
     },
