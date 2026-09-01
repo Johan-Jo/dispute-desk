@@ -1969,7 +1969,7 @@
       "notAssessed": {
         "title": "Aún sin evaluar",
         "bodyAbsent": "DisputeDesk todavía no ha evaluado este caso, así que no hay solidez del caso ni nivel de completitud que mostrar. Se evalúa automáticamente en cuanto se genera el paquete de pruebas; no necesitas hacer nada.",
-        "bodyStale": "Las pruebas de este caso cambiaron después de la última evaluación, así que la solidez y la completitud anteriores ya no lo describen. DisputeDesk lo reevalúa automáticamente; no necesitas hacer nada.",
+        "bodyStale": "Este caso se evaluó con una versión anterior de nuestro sistema de puntuación, así que la solidez y la completitud anteriores ya no son válidas. No ha cambiado nada en tus pruebas. DisputeDesk lo reevalúa automáticamente antes de la fecha límite de respuesta; no necesitas hacer nada.",
         "actionsHidden": "No se puede enviar hasta que este caso se haya evaluado."
       }
     },

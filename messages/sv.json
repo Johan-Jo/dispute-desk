@@ -1969,7 +1969,7 @@
       "notAssessed": {
         "title": "Inte bedömt ännu",
         "bodyAbsent": "DisputeDesk har ännu inte bedömt det här ärendet, så det finns varken ärendestyrka eller fullständighet att visa. Bedömningen sker automatiskt när bevispaketet har byggts — du behöver inte göra något.",
-        "bodyStale": "Bevisen i det här ärendet ändrades efter den senaste bedömningen, så tidigare ärendestyrka och fullständighet beskriver det inte längre. DisputeDesk bedömer om det automatiskt — du behöver inte göra något.",
+        "bodyStale": "Det här ärendet bedömdes enligt en tidigare version av vår poängsättning, så tidigare ärendestyrka och fullständighet gäller inte längre. Inget har ändrats i dina bevis. DisputeDesk bedömer ärendet automatiskt på nytt innan svarsfristen — du behöver inte göra något.",
         "actionsHidden": "Det går inte att skicka förrän ärendet har bedömts."
       }
     },

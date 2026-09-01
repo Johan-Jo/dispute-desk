@@ -1969,7 +1969,7 @@
       "notAssessed": {
         "title": "Pas encore évalué",
         "bodyAbsent": "DisputeDesk n'a pas encore évalué ce dossier : il n'y a donc ni solidité ni exhaustivité à afficher. L'évaluation est automatique dès que le dossier de preuves est constitué — vous n'avez rien à faire.",
-        "bodyStale": "Les preuves de ce dossier ont changé après la dernière évaluation : la solidité et l'exhaustivité précédentes ne le décrivent plus. DisputeDesk le réévalue automatiquement — vous n'avez rien à faire.",
+        "bodyStale": "Ce dossier a été évalué selon une version antérieure de notre notation : la solidité et l'exhaustivité précédentes ne s'appliquent plus. Rien n'a changé dans vos preuves. DisputeDesk réévalue le dossier automatiquement avant la date limite de réponse — vous n'avez rien à faire.",
         "actionsHidden": "L'envoi n'est pas disponible tant que ce dossier n'a pas été évalué."
       }
     },
