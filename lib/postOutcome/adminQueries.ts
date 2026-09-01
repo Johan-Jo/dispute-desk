@@ -341,3 +341,46 @@ export function orderForReview(rows: readonly OutcomeAnalysisRow[]): OutcomeAnal
     return (b.finalizedAt ?? "").localeCompare(a.finalizedAt ?? "");
   });
 }
+
+/**
+ * The findings behind a set of analyses, for `deriveConclusions`.
+ *
+ * Separate from `listOutcomeAnalyses` on purpose: the table only ever needed
+ * one row per analysis, and joining findings into it would have multiplied
+ * rows and quietly changed every count on the page. The conclusion block wants
+ * the opposite shape — every finding, no analysis fields — so it gets its own
+ * read.
+ *
+ * Chunked because the id list is bounded by the table's own limit (100) but the
+ * URL length of an `.in()` filter is not something to discover in production.
+ */
+export async function listFindingsForAnalyses(
+  analysisIds: readonly string[],
+): Promise<Array<{ analysisId: string; category: string; observedFact: string | null }>> {
+  if (analysisIds.length === 0) return [];
+  const sb = getServiceClient();
+
+  const CHUNK = 50;
+  const out: Array<{ analysisId: string; category: string; observedFact: string | null }> = [];
+  for (let i = 0; i < analysisIds.length; i += CHUNK) {
+    const slice = analysisIds.slice(i, i + CHUNK);
+    const { data, error } = await sb
+      .from("post_outcome_findings")
+      .select("analysis_id, category, observed_fact")
+      .in("analysis_id", slice)
+      .returns<
+        Array<{ analysis_id: string; category: string; observed_fact: string | null }>
+      >();
+    // A conclusion block that silently renders half the findings is worse than
+    // one that renders none, so a failed chunk propagates.
+    if (error) throw error;
+    for (const r of data ?? []) {
+      out.push({
+        analysisId: r.analysis_id,
+        category: r.category,
+        observedFact: r.observed_fact,
+      });
+    }
+  }
+  return out;
+}
