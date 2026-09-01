@@ -16,8 +16,18 @@
  * PRODUCT_NOT_RECEIVED module does not invalidate every FRAUDULENT analysis.
  */
 
-/** Whole-pipeline analytical behaviour. See bump rules above. */
-export const ANALYZER_VERSION = 1;
+/**
+ * Whole-pipeline analytical behaviour. See bump rules above.
+ *
+ * 2 (2026-09-01): package-identity resolution changed. A dispute with several
+ * submitted packages is no longer automatically unanalysable — the evidence
+ * record's `uncategorizedFile` names the forwarded package outright, and where
+ * that was never captured the last VERIFIED save is what Shopify's
+ * replace-on-save semantics leave in the record. That moves both the tie value
+ * and the analysis-level gate, so v1 conclusions are preserved and superseded
+ * rather than overwritten.
+ */
+export const ANALYZER_VERSION = 2;
 
 /**
  * Per-reason module versions. A reason absent from this map has no module yet

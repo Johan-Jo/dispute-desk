@@ -168,14 +168,21 @@ describe("package identity", () => {
     expect(pkg?.id).toBe("p-1");
   });
 
-  it("refuses to pick a winner when several packages were submitted", () => {
-    // Guessing "the newest" would be a fabrication nobody recorded.
+  it("reads several verified saves as the last one winning", () => {
+    // This used to return AMBIGUOUS on the grounds that picking "the newest"
+    // would be a fabrication. That premise was wrong: Shopify keeps ONE
+    // mutable evidence record per dispute and every save REPLACES its
+    // uncategorizedFile, so the last verified save is what the record holds.
+    // Confirmed on prod, where versions 2, 3 and 5 of one dispute all carried
+    // the identical evidence GID — the GID names the dispute, not a version.
+    // The inference is still labelled as one, and it does not reach full
+    // analysis; see analysisLevel.ts.
     const { tie, pkg } = resolvePackageTie(disputeRow(), [
-      packageRow({ id: "p-1", version: 1 }),
-      packageRow({ id: "p-2", version: 2 }),
+      packageRow({ id: "p-1", version: 1, submitted_at: "2026-07-01T00:00:00.000Z" }),
+      packageRow({ id: "p-2", version: 2, submitted_at: "2026-07-02T00:00:00.000Z" }),
     ]);
-    expect(tie).toBe("AMBIGUOUS_MULTIPLE_PACKAGES");
-    expect(pkg).toBeNull();
+    expect(tie).toBe("LATEST_VERIFIED_SAVE");
+    expect(pkg?.id).toBe("p-2");
   });
 
   it("reports NONE when the GID does not match the dispute", () => {
@@ -249,11 +256,14 @@ describe("assembleSnapshot", () => {
   });
 
   it("flags ambiguity when several packages were submitted", () => {
+    // Genuinely ambiguous: no save was verified, so none of them replaced the
+    // evidence record's file and save order says nothing. A dispute whose
+    // saves DID verify resolves to the last one — see resolvePackageTie.
     const result = assembleSnapshot(
       inputs({
         submittedPackages: [
-          packageRow({ id: "p-1", version: 1 }),
-          packageRow({ id: "p-2", version: 2 }),
+          packageRow({ id: "p-1", version: 1, shopify_response: { verified: false, finalStatus: "save_failed" } }),
+          packageRow({ id: "p-2", version: 2, shopify_response: { verified: false, finalStatus: "save_failed" } }),
         ],
       }),
     );
@@ -390,9 +400,9 @@ describe("ambiguous-package regressions (found in prod shadow run)", () => {
     const result = assembleSnapshot(
       inputs({
         submittedPackages: [
-          packageRow({ id: "p-1", version: 1 }),
-          packageRow({ id: "p-2", version: 2 }),
-          packageRow({ id: "p-3", version: 3 }),
+          packageRow({ id: "p-1", version: 1, shopify_response: { verified: false, finalStatus: "save_failed" } }),
+          packageRow({ id: "p-2", version: 2, shopify_response: { verified: false, finalStatus: "save_failed" } }),
+          packageRow({ id: "p-3", version: 3, shopify_response: { verified: false, finalStatus: "save_failed" } }),
         ],
       }),
     );
@@ -491,5 +501,199 @@ describe("bank-inclusion routes through THE owner", () => {
       (e) => e.id === "fact:listed-only",
     );
     expect(item?.inclusionEligible).toBe(false);
+  });
+});
+
+/* ─────────────────── Which package did the issuer actually get? ──────────── */
+
+describe("tying a package to the evidence Shopify holds", () => {
+  function pkgWith(
+    id: string,
+    fileGid: string | null,
+    submittedAt: string,
+    verified = true,
+  ): RawPackageRow {
+    return {
+      ...packageRow(),
+      id,
+      submitted_at: submittedAt,
+      shopify_response: {
+        verified,
+        finalStatus: "saved_to_shopify_verified",
+        evidenceGid: "gid://shopify/DisputeEvidence/1",
+        ...(fileGid ? { fileGid } : {}),
+      },
+    };
+  }
+
+  function disputeWithFile(fileGid: string | null): RawDisputeRow {
+    return disputeRow({
+      raw_snapshot: {
+        evidenceSentOn: SUBMITTED_AT,
+        disputeEvidence: {
+          id: "gid://shopify/DisputeEvidence/1",
+          ...(fileGid ? { uncategorizedFile: { id: fileGid } } : {}),
+        },
+      },
+    });
+  }
+
+  it("names the package whose file the evidence record holds", () => {
+    // The only signal that discriminates between versions: the evidence GID is
+    // identical on every package of a dispute (verified on prod).
+    const result = resolvePackageTie(disputeWithFile("gid://shopify/GenericFile/B"), [
+      pkgWith("p-a", "gid://shopify/GenericFile/A", "2026-07-01T00:00:00.000Z"),
+      pkgWith("p-b", "gid://shopify/GenericFile/B", "2026-07-02T00:00:00.000Z"),
+    ]);
+    expect(result.tie).toBe("EVIDENCE_FILE_MATCH");
+    expect(result.pkg?.id).toBe("p-b");
+  });
+
+  it("prefers the file match even when it is not the latest save", () => {
+    const result = resolvePackageTie(disputeWithFile("gid://shopify/GenericFile/A"), [
+      pkgWith("p-a", "gid://shopify/GenericFile/A", "2026-07-01T00:00:00.000Z"),
+      pkgWith("p-b", "gid://shopify/GenericFile/B", "2026-07-02T00:00:00.000Z"),
+    ]);
+    expect(result.tie).toBe("EVIDENCE_FILE_MATCH");
+    expect(result.pkg?.id).toBe("p-a");
+  });
+
+  it("falls back to the last VERIFIED save when no file GID was captured", () => {
+    // Every snapshot before 2026-09-01. Shopify replaces the attached file on
+    // each save, so the last verified one is what the record ended up holding.
+    const result = resolvePackageTie(disputeWithFile(null), [
+      pkgWith("p-a", null, "2026-07-01T00:00:00.000Z"),
+      pkgWith("p-b", null, "2026-07-03T00:00:00.000Z"),
+      pkgWith("p-c", null, "2026-07-02T00:00:00.000Z"),
+    ]);
+    expect(result.tie).toBe("LATEST_VERIFIED_SAVE");
+    expect(result.pkg?.id).toBe("p-b");
+  });
+
+  it("ignores a later save that was never verified", () => {
+    // An unverified attempt replaced nothing, so it is not what the issuer has.
+    const result = resolvePackageTie(disputeWithFile(null), [
+      pkgWith("p-a", null, "2026-07-01T00:00:00.000Z", true),
+      pkgWith("p-b", null, "2026-07-03T00:00:00.000Z", false),
+    ]);
+    expect(result.tie).toBe("LATEST_VERIFIED_SAVE");
+    expect(result.pkg?.id).toBe("p-a");
+  });
+
+  it("stays ambiguous when no save was ever verified", () => {
+    const result = resolvePackageTie(disputeWithFile(null), [
+      pkgWith("p-a", null, "2026-07-01T00:00:00.000Z", false),
+      pkgWith("p-b", null, "2026-07-03T00:00:00.000Z", false),
+    ]);
+    expect(result.tie).toBe("AMBIGUOUS_MULTIPLE_PACKAGES");
+    expect(result.pkg).toBeNull();
+  });
+
+  it("does not guess when a file GID matches more than one package", () => {
+    const result = resolvePackageTie(disputeWithFile("gid://shopify/GenericFile/A"), [
+      pkgWith("p-a", "gid://shopify/GenericFile/A", "2026-07-01T00:00:00.000Z"),
+      pkgWith("p-b", "gid://shopify/GenericFile/A", "2026-07-02T00:00:00.000Z"),
+    ]);
+    expect(result.tie).toBe("LATEST_VERIFIED_SAVE");
+  });
+
+  it("leaves the single-package path alone", () => {
+    const result = resolvePackageTie(disputeRow(), [packageRow()]);
+    expect(result.tie).toBe("EVIDENCE_GID_MATCH");
+  });
+});
+
+/* ─────────────── Which approved passages the package actually cited ───────── */
+
+describe("per-passage communication provenance", () => {
+  function gorgiasRow(overrides: Partial<RawGorgiasRow> = {}): RawGorgiasRow {
+    return {
+      id: "g-1",
+      dispute_id: "d-1",
+      evidence_category: "customer_communication",
+      review_status: "approved",
+      approved_at: "2026-07-05T00:00:00.000Z",
+      created_at: "2026-07-04T00:00:00.000Z",
+      sent_at: "2026-07-04T00:00:00.000Z",
+      approved_excerpt: "Customer confirmed receipt.",
+      ...overrides,
+    };
+  }
+
+  function commPackage(approvedItemIds: string[] | null, bankIncluded = true): RawPackageRow {
+    return packageRow({
+      facts_json: [
+        {
+          id: "fc",
+          category: "customer_communication",
+          source: "gorgias",
+          value: {
+            fieldKey: "customer_communication",
+            customerConfirmsOrder: true,
+            ...(approvedItemIds ? { approvedItemIds } : {}),
+          },
+          bankEligible: bankIncluded,
+          includeInBankNarrative: bankIncluded,
+          submissionRisk: false,
+          internalOnly: false,
+        },
+      ],
+    });
+  }
+
+  it("marks a cited passage as having reached the issuer", () => {
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(["g-1"])],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(true);
+  });
+
+  it("leaves an uncited passage unmarked", () => {
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(["g-other"])],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(false);
+  });
+
+  it("does not credit a passage carried in a withheld fact", () => {
+    // The fact names the passage but never reached the issuer. Calling it
+    // present would claim the opposite of what the classifier decided.
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(["g-1"], false)],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(false);
+  });
+
+  it("stays unverifiable on a package predating the ids", () => {
+    // Every package built before 2026-09-01. Absent ids must keep reading as
+    // "cannot tell", never as "was omitted".
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(null)],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(false);
   });
 });

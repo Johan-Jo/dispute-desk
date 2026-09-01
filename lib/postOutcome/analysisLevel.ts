@@ -136,6 +136,23 @@ export function resolveAnalysisLevel(
     };
   }
 
+  // An inferred tie identifies the package without recording it. Shopify's
+  // replace-on-save semantics make "the last verified save is what the record
+  // holds" a sound reading, but it is a reading — so the package IS named (the
+  // package-level stages get something to examine, where AMBIGUOUS gave them
+  // null) while the case stays short of full analysis and says why. Cases
+  // captured from 2026-09-01 carry `uncategorizedFile` and reach
+  // EVIDENCE_FILE_MATCH instead, which is a recorded fact.
+  if (inputs.packageEvidenceTie === "LATEST_VERIFIED_SAVE") {
+    return {
+      level: "PACKAGE_INTEGRITY_ONLY",
+      dataIntegrityLimitation: true,
+      blockingReasons: [
+        "Several submitted packages exist; the forwarded one is inferred from save order, not recorded.",
+      ],
+    };
+  }
+
   if (inputs.packageEvidenceTie === "NONE") {
     return {
       level: "PACKAGE_INTEGRITY_ONLY",

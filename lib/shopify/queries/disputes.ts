@@ -31,6 +31,14 @@ export const DISPUTE_LIST_QUERY = `
             customerEmailAddress
             shippingAddress { name }
             billingAddress { name }
+            # The file the evidence record currently holds. Shopify keeps ONE
+            # mutable evidence record per dispute and every save replaces its
+            # uncategorizedFile, so the evidence GID is the same on every
+            # package and identifies the dispute, not a version. This file GID
+            # is what says WHICH package the issuer actually holds — without it
+            # a dispute with several saves is unattributable after the fact
+            # (lib/postOutcome/buildSnapshot.ts resolvePackageTie).
+            uncategorizedFile { id }
           }
         }
         cursor
@@ -111,6 +119,10 @@ export interface DisputeListNode {
     customerEmailAddress: string | null;
     shippingAddress?: { name: string | null } | null;
     billingAddress?: { name: string | null } | null;
+    /** The file the evidence record holds — identifies WHICH package was
+     *  forwarded, where the evidence GID cannot. Optional: absent on every
+     *  snapshot captured before 2026-09-01. */
+    uncategorizedFile?: { id: string } | null;
   } | null;
 }
 

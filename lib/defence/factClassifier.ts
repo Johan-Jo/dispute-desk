@@ -313,6 +313,30 @@ function firstTrackingEntry(
   return urlOnly;
 }
 
+/**
+ * Per-passage ids carried by a communication section, if it has any.
+ *
+ * Reads the section rather than the payload because the payload is already a
+ * summary by the time it reaches here — the identity lives in the collector's
+ * own data (`lib/packs/sources/gorgiasCommSource.ts`).
+ */
+function communicationItemIds(section: PackSectionLike): string[] {
+  const conversations = section.data?.conversations;
+  if (!Array.isArray(conversations)) return [];
+  const ids: string[] = [];
+  for (const c of conversations) {
+    const messages = (c as Record<string, unknown> | null)?.messages;
+    if (!Array.isArray(messages)) continue;
+    for (const m of messages) {
+      const id = (m as Record<string, unknown> | null)?.evidenceMessageId;
+      if (typeof id === "string" && id) ids.push(id);
+    }
+  }
+  // Sorted and deduped: this value is hashed (computeEvidenceHash), so an
+  // unstable order would change the hash without the evidence changing.
+  return [...new Set(ids)].sort();
+}
+
 function extractValue(
   fieldKey: string,
   payload: Record<string, unknown> | null,
@@ -426,12 +450,27 @@ function extractValue(
         // (see `extractValue`), so a historical pack cannot reintroduce it.
       };
     }
-    case "customer_communication":
+    case "customer_communication": {
+      // Which approved passages this fact actually stands for.
+      //
+      // The value is a SUMMARY — a count and a confirmation flag — so a
+      // package used to record that communication evidence went in without
+      // recording which passages. A decided case then could not be traced back
+      // to what was filed, and the post-outcome analyser could only classify
+      // every approved passage INCLUSION_UNVERIFIABLE: not omitted, not
+      // included, unknowable. These ids close that.
+      //
+      // Empty for a source that carries no per-item identity (a Shopify
+      // timeline aggregate), and the analyser keeps reading an empty list as
+      // unverifiable rather than as "nothing was included".
+      const approvedItemIds = communicationItemIds(section);
       return {
         customerConfirmsOrder: p.customerConfirmsOrder === true,
         messageCount: typeof p.messageCount === "number" ? p.messageCount : null,
         lastMessageAt: typeof p.lastMessageAt === "string" ? p.lastMessageAt : null,
+        ...(approvedItemIds.length > 0 ? { approvedItemIds } : {}),
       };
+    }
     case "customer_account_info":
       // Prior orders EXCLUDING the disputed one. `totalOrders` mirrors
       // Shopify's numberOfOrders, which counts the disputed order itself

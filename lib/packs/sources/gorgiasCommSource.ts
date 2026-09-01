@@ -270,6 +270,11 @@ export function buildSnapshotSection(
       matchConfidence: ticket.confidence,
       matchingAlgorithmVersion: ticket.matchingAlgorithmVersion,
       messages: included.map((m) => ({
+        // The `gorgias_evidence_messages` row id — our own key, not Gorgias's.
+        // Without it a package records that SOME approved passages went in but
+        // not WHICH, so a decided case cannot be traced back to the passages
+        // actually filed (post-outcome INCLUSION_UNVERIFIABLE).
+        evidenceMessageId: m.id,
         gorgiasMessageId: m.gorgiasMessageId,
         gorgiasTicketId: ticket.gorgiasTicketId,
         senderType: m.senderType,
