@@ -173,22 +173,25 @@ export async function persistAnalysis(
     }
   }
 
-  // A newer analyzer's verdict replaces an older one for the same dispute.
+  // The newest analysis of a dispute is the current one. Everything earlier for
+  // that dispute is superseded — pointed at the replacement, never deleted, so
+  // the old conclusion and any review taken on it stay auditable (plan §13).
   //
-  // Without this the table grows a row per version per dispute and the admin
-  // list shows the same case several times, once per analyser generation, with
-  // no way to tell which conclusion is current. Superseding points the old row
-  // at the new one; it is never deleted, so the earlier conclusion and any
-  // review taken on it stay auditable (plan §13).
+  // This first shipped as "strictly LOWER analyzer versions", on the reasoning
+  // that two rows at the same version differ only by snapshot hash and are
+  // therefore parallel valid views. That was wrong the first time it mattered.
+  // When `disputeEvidence.uncategorizedFile` began arriving, 48 disputes were
+  // re-analysed at the SAME analyzer version against a genuinely better
+  // snapshot; the older rows were not a second opinion, they were the same
+  // question answered with less information. The list showed 98 current rows
+  // for 50 disputes.
   //
-  // Strictly LOWER versions only. Two rows at the same version differ by
-  // snapshot hash — a repaired source, not a superseded verdict — and both
-  // remain current.
+  // A changed snapshot hash means the record improved. Supersede on it.
   const { data: older } = await sb
     .from("post_outcome_analyses")
     .select("id")
     .eq("dispute_id", analysis.disputeId)
-    .lt("analyzer_version", analysis.analyzerVersion)
+    .neq("id", inserted.id)
     .is("superseded_by_id", null)
     .returns<Array<{ id: string }>>();
 
