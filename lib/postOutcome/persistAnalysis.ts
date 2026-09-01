@@ -173,6 +173,35 @@ export async function persistAnalysis(
     }
   }
 
+  // A newer analyzer's verdict replaces an older one for the same dispute.
+  //
+  // Without this the table grows a row per version per dispute and the admin
+  // list shows the same case several times, once per analyser generation, with
+  // no way to tell which conclusion is current. Superseding points the old row
+  // at the new one; it is never deleted, so the earlier conclusion and any
+  // review taken on it stay auditable (plan §13).
+  //
+  // Strictly LOWER versions only. Two rows at the same version differ by
+  // snapshot hash — a repaired source, not a superseded verdict — and both
+  // remain current.
+  const { data: older } = await sb
+    .from("post_outcome_analyses")
+    .select("id")
+    .eq("dispute_id", analysis.disputeId)
+    .lt("analyzer_version", analysis.analyzerVersion)
+    .is("superseded_by_id", null)
+    .returns<Array<{ id: string }>>();
+
+  for (const row of older ?? []) {
+    // Best-effort: a failure here leaves a duplicate on the list, which is
+    // visible and fixable. Throwing would discard an analysis already written.
+    try {
+      await supersedeAnalysis(row.id, inserted.id);
+    } catch {
+      /* left for the next run */
+    }
+  }
+
   return {
     analysisId: inserted.id,
     alreadyExisted: false,
