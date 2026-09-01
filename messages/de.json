@@ -1969,7 +1969,7 @@
       "notAssessed": {
         "title": "Noch nicht bewertet",
         "bodyAbsent": "DisputeDesk hat diesen Fall noch nicht bewertet, daher gibt es weder eine Fallstärke noch eine Vollständigkeit anzuzeigen. Die Bewertung erfolgt automatisch, sobald das Beweispaket erstellt ist — von Ihnen ist nichts erforderlich.",
-        "bodyStale": "Die Beweise zu diesem Fall haben sich nach der letzten Bewertung geändert, daher beschreiben die frühere Fallstärke und Vollständigkeit ihn nicht mehr. DisputeDesk bewertet ihn automatisch neu — von Ihnen ist nichts erforderlich.",
+        "bodyStale": "Dieser Fall wurde nach einer früheren Version unserer Bewertung eingestuft, daher gelten die bisherige Fallstärke und Vollständigkeit nicht mehr. An Ihren Beweisen hat sich nichts geändert. DisputeDesk bewertet den Fall vor der Antwortfrist automatisch neu — von Ihnen ist nichts erforderlich.",
         "actionsHidden": "Das Senden ist erst möglich, wenn dieser Fall bewertet wurde."
       }
     },
