@@ -162,6 +162,39 @@ export function platformSaveVerified(pkg: RawPackageRow | null): boolean {
   return (response as Record<string, unknown>).verified === true;
 }
 
+/** The PDF file GID this package uploaded, from its save response. */
+export function responseFileGid(pkg: RawPackageRow | null): string | null {
+  const response = pkg?.shopify_response;
+  if (!response || typeof response !== "object") return null;
+  const gid = (response as Record<string, unknown>).fileGid;
+  return typeof gid === "string" ? gid : null;
+}
+
+/** Whether the platform confirmed and verified this package's save. */
+function saveVerified(pkg: RawPackageRow): boolean {
+  const r = pkg.shopify_response;
+  if (!r || typeof r !== "object") return false;
+  return (r as Record<string, unknown>).verified === true;
+}
+
+/**
+ * The file the dispute's evidence record currently holds.
+ *
+ * Captured from 2026-09-01 on; absent on every earlier snapshot, which is why
+ * the tie resolver keeps an ordering fallback rather than treating absence as
+ * "no match".
+ */
+export function snapshotEvidenceFileGid(dispute: RawDisputeRow): string | null {
+  const snap = dispute.raw_snapshot;
+  if (!snap || typeof snap !== "object") return null;
+  const ev = (snap as Record<string, unknown>).disputeEvidence;
+  if (!ev || typeof ev !== "object") return null;
+  const file = (ev as Record<string, unknown>).uncategorizedFile;
+  if (!file || typeof file !== "object") return null;
+  const id = (file as Record<string, unknown>).id;
+  return typeof id === "string" ? id : null;
+}
+
 export function responseEvidenceGid(pkg: RawPackageRow | null): string | null {
   const response = pkg?.shopify_response;
   if (!response || typeof response !== "object") return null;
@@ -207,9 +240,34 @@ export function resolvePackageTie(
   packages: RawPackageRow[],
 ): { tie: PackageEvidenceTie; pkg: RawPackageRow | null } {
   if (packages.length === 0) return { tie: "NONE", pkg: null };
+
+  // 1. The file the evidence record holds names the package outright. Shopify
+  //    keeps ONE mutable evidence record per dispute and every save replaces
+  //    its uncategorizedFile, so this is the only signal that discriminates
+  //    between versions. Only accept it when it picks out exactly one.
+  const evidenceFileGid = snapshotEvidenceFileGid(dispute);
+  if (evidenceFileGid) {
+    const matches = packages.filter((p) => responseFileGid(p) === evidenceFileGid);
+    if (matches.length === 1) {
+      return { tie: "EVIDENCE_FILE_MATCH", pkg: matches[0] };
+    }
+  }
+
   if (packages.length > 1) {
+    // 2. No captured file GID. Shopify replaces the attached file on every
+    //    save, so the last VERIFIED save is what the record ended up holding.
+    //    An unverified later attempt did not replace anything, which is why
+    //    this filters rather than taking the maximum submitted_at outright.
+    const verified = packages
+      .filter(saveVerified)
+      .filter((p) => p.submitted_at)
+      .sort((a, b) => (a.submitted_at! < b.submitted_at! ? 1 : -1));
+    if (verified.length > 0) {
+      return { tie: "LATEST_VERIFIED_SAVE", pkg: verified[0] };
+    }
     return { tie: "AMBIGUOUS_MULTIPLE_PACKAGES", pkg: null };
   }
+
   const pkg = packages[0];
   const gid = responseEvidenceGid(pkg);
   const tie: PackageEvidenceTie =
@@ -416,6 +474,11 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
   if (tie === "AMBIGUOUS_MULTIPLE_PACKAGES") {
     reconstructionGaps.push(
       `${inputs.submittedPackages.length} submitted packages exist; the forwarded one is not identifiable.`,
+    );
+  }
+  if (tie === "LATEST_VERIFIED_SAVE") {
+    reconstructionGaps.push(
+      `${inputs.submittedPackages.length} submitted packages exist; the forwarded one is inferred from save order because no evidence file GID was captured.`,
     );
   }
 
