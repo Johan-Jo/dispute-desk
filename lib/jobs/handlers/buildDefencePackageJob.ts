@@ -39,6 +39,7 @@ import {
   summariseComposedErrors,
   VALIDATOR_VERSION,
 } from "@/lib/defence/validateNarrative";
+import { suppressUnsupportedSections } from "@/lib/defence/suppressUnsupportedSections";
 import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
@@ -571,6 +572,18 @@ export async function handleBuildDefencePackage(
     ...reasonCodeFamily.prohibitedBankPhrases,
     ...paymentProhibited,
   ];
+  // Drop argument sections whose every supporting fact is withheld from the
+  // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
+  // disputes: 51 such sections across 27 cases. Blocking them would mean
+  // status:"failed" and no PDF at all, so the letter loses the paragraph
+  // instead of the merchant losing the filing.
+  const suppression = suppressUnsupportedSections({
+    narrative: narrativeRes.narrative,
+    approvedFacts: planFacts,
+    internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+  });
+  narrativeRes.narrative = suppression.narrative;
+
   let validation = validateNarrative({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -583,6 +596,26 @@ export async function handleBuildDefencePackage(
   // Non-blocking findings are recorded whether or not the package passes.
   // Without this the rule is invisible on live traffic, and "detect first,
   // block later" needs the detection to actually land somewhere.
+  // Removing content from a filed document is not something to do silently.
+  if (suppression.suppressed.length > 0 || suppression.declinedToEmptyLetter) {
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_section_suppressed",
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        suppressed: suppression.suppressed,
+        // True means every argument rested on withheld facts, so nothing was
+        // removed and the warnings stand. Worth seeing: it is the population
+        // the citability rule could never be promoted for.
+        declinedToEmptyLetter: suppression.declinedToEmptyLetter,
+      },
+    });
+  }
+
   const validationWarnings = validation.warnings ?? [];
   if (validationWarnings.length > 0) {
     await logAuditEvent({
@@ -651,6 +684,17 @@ export async function handleBuildDefencePackage(
       // Re-validate the retry output. If it still fails, persist the
       // retry result (closer to correct than the first attempt) along
       // with its errors.
+      // The retry output needs the same treatment; without this a retried
+      // package keeps the unsupported section the first pass had removed.
+      const retrySuppression = suppressUnsupportedSections({
+        narrative: retryRes.narrative,
+        approvedFacts: planFacts,
+        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+      });
+      retryRes.narrative = retrySuppression.narrative;
+      suppression.suppressed = retrySuppression.suppressed;
+      suppression.declinedToEmptyLetter = retrySuppression.declinedToEmptyLetter;
+
       const retryValidation = validateNarrative({
         narrative: retryRes.narrative,
         approvedFacts: planFacts,
