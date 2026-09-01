@@ -38,7 +38,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
-import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { decideForPack, selectForDeadline } from "@/lib/automation/decision";
 import {
@@ -53,6 +52,12 @@ import {
   parseFinalizeRpcResult,
 } from "@/lib/defence/finalizeRpc";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import {
+  classifyUnconfirmedSaves,
+  summariseUnconfirmed,
+  CONFIRMATION_GRACE_HOURS,
+} from "@/lib/automation/unconfirmedForwarding";
+import { logAuditEvent } from "@/lib/audit/logEvent";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { runDeadlineSubmitLegacy } from "./legacyRoute";
 
@@ -73,6 +78,8 @@ interface Summary {
    *  nothing about them is retriable — they are the gate working. */
   blockedByDecision: number;
   emailed: number;
+  /** Saved-but-unconfirmed forwarding, by urgency. Reported, never acted on. */
+  unconfirmedForwarding?: Record<"past_deadline" | "due_soon" | "watch", number>;
   errors: Array<{ disputeId: string; error: string }>;
 }
 
@@ -513,6 +520,63 @@ export async function GET(req: NextRequest) {
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  }
+
+  // ── Saves the platform never confirmed forwarding ────────────────────────
+  //
+  // The scan above deliberately filters `evidence_saved_to_shopify_at IS NULL`
+  // — the disputes where we have not filed. That makes the opposite population
+  // invisible to it: evidence attached and read back, but no `evidenceSentOn`
+  // from Shopify, so `submission_state` never left `saved_to_shopify`. Two prod
+  // disputes reached a decision in that state with nothing watching.
+  //
+  // Reported, not acted on. An unconfirmed save is not proof nothing reached
+  // the issuer (one of the two was won); it is proof we cannot show it did, and
+  // that belongs in front of someone while the deadline can still be met.
+  try {
+    const { data: savedRows, error: savedErr } = await sb
+      .from("disputes")
+      .select(
+        "id, shop_id, evidence_saved_to_shopify_at, submitted_at, submission_state, due_at, final_outcome",
+      )
+      .not("evidence_saved_to_shopify_at", "is", null)
+      .is("submitted_at", null)
+      .is("final_outcome", null);
+
+    if (savedErr) throw savedErr;
+
+    const unconfirmed = classifyUnconfirmedSaves(savedRows ?? [], now);
+    summary.unconfirmedForwarding = summariseUnconfirmed(unconfirmed);
+
+    // One event per shop, not one for the scan. An audit row belongs to the
+    // shop it concerns; a single cross-shop row would be unreadable from any
+    // merchant's own history.
+    const byShop = new Map<string, typeof unconfirmed>();
+    for (const u of unconfirmed) {
+      const list = byShop.get(u.shopId) ?? [];
+      list.push(u);
+      byShop.set(u.shopId, list);
+    }
+    for (const [shopId, list] of byShop) {
+      await logAuditEvent({
+        shopId,
+        actorType: "system",
+        eventType: "defence_package_forwarding_unconfirmed",
+        eventPayload: {
+          graceHours: CONFIRMATION_GRACE_HOURS,
+          counts: summariseUnconfirmed(list),
+          // Bounded: the payload is for triage, not a second copy of the table.
+          disputes: list.slice(0, 25),
+        },
+      });
+    }
+  } catch (err) {
+    // Never let the detector cost the submissions. This route's job is filing;
+    // reporting is the addition.
+    summary.errors.push({
+      disputeId: "unconfirmed-forwarding-scan",
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   return NextResponse.json(summary);
