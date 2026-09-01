@@ -46,6 +46,8 @@ import {
   formatDueDate,
   formatShortId,
   csvEscape,
+  disputesExportFilename,
+  shopHandleFromLocation,
   orderLabel,
   parseListDeepLink,
   resolveSort,
@@ -441,21 +443,42 @@ export default function DisputesListPage() {
 
     setExporting(true);
     try {
-      const all: Dispute[] = [];
       const PER_PAGE = 100;
-      /* Hard stop so a pagination bug can never spin forever in the merchant's
-       * browser. 200 pages x 100 = 20,000 disputes, far above any real shop. */
-      for (let p = 1; p <= 200; p++) {
+      const fetchPage = async (pageNum: number): Promise<DisputesResponse | null> => {
         const params = buildFilterParams();
-        params.set("page", String(p));
+        params.set("page", String(pageNum));
         params.set("per_page", String(PER_PAGE));
         const res = await fetch(`/api/disputes?${params}`);
-        if (!res.ok) break;
-        const json: DisputesResponse = await res.json();
-        const batch = json.disputes ?? [];
-        all.push(...batch);
-        if (batch.length < PER_PAGE) break;
-        if (json.pagination && p >= json.pagination.total_pages) break;
+        if (!res.ok) return null;
+        return (await res.json()) as DisputesResponse;
+      };
+
+      /* Page 1 first — its `pagination.total_pages` tells us how many remain,
+       * so the rest go out AT ONCE instead of one-after-another.
+       *
+       * The sequential version issued 12 round-trips for a 1,125-dispute shop,
+       * each waiting on the previous, and every one of them re-ran the list
+       * route's presentation + case-strength work that the CSV does not read.
+       * Merchants reported the export taking a long time for a few hundred
+       * rows; this makes the wall-clock roughly one request instead of N.
+       *
+       * MAX_PAGES is a backstop against a pagination bug, not a real limit:
+       * 200 x 100 = 20,000 disputes, far above any shop we have. */
+      const MAX_PAGES = 200;
+      const first = await fetchPage(1);
+      const all: Dispute[] = first?.disputes ? [...first.disputes] : [];
+      const totalPages = Math.min(first?.pagination?.total_pages ?? 1, MAX_PAGES);
+
+      if (totalPages > 1) {
+        const rest = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 2)),
+        );
+        /* Concatenated in page order — Promise.all preserves index order, so the
+         * file keeps the sort the merchant is looking at. A failed page
+         * contributes nothing rather than aborting the whole export. */
+        for (const json of rest) {
+          if (json?.disputes) all.push(...json.disputes);
+        }
       }
 
       const exportRows = queryValue
@@ -467,11 +490,16 @@ export default function DisputesListPage() {
           esc(orderLabel(d)),
           formatShortId(d.id),
           esc(d.customer_display_name ?? ""),
-          formatCurrency(d.amount, d.currency_code, numberLocale),
+          /* MUST be escaped: a formatted amount over 999 carries a thousands
+           * separator (`$1,375.00`), and a non-USD currency can too. Left raw,
+           * every such row shifted all later columns by one — 37 of 1,125 live
+           * disputes, plus a VND amount that split across three fields. This
+           * was the one column the escaping pass missed. */
+          esc(formatCurrency(d.amount, d.currency_code, numberLocale)),
           esc(translateReason(d.reason, t)),
           esc(translateFamily(d.reason, t)),
           d.phase ?? "",
-          statusLabelForCsv(d.status, t),
+          esc(statusLabelForCsv(d.status, t)),
           d.normalized_status ?? "",
           d.submission_state ?? "",
           esc(formatDueDate(d.initiated_at, dateLocale)),
@@ -501,7 +529,10 @@ export default function DisputesListPage() {
       a.href = URL.createObjectURL(
         new Blob([csv], { type: "text/csv;charset=utf-8" }),
       );
-      a.download = "disputes.csv";
+      a.download = disputesExportFilename(
+        shopHandleFromLocation(window.location.search, document.referrer),
+        new Date(),
+      );
       a.click();
       URL.revokeObjectURL(a.href);
     } finally {

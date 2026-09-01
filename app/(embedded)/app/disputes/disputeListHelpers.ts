@@ -740,3 +740,63 @@ export function figmaKpis(
 export function csvEscape(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
+
+/* Filename for the disputes CSV: what it is, whose it is, when it was pulled.
+ *
+ * It used to be the constant "disputes.csv", so every download a merchant made
+ * collided in their Downloads folder ("disputes (3).csv") with nothing to say
+ * which shop or which day it covered. Support tickets arrive with these files
+ * attached; an undated, unattributed one is guesswork.
+ *
+ * `shopHandle` is best-effort — see `shopHandleFromLocation`. When it is
+ * unknown the shop segment is simply omitted rather than filled with a
+ * placeholder, so the name stays honest.
+ *
+ * Date is the LOCAL calendar day (not UTC): the merchant's "today" is the one
+ * they will look for. Format is YYYY-MM-DD so the files sort chronologically.
+ */
+export function disputesExportFilename(
+  shopHandle: string | null,
+  now: Date,
+): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  /* Filesystem-safe: strip anything that is not alphanumeric/dash/underscore,
+   * collapse runs, and cap the length so a pathological handle cannot produce
+   * an unusable filename. */
+  const safe = (shopHandle ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return safe
+    ? `disputes-history-${safe}-${stamp}.csv`
+    : `disputes-history-${stamp}.csv`;
+}
+
+/* The Shopify store handle, read from the embedded admin URL.
+ *
+ * Embedded apps run in an iframe under
+ * `admin.shopify.com/store/<handle>/apps/...`. `window.location` inside the
+ * frame is the app's own URL, so the handle is taken from the `shop` query
+ * param App Bridge puts there, falling back to the referrer/ancestor path.
+ * Returns null when nothing is readable — the caller drops the segment rather
+ * than guessing. Never throws: this runs during a download click. */
+export function shopHandleFromLocation(
+  search: string,
+  referrer: string,
+): string | null {
+  try {
+    const shopParam = new URLSearchParams(search).get("shop");
+    if (shopParam) {
+      // "blume-box.myshopify.com" -> "blume-box"
+      const handle = shopParam.split(".")[0]?.trim();
+      if (handle) return handle;
+    }
+    const m = /\/store\/([^/?#]+)/.exec(referrer);
+    if (m?.[1]) return m[1];
+  } catch {
+    /* fall through */
+  }
+  return null;
+}
