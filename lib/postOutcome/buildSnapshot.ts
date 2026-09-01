@@ -377,6 +377,8 @@ function factsToEvidence(
 function gorgiasToEvidence(
   rows: RawGorgiasRow[],
   submissionInstant: string | null,
+  /** Passage ids the package's issuer-facing communication facts name. */
+  citedCommunicationItemIds: ReadonlySet<string>,
 ): {
   before: SnapshotEvidenceItem[];
   after: SnapshotEvidenceItem[];
@@ -398,12 +400,15 @@ function gorgiasToEvidence(
       // one absent from the PDF is correct behaviour, not a defect.
       signalValue: null,
       inclusionEligible: approved,
-      // Always false, and deliberately so: a passage enters a package as ONE
-      // aggregate `customer_communication` fact with `sourceRef: null`, so no
-      // per-passage inclusion flag can be derived. Stage 3 reads the absence of
-      // a linkage as INCLUSION_UNVERIFIABLE rather than as an omission —
-      // claiming inclusion here would be inventing the link.
-      presentInSubmittedPackage: false,
+      // From 2026-09-01 a communication fact carries `approvedItemIds` — the
+      // passages it actually stands for — so inclusion is a lookup.
+      //
+      // Before that the passage entered as ONE aggregate fact with
+      // `sourceRef: null` and no per-passage identity, so nothing could be
+      // derived. `false` keeps that case reading as INCLUSION_UNVERIFIABLE in
+      // Stage 3 rather than as an omission: claiming inclusion with no link
+      // would be inventing it, and claiming omission would be worse.
+      presentInSubmittedPackage: citedCommunicationItemIds.has(row.id),
     };
 
     if (!submissionInstant) {
@@ -470,6 +475,25 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
   const { dispute } = inputs;
   const reconstructionGaps: string[] = [];
 
+  /**
+   * Passage ids the submitted package's issuer-facing communication facts name.
+   *
+   * Only bank-included facts count: a passage carried in a fact we deliberately
+   * withheld never reached the issuer, and calling it present would claim the
+   * opposite. Routed through THE predicate rather than re-spelled — C-1 exists
+   * because two spellings of this rule drifted (lib/defence/bankInclusion.ts).
+   */
+  const citedCommunicationItemIds = new Set<string>();
+  for (const p of inputs.submittedPackages) {
+    for (const fact of parseFacts(p.facts_json)) {
+      if (fact.category !== "customer_communication") continue;
+      if (!isBankIncludedFact(fact)) continue;
+      const ids = fact.value?.approvedItemIds;
+      if (!Array.isArray(ids)) continue;
+      for (const id of ids) if (typeof id === "string") citedCommunicationItemIds.add(id);
+    }
+  }
+
   const { tie, pkg } = resolvePackageTie(dispute, inputs.submittedPackages);
   if (tie === "AMBIGUOUS_MULTIPLE_PACKAGES") {
     reconstructionGaps.push(
@@ -516,7 +540,11 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
   const factEvidence = factsToEvidence(facts, submissionInstant);
   const factIds = new Set(factEvidence.map((e) => e.id));
 
-  const gorgias = gorgiasToEvidence(inputs.gorgias, submissionInstant);
+  const gorgias = gorgiasToEvidence(
+    inputs.gorgias,
+    submissionInstant,
+    citedCommunicationItemIds,
+  );
 
   // The outcome must be a real won/lost. `outcome_source` being absent does not
   // by itself make it unreliable — Shopify is the source for every prod case —

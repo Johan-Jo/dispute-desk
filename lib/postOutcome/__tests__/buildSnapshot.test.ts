@@ -602,3 +602,98 @@ describe("tying a package to the evidence Shopify holds", () => {
     expect(result.tie).toBe("EVIDENCE_GID_MATCH");
   });
 });
+
+/* ─────────────── Which approved passages the package actually cited ───────── */
+
+describe("per-passage communication provenance", () => {
+  function gorgiasRow(overrides: Partial<RawGorgiasRow> = {}): RawGorgiasRow {
+    return {
+      id: "g-1",
+      dispute_id: "d-1",
+      evidence_category: "customer_communication",
+      review_status: "approved",
+      approved_at: "2026-07-05T00:00:00.000Z",
+      created_at: "2026-07-04T00:00:00.000Z",
+      sent_at: "2026-07-04T00:00:00.000Z",
+      approved_excerpt: "Customer confirmed receipt.",
+      ...overrides,
+    };
+  }
+
+  function commPackage(approvedItemIds: string[] | null, bankIncluded = true): RawPackageRow {
+    return packageRow({
+      facts_json: [
+        {
+          id: "fc",
+          category: "customer_communication",
+          source: "gorgias",
+          value: {
+            fieldKey: "customer_communication",
+            customerConfirmsOrder: true,
+            ...(approvedItemIds ? { approvedItemIds } : {}),
+          },
+          bankEligible: bankIncluded,
+          includeInBankNarrative: bankIncluded,
+          submissionRisk: false,
+          internalOnly: false,
+        },
+      ],
+    });
+  }
+
+  it("marks a cited passage as having reached the issuer", () => {
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(["g-1"])],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(true);
+  });
+
+  it("leaves an uncited passage unmarked", () => {
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(["g-other"])],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(false);
+  });
+
+  it("does not credit a passage carried in a withheld fact", () => {
+    // The fact names the passage but never reached the issuer. Calling it
+    // present would claim the opposite of what the classifier decided.
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(["g-1"], false)],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(false);
+  });
+
+  it("stays unverifiable on a package predating the ids", () => {
+    // Every package built before 2026-09-01. Absent ids must keep reading as
+    // "cannot tell", never as "was omitted".
+    const result = assembleSnapshot(
+      inputs({
+        gorgias: [gorgiasRow()],
+        submittedPackages: [commPackage(null)],
+      }),
+    );
+    const item = result.snapshot.availableBeforeSubmission.find(
+      (e) => e.id === "gorgias:g-1",
+    );
+    expect(item?.presentInSubmittedPackage).toBe(false);
+  });
+});
