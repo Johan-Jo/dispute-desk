@@ -40,6 +40,10 @@ export const credit_not_processed: ReasonCodeGuidance = {
   ],
   criticalCategories: ["refund_record"],
   allowedFactCategories: [
+    // Admitted since `product_description` split out of `order_record`
+    // (2026-09-01). Ranking is unchanged here — only `product_unacceptable`
+    // promotes it — but the fact stays as citable as it was before.
+    "product_listing",
     "refund_record",
     "no_return_initiated",
     "policy_refund",
