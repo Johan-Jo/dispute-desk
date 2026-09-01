@@ -32,6 +32,26 @@ describe("resolveReasonCodeModuleForContext — BNPL (no network code)", () => {
     expect(mod.key).toBe("generic_fallback");
   });
 
+  it("routes FRAUDULENT → visa_10_4_fraud rather than generic_fallback", () => {
+    // A wallet/BNPL "fraudulent" claim is an unauthorized-transaction claim.
+    // It fell to generic_fallback until 2026-09-01.
+    const mod = resolveReasonCodeModuleForContext(null, "FRAUDULENT");
+    expect(mod.key).toBe("visa_10_4_fraud");
+  });
+
+  it("leaves the unauthorized module hedged on a non-card rail", () => {
+    // `payment_authentication` and `billing_match` have no members off the
+    // card rail, so this module can never satisfy its own critical
+    // categories there. That is the intended outcome: we do not assert an
+    // authorization we cannot evidence.
+    const mod = resolveReasonCodeModuleForContext(null, "FRAUDULENT");
+    expect(mod.criticalCategories).toEqual(["payment_authentication", "billing_match"]);
+  });
+
+  it("leaves GENERAL on generic_fallback — its correct module, not a miss", () => {
+    expect(resolveReasonCodeModuleForContext(null, "GENERAL").key).toBe("generic_fallback");
+  });
+
   it("prefers the network code when one IS present (card path unchanged)", () => {
     // With a real Visa fraud code, the network code wins even if a
     // Shopify reason is also supplied.
