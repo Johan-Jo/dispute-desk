@@ -105,6 +105,9 @@ export type EventType =
   /** An argument section was dropped because every fact it cited was withheld
    *  from the Evidence Basis. Content removed from a filed document. */
   | "defence_package_section_suppressed"
+  /** Evidence saved to the platform with no forwarding confirmation, past the
+   *  grace window. Reported by the daily deadline cron. */
+  | "defence_package_forwarding_unconfirmed"
   /** PR-C1 (2026-08-07): a persisted package candidate was refused at a
    *  save / forward / deadline path because it carries a retired delivery
    *  fact or an address-delivery assertion. Nothing was written to Shopify. */
