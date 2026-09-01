@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Microscope } from "lucide-react";
+import {
+  categoryLabel,
+  categoryMeaning,
+  reviewStateLabel,
+} from "@/lib/postOutcome/labels";
 
 /**
  * Compact post-outcome context for /admin/shops/[id] (plan §14.2) and the
@@ -141,9 +146,14 @@ export function PostOutcomeInsights({
               label="Analysis level"
               value={single.analysisLevel.replace(/_/g, " ").toLowerCase()}
             />
-            <Metric label="Observed gap" value={single.category ?? "—"} />
-            <Metric label="Review" value={single.reviewState.replace(/_/g, " ")} />
+            <Metric label="Observed gap" value={categoryLabel(single.category)} />
+            <Metric label="Review" value={reviewStateLabel(single.reviewState)} />
           </div>
+          {/* The label alone is a category name. A reviewer needs the sentence
+              under it to know what was observed without opening the detail page. */}
+          {categoryMeaning(single.category) && (
+            <p className="text-xs text-[#64748B]">{categoryMeaning(single.category)}</p>
+          )}
           {/* Saved is never shown as sent — the distinction the feature rests on. */}
           {!FORWARDED.has(single.submissionConfirmationSource) && (
             <p className="text-xs text-[#92400E] bg-[#FFFBEB] border border-[#FDE68A] rounded px-3 py-2">
