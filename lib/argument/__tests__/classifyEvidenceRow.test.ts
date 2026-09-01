@@ -181,7 +181,7 @@ describe("classifyEvidenceRow — ip_location_check", () => {
       }).category,
     ).toBe("moderate");
   });
-  it("clean same-country match → supporting (bank-facing but not decisive)", () => {
+  it("clean same-country match → moderate, so the Evidence Basis can list it", () => {
     expect(
       classifyEvidenceRow({
         fieldKey: "ip_location_check",
@@ -192,7 +192,7 @@ describe("classifyEvidenceRow — ip_location_check", () => {
           ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
         },
       }).category,
-    ).toBe("supporting");
+    ).toBe("moderate");
   });
   it("bankEligible: false → supporting", () => {
     expect(

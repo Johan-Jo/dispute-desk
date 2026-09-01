@@ -7775,3 +7775,20 @@ where version >= '<your prefix>' order by version;
 ```
 
 A name in that list that is not your file is a collision, not a coincidence.
+
+### IP location: tier aligned with the collector (2026-08-31)
+
+`categorizeEvidenceField` rated a clean `same_country` IP match as `supporting`. Its comment called that "still bank-facing, just less decisive" — but `supporting` is precisely the tier that makes a fact **not** bank-eligible (`bankEligible = cat === "strong" || "moderate"`), so the row was excluded from the Evidence Basis while four other parts of the system treated it as bank-facing:
+
+- `computeBankEligible` in `deviceLocationSource` returns **true** for it
+- `computeFieldScore` in the same collector rates it **Moderate**
+- the collector emits an **approved bank sentence** (`bankParagraph` → `bankLocationSummary`) that the narrative quotes verbatim — the 2026-08-11 fix for the model inventing IP prose. Populated on 62/66, then 46/46, then 24/24 facts from prompt v13 on; deliberately empty for `different_country`
+- `evidenceBasisRows` carries a `same_country` cell string that could never render, because nothing reached it
+
+Measured 2026-08-31: **45 of 53** filed packages on decided disputes asserted the approved IP sentence to the issuer while the Evidence Basis listed no IP row. The package argued a point and withheld its own evidence.
+
+`same_country` now categorises as `moderate`, same as `same_city`. `different_country` and any payload failing the collector's gate stay `supporting`, so nothing adverse becomes citable.
+
+**Blast radius.** 132 facts across 64 disputes and 2 shops. 65 sit on decided disputes (analysis only). Of the 67 on open disputes, 25 are already `submitted_to_bank` and 7 `submitted_to_shopify` — already filed. **One** dispute is in `new`, the only case early enough for the change to affect an automation decision.
+
+**This is a bank-visible behaviour change and also a scoring one.** `moderate` carries strength weight 2 where `supporting` carries 0, so affected disputes score higher and could cross a strength band, and strength gates auto-save. That is the intended reading — evidence good enough to show an issuer should count — but it is a real consequence, not a side effect to discover later.

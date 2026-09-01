@@ -4,12 +4,24 @@ import { Microscope } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
+  categoryLabel,
+  categoryMeaning,
+  confidenceLabel,
+  reviewStateLabel,
+} from "@/lib/postOutcome/labels";
+import {
   defaultSince,
+  listFindingsForAnalyses,
   listOutcomeAnalyses,
   orderForReview,
   summarise,
   type OutcomeAnalysisFilters,
 } from "@/lib/postOutcome/adminQueries";
+import {
+  deriveConclusions,
+  dominantCategory,
+  type Conclusion,
+} from "@/lib/postOutcome/conclusions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,6 +77,39 @@ function Stat({
   );
 }
 
+/**
+ * One derived conclusion.
+ *
+ * Strength is shown as a word, not a colour alone: INSUFFICIENT is the most
+ * important state to read correctly, and a grey chip does not say "we could not
+ * test this".
+ */
+const STRENGTH_STYLE: Record<Conclusion["strength"], { chip: string; text: string }> = {
+  OBSERVED: { chip: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]", text: "Observed" },
+  DIRECTIONAL: { chip: "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]", text: "Directional" },
+  INSUFFICIENT: { chip: "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0]", text: "Not testable yet" },
+};
+
+function ConclusionCard({ c }: { c: Conclusion }) {
+  const style = STRENGTH_STYLE[c.strength];
+  return (
+    <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-medium text-[#0F172A] leading-snug">{c.headline}</p>
+        <span className={`shrink-0 text-[11px] px-2 py-0.5 rounded border ${style.chip}`}>
+          {style.text}
+        </span>
+      </div>
+      <p className="text-sm text-[#475569] mt-2">{c.detail}</p>
+      {c.action && (
+        <p className="text-sm text-[#0F172A] mt-2">
+          <span className="text-[#64748B]">Next:</span> {c.action}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default async function OutcomeAnalysisPage({
   searchParams,
 }: {
@@ -91,6 +136,13 @@ export default async function OutcomeAnalysisPage({
   const ordered = orderForReview(rows);
   const summary = summarise(rows);
 
+  // The page leads with what the set SAYS, not with what is in it. Findings are
+  // read separately because the conclusion block wants one row per finding
+  // where the table wants one per analysis.
+  const findings = await listFindingsForAnalyses(rows.map((r) => r.id));
+  const conclusions = deriveConclusions(rows, findings);
+  const dominant = dominantCategory(rows);
+
   return (
     <div className="p-8 space-y-6">
       <AdminPageHeader
@@ -103,6 +155,31 @@ export default async function OutcomeAnalysisPage({
         Automated findings are <strong>hypotheses until reviewed</strong>. Nothing here
         changes rules, templates or scoring on its own.
       </div>
+
+      {/* ── What the set says, before what is in it ──────────────────────
+          The table below answers "which cases"; this answers "so what". A
+          reader who stops after this block should still leave knowing the
+          dominant defect, whether it is one bug or many, and what is not yet
+          knowable from this sample. */}
+      {conclusions.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-lg font-semibold text-[#0F172A]">What this set says</h2>
+            {dominant && (
+              <p className="text-sm text-[#64748B]">
+                Most common gap:{" "}
+                <span className="text-[#0F172A] font-medium">{dominant.label}</span>{" "}
+                ({dominant.count} of {summary.decidedAnalysed}, {dominant.share})
+              </p>
+            )}
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {conclusions.map((c) => (
+              <ConclusionCard key={c.key} c={c} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat
@@ -199,11 +276,15 @@ export default async function OutcomeAnalysisPage({
                     {r.dataIntegrityLimitation ? " ⚠" : ""}
                   </td>
                   <td className="px-4 py-2 text-[#0F172A]">
-                    {r.effectiveCategory ?? "—"}
+                    <span title={categoryMeaning(r.effectiveCategory) ?? undefined}>
+                      {categoryLabel(r.effectiveCategory)}
+                    </span>
                   </td>
-                  <td className="px-4 py-2 text-[#64748B]">{r.primaryConfidence ?? "—"}</td>
                   <td className="px-4 py-2 text-[#64748B]">
-                    {r.reviewState === "PENDING_REVIEW" ? "Pending" : r.reviewState}
+                    {confidenceLabel(r.primaryConfidence)}
+                  </td>
+                  <td className="px-4 py-2 text-[#64748B]">
+                    {reviewStateLabel(r.reviewState)}
                     {r.reviewCount > 1 ? ` (${r.reviewCount})` : ""}
                   </td>
                   <td className="px-4 py-2 text-right text-[#94A3B8]">

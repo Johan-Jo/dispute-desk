@@ -202,7 +202,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Moderate when location matches AND no VPN/proxy flag. Supporting when partial match. Invalid when payload missing.",
+    note: "Moderate when the collector's bankEligible gate passes (same_city or same_country, no VPN/proxy/hosting, consistent IP) — city and country alike, since the collector approves a bank sentence for both. Supporting when the gate fails. Invalid when payload missing.",
   },
   device_session_consistency: {
     signalId: "device_session",
@@ -579,13 +579,38 @@ export function categorizeEvidenceField(
   //   - ipConsistencyLevel ∈ {consistent, first_seen}
   // See lib/packs/sources/deviceLocationSource.ts → computeBankEligible.
   //
-  // Same-city is the strongest variant (city-level geolocation matching
-  // billing) → moderate. Same-country with the rest of the gate clean
-  // → supporting (still bank-facing, just less decisive). When the
-  // collector says not eligible, the row stays supporting so it never
-  // reaches a bank-facing surface via natural categorization — the
-  // `isNegativeOrAmbiguous` guard in the line-item resolver routes it
-  // to `internal_only` for negative payloads.
+  // Same-city and clean same-country are both MODERATE. When the collector
+  // says not eligible, the row stays supporting so it never reaches a
+  // bank-facing surface via natural categorization — the
+  // `isNegativeOrAmbiguous` guard in the line-item resolver routes it to
+  // `internal_only` for negative payloads.
+  //
+  // ── Why same_country moved off `supporting` (2026-08-31) ──
+  //
+  // The previous comment here said same-country was "still bank-facing, just
+  // less decisive". It was not. `supporting` is exactly the tier that makes a
+  // fact NOT bank-eligible (`bankEligible = cat === "strong" || "moderate"`),
+  // so the row was excluded from the Evidence Basis while four other parts of
+  // the system treated it as bank-facing:
+  //
+  //   - `computeBankEligible` in deviceLocationSource returns TRUE for it
+  //   - `computeFieldScore` in the same collector rates it "Moderate"
+  //   - the collector emits an APPROVED bank sentence (`bankParagraph`), which
+  //     the narrative quotes verbatim — the 2026-08-11 fix for the model
+  //     inventing IP prose
+  //   - `evidenceBasisRows` carries a same_country cell string that could
+  //     never render, because nothing reached it
+  //
+  // Measured 2026-08-31: 45 of 53 filed packages on decided disputes asserted
+  // the approved IP sentence to the issuer while the Evidence Basis listed no
+  // IP row at all. The package argued a point and withheld its own evidence.
+  //
+  // NOTE ON BLAST RADIUS: `moderate` also carries strength weight 2 where
+  // `supporting` carries 0, so this raises the weighted case-strength score on
+  // every dispute holding a clean same-country IP fact. That is the intended
+  // reading — evidence good enough to show an issuer is evidence that should
+  // count — but it can move a case across a strength band, and strength gates
+  // auto-save.
   //
   // (Prior to 2026-05-20 this branch checked locationMatch === "match"
   // || "country_match" — values the collector never emits since the
@@ -594,7 +619,7 @@ export function categorizeEvidenceField(
   if (fieldKey === "ip_location_check") {
     if (p.bankEligible !== true) return "supporting";
     if (p.locationMatch === "same_city") return "moderate";
-    if (p.locationMatch === "same_country") return "supporting";
+    if (p.locationMatch === "same_country") return "moderate";
     return "supporting";
   }
 
