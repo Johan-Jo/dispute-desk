@@ -38,6 +38,10 @@ export const canceled_recurring: ReasonCodeGuidance = {
   ],
   criticalCategories: ["subscription_terms", "policy_cancellation"],
   allowedFactCategories: [
+    // Admitted since `product_description` split out of `order_record`
+    // (2026-09-01). Ranking is unchanged here — only `product_unacceptable`
+    // promotes it — but the fact stays as citable as it was before.
+    "product_listing",
     "subscription_terms",
     "policy_cancellation",
     "policy_acceptance",
@@ -47,5 +51,5 @@ export const canceled_recurring: ReasonCodeGuidance = {
     "order_record",
     "manual_evidence",
   ],
-  version: 2,
+  version: 3,
 };

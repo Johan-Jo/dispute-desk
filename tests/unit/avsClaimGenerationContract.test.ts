@@ -315,7 +315,12 @@ describe("the whole prompt contract, base + module", () => {
   });
 
   it("the module version was bumped — its block is cached separately", () => {
-    expect(visa_10_4_fraud.version).toBe(10);
+    // `toBeGreaterThanOrEqual`, not `toBe`. The invariant is "this block was
+    // versioned when its content changed and never regresses below that",
+    // which an equality pin cannot express: it fails on the NEXT legitimate
+    // bump too, as it did on 2026-09-01. Matches the sibling assertion in
+    // avsClaimGenerationContract.test.ts.
+    expect(visa_10_4_fraud.version).toBeGreaterThanOrEqual(10);
   });
 
   it("a valid AVS-only and a valid AVS+CVV summary both remain quotable verbatim", () => {

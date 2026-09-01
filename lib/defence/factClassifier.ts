@@ -273,7 +273,19 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
     case "order_confirmation":
       return "order_record";
     case "product_description":
-      return "order_record";
+      // `product_listing`, NOT `order_record`. It mapped to `order_record`
+      // until 2026-09-01, which made the listing-as-purchased — the one fact
+      // that answers "did what we supplied match what we promised?" —
+      // indistinguishable from the order confirmation. The consequence was
+      // structural: `product_unacceptable.criticalCategories` named
+      // `order_record`, so every not-as-described case satisfied its own
+      // critical category with an order confirmation and rendered as a `full`
+      // package. Measured on prod the same day: 0 of 252 not-as-described
+      // disputes carried a `product_description` item, and all 252 rendered
+      // firm. The signal layer already drew this line —
+      // `canonicalEvidence.ts` gives the field `signalId: "product_listing"`
+      // — only the fact-category layer collapsed it.
+      return "product_listing";
     case "duplicate_explanation":
       return "duplicate_explanation";
     default:

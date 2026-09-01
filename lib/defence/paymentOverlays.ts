@@ -24,6 +24,7 @@ import type {
 } from "@/lib/disputes/paymentContext";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import { buildKlarnaOverlay } from "./klarnaOverlay";
+import { buildPaypalOverlay } from "./paypalOverlay";
 
 /**
  * Card-network vocabulary that must never appear in a BNPL/local
@@ -106,6 +107,20 @@ export function paymentOverlayFor(
 } {
   if (!isNonCardPaymentFamily(family)) {
     return { overlay: null, prohibitedPhrases: [] };
+  }
+  // PayPal is a wallet, not BNPL. Routing it to the generic BNPL overlay
+  // told the model the buyer had used an instalment product they never
+  // used — on prod 2026-09-01 that was the framing on 518 of one
+  // merchant's 522 disputes. No context object is required: with no
+  // reason the overlay returns its generic category, still correctly
+  // framed as a wallet dispute.
+  if (family === "paypal") {
+    return {
+      overlay: buildPaypalOverlay({
+        shopifyReason: klarnaContext?.shopifyReason ?? null,
+      }),
+      prohibitedPhrases: BNPL_PROHIBITED_CARD_PHRASES,
+    };
   }
   if (family === "klarna" && klarnaContext) {
     return {

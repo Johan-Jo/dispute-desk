@@ -43,6 +43,10 @@ export const generic_fallback: ReasonCodeGuidance = {
   ],
   criticalCategories: ["order_record"],
   allowedFactCategories: [
+    // Admitted since `product_description` split out of `order_record`
+    // (2026-09-01). Ranking is unchanged here — only `product_unacceptable`
+    // promotes it — but the fact stays as citable as it was before.
+    "product_listing",
     "payment_authentication",
     "payment_auth",
     "billing_match",
@@ -64,5 +68,5 @@ export const generic_fallback: ReasonCodeGuidance = {
     "account_history",
     "manual_evidence",
   ],
-  version: 2,
+  version: 3,
 };

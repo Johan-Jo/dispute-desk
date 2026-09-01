@@ -39,6 +39,10 @@ export const inr_product_not_received: ReasonCodeGuidance = {
   ],
   criticalCategories: ["delivery_proof"],
   allowedFactCategories: [
+    // Admitted since `product_description` split out of `order_record`
+    // (2026-09-01). Ranking is unchanged here — only `product_unacceptable`
+    // promotes it — but the fact stays as citable as it was before.
+    "product_listing",
     "delivery_proof",
     "shipping_tracking",
     "digital_access_log",
@@ -50,5 +54,5 @@ export const inr_product_not_received: ReasonCodeGuidance = {
     "policy_shipping",
     "manual_evidence",
   ],
-  version: 3,
+  version: 4,
 };
