@@ -23,6 +23,7 @@ import {
   ASSESSMENT_POLICY_VERSION,
   ASSESSMENT_VERSION,
   buildCaseAssessmentSnapshot,
+  assessmentInputHashTerms,
   computeAssessmentInputHash,
   resolveGateDecision,
 } from "../assessmentSnapshot";
@@ -326,5 +327,161 @@ describe("resolveGateDecision", () => {
 
   it("is null when both gates are stated and neither fires", () => {
     expect(resolveGateDecision(gatesWith({ coverage: null, fatalLoss: null }))).toBeNull();
+  });
+});
+
+/**
+ * The mismatch has to name its own cause.
+ *
+ * `evaluateFreshness` answers one boolean over model + gates + payloads, so a
+ * stale verdict cannot say which term moved. On 2026-09-01 a merchant was told
+ * "the evidence on this case changed after it was last assessed" on a case
+ * whose snapshot re-derived byte-identically from `pack_json`, and there was
+ * nothing on the row or in a log to narrow it. These tests pin the attribution
+ * so the next occurrence is a one-line diagnosis.
+ *
+ * The property: perturb exactly ONE term and exactly that term's digest moves.
+ * The second half is what makes it useful — a digest that changed when its
+ * term did not would point at the wrong half of the pipeline.
+ */
+describe("assessmentInputHashTerms — attribution", () => {
+  const model = modelFor(BASE_SECTIONS, "PRODUCT_NOT_RECEIVED");
+
+  it("is stable for identical inputs", () => {
+    const a = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    const b = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    expect(a).toEqual(b);
+  });
+
+  it("moves ONLY the model term when the evidence model changes", () => {
+    const base = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    const changed = assessmentInputHashTerms({
+      // One section dropped — a real evidence change.
+      model: modelFor([ORDER], "PRODUCT_NOT_RECEIVED"),
+      gates: NO_GATES,
+      payloadSource: undefined,
+    });
+    expect(changed.model).not.toBe(base.model);
+    expect(changed.gates).toBe(base.gates);
+    expect(changed.payloads).toBe(base.payloads);
+  });
+
+  it("moves ONLY the gates term when a gate changes", () => {
+    const base = assessmentInputHashTerms({ model, gates: NO_GATES, payloadSource: undefined });
+    const changed = assessmentInputHashTerms({
+      model,
+      gates: gatesWith({
+        nameMismatch: {
+          triggered: true,
+          cardholderName: "A. Buyer",
+          customerName: "B. Other",
+        },
+      }),
+      payloadSource: undefined,
+    });
+    expect(changed.gates).not.toBe(base.gates);
+    expect(changed.model).toBe(base.model);
+    expect(changed.payloads).toBe(base.payloads);
+  });
+
+  it("moves ONLY the payloads term when a payload changes", () => {
+    const withPayload = (proofType: string): EvidencePayloadSource => ({
+      kind: "list",
+      items: [{ payload: { fieldsProvided: ["delivery_proof"], proofType } }],
+    });
+    const base = assessmentInputHashTerms({
+      model,
+      gates: NO_GATES,
+      payloadSource: withPayload("delivered_confirmed"),
+    });
+    const changed = assessmentInputHashTerms({
+      model,
+      gates: NO_GATES,
+      payloadSource: withPayload("delivered_unverified"),
+    });
+    expect(changed.payloads).not.toBe(base.payloads);
+    expect(changed.model).toBe(base.model);
+    expect(changed.gates).toBe(base.gates);
+  });
+
+  it("agrees with the composite hash about WHETHER anything moved", () => {
+    // The attribution is only trustworthy if it cannot claim "all three equal"
+    // on inputs the real predicate calls stale, or the reverse.
+    const a = { model, gates: NO_GATES, payloadSource: undefined };
+    const b = {
+      model: modelFor([ORDER], "PRODUCT_NOT_RECEIVED"),
+      gates: NO_GATES,
+      payloadSource: undefined,
+    };
+    const termsEqual =
+      JSON.stringify(assessmentInputHashTerms(a)) ===
+      JSON.stringify(assessmentInputHashTerms(b));
+    const hashEqual = computeAssessmentInputHash(a) === computeAssessmentInputHash(b);
+    expect(termsEqual).toBe(hashEqual);
+  });
+});
+
+/**
+ * A CATEGORIZATION CHANGE IS A POLICY CHANGE.
+ *
+ * On 2026-08-31 PR #641 moved a clean `same_country` IP fact from `supporting`
+ * to `moderate` — correct on its merits, but shipped without bumping
+ * `SCORING_POLICY_VERSION`. The category decides `quality` via
+ * `fromLegacyCategory` (`moderate` -> `corroborating`, `supporting` ->
+ * `contextual`), and `modelFingerprint` hashes `quality` per record. So every
+ * snapshot written before the deploy hashed to a value the new rules cannot
+ * reproduce, and 63 open production packs told their merchants "the evidence
+ * on this case changed after it was last assessed" about evidence that had not
+ * moved at all.
+ *
+ * These tests pin the two halves of that lesson. They cannot force a future
+ * author to bump the constant — but they make the mechanism explicit, so the
+ * chain from "I changed a category" to "the whole fleet reports stale" is
+ * visible in a test rather than discovered in production.
+ */
+describe("categorization is a hash input", () => {
+  it("a record's quality reaches the input hash", () => {
+    // Two payloads that categorize differently for the SAME field. If quality
+    // ever stops being hashed, these collapse and the test fails loudly.
+    const ipSection = (locationMatch: string) => ({
+      source: "ipinfo",
+      fieldsProvided: ["ip_location_check"],
+      data: {
+        locationMatch,
+        bankEligible: true,
+        vpnDetected: false,
+        proxyDetected: false,
+        hostingDetected: false,
+        ipConsistency: "consistent",
+      },
+    });
+    const a = hashOf(modelFor([ORDER, ipSection("same_city")], "FRAUDULENT"));
+    const b = hashOf(modelFor([ORDER, ipSection("different_country")], "FRAUDULENT"));
+    expect(a).not.toBe(b);
+  });
+
+  it("a policy bump alone invalidates a byte-identical snapshot", () => {
+    // The mechanism PR #641 should have used. `evaluateFreshness` checks
+    // policyVersion BEFORE inputHash, so the merchant is told "not assessed
+    // yet" (bodyAbsent) rather than the false "your evidence changed".
+    const model = modelFor(BASE_SECTIONS, "PRODUCT_NOT_RECEIVED");
+    const snap = buildCaseAssessmentSnapshot({
+      caseId: "d1",
+      model,
+      gates: NO_GATES,
+      payloadSource: undefined,
+      now: NOW,
+    });
+
+    const verdict = evaluateFreshness({
+      snapshot: snap.freshness,
+      currentInputHash: hashOf(model),
+      currentPolicyVersion: ASSESSMENT_POLICY_VERSION + 1,
+    });
+
+    expect(verdict.fresh).toBe(false);
+    // NOT input_hash_mismatch — the inputs are identical. Conflating the two
+    // is exactly what put "your evidence changed" in front of 63 merchants.
+    expect(verdict).toEqual({ fresh: false, reason: "policy_version_superseded" });
   });
 });
