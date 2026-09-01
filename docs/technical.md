@@ -4311,6 +4311,47 @@ reader *can* observe, evidence drift, is exactly what the model and payload
 terms carry. A pack with no persisted fingerprint yields no current hash, and an
 unverifiable snapshot is not a fresh one.
 
+**A categorization change is a POLICY change (2026-09-01).** `SCORING_POLICY_VERSION`
+is now **2**. PR #641 moved a clean `same_country` IP fact from `supporting` to
+`moderate` in `lib/argument/canonicalEvidence.ts` — correct on its merits, but
+it shipped without bumping the constant, and the category reaches the input
+hash: `categorizeEvidenceField` -> `fromLegacyCategory` (`moderate` ->
+`corroborating`, was `contextual`) -> `modelFingerprint` hashes `quality` per
+record. Every snapshot written before that deploy therefore hashed to a value
+the new rules cannot reproduce.
+
+The merchant-visible consequence: 63 open production packs reported
+`input_hash_mismatch`, whose copy reads *"The evidence on this case changed
+after it was last assessed."* Nothing about that evidence had changed — the
+rules for hashing it had. Those cases lost their strength band, completeness
+score **and** send action together (`resolveAssessmentGate` sets all three
+false at once).
+
+The bump is the mechanism that change should have used. `evaluateFreshness`
+checks `policyVersion` **before** `inputHash`, so an old snapshot now reports
+`policy_version_superseded` — the truthful reason, which routes to the "not yet
+assessed" copy rather than the false "your evidence changed" one.
+
+**The rule:** changing what `categorizeEvidenceField` returns for any field
+MUST bump `SCORING_POLICY_VERSION` in the same PR. A bump invalidates every
+persisted snapshot, which is correct and intended; leaving it unbumped tells
+the whole fleet their evidence moved.
+
+**A bump does not re-derive anything.** Only `buildPack` writes the snapshot,
+and the nightly `refresh-open-disputes` cron rebuilds only when a carrier
+delivery status moves — so a policy-stale pack never self-heals. Run
+`scripts/rebuild-policy-v2-stale-packs.mjs` (dry-run by default, `--limit=N`
+for a canary, `--apply` to enqueue) AFTER the bump deploys; rebuilding first
+just re-writes the old version. `buildPack` does not consume pack quota, so the
+rebuild spends no merchant credits, and jobs are queued at `priority: 90` so
+they sit below interactive work. Verify with
+`scripts/sql/policy-v2-verify.sql`.
+
+Scope: the bump touches only the workspace read path. The filing selector
+compares `plan.policyVersion` (`caseSelectionContext.ts:227`) and the
+automation decision carries its own `AUTOMATION_POLICY_VERSION`, so neither is
+affected and no case is blocked from filing.
+
 **Naming which term moved (2026-09-01).** `evaluateFreshness` answers one
 boolean over model + gates + payloads, so a mismatch could say only "something
 changed". A merchant was shown *"the evidence on this case changed after it was

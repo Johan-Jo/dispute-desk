@@ -420,3 +420,68 @@ describe("assessmentInputHashTerms — attribution", () => {
     expect(termsEqual).toBe(hashEqual);
   });
 });
+
+/**
+ * A CATEGORIZATION CHANGE IS A POLICY CHANGE.
+ *
+ * On 2026-08-31 PR #641 moved a clean `same_country` IP fact from `supporting`
+ * to `moderate` — correct on its merits, but shipped without bumping
+ * `SCORING_POLICY_VERSION`. The category decides `quality` via
+ * `fromLegacyCategory` (`moderate` -> `corroborating`, `supporting` ->
+ * `contextual`), and `modelFingerprint` hashes `quality` per record. So every
+ * snapshot written before the deploy hashed to a value the new rules cannot
+ * reproduce, and 63 open production packs told their merchants "the evidence
+ * on this case changed after it was last assessed" about evidence that had not
+ * moved at all.
+ *
+ * These tests pin the two halves of that lesson. They cannot force a future
+ * author to bump the constant — but they make the mechanism explicit, so the
+ * chain from "I changed a category" to "the whole fleet reports stale" is
+ * visible in a test rather than discovered in production.
+ */
+describe("categorization is a hash input", () => {
+  it("a record's quality reaches the input hash", () => {
+    // Two payloads that categorize differently for the SAME field. If quality
+    // ever stops being hashed, these collapse and the test fails loudly.
+    const ipSection = (locationMatch: string) => ({
+      source: "ipinfo",
+      fieldsProvided: ["ip_location_check"],
+      data: {
+        locationMatch,
+        bankEligible: true,
+        vpnDetected: false,
+        proxyDetected: false,
+        hostingDetected: false,
+        ipConsistency: "consistent",
+      },
+    });
+    const a = hashOf(modelFor([ORDER, ipSection("same_city")], "FRAUDULENT"));
+    const b = hashOf(modelFor([ORDER, ipSection("different_country")], "FRAUDULENT"));
+    expect(a).not.toBe(b);
+  });
+
+  it("a policy bump alone invalidates a byte-identical snapshot", () => {
+    // The mechanism PR #641 should have used. `evaluateFreshness` checks
+    // policyVersion BEFORE inputHash, so the merchant is told "not assessed
+    // yet" (bodyAbsent) rather than the false "your evidence changed".
+    const model = modelFor(BASE_SECTIONS, "PRODUCT_NOT_RECEIVED");
+    const snap = buildCaseAssessmentSnapshot({
+      caseId: "d1",
+      model,
+      gates: NO_GATES,
+      payloadSource: undefined,
+      now: NOW,
+    });
+
+    const verdict = evaluateFreshness({
+      snapshot: snap.freshness,
+      currentInputHash: hashOf(model),
+      currentPolicyVersion: ASSESSMENT_POLICY_VERSION + 1,
+    });
+
+    expect(verdict.fresh).toBe(false);
+    // NOT input_hash_mismatch — the inputs are identical. Conflating the two
+    // is exactly what put "your evidence changed" in front of 63 merchants.
+    expect(verdict).toEqual({ fresh: false, reason: "policy_version_superseded" });
+  });
+});

@@ -1,8 +1,8 @@
 # "Not assessed yet" banner on a case that IS assessed
 
-Status: STEPS 1-2 IMPLEMENTED (branch `fix/workspace-assessment-freshness-diagnostics`).
-Cause still NOT identified — step 1 exists to name it on the next occurrence.
-Step 3 (copy) NOT done.
+Status: **CAUSE FOUND AND FIXED.** PR #641 changed a categorization rule
+without bumping `SCORING_POLICY_VERSION`. Bumped to 2; 63 open packs need a
+rebuild after deploy. Step 3 (copy) still NOT done.
 Opened: 2026-09-01, from a merchant-visible banner on order #360499.
 
 ## The symptom
@@ -77,132 +77,107 @@ Dispute `8d8a1db7-17b2-415a-befe-ab65b757affb`, pack
    all 27 open disputes that have a pack carry a present, current-policy
    snapshot; 12 more have no pack at all (those correctly render `bodyAbsent`).
 
-## The decisive test: the server says the case IS assessed
+## THE CAUSE
 
-`buildWorkspaceAssessment` — the exact function the route calls — was run over
-the real prod rows for this dispute (pack sections, gate fingerprint, coverage,
-waived items, persisted snapshot), using current `master` code:
+**PR #641, merged to `master` 2026-08-31**, changed `ip_location_check`
+categorization for a clean `same_country` fact from `supporting` to `moderate`
+(`lib/argument/canonicalEvidence.ts:622`). It did not bump
+`SCORING_POLICY_VERSION`.
 
-    gates present      : true
-    current hash       : 2a729a83f0c286a5...
-    snapshot hash      : 2a729a83f0c286a5...
-    snapshot policyVer : 1
-    needsRecalculation : false          <-- assessed
-    recalculationReason: null
-    strengthBand       : weak
-    readiness          : ready_with_warnings
+That category reaches the assessment input hash:
 
-A negative control confirms the hash is genuinely sensitive (dropping one
-section, or changing the reason, both change it), so the match is real and not
-an artefact of a hash that ignores its inputs.
+    categorizeEvidenceField -> "moderate"
+      fromLegacyCategory    -> quality "corroborating"   (was "contextual")
+        modelFingerprint    -> hashes `quality` per record
+          inputHash differs -> input_hash_mismatch
+            bodyStale       -> "The evidence on this case changed"
 
-**The server, on current code and current data, does NOT produce the banner.**
+The reported pack was built **08-27**, storing a hash computed while the field
+was `contextual`. #641 shipped **08-31**. The merchant viewed it **09-01**. The
+snapshot never changed; the rules for deriving its hash did, underneath it.
 
-## Why this could not have been a transient input
+Proven directly: on a branch containing #641 the field derives as
+`corroborating` and the hash is `69fac7a0…`; the stored value is `2a729a83…`.
+Same pack, same data, different code.
 
-`dispute_events` holds the complete history — four rows, one build, no rebuild:
+**Why the earlier reproductions said "MATCH".** They ran on
+`promote/csv-fixes`, which predates #641, so they faithfully reproduced the OLD
+hash. A `git show master:` check compounded it by reading a stale local
+`master` ref that had never been fetched — it showed `supporting`, which
+appeared to rule prod out. Both checks were wrong in the same direction. The
+moment the work moved to a branch off `origin/develop`, the same script flipped
+to MISMATCH; that flip is what exposed it. **Lesson: verify against
+`origin/<branch>`, never a local ref, when asking "what is deployed?"**
 
-    2026-08-27 18:22:42  dispute_opened        chargeback opened - PRODUCT_NOT_RECEIVED
-    2026-08-27 18:23:37  auto_build_triggered
-    2026-08-27 18:24:55  pack_created          Score: 42%, 7 evidence items
-    2026-08-27 18:24:57  pack_blocked          Auto-mode case strength is Weak
+## Blast radius (prod, measured)
 
-The pack has been in exactly this state since 08-27. `pack_json` is written in
-ONE update (`buildPack` builds the whole object, then a single `.update`), so
-there is no partial-write window. The only later job (`enrich_gorgias_comms`,
-08-28 18:10) writes exclusively to `gorgias_matched_tickets` /
-`gorgias_evidence_messages`, neither of which feeds the hash. And the three
-hash-path files (`derive.ts`, `assessmentSnapshot.ts`, `assessment.ts`) last
-changed on master 08-21, 08-21 and 08-10 — all BEFORE the pack was built, so
-there is no version skew between the writer and the current reader.
+63 open unsaved `ready` packs carry a policy-version-1 snapshot — 33
+`under_review`, 30 `needs_response`. All showed "Not assessed yet" with the
+strength band, completeness score and send action withdrawn. (13 more sit on
+decided disputes and do not matter: their evidence is already filed.)
 
-## Therefore
+By IP tier: 55 open packs hold `same_country`, 20 `same_city`, 1
+`different_country`.
 
-The client displayed `bodyStale`, which `bodyKeyFor` emits ONLY for
-`input_hash_mismatch` or `policy_version_superseded`. The client cannot invent
-that reason — `useDisputeWorkspace.ts:1182` only relays
-`serverAssessment.assessment.recalculationReason`, and the one client-side
-fallback (`:1020`) passes no reason at all, which resolves to `bodyAbsent`.
+## The fix (implemented)
 
-So the response that painted this screen carried `input_hash_mismatch`, and the
-same request replayed today does not. Two candidates remain, and they are
-distinguishable:
+1. **`SCORING_POLICY_VERSION` 1 -> 2** (`lib/evidence/model/assessment.ts`).
+   `evaluateFreshness` checks `policyVersion` BEFORE `inputHash`, so an old
+   snapshot now reports `policy_version_superseded` — the truthful reason,
+   which routes to the "not yet assessed" copy instead of the false "your
+   evidence changed" one. This is exactly the case the field exists for.
+2. **Rebuild** via `scripts/rebuild-policy-v2-stale-packs.mjs`. A bump makes
+   the copy honest but re-derives nothing — only `buildPack` writes the
+   snapshot, and the nightly `refresh-open-disputes` cron rebuilds only on a
+   carrier delivery change, so these never self-heal. Dry-run by default;
+   `--limit=N` for a canary; `--apply` to enqueue at `priority: 90`.
+   **Must run AFTER the bump deploys** — rebuilding first re-writes version 1.
+   `buildPack` does not consume pack quota, so no merchant credits are spent.
+   Dry-run against prod: 63 scanned, 63 stale — matching the SQL census.
+3. **Regression tests** pin that a record's `quality` reaches the input hash,
+   and that a policy bump alone yields `policy_version_superseded` rather than
+   `input_hash_mismatch` on byte-identical inputs.
+4. **Diagnostics** (first commit on this branch) would have printed
+   `movedTerms: ["model"]` on the first page load. Retained: they turn the next
+   occurrence into a one-line diagnosis.
 
-- **(A) A cached response.** The fetch at `useDisputeWorkspace.ts:388` is a bare
-  `fetch()` with no `cache: "no-store"`, and the route sets no `dynamic` /
-  `revalidate` / `Cache-Control`. A response produced during the ~80s build
-  window (18:23:37 -> 18:24:55, when the pack row existed but `case_assessment`
-  did not yet) could be served from cache long afterwards. This is the leading
-  hypothesis. NOTE it predicts `snapshot_absent` -> `bodyAbsent`, so for it to
-  explain `bodyStale` the cached response must have been produced when a hash
-  was reconstructable but mismatched -- verify rather than assume.
-- **(B) A genuine mismatch under request-time conditions not reproducible from
-  persisted state.** Cannot be ruled out without the instrumentation below.
+## Scope checked
 
-## Step 1 - INSTRUMENT (do this first; it is also cheap to ship)
+The bump touches only the workspace read path. The filing selector compares
+`plan.policyVersion` (`caseSelectionContext.ts:227`) and the automation
+decision carries its own `AUTOMATION_POLICY_VERSION`. Neither is affected; no
+case is blocked from filing.
 
-Because `evaluateFreshness` collapses three hash terms into one boolean, a
-mismatch is unattributable today -- which is precisely why this took a full
-session and still did not yield the mechanism. In
-`app/api/disputes/[id]/workspace/route.ts`, at `currentAssessmentHash`, log ON
-MISMATCH ONLY:
+## The class, not the instance
 
-- `disputeId`, `packId`, `packRow.updated_at`
-- stored vs recomputed `inputHash`; stored vs current `policyVersion`
-- **which of the three terms differs** -- recompute `modelFingerprint`,
-  `gateFingerprint` and `payloadFingerprint` separately and name the offender
+The defect is not "#641 forgot a bump" — it is that nothing made the coupling
+visible. `categorizeEvidenceField` decides a category, the category becomes a
+`quality`, and `quality` is hashed; none of that is apparent from the file
+being edited. The rule is now stated at `SCORING_POLICY_VERSION`, in
+`docs/technical.md`, and pinned by a test asserting the categorization ->
+hash chain is live.
 
-That last item is the whole point: it turns the next occurrence into a one-line
-diagnosis. Read-only; ship to `develop` alone.
+## Still open
 
-## Step 2 - KILL THE CACHE PATH (independent of cause, and likely the fix)
+**Step 3, the copy.** Two problems independent of this cause:
 
-Regardless of (A) vs (B), a workspace response must never be served from cache:
-it carries a per-merchant assessment whose staleness is the exact failure mode
-this whole layer exists to prevent.
+1. `bodyStale` asserts *"The evidence on this case changed"* — a claim about
+   the merchant's data that the code does not verify. What it knows is that two
+   hashes differ, which has other causes, as this incident proves.
+2. Neither body says WHEN reassessment happens, which reads as contradictory
+   next to a "Pack prepared" badge.
 
-- Add `cache: "no-store"` to the fetch at `useDisputeWorkspace.ts:388`.
-- Add `export const dynamic = "force-dynamic"` to the workspace route.
-
-If (A) is the cause this fixes it outright. If (B) is, this removes a confound
-that would otherwise muddy the instrumentation in step 1. Either way it is
-correct on its own merits.
-
-## Step 3 - THE COPY (ship alongside; worth doing regardless)
-
-1. **`bodyStale` asserts a fact the product has not verified.** "The evidence on
-   this case changed" is a claim about the merchant's data. What the code knows
-   is "two hashes differ" -- which, as this incident proves, has other causes.
-   State the state, not an unproven cause.
-2. **Neither body says WHEN.** "DisputeDesk reassesses it automatically", with
-   no timeframe, sitting next to a "Pack prepared" badge, reads as a
-   contradiction to a merchant.
-3. **The banner withdraws the send action** (`mayOfferFilingAction: false`). On
-   a case the server considers `ready_with_warnings`, that is a real capability
-   loss, not just wrong words -- which is why steps 1-2 matter more than 3.
-
-Strings live in `messages/en.json` under
-`disputes.assessmentState.notAssessed.*`; translate all six locales in the same
-session (`[[feedback_translate_on_add]]`).
+Strings live at `disputes.assessmentState.notAssessed.*`; all six locales in
+the same session.
 
 ## Explicitly NOT the cause
 
-Recorded so the next session does not re-derive them:
+Recorded so they are not re-derived: the `list` vs `byField` payload shape
+(both hash identically); a missing gate fingerprint; a competing pack row;
+`orderContext` / `networkReasonCode` asymmetry; `dispute.reason` drift; the
+contradiction gate; the checklist; response caching (a real weakness, fixed in
+the first commit here, but not this).
 
-- NOT the `list` vs `byField` payload-shape difference (tested; both hash
-  identically because the route copies whole section data into each field).
-- NOT a missing `case_assessment_gates` fingerprint (present, reads back OK).
-- NOT a policy-version bump (1 == 1).
-- NOT a second/competing pack row (only one exists for this dispute).
-- NOT `orderContext` asymmetry -- BOTH call sites omit it.
-- NOT `networkReasonCode` asymmetry -- both pass `null`.
-- NOT `dispute.reason` drift -- matches `pack_json.disputeReason`.
-- NOT the contradiction gate -- it mutates `allSections` before BOTH the model
-  derivation and the persist, so the two see the same set.
-- NOT the checklist -- it feeds only counts and display rows, never the gate.
-- NOT the filing path -- `caseSelectionContext.ts:221` builds both sides of its
-  freshness check from the same projected object, so it is fresh by
-  construction and never calls `computeAssessmentInputHash`. No open case is
-  blocked from filing by this. Confirmed: 27 open disputes with a pack all
-  carry a present, current-policy snapshot; 12 more have no pack (correctly
-  `bodyAbsent`).
+**The filing path was never affected.** `caseSelectionContext.ts:221` builds
+both sides of its freshness check from the same projected object, so it is
+fresh by construction and never calls `computeAssessmentInputHash`.
