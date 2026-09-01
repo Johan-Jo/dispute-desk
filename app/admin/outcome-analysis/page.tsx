@@ -4,6 +4,12 @@ import { Microscope } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
+  categoryLabel,
+  categoryMeaning,
+  confidenceLabel,
+  reviewStateLabel,
+} from "@/lib/postOutcome/labels";
+import {
   defaultSince,
   listOutcomeAnalyses,
   orderForReview,
@@ -199,11 +205,15 @@ export default async function OutcomeAnalysisPage({
                     {r.dataIntegrityLimitation ? " ⚠" : ""}
                   </td>
                   <td className="px-4 py-2 text-[#0F172A]">
-                    {r.effectiveCategory ?? "—"}
+                    <span title={categoryMeaning(r.effectiveCategory) ?? undefined}>
+                      {categoryLabel(r.effectiveCategory)}
+                    </span>
                   </td>
-                  <td className="px-4 py-2 text-[#64748B]">{r.primaryConfidence ?? "—"}</td>
                   <td className="px-4 py-2 text-[#64748B]">
-                    {r.reviewState === "PENDING_REVIEW" ? "Pending" : r.reviewState}
+                    {confidenceLabel(r.primaryConfidence)}
+                  </td>
+                  <td className="px-4 py-2 text-[#64748B]">
+                    {reviewStateLabel(r.reviewState)}
                     {r.reviewCount > 1 ? ` (${r.reviewCount})` : ""}
                   </td>
                   <td className="px-4 py-2 text-right text-[#94A3B8]">
