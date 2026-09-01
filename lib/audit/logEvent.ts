@@ -102,6 +102,9 @@ export type EventType =
   /** Non-blocking validation findings. Recorded so a rule can be measured on
    *  live traffic before it is allowed to fail a package. */
   | "defence_package_validation_warning"
+  /** An argument section was dropped because every fact it cited was withheld
+   *  from the Evidence Basis. Content removed from a filed document. */
+  | "defence_package_section_suppressed"
   /** PR-C1 (2026-08-07): a persisted package candidate was refused at a
    *  save / forward / deadline path because it carries a retired delivery
    *  fact or an address-delivery assertion. Nothing was written to Shopify. */
