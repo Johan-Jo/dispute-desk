@@ -91,7 +91,15 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "any",
     packageMode: "any",
     template:
-      "This representment addresses {{reasonCodeContext}}. The approved evidence supporting the merchant's position is summarised below.",
+      // "representment" was here until 2026-09-02. It is a card-network term
+      // of art, and `BNPL_PROHIBITED_CARD_PHRASES` hard-rejects it on every
+      // non-card rail — so this template, the LAST fallback in the chain,
+      // failed the composed document for any family without a thesis of its
+      // own the moment that family landed on PayPal/Klarna/Affirm. It cost
+      // 26 unfileable not-as-described packages before it was found. A
+      // template that serves every family AND every rail must be neutral in
+      // both; `thesisTemplatesAreRailNeutral.test.ts` now enforces that.
+      "This response addresses {{reasonCodeContext}}. The approved evidence supporting the merchant's position is summarised below.",
     requiredTokens: ["reasonCodeContext"],
     optionalTokens: [],
   },
