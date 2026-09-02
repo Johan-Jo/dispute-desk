@@ -6792,6 +6792,18 @@ saveToShopifyJob (flag on) → blocks on any non-final defence-package status; s
                               buffer to the defence package PDF; marks status=submitted on verify-ok.
 ```
 
+#### Thesis fallback must be rail-neutral (2026-09-02 incident)
+
+`renderThesis` falls back `(section, family, mode)` → `(section, family, "any")` → `(section, "any", "any")` → null. The last entry, `executiveSummary:any:any`, is therefore the thesis for **every family that has none of its own** — today `product_not_as_described`, `duplicate_processing`, `cancelled_recurring`, `processing_error`, `authorization_error` and `fallback`.
+
+It opened with *"This representment addresses …"*. `representment` is a card-network term of art and sits in `BNPL_PROHIBITED_CARD_PHRASES`, which `validateComposedDocument` **hard-rejects on every non-card rail**. So the moment such a family landed on PayPal, the composed document was rejected and the dispute filed nothing — the merchant's package failed at the last step and Shopify submitted its own scrape at the deadline.
+
+**Blast radius on prod:** `product_unacceptable` × `paypal` failed **26 of 26** (100%). The same module on the card rail passed (3 of 3), and `inr_product_not_received` on PayPal passed (20 of 20) because that family has its own thesis and never reaches the fallback. Latent since **2026-08-30**, when PR #621 made packs classify as `paypal` instead of `other` and switched the ban on; invisible until a batch of rebuilds ran through it, because no PayPal not-as-described pack had been built in between.
+
+**Fix + guard.** The generic thesis now reads *"This response addresses …"*. `lib/defence/pdf/__tests__/thesisTemplatesAreRailNeutral.test.ts` fails the build if any thesis template contains a `BNPL_PROHIBITED_CARD_PHRASES` match, singles out the generic fallbacks, and pins `representment` by name so a revert is a red test. `validateComposedDocument` remains the runtime net — but runtime here means an unfileable package, so the catch belongs at build time.
+
+**The general rule:** a template reachable by any family on any rail may not assume a rail. Card-specific vocabulary belongs in a family template whose family only ever settles on card, gated by `requiredTokens`.
+
 #### Conformity evidence — the not-as-described family (2026-09-01)
 
 `categoryForField("product_description")` returned **`order_record`** until 2026-09-01, which made the listing-as-purchased — the one fact that answers *"did what we supplied match what we promised?"* — indistinguishable from the order confirmation. The signal layer had always drawn the line (`canonicalEvidence.ts` gives the field `signalId: "product_listing"`); only the fact-category layer collapsed it. Three consequences followed:
