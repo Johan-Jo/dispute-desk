@@ -14,7 +14,14 @@
  *
  * Usage:
  *   node scripts/build-one-pack.mjs <dispute-id> [--env-file .env.production.local]
- *                                                [--template <uuid>] [--apply]
+ *                                    [--template <uuid>] [--rebuild] [--apply]
+ *
+ * --rebuild re-enqueues `build_pack` for the dispute's EXISTING pack instead of
+ * creating a new one. Deliberately non-destructive, unlike
+ * `scripts/rebuild-pack.mjs`, which deletes the pack's evidence_items and
+ * argument_maps first: `buildPack` has no status guard, so a plain re-enqueue
+ * re-runs it and chains to a fresh defence-package version on its own. Use this
+ * to re-test a pack whose DEFENCE PACKAGE failed while the pack itself is fine.
  *
  * Without --apply it prints the plan and exits without writing.
  */
@@ -25,12 +32,17 @@ import { join } from "path";
 const argv = process.argv.slice(2);
 const disputeId = argv.find((a) => !a.startsWith("--"));
 const apply = argv.includes("--apply");
+const rebuild = argv.includes("--rebuild");
 const flag = (name) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : null;
 };
 const envFile = flag("--env-file") ?? ".env.production.local";
 const templateId = flag("--template");
+// Caps mirror lib/defence/generationBudget.ts defaults. Override to match prod
+// when the env vars there have been raised.
+const genCap = Number(flag("--gen-cap") ?? 100);
+const tokenCap = Number(flag("--token-cap") ?? 50000);
 
 if (!disputeId) {
   console.error("Usage: node scripts/build-one-pack.mjs <dispute-id> [--apply]");
@@ -101,8 +113,38 @@ async function main() {
     process.exit(1);
   }
 
-  // The route returns the existing pack rather than building a second one.
-  // Here that is a hard refusal: a silent no-op would look like a build.
+  // Generation budget. `generationBudget.ts` documents exactly why this check
+  // belongs BEFORE the enqueue: past the cap, a build still runs every
+  // collector, rebuilds the pack, inserts a defence-package draft and then
+  // dies without generating — leaving a `failed` row ABOVE the case's last
+  // good package, which does NOT self-heal when the budget resets. "The daily
+  // cap is a budget; enqueueing past it is not a retry, it is waste with a
+  // side effect." Skipping this check cost two dead package versions on
+  // 2026-09-02 before it was added.
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: runs, error: runsErr } = await sb
+    .from("defence_package_runs")
+    .select("prompt_tokens")
+    .eq("shop_id", dispute.shop_id)
+    .eq("daily_bucket", today);
+  if (runsErr) {
+    console.error(`Refusing: could not read generation budget — ${runsErr.message}`);
+    console.error("Unlike the app (which fails open), a manual canary fails CLOSED.");
+    process.exit(1);
+  }
+  const gensUsed = runs?.length ?? 0;
+  const tokensUsed = (runs ?? []).reduce((sum, r) => sum + (r.prompt_tokens ?? 0), 0);
+  console.log(
+    `budget   : ${gensUsed}/${genCap} generations, ${tokensUsed}/${tokenCap} tokens (UTC ${today})`,
+  );
+  if (gensUsed >= genCap || tokensUsed >= tokenCap) {
+    console.error(
+      `Refusing: daily cap reached. Resets 00:00 UTC. ` +
+        `Raise DEFENCE_PACKAGE_DAILY_TOKEN_CAP and pass --token-cap to match, or wait.`,
+    );
+    process.exit(1);
+  }
+
   const { data: existing } = await sb
     .from("evidence_packs")
     .select("id, status, created_at")
@@ -111,10 +153,49 @@ async function main() {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (rebuild) {
+    if (!existing) {
+      console.error("Refusing: --rebuild needs an existing pack; this dispute has none.");
+      process.exit(1);
+    }
+    console.log(`rebuild  : pack ${existing.id} (status ${existing.status})`);
+    if (!apply) {
+      console.log("\nDRY RUN — nothing written. Re-run with --apply to rebuild.");
+      return;
+    }
+    const { data: job, error: jobErr } = await sb
+      .from("jobs")
+      .insert({ shop_id: dispute.shop_id, job_type: "build_pack", entity_id: existing.id })
+      .select("id")
+      .single();
+    if (jobErr || !job) {
+      console.error("Failed to enqueue rebuild:", jobErr?.message);
+      process.exit(1);
+    }
+    await sb.from("audit_events").insert({
+      shop_id: dispute.shop_id,
+      dispute_id: disputeId,
+      pack_id: existing.id,
+      actor_type: "merchant",
+      event_type: "job_queued",
+      event_payload: {
+        jobId: job.id,
+        trigger: "manual_regenerate",
+        note: "single-pack rebuild via scripts/build-one-pack.mjs --rebuild",
+      },
+    });
+    console.log(`\nREBUILD queued  pack=${existing.id}  job=${job.id}`);
+    return;
+  }
+
+  // The route returns the existing pack rather than building a second one.
+  // Here that is a hard refusal: a silent no-op would look like a build.
   if (existing) {
     console.error(
       `Refusing: active pack ${existing.id} already exists ` +
-        `(status ${existing.status}, created ${existing.created_at}).`,
+        `(status ${existing.status}, created ${existing.created_at}). ` +
+        `Use --rebuild to re-run it.`,
     );
     process.exit(1);
   }

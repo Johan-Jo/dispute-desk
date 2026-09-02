@@ -17,6 +17,7 @@
     { "path": "/api/cron/refresh-open-disputes", "schedule": "30 2 * * *" },
     { "path": "/api/cron/retention-cleanup", "schedule": "0 3 * * 0" },
     { "path": "/api/cron/cleanup-webhook-events", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/prompt-module-drift", "schedule": "15 7 * * *" },
     { "path": "/api/jobs/worker", "schedule": "*/2 * * * *" },
     { "path": "/api/cron/signal-radar-reddit", "schedule": "0 * * * *" },
     { "path": "/api/cron/signal-radar-classify", "schedule": "*/5 * * * *" },
