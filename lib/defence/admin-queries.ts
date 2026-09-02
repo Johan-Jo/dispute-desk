@@ -9,6 +9,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase/server";
 import { ALL_REASON_CODE_MODULES } from "./reasonCodes/registry";
 import type { ReasonCodeGuidance, ReasonCodeModuleKey } from "./types";
+import { PROMPT_MODULE_GUIDANCE_KEYS } from "./promptModuleGuidanceKeys";
 
 export interface AdminPromptModuleRow {
   key: ReasonCodeModuleKey;
@@ -136,13 +137,7 @@ export async function listRecentRuns(limit = 50): Promise<AdminRunRow[]> {
  * Read-only — no inserts, no updates.
  */
 
-const GUIDANCE_KEYS_FOR_DRIFT = [
-  "prioritize",
-  "avoid",
-  "mustNotClaim",
-  "criticalCategories",
-  "allowedFactCategories",
-] as const;
+const GUIDANCE_KEYS_FOR_DRIFT = PROMPT_MODULE_GUIDANCE_KEYS;
 
 /** Stringify guidance with stable key order so symmetric objects with
  *  different ordering don't appear drifted. Only the five guidance

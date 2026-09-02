@@ -6792,6 +6792,25 @@ saveToShopifyJob (flag on) → blocks on any non-final defence-package status; s
                               buffer to the defence package PDF; marks status=submitted on verify-ok.
 ```
 
+#### Prompt-module drift: the DB row beats the file (2026-09-02 incident)
+
+`resolveReasonCodeModule` lets a `defence_prompt_modules` row override the file default's `promptBody` and its five guidance lists (`prioritize`, `avoid`, `mustNotClaim`, `criticalCategories`, `allowedFactCategories`). **The row wins.** So a reviewed, tested, deployed change to `lib/defence/reasonCodes/*.ts` has *no effect in production* while a stale row sits above it — and until now, nothing said so.
+
+Measured on prod 2026-09-02: **all seven modules were drifted**, none marked `intentional_override`.
+
+- `product_unacceptable` still carried `criticalCategories: ["order_record"]` and delivery-second ranking, so the conformity change shipped the previous day did nothing. It had been reported as live.
+- `visa_10_4_fraud` was drifted in prompt **body** across five commits and ~7 weeks — including work that removed concrete claim examples from runtime prompts and closed prompt paths to a claim the validator refuses. Production generated fraud narratives without those guards throughout.
+
+This was the **second** occurrence; the first (2026-05-16) is why `scripts/reconcile-defence-prompt-modules.mts` exists. Detection existed both times — `detectPromptModuleDrift` — rendered on an admin page nobody watched. *A detector nothing consumes is not a control.*
+
+**Three guards now:**
+
+1. **`GET /api/cron/prompt-module-drift`** (daily, 07:15 UTC) runs `detectPromptModuleDrift` in prod and emails ops on any non-intentional drift, naming the modules and the remedy. Not a CI check: CI cannot see the production database, and a build-time check would verify the wrong DB and pass while prod stayed broken — exactly the failure being guarded.
+2. **`lib/defence/promptModuleGuidanceKeys.ts`** holds the overridable-field list once. It was written out three times; a sixth field added to the resolver but missed by the detector would drift invisibly.
+3. **`promptModuleOverrideCoverage.test.ts`** fails the build if the resolver reads an override field the shared list does not name, or names one it ignores.
+
+**Remedy when the cron fires:** `npx tsx scripts/reconcile-defence-prompt-modules.mts --env-file .env.production.local --apply`. The script now requires `--env-file`, prints the resolved database before writing, and dry-runs by default — it was hardcoded to `.env.local` (dev), so "reconciling prod" reconciled dev and printed a confident success. Rows meant to diverge should be marked `intentional_override=true`; both the script and the cron respect that.
+
 #### Thesis fallback must be rail-neutral (2026-09-02 incident)
 
 `renderThesis` falls back `(section, family, mode)` → `(section, family, "any")` → `(section, "any", "any")` → null. The last entry, `executiveSummary:any:any`, is therefore the thesis for **every family that has none of its own** — today `product_not_as_described`, `duplicate_processing`, `cancelled_recurring`, `processing_error`, `authorization_error` and `fallback`.
