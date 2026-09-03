@@ -67,6 +67,9 @@ export interface LatestPackageRow {
   prompt_version?: number | null;
   /** The validator version in force when it failed. NULL = pre-versioning. */
   validator_version?: number | null;
+  /** The composition (thesis-template) version in force when it failed.
+   *  NULL = pre-versioning. */
+  composition_version?: number | null;
   /** The evidence the failure was produced from. */
   evidence_hash?: string | null;
 }
@@ -81,6 +84,8 @@ export interface LatestPackageRow {
 export interface CurrentGenerationInputs {
   promptVersion: number;
   validatorVersion: number;
+  /** `COMPOSITION_VERSION` — the deterministic composed-prose rules. */
+  compositionVersion: number;
   /** The hash of the evidence a rebuild would run against. */
   evidenceHash: string | null;
 }
@@ -89,6 +94,7 @@ export interface CurrentGenerationInputs {
 export type GenerationRetryBasis =
   | "prompt_version_changed"
   | "validator_version_changed"
+  | "composition_version_changed"
   | "evidence_changed";
 
 export interface GenerationGuardVerdict {
@@ -172,6 +178,12 @@ export function evaluateGenerationGuard(
    *   - the generator (`prompt_version`)
    *   - the validator (`validator_version`) — the one that mattered, since a
    *     detector fix leaves the prompt untouched
+   *   - the composition rules (`composition_version`) — added 2026-09-03 for
+   *     the same reason one rung down. `ecbb03aa` fixed a composed failure by
+   *     editing one thesis template: no prompt, no validator, no evidence
+   *     moved, so the guard read "same attempt" and all 27 cases the defect
+   *     had killed stayed dead after the fix shipped, 9 past deadline. A rule
+   *     the composed verdict depends on must be a rule the guard can see.
    *   - the evidence (`evidence_hash`)
    *
    * A NULL on the row means "not recorded", which is not evidence of sameness:
@@ -190,6 +202,12 @@ export function evaluateGenerationGuard(
     }
     if (latest.validator_version == null || latest.validator_version !== current.validatorVersion) {
       retryBasis.push("validator_version_changed");
+    }
+    if (
+      latest.composition_version == null ||
+      latest.composition_version !== current.compositionVersion
+    ) {
+      retryBasis.push("composition_version_changed");
     }
     if (
       current.evidenceHash != null &&

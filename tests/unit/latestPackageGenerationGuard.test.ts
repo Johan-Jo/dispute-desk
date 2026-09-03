@@ -39,6 +39,7 @@ import {
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import { VALIDATOR_VERSION } from "@/lib/defence/validateNarrative";
+import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 
 const mockSb = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -87,6 +88,58 @@ describe("evaluateGenerationGuard", () => {
   it("allows when there is no previous package at all", () => {
     expect(evaluateGenerationGuard(null).blocked).toBe(false);
     expect(evaluateGenerationGuard(undefined).blocked).toBe(false);
+  });
+
+  /* ── composition_version: the fourth retry input (2026-09-03) ─────────
+   *
+   * `ecbb03aa` fixed a composed failure by editing ONE thesis template. No
+   * prompt, no validator and no evidence moved, so the three inputs the guard
+   * knew all still matched the failure and it concluded "same attempt". The
+   * fix shipped to prod and all 27 cases the defect had killed stayed
+   * permanently blocked — 9 of them past deadline before it was noticed. */
+  const CURRENT = {
+    promptVersion: 16,
+    validatorVersion: 4,
+    compositionVersion: 2,
+    evidenceHash: "hash-a",
+  };
+  const FAILED_UNDER_OLD_TEMPLATES = {
+    id: "p2",
+    version: 2,
+    status: "failed",
+    failure_code: "validation_failed",
+    prompt_version: 16,
+    validator_version: 4,
+    composition_version: 1,
+    evidence_hash: "hash-a",
+  };
+
+  it("retries a composed failure when ONLY the composition version moved", () => {
+    // The regression this whole change exists for: everything else identical.
+    const v = evaluateGenerationGuard(FAILED_UNDER_OLD_TEMPLATES, CURRENT);
+    expect(v.blocked).toBe(false);
+    expect(v.retryBasis).toEqual(["composition_version_changed"]);
+  });
+
+  it("treats a NULL composition_version as changed, so pre-versioning rows get one rebuild", () => {
+    // This is the backfill for the 27 stuck packages: they predate the column.
+    const v = evaluateGenerationGuard(
+      { ...FAILED_UNDER_OLD_TEMPLATES, composition_version: null },
+      CURRENT,
+    );
+    expect(v.blocked).toBe(false);
+    expect(v.retryBasis).toContain("composition_version_changed");
+  });
+
+  it("still blocks when the composition version matches and nothing else moved", () => {
+    // The loop stays bounded at one: the rebuild writes all four, and a second
+    // identical failure blocks again.
+    const v = evaluateGenerationGuard(
+      { ...FAILED_UNDER_OLD_TEMPLATES, composition_version: 2 },
+      CURRENT,
+    );
+    expect(v.blocked).toBe(true);
+    expect(v.retryBasis).toEqual([]);
   });
 });
 
@@ -172,6 +225,10 @@ describe("maybeEnqueueDefencePackage — blocked, with ZERO side effects", () =>
   const CURRENT_RULES = {
     prompt_version: CURRENT_PROMPT_VERSION,
     validator_version: VALIDATOR_VERSION,
+    /* Read from the module for the same reason as the other two: a bump must
+     * not quietly turn these fixtures into "something changed" and stop them
+     * exercising the blocked path. */
+    composition_version: COMPOSITION_VERSION,
     /* The hash the stubbed pack (empty sections, no items) actually produces,
      * computed with the real function rather than hardcoded — a wrong literal
      * would read as "evidence changed", allow the retry, and silently stop
@@ -369,6 +426,9 @@ describe("the status logic is not duplicated", () => {
      * So the assertion is the two-argument form, not the bare call. */
     expect(src).toMatch(/evaluateGenerationGuard\(priorLatest,\s*\{/);
     expect(src).toMatch(/validatorVersion:\s*VALIDATOR_VERSION/);
+    // The fourth input has to reach the guard from BOTH call sites, or the
+    // worker re-blocks what the enqueue site just let through.
+    expect(src).toMatch(/compositionVersion:\s*COMPOSITION_VERSION/);
     // Declines without marking the draft failed — it is not defective.
     expect(src).toMatch(/generation_blocked: \$\{priorGuard\.reason\}/);
   });

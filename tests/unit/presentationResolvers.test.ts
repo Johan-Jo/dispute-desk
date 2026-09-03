@@ -14,6 +14,7 @@ import {
   ACTION_REQUIRED_ATTENTION,
   dashboardBucket,
   isActiveNormalizedStatus,
+  isTransmissionConfirmed,
   resolveAttention,
   resolveLifecycle,
   resolvePresentation,
@@ -86,10 +87,89 @@ describe("resolveLifecycle", () => {
     expect(
       resolveLifecycle({ ...baseLifecycle, submissionState: "submitted_confirmed" }),
     ).toBe("under_review");
-    // External Shopify under_review status (normalized submitted_to_bank).
+    /* External Shopify under_review status (normalized submitted_to_bank).
+     * `submissionState` is left unrecognized here on purpose: the Shopify
+     * inference is allowed to stand when our own records say nothing. It is
+     * only overruled by a POSITIVE `not_saved` — see the regression below. */
     expect(
-      resolveLifecycle({ ...baseLifecycle, normalizedStatus: "submitted_to_bank" }),
+      resolveLifecycle({
+        ...baseLifecycle,
+        submissionState: null,
+        normalizedStatus: "submitted_to_bank",
+      }),
     ).toBe("under_review");
+  });
+
+  /* ── the false "response has been sent" (2026-09-03) ──────────────────
+   *
+   * `normalized_status = 'submitted_to_bank'` is an INFERENCE from Shopify
+   * status `under_review` (normalizeStatus.ts:40). For a CHARGEBACK that
+   * plausibly means "forwarded to the network". For an INQUIRY it is simply
+   * the ordinary open state, true from the moment it is created.
+   *
+   * Trusting it over our own save record told 38 open prod disputes (27
+   * inquiries; 29 with a live deadline) "The response has been sent and can no
+   * longer be changed" while submission_state = 'not_saved' and both
+   * submitted_at and evidence_saved_to_shopify_at were NULL. Nothing had been
+   * sent. And because `resolveAttention` suppresses ALL merchant attention on
+   * this same predicate, the real blocker on #99413 — `auto_build_off`, no
+   * pack would ever be built — was hidden behind "No action required" while
+   * the deadline ran down. */
+  it("does NOT claim transmission when our own record says not_saved", () => {
+    expect(
+      isTransmissionConfirmed({
+        submissionState: "not_saved",
+        normalizedStatus: "submitted_to_bank",
+      }),
+    ).toBe(false);
+    // #99413 exactly: an inquiry Shopify calls under_review, nothing saved,
+    // no pack. It must not read as "sent" — it has not even been built.
+    expect(
+      resolveLifecycle({
+        ...baseLifecycle,
+        submissionState: "not_saved",
+        normalizedStatus: "submitted_to_bank",
+        packStatus: null,
+      }),
+    ).not.toBe("under_review");
+  });
+
+  it("keeps trusting Shopify when we have no contradicting record", () => {
+    // The narrowing is deliberately minimal: only a positive `not_saved`
+    // overrules the inference. Absent/unknown still defers to Shopify, so a
+    // dispute we never tracked locally is not wrongly reopened.
+    for (const state of [null, "submission_uncertain", "manual_submission_reported"]) {
+      expect(
+        isTransmissionConfirmed({
+          submissionState: state,
+          normalizedStatus: "submitted_to_bank",
+        }),
+      ).toBe(true);
+    }
+  });
+
+  it("our own confirmed save still outranks everything", () => {
+    expect(
+      isTransmissionConfirmed({
+        submissionState: "submitted_confirmed",
+        normalizedStatus: "in_progress",
+      }),
+    ).toBe(true);
+  });
+
+  it("a real blocker stays visible on such a dispute instead of being suppressed", () => {
+    // The second half of the #99413 defect: attention is suppressed on
+    // transmissionConfirmed, so the false positive hid `auto_build_off`.
+    const p = resolvePresentation({
+      ...basePresentation,
+      submissionState: "not_saved",
+      normalizedStatus: "submitted_to_bank",
+      packStatus: null,
+      needsAttention: true,
+      attentionReason: "auto_build_off",
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("auto_build_off");
   });
 
   it("saved: submission_state is authoritative", () => {
