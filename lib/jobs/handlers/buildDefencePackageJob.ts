@@ -42,6 +42,7 @@ import {
 import { suppressUnsupportedSections } from "@/lib/defence/suppressUnsupportedSections";
 import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
+import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
@@ -204,7 +205,7 @@ export async function handleBuildDefencePackage(
   const { data: priorLatest } = await sb
     .from("defence_packages")
     .select(
-      "id, version, status, validation_status, failure_code, prompt_version, validator_version, evidence_hash",
+      "id, version, status, validation_status, failure_code, prompt_version, validator_version, composition_version, evidence_hash",
     )
     .eq("dispute_id", pkg.dispute_id)
     .neq("id", pkg.id)
@@ -214,6 +215,7 @@ export async function handleBuildDefencePackage(
   const priorGuard = evaluateGenerationGuard(priorLatest, {
     promptVersion: CURRENT_PROMPT_VERSION,
     validatorVersion: VALIDATOR_VERSION,
+    compositionVersion: COMPOSITION_VERSION,
     /* The draft under construction carries the hash the enqueue site computed,
      * so the comparison is against the same evidence that decision used. */
     evidenceHash: typeof pkg.evidence_hash === "string" ? pkg.evidence_hash : null,
@@ -738,6 +740,10 @@ export async function handleBuildDefencePackage(
          * still in force", so the guard blocks both and the case never
          * recovers — the state fourteen disputes were in on 2026-08-12. */
         validator_version: VALIDATOR_VERSION,
+        /* Same argument for the composed-prose rules: a composed failure can
+         * be caused by a template alone, so the retry decision needs to see
+         * which templates produced it (2026-09-03). */
+        composition_version: COMPOSITION_VERSION,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packageId);
@@ -1015,6 +1021,7 @@ export async function handleBuildDefencePackage(
          * to say which rules produced it, or it cannot be retried when they
          * change. */
         validator_version: VALIDATOR_VERSION,
+        composition_version: COMPOSITION_VERSION,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packageId);
@@ -1336,6 +1343,7 @@ export async function handleBuildDefencePackage(
        * success carrying a stale version would make the NEXT failure look
        * older than it is. */
       validator_version: VALIDATOR_VERSION,
+      composition_version: COMPOSITION_VERSION,
       updated_at: new Date().toISOString(),
       ...canonicalIdentityColumns,
     })
