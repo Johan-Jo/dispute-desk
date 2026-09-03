@@ -1991,7 +1991,8 @@
       "reviewItem": {
         "generic": "Dieser Beweis benötigt Ihre Bestätigung, bevor er verwendet werden kann."
       }
-    }
+    },
+    "multipleOnOrder": "{index} von {total} zu dieser Bestellung"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",

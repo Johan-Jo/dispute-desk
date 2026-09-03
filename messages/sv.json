@@ -1991,7 +1991,8 @@
       "reviewItem": {
         "generic": "Den här uppgiften behöver din bekräftelse innan den kan användas."
       }
-    }
+    },
+    "multipleOnOrder": "{index} av {total} på denna order"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
