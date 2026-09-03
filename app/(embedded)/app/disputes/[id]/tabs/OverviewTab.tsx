@@ -39,6 +39,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { TAB_INDEX } from "../workspace-components/types";
 import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
+import { heroBlockingCopy } from "@/lib/disputes/presentation/heroCopy";
 import { ATTENTION_CHIP, STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
@@ -380,6 +381,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    * Terminal disputes therefore leave the assessment vocabulary behind
    * entirely and state what we filed and the likely deciding factor.
    * The gate itself is untouched and still governs every live case. */
+  /* A halt is STATED, not narrated as progress. The precedence lives in
+   * `heroBlockingCopy` — a pure function the tests call too, so a green test
+   * means this page picks that key rather than merely that the key exists.
+   * See its docblock for the #99413 incident that motivated extracting it. */
+  const heroBlocking = heroBlockingCopy({
+    lifecycle,
+    attention: presentation?.attention ?? null,
+    blockingReason: presentation?.blockingReason ?? null,
+  });
+
   const isDecided = lifecycle === "won" || lifecycle === "lost";
   const decidedOutcome: "won" | "lost" | null =
     lifecycle === "won" ? "won" : lifecycle === "lost" ? "lost" : null;
@@ -570,6 +581,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     ) {
       return t(`hero.title.preSubmit.${heroVariant}`);
     }
+    /* A BLOCKING cause outranks the lifecycle headline (2026-09-03).
+     *
+     * The hero previously described only what the pipeline was DOING, and
+     * handled exactly one blocking reason (`approval_gate`, via
+     * `showApprovalDecide`). The resolver emits seven. So on #99413 —
+     * `auto_build_off`, meaning the merchant has automatic evidence building
+     * switched off and NO pack will ever be built — the page rendered
+     * "Building your evidence pack… usually within a few hours" and "No
+     * action needed from you", over a live deadline.
+     *
+     * A lifecycle of `building_evidence` is not false there so much as
+     * unreachable: the build is halted pending the merchant. When the shared
+     * resolver says work is blocked, the hero says WHY, using the same copy
+     * keys the list and the header pill already use (`attentionLabelKey`) so
+     * the three surfaces cannot drift. Terminal states keep their headline —
+     * nothing is blocked once the case is decided. */
+    if (heroBlocking) return tp(heroBlocking.titleKey);
     switch (lifecycle) {
       case "won":
         return t("hero.title.closed.won");
@@ -603,6 +631,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       const reason = (strengthReasonText ?? "").trim();
       return reason.length > 0 ? reason : null;
     }
+    if (heroBlocking) return tp(heroBlocking.subtitleKey);
     switch (lifecycle) {
       case "won":
         return t("hero.subtitle.closedWon", {
