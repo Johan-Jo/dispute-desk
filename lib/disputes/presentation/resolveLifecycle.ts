@@ -14,7 +14,10 @@
  * - `transmissionConfirmed` = `submission_state='submitted_confirmed'`
  *   (backed by Shopify `evidenceSentOn`) OR
  *   `normalized_status='submitted_to_bank'` (Shopify status
- *   `under_review` — normalizeStatus.ts:40-48).
+ *   `under_review` — normalizeStatus.ts:40-48) UNLESS `submission_state`
+ *   positively says `not_saved`. The second clause is an inference from a
+ *   Shopify status that means "open" for an inquiry; our own save record
+ *   outranks it. See `isTransmissionConfirmed` (2026-09-03).
  * - Saved authority = `submission_state` whenever it holds a recognized
  *   value; a qualifying PresentationStatus is a fallback ONLY when
  *   `submission_state` is missing/unrecognized; `pack.savedToShopifyAt`
@@ -75,14 +78,46 @@ export interface LifecycleInput {
   presentationSavedFallback?: boolean;
 }
 
+/** `submission_state` values that positively contradict "we sent something".
+ *  `not_saved` is the only one that is an assertion rather than an absence:
+ *  the save path writes it, so it means "no evidence has been saved", not
+ *  "unknown". */
+const CONTRADICTS_TRANSMISSION = new Set(["not_saved"]);
+
 export function isTransmissionConfirmed(input: {
   submissionState: string | null;
   normalizedStatus: string | null;
 }): boolean {
-  return (
-    input.submissionState === "submitted_confirmed" ||
-    input.normalizedStatus === "submitted_to_bank"
-  );
+  // Our own save state is the direct observation and outranks the inference.
+  if (input.submissionState === "submitted_confirmed") return true;
+
+  /* `normalized_status = 'submitted_to_bank'` is an INFERENCE, not an
+   * observation. It comes from Shopify status `under_review`
+   * (normalizeStatus.ts:40), whose comment reads "Shopify has forwarded the
+   * representment to the card network" — true for a chargeback, and simply
+   * wrong for an INQUIRY, where `under_review` is the ordinary open state
+   * from the moment it is created.
+   *
+   * Believing the inference over our own records told 38 open prod disputes
+   * (27 inquiries, 29 with a live deadline) "The response has been sent and
+   * can no longer be changed" while `submission_state = 'not_saved'`,
+   * `submitted_at` and `evidence_saved_to_shopify_at` were all NULL — nothing
+   * had been sent. Worse, `resolveAttention` suppresses ALL merchant
+   * attention on this predicate, so the real blocker (#99413:
+   * `auto_build_off` — no pack would ever be built) was hidden behind "No
+   * action required" while the deadline ran (2026-09-03).
+   *
+   * So the inference stands only when our own records do not contradict it.
+   * An absent/unrecognized `submission_state` is NOT a contradiction and
+   * still defers to Shopify — this narrows the claim to the case where we
+   * positively know better. */
+  if (input.normalizedStatus === "submitted_to_bank") {
+    return !(
+      input.submissionState != null &&
+      CONTRADICTS_TRANSMISSION.has(input.submissionState)
+    );
+  }
+  return false;
 }
 
 export function resolveLifecycle(input: LifecycleInput): OperationalLifecycle {

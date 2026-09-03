@@ -16,6 +16,21 @@
  * a generator-version test alone would have kept them blocked: the fix that
  * unblocked them was #539 in `claimCapabilities.ts` — the VALIDATOR changed,
  * not the prompt. That is why `validator_version` exists.
+ *
+ * PERMANENT DEATH, AGAIN (2026-09-03) — the same shape a third time, one layer
+ * further out. `ecbb03aa` fixed a composed failure by editing a single thesis
+ * TEMPLATE: the fallback thesis said "representment", hard-banned on non-card
+ * rails, so every `product_not_as_described` package on PayPal failed
+ * composition and filed nothing. The fix changed no prompt, no validator and no
+ * evidence — so all three inputs still matched and the guard read "same
+ * attempt" for all 27 cases the defect had killed. The fix shipped to prod and
+ * every case it was written to save stayed dead; 9 were past deadline when it
+ * was found. That is why `composition_version` exists.
+ *
+ * The recurring lesson, now three times over: a fix that changes the RULES
+ * without changing anything the guard can SEE leaves its own beneficiaries
+ * blocked. Any new layer that can decide a package's verdict needs a version
+ * the guard reads.
  */
 
 import { describe, expect, it } from "vitest";
@@ -30,6 +45,7 @@ import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 const NOW: CurrentGenerationInputs = {
   promptVersion: 13,
   validatorVersion: 4,
+  compositionVersion: 1,
   evidenceHash: "hash-current",
 };
 
@@ -42,6 +58,7 @@ const FAILED_CURRENT: LatestPackageRow = {
   failure_code: "validation_failed",
   prompt_version: 13,
   validator_version: 4,
+  composition_version: 1,
   evidence_hash: "hash-current",
 };
 
@@ -55,6 +72,42 @@ describe("nothing changed — the loop stays closed", () => {
 
   it("blocks with no `current` supplied — a caller that cannot answer gets no pass", () => {
     expect(evaluateGenerationGuard(FAILED_CURRENT).blocked).toBe(true);
+  });
+
+  /* The 2026-09-03 case, reproduced from prod. #93953 (and 26 others) failed
+   * `composed:narrative global` / forbidden_phrase at prompt 16 / validator 4.
+   * The fix edited a template, so prompt, validator and evidence were all
+   * still identical — under the three-input guard these stayed blocked
+   * forever, which is exactly what happened. */
+  it("retries when only the COMPOSITION rules moved — the templates are a rule layer", () => {
+    const failedUnderOldTemplates: LatestPackageRow = {
+      id: "6cd16b7b-7888-40d7-a059-ff168811c0ea",
+      version: 2,
+      status: "failed",
+      validation_status: "failed",
+      failure_code: "validation_failed",
+      prompt_version: 16,
+      validator_version: 4,
+      composition_version: 1,
+      evidence_hash: "hash-current",
+    };
+    const templatesFixed: CurrentGenerationInputs = {
+      promptVersion: 16,
+      validatorVersion: 4,
+      compositionVersion: 2,
+      evidenceHash: "hash-current",
+    };
+
+    const after = evaluateGenerationGuard(failedUnderOldTemplates, templatesFixed);
+    expect(after.blocked).toBe(false);
+    expect(after.retryBasis).toEqual(["composition_version_changed"]);
+
+    // And the counterfactual: the guard as it was before this input existed.
+    const before = evaluateGenerationGuard(failedUnderOldTemplates, {
+      ...templatesFixed,
+      compositionVersion: 1,
+    });
+    expect(before.blocked).toBe(true);
   });
 
   it("a SECOND failure under the same rules blocks again — the retry is bounded at one", () => {
@@ -246,11 +299,15 @@ describe("the versions are real, not placeholders", () => {
       failure_code: "validation_failed",
       prompt_version: 14,
       validator_version: 1,
+      composition_version: 1,
       evidence_hash: "9012d4c3c6b2be92803cae2a492ace4f648e69140a39b82f203d72e245e43231",
     };
     const unchangedExceptValidator: CurrentGenerationInputs = {
       promptVersion: 14,
       validatorVersion: VALIDATOR_VERSION,
+      /* Pinned to the row's own value so this case isolates the VALIDATOR,
+       * which is what it was written to prove. */
+      compositionVersion: 1,
       evidenceHash: v5.evidence_hash!,
     };
 

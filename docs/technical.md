@@ -3228,7 +3228,7 @@ Regression coverage: `lib/packs/sources/__tests__/fraudRiskSource.test.ts` cover
 One resolver interpretation of every dispute, consumed by the dashboard, the disputes list, and the detail page so the three surfaces can never disagree. Spec: `docs/plans/design-alignment-shared-presentation-model.plan.md`; module: **`lib/disputes/presentation/`**.
 
 **Four independent dimensions** (never collapsed into one "Needs action / Done" label):
-1. **Operational lifecycle** (`resolveLifecycle.ts`) — objective facts only: `building_evidence · monitoring · pack_prepared · saved_to_shopify · under_review · won · lost · closed`. "Sent to card network" is a **milestone**, not a state: `submission_state='submitted_confirmed'` (or `normalized_status='submitted_to_bank'`) ⇒ current state `under_review`. `submission_state` is authoritative for saved; `pack.savedToShopifyAt` is display-only. `pack_prepared` = the verified `evidence_packs.status='ready'` (or `save_failed`). A failed build never claims "Monitoring". Terminal-without-outcome (`closed_at` set, `final_outcome` null) resolves to neutral `closed`.
+1. **Operational lifecycle** (`resolveLifecycle.ts`) — objective facts only: `building_evidence · monitoring · pack_prepared · saved_to_shopify · under_review · won · lost · closed`. "Sent to card network" is a **milestone**, not a state: `submission_state='submitted_confirmed'` (or `normalized_status='submitted_to_bank'`) ⇒ current state `under_review`. **`normalized_status='submitted_to_bank'` is an INFERENCE and yields to our own record (fixed 2026-09-03):** it derives from Shopify status `under_review`, which for a **chargeback** plausibly means "forwarded to the network" but for an **inquiry** is just the ordinary open state from creation. Believing it over `submission_state` told 38 open prod disputes (27 inquiries; 29 with a live deadline) "The response has been sent and can no longer be changed" while `submission_state='not_saved'` and both `submitted_at` and `evidence_saved_to_shopify_at` were NULL — nothing had been sent. Worse, `resolveAttention` suppresses **all** merchant attention on this same predicate, so on #99413 the real blocker (`auto_build_off` — no pack would ever be built) was hidden behind "No action required" while the deadline ran. `isTransmissionConfirmed` now honours the inference only when our own record does not positively contradict it: a `submission_state` of `not_saved` overrules it; absent/unrecognized still defers to Shopify, so the narrowing touches only cases where we positively know better. Regression: `tests/unit/presentationResolvers.test.ts`. `submission_state` is authoritative for saved; `pack.savedToShopifyAt` is display-only. `pack_prepared` = the verified `evidence_packs.status='ready'` (or `save_failed`). A failed build never claims "Monitoring". Terminal-without-outcome (`closed_at` set, `final_outcome` null) resolves to neutral `closed`.
 2. **Merchant attention** (`resolveAttention.ts`) — `none · requested · blocking · technical_error` (plus the now-inert `recommended`/`opportunity` enum members). Deterministic ladder; only `blocking`/`requested`/merchant-resolvable `technical_error` are genuine tasks (`ACTION_REQUIRED_ATTENTION`). Internal failures (`submission_failed`, pack build failures, `submission_uncertain`, `gorgiasEvidenceStale`) surface transparency copy only (`internalIssue`), never Action required. **The generic `recommended`/`opportunity` "customer communication may strengthen this" states were REMOVED as emitted attention (2026-07-27):** virtually every dispute improves with customer communication, so flagging it on a few and not others was arbitrary and confusing. The resolver no longer returns them (the enum values remain for back-compat but are never produced); `concreteContribution` is still computed for other consumers. The ONLY "you can add something" attention is `requested` — a concrete, matched Gorgias conversation awaiting approval (`gorgias_evidence_ready`). Deadline risk amplifies emphasis; it is not an attention value. **Attention deep-link + spotlight (generalized 2026-07-27):** `lib/disputes/attentionDeepLink.ts` maps an attention/reason → the workspace `?section=` key (`gorgias_evidence_ready`/`requested` → `gorgias-comms`). The dashboard banner deep-links STRAIGHT to the single action-required dispute (+ section) when `merchantActionCount === 1` (via `stats.singleActionDispute`), else to the filtered list; each list row that carries a `requested` attention appends `?section=gorgias-comms` to its detail href; and the Overview "Review communication" CTA fires the same scroll+pulse in-page via `actions.focusGorgiasReview()` (client-state `focusSection` nonce) — so from anywhere, the merchant lands ON the exact card to act on.
 3. **Evidence strength** (`resolveStrength.ts`) — pass-through of `caseStrength.overall`; `insufficient` ⇒ `not_assessed` (distinct from weak). Never re-derived in UI.
 4. **External lifecycle** — `transmissionConfirmed` + outcome; saved never implies sent.
@@ -5697,7 +5697,8 @@ Copy keys `rebuildFailedTitle` / `rebuildFailedBodyFiled` / `rebuildFailedBodyUn
 `failure_reason`) never reaches the markup, and that the tone flips with `bankFacing`.
 **A detector change without a `VALIDATOR_VERSION` bump kills the cases it fixes (2026-08-14).**
 `evaluateGenerationGuard` refuses to regenerate a case whose latest package is `failed` unless
-one of three inputs moved — `prompt_version`, `validator_version`, `evidence_hash` — because
+one of four inputs moved — `prompt_version`, `validator_version`, `composition_version`,
+`evidence_hash` (the fourth added 2026-09-03, see below) — because
 rebuilding under the rules that failed it just reproduces the failure. #561 changed claim
 DETECTION in `claimCapabilities.ts` and left `VALIDATOR_VERSION` at 1. The guard then read
 prompt 14 / validator 1 / same evidence on blume-box `11051073729` and correctly concluded
@@ -5707,6 +5708,29 @@ prompt 14 / validator 1 / same evidence on blume-box `11051073729` and correctly
 were dead the same way. This is precisely the PERMANENT DEATH failure the constant's own
 docblock describes (`#12936` three weeks past deadline, `#353605` losing its deadline), caused
 by the omission it warns about.
+
+**And a TEMPLATE change without a `COMPOSITION_VERSION` bump does the same thing (2026-09-03) —
+the third instance of this class.** The fallback thesis `executiveSummary:any:any` opened with
+"This representment addresses …". `representment` is in `BNPL_PROHIBITED_CARD_PHRASES`, which
+`validateComposedDocument` hard-rejects on every non-card rail — so the moment a family with no
+thesis of its own landed on PayPal, composition failed and the dispute filed nothing. On prod
+that was `product_not_as_described`: 26 packages, 100% failure. `ecbb03aa` fixed it by editing
+the one template string — touching no prompt, no validator and no evidence, so all three retry
+inputs still matched and the guard read "same attempt" for all 27 cases. The fix shipped and
+every case it was written to save stayed dead; 9 were past deadline when it was found.
+
+`COMPOSITION_VERSION = 1` (`lib/defence/pdf/thesisTemplates.ts`), persisted per row as
+`defence_packages.composition_version`. **Any change to composed prose — template text,
+`renderThesis`'s fallback chain, `thesisTokens` extractors, or the fallback/section text in
+`composePdfBlocks` — must bump it in the same commit.** NULL means pre-versioning and is read as
+"changed", which is what gives the 27 stuck packages exactly one rebuild under the corrected
+templates. `lib/defence/pdf/__tests__/compositionVersionBump.test.ts` pins the value;
+`thesisTemplatesAreRailNeutral.test.ts` stops the underlying defect recurring by asserting no
+template contains a phrase banned on a non-card rail.
+
+The recurring lesson, three times over: **a fix that changes the rules without changing anything
+the guard can see leaves its own beneficiaries permanently blocked.** Any new layer that can
+decide a package's verdict needs a version the guard reads.
 
 `VALIDATOR_VERSION = 2`. **Any change to `claimGuards.ts`, `factPredicates.ts`,
 `claimCapabilities.ts` (derivation OR detection), `FORBIDDEN_PHRASES` /

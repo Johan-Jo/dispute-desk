@@ -25,6 +25,44 @@
 
 import type { ThesisTemplate } from "../types";
 
+/**
+ * The COMPOSITION rules version — the fourth retry input.
+ *
+ * WHY THIS EXISTS (2026-09-03). `evaluateGenerationGuard` decides whether a
+ * failed package may be rebuilt by asking whether anything changed since the
+ * failure. It knew three inputs: `prompt_version`, `VALIDATOR_VERSION`, and
+ * the evidence hash. The composed document has a FOURTH input those three do
+ * not cover — the deterministic prose this file contributes — and a composed
+ * failure can be caused entirely by it.
+ *
+ * That is not hypothetical. `ecbb03aa` fixed the `representment` defect by
+ * editing one template string. It touched no prompt, no validator and no
+ * evidence, so all three retry inputs still matched the failure and the guard
+ * correctly concluded "same attempt" for all 27 cases the defect had killed.
+ * The fix shipped to prod and every case it fixed stayed dead — 9 of them
+ * past their deadline by the time it was noticed.
+ *
+ * This is the same lesson `VALIDATOR_VERSION`'s history records twice (v2 and
+ * v3): a fix that changes the RULES without changing anything the guard reads
+ * leaves the cases it was written to save permanently blocked. The answer is
+ * the same one — make the rule layer versioned, and bump it in the same commit
+ * as the rule change.
+ *
+ * BUMP THIS whenever a change to composed prose could alter a composed
+ * verdict: template text here, `renderThesis`'s chain, `thesisTokens`
+ * extractors, or the fallback/section text in `composePdfBlocks`.
+ * `compositionVersionBump.test.ts` pins the value so the bump is a deliberate
+ * edit rather than something to remember.
+ *
+ * HISTORY
+ *   1  (2026-09-03) initial versioning. Covers the state AFTER `ecbb03aa` —
+ *      the rail-neutral fallback thesis. Set to 1 (not 0) so every package
+ *      built before this constant existed carries NULL and is therefore
+ *      treated as changed, giving the 27 cases killed by `representment`
+ *      exactly one rebuild under the corrected template.
+ */
+export const COMPOSITION_VERSION = 1;
+
 export const THESIS_TEMPLATES: ThesisTemplate[] = [
   // ── executiveSummary ─────────────────────────────────────────────
   {
