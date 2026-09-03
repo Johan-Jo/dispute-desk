@@ -1991,7 +1991,8 @@
       "reviewItem": {
         "generic": "Cet élément nécessite votre confirmation avant de pouvoir être utilisé."
       }
-    }
+    },
+    "multipleOnOrder": "{index} sur {total} pour cette commande"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",

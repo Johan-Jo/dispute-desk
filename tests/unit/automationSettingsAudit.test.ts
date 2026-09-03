@@ -26,6 +26,9 @@ vi.mock("@/lib/automation/settings", () => ({
   updateShopSettings: vi.fn(),
 }));
 vi.mock("@/lib/audit/logEvent", () => ({ logAuditEvent: vi.fn() }));
+vi.mock("@/lib/billing/replayBlockedBuilds", () => ({
+  scheduleBlockedBuildReplay: vi.fn(),
+}));
 vi.mock("@/lib/admin/impersonation", () => ({
   verifyImpersonation: vi.fn(),
   IMPERSONATION_MODE_HEADER: "x-dd-impersonation-mode",
@@ -38,6 +41,7 @@ vi.mock("@/lib/middleware/extractShopId", () => ({
 import { getShopSettings, updateShopSettings } from "@/lib/automation/settings";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { verifyImpersonation } from "@/lib/admin/impersonation";
+import { scheduleBlockedBuildReplay } from "@/lib/billing/replayBlockedBuilds";
 import { PATCH } from "@/app/api/automation/settings/route";
 
 const SHOP = "11111111-1111-1111-1111-111111111111";
@@ -45,6 +49,7 @@ const mockGet = vi.mocked(getShopSettings);
 const mockUpdate = vi.mocked(updateShopSettings);
 const mockAudit = vi.mocked(logAuditEvent);
 const mockImp = vi.mocked(verifyImpersonation);
+const mockReplay = vi.mocked(scheduleBlockedBuildReplay);
 
 function req(body: Record<string, unknown>) {
   return {
@@ -144,6 +149,77 @@ describe("automation settings audit", () => {
     mockAudit.mockRejectedValue(new Error("audit table down"));
 
     const res = await PATCH(req({ shop_id: SHOP, auto_build_enabled: false }));
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Turning auto-build back ON must replay what it blocked.
+ *
+ * A dispute the pipeline exited on `auto_build_off` never retries by itself:
+ * `disputeEffectsDispatcher` wraps the pipeline in `withEffectDedup`, which
+ * burns its claim BEFORE running the effect, so the second attempt is
+ * `already_applied`. Neither rebuild cron rescues it either.
+ *
+ * So this route saving the setting and stopping meant every dispute already
+ * blocked stayed blocked — no pack, no queued job — until its deadline passed.
+ * Found on `6a8848-dd` (2026-09-03): the merchant turned auto-build on, the
+ * setting flipped, the audit row recorded false→true, and 11 live disputes did
+ * not move. The pack for #99413 had to be built by hand.
+ *
+ * `replayBlockedBuilds` already solves exactly this for arriving CREDITS. It
+ * was simply never wired to this trigger.
+ */
+describe("auto-build back on replays the disputes it blocked", () => {
+  it("sweeps on the false→true edge", async () => {
+    mockGet.mockResolvedValue({ ...BASE, auto_build_enabled: false } as never);
+    mockUpdate.mockResolvedValue({ ...BASE, auto_build_enabled: true } as never);
+
+    await PATCH(req({ shop_id: SHOP, auto_build_enabled: true }));
+
+    expect(mockReplay).toHaveBeenCalledTimes(1);
+    expect(mockReplay.mock.calls[0][0]).toMatchObject({ shopId: SHOP });
+  });
+
+  it("does NOT sweep when the value was already true", async () => {
+    // The settings page PATCHes all three fields on every save. Sweeping on a
+    // no-op would re-run the pipeline for every open dispute each time the
+    // merchant touched an unrelated field.
+    mockGet.mockResolvedValue({ ...BASE, auto_build_enabled: true } as never);
+    mockUpdate.mockResolvedValue({ ...BASE, auto_build_enabled: true } as never);
+
+    await PATCH(req({ shop_id: SHOP, auto_build_enabled: true }));
+
+    expect(mockReplay).not.toHaveBeenCalled();
+  });
+
+  it("does NOT sweep when auto-build is being turned OFF", async () => {
+    mockGet.mockResolvedValue({ ...BASE, auto_build_enabled: true } as never);
+    mockUpdate.mockResolvedValue({ ...BASE, auto_build_enabled: false } as never);
+
+    await PATCH(req({ shop_id: SHOP, auto_build_enabled: false }));
+
+    expect(mockReplay).not.toHaveBeenCalled();
+  });
+
+  it("does NOT sweep when an unrelated field changes", async () => {
+    mockGet.mockResolvedValue({ ...BASE, auto_save_min_score: 70 } as never);
+    mockUpdate.mockResolvedValue({ ...BASE, auto_save_min_score: 90 } as never);
+
+    await PATCH(req({ shop_id: SHOP, auto_save_min_score: 90 }));
+
+    expect(mockReplay).not.toHaveBeenCalled();
+  });
+
+  it("still saves the setting when the sweep cannot be scheduled", async () => {
+    // Fire-and-forget: a failed sweep must never roll back a saved setting.
+    mockGet.mockResolvedValue({ ...BASE, auto_build_enabled: false } as never);
+    mockUpdate.mockResolvedValue({ ...BASE, auto_build_enabled: true } as never);
+    mockReplay.mockRejectedValueOnce(new Error("queue down"));
+
+    const res = await PATCH(req({ shop_id: SHOP, auto_build_enabled: true }));
 
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalled();
