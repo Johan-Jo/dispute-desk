@@ -7175,7 +7175,35 @@ genuine parcel A / parcel B are **not** collapsed.
 
 Because `recordId` feeds `modelFingerprint`, this changed every `inputHash`
 once, fleet-wide — the documented R4 record-id-migration condition. Open packs
-go stale on deploy and rebuild; there is no grandfathering escape hatch.
+go stale on deploy; there is no grandfathering escape hatch.
+
+**Stale is not regenerated, and the distinction is a cost decision.** Nothing
+enqueues a `build_pack` in response to an `input_hash_mismatch`:
+`evaluateFreshness` only returns a verdict; no job handler or cron route reads
+the hash to trigger a build; `defence-package-deadline-rebuild` scans
+**due-today disputes only** (skipping anything rebuilt within 6h); and
+`refresh-open-disputes` fires only when delivery status actually moves. A stale
+pack is therefore marked non-fileable until something independently rebuilds
+it — a nearing deadline, or delivery landing — both of which would have
+happened regardless. **A record-id migration costs no extra LLM spend.**
+Measured after the 2026-09-04 deploy: zero `build_pack` jobs in the following
+12 hours.
+
+Do not describe this as a "rebuild wave" — that framing was stated in the
+PR for this change and was wrong.
+
+**The corollary, which cost a merchant-visible regression on 2026-09-04: if
+nothing rebuilds automatically, nothing is REPAIRED automatically either.** A
+fix to the derivation changes how packs are *built*; every already-stored
+`plan_json` / `facts_json` keeps its old content until that pack is rebuilt.
+The duplicate rows stayed on the live package for order #352535 after the fix
+deployed, because the package was built two days earlier and the UI renders
+stored JSON. When shipping a derivation fix, state explicitly which existing
+rows it does NOT touch, and repair them deliberately — `scripts/sql/
+rebuild-duplicated-packs.sql` scopes the candidates (open, unfiled, actually
+duplicated) so the spend is bounded and chosen rather than assumed. Related trap: package counts are
+`defence_packages` ROWS, and several accumulate per dispute (draft, stale,
+failed, superseded), so a 170-package figure is not 170 disputes.
 
 ### Invariant vs intentional across surfaces
 
