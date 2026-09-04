@@ -462,7 +462,25 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                 {evidenceBasis.map((r, i) => (
                   <Fragment key={i}>
                     <Text as="span" variant="bodySm" fontWeight="semibold">{r.label}</Text>
-                    <Text as="span" variant="bodySm">{r.value}</Text>
+                    {/* Same structured link the PDF renders as an annotation —
+                        one builder, two renderers, no parallel URL parsing.
+                        Anchored on carrier + number so the raw URL is never
+                        shown; `link` is null on rows without a citable URL. */}
+                    <Text as="span" variant="bodySm">
+                      {r.value}
+                      {r.link ? (
+                        <>
+                          {" · "}
+                          <a
+                            href={r.link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {r.link.label}
+                          </a>
+                        </>
+                      ) : null}
+                    </Text>
                   </Fragment>
                 ))}
               </div>

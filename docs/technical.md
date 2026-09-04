@@ -1550,6 +1550,7 @@ Direct carrier-API delivery verification for carriers whose events never reach S
 **Never print the merchant's raw tracking URL.** Every tracking link that reaches an issuer — or the merchant — is rebuilt by `resolveTrackingLinkUrl()`, the single owner. Shopify's `fulfillments[].tracking[].url` is written by whatever shipping app the merchant runs, and measured across 349,405 prod rows on 2026-08-14 it is frequently unusable as a citation: 121,851 (35%) plain `http://`; 3,244 with an **empty** identifier (`?tracknum=`, `?tLabels=`); 2,303 with no identifier at all (`https://gtagsm.com/tracking/`, `http://ppxtrack.com`); 21,729 on the retired `wwwapps.ups.com/WebTracking` host. An issuer who follows such a link lands on a blank search box and reads it as *"this merchant has no delivery proof"* — the opposite of what the row asserts.
 
 Resolution order:
+0. **Number format overrides the carrier string** — where the two disagree AND the matched carrier demonstrably cannot resolve the number. A `420` + 5-digit-ZIP + 22-digit **IMpb** barcode, or a bare 22-digit `9…` USPS number, is a USPS-network parcel whoever's name is on the label; for IMpb only the **inner 22 digits** are tracked (the `420`+ZIP prefix is a routing header). Measured prod 2026-09-03: **30,983** rows labelled `DHL` and **5,578** labelled `TechSHIP` carry USPS-network numbers — 36,561 shipments whose bank-facing link was built from the DHL Express template and opened a DHL page with nothing on it (reported by the maintainer against blume-box parcel `420774699261290416102420744039`). The override is scoped by `CANNOT_RESOLVE_USPS_NETWORK` (currently `dhl` alone): `dhl_ecommerce` injects into the same USPS network but resolves those numbers on its own webtrack host with **richer** scan history, so it is deliberately not overridden. A carrier name is a hint; a barcode format is evidence.
 1. **Canonical template** — an identified carrier (company string first, URL host second) plus a plausible tracking number produces the carrier's own deep link (`TEMPLATES` allowlist: UPS `tracknum=`, USPS `TrackConfirmAction?qtc_tLabels1=`, FedEx `trknbr=`, DHL, DHL eCommerce, Canada Post, PostNord, Purolator `pin=` singular, Colissimo, Dragonfly/Intelcom, Evri, Stallion, Fleet Optics).
 2. **Merchant URL** — only if it actually references a shipment (`urlReferencesShipment()`); upgraded to https, and USPS's `_input` endpoint rewritten to the results endpoint.
 3. **Null** — print carrier + number with **no link** rather than a link that appears to disprove the row.
@@ -1563,6 +1564,8 @@ Sub-brands resolve before parents (DHL eCommerce ≠ DHL Express — an eCommerc
 **Not verified by render** (consent walls or untested): PostNord, Colissimo, Canada Post, Purolator, Dragonfly, Evri, Stallion, Fleet Optics. Their host+path come from carrier-issued redirects, carrier-owned route tables and official plugin source — treat as correct-endpoint-but-unproven-render. Carriers with an unavoidable recipient-postcode gate (DPD Germany) or no GET deep-link at all (DPD Ireland) intentionally have **no** template and fall through to rules 2/3. A template that renders an empty form is worse than no template, since rule 3 would have printed nothing.
 
 A tracking link is a **convenience for the reviewer, never the proof itself** — carriers purge tracking data after ~90–120 days, so a link read months later may legitimately show nothing. The durable evidence is the carrier-confirmed timestamp and POD persisted on `shopify_fulfillment_trackings`.
+
+**The link must be CLICKABLE, not printed.** The resolved URL is carried on `EvidenceBasisRow.link` (`{url, label}`) as structured data — never concatenated into the row's `value` text. Both renderers turn it into a real anchor: `<Link src>` in the PDF (a genuine `/Link` + `/URI` annotation, asserted on the rendered **bytes** in `DefencePackageDocument.test.ts` — a `<Link>` that renders without producing the annotation is not clickable in any reader, and only the output can prove it) and `<a target="_blank" rel="noopener noreferrer">` in the embedded HTML preview. Anchor text is carrier + number, so the raw URL never appears. Until 2026-09-03 the URL was appended to the value string, so both surfaces printed a dead ~120-character URL a reviewer had to select, copy and paste by hand — which nobody does, leaving the delivery claim unverifiable in the one document that asserts it. `link` is `null` whenever rule 3 applies, and renderers fall back to plain text.
 
 Call sites (all four go through the one owner): `lib/defence/pdf/evidenceBasisRows.ts` (PDF Evidence Basis table), `lib/defence/factClassifier.ts` (the value the LLM narrative cites verbatim), `lib/argument/evidenceLineItem.ts` and `lib/argument/deliveryPresentation.ts` (merchant UI). Contract pinned by `lib/carriers/__tests__/trackingLinkUrl.test.ts`, whose URL literals are real prod strings (`scripts/sql/tracking-url-shapes.sql`).
 
@@ -7141,6 +7144,38 @@ never cited, and it must never appear in `model.fields`.
 stay in the `evidence` domain even though they are never or only conditionally
 bank-facing — they are *scored*, so removing them from `fields` would silently
 stop scoring them. Bank exposure is expressed by `citationPolicy`, not domain.
+
+#### Record identity is derivation-path-independent
+
+`recordId` is `${fieldKey}#${instanceKey}`. `instanceKey` is the **natural**
+per-instance key where one exists (`fulfillmentId` / tracking number for
+delivery, `conversationId` for comms, `evidenceItemId` / `storagePath` for
+uploads) and otherwise the **within-field ordinal** — never provenance.
+
+That last clause is load-bearing. `deriveCaseEvidenceModel` is fed the same
+underlying evidence **twice**: once from `sections` (from `pack_json.sections`,
+where `evidenceItemId` is `null`) and once from the mirrored `evidence_items`
+row (which carries a uuid). Until 2026-09-03 the fallback was
+`evidenceItemId ?? source ?? "unknown"`, so one fact minted two ids —
+`no_return_initiated#shopify_order` **and**
+`no_return_initiated#1419a997-…` — the dedup in `push()` (which keys on
+`recordId`, and whose comment already promised exactly this) never fired, and
+the duplicate rode through `plan_json.included[]` → `selectPlanFacts` →
+`buildEvidenceBasisRows` onto the merchant- and bank-facing Evidence Basis as
+two identical rows. Measured on prod: **169 of 169** packages with a plan
+carried at least one duplicated field; 59 were already submitted or final.
+
+Provenance is carried on `provenance` (`evidenceItemId`, `origin`), so nothing
+is lost by keeping it out of the identity. **Do not fix a duplicate row in a
+renderer** — the plan is what the narrative writer, `validateNarrative`'s
+referential layer and `usedFactIds` all join against, so a label-level dedup
+would hide the symptom while those kept seeing two records. Pinned by
+`lib/evidence/model/__tests__/recordIdentity.test.ts`, which also asserts that
+genuine parcel A / parcel B are **not** collapsed.
+
+Because `recordId` feeds `modelFingerprint`, this changed every `inputHash`
+once, fleet-wide — the documented R4 record-id-migration condition. Open packs
+go stale on deploy and rebuild; there is no grandfathering escape hatch.
 
 ### Invariant vs intentional across surfaces
 

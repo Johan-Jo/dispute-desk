@@ -154,27 +154,19 @@ function renderValue(fact: EvidenceFact): string | null {
       // issuer response asked for precisely this: "a tracking number or
       // tracking details that show the order was successfully delivered."
       //
-      // The URL is printed too, not just the number: an issuer reviewing the
-      // packet should be able to check the parcel on the carrier's own site
-      // without first working out which carrier's format the number belongs
-      // to. Appended to every proof state — including in-transit, where
-      // looking it up is the whole point.
+      // Carrier + number stay in the TEXT — they are the identifiers, and
+      // they must survive a printed page and a link that has gone stale.
+      //
+      // The URL does NOT. It moves to the row's `link`, which both renderers
+      // turn into a real clickable anchor (`<Link>` in the PDF, `<a>` in the
+      // HTML preview) whose visible text is the carrier + number. Pasting the
+      // raw URL into the value here is what produced the dead 120-character
+      // DHL string a reviewer had to select, copy and paste by hand; the link
+      // is a convenience for a busy reader, and a convenience that takes three
+      // manual steps is not one.
       const carrier = typeof v?.carrier === "string" ? (v.carrier as string).trim() : "";
       const number = typeof v?.trackingNumber === "string" ? (v.trackingNumber as string).trim() : "";
-      // NOT the merchant's raw URL. `resolveTrackingLinkUrl` rebuilds the
-      // link from the carrier's canonical deep-link format so it opens the
-      // shipment's RESULT page, and returns null rather than print a link
-      // that opens an empty search box — which an issuer reads as "no proof
-      // of delivery", the opposite of what this row asserts.
-      const url =
-        trackingLinkUrl({
-          company: carrier,
-          number,
-          url: typeof v?.trackingUrl === "string" ? (v.trackingUrl as string) : null,
-        }) ?? "";
-      const ref = [[carrier, number].filter(Boolean).join(" "), url]
-        .filter(Boolean)
-        .join(" · ");
+      const ref = [carrier, number].filter(Boolean).join(" ");
       const withRef = (base: string) => (ref ? `${base} · ${ref}` : base);
       if (proof === "signature_confirmed") {
         return withRef(at ? `Signature on delivery, ${at}` : "Signature on delivery");
@@ -332,6 +324,34 @@ function collapseDeliveryPair(facts: EvidenceFact[]): EvidenceFact[] {
   return facts.filter((f) => f.category !== "shipping_tracking");
 }
 
+/**
+ * The row's clickable tracking link, or null.
+ *
+ * NOT the merchant's raw URL. `resolveTrackingLinkUrl` rebuilds the link from
+ * the carrier's canonical deep-link format so it opens the shipment's RESULT
+ * page, and returns null rather than emit a link that opens an empty search
+ * box — which an issuer reads as "no proof of delivery", the opposite of what
+ * this row asserts.
+ *
+ * Anchor text is carrier + number so the reader sees what they are opening and
+ * the raw URL never has to appear. Falls back to the number alone, and finally
+ * to a generic label, so a link is never anchored on empty text.
+ */
+function renderLink(f: EvidenceFact): EvidenceBasisRow["link"] {
+  if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") return null;
+  const v = f.value as Record<string, unknown> | null;
+  const carrier = typeof v?.carrier === "string" ? v.carrier.trim() : "";
+  const number = typeof v?.trackingNumber === "string" ? v.trackingNumber.trim() : "";
+  const url = trackingLinkUrl({
+    company: carrier,
+    number,
+    url: typeof v?.trackingUrl === "string" ? v.trackingUrl : null,
+  });
+  if (!url) return null;
+  const label = [carrier, number].filter(Boolean).join(" ") || "Track this shipment";
+  return { url, label };
+}
+
 export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[] {
   // The ONE bank-inclusion predicate (`lib/defence/bankInclusion.ts`). The rule
   // used to be spelled inline here, in the classifier, in the workspace route
@@ -354,6 +374,7 @@ export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[
       category: f.category,
       label: f.label,
       value: capitalizeFirst(value),
+      link: renderLink(f),
     });
   }
   return rows;
