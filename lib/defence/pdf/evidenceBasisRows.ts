@@ -166,7 +166,12 @@ function renderValue(fact: EvidenceFact): string | null {
       // manual steps is not one.
       const carrier = typeof v?.carrier === "string" ? (v.carrier as string).trim() : "";
       const number = typeof v?.trackingNumber === "string" ? (v.trackingNumber as string).trim() : "";
-      const ref = [carrier, number].filter(Boolean).join(" ");
+      // The carrier + number appears EXACTLY ONCE. When a link exists it is
+      // the link's anchor text, so repeating it here printed it twice
+      // ("… · TechSHIP 4207… · TechSHIP 4207…"). When there is no link, it
+      // must still appear as plain text — it is the identifier that makes the
+      // delivery claim verifiable, and it has to survive a printed page.
+      const ref = renderLink(fact) ? "" : [carrier, number].filter(Boolean).join(" ");
       const withRef = (base: string) => (ref ? `${base} · ${ref}` : base);
       if (proof === "signature_confirmed") {
         return withRef(at ? `Signature on delivery, ${at}` : "Signature on delivery");
