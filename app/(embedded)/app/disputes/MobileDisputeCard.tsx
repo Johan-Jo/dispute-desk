@@ -49,6 +49,8 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 
 interface Props {
   dispute: Dispute;
+  /** Set only when this order carries more than one dispute in the list. */
+  siblingPosition?: { index: number; total: number } | null;
   activeTab: TabId;
   searchParams: ReadonlyURLSearchParams | null;
   dateLocale: string;
@@ -97,6 +99,7 @@ function dueDateColor(status: FigmaDueStatus): string {
 
 export function MobileDisputeCard({
   dispute: d,
+  siblingPosition = null,
   searchParams,
   dateLocale,
   numberLocale,
@@ -207,6 +210,24 @@ export function MobileDisputeCard({
           >
             {orderLabel(d)} · {d.customer_display_name ?? "—"}
           </p>
+          {siblingPosition && (
+            /* Two disputes on one order differ only by amount here, which reads
+               as a duplicate. Name the relationship. */
+            <p
+              style={{
+                fontSize: 12,
+                color: "#6D7175",
+                margin: 0,
+                marginBottom: 4,
+                lineHeight: 1.4,
+              }}
+            >
+              {t("disputes.multipleOnOrder", {
+                index: siblingPosition.index,
+                total: siblingPosition.total,
+              })}
+            </p>
+          )}
           <p
             style={{
               fontSize: 14,

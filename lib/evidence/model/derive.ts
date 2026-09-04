@@ -188,12 +188,16 @@ function citationFor(
  * system gave us nothing — an ordinal is still stable for a fixed payload,
  * unlike `EvidenceFact.id`, which is assigned by cross-section iteration
  * order and shifts whenever any earlier section changes.
+ *
+ * The fallback is the ordinal ALONE, never provenance. `deriveCaseEvidenceModel`
+ * is fed the same underlying evidence twice — once from `sections` (no
+ * `evidenceItemId`) and once from the mirrored `evidence_items` row (a uuid) —
+ * so encoding `evidenceItemId ?? source` here minted two ids for one fact, the
+ * dedup in `push` never fired, and the duplicate rode into the argument plan
+ * and out onto the merchant-visible Evidence Basis. Provenance is carried on
+ * `provenance` (`evidenceItemId`, `origin`); it is not identity.
  */
-function instanceKey(
-  payload: EvidencePayload | null,
-  index: number,
-  fallback: string,
-): string {
+function instanceKey(payload: EvidencePayload | null, index: number): string {
   if (payload) {
     switch (payload.fieldKey) {
       case "delivery_proof":
@@ -219,7 +223,7 @@ function instanceKey(
         break;
     }
   }
-  return index === 0 ? fallback : `${fallback}:${index}`;
+  return String(index);
 }
 
 /**
@@ -249,7 +253,6 @@ function makeRecords(args: {
   const isValid = validity === "valid";
   const payload = normalizeEvidencePayload(fieldKey, raw);
   const citation = citationFor(fieldKey, raw, isValid);
-  const fallback = evidenceItemId ?? source ?? "unknown";
 
   const count =
     definitionFor(fieldKey).cardinality === "multiple" && payload
@@ -257,7 +260,7 @@ function makeRecords(args: {
       : 1;
 
   return Array.from({ length: count }, (_, i) => ({
-    recordId: `${fieldKey}#${instanceKey(payload, i, fallback)}`,
+    recordId: `${fieldKey}#${instanceKey(payload, i)}`,
     fieldKey,
     provenance: {
       origin: originFor(source),

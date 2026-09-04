@@ -98,7 +98,7 @@ describe("delivery facts carry the identifiers an issuer can verify", () => {
 
 describe("the evidence-basis row prints those identifiers", () => {
   /** Render one delivery fact through the real row builder. */
-  const row = (value: Record<string, unknown>): string => {
+  const build = (value: Record<string, unknown>) => {
     const fact: EvidenceFact = {
       id: "f0",
       category: "delivery_proof",
@@ -114,32 +114,44 @@ describe("the evidence-basis row prints those identifiers", () => {
       submissionRisk: false,
       confidence: null,
     };
-    return buildEvidenceBasisRows([fact])[0].value;
+    return buildEvidenceBasisRows([fact])[0];
   };
+  const row = (value: Record<string, unknown>): string => build(value).value;
 
-  it("appends carrier, number AND the carrier's tracking URL to a confirmed delivery", () => {
-    const out = row(extractValue("delivery_proof", NESTED_PROD_SHAPE));
-    expect(out).toContain("Delivered");
-    expect(out).toContain("USPS 9434650899562189159072");
-    // The issuer should be able to check the parcel on the carrier's own site
-    // without first working out whose number format this is — and the link
-    // must be the CANONICAL results endpoint rebuilt from the number, not
-    // the merchant's `.action?tLabels=` variant.
-    expect(out).toContain(
-      "https://tools.usps.com/tracking/9434650899562189159072",
-    );
+  it("carries carrier + number in the TEXT and the URL as a CLICKABLE LINK", () => {
+    const out = build(extractValue("delivery_proof", NESTED_PROD_SHAPE));
+    expect(out.value).toContain("Delivered");
+    expect(out.value).toContain("USPS 9434650899562189159072");
+
+    // The URL is NOT pasted into the value text. It used to be, and both
+    // renderers printed a dead 120-character string a reviewer had to
+    // select, copy and paste by hand — which nobody does, leaving the
+    // delivery claim unverifiable in the document that asserts it.
+    expect(out.value).not.toContain("http");
+
+    // It reaches the bank as a real link instead: `<Link>` in the PDF (a
+    // genuine link annotation) and `<a>` in the HTML preview, anchored on
+    // the carrier + number so the raw URL never has to be shown.
+    //
+    // And it must be the CANONICAL results endpoint rebuilt from the
+    // number, not the merchant's `.action?tLabels=` variant.
+    expect(out.link).toEqual({
+      url: "https://tools.usps.com/tracking/9434650899562189159072",
+      label: "USPS 9434650899562189159072",
+    });
   });
 
-  it("prints the URL even when the carrier name is missing", () => {
-    const out = row({
+  it("links even when the carrier name is missing, anchored on the number", () => {
+    const out = build({
       proofType: "delivered_confirmed",
       deliveredAt: "2026-06-20T22:58:00Z",
       carrier: null,
       trackingNumber: "9434650899562189159072",
       trackingUrl: "https://tools.usps.com/go/TrackConfirmAction.action",
     });
-    expect(out).toContain("9434650899562189159072");
-    expect(out).toContain("https://tools.usps.com");
+    expect(out.value).toContain("9434650899562189159072");
+    expect(out.link?.url).toContain("https://tools.usps.com");
+    expect(out.link?.label).toBe("9434650899562189159072");
   });
 
   it("appends them to a signature too", () => {
@@ -153,23 +165,57 @@ describe("the evidence-basis row prints those identifiers", () => {
     expect(out).toContain("UPS2 1Z999AA10123456784");
   });
 
-  it("appends them to an in-transit parcel — looking it up is the whole point", () => {
-    const out = row({
+  it("links an in-transit parcel too — looking it up is the whole point", () => {
+    const out = build({
       proofType: "delivered_unverified",
       carrier: "PostNord SE",
       trackingNumber: "00370725111111111111",
       trackingUrl: "https://postnord.se/track?id=00370725111111111111",
     });
-    expect(out).toContain("In transit");
-    expect(out).toContain("PostNord SE 00370725111111111111");
+    expect(out.value).toContain("In transit");
+    expect(out.value).toContain("PostNord SE 00370725111111111111");
     // tracking.postnord.com is the real tracker; the postnord.se page is a
     // shell that embeds that same widget.
-    expect(out).toContain("https://tracking.postnord.com/se/?id=00370725111111111111");
+    expect(out.link?.url).toBe("https://tracking.postnord.com/se/?id=00370725111111111111");
   });
 
-  it("prints no dangling separator when there is no tracking", () => {
-    const out = row({ proofType: "delivered_confirmed", deliveredAt: "2026-06-20T22:58:00Z" });
-    expect(out).toMatch(/^Delivered /);
-    expect(out).not.toContain("·");
+  it("prints no dangling separator and NO link when there is no tracking", () => {
+    const out = build({ proofType: "delivered_confirmed", deliveredAt: "2026-06-20T22:58:00Z" });
+    expect(out.value).toMatch(/^Delivered /);
+    expect(out.value).not.toContain("·");
+    // Rule 3 of `resolveTrackingLinkUrl`: no link at all beats a link that
+    // opens an empty search form in front of the issuer.
+    expect(out.link).toBeNull();
+  });
+
+  it("emits NO link when the URL would open an empty search form", () => {
+    const out = build({
+      proofType: "delivered_confirmed",
+      deliveredAt: "2026-06-20T22:58:00Z",
+      carrier: "Some Regional Courier",
+      trackingNumber: null,
+      trackingUrl: "https://courier.example/tracking/",
+    });
+    expect(out.link).toBeNull();
+  });
+
+  it("never puts a bare URL back into the value text (regression guard)", () => {
+    // The whole class: any delivery row, any proof state, must keep the URL
+    // out of the prose and in `link`.
+    for (const proofType of [
+      "delivered_confirmed",
+      "signature_confirmed",
+      "delivered_unverified",
+    ]) {
+      const out = build({
+        proofType,
+        deliveredAt: "2026-06-20T22:58:00Z",
+        carrier: "DHL",
+        trackingNumber: "4207746992612904161024",
+        trackingUrl: "https://www.dhl.com/us-en/home/tracking.html",
+      });
+      expect(out.value).not.toMatch(/https?:\/\//);
+      expect(out.link?.url).toContain("dhl.com");
+    }
   });
 });
