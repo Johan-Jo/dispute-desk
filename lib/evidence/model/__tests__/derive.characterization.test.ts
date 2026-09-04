@@ -96,14 +96,22 @@ describe("#352552 — the incident, as the model sees it", () => {
   it("carries a stable, non-positional record id", () => {
     // `EvidenceFact.id` is `f${index}` today — it changes on every rebuild,
     // so nothing downstream can reference a specific fact.
-    expect(tds.records[0].recordId).toBe("tds_authentication#shopify_transactions");
-    expect(tds.representativeId).toBe("tds_authentication#shopify_transactions");
+    //
+    // The fallback is the WITHIN-FIELD ordinal, not the collector source: the
+    // same evidence arrives twice (a `sections` entry and its mirrored
+    // `evidence_items` row) and encoding the derivation path minted two ids
+    // for one fact, which printed the Evidence Basis row twice. Stability is
+    // unchanged — the ordinal is fixed for a fixed payload, unlike
+    // `EvidenceFact.id`, which shifts with cross-section iteration order.
+    // See `recordIdentity.test.ts`.
+    expect(tds.records[0].recordId).toBe("tds_authentication#0");
+    expect(tds.representativeId).toBe("tds_authentication#0");
   });
 
   it("is citable, because the liability shift is real", () => {
     // The predicate is imported from factClassifier, not restated — so the
     // model and the bank filter cannot disagree about this record.
-    expect(tds.citableIds).toEqual(["tds_authentication#shopify_transactions"]);
+    expect(tds.citableIds).toEqual(["tds_authentication#0"]);
     expect(tds.records[0].citation.eligibility).toBe("eligible");
   });
 

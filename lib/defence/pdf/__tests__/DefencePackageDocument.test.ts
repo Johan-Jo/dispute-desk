@@ -126,6 +126,76 @@ function sampleData(overrides: SampleDataOverrides = {}): DefencePackageDocument
   return { meta, composedBlocks, approvedFacts, manualEvidence };
 }
 
+/**
+ * The tracking link must be CLICKABLE in the delivered PDF.
+ *
+ * It used to be a URL concatenated into the Evidence Basis value string, so
+ * `@react-pdf/renderer` drew it as ordinary text: a reviewer had to select a
+ * 120-character DHL URL, copy it and paste it into a browser to see the
+ * parcel. In practice nobody does that, which left the delivery claim — the
+ * single thing the issuer asked for — unverifiable inside the document that
+ * asserts it.
+ *
+ * These assert on the rendered BYTES, not on the React tree: a `<Link>` that
+ * renders without producing a `/Link` annotation with a `/URI` action is not
+ * clickable in any PDF reader, and only the output can prove it did.
+ */
+describe("the PDF's tracking link is a real, clickable annotation", () => {
+  function deliveryFact(overrides: Record<string, unknown> = {}): EvidenceFact {
+    return {
+      id: "f0",
+      category: "delivery_proof",
+      label: "Delivery confirmation",
+      value: {
+        proofType: "delivered_confirmed",
+        deliveredAt: "2026-07-10T19:28:00Z",
+        carrier: "TechSHIP",
+        trackingNumber: "4207746992612904161024",
+        trackingUrl:
+          "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=4207746992612904161024",
+        ...overrides,
+      },
+      source: "shopify_fulfillments",
+      sourceRef: null,
+      strength: "strong",
+      bankEligible: true,
+      merchantVisible: true,
+      internalOnly: false,
+      includeInBankNarrative: true,
+      submissionRisk: false,
+      confidence: null,
+    };
+  }
+
+  it("emits a /Link annotation with a /URI action pointing at the carrier", async () => {
+    const result = await renderDefencePdf(
+      sampleData({ approvedFacts: [deliveryFact()] }),
+    );
+    // latin1 keeps byte offsets intact through the PDF's binary streams.
+    const raw = result.buffer.toString("latin1");
+    expect(raw).toContain("/Annots");
+    expect(raw).toContain("/Link");
+    expect(raw).toContain("/URI");
+    // The canonical DHL results endpoint, rebuilt from the number.
+    expect(raw).toContain("dhl.com");
+    expect(raw).toContain("4207746992612904161024");
+  }, 30000);
+
+  it("emits NO link annotation when there is no citable tracking URL", async () => {
+    // Rule 3 of `resolveTrackingLinkUrl`: printing nothing beats printing a
+    // link that opens an empty search box in front of the issuer.
+    const result = await renderDefencePdf(
+      sampleData({
+        approvedFacts: [
+          deliveryFact({ carrier: null, trackingNumber: null, trackingUrl: null }),
+        ],
+      }),
+    );
+    const raw = result.buffer.toString("latin1");
+    expect(raw).not.toContain("/URI");
+  }, 30000);
+});
+
 describe("DefencePackageDocument", () => {
   it("renders to a valid PDF buffer", async () => {
     const result = await renderDefencePdf(sampleData());
