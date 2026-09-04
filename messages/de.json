@@ -1431,8 +1431,8 @@
         "insufficient": "Keine Beweise verfügbar."
       },
       "fatalLoss": {
-        "refund_issued": "Für diese Bestellung wurde bereits eine Rückerstattung ausgestellt — die Bank wird dies als Schuldeingeständnis werten, daher kann der Fall in dieser Form nicht gewonnen werden.",
-        "inr_no_fulfillment": "Die Bestellung wurde nie ausgeführt und der Streitfallgrund ist ‚Produkt nicht erhalten' — es gibt keine sachliche Grundlage zur Verteidigung der Belastung."
+        "refund_issued": "Für diese Belastung wurde bereits eine Rückerstattung ausgestellt — die Bank würde eine Verteidigung als Eingeständnis werten, dass das Geld geschuldet wird. Von Ihnen ist nichts erforderlich — lassen Sie den Fall abschließen. Erfolgte die Rückerstattung VOR der Reklamation, sagen Sie uns Bescheid: Eine Gutschrift vor der Reklamation ist eines der stärksten Argumente überhaupt, und wir bauen die Verteidigung darauf neu auf.",
+        "inr_no_fulfillment": "Die Kundin oder der Kunde gibt an, die Ware nie erhalten zu haben, und für diese Bestellung ist keine Sendung erfasst — es gibt also keine Fakten, mit denen sich argumentieren ließe. Wurde doch versandt, tragen Sie die Sendungsnummer nach — wir bauen die Verteidigung automatisch neu auf. Wurde nie versandt, sehen Sie in Ihrer E-Mail nach: Die nächsten Schritte hängen davon ab, ob es sich noch um eine Anfrage oder bereits um ein Chargeback handelt."
       },
       "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen.",
       "returnedToSender": {
