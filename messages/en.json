@@ -801,8 +801,8 @@
         "insufficient": "No evidence available."
       },
       "fatalLoss": {
-        "refund_issued": "A refund covering this charge was already issued, so the bank will read a defence as an admission that the money is owed. What to do: no action is needed — let this one close. If the refund was issued BEFORE the customer disputed, tell us and we will rebuild the defence around that, because a pre-dispute credit is one of the strongest arguments there is.",
-        "inr_no_fulfillment": "The customer says the item never arrived, and this order has no shipment on record — so there is nothing factual to argue with. What to do: if it DID ship, add the tracking number and we will rebuild the defence automatically. If it never shipped, refund the order to close this out; defending it will cost you the chargeback fee on top of the amount."
+        "refund_issued": "A refund covering this charge was already issued, so the bank will read a defence as an admission that the money is owed. Nothing is needed from you — let this one close. If the refund was issued BEFORE the customer disputed, tell us: a pre-dispute credit is one of the strongest arguments there is, and we will rebuild the defence around it.",
+        "inr_no_fulfillment": "The customer says the item never arrived, and this order has no shipment on record — so there is nothing factual to argue with. If it DID ship, add the tracking number and we will rebuild the defence automatically. If it never shipped, check your email for what to do next — the options depend on whether this is still an inquiry or already a chargeback."
       },
       "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed.",
       "returnedToSender": {

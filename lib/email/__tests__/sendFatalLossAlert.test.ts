@@ -55,6 +55,7 @@ const BASE = {
   currencyCode: "USD",
   dueAt: "2026-09-11T23:00:00Z",
   orderName: "#360499",
+  phase: "chargeback",
 } as const;
 
 function sentBody(): { subject: string; html: string; text: string } {
@@ -69,15 +70,69 @@ beforeEach(() => {
 });
 
 describe("inr_no_fulfillment — the two-cause ask", () => {
-  it("offers BOTH branches: add tracking, or refund", async () => {
+  it("asks for tracking, the one thing only the merchant can supply", async () => {
     const r = await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment" });
     expect(r.ok).toBe(true);
-    const { html } = sentBody();
     // Cause 2 — shipped but never marked fulfilled. Asking for this is the
     // whole point: without it we silently concede a WINNABLE case.
-    expect(html).toContain("tracking number");
-    // Cause 1 — genuinely never shipped.
-    expect(html).toMatch(/refund the order/i);
+    expect(sentBody().html).toContain("tracking number");
+  });
+
+  /**
+   * NEVER tell a merchant to refund an open CHARGEBACK.
+   *
+   * Shopify: "You can't issue a refund after a cardholder initiates a
+   * chargeback." The refund control is blocked, the amount and fee are already
+   * debited, and a refund forced through by other means pays the customer
+   * twice. The first version of this email said "refund the order" on every
+   * INR case — advice the merchant literally cannot follow.
+   * https://help.shopify.com/en/manual/payments/chargebacks/resolve-chargeback
+   */
+  it("does NOT tell a chargeback merchant to refund — Shopify blocks it", async () => {
+    await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: "chargeback" });
+    const { html } = sentBody();
+    expect(html).not.toMatch(/refund the order/i);
+    expect(html).toMatch(/blocks refunds while a chargeback is open/i);
+    expect(html).toMatch(/already been debited/i);
+  });
+
+  it("offers the withdrawal route, the only thing that reverses a chargeback", async () => {
+    await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: "chargeback" });
+    expect(sentBody().html).toMatch(/withdraw the dispute/i);
+  });
+
+  it("DOES tell an inquiry merchant to refund — no money has moved yet", async () => {
+    // An inquiry is refundable, and refunding settles it before it escalates
+    // into a chargeback with a fee. Same trigger, opposite instruction.
+    await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: "inquiry" });
+    const { html } = sentBody();
+    expect(html).toMatch(/refund the order now/i);
+    expect(html).not.toMatch(/blocks refunds/i);
+  });
+
+  it("calls an inquiry an inquiry, in the subject AND the body", async () => {
+    // An inquiry is not a chargeback: no money has moved. Calling it one
+    // misstates the facts and contradicts the very next line, which tells the
+    // merchant nothing has been taken yet.
+    await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: "inquiry" });
+    const { subject, html } = sentBody();
+    expect(subject).toMatch(/inquiry for #360499/);
+    expect(subject).not.toMatch(/chargeback/i);
+    expect(html).toMatch(/The inquiry on/);
+  });
+
+  it("calls a chargeback a chargeback", async () => {
+    await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: "chargeback" });
+    const { subject, html } = sentBody();
+    expect(subject).toMatch(/chargeback for #360499/);
+    expect(html).toMatch(/The chargeback on/);
+  });
+
+  it("treats an unknown phase as a chargeback (the safe default)", async () => {
+    // Guessing "inquiry" would emit impossible advice; guessing "chargeback"
+    // only under-promises.
+    await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: null });
+    expect(sentBody().html).not.toMatch(/refund the order now/i);
   });
 
   it("names the order and the amount so it is actionable from the inbox", async () => {

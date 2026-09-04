@@ -807,8 +807,8 @@
         "insufficient": "Inga bevis finns."
       },
       "fatalLoss": {
-        "refund_issued": "En återbetalning som täcker den här debiteringen har redan gjorts, så banken skulle tolka ett försvar som ett erkännande av att pengarna ska betalas. Vad du gör: ingenting — låt ärendet stängas. Om återbetalningen gjordes INNAN kunden bestred, säg till så bygger vi om försvaret utifrån det — en kreditering före bestridandet är ett av de starkaste argument som finns.",
-        "inr_no_fulfillment": "Kunden uppger att varan aldrig kom fram, och den här ordern har ingen registrerad försändelse — alltså finns inga sakuppgifter att argumentera med. Vad du gör: om den faktiskt skickades, lägg till spårningsnumret så bygger vi om försvaret automatiskt. Om den aldrig skickades, återbetala ordern — att försvara den kostar dig återkravsavgiften utöver beloppet."
+        "refund_issued": "En återbetalning som täcker den här debiteringen har redan gjorts, så banken skulle tolka ett försvar som ett erkännande av att pengarna ska betalas. Inget behövs från dig — låt ärendet stängas. Om återbetalningen gjordes INNAN kunden bestred, säg till: en kreditering före bestridandet är ett av de starkaste argument som finns, och vi bygger om försvaret utifrån det.",
+        "inr_no_fulfillment": "Kunden uppger att varan aldrig kom fram, och den här ordern har ingen registrerad försändelse — alltså finns inga sakuppgifter att argumentera med. Om den faktiskt skickades, lägg till spårningsnumret så bygger vi om försvaret automatiskt. Om den aldrig skickades, se din e-post — vad du bör göra beror på om det fortfarande är en förfrågan eller redan ett återkrav."
       },
       "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående.",
       "returnedToSender": {

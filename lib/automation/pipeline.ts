@@ -246,7 +246,7 @@ async function notifyFatalLoss(
 
     const { data: dispute } = await sb
       .from("disputes")
-      .select("dispute_gid, reason, amount, currency_code, due_at, order_name")
+      .select("dispute_gid, reason, amount, currency_code, due_at, order_name, phase")
       .eq("id", pack.dispute_id)
       .maybeSingle();
 
@@ -262,6 +262,9 @@ async function notifyFatalLoss(
       currencyCode: (dispute?.currency_code as string | null) ?? null,
       dueAt: (dispute?.due_at as string | null) ?? null,
       orderName: (dispute?.order_name as string | null) ?? null,
+      // Decides whether "refund it" is legal advice: Shopify blocks refunds
+      // once a chargeback is open, but an inquiry can still be refunded.
+      phase: (dispute?.phase as string | null) ?? null,
     });
 
     // Only stamp on a real send, so a missing RESEND_API_KEY or an unconfigured

@@ -77,6 +77,13 @@ export interface FatalLossAlertContext {
   currencyCode: string | null;
   dueAt: string | null;
   orderName: string | null;
+  /**
+   * `disputes.phase` — `inquiry` or `chargeback`. Decides whether "refund it"
+   * is even a legal instruction: Shopify BLOCKS refunds once a chargeback is
+   * open, so telling a merchant to refund one is advice they cannot follow.
+   * See `actionsFor`.
+   */
+  phase: string | null;
 }
 
 export interface SendResult {
@@ -84,12 +91,26 @@ export interface SendResult {
   error?: string;
 }
 
+/**
+ * The dispute's own noun. An INQUIRY is not a chargeback — no money has moved
+ * and calling it one both misstates the facts and contradicts the body, which
+ * tells an inquiry merchant that "no money has been taken yet".
+ */
+function disputeNoun(phase: string | null): string {
+  return (phase ?? "").toLowerCase() === "inquiry" ? "inquiry" : "chargeback";
+}
+
 /** Subject line — names the order and the fact that action is needed. */
-function subjectFor(reason: FatalLossReason, orderName: string | null): string {
+function subjectFor(
+  reason: FatalLossReason,
+  orderName: string | null,
+  phase: string | null,
+): string {
   const order = orderName ? ` for ${orderName}` : "";
+  const noun = disputeNoun(phase);
   return reason === "inr_no_fulfillment"
-    ? `Action needed: chargeback${order} can't be defended without tracking`
-    : `No action needed: chargeback${order} was already refunded`;
+    ? `Action needed: ${noun}${order} can't be defended without tracking`
+    : `No action needed: ${noun}${order} was already refunded`;
 }
 
 /** One-line summary of the situation, in plain terms. */
@@ -100,16 +121,52 @@ function situationFor(reason: FatalLossReason): string {
 }
 
 /**
- * The action block — the point of the email. Returns HTML list items.
- * Ordered most-likely-useful first.
+ * The action block — the point of the email. Returns HTML list items,
+ * most-likely-useful first.
+ *
+ * ── WHY PHASE DECIDES THE SECOND BRANCH ───────────────────────────────
+ *
+ * The first version of this email told a merchant whose order never shipped
+ * to "refund the order". **That is advice they cannot follow, and it was
+ * wrong.** Shopify: *"You can't issue a refund after a cardholder initiates a
+ * chargeback"* — the refund control is blocked once the dispute is open, the
+ * disputed amount and fee are already debited, and a refund forced through by
+ * other means pays the customer twice.
+ *
+ * The correct instruction depends on `phase`, which the dispute row already
+ * carries:
+ *
+ *   - `chargeback` — the money is ALREADY gone. There is nothing to refund and
+ *     no action that returns it. Either let it close (the bank keeps the funds
+ *     with the customer), or, if the customer agrees they were wrong, have
+ *     them ask their bank to WITHDRAW the dispute and send the withdrawal
+ *     letter — the one route Shopify documents for making it go away.
+ *   - `inquiry` — no money has moved yet and refunding is still possible. Here
+ *     a refund genuinely IS the cheap resolution: it settles the case before
+ *     it escalates into a chargeback and its fee.
+ *
+ * Never collapse these two. Telling a chargeback merchant to refund is an
+ * instruction Shopify's own UI refuses, and it reads as though we do not know
+ * how the product works.
  */
-function actionsFor(reason: FatalLossReason): string[] {
+function actionsFor(reason: FatalLossReason, phase: string | null): string[] {
+  const isInquiry = (phase ?? "").toLowerCase() === "inquiry";
+
   if (reason === "inr_no_fulfillment") {
-    return [
-      "<strong>If it did ship:</strong> add the tracking number to the order in Shopify. DisputeDesk rebuilds the defence automatically once the shipment appears, and the case becomes defensible.",
-      "<strong>If it never shipped:</strong> refund the order. The customer is right, and defending it costs you the chargeback fee on top of the amount you would refund anyway.",
-    ];
+    const shipped =
+      "<strong>If it did ship:</strong> add the tracking number to the order in Shopify. DisputeDesk rebuilds the defence automatically once the shipment appears, and the case becomes defensible.";
+    return isInquiry
+      ? [
+          shipped,
+          "<strong>If it never shipped:</strong> refund the order now. This is still an inquiry, so no money has been taken yet and refunding settles it before it becomes a chargeback with a fee attached.",
+        ]
+      : [
+          shipped,
+          "<strong>If it never shipped:</strong> there is nothing to do — and nothing to refund. The disputed amount and the chargeback fee have already been debited, and Shopify blocks refunds while a chargeback is open. Let it close.",
+          "<strong>Only if the customer agrees they were mistaken:</strong> ask them to contact their bank and withdraw the dispute, then send us the bank's withdrawal letter. That is the one route that reverses a chargeback.",
+        ];
   }
+
   return [
     "<strong>No action needed</strong> — let this one close. Arguing it would tell the bank the money is owed.",
     "<strong>If you refunded BEFORE the customer disputed</strong>, tell us. A pre-dispute credit is one of the strongest arguments available, and we will rebuild the defence around it.",
@@ -155,8 +212,8 @@ export async function sendFatalLossAlert(
     ? getEmbeddedAppUrl(shopDomain, `/app/disputes/${ctx.disputeId}`)
     : null;
 
-  const subject = subjectFor(ctx.reason, ctx.orderName);
-  const actions = actionsFor(ctx.reason);
+  const subject = subjectFor(ctx.reason, ctx.orderName, ctx.phase);
+  const actions = actionsFor(ctx.reason, ctx.phase);
   const isInr = ctx.reason === "inr_no_fulfillment";
 
   const actionHtml = actions
@@ -170,7 +227,7 @@ export async function sendFatalLossAlert(
   const html = `<!doctype html>
 <html><body style="font-family:Helvetica,Arial,sans-serif;color:#0F172A;line-height:1.55;">
 <p>Hello,</p>
-<p>The chargeback on <strong>${escapeHtml(ctx.orderName ?? ctx.disputeId.slice(0, 8))}</strong>${amountStr ? ` (${escapeHtml(amountStr)})` : ""} cannot be won as it stands. ${escapeHtml(situationFor(ctx.reason))}</p>
+<p>The ${escapeHtml(disputeNoun(ctx.phase))} on <strong>${escapeHtml(ctx.orderName ?? ctx.disputeId.slice(0, 8))}</strong>${amountStr ? ` (${escapeHtml(amountStr)})` : ""} cannot be won as it stands. ${escapeHtml(situationFor(ctx.reason))}</p>
 <p><strong>What to do</strong></p>
 <ul style="padding-left:20px;margin-top:4px;">
 ${actionHtml}
@@ -186,7 +243,7 @@ ${disputeUrl ? `<p><a href="${escapeHtml(disputeUrl)}" style="color:#1F1F1F;">Op
 </body></html>`;
 
   const text = [
-    `The chargeback on ${ctx.orderName ?? ctx.disputeId.slice(0, 8)}${amountStr ? ` (${amountStr})` : ""} cannot be won as it stands.`,
+    `The ${disputeNoun(ctx.phase)} on ${ctx.orderName ?? ctx.disputeId.slice(0, 8)}${amountStr ? ` (${amountStr})` : ""} cannot be won as it stands.`,
     situationFor(ctx.reason),
     "",
     "What to do:",
