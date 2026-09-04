@@ -117,11 +117,24 @@ describe("the evidence-basis row prints those identifiers", () => {
     return buildEvidenceBasisRows([fact])[0];
   };
   const row = (value: Record<string, unknown>): string => build(value).value;
+  /**
+   * What the READER actually sees: the value text plus the link's anchor
+   * text. The carrier + number must appear here EXACTLY ONCE — it used to be
+   * emitted in both halves, printing "… · TechSHIP 4207… · TechSHIP 4207…"
+   * on the live package (reported 2026-09-04).
+   */
+  const rendered = (value: Record<string, unknown>): string => {
+    const r = build(value);
+    return r.link ? `${r.value} · ${r.link.label}` : r.value;
+  };
 
   it("carries carrier + number in the TEXT and the URL as a CLICKABLE LINK", () => {
     const out = build(extractValue("delivery_proof", NESTED_PROD_SHAPE));
     expect(out.value).toContain("Delivered");
-    expect(out.value).toContain("USPS 9434650899562189159072");
+    // Carrier + number reaches the reader through the LINK, not the value —
+    // and appears exactly once in the rendered line.
+    const seen = rendered(extractValue("delivery_proof", NESTED_PROD_SHAPE));
+    expect(seen.match(/USPS 9434650899562189159072/g)).toHaveLength(1);
 
     // The URL is NOT pasted into the value text. It used to be, and both
     // renderers printed a dead 120-character string a reviewer had to
@@ -149,20 +162,25 @@ describe("the evidence-basis row prints those identifiers", () => {
       trackingNumber: "9434650899562189159072",
       trackingUrl: "https://tools.usps.com/go/TrackConfirmAction.action",
     });
-    expect(out.value).toContain("9434650899562189159072");
     expect(out.link?.url).toContain("https://tools.usps.com");
     expect(out.link?.label).toBe("9434650899562189159072");
+    expect(rendered({
+      proofType: "delivered_confirmed", deliveredAt: "2026-06-20T22:58:00Z",
+      carrier: null, trackingNumber: "9434650899562189159072",
+      trackingUrl: "https://tools.usps.com/go/TrackConfirmAction.action",
+    }).match(/9434650899562189159072/g)).toHaveLength(1);
   });
 
   it("appends them to a signature too", () => {
-    const out = row({
+    const payload = {
       proofType: "signature_confirmed",
       deliveredAt: "2026-06-20T22:58:00Z",
       carrier: "UPS2",
       trackingNumber: "1Z999AA10123456784",
-    });
-    expect(out).toContain("Signature on delivery");
-    expect(out).toContain("UPS2 1Z999AA10123456784");
+    };
+    const seen = rendered(payload);
+    expect(seen).toContain("Signature on delivery");
+    expect(seen.match(/UPS2 1Z999AA10123456784/g)).toHaveLength(1);
   });
 
   it("links an in-transit parcel too — looking it up is the whole point", () => {
@@ -173,7 +191,12 @@ describe("the evidence-basis row prints those identifiers", () => {
       trackingUrl: "https://postnord.se/track?id=00370725111111111111",
     });
     expect(out.value).toContain("In transit");
-    expect(out.value).toContain("PostNord SE 00370725111111111111");
+    expect(rendered({
+      proofType: "delivered_unverified",
+      carrier: "PostNord SE",
+      trackingNumber: "00370725111111111111",
+      trackingUrl: "https://postnord.se/track?id=00370725111111111111",
+    }).match(/PostNord SE 00370725111111111111/g)).toHaveLength(1);
     // tracking.postnord.com is the real tracker; the postnord.se page is a
     // shell that embeds that same widget.
     expect(out.link?.url).toBe("https://tracking.postnord.com/se/?id=00370725111111111111");
@@ -217,5 +240,57 @@ describe("the evidence-basis row prints those identifiers", () => {
       expect(out.value).not.toMatch(/https?:\/\//);
       expect(out.link?.url).toContain("dhl.com");
     }
+  });
+});
+
+/**
+ * The exact line the merchant reported on 2026-09-04, from the live package
+ * for blume-box order #352535:
+ *
+ *   Delivered Jul 10, 2026, 19:28 UTC · TechSHIP 4207… · TechSHIP 4207…
+ *
+ * Introduced by the clickable-link change: the value kept appending
+ * carrier + number while the link ALSO used it as anchor text, so the
+ * identifier printed twice on every delivery row that had a link.
+ */
+describe("the tracking reference is never printed twice", () => {
+  const build = (value: Record<string, unknown>) =>
+    buildEvidenceBasisRows([
+      {
+        id: "f0", category: "delivery_proof", label: "Delivery confirmation",
+        value, source: "shopify_fulfillments", sourceRef: null, strength: "strong",
+        bankEligible: true, merchantVisible: true, internalOnly: false,
+        includeInBankNarrative: true, submissionRisk: false, confidence: null,
+      } as EvidenceFact,
+    ])[0];
+
+  it("prints 'TechSHIP <number>' exactly once on the reported package", () => {
+    const r = build({
+      proofType: "delivered_confirmed",
+      deliveredAt: "2026-07-10T19:28:00Z",
+      carrier: "TechSHIP",
+      trackingNumber: "420774699261290416102420744039",
+      trackingUrl:
+        "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=420774699261290416102420744039",
+    });
+    const seen = r.link ? `${r.value} · ${r.link.label}` : r.value;
+    expect(seen.match(/TechSHIP 420774699261290416102420744039/g)).toHaveLength(1);
+    expect(seen).toBe(
+      "Delivered Jul 10, 2026, 19:28 UTC · TechSHIP 420774699261290416102420744039",
+    );
+  });
+
+  it("still shows carrier + number as TEXT when no link can be built", () => {
+    // No link (rule 3) ⇒ the identifier must stay in the value, or the row
+    // asserts a delivery with nothing to check it against.
+    const r = build({
+      proofType: "delivered_confirmed",
+      deliveredAt: "2026-07-10T19:28:00Z",
+      carrier: "Some Regional Courier",
+      trackingNumber: null,
+      trackingUrl: null,
+    });
+    expect(r.link).toBeNull();
+    expect(r.value).toContain("Some Regional Courier");
   });
 });
