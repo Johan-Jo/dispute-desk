@@ -1431,8 +1431,8 @@
         "insufficient": "Aucune preuve disponible."
       },
       "fatalLoss": {
-        "refund_issued": "Un remboursement a déjà été émis pour cette commande — la banque le considérera comme un aveu de responsabilité, donc le dossier ne peut pas être gagné en l'état.",
-        "inr_no_fulfillment": "La commande n'a jamais été exécutée et le motif du litige est « article non reçu » — il n'y a aucune base factuelle pour défendre le débit."
+        "refund_issued": "Un remboursement couvrant ce débit a déjà été émis : la banque lirait une défense comme l’aveu que la somme est due. Rien n’est attendu de vous — laissez ce dossier se clore. Si le remboursement a été émis AVANT la contestation du client, dites-le-nous : un avoir antérieur à la contestation est l’un des arguments les plus solides qui soient, et nous reconstruirons la défense sur cette base.",
+        "inr_no_fulfillment": "Le client déclare n’avoir jamais reçu l’article et aucune expédition n’est enregistrée pour cette commande : il n’y a donc aucun fait à opposer. Si la commande a bien été expédiée, ajoutez le numéro de suivi et nous reconstruirons la défense automatiquement. Si elle ne l’a jamais été, consultez votre e-mail : la suite dépend s’il s’agit encore d’une demande d’information ou déjà d’une rétrofacturation."
       },
       "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir.",
       "returnedToSender": {

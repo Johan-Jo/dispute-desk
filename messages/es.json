@@ -1431,8 +1431,8 @@
         "insufficient": "No hay pruebas disponibles."
       },
       "fatalLoss": {
-        "refund_issued": "Ya se emitió un reembolso para este pedido — el banco lo considerará una confesión de responsabilidad, por lo que el caso no puede ganarse tal como está.",
-        "inr_no_fulfillment": "El pedido nunca se cumplió y el motivo de la disputa es «artículo no recibido» — no hay base factual para defender el cargo."
+        "refund_issued": "Ya se emitió un reembolso que cubre este cargo, por lo que el banco interpretaría una defensa como admisión de que se debe el dinero. No hace falta nada por su parte — deje que se cierre. Si el reembolso se emitió ANTES de que el cliente reclamara, avísenos: un abono previo a la reclamación es uno de los argumentos más sólidos que existen y reconstruiremos la defensa sobre esa base.",
+        "inr_no_fulfillment": "El cliente dice que el artículo nunca llegó y este pedido no tiene ningún envío registrado, así que no hay hechos con los que argumentar. Si SÍ se envió, añada el número de seguimiento y reconstruiremos la defensa automáticamente. Si nunca se envió, consulte su correo: los siguientes pasos dependen de si esto sigue siendo una consulta o ya es un contracargo."
       },
       "creditAlreadyIssued": "Esta transacción ya fue reembolsada antes de que se presentara la disputa. La respuesta más sólida es el propio reembolso: al titular de la tarjeta ya se le devolvió el dinero, así que no queda nada pendiente.",
       "returnedToSender": {
