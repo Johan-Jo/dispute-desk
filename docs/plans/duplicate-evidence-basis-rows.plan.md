@@ -169,10 +169,37 @@ freshness header already anticipates:
 > `EvidenceFact.id` is positional and `computeEvidenceHash` sorts on it, so a
 > record-id migration changes every hash once, fleet-wide.
 
-Every open pack goes stale on deploy and rebuilds. That is the documented,
-intended behaviour for a record-id migration (no grandfathering escape hatch),
-but it must be a deliberate decision, and the rebuild wave should be checked
-against job throughput before rollout rather than discovered afterwards.
+Every open pack goes stale on deploy. That is the documented, intended
+behaviour for a record-id migration (no grandfathering escape hatch).
+
+**CORRECTED 2026-09-04 — "and rebuilds" was wrong, and it was wrong in a way
+that matters.** Stale does NOT mean regenerated. Nothing in the codebase
+enqueues a `build_pack` in response to an `input_hash_mismatch`:
+
+* `evaluateFreshness` (`lib/pipeline/contracts/freshness.ts`) only *evaluates*.
+  It returns a verdict; it spends nothing.
+* `grep` for `input_hash_mismatch` / `inputHash` across `lib/jobs/` and every
+  `app/api/cron/**` route returns no enqueue site.
+* `defence-package-deadline-rebuild` scans **due-today disputes only**, and
+  skips any pack touched within 6h. It does not scan the fleet and does not
+  read the hash.
+* `refresh-open-disputes` enqueues only when a dispute's **delivery status
+  actually moves**.
+
+So a stale hash marks a pack non-fileable until something *independently*
+rebuilds it — a deadline approaching, or delivery landing — both of which
+would have happened anyway. **There is no rebuild wave and no incremental LLM
+spend.**
+
+Confirmed on prod after the 2026-09-04 12:09 UTC deploy: `build_pack` jobs in
+the following 12 hours = **0** (the only rows were 3 jobs at 02:00 UTC, ten
+hours *before* the merge).
+
+Note also that the "170 packages" figure counts `defence_packages` ROWS, not
+disputes — several packages accumulate per dispute (draft, stale, failed,
+superseded). Blume Box has 11 open disputes and dozens of package rows. Do not
+read a package count as a dispute count, and do not read "goes stale" as
+"regenerates".
 
 ### 4. Regression test
 
