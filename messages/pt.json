@@ -1431,8 +1431,8 @@
         "insufficient": "Nenhuma evidência disponível."
       },
       "fatalLoss": {
-        "refund_issued": "Já foi emitido um reembolso para este pedido — o banco tratará isso como uma confissão de responsabilidade, portanto o caso não pode ser vencido como está.",
-        "inr_no_fulfillment": "O pedido nunca foi cumprido e o motivo da disputa é \"produto não recebido\" — não há base factual para defender a cobrança."
+        "refund_issued": "Já foi emitido um reembolso que cobre esta cobrança, por isso o banco leria uma defesa como admissão de que o valor é devido. O que fazer: nada — deixe este caso encerrar. Se o reembolso foi emitido ANTES de o cliente contestar, avise-nos e reconstruiremos a defesa com base nisso: um crédito anterior à contestação é um dos argumentos mais fortes que existem.",
+        "inr_no_fulfillment": "O cliente diz que o artigo nunca chegou e este pedido não tem qualquer envio registado — portanto não há factos para argumentar. O que fazer: se foi enviado, adicione o número de rastreio e reconstruiremos a defesa automaticamente. Se nunca foi enviado, reembolse o pedido; defendê-lo custar-lhe-á a taxa de estorno além do valor."
       },
       "creditAlreadyIssued": "Esta transação já foi reembolsada antes de a disputa ser aberta. A resposta mais forte é o próprio reembolso — o titular do cartão já foi reembolsado, portanto nada mais é devido.",
       "returnedToSender": {

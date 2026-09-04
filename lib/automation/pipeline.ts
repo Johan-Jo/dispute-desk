@@ -203,6 +203,83 @@ async function clearStaleBillingAttention(disputeId: string): Promise<void> {
 const MODERATE_PARK_MESSAGE =
   "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
 
+/**
+ * Tell the merchant a fatal-loss case needs a decision from them.
+ *
+ * Standing DisputeDesk down is not neutral: Shopify still files its own scrape
+ * of the order at the deadline, and on an unfulfilled INR order that scrape
+ * argues against the merchant. Before 2026-09-04 the only signal was a line of
+ * strength-reason copy inside the app, which nobody is watching — the merchant
+ * found out when they lost. See `lib/email/sendFatalLossAlert.ts`.
+ *
+ * DEDUPED ON THE AUDIT LOG, once per (dispute, reason). Every rebuild re-runs
+ * this branch — blume-box #360499 alone rebuilt three times in a week — and a
+ * merchant emailed the same warning on every pack rebuild stops reading them.
+ * The reason is part of the key on purpose: a case that moves from
+ * `inr_no_fulfillment` to `refund_issued` has genuinely new advice.
+ *
+ * Fire-and-forget. A failed send must never fail the pipeline: the block
+ * decision itself is already recorded.
+ */
+async function notifyFatalLoss(
+  sb: ReturnType<typeof getServiceClient>,
+  pack: { shop_id: string; dispute_id: string | null },
+  fatalLossReason: string | null,
+): Promise<void> {
+  try {
+    if (!pack.dispute_id || !fatalLossReason) return;
+    if (fatalLossReason !== "inr_no_fulfillment" && fatalLossReason !== "refund_issued") {
+      return;
+    }
+
+    const { data: already } = await sb
+      .from("audit_events")
+      .select("event_payload")
+      .eq("dispute_id", pack.dispute_id)
+      .eq("event_type", "fatal_loss_alert_sent")
+      .limit(50);
+    const alreadySentForThisReason = (already ?? []).some(
+      (row) =>
+        (row.event_payload as { reason?: string } | null)?.reason === fatalLossReason,
+    );
+    if (alreadySentForThisReason) return;
+
+    const { data: dispute } = await sb
+      .from("disputes")
+      .select("dispute_gid, reason, amount, currency_code, due_at, order_name")
+      .eq("id", pack.dispute_id)
+      .maybeSingle();
+
+    const { sendFatalLossAlert } = await import("@/lib/email/sendFatalLossAlert");
+    const result = await sendFatalLossAlert({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      disputeGid: (dispute?.dispute_gid as string | null) ?? null,
+      reason: fatalLossReason,
+      disputeReason: (dispute?.reason as string | null) ?? null,
+      amount:
+        dispute?.amount != null ? Number(dispute.amount as unknown as string) : null,
+      currencyCode: (dispute?.currency_code as string | null) ?? null,
+      dueAt: (dispute?.due_at as string | null) ?? null,
+      orderName: (dispute?.order_name as string | null) ?? null,
+    });
+
+    // Only stamp on a real send, so a missing RESEND_API_KEY or an unconfigured
+    // team email does not permanently suppress the alert for this dispute.
+    if (result.ok) {
+      await sb.from("audit_events").insert({
+        shop_id: pack.shop_id,
+        dispute_id: pack.dispute_id,
+        actor_type: "system",
+        event_type: "fatal_loss_alert_sent",
+        event_payload: { reason: fatalLossReason },
+      });
+    }
+  } catch {
+    /* non-fatal — the block decision is already recorded */
+  }
+}
+
 function fatalLossMessage(
   fatalLoss: { reason?: string | null; message?: string | null } | null | undefined,
 ): string {
@@ -739,6 +816,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         },
       );
     }
+    void notifyFatalLoss(sb, pack, fatalLoss?.reason ?? null);
     return { action: "block", details: reason };
   }
 
