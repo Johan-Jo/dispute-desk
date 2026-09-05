@@ -346,7 +346,15 @@
     "buildingMonitoringDesc": "DisputeDesk is working",
     "underReviewCard": "Under review",
     "underReviewCardDesc": "Response sent",
-    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)"
+    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)",
+    "merchantMessage": {
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "cta": "Send",
+      "error": "That didn't go through. Please try again.",
+      "thanksTitle": "Thank you — we'll be in touch",
+      "thanksBody": "We've got your details and will reach out shortly."
+    }
   },
   "disputes": {
     "title": "Disputes",

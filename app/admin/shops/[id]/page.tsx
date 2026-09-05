@@ -23,6 +23,7 @@ import {
 import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
 import { PostOutcomeInsights } from "@/components/admin/PostOutcomeInsights";
 import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
+import { ShopMerchantMessages } from "@/components/admin/ShopMerchantMessages";
 
 interface ShopDetail {
   shop: {
@@ -279,6 +280,8 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
           </button>
         </div>
       </div>
+
+      <ShopMerchantMessages shopId={id} />
     </div>
   );
 }
