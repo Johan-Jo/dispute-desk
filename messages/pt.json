@@ -351,9 +351,13 @@
       "emailLabel": "E-mail",
       "phoneLabel": "Telefone",
       "cta": "Enviar",
+      "sent": "Enviado",
+      "dismiss": "Fechar",
+      "subtitle": "Deixe um e-mail ou telefone e ligamos de volta dentro de um dia útil.",
+      "helper": "Preencha e-mail ou telefone — basta um.",
       "error": "Não foi possível enviar. Tente novamente.",
       "thanksTitle": "Obrigado — entraremos em contacto",
-      "thanksBody": "Recebemos os seus dados e entraremos em contacto em breve."
+      "thanksBody": "Obrigado! Entraremos em contacto dentro de um dia útil."
     }
   },
   "disputes": {

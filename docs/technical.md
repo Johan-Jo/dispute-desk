@@ -5436,10 +5436,25 @@ would be hostile to the merchant and a Shopify App Store review risk.
 Dismissal is server-side and per-message, so it holds across the
 merchant's devices and across pages.
 
-Default tone is **`critical`** (red). These messages exist because ops
-needs an answer from a merchant who has not responded to quieter
-channels, so the loud default is deliberate — an admin can still pick a
-softer tone per message.
+**Visual spec:** the "Red top alert banner" Claude Design handoff
+(`Dashboard.dc.html`) — a white card with a solid `#B42318` header bar
+carrying a warning triangle, the title, and a dismiss X; a `#FCA5A5`
+border; and a red-tinted lift shadow. Transcribed literally rather than
+expressed as a Polaris `<Banner>`: Polaris has no solid-header variant,
+and the design's whole purpose is to outshout the tonal banners around
+it. Contact inputs are 40px-tall fields and the Send button is the
+design system's `danger` variant (`#EF4444`, hover `#DC2626`).
+
+The Send button enables on a plausible email **or** ≥7 phone digits —
+either channel alone is a complete answer, matching the design's own
+validation. After a successful send the button reads "Sent" and the
+helper line becomes the thank-you.
+
+`tone` is still stored per message and the composer defaults to
+`critical`, but note the merchant-facing banner now renders the red
+design for every message regardless of tone; `tone` currently affects
+only what an admin sees in the composer. Wire it through if softer
+variants are ever needed.
 
 **Routes**
 
