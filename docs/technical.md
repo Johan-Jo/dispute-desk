@@ -5477,6 +5477,14 @@ replaced by a green confirmation panel echoing the address/number we
 received. A filled-in-but-disabled form read as "still editable" and
 left merchants unsure whether anything had happened.
 
+That panel is component state, so it lasts only until the merchant
+navigates. The durable half is in `getActiveMerchantMessage`, which
+filters on **`responded_at IS NULL`** alongside `dismissed_at`: an
+answered message stops being active and the banner never returns.
+Without that filter a merchant who replied met the empty form again on
+their very next page view, asking a second time for what they had just
+given us. Pinned in `lib/merchantMessages/__tests__/activeMessage.test.ts`.
+
 **Delivery is tracked, not assumed.** Responses email
 `ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`), and the outcome is
 recorded on the row (`response_notified_at` / `response_notify_error`,
