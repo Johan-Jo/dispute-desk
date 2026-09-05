@@ -346,7 +346,15 @@
     "buildingMonitoringDesc": "DisputeDesk arbetar",
     "underReviewCard": "Under granskning",
     "underReviewCardDesc": "Svar skickat",
-    "winRateDenominatorNote": "vunna ÷ avgjorda (vunna, förlorade, accepterade)"
+    "winRateDenominatorNote": "vunna ÷ avgjorda (vunna, förlorade, accepterade)",
+    "merchantMessage": {
+      "emailLabel": "E-post",
+      "phoneLabel": "Telefon",
+      "cta": "Skicka",
+      "error": "Det gick inte att skicka. Försök igen.",
+      "thanksTitle": "Tack — vi hör av oss",
+      "thanksBody": "Vi har fått dina uppgifter och återkommer inom kort."
+    }
   },
   "disputes": {
     "title": "Tvister",

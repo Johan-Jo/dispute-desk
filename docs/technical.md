@@ -5394,6 +5394,65 @@ How it works:
   iCloud Keychain / Google Password Manager sync a passkey within one ecosystem
   automatically.
 
+## Targeted merchant messages (admin → one shop)
+
+Ops can put a dismissible banner on a single merchant's embedded
+dashboard, optionally asking for a contact channel. Built for the case
+where an account shows real recoverable value but every email address
+on file has gone unanswered.
+
+**Where:** Admin → Shops → (shop) → *In-app message* card
+(`components/admin/ShopMerchantMessages.tsx`).
+
+**Data:** `merchant_messages` (migration
+`20260905120000_merchant_messages.sql`). One row = one message to one
+shop. RLS on with no policies — service-role access only, same posture
+as the other ops tables.
+
+| Column | Meaning |
+|---|---|
+| `title` / `body` | Banner copy, admin-authored free text |
+| `ask_for_contact` | Show email/phone inputs + submit |
+| `tone` | Polaris banner tone (`info`/`success`/`warning`/`critical`) |
+| `status` | `draft` (never renders) / `published` / `archived` |
+| `expires_at` | Optional auto-expiry |
+| `dismissed_at` | Merchant dismissed it |
+| `responded_at`, `response_email`, `response_phone`, `response_note` | Merchant's reply |
+
+**Copy is deliberately NOT tokenized.** These are one-off human notes
+written for a specific merchant in that merchant's language. No library
+code derives them and nothing persists them into pack data, so the
+structural-i18n rule (CLAUDE.md #5) doesn't apply. Only the surrounding
+form chrome (`dashboard.merchantMessage.*`) is localized across the six
+locales.
+
+**Merchant surface:** `DashboardMerchantMessageBanner` renders the
+newest active message (published, not dismissed, unexpired). It is a
+dismissible Polaris `Banner` in the normal dashboard flow — **not** a
+blocking modal. A modal that intercepts the session would be hostile to
+the merchant and a Shopify App Store review risk. Dismissal is
+server-side, so it holds across the merchant's devices.
+
+**Routes**
+
+| Route | Purpose |
+|---|---|
+| `GET /api/dashboard/message` | Active message for the current shop |
+| `POST /api/dashboard/message/dismiss` | Merchant dismissed |
+| `POST /api/dashboard/message/respond` | Merchant's reply → emails ops, stores on the row |
+| `GET,POST /api/admin/shops/[id]/messages` | List / create |
+| `PATCH,DELETE /api/admin/shops/[id]/messages/[messageId]` | Publish, archive, edit, delete |
+
+Every merchant-facing write is scoped by `shop_id` as well as message
+id, so a uuid belonging to another shop cannot be dismissed or answered
+from the wrong session. Replies are HTML-escaped before they reach the
+ops inbox. Both invariants are pinned in
+`lib/merchantMessages/__tests__/respondRoute.test.ts`.
+
+Responses email `ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`) via
+the shared `sendAdminEmail` helper, and are logged as a
+`merchant_message_answered` audit event with `actor_type='merchant'`.
+
 ## Multi-Language (i18n)
 
 ### Stack

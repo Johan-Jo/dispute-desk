@@ -346,7 +346,15 @@
     "buildingMonitoringDesc": "DisputeDesk arbeitet",
     "underReviewCard": "In Prüfung",
     "underReviewCardDesc": "Antwort gesendet",
-    "winRateDenominatorNote": "gewonnen ÷ entschieden (gewonnen, verloren, akzeptiert)"
+    "winRateDenominatorNote": "gewonnen ÷ entschieden (gewonnen, verloren, akzeptiert)",
+    "merchantMessage": {
+      "emailLabel": "E-Mail",
+      "phoneLabel": "Telefon",
+      "cta": "Senden",
+      "error": "Das hat leider nicht geklappt. Bitte versuchen Sie es erneut.",
+      "thanksTitle": "Vielen Dank — wir melden uns",
+      "thanksBody": "Wir haben Ihre Kontaktdaten erhalten und melden uns in Kürze."
+    }
   },
   "disputes": {
     "title": "Streitfälle",
