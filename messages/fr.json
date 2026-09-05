@@ -1855,7 +1855,7 @@
         "analysisDeferredBody": "Des conversations ont été associées, mais l'analyse des preuves est en pause et reprendra bientôt. Les tickets associés restent visibles ci-dessous.",
         "reconnectRequiredTitle": "Reconnecter Gorgias",
         "reconnectRequiredBody": "Votre connexion Gorgias n'est plus autorisée. Reconnectez-la dans les Paramètres pour reprendre les preuves de communication.",
-        "takingLongerNote": "Cela prend plus de temps que prévu. Il attend peut-être derrière d'autres tâches — actualisez pour vérifier s'il y a du nouveau."
+        "takingLongerNote": "Cela prend plus de temps que d'habitude. Le traitement s'exécute en arrière-plan et se terminera automatiquement — actualisez pour vérifier s'il y a du nouveau."
       },
       "staleBanner": {
         "title": "Votre dossier de défense n'est plus à jour",

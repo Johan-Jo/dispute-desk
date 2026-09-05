@@ -1855,7 +1855,7 @@
         "analysisDeferredBody": "Conversations were matched, but evidence analysis is paused and will resume shortly. Matched tickets remain visible below.",
         "reconnectRequiredTitle": "Reconnect Gorgias",
         "reconnectRequiredBody": "Your Gorgias connection is no longer authorized. Reconnect it in Settings to resume communication evidence.",
-        "takingLongerNote": "This is taking longer than expected. It may be waiting behind other work — you can refresh to check for an update."
+        "takingLongerNote": "This is taking longer than usual. It runs in the background and will finish on its own — refresh to check for an update."
       },
       "staleBanner": {
         "title": "Your defence package is out of date",
