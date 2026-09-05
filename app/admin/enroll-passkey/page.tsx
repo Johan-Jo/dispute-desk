@@ -79,8 +79,9 @@ function EnrollPasskey() {
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] mb-2">Secure your admin access</h1>
           <p className="text-sm text-[#64748B] mb-6">
-            Add Face ID, Windows Hello, or a security key to your admin account.
-            You&rsquo;ll use it every time you open the admin panel.
+            Add this device&rsquo;s built-in unlock &mdash; Windows Hello, Touch ID or
+            Face ID &mdash; to your admin account. You&rsquo;ll use it every time you
+            open the admin panel.
           </p>
 
           {error && <p className="text-sm text-[#B91C1C] mb-4">{error}</p>}

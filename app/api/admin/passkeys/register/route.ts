@@ -50,6 +50,11 @@ export async function POST(req: NextRequest) {
         | undefined,
     })),
     authenticatorSelection: {
+      // Bind admin access to the built-in authenticator of the machine being
+      // enrolled (Windows Hello / Touch ID / Face ID). Without this, Chrome
+      // also offers its cross-device "use a phone" flow, so the admin sees two
+      // competing prompts instead of one device unlock.
+      authenticatorAttachment: "platform",
       residentKey: "preferred",
       userVerification: "required", // force the biometric / device unlock
     },
