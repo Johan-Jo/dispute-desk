@@ -5427,11 +5427,19 @@ form chrome (`dashboard.merchantMessage.*`) is localized across the six
 locales.
 
 **Merchant surface:** `DashboardMerchantMessageBanner` renders the
-newest active message (published, not dismissed, unexpired). It is a
-dismissible Polaris `Banner` in the normal dashboard flow — **not** a
-blocking modal. A modal that intercepts the session would be hostile to
-the merchant and a Shopify App Store review risk. Dismissal is
-server-side, so it holds across the merchant's devices.
+newest active message (published, not dismissed, unexpired). It lives in
+`EmbeddedAppChrome`, so it shows on **every** embedded page — not just
+the dashboard — and sits **above** the scope and billing banners: an ops
+message awaiting an answer outranks both. It is a dismissible Polaris
+`Banner`, **not** a blocking modal; a modal that intercepts the session
+would be hostile to the merchant and a Shopify App Store review risk.
+Dismissal is server-side and per-message, so it holds across the
+merchant's devices and across pages.
+
+Default tone is **`critical`** (red). These messages exist because ops
+needs an answer from a merchant who has not responded to quieter
+channels, so the loud default is deliberate — an admin can still pick a
+softer tone per message.
 
 **Routes**
 

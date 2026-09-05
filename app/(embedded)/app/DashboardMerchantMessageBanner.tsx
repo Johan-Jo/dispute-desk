@@ -100,7 +100,9 @@ export function DashboardMerchantMessageBanner() {
   return (
     <Banner tone={message.tone} onDismiss={dismiss} title={message.title}>
       <BlockStack gap="300">
-        <Text as="p">{message.body}</Text>
+        <Text as="p" variant="bodyMd" fontWeight="semibold">
+          {message.body}
+        </Text>
         {message.askForContact ? (
           <>
             <InlineStack gap="300" blockAlign="end" wrap>

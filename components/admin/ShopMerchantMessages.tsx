@@ -20,13 +20,13 @@ const INPUT =
   "w-full py-2.5 px-4 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent";
 const LABEL = "block text-sm font-medium text-[#64748B] mb-1";
 
-const TONES = ["info", "success", "warning", "critical"] as const;
+const TONES = ["critical", "warning", "info", "success"] as const;
 
 export function ShopMerchantMessages({ shopId }: { shopId: string }) {
   const [messages, setMessages] = useState<MerchantMessage[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [tone, setTone] = useState<string>("info");
+  const [tone, setTone] = useState<string>("critical");
   const [askForContact, setAskForContact] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

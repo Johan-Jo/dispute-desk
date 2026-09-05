@@ -74,7 +74,7 @@ export async function POST(
     );
   }
 
-  const tone = TONES.has(body.tone ?? "") ? body.tone! : "info";
+  const tone = TONES.has(body.tone ?? "") ? body.tone! : "critical";
   const status = STATUSES.has(body.status ?? "") ? body.status! : "draft";
 
   const sb = getServiceClient();
