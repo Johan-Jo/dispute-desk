@@ -351,13 +351,13 @@
       "emailLabel": "E-post",
       "phoneLabel": "Telefon",
       "cta": "Skicka",
-      "sent": "Skickat",
       "dismiss": "Stäng",
       "subtitle": "Lämna e-post eller telefon och vi ringer upp inom en arbetsdag.",
       "helper": "Fyll i e-post eller telefon — ett räcker.",
       "error": "Det gick inte att skicka. Försök igen.",
       "thanksTitle": "Tack — vi hör av oss",
-      "thanksBody": "Tack! Vi hör av oss inom en arbetsdag."
+      "thanksBody": "Tack! Vi hör av oss inom en arbetsdag.",
+      "sending": "Skickar…"
     }
   },
   "disputes": {

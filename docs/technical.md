@@ -5472,9 +5472,32 @@ from the wrong session. Replies are HTML-escaped before they reach the
 ops inbox. Both invariants are pinned in
 `lib/merchantMessages/__tests__/respondRoute.test.ts`.
 
-Responses email `ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`) via
-the shared `sendAdminEmail` helper, and are logged as a
-`merchant_message_answered` audit event with `actor_type='merchant'`.
+**Confirmation state.** Once the merchant submits, the whole form is
+replaced by a green confirmation panel echoing the address/number we
+received. A filled-in-but-disabled form read as "still editable" and
+left merchants unsure whether anything had happened.
+
+**Delivery is tracked, not assumed.** Responses email
+`ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`), and the outcome is
+recorded on the row (`response_notified_at` / `response_notify_error`,
+migration `20260906090000`). This route deliberately does **not** use
+the shared `sendAdminEmail` helper: that returns `void` and swallows
+failures, which is right for background drift alerts but wrong here —
+a merchant reply that never reaches ops is the one failure this feature
+cannot afford to hide. The admin card shows a warning on any reply
+whose notification did not go out, so a silent miss is never mistaken
+for "nobody replied". The reply itself is always stored first, so a
+mail failure never loses the contact details.
+
+⚠️ **Dev cannot send these emails.** The `disputedesk-dev` Vercel
+project has no `RESEND_API_KEY` (only Production does), so on
+`dev.disputedesk.app` every response records
+`response_notify_error: "RESEND_API_KEY not set"` and no mail is sent.
+This is environment configuration, not a code defect — verify email
+delivery on production.
+
+Replies are also logged as a `merchant_message_answered` audit event
+with `actor_type='merchant'`.
 
 ## Multi-Language (i18n)
 

@@ -351,13 +351,13 @@
       "emailLabel": "Correo electrónico",
       "phoneLabel": "Teléfono",
       "cta": "Enviar",
-      "sent": "Enviado",
       "dismiss": "Cerrar",
       "subtitle": "Déjanos un correo o teléfono y te llamamos en un día hábil.",
       "helper": "Rellena correo o teléfono — con uno basta.",
       "error": "No se pudo enviar. Inténtalo de nuevo.",
       "thanksTitle": "Gracias, te contactaremos",
-      "thanksBody": "¡Gracias! Te contactaremos en un día hábil."
+      "thanksBody": "¡Gracias! Te contactaremos en un día hábil.",
+      "sending": "Enviando…"
     }
   },
   "disputes": {
