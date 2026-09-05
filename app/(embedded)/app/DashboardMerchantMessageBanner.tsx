@@ -8,28 +8,54 @@
  * channel, so we ask — inside the app — for an email or phone number,
  * and the answer is mailed to the ops address.
  *
- * Deliberately a dismissible Polaris Banner rather than a blocking
- * modal: a merchant who isn't interested dismisses it once and it
- * stays gone (dismissal is server-side, so it holds across devices).
- * A modal that intercepts the session would be hostile to the merchant
- * and a Shopify App Store review risk.
+ * Visual spec: "Red top alert banner" handoff (Claude Design),
+ * `Dashboard.dc.html` — a white card with a solid #B42318 header bar,
+ * #FCA5A5 border, and a red-shadow lift. Transcribed literally from the
+ * design rather than expressed as a Polaris <Banner>, because Polaris
+ * has no solid-header banner variant and the design's whole point is
+ * that this outshouts the ordinary tonal banners around it.
  *
- * Copy is admin-authored free text (see lib/merchantMessages/types.ts
- * for why it isn't tokenized); only the surrounding form chrome is
- * localized.
+ * Deliberately NOT a blocking modal. A merchant who isn't interested
+ * dismisses it once and it stays gone (dismissal is server-side, so it
+ * holds across their devices). A modal that intercepted the session
+ * would be hostile to the merchant and a Shopify App Store review risk.
+ *
+ * Message copy is admin-authored free text (see lib/merchantMessages/
+ * types.ts for why it isn't tokenized); only the form chrome and the
+ * helper/confirmation lines are localized.
  */
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Banner,
-  BlockStack,
-  Button,
-  InlineStack,
-  TextField,
-  Text,
-} from "@shopify/polaris";
 import type { ActiveMerchantMessage } from "@/lib/merchantMessages/types";
+
+/* Palette lifted verbatim from Dashboard.dc.html. */
+const RED_HEADER = "#B42318";
+const RED_BORDER = "#FCA5A5";
+const RED_SHADOW = "0 8px 20px -14px rgba(180,35,24,0.5)";
+const TITLE_ON_RED = "#FFFFFF";
+const DISMISS_IDLE = "#FEE4E2";
+const BODY_STRONG = "#0B1220";
+const BODY_MUTED = "#475467";
+const HELPER = "#667085";
+const FIELD_BORDER = "#E5E7EB";
+/* DisputeDeskUI.Button variant="danger": bg #EF4444, hover #DC2626. */
+const BTN_DANGER = "#EF4444";
+const BTN_DANGER_HOVER = "#DC2626";
+
+/** Matches the design-system TextField: h-40px, 8px radius, 14px text. */
+const fieldStyle: React.CSSProperties = {
+  width: "100%",
+  height: 40,
+  padding: "0 12px",
+  border: `1px solid ${FIELD_BORDER}`,
+  borderRadius: 8,
+  fontSize: 14,
+  fontFamily: "inherit",
+  color: BODY_STRONG,
+  outline: "none",
+  boxSizing: "border-box",
+};
 
 export function DashboardMerchantMessageBanner() {
   const t = useTranslations();
@@ -40,6 +66,8 @@ export function DashboardMerchantMessageBanner() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [hoverDismiss, setHoverDismiss] = useState(false);
+  const [hoverSend, setHoverSend] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,8 +98,13 @@ export function DashboardMerchantMessageBanner() {
     });
   };
 
+  /* The design enables Send on a plausible email OR ~7 digits of phone:
+   * either channel alone is a complete answer. */
+  const canSend =
+    /\S+@\S+\.\S+/.test(email) || phone.replace(/\D/g, "").length >= 7;
+
   const submit = async () => {
-    if (!email.trim() && !phone.trim()) return;
+    if (!canSend || submitting) return;
     setSubmitting(true);
     setError(false);
     try {
@@ -89,58 +122,199 @@ export function DashboardMerchantMessageBanner() {
     }
   };
 
-  if (submitted) {
-    return (
-      <Banner tone="success" title={t("dashboard.merchantMessage.thanksTitle")}>
-        <Text as="p">{t("dashboard.merchantMessage.thanksBody")}</Text>
-      </Banner>
-    );
-  }
+  const helperText = error
+    ? t("dashboard.merchantMessage.error")
+    : submitted
+      ? t("dashboard.merchantMessage.thanksBody")
+      : t("dashboard.merchantMessage.helper");
 
   return (
-    <Banner tone={message.tone} onDismiss={dismiss} title={message.title}>
-      <BlockStack gap="300">
-        <Text as="p" variant="bodyMd" fontWeight="semibold">
+    <div
+      style={{
+        background: "#FFFFFF",
+        border: `1px solid ${RED_BORDER}`,
+        borderRadius: 12,
+        overflow: "hidden",
+        boxShadow: RED_SHADOW,
+        marginBottom: 20,
+      }}
+    >
+      {/* Solid red header bar: warning triangle, title, dismiss. */}
+      <div
+        style={{
+          background: RED_HEADER,
+          padding: "12px 18px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span style={{ flex: "0 0 auto", color: TITLE_ON_RED, display: "flex" }}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </span>
+        <span
+          style={{
+            flex: "1 1 auto",
+            minWidth: 0,
+            fontSize: 14,
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            color: TITLE_ON_RED,
+          }}
+        >
+          {message.title}
+        </span>
+        <button
+          type="button"
+          onClick={dismiss}
+          onMouseEnter={() => setHoverDismiss(true)}
+          onMouseLeave={() => setHoverDismiss(false)}
+          aria-label={t("dashboard.merchantMessage.dismiss")}
+          style={{
+            flex: "0 0 auto",
+            width: 26,
+            height: 26,
+            border: 0,
+            borderRadius: 7,
+            background: hoverDismiss ? "rgba(255,255,255,0.2)" : "transparent",
+            color: hoverDismiss ? "#FFFFFF" : DISMISS_IDLE,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      {/* White body: message, optional contact form, helper line. */}
+      <div
+        style={{
+          padding: 18,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: 15,
+            fontWeight: 600,
+            color: BODY_STRONG,
+          }}
+        >
           {message.body}
-        </Text>
+        </p>
+
         {message.askForContact ? (
           <>
-            <InlineStack gap="300" blockAlign="end" wrap>
-              <div style={{ minWidth: 240 }}>
-                <TextField
-                  label={t("dashboard.merchantMessage.emailLabel")}
+            <p
+              style={{
+                margin: "-8px 0 0",
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: BODY_MUTED,
+              }}
+            >
+              {t("dashboard.merchantMessage.subtitle")}
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                <input
                   type="email"
                   autoComplete="email"
+                  placeholder={t("dashboard.merchantMessage.emailLabel")}
+                  aria-label={t("dashboard.merchantMessage.emailLabel")}
                   value={email}
-                  onChange={setEmail}
+                  disabled={submitted}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError(false);
+                  }}
+                  style={fieldStyle}
                 />
               </div>
-              <div style={{ minWidth: 200 }}>
-                <TextField
-                  label={t("dashboard.merchantMessage.phoneLabel")}
+              <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+                <input
                   type="tel"
                   autoComplete="tel"
+                  placeholder={t("dashboard.merchantMessage.phoneLabel")}
+                  aria-label={t("dashboard.merchantMessage.phoneLabel")}
                   value={phone}
-                  onChange={setPhone}
+                  disabled={submitted}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setError(false);
+                  }}
+                  style={fieldStyle}
                 />
               </div>
-              <Button
-                variant="primary"
+              <button
+                type="button"
                 onClick={submit}
-                loading={submitting}
-                disabled={!email.trim() && !phone.trim()}
+                disabled={!canSend || submitting || submitted}
+                onMouseEnter={() => setHoverSend(true)}
+                onMouseLeave={() => setHoverSend(false)}
+                style={{
+                  flex: "0 0 auto",
+                  height: 40,
+                  padding: "0 24px",
+                  minWidth: 110,
+                  border: 0,
+                  borderRadius: 8,
+                  background:
+                    hoverSend && canSend && !submitted
+                      ? BTN_DANGER_HOVER
+                      : BTN_DANGER,
+                  color: "#FFFFFF",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                  cursor: canSend && !submitted ? "pointer" : "not-allowed",
+                  opacity: canSend && !submitted ? 1 : 0.5,
+                  transition: "background 120ms",
+                }}
               >
-                {t("dashboard.merchantMessage.cta")}
-              </Button>
-            </InlineStack>
-            {error ? (
-              <Text as="p" tone="critical">
-                {t("dashboard.merchantMessage.error")}
-              </Text>
-            ) : null}
+                {submitted
+                  ? t("dashboard.merchantMessage.sent")
+                  : t("dashboard.merchantMessage.cta")}
+              </button>
+            </div>
+            <p style={{ margin: 0, fontSize: 12, color: HELPER }}>
+              {helperText}
+            </p>
           </>
         ) : null}
-      </BlockStack>
-    </Banner>
+      </div>
+    </div>
   );
 }
