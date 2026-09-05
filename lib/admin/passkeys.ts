@@ -96,6 +96,28 @@ export function filterTransports(
   return kept.length > 0 ? kept : null;
 }
 
+// ── WebAuthn UI hints ──────────────────────────────────────────────────────
+
+/**
+ * WebAuthn `hints` telling the browser which authenticator UI to surface.
+ *
+ * `client-device` = the platform authenticator built into this machine
+ * (Windows Hello / Touch ID / Face ID).
+ *
+ * **Why this and not `allowCredentials.transports`:** transports are only a
+ * *hint about how to reach a credential*, and Chrome deliberately keeps
+ * offering its cross-device "use a phone" sheet regardless of what we list —
+ * a user whose laptop passkey is unavailable needs that fallback. Filtering
+ * `hybrid` out of transports therefore did NOT remove the second prompt
+ * (shipped 2026-09-05, no observable change). `hints` is the field Chrome
+ * actually honours to collapse the picker to the local device.
+ *
+ * Typed + spread manually because @simplewebauthn/server@13 does not model
+ * `hints` yet; @simplewebauthn/browser@13 spreads the whole options object
+ * into `navigator.credentials.get()`, so it reaches Chrome intact.
+ */
+export const CLIENT_DEVICE_HINTS = ["client-device"] as const;
+
 // ── admin_passkeys queries ─────────────────────────────────────────────────
 
 export async function listPasskeys(userId: string): Promise<StoredPasskey[]> {
