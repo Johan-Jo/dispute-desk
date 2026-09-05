@@ -5354,7 +5354,19 @@ How it works:
 - **Lock-out escape hatch:** if an admin loses all devices, a service-role
   operator runs `DELETE FROM admin_passkeys WHERE user_id = '<uuid>'` to reset them
   to the enroll flow (documented in the migration).
-- **Platform-only, single prompt (fixed 2026-09-05).** Registration pins
+- **Single prompt via `hints` (2026-09-05, second attempt).** Both ceremony
+  routes attach `hints: ["client-device"]` (`CLIENT_DEVICE_HINTS` in
+  `lib/admin/passkeys.ts`) to the options JSON. **This is the field that actually
+  suppresses Chrome's cross-device "use a phone" / Google sheet.** The first
+  attempt (below) stripped the `hybrid` transport and shipped to prod with *no
+  observable change*, because `allowCredentials.transports` is only a routing
+  hint — Chrome intentionally still offers the phone fallback no matter what
+  transports are listed. `@simplewebauthn/server@13` does not model `hints`, so
+  it is spread onto the response manually; `@simplewebauthn/browser@13` spreads
+  the whole options object into `navigator.credentials.get()`, so it arrives
+  intact. Pinned by `tests/api/admin/passkeyHints.test.ts`, which asserts on the
+  response body (a transports-only assertion passes even when the bug is live).
+- **Platform-only (fixed 2026-09-05).** Registration pins
   `authenticatorSelection.authenticatorAttachment: "platform"`, and
   `filterTransports()` in `lib/admin/passkeys.ts` strips the `hybrid` transport
   both on write (`savePasskey`) and on read (`listPasskeys`,

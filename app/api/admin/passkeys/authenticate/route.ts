@@ -9,6 +9,7 @@ import type {
 } from "@simplewebauthn/server";
 import { hasAdminSession, getAdminSessionUser } from "@/lib/admin/auth";
 import {
+  CLIENT_DEVICE_HINTS,
   getRpConfig,
   listPasskeys,
   getPasskeyByCredentialId,
@@ -52,9 +53,9 @@ export async function POST(req: NextRequest) {
   const options = await generateAuthenticationOptions({
     rpID,
     userVerification: "required",
-    // `listPasskeys` strips `hybrid` (see filterTransports) so Chrome shows the
-    // local Windows Hello / Touch ID dialog only, not its "use a phone" sheet
-    // alongside it.
+    // `listPasskeys` strips `hybrid` (see filterTransports). Note transports are
+    // only a routing hint — on their own they do NOT suppress Chrome's phone
+    // sheet; `hints` below is what does that.
     allowCredentials: creds.map((c) => ({
       id: c.credentialId,
       transports: (c.transports ?? undefined) as
@@ -63,7 +64,10 @@ export async function POST(req: NextRequest) {
     })),
   });
 
-  const res = NextResponse.json(options);
+  // Ask the browser for the on-device authenticator UI only (no "use a phone"
+  // / Google sheet). @simplewebauthn/server@13 doesn't model `hints`, so it is
+  // attached here; the browser lib spreads it into navigator.credentials.get().
+  const res = NextResponse.json({ ...options, hints: CLIENT_DEVICE_HINTS });
   res.cookies.set(
     WEBAUTHN_CHALLENGE_COOKIE,
     await signChallenge({
