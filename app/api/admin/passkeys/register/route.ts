@@ -6,6 +6,7 @@ import {
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 import { hasAdminSession, getAdminSessionUser } from "@/lib/admin/auth";
 import {
+  CLIENT_DEVICE_HINTS,
   getRpConfig,
   listPasskeys,
   savePasskey,
@@ -60,7 +61,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const res = NextResponse.json(options);
+  // Same on-device-only hint as the auth ceremony, so enrolling doesn't offer
+  // the phone / Google route either. Pairs with authenticatorAttachment:
+  // "platform" above — that constrains WHAT may enrol, this constrains the UI.
+  const res = NextResponse.json({ ...options, hints: CLIENT_DEVICE_HINTS });
   res.cookies.set(
     WEBAUTHN_CHALLENGE_COOKIE,
     await signChallenge({
