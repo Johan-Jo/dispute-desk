@@ -5311,7 +5311,7 @@ How it works:
   `admin_impersonation_ended` `audit_events` (`actor_type: "system"`, `admin: true`,
   `adminUserId`), visible in `/admin/audit`.
 
-### Passkey second factor (custom WebAuthn — Face ID / Windows Hello)
+### Passkey second factor (custom WebAuthn — Windows Hello / Touch ID / Face ID)
 
 `/admin` requires a **passkey** in addition to the Supabase session + grant. The
 gate is three conditions: `valid session` **AND** `active grant` **AND**
@@ -5354,8 +5354,23 @@ How it works:
 - **Lock-out escape hatch:** if an admin loses all devices, a service-role
   operator runs `DELETE FROM admin_passkeys WHERE user_id = '<uuid>'` to reset them
   to the enroll flow (documented in the migration).
-- **Enroll copy:** "Add Face ID, Windows Hello, or a security key…" — the biometric
-  check stays on-device; the server only verifies a cryptographic assertion.
+- **Platform-only, single prompt (fixed 2026-09-05).** Registration pins
+  `authenticatorSelection.authenticatorAttachment: "platform"`, and
+  `filterTransports()` in `lib/admin/passkeys.ts` strips the `hybrid` transport
+  both on write (`savePasskey`) and on read (`listPasskeys`,
+  `getPasskeyByCredentialId`). **Why:** Chrome on Windows reports a Windows Hello
+  credential as `["hybrid","internal"]` because Windows can also proxy a phone.
+  Echoing `hybrid` back in `allowCredentials` made Chrome open its cross-device
+  "use a phone" / Google picker *at the same time* as the Windows Hello dialog —
+  two competing prompts for one device unlock. Filtering on read means credentials
+  already stored with `hybrid` are fixed without a re-enroll. `usb`/`nfc`/`ble`
+  are still allowed (a plugged-in security key doesn't open the phone sheet); an
+  all-`hybrid` credential yields `null`, not `[]`, because some browsers read an
+  empty array as "no transport works". Pinned by
+  `tests/unit/passkeyTransports.test.ts` — do not re-add `hybrid`.
+- **Enroll copy:** "Add this device's built-in unlock — Windows Hello, Touch ID or
+  Face ID…" — the biometric check stays on-device; the server only verifies a
+  cryptographic assertion.
 - **Manager page (`/admin/passkeys`):** list / rename / revoke registered devices,
   and "Add this device" (runs the register + re-assert ceremony inline). Backed by
   `GET /api/admin/passkeys` and `PATCH`/`DELETE /api/admin/passkeys/[id]` — these

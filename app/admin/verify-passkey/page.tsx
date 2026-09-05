@@ -73,7 +73,7 @@ function VerifyPasskey() {
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] mb-2">Confirm it&rsquo;s you</h1>
           <p className="text-sm text-[#64748B] mb-6">
-            Use Face ID, Windows Hello, or your security key to open the admin panel.
+            Use Windows Hello, Touch ID, or Face ID on this device to open the admin panel.
           </p>
 
           {error && <p className="text-sm text-[#B91C1C] mb-4">{error}</p>}

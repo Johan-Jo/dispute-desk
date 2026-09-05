@@ -52,6 +52,9 @@ export async function POST(req: NextRequest) {
   const options = await generateAuthenticationOptions({
     rpID,
     userVerification: "required",
+    // `listPasskeys` strips `hybrid` (see filterTransports) so Chrome shows the
+    // local Windows Hello / Touch ID dialog only, not its "use a phone" sheet
+    // alongside it.
     allowCredentials: creds.map((c) => ({
       id: c.credentialId,
       transports: (c.transports ?? undefined) as
