@@ -45,7 +45,6 @@ import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
 import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
-import { DashboardMerchantMessageBanner } from "./DashboardMerchantMessageBanner";
 import { CbInqBreakdown } from "./CbInqBreakdown";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import { localizeEventDescription } from "@/lib/disputeEvents/localizeDescription";
@@ -330,10 +329,6 @@ export default function EmbeddedDashboardPage() {
           <div data-help-guide="dashboard-attention-banner">
             <DashboardAttentionBanner stats={stats} />
           </div>
-        </Layout.Section>
-
-        <Layout.Section>
-          <DashboardMerchantMessageBanner />
         </Layout.Section>
 
         <Layout.Section>

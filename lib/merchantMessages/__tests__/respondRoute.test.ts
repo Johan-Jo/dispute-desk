@@ -63,8 +63,7 @@ function req(body: unknown) {
   return new Request("http://localhost/api/dashboard/message/respond", {
     method: "POST",
     body: JSON.stringify(body),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any;
+  }) as unknown as Parameters<typeof POST>[0];
 }
 
 beforeEach(() => {
