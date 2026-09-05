@@ -13,7 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
-import { sendAdminEmail } from "@/lib/email/adminEmail";
+import { Resend } from "resend";
+import { DEFAULT_FROM_EMAIL } from "@/lib/email/addresses";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,6 @@ const MAX_NOTE = 2000;
 
 function clean(value: unknown, max: number): string {
   if (typeof value !== "string") return "";
-  // eslint-disable-next-line no-control-regex
   return value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
 }
 
@@ -39,6 +39,51 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/**
+ * Send the ops notification and report whether it was accepted.
+ *
+ * Deliberately not `sendAdminEmail`: that helper returns void and
+ * swallows every failure, which is right for background drift alerts
+ * but wrong here — a merchant reply that never reaches ops is the one
+ * failure this feature cannot afford to hide.
+ */
+async function sendResponseNotification(msg: {
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.ADMIN_NOTIFY_EMAIL ?? "oi@johan.com.br";
+  if (!apiKey) {
+    console.warn("[email:merchant-message-response] RESEND_API_KEY not set");
+    return { ok: false, error: "RESEND_API_KEY not set" };
+  }
+  try {
+    const { data, error } = await new Resend(apiKey).emails.send({
+      from: DEFAULT_FROM_EMAIL,
+      to,
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+    });
+    // The Resend SDK reports API-level rejections in `error` rather than
+    // throwing, so this is the common failure path, not the rare one.
+    if (error) {
+      const detail = error.message ?? String(error);
+      console.error("[email:merchant-message-response] rejected:", detail);
+      return { ok: false, error: detail };
+    }
+    console.info(
+      `[email:merchant-message-response] sent to ${to} (${data?.id ?? "?"})`,
+    );
+    return { ok: true };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("[email:merchant-message-response] send failed:", detail);
+    return { ok: false, error: detail };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -121,11 +166,12 @@ export async function POST(req: NextRequest) {
     ["Note", note || "—"],
   ];
 
-  // Awaited (not fire-and-forget): this email IS the point of the
-  // feature. sendAdminEmail never throws, so a send failure still
-  // returns ok — the reply is already persisted on the row either way.
-  await sendAdminEmail({
-    logTag: "merchant-message-response",
+  // This email IS the point of the feature, so unlike the other admin
+  // alerts we need to know whether it actually went out. sendAdminEmail
+  // returns void and swallows failures, which made a missing key (dev)
+  // or a Resend rejection indistinguishable from success. Send directly
+  // and record the outcome on the row so admin can see the difference.
+  const notify = await sendResponseNotification({
     subject: `${shopName} shared contact details (${shopDomain})`,
     html: `<h2>Merchant replied to your in-app message</h2><table cellpadding="6">${rows
       .map(
@@ -135,6 +181,19 @@ export async function POST(req: NextRequest) {
       .join("")}</table>`,
     text: rows.map(([k, v]) => `${k}: ${v}`).join("\n"),
   });
+
+  await sb
+    .from("merchant_messages")
+    .update(
+      notify.ok
+        ? {
+            response_notified_at: new Date().toISOString(),
+            response_notify_error: null,
+          }
+        : { response_notify_error: notify.error },
+    )
+    .eq("id", messageId)
+    .eq("shop_id", shopId);
 
   await sb.from("audit_events").insert({
     shop_id: shopId,

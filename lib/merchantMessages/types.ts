@@ -30,6 +30,10 @@ export interface MerchantMessage {
   responseEmail: string | null;
   responsePhone: string | null;
   responseNote: string | null;
+  /** When the ops notification email was accepted by Resend. */
+  responseNotifiedAt: string | null;
+  /** Why that email did not go out, when it didn't. */
+  responseNotifyError: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,6 +66,8 @@ export function mapMerchantMessageRow(row: Record<string, unknown>): MerchantMes
     responseEmail: nullable(row.response_email),
     responsePhone: nullable(row.response_phone),
     responseNote: nullable(row.response_note),
+    responseNotifiedAt: nullable(row.response_notified_at),
+    responseNotifyError: nullable(row.response_notify_error),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
   };

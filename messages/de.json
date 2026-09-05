@@ -351,13 +351,13 @@
       "emailLabel": "E-Mail",
       "phoneLabel": "Telefon",
       "cta": "Senden",
-      "sent": "Gesendet",
       "dismiss": "Schließen",
       "subtitle": "Hinterlassen Sie E-Mail oder Telefonnummer und wir melden uns innerhalb eines Werktags.",
       "helper": "E-Mail oder Telefon eintragen — eines genügt.",
       "error": "Das hat leider nicht geklappt. Bitte versuchen Sie es erneut.",
       "thanksTitle": "Vielen Dank — wir melden uns",
-      "thanksBody": "Danke! Wir melden uns innerhalb eines Werktags."
+      "thanksBody": "Danke! Wir melden uns innerhalb eines Werktags.",
+      "sending": "Wird gesendet…"
     }
   },
   "disputes": {

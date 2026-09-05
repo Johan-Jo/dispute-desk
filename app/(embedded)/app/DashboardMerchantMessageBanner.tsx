@@ -42,6 +42,12 @@ const FIELD_BORDER = "#E5E7EB";
 /* DisputeDeskUI.Button variant="danger": bg #EF4444, hover #DC2626. */
 const BTN_DANGER = "#EF4444";
 const BTN_DANGER_HOVER = "#DC2626";
+/* Confirmation state. The design covers the ask, not the acknowledgement;
+ * these follow the same success family the admin card already uses. */
+const OK_BG = "#F0FDF4";
+const OK_BORDER = "#BBF7D0";
+const OK_TEXT = "#166534";
+const OK_MUTED = "#15803D";
 
 /** Matches the design-system TextField: h-40px, 8px radius, 14px text. */
 const fieldStyle: React.CSSProperties = {
@@ -124,9 +130,7 @@ export function DashboardMerchantMessageBanner() {
 
   const helperText = error
     ? t("dashboard.merchantMessage.error")
-    : submitted
-      ? t("dashboard.merchantMessage.thanksBody")
-      : t("dashboard.merchantMessage.helper");
+    : t("dashboard.merchantMessage.helper");
 
   return (
     <div
@@ -234,7 +238,73 @@ export function DashboardMerchantMessageBanner() {
           {message.body}
         </p>
 
-        {message.askForContact ? (
+        {message.askForContact && submitted ? (
+          /* Sent: the form is gone entirely and replaced by a green
+           * confirmation panel echoing what we received, so the state
+           * reads as finished rather than as a filled-in form. */
+          <div
+            style={{
+              background: OK_BG,
+              border: `1px solid ${OK_BORDER}`,
+              borderRadius: 10,
+              padding: "14px 16px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+            }}
+          >
+            <span style={{ flex: "0 0 auto", color: OK_TEXT, marginTop: 1 }}>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="8.5 12.5 11 15 15.5 9.5" />
+              </svg>
+            </span>
+            <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: OK_TEXT,
+                }}
+              >
+                {t("dashboard.merchantMessage.thanksTitle")}
+              </p>
+              <p
+                style={{
+                  margin: "2px 0 0",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  color: OK_MUTED,
+                }}
+              >
+                {t("dashboard.merchantMessage.thanksBody")}
+              </p>
+              {/* Echo what we actually received — proof it landed, and a
+               * chance to spot a typo before we try to reach them. */}
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: 13,
+                  color: OK_MUTED,
+                  wordBreak: "break-word",
+                }}
+              >
+                {[email.trim(), phone.trim()].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </div>
+        ) : message.askForContact ? (
           <>
             <p
               style={{
@@ -254,7 +324,6 @@ export function DashboardMerchantMessageBanner() {
                   placeholder={t("dashboard.merchantMessage.emailLabel")}
                   aria-label={t("dashboard.merchantMessage.emailLabel")}
                   value={email}
-                  disabled={submitted}
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setError(false);
@@ -269,7 +338,6 @@ export function DashboardMerchantMessageBanner() {
                   placeholder={t("dashboard.merchantMessage.phoneLabel")}
                   aria-label={t("dashboard.merchantMessage.phoneLabel")}
                   value={phone}
-                  disabled={submitted}
                   onChange={(e) => {
                     setPhone(e.target.value);
                     setError(false);
@@ -280,7 +348,7 @@ export function DashboardMerchantMessageBanner() {
               <button
                 type="button"
                 onClick={submit}
-                disabled={!canSend || submitting || submitted}
+                disabled={!canSend || submitting}
                 onMouseEnter={() => setHoverSend(true)}
                 onMouseLeave={() => setHoverSend(false)}
                 style={{
@@ -291,21 +359,19 @@ export function DashboardMerchantMessageBanner() {
                   border: 0,
                   borderRadius: 8,
                   background:
-                    hoverSend && canSend && !submitted
-                      ? BTN_DANGER_HOVER
-                      : BTN_DANGER,
+                    hoverSend && canSend ? BTN_DANGER_HOVER : BTN_DANGER,
                   color: "#FFFFFF",
                   fontSize: 14,
                   fontWeight: 500,
                   fontFamily: "inherit",
                   whiteSpace: "nowrap",
-                  cursor: canSend && !submitted ? "pointer" : "not-allowed",
-                  opacity: canSend && !submitted ? 1 : 0.5,
+                  cursor: canSend ? "pointer" : "not-allowed",
+                  opacity: canSend ? 1 : 0.5,
                   transition: "background 120ms",
                 }}
               >
-                {submitted
-                  ? t("dashboard.merchantMessage.sent")
+                {submitting
+                  ? t("dashboard.merchantMessage.sending")
                   : t("dashboard.merchantMessage.cta")}
               </button>
             </div>

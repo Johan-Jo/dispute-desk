@@ -198,6 +198,17 @@ export function ShopMerchantMessages({ shopId }: { shopId: string }) {
                     {m.responseEmail && m.responsePhone ? " · " : null}
                     {m.responsePhone ? `Phone: ${m.responsePhone}` : null}
                   </p>
+                  {/* The reply is safe in the database either way; this
+                   *  says whether the heads-up email actually reached
+                   *  the inbox, so a silent miss is not mistaken for
+                   *  "nobody replied". */}
+                  {!m.responseNotifiedAt ? (
+                    <p className="mt-2 text-[#B45309]">
+                      Email notification did NOT go out
+                      {m.responseNotifyError ? `: ${m.responseNotifyError}` : ""}
+                      . The reply above is stored — follow up manually.
+                    </p>
+                  ) : null}
                 </div>
               ) : m.dismissedAt ? (
                 <p className="mt-3 text-[#B45309]">Dismissed without replying</p>
