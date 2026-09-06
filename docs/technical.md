@@ -1116,9 +1116,22 @@ Two reasons, both learned the hard way:
 
 The function **discovers its target tables from the FK graph** (`pg_constraint` where `confrelid = shops`) rather than a hardcoded list. A hand-maintained list rots the moment a migration adds a per-shop table — silently, since the new table's rows just survive the purge — and cannot be written correctly by hand anyway: `evidence_items`, `pack_templates` and `integration_secrets` hang off a parent rather than off `shops`, so a plausible hand-written list fails with `column "shop_id" does not exist`. Their rows go via their own `ON DELETE CASCADE` when the parent is removed.
 
-#### Known related defect
+#### The two escape hatches
 
-The GDPR `shop/redact` webhook (`app/api/webhooks/shop-redact/route.ts`) lists `audit_events` and `dispute_events` in its own cascade and therefore **cannot complete** — it logs the trigger error, continues, and then fails to delete the `shops` row, leaving the shop partially redacted. It should be moved onto `admin_purge_shop`. Not fixed here to keep this change reviewable.
+Two transaction-scoped GUCs let privileged paths through the append-only triggers. Ordinary application traffic sets neither, so the immutability invariant is unchanged for every normal request.
+
+| GUC | DELETE | UPDATE | Used by |
+|---|---|---|---|
+| `app.allow_audit_mutation` | yes | yes | E2E fixture teardown (`delete_e2e_fixture_dispute`), ops wipe scripts |
+| `app.allow_append_only_delete` | yes | **no** | `admin_purge_shop` |
+
+The purge flag is deliberately narrower: erasing a shop wholesale is legitimate, rewriting its history never is.
+
+**Do not rewrite `reject_audit_mutation()` with a fresh `create or replace` body.** Migration `20260906170000` did exactly that to add the purge flag and silently dropped the older `app.allow_audit_mutation` branch, breaking `delete_e2e_fixture_dispute` and turning the e2e suite red (caught on the PR, restored in `20260906180000`). Any future change to these triggers must carry **both** branches forward.
+
+#### GDPR `shop/redact`
+
+`app/api/webhooks/shop-redact/route.ts` delegates to `admin_purge_shop`. It previously walked a hardcoded table list with one PostgREST DELETE per table, which **could not complete**: the append-only triggers refused two of those tables, the loop swallowed the error and continued, and the final `shops` delete then failed as well — leaving shops permanently half-redacted while still answering `200`. A purge failure now returns `500` so Shopify retries, rather than hiding an incomplete erasure behind a success.
 
 ### Storefront domain (`shops.primary_domain`)
 
