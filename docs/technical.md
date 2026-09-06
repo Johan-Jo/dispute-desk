@@ -1098,6 +1098,28 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 - **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column (matches Figma `shops-admin.tsx:42-49`). Nulls always sink regardless of direction.
 - **AdminTable** sortable-header form: `headers` accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
 
+### Deleting a shop (admin purge)
+
+`DELETE /api/admin/shops/[id]?confirm=<shop_domain>` permanently removes a shop and every row belonging to it. For clearing dev stores, internal test installs and app-review throwaways out of the admin list. **A real delete, not an uninstall flag** — nothing is recoverable and the merchant must install the app again.
+
+- **UI:** trash icon per row on `/admin/shops` (`components/admin/DeleteShopButton.tsx`). The dialog names what will be destroyed and requires the operator to **type the myshopify domain**. The list is full of near-identical names (`6mjjvm-tc`, `xxda51-v1`, `isj-153`), so a plain "Are you sure?" is not a real check against a mis-click. The same typed value is the API's `?confirm=`, so the guard holds server-side too.
+- **Auth:** middleware gates `/api/admin/*` already; the route re-checks `getAdminSessionUser()` anyway, because this is the most destructive endpoint in the app and a future matcher refactor must not silently open it.
+
+#### Why the work lives in SQL (`admin_purge_shop`)
+
+Two reasons, both learned the hard way:
+
+1. **Atomicity.** A loop of PostgREST deletes is not a transaction — a failure halfway leaves a half-erased shop.
+2. **The append-only tables.** `audit_events` and `dispute_events` carry `BEFORE DELETE` triggers that raise `append-only: DELETE not allowed`. Because every per-shop table cascades from `shops`, a plain `delete from shops` hits those triggers and **aborts the whole transaction** (verified on dev 2026-09-06 in a rolled-back transaction).
+
+`admin_purge_shop(uuid)` (migration `20260906170000`) sets `app.allow_append_only_delete` — transaction-scoped via `set_config(..., true)`, so it cannot leak past COMMIT — and the triggers yield to exactly that flag. **Ordinary traffic is unaffected: an unflagged DELETE is still refused, and UPDATE stays forbidden on both tables even with the flag set** (rewriting history is never legitimate; erasing a shop wholesale is). Both properties are covered by the trigger probes recorded above.
+
+The function **discovers its target tables from the FK graph** (`pg_constraint` where `confrelid = shops`) rather than a hardcoded list. A hand-maintained list rots the moment a migration adds a per-shop table — silently, since the new table's rows just survive the purge — and cannot be written correctly by hand anyway: `evidence_items`, `pack_templates` and `integration_secrets` hang off a parent rather than off `shops`, so a plausible hand-written list fails with `column "shop_id" does not exist`. Their rows go via their own `ON DELETE CASCADE` when the parent is removed.
+
+#### Known related defect
+
+The GDPR `shop/redact` webhook (`app/api/webhooks/shop-redact/route.ts`) lists `audit_events` and `dispute_events` in its own cascade and therefore **cannot complete** — it logs the trigger error, continues, and then fails to delete the `shops` row, leaving the shop partially redacted. It should be moved onto `admin_purge_shop`. Not fixed here to keep this change reviewable.
+
 ### Storefront domain (`shops.primary_domain`)
 
 `shops.shop_domain` is the **myshopify alias** — `6a8848-dd.myshopify.com` for a store customers actually reach at `meinmaison.com`. It is the correct key for every Shopify-side call (Admin API host, Admin URLs, Partners, session lookup) and must never be replaced by the storefront domain in those paths. It is a poor *identifier for humans*, which is what ops surfaces need.

@@ -10,6 +10,7 @@ import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
 import { AdminTable, type AdminTableHeader } from "@/components/admin/AdminTable";
 import { StatusPill } from "@/components/admin/StatusPill";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
+import { DeleteShopButton } from "@/components/admin/DeleteShopButton";
 
 interface Shop {
   id: string;
@@ -238,6 +239,14 @@ export default function AdminShopsPage() {
                     <ExternalLink className="w-3.5 h-3.5" />
                     View Details
                   </Link>
+                  <DeleteShopButton
+                    shopId={s.id}
+                    shopDomain={s.shop_domain}
+                    displayName={displayShopDomain(s)}
+                    disputeCount={s.disputeCount}
+                    packCount={s.packCount}
+                    onDeleted={fetchShops}
+                  />
                 </div>
               </td>
             </tr>
