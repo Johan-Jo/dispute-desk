@@ -64,6 +64,44 @@ describe("displayShopDomain", () => {
     ).toBe("isj-153.myshopify.com");
   });
 
+  it("drops a leading www for display", () => {
+    // Shopify reports `www.blume.com` as the primary domain and the column
+    // stores it that way; only the rendering is tidied.
+    expect(
+      displayShopDomain({
+        primary_domain: "www.blume.com",
+        shop_domain: "blume-box.myshopify.com",
+      }),
+    ).toBe("blume.com");
+  });
+
+  it("only strips a LEADING www, never a www inside the name", () => {
+    expect(
+      displayShopDomain({ primary_domain: "wwwmart.com", shop_domain: "x.myshopify.com" }),
+    ).toBe("wwwmart.com");
+    expect(
+      displayShopDomain({ primary_domain: "shop.wwwx.com", shop_domain: "x.myshopify.com" }),
+    ).toBe("shop.wwwx.com");
+  });
+
+  it("still differs from the alias after stripping, so the alias line renders", () => {
+    // The pages decide whether to show the myshopify line by comparing the
+    // DISPLAYED value to shop_domain — stripping must not collapse them.
+    const shop = {
+      primary_domain: "www.blume.com",
+      shop_domain: "blume-box.myshopify.com",
+    };
+    expect(displayShopDomain(shop)).not.toBe(shop.shop_domain);
+  });
+
+  it("equals the alias for a shop with no custom domain, so no second line", () => {
+    const shop = {
+      primary_domain: "surasvenne.myshopify.com",
+      shop_domain: "surasvenne.myshopify.com",
+    };
+    expect(displayShopDomain(shop)).toBe(shop.shop_domain);
+  });
+
   it("works on a row that omits the column entirely", () => {
     expect(displayShopDomain({ shop_domain: "isj-153.myshopify.com" })).toBe(
       "isj-153.myshopify.com",
