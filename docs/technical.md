@@ -5394,6 +5394,119 @@ How it works:
   iCloud Keychain / Google Password Manager sync a passkey within one ecosystem
   automatically.
 
+## Targeted merchant messages (admin → one shop)
+
+Ops can put a dismissible banner on a single merchant's embedded
+dashboard, optionally asking for a contact channel. Built for the case
+where an account shows real recoverable value but every email address
+on file has gone unanswered.
+
+**Where:** Admin → Shops → (shop) → *In-app message* card
+(`components/admin/ShopMerchantMessages.tsx`).
+
+**Data:** `merchant_messages` (migration
+`20260905120000_merchant_messages.sql`). One row = one message to one
+shop. RLS on with no policies — service-role access only, same posture
+as the other ops tables.
+
+| Column | Meaning |
+|---|---|
+| `title` / `body` | Banner copy, admin-authored free text |
+| `ask_for_contact` | Show email/phone inputs + submit |
+| `tone` | Polaris banner tone (`info`/`success`/`warning`/`critical`) |
+| `status` | `draft` (never renders) / `published` / `archived` |
+| `expires_at` | Optional auto-expiry |
+| `dismissed_at` | Merchant dismissed it |
+| `responded_at`, `response_email`, `response_phone`, `response_note` | Merchant's reply |
+
+**Copy is deliberately NOT tokenized.** These are one-off human notes
+written for a specific merchant in that merchant's language. No library
+code derives them and nothing persists them into pack data, so the
+structural-i18n rule (CLAUDE.md #5) doesn't apply. Only the surrounding
+form chrome (`dashboard.merchantMessage.*`) is localized across the six
+locales.
+
+**Merchant surface:** `DashboardMerchantMessageBanner` renders the
+newest active message (published, not dismissed, unexpired). It lives in
+`EmbeddedAppChrome`, so it shows on **every** embedded page — not just
+the dashboard — and sits **above** the scope and billing banners: an ops
+message awaiting an answer outranks both. It is a dismissible Polaris
+`Banner`, **not** a blocking modal; a modal that intercepts the session
+would be hostile to the merchant and a Shopify App Store review risk.
+Dismissal is server-side and per-message, so it holds across the
+merchant's devices and across pages.
+
+**Visual spec:** the "Red top alert banner" Claude Design handoff
+(`Dashboard.dc.html`) — a white card with a solid `#B42318` header bar
+carrying a warning triangle, the title, and a dismiss X; a `#FCA5A5`
+border; and a red-tinted lift shadow. Transcribed literally rather than
+expressed as a Polaris `<Banner>`: Polaris has no solid-header variant,
+and the design's whole purpose is to outshout the tonal banners around
+it. Contact inputs are 40px-tall fields and the Send button is the
+design system's `danger` variant (`#EF4444`, hover `#DC2626`).
+
+The Send button enables on a plausible email **or** ≥7 phone digits —
+either channel alone is a complete answer, matching the design's own
+validation. After a successful send the button reads "Sent" and the
+helper line becomes the thank-you.
+
+`tone` is still stored per message and the composer defaults to
+`critical`, but note the merchant-facing banner now renders the red
+design for every message regardless of tone; `tone` currently affects
+only what an admin sees in the composer. Wire it through if softer
+variants are ever needed.
+
+**Routes**
+
+| Route | Purpose |
+|---|---|
+| `GET /api/dashboard/message` | Active message for the current shop |
+| `POST /api/dashboard/message/dismiss` | Merchant dismissed |
+| `POST /api/dashboard/message/respond` | Merchant's reply → emails ops, stores on the row |
+| `GET,POST /api/admin/shops/[id]/messages` | List / create |
+| `PATCH,DELETE /api/admin/shops/[id]/messages/[messageId]` | Publish, archive, edit, delete |
+
+Every merchant-facing write is scoped by `shop_id` as well as message
+id, so a uuid belonging to another shop cannot be dismissed or answered
+from the wrong session. Replies are HTML-escaped before they reach the
+ops inbox. Both invariants are pinned in
+`lib/merchantMessages/__tests__/respondRoute.test.ts`.
+
+**Confirmation state.** Once the merchant submits, the whole form is
+replaced by a green confirmation panel echoing the address/number we
+received. A filled-in-but-disabled form read as "still editable" and
+left merchants unsure whether anything had happened.
+
+That panel is component state, so it lasts only until the merchant
+navigates. The durable half is in `getActiveMerchantMessage`, which
+filters on **`responded_at IS NULL`** alongside `dismissed_at`: an
+answered message stops being active and the banner never returns.
+Without that filter a merchant who replied met the empty form again on
+their very next page view, asking a second time for what they had just
+given us. Pinned in `lib/merchantMessages/__tests__/activeMessage.test.ts`.
+
+**Delivery is tracked, not assumed.** Responses email
+`ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`), and the outcome is
+recorded on the row (`response_notified_at` / `response_notify_error`,
+migration `20260906090000`). This route deliberately does **not** use
+the shared `sendAdminEmail` helper: that returns `void` and swallows
+failures, which is right for background drift alerts but wrong here —
+a merchant reply that never reaches ops is the one failure this feature
+cannot afford to hide. The admin card shows a warning on any reply
+whose notification did not go out, so a silent miss is never mistaken
+for "nobody replied". The reply itself is always stored first, so a
+mail failure never loses the contact details.
+
+⚠️ **Dev cannot send these emails.** The `disputedesk-dev` Vercel
+project has no `RESEND_API_KEY` (only Production does), so on
+`dev.disputedesk.app` every response records
+`response_notify_error: "RESEND_API_KEY not set"` and no mail is sent.
+This is environment configuration, not a code defect — verify email
+delivery on production.
+
+Replies are also logged as a `merchant_message_answered` audit event
+with `actor_type='merchant'`.
+
 ## Multi-Language (i18n)
 
 ### Stack

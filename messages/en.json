@@ -346,7 +346,19 @@
     "buildingMonitoringDesc": "DisputeDesk is working",
     "underReviewCard": "Under review",
     "underReviewCardDesc": "Response sent",
-    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)"
+    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)",
+    "merchantMessage": {
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "cta": "Send",
+      "dismiss": "Dismiss",
+      "subtitle": "Leave an email or phone number and we'll call you back within one business day.",
+      "helper": "Fill in email or phone — either one is enough.",
+      "error": "That didn't go through. Please try again.",
+      "thanksTitle": "Thank you — we'll be in touch",
+      "thanksBody": "Thanks! We'll be in touch within one business day.",
+      "sending": "Sending…"
+    }
   },
   "disputes": {
     "title": "Disputes",

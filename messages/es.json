@@ -346,7 +346,19 @@
     "buildingMonitoringDesc": "DisputeDesk está trabajando",
     "underReviewCard": "En revisión",
     "underReviewCardDesc": "Respuesta enviada",
-    "winRateDenominatorNote": "ganadas ÷ decididas (ganadas, perdidas, aceptadas)"
+    "winRateDenominatorNote": "ganadas ÷ decididas (ganadas, perdidas, aceptadas)",
+    "merchantMessage": {
+      "emailLabel": "Correo electrónico",
+      "phoneLabel": "Teléfono",
+      "cta": "Enviar",
+      "dismiss": "Cerrar",
+      "subtitle": "Déjanos un correo o teléfono y te llamamos en un día hábil.",
+      "helper": "Rellena correo o teléfono — con uno basta.",
+      "error": "No se pudo enviar. Inténtalo de nuevo.",
+      "thanksTitle": "Gracias, te contactaremos",
+      "thanksBody": "¡Gracias! Te contactaremos en un día hábil.",
+      "sending": "Enviando…"
+    }
   },
   "disputes": {
     "title": "Disputas",
