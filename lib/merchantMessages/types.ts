@@ -27,6 +27,7 @@ export interface MerchantMessage {
   expiresAt: string | null;
   dismissedAt: string | null;
   respondedAt: string | null;
+  responseName: string | null;
   responseEmail: string | null;
   responsePhone: string | null;
   responseNote: string | null;
@@ -63,6 +64,7 @@ export function mapMerchantMessageRow(row: Record<string, unknown>): MerchantMes
     expiresAt: nullable(row.expires_at),
     dismissedAt: nullable(row.dismissed_at),
     respondedAt: nullable(row.responded_at),
+    responseName: nullable(row.response_name),
     responseEmail: nullable(row.response_email),
     responsePhone: nullable(row.response_phone),
     responseNote: nullable(row.response_note),

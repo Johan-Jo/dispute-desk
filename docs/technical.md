@@ -5417,7 +5417,7 @@ as the other ops tables.
 | `status` | `draft` (never renders) / `published` / `archived` |
 | `expires_at` | Optional auto-expiry |
 | `dismissed_at` | Merchant dismissed it |
-| `responded_at`, `response_email`, `response_phone`, `response_note` | Merchant's reply |
+| `responded_at`, `response_name`, `response_email`, `response_phone`, `response_note` | Merchant's reply |
 
 **Copy is deliberately NOT tokenized.** These are one-off human notes
 written for a specific merchant in that merchant's language. No library
@@ -5471,6 +5471,18 @@ id, so a uuid belonging to another shop cannot be dismissed or answered
 from the wrong session. Replies are HTML-escaped before they reach the
 ops inbox. Both invariants are pinned in
 `lib/merchantMessages/__tests__/respondRoute.test.ts`.
+
+The contact row is **Name · Email · Phone · Send**. Name is captured
+because these messages typically ask *who is responsible for the
+account*, so it is the field that answers the question — but it is
+deliberately **not** part of the send-enable rule: a name with no
+channel is not reachable, so email-or-phone still gates Send.
+
+Message bodies render with `white-space: pre-wrap`. The admin composes
+them in a textarea, so the paragraph breaks they type are meaningful —
+a bilingual message needs its halves to stay apart. Without this the
+first real merchant message rendered as one run-on paragraph with the
+divider swallowed mid-sentence.
 
 **Confirmation state.** Once the merchant submits, the whole form is
 replaced by a green confirmation panel echoing the address/number we
