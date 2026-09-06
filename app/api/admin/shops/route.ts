@@ -32,7 +32,17 @@ export async function GET(req: NextRequest) {
   const sb = getServiceClient();
   let query = sb.from("shops").select("*").order("created_at", { ascending: false });
 
-  if (search) query = query.ilike("shop_domain", `%${search}%`);
+  // Match either domain: ops search by the real storefront domain
+  // ("blumebox") as readily as by the myshopify alias, and shops installed
+  // before the primary_domain backfill only have the alias.
+  if (search) {
+    const term = search.replace(/[%,()]/g, "");
+    if (term) {
+      query = query.or(
+        `shop_domain.ilike.%${term}%,primary_domain.ilike.%${term}%`,
+      );
+    }
+  }
   if (planFilter) query = query.eq("plan", planFilter);
   if (status === "active") query = query.is("uninstalled_at", null);
   if (status === "uninstalled") query = query.not("uninstalled_at", "is", null);
