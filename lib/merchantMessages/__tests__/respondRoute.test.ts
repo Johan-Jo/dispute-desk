@@ -133,6 +133,22 @@ describe("POST /api/dashboard/message/respond", () => {
     expect(okWrite).toBeTruthy();
   });
 
+  it("stores the name and puts it in the ops email", async () => {
+    await POST(
+      req({ messageId: "msg-1", name: "Hans Meier", email: "h@m.de" }),
+    );
+    const write = updateCalls.find((u) => "response_name" in u);
+    expect(write?.response_name).toBe("Hans Meier");
+    const mail = sendEmail.mock.calls[0][0] as { text: string };
+    expect(mail.text).toContain("Hans Meier");
+  });
+
+  it("still requires a contact channel — a name alone is not reachable", async () => {
+    const res = await POST(req({ messageId: "msg-1", name: "Hans Meier" }));
+    expect(res.status).toBe(400);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
   it("escapes merchant-supplied text before it reaches the ops inbox", async () => {
     await POST(
       req({

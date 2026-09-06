@@ -357,7 +357,8 @@
       "error": "Das hat leider nicht geklappt. Bitte versuchen Sie es erneut.",
       "thanksTitle": "Vielen Dank — wir melden uns",
       "thanksBody": "Danke! Wir melden uns innerhalb eines Werktags.",
-      "sending": "Wird gesendet…"
+      "sending": "Wird gesendet…",
+      "nameLabel": "Name"
     }
   },
   "disputes": {

@@ -4,7 +4,7 @@
  * The merchant answered a contact-asking message. Stores the reply on
  * the row and emails it to the ops address so a human can follow up.
  *
- * Body: { messageId: string, email?: string, phone?: string, note?: string }
+ * Body: { messageId: string, name?: string, email?: string, phone?: string, note?: string }
  *
  * At least one of email/phone is required — the banner asks for
  * "email or phone", so either alone is a complete answer.
@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
 
   let body: {
     messageId?: string;
+    name?: string;
     email?: string;
     phone?: string;
     note?: string;
@@ -105,6 +106,7 @@ export async function POST(req: NextRequest) {
   }
 
   const messageId = (body.messageId ?? "").trim();
+  const name = clean(body.name, MAX_FIELD);
   const email = clean(body.email, MAX_FIELD);
   const phone = clean(body.phone, MAX_FIELD);
   const note = clean(body.note, MAX_NOTE);
@@ -133,6 +135,7 @@ export async function POST(req: NextRequest) {
     .from("merchant_messages")
     .update({
       responded_at: nowIso,
+      response_name: name || null,
       response_email: email || null,
       response_phone: phone || null,
       response_note: note || null,
@@ -161,6 +164,7 @@ export async function POST(req: NextRequest) {
 
   const rows: Array<[string, string]> = [
     ["Shop", `${shopName} (${shopDomain})`],
+    ["Name", name || "—"],
     ["Email", email || "—"],
     ["Phone", phone || "—"],
     ["Note", note || "—"],
@@ -201,6 +205,7 @@ export async function POST(req: NextRequest) {
     event_type: "merchant_message_answered",
     event_payload: {
       message_id: messageId,
+      has_name: !!name,
       has_email: !!email,
       has_phone: !!phone,
       has_note: !!note,

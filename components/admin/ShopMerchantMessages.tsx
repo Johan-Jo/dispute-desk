@@ -194,6 +194,7 @@ export function ShopMerchantMessages({ shopId }: { shopId: string }) {
                 <div className="mt-3 p-3 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0]">
                   <p className="font-medium text-[#166534]">Merchant replied</p>
                   <p className="text-[#166534]">
+                    {m.responseName ? `${m.responseName} — ` : null}
                     {m.responseEmail ? `Email: ${m.responseEmail}` : null}
                     {m.responseEmail && m.responsePhone ? " · " : null}
                     {m.responsePhone ? `Phone: ${m.responsePhone}` : null}

@@ -357,7 +357,8 @@
       "error": "L'envoi a échoué. Veuillez réessayer.",
       "thanksTitle": "Merci — nous vous recontactons",
       "thanksBody": "Merci ! Nous vous recontactons sous un jour ouvré.",
-      "sending": "Envoi…"
+      "sending": "Envoi…",
+      "nameLabel": "Nom"
     }
   },
   "disputes": {

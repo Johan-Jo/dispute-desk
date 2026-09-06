@@ -357,7 +357,8 @@
       "error": "Não foi possível enviar. Tente novamente.",
       "thanksTitle": "Obrigado — entraremos em contacto",
       "thanksBody": "Obrigado! Entraremos em contacto dentro de um dia útil.",
-      "sending": "A enviar…"
+      "sending": "A enviar…",
+      "nameLabel": "Nome"
     }
   },
   "disputes": {
