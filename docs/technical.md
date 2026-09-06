@@ -1665,6 +1665,14 @@ Service-role only RLS. Hot-path indexes on `(shop_id, proxy_detected)`, `(shop_i
 
 **`fraud_intel_parse_misses`** — surface table for fact strings the parser didn't match. Drives the `/admin/fraud-intel` ops widget so we can monitor parser drift when Shopify rewords a signal.
 
+**Aggregated, one row per distinct phrasing** (since `20260906200000`): the key is `(shop_id, fact_text, parser_version)`, carrying `occurrences`, `first_seen_at` and `last_seen_at`. It is written **only** through `record_parse_misses(jsonb)`, which groups the batch and then upserts-and-increments — never a plain `insert`.
+
+Why it changed: the parser deliberately matches only the six signals GraphQL does not expose, so **every other fact Shopify sends is recorded as a miss by design**. Storing one row per sighting meant the table grew with every order forever. On prod 2026-09-06 it held **6,500,217 rows for 23,890 distinct phrasings** (most of those templated, e.g. `Shipping address is N km…`) at **1371 MB** — the largest table in the database, and, as an unindexed FK to `shops`, the direct cause of the admin shop-delete timing out. It also broke its own widget: the page pulled 2000 raw rows and tallied them in JS, so against 6.5M rows the "top drift patterns" list was an arbitrary sliver rather than the real top-N. The widget now reads `occurrences` and orders in the database.
+
+The diagnostic value was always in the distinct set, never the sighting count per order — which is what an occurrence counter preserves exactly.
+
+**When adding a write path for misses, call `record_parse_misses`.** A direct `insert` would violate the unique key or, worse, silently reintroduce per-sighting rows. A vitest case asserts the batch writer uses the RPC and never inserts into this table directly.
+
 #### Parser (`lib/fraudIntel/factParser.ts`)
 
 Pure function `parseRiskFacts(facts)` → `{ signals, misses }`. Regex-per-template with `(sentiment, regex)` tuples so a NEGATIVE-tagged "proxy detected" doesn't false-match against a POSITIVE-tagged "no proxy" fact (sentiment-gated rules cut false-match rates).
