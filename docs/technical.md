@@ -1116,6 +1116,30 @@ Two reasons, both learned the hard way:
 
 The function **discovers its target tables from the FK graph** (`pg_constraint` where `confrelid = shops`) rather than a hardcoded list. A hand-maintained list rots the moment a migration adds a per-shop table — silently, since the new table's rows just survive the purge — and cannot be written correctly by hand anyway: `evidence_items`, `pack_templates` and `integration_secrets` hang off a parent rather than off `shops`, so a plausible hand-written list fails with `column "shop_id" does not exist`. Their rows go via their own `ON DELETE CASCADE` when the parent is removed.
 
+#### Index every `shop_id` FK
+
+Postgres indexes the **referenced** side of a foreign key automatically, never the referencing side. So `delete from shops` must prove no child row still points at it, and a child table with no index on `shop_id` costs a full sequential scan — **once per FK, whether or not the shop has any rows there**.
+
+`fraud_intel_parse_misses` (1371 MB / 6.5M rows) had no such index. Measured on prod 2026-09-06 for a shop with **zero orders** and 194 audit rows:
+
+| step | before | after |
+|---|---|---|
+| `delete from shops` | 6.605 s | 0.027 s |
+| full `admin_purge_shop` | 14.17 s | 0.03 s |
+
+Through the admin UI the purge blew the statement timeout outright (`canceling statement due to statement timeout`). The shop's own deletes took 3 ms — the entire cost was FK validation against tables it had no rows in, which is why an empty shop was as slow as a busy one. Fixed in `20260906190000` for all four unindexed FKs.
+
+**When adding a per-shop table, index its `shop_id`.** It is not optional bookkeeping: without it, that table's full size is added to the cost of deleting *any* shop. To audit, list FKs to `shops` whose referencing column has no leading index:
+
+```sql
+select c.conrelid::regclass::text as tbl, a.attname
+  from pg_constraint c
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+ where c.contype = 'f' and c.confrelid = 'public.shops'::regclass
+   and not exists (select 1 from pg_index i
+                    where i.indrelid = c.conrelid and i.indkey[0] = a.attnum);
+```
+
 #### The two escape hatches
 
 Two transaction-scoped GUCs let privileged paths through the append-only triggers. Ordinary application traffic sets neither, so the immutability invariant is unchanged for every normal request.
@@ -1640,6 +1664,14 @@ Service-role only RLS. Hot-path indexes on `(shop_id, proxy_detected)`, `(shop_i
 - `parse_miss_reason = 'unmatched_phrases'` = parser was invoked but failed to match any of the present facts. Distinguishes Shopify reword events from data-genuinely-absent.
 
 **`fraud_intel_parse_misses`** — surface table for fact strings the parser didn't match. Drives the `/admin/fraud-intel` ops widget so we can monitor parser drift when Shopify rewords a signal.
+
+**Aggregated, one row per distinct phrasing** (since `20260906200000`): the key is `(shop_id, fact_text, parser_version)`, carrying `occurrences`, `first_seen_at` and `last_seen_at`. It is written **only** through `record_parse_misses(jsonb)`, which groups the batch and then upserts-and-increments — never a plain `insert`.
+
+Why it changed: the parser deliberately matches only the six signals GraphQL does not expose, so **every other fact Shopify sends is recorded as a miss by design**. Storing one row per sighting meant the table grew with every order forever. On prod 2026-09-06 it held **6,500,217 rows for 23,890 distinct phrasings** (most of those templated, e.g. `Shipping address is N km…`) at **1371 MB** — the largest table in the database, and, as an unindexed FK to `shops`, the direct cause of the admin shop-delete timing out. It also broke its own widget: the page pulled 2000 raw rows and tallied them in JS, so against 6.5M rows the "top drift patterns" list was an arbitrary sliver rather than the real top-N. The widget now reads `occurrences` and orders in the database.
+
+The diagnostic value was always in the distinct set, never the sighting count per order — which is what an occurrence counter preserves exactly.
+
+**When adding a write path for misses, call `record_parse_misses`.** A direct `insert` would violate the unique key or, worse, silently reintroduce per-sighting rows. A vitest case asserts the batch writer uses the RPC and never inserts into this table directly.
 
 #### Parser (`lib/fraudIntel/factParser.ts`)
 
