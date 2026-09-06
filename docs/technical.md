@@ -1087,6 +1087,8 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 
 - **Stats row (top):** 4 cards — Total Shops · Active (green) · Total Disputes · Total MRR (sum of `monthlyRevenueUsd` across active shops, derived from `shops.plan` via `lib/billing/plans.ts → PLANS[plan].price`).
 - **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Actions.
+- **Domain column shows the REAL storefront domain**, not the myshopify alias — `meinmaison.com`, not `6a8848-dd.myshopify.com`. It reads `shops.primary_domain` via `displayShopDomain()` (`lib/shopify/domainHost.ts`), falling back to `shop_domain` when the column is null. When the two differ, the alias renders beneath in small grey type, because it is still the key every Shopify-side lookup (Admin URLs, Partners) and our own logs are addressed by. See § *Storefront domain (`shops.primary_domain`)*.
+- **Search** matches either domain (`shop_domain` OR `primary_domain`), so ops can type the brand name or the alias.
 - **Filter chips:** All Plans · Scale · Growth · Starter · Free.
 - **Data source:** `/api/admin/shops` returns the shop row plus 4 computed fields per shop:
   - `chargebackRate90d{,Numerator,Denominator,Available}` — single batched `shop_daily_metrics` read for the trailing 90 UTC days, aggregated in JS.
@@ -1096,11 +1098,22 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 - **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column (matches Figma `shops-admin.tsx:42-49`). Nulls always sink regardless of direction.
 - **AdminTable** sortable-header form: `headers` accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
 
+### Storefront domain (`shops.primary_domain`)
+
+`shops.shop_domain` is the **myshopify alias** — `6a8848-dd.myshopify.com` for a store customers actually reach at `meinmaison.com`. It is the correct key for every Shopify-side call (Admin API host, Admin URLs, Partners, session lookup) and must never be replaced by the storefront domain in those paths. It is a poor *identifier for humans*, which is what ops surfaces need.
+
+`shops.primary_domain` (migration `20260906150000_shops_primary_domain.sql`) stores the storefront's real domain, taken from `Shop.primaryDomain.url` and normalised to a bare lowercase host by `toDomainHost()` in `lib/shopify/domainHost.ts` — normalising at the write keeps the value directly comparable to `shop_domain`, instead of leaving each read site to strip the scheme its own way.
+
+- **Written by** `persistShopCurrency` (`lib/shopify/persistShopCurrency.ts`), alongside `currency_code` and `shop_name`, from the one `fetchShopDetails` call it already makes. Call sites: OAuth callback, embedded token-exchange, and the `shop/update` webhook — so a merchant switching domains propagates on its own.
+- **Nullable and best-effort.** A failed enrichment must never block an install. Every read goes through `displayShopDomain()`, which falls back to `shop_domain`.
+- **Equal to the alias when the shop has no custom domain** — that is correct, not a fallback: the myshopify host genuinely *is* that shop's primary domain. The UI collapses to a single line whenever the two match.
+- **Backfill:** `node scripts/backfill-shop-primary-domain.mjs --env-file .env.production.local` (dry-run; add `--apply` to write) fills the column for shops installed before it existed. Uses the stored offline token per `[[reference_merchant_admin_token_and_env_files]]`; skips uninstalled shops and dead tokens with a warning rather than failing the run. It also fills a missing `shop_name` on the same roundtrip.
+
 ### Admin shop detail (`/admin/shops/[id]`, Figma `pages/admin/shop-detail.tsx`)
 
 The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Figma-aligned custom layout:
 
-- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` shop domain + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
+- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` storefront domain (`displayShopDomain()`, with the myshopify alias on a small grey line below when it differs) + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
 - **Risk Profile card** — see next section.
 - **Quick Stats footer:** 3 cards (Monthly Revenue · Evidence Packs · Total Disputes). **Monthly Revenue is the merchant's own store revenue (GMV) over the trailing 30 days** — `sum(shopify_orders.order_total)` in the shop's dominant currency, via `computeStoreRevenue(shopId)` (`lib/admin/storeRevenue.ts`), surfaced by `GET /api/admin/shops/[id]` as `storeRevenue`. This replaced the old subscription-price display (which showed "$0 / Free plan" and read as broken). Packs + disputes are `count(*)`.
 - **Admin Overrides card:** unchanged (plan override, pack limit override, admin notes).
