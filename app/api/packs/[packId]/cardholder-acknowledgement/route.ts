@@ -54,6 +54,7 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 import { deriveCompletenessMetrics } from "@/lib/automation/completeness";
+import { JOB_PRIORITY_INTERACTIVE } from "@/lib/jobs/priorities";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 export const runtime = "nodejs";
@@ -269,6 +270,7 @@ export async function POST(
     shop_id: pack.shop_id,
     job_type: "build_pack",
     entity_id: packId,
+    priority: JOB_PRIORITY_INTERACTIVE,
   });
 
   // Client signal: when the dispute is in the resubmission window

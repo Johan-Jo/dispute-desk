@@ -29,6 +29,7 @@ function makeJob(overrides: Partial<ClaimedJob> = {}): ClaimedJob {
     entityId: null,
     attempts: 0,
     maxAttempts: 3,
+    priority: 100,
     ...overrides,
   };
 }

@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { JOB_PRIORITY_INTERACTIVE } from "@/lib/jobs/priorities";
 
 /**
  * Pack states where another build_pack/save_to_shopify cycle is already
@@ -157,6 +158,7 @@ export async function POST(
     shop_id: pack.shop_id,
     job_type: "build_pack",
     entity_id: packId,
+    priority: JOB_PRIORITY_INTERACTIVE,
   });
   if (jobErr) {
     // Roll back the flag so the UI doesn't get stuck "regenerating"

@@ -229,7 +229,7 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       // Grounded Defence Package PDF Builder — non-fatal. Flag-gated inside
       // maybeEnqueueDefencePackage so the build path is byte-identical when
       // the feature is off.
-      await maybeEnqueueDefencePackage(packId).catch((err) => {
+      await maybeEnqueueDefencePackage(packId, { priority: job.priority }).catch((err) => {
         console.error("[buildPack] maybeEnqueueDefencePackage failed:", err);
       });
 

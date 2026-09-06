@@ -50,6 +50,7 @@ function makeJob(): ClaimedJob {
     entityId: PACK_ID,
     attempts: 0,
     maxAttempts: 3,
+    priority: 100,
   };
 }
 

@@ -12,6 +12,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { maybeEnqueueDefencePackage } from "@/lib/defence/enqueue";
+import { JOB_PRIORITY_INTERACTIVE } from "@/lib/jobs/priorities";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,8 @@ export async function POST(
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
-  const result = await maybeEnqueueDefencePackage(packId);
+  const result = await maybeEnqueueDefencePackage(packId, {
+    priority: JOB_PRIORITY_INTERACTIVE,
+  });
   return NextResponse.json(result);
 }

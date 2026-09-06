@@ -40,6 +40,7 @@ function makeJob(entityId: string | null = "dispute-1"): ClaimedJob {
     entityId: entityId as string,
     attempts: 0,
     maxAttempts: 3,
+    priority: 100,
   };
 }
 
