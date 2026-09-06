@@ -580,6 +580,8 @@ Hub **article** pages (`/<locale>/resources/[pillar]/[slug]` and `/<locale>/temp
 
 Hub-index pages (`/<locale>/resources`, `/templates`, `/glossary`, `/case-studies`) **return 404 when the requested locale has zero published localizations** for that route kind. Previously they rendered an empty grid at 200 OK, which Google catalogues as "crawled — currently not indexed" and pollutes the indexable URL count. The 404 is enforced in each hub `page.tsx` (resources also requires `!isFiltered` so search/pillar filters keep their 200 OK with an empty result set — that's a user query, not missing content). The sitemap (`pushStaticEntries` in `app/sitemap.ts`) likewise skips these URLs.
 
+**No live links to empty hubs.** Because an empty hub 404s, any live internal link pointing at it is a broken link (Ahrefs "Links to 4XX pages"). `HubSectionNav` therefore takes a `present?: Set<HubSection>` prop and only renders a section tab when that hub has published content in the current locale (the **active** section always renders so the current page still labels itself). Each hub `page.tsx` computes the set via `getNonEmptyHubsForLocale(hubLocale)` in `lib/resources/queries.ts`. The pure `visibleHubSections()` helper encodes the rule and is pinned by `tests/unit/hubSectionNav.test.ts`. As of 2026-06-04 only `resources` and `templates` have published content; `glossary` and `case-studies` are empty, so their tabs do not render and the marketing site exposes no internal links to those 404ing URLs.
+
 ### Marketing home: Resources Hub article strip
 
 Between the **Pricing** section and the **ROI Snapshot**, the marketing home page renders 3 published hub articles for the current locale.

@@ -6,7 +6,10 @@ import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
-import { listPublishedByRoute } from "@/lib/resources/queries";
+import {
+  getNonEmptyHubsForLocale,
+  listPublishedByRoute,
+} from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { HubSectionNav } from "@/components/resources/HubSectionNav";
@@ -48,6 +51,14 @@ export default async function GlossaryPage({ params }: Props) {
   // 404 when this locale has zero published glossary entries — see case-studies/page.tsx.
   if (rows.length === 0) notFound();
 
+  let presentHubs: Awaited<ReturnType<typeof getNonEmptyHubsForLocale>> =
+    new Set();
+  try {
+    presentHubs = await getNonEmptyHubsForLocale(hubLocale);
+  } catch {
+    presentHubs = new Set();
+  }
+
   return (
     <div className={`${MARKETING_PAGE_CONTAINER_CLASS} py-12`}>
       <ResourceBreadcrumbs
@@ -59,6 +70,7 @@ export default async function GlossaryPage({ params }: Props) {
       <HubSectionNav
         basePath={basePath}
         active="glossary"
+        present={presentHubs}
         labels={{
           resources: t("hubNav.resources"),
           templates: t("hubNav.templates"),

@@ -68,6 +68,43 @@ export async function countPublishedForRoute(
   return count ?? 0;
 }
 
+/** Hub route kinds whose index page lives at `/<kind>` on the marketing site. */
+export const HUB_ROUTE_KINDS = [
+  "resources",
+  "templates",
+  "case-studies",
+  "glossary",
+] as const;
+export type HubRouteKind = (typeof HUB_ROUTE_KINDS)[number];
+
+/**
+ * Which hub route kinds have ≥1 published localization for `locale`. Used by
+ * `HubSectionNav` so the section tabs never link to an empty hub — an empty
+ * hub index `notFound()`s (200→404), and a live internal link pointing at it
+ * is what Ahrefs flags as "Links to 4XX pages". Only hubs present here are
+ * rendered as links.
+ */
+export async function getNonEmptyHubsForLocale(
+  locale: HubContentLocale,
+): Promise<Set<HubRouteKind>> {
+  const sb = getServiceClient();
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select("route_kind, content_items!inner(workflow_status)")
+    .eq("locale", locale)
+    .eq("is_published", true)
+    .eq("content_items.workflow_status", "published")
+    .in("route_kind", HUB_ROUTE_KINDS as unknown as string[]);
+  const present = new Set<HubRouteKind>();
+  if (error || !data) return present;
+  for (const row of data as Array<{ route_kind: string }>) {
+    if ((HUB_ROUTE_KINDS as readonly string[]).includes(row.route_kind)) {
+      present.add(row.route_kind as HubRouteKind);
+    }
+  }
+  return present;
+}
+
 export type ListPublishedByRouteResult = {
   rows: (ContentLocalizationRow & { content_items: ContentItemRow })[];
   total: number;
