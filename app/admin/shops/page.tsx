@@ -9,10 +9,15 @@ import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
 import { AdminTable, type AdminTableHeader } from "@/components/admin/AdminTable";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 
 interface Shop {
   id: string;
+  /** The myshopify alias — `6a8848-dd.myshopify.com`. Always present. */
   shop_domain: string;
+  /** The real storefront domain from Shopify's `Shop.primaryDomain`. Null for
+   *  shops installed before the backfill, or when enrichment failed. */
+  primary_domain: string | null;
   plan: string;
   created_at: string;
   uninstalled_at: string | null;
@@ -168,8 +173,18 @@ export default function AdminShopsPage() {
             <tr key={s.id} className="hover:bg-[#F8FAFC] transition-colors">
               <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
-                  <Store className="w-4 h-4 text-[#64748B]" />
-                  <span className="text-sm font-medium text-[#0F172A]">{s.shop_domain}</span>
+                  <Store className="w-4 h-4 text-[#64748B] shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-[#0F172A]">
+                      {displayShopDomain(s)}
+                    </span>
+                    {/* Keep the alias visible when it differs — it is the key
+                        every Shopify-side lookup (Partners, Admin URLs, our
+                        own logs) is still addressed by. */}
+                    {s.primary_domain && s.primary_domain !== s.shop_domain && (
+                      <span className="text-xs text-[#94A3B8]">{s.shop_domain}</span>
+                    )}
+                  </div>
                 </div>
               </td>
               <td className="px-6 py-4">

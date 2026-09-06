@@ -24,11 +24,17 @@ import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
 import { PostOutcomeInsights } from "@/components/admin/PostOutcomeInsights";
 import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
 import { ShopMerchantMessages } from "@/components/admin/ShopMerchantMessages";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 
 interface ShopDetail {
   shop: {
     id: string;
+    /** The myshopify alias. Always present, and the only host Shopify-side
+     *  URLs (Admin, Partners) may be built from. */
     shop_domain: string;
+    /** The real storefront domain. Null pre-backfill or on enrichment
+     *  failure — display falls back to `shop_domain`. */
+    primary_domain: string | null;
     plan: string;
     created_at: string;
     uninstalled_at: string | null;
@@ -137,7 +143,17 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
               <Store className="w-6 h-6 text-[#1D4ED8]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#0F172A] mb-1">{shop.shop_domain}</h1>
+              <h1 className="text-2xl font-bold text-[#0F172A]">
+                {displayShopDomain(shop)}
+              </h1>
+              {/* Keep the alias on screen when it differs — it is what every
+                  Shopify-side lookup (Admin URLs, Partners) and our own logs
+                  are keyed by. */}
+              <p className="text-sm text-[#94A3B8] mb-1 min-h-[1.25rem]">
+                {shop.primary_domain && shop.primary_domain !== shop.shop_domain
+                  ? shop.shop_domain
+                  : null}
+              </p>
               <div className="flex flex-wrap items-center gap-3">
                 <span
                   className={`px-2.5 py-1 ${planPillClass} text-xs font-semibold rounded-full`}
