@@ -357,7 +357,8 @@
       "error": "That didn't go through. Please try again.",
       "thanksTitle": "Thank you — we'll be in touch",
       "thanksBody": "Thanks! We'll be in touch within one business day.",
-      "sending": "Sending…"
+      "sending": "Sending…",
+      "nameLabel": "Name"
     }
   },
   "disputes": {

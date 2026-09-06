@@ -357,7 +357,8 @@
       "error": "Det gick inte att skicka. Försök igen.",
       "thanksTitle": "Tack — vi hör av oss",
       "thanksBody": "Tack! Vi hör av oss inom en arbetsdag.",
-      "sending": "Skickar…"
+      "sending": "Skickar…",
+      "nameLabel": "Namn"
     }
   },
   "disputes": {
