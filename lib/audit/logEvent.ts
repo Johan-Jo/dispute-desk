@@ -21,6 +21,12 @@ export type EventType =
   // "system" with `admin: true` — matching the `admin_override` convention.
   | "admin_impersonation_started"
   | "admin_impersonation_ended"
+  // Internal-admin hard purge of a shop (app/api/admin/shops/[id] DELETE).
+  // Written immediately BEFORE the purge, so it is deleted along with
+  // everything else moments later — it exists to mark intent inside the
+  // transaction window, not to survive it. The durable record is the
+  // server-side log line the route writes after `admin_purge_shop` returns.
+  | "admin_shop_purge_requested"
   | "billing_activated"
   | "billing_declined"
   | "billing_verification_failed"
