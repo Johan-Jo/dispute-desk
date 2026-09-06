@@ -30,10 +30,18 @@ export function toDomainHost(url: string | null | undefined): string | null {
  * falling back to the myshopify alias. Shops installed before the
  * `primary_domain` backfill, and any shop whose enrichment call failed, have
  * a null column — they must still render something.
+ *
+ * A leading `www.` is dropped for display. Shopify genuinely reports
+ * `www.blume.com` as that shop's primary domain and the column stores it that
+ * way — faithful to the source, and still correct if the value is ever used
+ * for matching — but in a list meant for scanning, `blume.com` is how anyone
+ * would refer to the merchant. Display-only: never write the stripped form
+ * back to the column.
  */
 export function displayShopDomain(shop: {
   primary_domain?: string | null;
   shop_domain: string;
 }): string {
-  return shop.primary_domain?.trim() || shop.shop_domain;
+  const domain = shop.primary_domain?.trim() || shop.shop_domain;
+  return domain.replace(/^www\./i, "");
 }

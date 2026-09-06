@@ -150,9 +150,7 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
                   Shopify-side lookup (Admin URLs, Partners) and our own logs
                   are keyed by. */}
               <p className="text-sm text-[#94A3B8] mb-1 min-h-[1.25rem]">
-                {shop.primary_domain && shop.primary_domain !== shop.shop_domain
-                  ? shop.shop_domain
-                  : null}
+                {displayShopDomain(shop) !== shop.shop_domain ? shop.shop_domain : null}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <span

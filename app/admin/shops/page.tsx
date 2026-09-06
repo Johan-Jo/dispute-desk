@@ -181,7 +181,7 @@ export default function AdminShopsPage() {
                     {/* Keep the alias visible when it differs — it is the key
                         every Shopify-side lookup (Partners, Admin URLs, our
                         own logs) is still addressed by. */}
-                    {s.primary_domain && s.primary_domain !== s.shop_domain && (
+                    {displayShopDomain(s) !== s.shop_domain && (
                       <span className="text-xs text-[#94A3B8]">{s.shop_domain}</span>
                     )}
                   </div>
