@@ -227,12 +227,18 @@ export function DashboardMerchantMessageBanner() {
           gap: 14,
         }}
       >
+        {/* pre-wrap, not the HTML default: the admin composes this in a
+         *  textarea, so the paragraph breaks they type are meaningful —
+         *  a bilingual message needs its two halves to stay apart.
+         *  Long lines still wrap normally. */}
         <p
           style={{
             margin: 0,
             fontSize: 15,
             fontWeight: 600,
+            lineHeight: 1.5,
             color: BODY_STRONG,
+            whiteSpace: "pre-wrap",
           }}
         >
           {message.body}
