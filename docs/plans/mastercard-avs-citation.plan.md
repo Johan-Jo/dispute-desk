@@ -1,6 +1,30 @@
-# AVS citation — fail closed on both networks, and retract the live defective package
+# AVS citation — fail closed on both networks (the retraction window has since closed)
 
-**Status:** PLAN ONLY (v7, 2026-08-26). Not started. **Contains one time-critical action — §1.**
+**Status:** **v7 2026-08-26 — SUPERSEDED IN PART, verified 2026-09-07.** The core defect is FIXED in prod; §1 is MOOT and was never actioned; §4 remains open. Do not re-plan §§3/5/7 — they shipped.
+
+> ### Status true-up — 2026-09-07
+>
+> Re-verified against prod (`aokhplydttxtebvbeuzc`) and `master`.
+>
+> | § | Claim | State today |
+> |---|---|---|
+> | **1** | Rebuild `#347617` before its 2026-08-27 deadline | **MOOT — not actioned.** Both `#347617` and `#345459` are now `submitted_confirmed`. The deadline passed 11 days ago and the defective package was filed as-is. Nothing is retractable; both await issuer decisions. |
+> | **3, 5** | Replace the flat boolean with a network-aware citation contract | **DONE** — `lib/argument/avsCodeMap.ts`, shipped in PR #522 (`b8b96a19`). |
+> | **7** | One centralized, semantic citation decision | **DONE** — single consumer, `paymentVerification.ts:235` (`citableAddressVerified`). |
+> | **4** | `packageSafety` must block the assertion on *persisted* rows | **OPEN** — `lib/defence/packageSafety.ts` has no AVS guard. |
+>
+> **The defect itself is closed.** `NETWORK_OVERRIDES` carries `mastercard: {}` / `amex: {}` / `unknown: {}` — emptiness *is* the finding, as §5 argued. Verified by direct test on 2026-09-07:
+>
+> | network + code | citable |
+> |---|---|
+> | Visa `Y` / `M` | yes |
+> | **Mastercard `Y` / `M`** | **no** |
+> | Amex, unknown | no |
+> | Mastercard `Y` still grades a full match | yes (non-citable ≠ non-matching) |
+>
+> Built stronger than planned: there is deliberately **no code-only variant** of `isCeItem3Citable`, so the network-blind bypass this plan existed to prevent is structurally impossible rather than merely avoided.
+>
+> **What is left is §4 only** — a retrospective guard so an old persisted package cannot re-save the unauthorized assertion. New emissions are already correct, so this is cleanup, not live exposure.
 **Deliverable:** stop emitting a standalone AVS address assertion that **no primary source authorizes on either network**; replace the Visa-specific boolean with a rule-identified, versioned citation decision; **block existing defective packages from saving**; and **replace the defective PDF now filed on `#347617` before its 2026-08-27 23:00 UTC deadline.**
 **Deployment:** `master` `15fc510`, `develop` `8309eaa` — same tree; CI and Vercel green.
 **Sources:** S1 — Visa Dispute Management Guidelines (§4 CE chart Item 3; general AVS guidance pp. 13, 53). S4 — Mastercard Chargeback Guide, Merchant Edition, 19 May 2026, **p. 501 (Dual Message Chargebacks)** and **p. 1189 (Dispute Processing)**.

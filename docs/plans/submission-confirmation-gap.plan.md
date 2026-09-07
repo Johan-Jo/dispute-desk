@@ -1,6 +1,33 @@
 # Submission confirmation gap — "verified" does not mean filed
 
-**Status:** v3, 2026-09-04. §6.5 corrected — v2 claimed a Gorgias re-enqueue loop that the run table refutes. §0.1 executed (read-only probes + two submission attempts on one canary); everything else NOT started. **Contains one time-critical action — §0.**
+**Status:** **v3 2026-09-04 — PARTLY SHIPPED, verified 2026-09-07.** §3's detection is in prod. §0's urgency is WITHDRAWN — the six cases needed no action, and the reasoning that made them look urgent was wrong. §§4 and 5 remain open and are the real remaining value here.
+
+> ### Status true-up — 2026-09-07
+>
+> Re-verified against prod (`aokhplydttxtebvbeuzc`), live Shopify, and `master`.
+>
+> | § | Claim | State today |
+> |---|---|---|
+> | **0** | Six live cases, manual submission required | **WITHDRAWN — no action needed.** See below. |
+> | **3** | Watch saves the platform never confirmed | **DONE** — `lib/automation/unconfirmedForwarding.ts`, PR #649 (`7b24dcc2`), wired into `defence-package-deadline-submit`. |
+> | **4** | Auto-build flip does not sweep the backlog | **OPEN** — no sweep on `false → true`. |
+> | **5** | Deadline crons fire after early-morning deadlines | **OPEN** — `vercel.json` still `0 6` / `0 8` UTC. Re-measured 2026-09-07: **328 of 664 (49.4%)** of disputes due since 2026-06-01 fall before 08:00 UTC. The plan's 49.6% holds. |
+>
+> ### Why §0 is withdrawn
+>
+> §0 called for manually submitting the stuck saves in Shopify Admin. That was the wrong conclusion, and the population data says so:
+>
+> - **129 of 136 saves (95%) reach `submitted_confirmed` on their own.**
+> - `240d293a` forwarded itself on **2026-09-06 23:21**, *hours after* its deadline, unprompted.
+> - **`f3c335bf` (#13794) was WON — $637 recovered — with `submitted_at` NULL throughout.** The issuer saw evidence we never had confirmation of.
+>
+> So `evidenceSentOn: null` is substantially a **reporting gap on Shopify's side**, not proof the evidence was never forwarded. This plan's own §0 said as much (*"An unconfirmed save is NOT proof that nothing reached the issuer"*) and then recommended acting as though it were.
+>
+> **Submitting early is strictly worse than waiting.** It is a one-way door that closes the amendment window while the evidence is already on Shopify's object and will be forwarded at the deadline regardless. `#352218` improved across **five package versions** before its save — exactly the improvement an early submit forecloses. There is no upside to trade for that.
+>
+> The Shopify bug is unchanged and still reproduces (re-tested on canary `56c07c16`, 2026-09-07: HTTP 200, `userErrors: []`, `evidenceSentOn` still null, evidence fields intact). It simply does not require the response §0 proposed.
+>
+> **The genuine defect was never the submission** — it was reporting evidence as confirmed-filed when we could not know that. §3 fixed it.
 **Deliverable:** stop DisputeDesk from reporting evidence as filed when Shopify never accepted it. Gate the terminal pack state on Shopify's own `evidenceSentOn` / `disputeEvidence.submitted` rather than on a field-echo readback, alert on the gap, and close the two adjacent paths that let a case reach its deadline with nobody having acted — the unswept backlog after an auto-build flip, and deadline crons that run after early-morning deadlines.
 **Deployment:** branch `promote/assessment-policy-v2`; prod = `master`. All figures below are read from **prod** (`aokhplydttxtebvbeuzc`) on 2026-09-04.
 **Evidence SQL:** `scripts/sql/submission-confirmation-gap.sql`, queries Q1–Q9d. Every figure in this plan is labelled with the query that produced it.
