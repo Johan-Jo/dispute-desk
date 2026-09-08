@@ -1984,6 +1984,14 @@
         "bodyAbsent": "O DisputeDesk ainda não avaliou este caso, por isso não há solidez nem grau de completude para mostrar. É avaliado automaticamente assim que o pacote de provas for criado — não precisa de fazer nada.",
         "bodyStale": "Este caso foi avaliado segundo uma versão anterior da nossa pontuação, por isso a solidez e a completude anteriores já não se aplicam. Nada mudou nas suas provas. O DisputeDesk reavalia o caso automaticamente antes do prazo de resposta — não precisa de fazer nada.",
         "actionsHidden": "O envio não está disponível enquanto este caso não for avaliado."
+      },
+      "stale": {
+        "title": "Avaliado numa versão anterior",
+        "body": "Este caso foi avaliado numa versão anterior da nossa pontuação, pelo que a solidez e a integridade anteriores já não se aplicam. Nada mudou nas suas provas."
+      },
+      "unknown": {
+        "title": "Avaliação indisponível",
+        "body": "Não foi possível ler a avaliação deste caso neste momento. Nada mudou nas suas provas — tente novamente dentro de momentos."
       }
     },
     "deadlineOnly": {

@@ -47,7 +47,22 @@ import type { StalenessReason } from "@/lib/pipeline/contracts";
  * A closed union rather than `!needsRecalculation`, so a reader cannot get the
  * answer by negating something and has to name which state they are handling.
  */
-export type AssessmentPresence = "current" | "not_assessed";
+export type AssessmentPresence = "current" | "absent" | "stale" | "unknown";
+
+/**
+ * Plan §3.5 splits the former `not_assessed` into THREE.
+ *
+ * `absent` and `stale` were always different merchant situations —
+ * bodyKeyFor already routed them to different copy — but they shared one
+ * presence value, so a caller could only ask "assessed or not". The header
+ * pill therefore said "Not assessed yet" over a case carrying completeness
+ * 97, which is false: it WAS assessed, under a policy we have since retired.
+ *
+ * `unknown` is new and is the one that must never be collapsed: it means the
+ * freshness read itself failed. Merging it into `absent` would let an
+ * infrastructure failure assert "we have not assessed this yet", which is a
+ * positive claim about our own state that nobody checked.
+ */
 
 export interface NotAssessedCopy {
   presence: AssessmentPresence;
@@ -83,7 +98,11 @@ export interface AssessmentGate extends NotAssessedCopy {
 
 const TITLE: Record<AssessmentPresence, string> = {
   current: "disputes.assessmentState.current.title",
-  not_assessed: "disputes.assessmentState.notAssessed.title",
+  absent: "disputes.assessmentState.notAssessed.title",
+  // Distinct title: "Not assessed yet" is false for a case that was
+  // assessed under a retired policy.
+  stale: "disputes.assessmentState.stale.title",
+  unknown: "disputes.assessmentState.unknown.title",
 };
 
 /**
@@ -107,7 +126,25 @@ function bodyKeyFor(reason: StalenessReason | null): string {
 export function resolveAssessmentGate(input: {
   needsRecalculation: boolean;
   recalculationReason?: StalenessReason | null;
+  /**
+   * Did the freshness/assessment read SUCCEED? Optional so existing callers
+   * are unaffected, but when explicitly `false` the gate reports `unknown`
+   * and licenses nothing. Plan §3.1: a failed read must never resolve to
+   * absence.
+   */
+  readOk?: boolean;
 }): AssessmentGate {
+  if (input.readOk === false) {
+    return {
+      presence: "unknown",
+      titleToken: { key: TITLE.unknown },
+      bodyToken: { key: "disputes.assessmentState.unknown.body" },
+      mayRenderVerdict: false,
+      mayRenderRecommendation: false,
+      mayOfferFilingAction: false,
+    };
+  }
+
   if (!input.needsRecalculation) {
     return {
       presence: "current",
@@ -118,14 +155,22 @@ export function resolveAssessmentGate(input: {
       mayOfferFilingAction: true,
     };
   }
+
+  const reason = input.recalculationReason ?? null;
+  const presence: AssessmentPresence =
+    reason === "input_hash_mismatch" || reason === "policy_version_superseded"
+      ? "stale"
+      : "absent";
+
   return {
-    presence: "not_assessed",
-    titleToken: { key: TITLE.not_assessed },
-    bodyToken: { key: bodyKeyFor(input.recalculationReason ?? null) },
+    presence,
+    titleToken: { key: TITLE[presence] },
+    bodyToken: { key: bodyKeyFor(reason) },
     // All three FALSE together, deliberately. There is no state in which it is
     // correct to show a strength band but hide the recommendation, or to hide
     // both and keep the submit button: each of the three is downstream of the
-    // same missing assessment.
+    // same missing assessment. `stale` is no more permissive than `absent` —
+    // a number computed under a retired policy is not a number.
     mayRenderVerdict: false,
     mayRenderRecommendation: false,
     mayOfferFilingAction: false,

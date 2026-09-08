@@ -1984,6 +1984,14 @@
         "bodyAbsent": "DisputeDesk has not assessed this case yet, so there is no case strength or completeness to show. It is assessed automatically once the evidence pack is built — nothing is needed from you.",
         "bodyStale": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence. DisputeDesk reassesses the case automatically before the response deadline — nothing is needed from you.",
         "actionsHidden": "Sending is unavailable until this case has been assessed."
+      },
+      "stale": {
+        "title": "Assessed under an earlier version",
+        "body": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence."
+      },
+      "unknown": {
+        "title": "Assessment unavailable",
+        "body": "We could not read this case's assessment just now. Nothing about your evidence has changed — try again shortly."
       }
     },
     "deadlineOnly": {
