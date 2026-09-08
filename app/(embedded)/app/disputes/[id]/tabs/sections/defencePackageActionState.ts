@@ -46,7 +46,13 @@ export interface ActionState {
   canRegenerate: boolean;
   /** The banner that hosts Approve / Resubmit / More actions. */
   bannerHostsActions: boolean;
-  /** Render the review-required banner. */
+  /**
+   * Render the review-required banner.
+   *
+   * Guarded on the SAME terminal predicate as `canRegenerate`. The banner's
+   * only instruction is "regenerate the package", so it must not outlive
+   * the ability to do so.
+   */
   showReviewRequired: boolean;
 }
 
@@ -97,13 +103,38 @@ export function deriveDefencePackageActionState(input: ActionStateInput): Action
     !input.isClosed &&
     !input.submitPending;
 
+  /*
+   * TERMINAL STATES SUPPRESS THE BLOCKER BANNER.
+   *
+   * `showReviewRequired` was `packageBlocked` alone, while `canRegenerate`
+   * above already refuses once the evidence is with the network. So a
+   * forwarded dispute rendered "Regenerate the package to produce a version
+   * that can be submitted" directly above "Shopify can no longer swap the
+   * forwarded PDF" — an instruction the same card declares impossible.
+   *
+   * Observed on blume-box 4d4db363 (Order #345812, USD 75), forwarded
+   * 2026-07-23. The safety suppression that blocked the package (a
+   * delivery-address claim) landed AFTER forwarding: a correct refusal
+   * about a FUTURE filing, rendered as an instruction about a past one.
+   *
+   * The historical fact is not lost — the "Sent to card network" banner
+   * still states what was filed and when. Only the impossible instruction
+   * is withdrawn.
+   *
+   * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.1, applying
+   * label-fact-divergence §4 precedence — "terminal and confirmed external
+   * states preserve their historical facts and prohibit unsupported
+   * actions".
+   */
+  const terminal = input.isNetworkSubmitted || input.isClosed;
+
   return {
     packageBlocked,
     canFinalize,
     canSubmit,
     canRegenerate,
     bannerHostsActions,
-    showReviewRequired: packageBlocked,
+    showReviewRequired: packageBlocked && !terminal,
   };
 }
 

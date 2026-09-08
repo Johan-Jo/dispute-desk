@@ -225,6 +225,34 @@ function isDecided(status: CaseStatus): boolean {
   return status === "won" || status === "lost" || status === "closed";
 }
 
+/**
+ * The case is OUT OF OUR HANDS: decided, or forwarded to the card network and
+ * awaiting a decision. Either way nothing the merchant does can change what
+ * was filed.
+ *
+ * `submitted` (from `isReadOnly`) was deliberately excluded from `isDecided`,
+ * which is right for the outcome pill — a forwarded case has no outcome yet.
+ * But it is wrong for ASSESSMENT vocabulary, and that gap is the defect:
+ * blume-box 4d4db363 (Order #345812, forwarded 2026-07-23, completeness 99)
+ * rendered "Not assessed yet … nothing is needed from you" and "Review
+ * required before submission" on a case whose evidence was already with the
+ * network. Its pack predates assessment snapshots, so the gate answers
+ * "no assessment" — correctly. Asking is the error.
+ *
+ * 110 forwarded-but-undecided disputes carry a pack in prod; 35 have no
+ * snapshot at all and render this unconditionally.
+ *
+ * `docs/technical.md:2677` drew this same distinction for DECIDED disputes
+ * ("assessmentPresence.ts is not the bug — the caller was"). This extends it
+ * to forwarded ones, which that fix and `lost-dispute-explanation.plan.md`
+ * both scope out.
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.2.
+ */
+function isOutOfOurHands(status: CaseStatus): boolean {
+  return isDecided(status) || status === "submitted";
+}
+
 function deriveAutomationMode(
   appliedRule: { mode: "auto" | "review" } | null,
 ): AutomationMode {
@@ -868,13 +896,19 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
    * card shows a Weak badge, a needs-attention status and a "review missing
    * evidence" step for a case nothing has assessed. */
   const assessed = derived.assessment.mayRenderVerdict;
+  /* Forwarded cases join decided ones here: no next step, and no
+   * "not assessed yet" copy. The evidence is with the network; a freshness
+   * verdict about whether we could still file cannot change anything, so
+   * rendering it as a merchant-facing fact is noise at best and a false
+   * instruction at worst. */
+  const outOfOurHands = isOutOfOurHands(caseStatus);
   const caseSummary: CaseSummaryViewModel = {
     strength: assessed ? derived.caseStrength.overall : null,
     status: caseStatus,
     // Decided cases have nothing to automate — drop the "Review required"
     // pill (the outcome pill + calm headline carry the state).
     automationMode: decided ? null : automationMode,
-    nextStep: decided
+    nextStep: outOfOurHands
       ? { kind: "submitted_no_action" }
       : !assessed
         ? {
