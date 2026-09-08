@@ -14,7 +14,8 @@
  * knows about, so a stray write is harmless.
  *
  * Currently-known banner IDs:
- *   scope_upgrade — re-OAuth nudge for read_all_orders
+ *   scope_upgrade   — re-OAuth nudge for read_all_orders
+ *   contact_request — targeted "share a contact channel" ask
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -25,7 +26,7 @@ export const runtime = "nodejs";
 
 // Allowlist of banner IDs the API will accept. Keeps the column
 // clean — a typo or malicious client can't write arbitrary keys.
-const KNOWN_BANNERS = new Set<string>(["scope_upgrade"]);
+const KNOWN_BANNERS = new Set<string>(["scope_upgrade", "contact_request"]);
 
 export async function POST(req: NextRequest) {
   const shopId = extractShopId(req);

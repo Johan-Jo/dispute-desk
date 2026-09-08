@@ -1087,6 +1087,8 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 
 - **Stats row (top):** 4 cards — Total Shops · Active (green) · Total Disputes · Total MRR (sum of `monthlyRevenueUsd` across active shops, derived from `shops.plan` via `lib/billing/plans.ts → PLANS[plan].price`).
 - **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Actions.
+- **Domain column shows the REAL storefront domain**, not the myshopify alias — `meinmaison.com`, not `6a8848-dd.myshopify.com`. It reads `shops.primary_domain` via `displayShopDomain()` (`lib/shopify/domainHost.ts`), falling back to `shop_domain` when the column is null. When the two differ, the alias renders beneath in small grey type, because it is still the key every Shopify-side lookup (Admin URLs, Partners) and our own logs are addressed by. See § *Storefront domain (`shops.primary_domain`)*.
+- **Search** matches either domain (`shop_domain` OR `primary_domain`), so ops can type the brand name or the alias.
 - **Filter chips:** All Plans · Scale · Growth · Starter · Free.
 - **Data source:** `/api/admin/shops` returns the shop row plus 4 computed fields per shop:
   - `chargebackRate90d{,Numerator,Denominator,Available}` — single batched `shop_daily_metrics` read for the trailing 90 UTC days, aggregated in JS.
@@ -1096,11 +1098,82 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 - **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column (matches Figma `shops-admin.tsx:42-49`). Nulls always sink regardless of direction.
 - **AdminTable** sortable-header form: `headers` accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
 
+### Deleting a shop (admin purge)
+
+`DELETE /api/admin/shops/[id]?confirm=<shop_domain>` permanently removes a shop and every row belonging to it. For clearing dev stores, internal test installs and app-review throwaways out of the admin list. **A real delete, not an uninstall flag** — nothing is recoverable and the merchant must install the app again.
+
+- **UI:** trash icon per row on `/admin/shops` (`components/admin/DeleteShopButton.tsx`). The dialog names what will be destroyed and requires the operator to **type the myshopify domain**. The list is full of near-identical names (`6mjjvm-tc`, `xxda51-v1`, `isj-153`), so a plain "Are you sure?" is not a real check against a mis-click. The same typed value is the API's `?confirm=`, so the guard holds server-side too.
+- **Auth:** middleware gates `/api/admin/*` already; the route re-checks `getAdminSessionUser()` anyway, because this is the most destructive endpoint in the app and a future matcher refactor must not silently open it.
+
+#### Why the work lives in SQL (`admin_purge_shop`)
+
+Two reasons, both learned the hard way:
+
+1. **Atomicity.** A loop of PostgREST deletes is not a transaction — a failure halfway leaves a half-erased shop.
+2. **The append-only tables.** `audit_events` and `dispute_events` carry `BEFORE DELETE` triggers that raise `append-only: DELETE not allowed`. Because every per-shop table cascades from `shops`, a plain `delete from shops` hits those triggers and **aborts the whole transaction** (verified on dev 2026-09-06 in a rolled-back transaction).
+
+`admin_purge_shop(uuid)` (migration `20260906170000`) sets `app.allow_append_only_delete` — transaction-scoped via `set_config(..., true)`, so it cannot leak past COMMIT — and the triggers yield to exactly that flag. **Ordinary traffic is unaffected: an unflagged DELETE is still refused, and UPDATE stays forbidden on both tables even with the flag set** (rewriting history is never legitimate; erasing a shop wholesale is). Both properties are covered by the trigger probes recorded above.
+
+The function **discovers its target tables from the FK graph** (`pg_constraint` where `confrelid = shops`) rather than a hardcoded list. A hand-maintained list rots the moment a migration adds a per-shop table — silently, since the new table's rows just survive the purge — and cannot be written correctly by hand anyway: `evidence_items`, `pack_templates` and `integration_secrets` hang off a parent rather than off `shops`, so a plausible hand-written list fails with `column "shop_id" does not exist`. Their rows go via their own `ON DELETE CASCADE` when the parent is removed.
+
+#### Index every `shop_id` FK
+
+Postgres indexes the **referenced** side of a foreign key automatically, never the referencing side. So `delete from shops` must prove no child row still points at it, and a child table with no index on `shop_id` costs a full sequential scan — **once per FK, whether or not the shop has any rows there**.
+
+`fraud_intel_parse_misses` (1371 MB / 6.5M rows) had no such index. Measured on prod 2026-09-06 for a shop with **zero orders** and 194 audit rows:
+
+| step | before | after |
+|---|---|---|
+| `delete from shops` | 6.605 s | 0.027 s |
+| full `admin_purge_shop` | 14.17 s | 0.03 s |
+
+Through the admin UI the purge blew the statement timeout outright (`canceling statement due to statement timeout`). The shop's own deletes took 3 ms — the entire cost was FK validation against tables it had no rows in, which is why an empty shop was as slow as a busy one. Fixed in `20260906190000` for all four unindexed FKs.
+
+**When adding a per-shop table, index its `shop_id`.** It is not optional bookkeeping: without it, that table's full size is added to the cost of deleting *any* shop. To audit, list FKs to `shops` whose referencing column has no leading index:
+
+```sql
+select c.conrelid::regclass::text as tbl, a.attname
+  from pg_constraint c
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+ where c.contype = 'f' and c.confrelid = 'public.shops'::regclass
+   and not exists (select 1 from pg_index i
+                    where i.indrelid = c.conrelid and i.indkey[0] = a.attnum);
+```
+
+#### The two escape hatches
+
+Two transaction-scoped GUCs let privileged paths through the append-only triggers. Ordinary application traffic sets neither, so the immutability invariant is unchanged for every normal request.
+
+| GUC | DELETE | UPDATE | Used by |
+|---|---|---|---|
+| `app.allow_audit_mutation` | yes | yes | E2E fixture teardown (`delete_e2e_fixture_dispute`), ops wipe scripts |
+| `app.allow_append_only_delete` | yes | **no** | `admin_purge_shop` |
+
+The purge flag is deliberately narrower: erasing a shop wholesale is legitimate, rewriting its history never is.
+
+**Do not rewrite `reject_audit_mutation()` with a fresh `create or replace` body.** Migration `20260906170000` did exactly that to add the purge flag and silently dropped the older `app.allow_audit_mutation` branch, breaking `delete_e2e_fixture_dispute` and turning the e2e suite red (caught on the PR, restored in `20260906180000`). Any future change to these triggers must carry **both** branches forward.
+
+#### GDPR `shop/redact`
+
+`app/api/webhooks/shop-redact/route.ts` delegates to `admin_purge_shop`. It previously walked a hardcoded table list with one PostgREST DELETE per table, which **could not complete**: the append-only triggers refused two of those tables, the loop swallowed the error and continued, and the final `shops` delete then failed as well — leaving shops permanently half-redacted while still answering `200`. A purge failure now returns `500` so Shopify retries, rather than hiding an incomplete erasure behind a success.
+
+### Storefront domain (`shops.primary_domain`)
+
+`shops.shop_domain` is the **myshopify alias** — `6a8848-dd.myshopify.com` for a store customers actually reach at `meinmaison.com`. It is the correct key for every Shopify-side call (Admin API host, Admin URLs, Partners, session lookup) and must never be replaced by the storefront domain in those paths. It is a poor *identifier for humans*, which is what ops surfaces need.
+
+`shops.primary_domain` (migration `20260906150000_shops_primary_domain.sql`) stores the storefront's real domain, taken from `Shop.primaryDomain.url` and normalised to a bare lowercase host by `toDomainHost()` in `lib/shopify/domainHost.ts` — normalising at the write keeps the value directly comparable to `shop_domain`, instead of leaving each read site to strip the scheme its own way.
+
+- **Written by** `persistShopCurrency` (`lib/shopify/persistShopCurrency.ts`), alongside `currency_code` and `shop_name`, from the one `fetchShopDetails` call it already makes. Call sites: OAuth callback, embedded token-exchange, and the `shop/update` webhook — so a merchant switching domains propagates on its own.
+- **Nullable and best-effort.** A failed enrichment must never block an install. Every read goes through `displayShopDomain()`, which falls back to `shop_domain`.
+- **A leading `www.` is stripped for DISPLAY only.** Shopify reports `www.blume.com` as that shop's genuine primary domain and the column stores it verbatim — faithful to the source, and still correct if the value is ever used for matching. `displayShopDomain()` renders `blume.com`, because that is how anyone refers to the merchant in a list meant for scanning. Never write the stripped form back. The pages decide whether to show the alias line by comparing the **displayed** value to `shop_domain`, not the raw column.
+- **Equal to the alias when the shop has no custom domain** — that is correct, not a fallback: the myshopify host genuinely *is* that shop's primary domain. The UI collapses to a single line whenever the two match.
+- **Backfill:** `node scripts/backfill-shop-primary-domain.mjs --env-file .env.production.local` (dry-run; add `--apply` to write) fills the column for shops installed before it existed. Uses the stored offline token per `[[reference_merchant_admin_token_and_env_files]]`; skips uninstalled shops and dead tokens with a warning rather than failing the run. It also fills a missing `shop_name` on the same roundtrip.
+
 ### Admin shop detail (`/admin/shops/[id]`, Figma `pages/admin/shop-detail.tsx`)
 
 The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Figma-aligned custom layout:
 
-- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` shop domain + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
+- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` storefront domain (`displayShopDomain()`, with the myshopify alias on a small grey line below when it differs) + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
 - **Risk Profile card** — see next section.
 - **Quick Stats footer:** 3 cards (Monthly Revenue · Evidence Packs · Total Disputes). **Monthly Revenue is the merchant's own store revenue (GMV) over the trailing 30 days** — `sum(shopify_orders.order_total)` in the shop's dominant currency, via `computeStoreRevenue(shopId)` (`lib/admin/storeRevenue.ts`), surfaced by `GET /api/admin/shops/[id]` as `storeRevenue`. This replaced the old subscription-price display (which showed "$0 / Free plan" and read as broken). Packs + disputes are `count(*)`.
 - **Admin Overrides card:** unchanged (plan override, pack limit override, admin notes).
@@ -1591,6 +1664,14 @@ Service-role only RLS. Hot-path indexes on `(shop_id, proxy_detected)`, `(shop_i
 - `parse_miss_reason = 'unmatched_phrases'` = parser was invoked but failed to match any of the present facts. Distinguishes Shopify reword events from data-genuinely-absent.
 
 **`fraud_intel_parse_misses`** — surface table for fact strings the parser didn't match. Drives the `/admin/fraud-intel` ops widget so we can monitor parser drift when Shopify rewords a signal.
+
+**Aggregated, one row per distinct phrasing** (since `20260906200000`): the key is `(shop_id, fact_text, parser_version)`, carrying `occurrences`, `first_seen_at` and `last_seen_at`. It is written **only** through `record_parse_misses(jsonb)`, which groups the batch and then upserts-and-increments — never a plain `insert`.
+
+Why it changed: the parser deliberately matches only the six signals GraphQL does not expose, so **every other fact Shopify sends is recorded as a miss by design**. Storing one row per sighting meant the table grew with every order forever. On prod 2026-09-06 it held **6,500,217 rows for 23,890 distinct phrasings** (most of those templated, e.g. `Shipping address is N km…`) at **1371 MB** — the largest table in the database, and, as an unindexed FK to `shops`, the direct cause of the admin shop-delete timing out. It also broke its own widget: the page pulled 2000 raw rows and tallied them in JS, so against 6.5M rows the "top drift patterns" list was an arbitrary sliver rather than the real top-N. The widget now reads `occurrences` and orders in the database.
+
+The diagnostic value was always in the distinct set, never the sighting count per order — which is what an occurrence counter preserves exactly.
+
+**When adding a write path for misses, call `record_parse_misses`.** A direct `insert` would violate the unique key or, worse, silently reintroduce per-sighting rows. A vitest case asserts the batch writer uses the RPC and never inserts into this table directly.
 
 #### Parser (`lib/fraudIntel/factParser.ts`)
 
@@ -5393,6 +5474,131 @@ How it works:
   enrollment is intentional: `admin_passkeys` holds one row per device, and
   iCloud Keychain / Google Password Manager sync a passkey within one ecosystem
   automatically.
+
+## Targeted merchant messages (admin → one shop)
+
+Ops can put a dismissible banner on a single merchant's embedded
+dashboard, optionally asking for a contact channel. Built for the case
+where an account shows real recoverable value but every email address
+on file has gone unanswered.
+
+**Where:** Admin → Shops → (shop) → *In-app message* card
+(`components/admin/ShopMerchantMessages.tsx`).
+
+**Data:** `merchant_messages` (migration
+`20260905120000_merchant_messages.sql`). One row = one message to one
+shop. RLS on with no policies — service-role access only, same posture
+as the other ops tables.
+
+| Column | Meaning |
+|---|---|
+| `title` / `body` | Banner copy, admin-authored free text |
+| `ask_for_contact` | Show email/phone inputs + submit |
+| `tone` | Polaris banner tone (`info`/`success`/`warning`/`critical`) |
+| `status` | `draft` (never renders) / `published` / `archived` |
+| `expires_at` | Optional auto-expiry |
+| `dismissed_at` | Merchant dismissed it |
+| `responded_at`, `response_name`, `response_email`, `response_phone`, `response_note` | Merchant's reply |
+
+**Copy is deliberately NOT tokenized.** These are one-off human notes
+written for a specific merchant in that merchant's language. No library
+code derives them and nothing persists them into pack data, so the
+structural-i18n rule (CLAUDE.md #5) doesn't apply. Only the surrounding
+form chrome (`dashboard.merchantMessage.*`) is localized across the six
+locales.
+
+**Merchant surface:** `DashboardMerchantMessageBanner` renders the
+newest active message (published, not dismissed, unexpired). It lives in
+`EmbeddedAppChrome`, so it shows on **every** embedded page — not just
+the dashboard — and sits **above** the scope and billing banners: an ops
+message awaiting an answer outranks both. It is a dismissible Polaris
+`Banner`, **not** a blocking modal; a modal that intercepts the session
+would be hostile to the merchant and a Shopify App Store review risk.
+Dismissal is server-side and per-message, so it holds across the
+merchant's devices and across pages.
+
+**Visual spec:** the "Red top alert banner" Claude Design handoff
+(`Dashboard.dc.html`) — a white card with a solid `#B42318` header bar
+carrying a warning triangle, the title, and a dismiss X; a `#FCA5A5`
+border; and a red-tinted lift shadow. Transcribed literally rather than
+expressed as a Polaris `<Banner>`: Polaris has no solid-header variant,
+and the design's whole purpose is to outshout the tonal banners around
+it. Contact inputs are 40px-tall fields and the Send button is the
+design system's `danger` variant (`#EF4444`, hover `#DC2626`).
+
+The Send button enables on a plausible email **or** ≥7 phone digits —
+either channel alone is a complete answer, matching the design's own
+validation. After a successful send the button reads "Sent" and the
+helper line becomes the thank-you.
+
+`tone` is still stored per message and the composer defaults to
+`critical`, but note the merchant-facing banner now renders the red
+design for every message regardless of tone; `tone` currently affects
+only what an admin sees in the composer. Wire it through if softer
+variants are ever needed.
+
+**Routes**
+
+| Route | Purpose |
+|---|---|
+| `GET /api/dashboard/message` | Active message for the current shop |
+| `POST /api/dashboard/message/dismiss` | Merchant dismissed |
+| `POST /api/dashboard/message/respond` | Merchant's reply → emails ops, stores on the row |
+| `GET,POST /api/admin/shops/[id]/messages` | List / create |
+| `PATCH,DELETE /api/admin/shops/[id]/messages/[messageId]` | Publish, archive, edit, delete |
+
+Every merchant-facing write is scoped by `shop_id` as well as message
+id, so a uuid belonging to another shop cannot be dismissed or answered
+from the wrong session. Replies are HTML-escaped before they reach the
+ops inbox. Both invariants are pinned in
+`lib/merchantMessages/__tests__/respondRoute.test.ts`.
+
+The contact row is **Name · Email · Phone · Send**. Name is captured
+because these messages typically ask *who is responsible for the
+account*, so it is the field that answers the question — but it is
+deliberately **not** part of the send-enable rule: a name with no
+channel is not reachable, so email-or-phone still gates Send.
+
+Message bodies render with `white-space: pre-wrap`. The admin composes
+them in a textarea, so the paragraph breaks they type are meaningful —
+a bilingual message needs its halves to stay apart. Without this the
+first real merchant message rendered as one run-on paragraph with the
+divider swallowed mid-sentence.
+
+**Confirmation state.** Once the merchant submits, the whole form is
+replaced by a green confirmation panel echoing the address/number we
+received. A filled-in-but-disabled form read as "still editable" and
+left merchants unsure whether anything had happened.
+
+That panel is component state, so it lasts only until the merchant
+navigates. The durable half is in `getActiveMerchantMessage`, which
+filters on **`responded_at IS NULL`** alongside `dismissed_at`: an
+answered message stops being active and the banner never returns.
+Without that filter a merchant who replied met the empty form again on
+their very next page view, asking a second time for what they had just
+given us. Pinned in `lib/merchantMessages/__tests__/activeMessage.test.ts`.
+
+**Delivery is tracked, not assumed.** Responses email
+`ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`), and the outcome is
+recorded on the row (`response_notified_at` / `response_notify_error`,
+migration `20260906090000`). This route deliberately does **not** use
+the shared `sendAdminEmail` helper: that returns `void` and swallows
+failures, which is right for background drift alerts but wrong here —
+a merchant reply that never reaches ops is the one failure this feature
+cannot afford to hide. The admin card shows a warning on any reply
+whose notification did not go out, so a silent miss is never mistaken
+for "nobody replied". The reply itself is always stored first, so a
+mail failure never loses the contact details.
+
+⚠️ **Dev cannot send these emails.** The `disputedesk-dev` Vercel
+project has no `RESEND_API_KEY` (only Production does), so on
+`dev.disputedesk.app` every response records
+`response_notify_error: "RESEND_API_KEY not set"` and no mail is sent.
+This is environment configuration, not a code defect — verify email
+delivery on production.
+
+Replies are also logged as a `merchant_message_answered` audit event
+with `actor_type='merchant'`.
 
 ## Multi-Language (i18n)
 
