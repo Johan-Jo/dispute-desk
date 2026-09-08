@@ -8258,7 +8258,26 @@ Measured 2026-08-31: **45 of 53** filed packages on decided disputes asserted th
 
 ## Label–fact divergence: claim ownership in the presentation model
 
-**Plan:** `docs/plans/label-fact-divergence.plan.md`.
+**Plans:** `docs/plans/label-fact-divergence.plan.md`, completing two
+requirements the earlier plans specified but the implementation never
+delivered:
+
+- **`design-alignment-shared-presentation-model.plan.md` §9 / §12.** That plan
+  specified dimension 1 as deriving from a *"verified completed-package
+  state"*, and stated the rule outright: *"`queued`/`building`/`saving`/`failed`
+  and the mere existence of a draft record do not prove a completed, ready
+  package. **Do not infer `pack_prepared`**"* — with the rung to be SKIPPED
+  until a reliable backend field was confirmed. No such field was supplied, and
+  `resolveLifecycle` shipped `PACK_PREPARED = {ready, save_failed}` instead:
+  the pack-status inference the plan forbade. `resolveArtifact` supplies the
+  missing verified state (`pdf_path` + `validation_status = 'ok'`), so
+  `pack_prepared` is emitted on a fact rather than a proxy.
+- **`not-assessed-banner.plan.md` step 3 (copy).** That plan root-caused the
+  "Not assessed yet" banner on an assessed case to PR #641 changing
+  `ip_location_check` categorization without bumping `SCORING_POLICY_VERSION`;
+  the bump to 2 and the 63-pack rebuild are done. Its step 3 — copy that stops
+  telling a previously-assessed merchant "Not assessed yet" — is the
+  `absent`/`stale`/`unknown` split below.
 
 Seven merchant-visible claims were rendered without checking the fact they
 asserted — `saved_to_shopify_verified` without `evidenceSentOn`, "Pack
