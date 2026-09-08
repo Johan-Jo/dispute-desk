@@ -45,3 +45,60 @@ export {
   type ChecklistRowFacts,
   type FieldAction,
 } from "./concreteContribution";
+
+export {
+  canClaimPrepared,
+  resolveArtifact,
+  type ArtifactFreshness,
+  type ArtifactIdentity,
+  type ArtifactObservation,
+  type ArtifactUnknownReason,
+  type ArtifactValidation,
+  type ObservedPackageRow,
+  type ResolveArtifactInput,
+} from "./resolveArtifact";
+
+export {
+  isInFlight,
+  resolveBuildAttempt,
+  suppressesAutomaticRecoveryPromise,
+  type BuildAttempt,
+  type BuildAttemptIdentity,
+  type BuildAttemptState,
+  type BuildAttemptUnknownReason,
+  type ObservedActiveJob,
+  type ObservedAttemptRow,
+  type ResolveBuildAttemptInput,
+} from "./resolveBuildAttempt";
+
+export {
+  mayPromiseAutomaticWork,
+  mayRenderIntegrationGuidance,
+  mayRenderLiveIntegrationCard,
+  resolveAutomationPromise,
+  resolveDeadlineFacts,
+  delayNoteKey,
+  resolveDelayCause,
+  resolveIntegrationAvailability,
+  type AutomationPromise,
+  type DeadlineFacts,
+  type DelayCause,
+  type IntegrationAvailability,
+  type ResolveAutomationInput,
+  type ResolveDelayInput,
+  type ResolveIntegrationInput,
+} from "./resolveAvailability";
+
+export {
+  gatherArtifactFacts,
+  type ArtifactFacts,
+  type GatherArtifactOptions,
+} from "./gatherArtifacts";
+
+export {
+  assertProjection,
+  findingKey,
+  type CaseProjection,
+  type Finding,
+  type FindingKind,
+} from "./claimAssertions";

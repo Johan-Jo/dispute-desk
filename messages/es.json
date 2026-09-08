@@ -1984,6 +1984,14 @@
         "bodyAbsent": "DisputeDesk todavía no ha evaluado este caso, así que no hay solidez del caso ni nivel de completitud que mostrar. Se evalúa automáticamente en cuanto se genera el paquete de pruebas; no necesitas hacer nada.",
         "bodyStale": "Este caso se evaluó con una versión anterior de nuestro sistema de puntuación, así que la solidez y la completitud anteriores ya no son válidas. No ha cambiado nada en tus pruebas. DisputeDesk lo reevalúa automáticamente antes de la fecha límite de respuesta; no necesitas hacer nada.",
         "actionsHidden": "No se puede enviar hasta que este caso se haya evaluado."
+      },
+      "stale": {
+        "title": "Evaluado con una versión anterior",
+        "body": "Este caso se evaluó con una versión anterior de nuestra puntuación, por lo que la solidez y la integridad anteriores ya no se aplican. Tus pruebas no han cambiado."
+      },
+      "unknown": {
+        "title": "Evaluación no disponible",
+        "body": "No hemos podido leer la evaluación de este caso en este momento. Tus pruebas no han cambiado; inténtalo de nuevo en breve."
       }
     },
     "deadlineOnly": {

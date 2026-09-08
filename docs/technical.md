@@ -8255,3 +8255,101 @@ Measured 2026-08-31: **45 of 53** filed packages on decided disputes asserted th
 **Blast radius.** 132 facts across 64 disputes and 2 shops. 65 sit on decided disputes (analysis only). Of the 67 on open disputes, 25 are already `submitted_to_bank` and 7 `submitted_to_shopify` — already filed. **One** dispute is in `new`, the only case early enough for the change to affect an automation decision.
 
 **This is a bank-visible behaviour change and also a scoring one.** `moderate` carries strength weight 2 where `supporting` carries 0, so affected disputes score higher and could cross a strength band, and strength gates auto-save. That is the intended reading — evidence good enough to show an issuer should count — but it is a real consequence, not a side effect to discover later.
+
+## Label–fact divergence: claim ownership in the presentation model
+
+**Plans:** `docs/plans/label-fact-divergence.plan.md`, completing two
+requirements the earlier plans specified but the implementation never
+delivered:
+
+- **`design-alignment-shared-presentation-model.plan.md` §9 / §12.** That plan
+  specified dimension 1 as deriving from a *"verified completed-package
+  state"*, and stated the rule outright: *"`queued`/`building`/`saving`/`failed`
+  and the mere existence of a draft record do not prove a completed, ready
+  package. **Do not infer `pack_prepared`**"* — with the rung to be SKIPPED
+  until a reliable backend field was confirmed. No such field was supplied, and
+  `resolveLifecycle` shipped `PACK_PREPARED = {ready, save_failed}` instead:
+  the pack-status inference the plan forbade. `resolveArtifact` supplies the
+  missing verified state (`pdf_path` + `validation_status = 'ok'`), so
+  `pack_prepared` is emitted on a fact rather than a proxy.
+- **`not-assessed-banner.plan.md` step 3 (copy).** That plan root-caused the
+  "Not assessed yet" banner on an assessed case to PR #641 changing
+  `ip_location_check` categorization without bumping `SCORING_POLICY_VERSION`;
+  the bump to 2 and the 63-pack rebuild are done. Its step 3 — copy that stops
+  telling a previously-assessed merchant "Not assessed yet" — is the
+  `absent`/`stale`/`unknown` split below.
+
+Seven merchant-visible claims were rendered without checking the fact they
+asserted — `saved_to_shopify_verified` without `evidenceSentOn`, "Pack
+prepared" without `pdf_path`, "reassesses automatically" without
+`auto_build_enabled`, "waiting behind other work" without a queue read, the
+Gorgias card without an integration, "Cited in the PDF" without a document,
+and "Not assessed yet" over a case carrying completeness 97. Each was fixed at
+its own render site, and the class survived every time.
+
+Measured on prod 2026-09-05: **eight open disputes** showed
+`evidence_packs.status='ready'` (three at completeness 97) whose newest defence
+package had `pdf_path IS NULL`.
+
+### The dimensions
+
+`lib/disputes/presentation/` had four independent dimensions. It now has nine,
+composed rather than merged — an earlier response may be transmission-confirmed
+while a later build fails, and neither fact may erase the other.
+
+| Dimension | Resolver | States |
+|---|---|---|
+| 5. Artifact | `resolveArtifact` | `unknown` / `absent` / `present` (+ freshness, validation) |
+| 6. Build attempt | `resolveBuildAttempt` | `unknown` / `none` / `queued` / `running` / `succeeded` / `declined` / `not_required` / `capped` / `failed` |
+| 7. Automation | `resolveAutomationPromise` | `unknown` / `will_not_run` / `may_run` |
+| 8. Integration | `resolveIntegrationAvailability` | `unknown` / `never_connected` / `connected` / `reconnect_required` / `disconnected_with_history` |
+| 9. Delay + deadline | `resolveDelayCause`, `resolveDeadlineFacts` | `unknown` / `elapsed_only` / `queue_backlog` |
+
+Assessment presence (`lib/disputes/assessmentPresence.ts`) split from
+`current | not_assessed` into **`current` / `absent` / `stale` / `unknown`**.
+`stale` is no more permissive than `absent`: a number computed under a retired
+policy is not a number.
+
+### Rules that hold everywhere
+
+- **A failed read is `unknown`, never `absent`.** `absent` is a positive claim
+  ("we looked, there is nothing"); an infrastructure failure must not be able
+  to make it. Every resolver takes an explicit `readOk`.
+- **Pack status never proves a document.** `resolveArtifact` takes no pack
+  status input at all, so `ready` or `save_failed` with no PDF resolves
+  `absent` by construction.
+- **`capped` before generic failure.** `daily_cap_reached` is persisted as
+  `status='failed'`; testing failure first reports a budget stop as a defect.
+- **`covered_shopify` ≠ `no_bank_eligible_facts`.** Opposite merchant meanings;
+  an unrecognised skip cause stays neutral and is flagged rather than asserting
+  either.
+- **Selection goes through `candidateVersions`.** "Highest version" is not "the
+  package we would file". The artifact dimension looks past an aborted build;
+  the attempt dimension still sees it.
+
+### Enforcement
+
+`lib/disputes/presentation/__tests__/claimOwnership.invariant.test.ts` walks
+every production `.ts`/`.tsx` with the TypeScript AST — not grep, which an
+aliased translator or helper wrapper defeats — and fails when a protected claim
+token is constructed outside `lib/disputes/presentation/`. Six bypass specimens
+must fail; a pure renderer consuming a resolved claim must pass. A second
+assertion fails when a baseline entry no longer violates, so the list cannot
+become permanent.
+
+The bare enum values (`saved_to_shopify`, `pack_prepared`) are deliberately
+unprotected: API routes and pipeline code read them to *decide*, which is
+legitimate. The guard covers the claim **tokens** a merchant sees.
+
+### Monitoring
+
+`GET /api/cron/claim-divergence-monitor` (hourly, `cronEnvGate`) runs the real
+resolvers over real facts and reports two separate categories:
+
+- **divergence** — a claim not licensed by its predicate. A bug in us.
+- **stranded** — the label is honest and the case is still unfileable.
+
+A cohort query failure emails a monitor failure and returns 500; it never
+returns `ok:true` with zero findings.
+
+Evidence SQL: `scripts/sql/label-fact-divergence.sql` (Q1–Q5).
