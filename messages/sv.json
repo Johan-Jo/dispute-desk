@@ -1868,7 +1868,7 @@
         "analysisDeferredBody": "Konversationer matchades, men bevisanalysen är pausad och återupptas snart. Matchade ärenden visas nedan.",
         "reconnectRequiredTitle": "Återanslut Gorgias",
         "reconnectRequiredBody": "Din Gorgias-anslutning är inte längre auktoriserad. Återanslut den i Inställningar för att återuppta kommunikationsbevis.",
-        "takingLongerNote": "Detta tar längre tid än väntat. Det kan vänta bakom annat arbete – uppdatera för att kontrollera om det finns någon uppdatering."
+        "takingLongerNote": "Detta tar längre tid än vanligt. Det körs i bakgrunden och slutförs automatiskt – uppdatera för att se om något har ändrats."
       },
       "staleBanner": {
         "title": "Ditt försvarspaket är inaktuellt",
