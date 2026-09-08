@@ -169,3 +169,58 @@ describe("submit-response handling", () => {
     expect(e.error).toBeNull();
   });
 });
+
+/* ── Terminal states suppress the blocker banner ──────────────────────────
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.1.
+ *
+ * PROD REGRESSION — blume-box 4d4db363 (Order #345812, USD 75), forwarded to
+ * the card network 2026-07-23. The card rendered, stacked:
+ *
+ *   "Review required … Regenerate the package to produce a version that can
+ *    be submitted"
+ *   "Sent to card network … Shopify can no longer swap the forwarded PDF"
+ *
+ * `canRegenerate` already refused; `showReviewRequired` did not, so the only
+ * instruction the banner carries outlived the ability to follow it.
+ */
+describe("a forwarded or closed dispute shows no review-required banner", () => {
+  it("network-submitted: the banner is suppressed, and Regenerate is too", () => {
+    const state = blocked({ isNetworkSubmitted: true });
+    expect(state.packageBlocked).toBe(true); // the refusal itself still stands
+    expect(state.canRegenerate).toBe(false);
+    expect(state.showReviewRequired).toBe(false);
+  });
+
+  it("closed: same", () => {
+    const state = blocked({ isClosed: true });
+    expect(state.canRegenerate).toBe(false);
+    expect(state.showReviewRequired).toBe(false);
+  });
+
+  it("still actionable: the banner remains, because Regenerate is possible", () => {
+    // The guard must not silence a case the merchant CAN still fix — that
+    // would trade one silent failure for another.
+    const state = blocked({ isNetworkSubmitted: false, isClosed: false });
+    expect(state.canRegenerate).toBe(true);
+    expect(state.showReviewRequired).toBe(true);
+  });
+
+  it("the banner never outlives Regenerate", () => {
+    // The invariant behind the fix, stated directly: the banner's only
+    // instruction is "regenerate", so it may never render where that is
+    // refused for a terminal reason.
+    for (const over of [
+      { isNetworkSubmitted: true },
+      { isClosed: true },
+      { isNetworkSubmitted: true, isClosed: true },
+    ]) {
+      const state = blocked(over);
+      expect(state.showReviewRequired && !state.canRegenerate).toBe(false);
+    }
+  });
+
+  it("an unblocked forwarded package shows no banner either", () => {
+    expect(safe({ isNetworkSubmitted: true }).showReviewRequired).toBe(false);
+  });
+});
