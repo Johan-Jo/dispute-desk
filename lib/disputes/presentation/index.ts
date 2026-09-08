@@ -87,3 +87,9 @@ export {
   type ResolveDelayInput,
   type ResolveIntegrationInput,
 } from "./resolveAvailability";
+
+export {
+  gatherArtifactFacts,
+  type ArtifactFacts,
+  type GatherArtifactOptions,
+} from "./gatherArtifacts";
