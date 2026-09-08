@@ -77,6 +77,7 @@ export {
   mayRenderLiveIntegrationCard,
   resolveAutomationPromise,
   resolveDeadlineFacts,
+  delayNoteKey,
   resolveDelayCause,
   resolveIntegrationAvailability,
   type AutomationPromise,

@@ -157,3 +157,18 @@ export function resolveDeadlineFacts(dueAtIso: string | null, now: Date): Deadli
   const ms = due - now.getTime();
   return { dueAtIso, msRemaining: ms, passed: ms < 0 };
 }
+
+/* ── Claim constructors ─────────────────────────────────────────────── */
+
+/**
+ * The delay note's copy, chosen by observed cause — plan §4.
+ *
+ * Lives here rather than at the render site because this is a CLAIM: the
+ * `queue_backlog` variant asserts a fact about the job queue, and the
+ * ownership invariant must be able to prove no surface constructs it without
+ * having observed one. A component with no queue observation resolves
+ * `elapsed_only` and can only say how long it has been.
+ */
+export function delayNoteKey(cause: DelayCause): "status.queuedNote" | "status.takingLongerNote" {
+  return cause === "queue_backlog" ? "status.queuedNote" : "status.takingLongerNote";
+}

@@ -147,7 +147,6 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
     "disputes.evidenceTab.sections.summary.nextStep",
   );
   const tAutoCopy = useTranslations("disputes.evidenceTab.automation");
-  const tAssessment = useTranslations("disputes.assessmentState");
   const tRoot = useTranslations();
   const locale = useLocale();
 
@@ -158,6 +157,15 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
    * branch an unassessed case rendered a WEAK verdict badge. The badge is
    * replaced by a neutral state chip; nothing infers a band. */
   const notAssessed = props.nextStep.kind === "not_assessed";
+  /* Use the token the GATE resolved, not a hardcoded key. `absent`,
+   * `stale` and `unknown` are different merchant situations (label-fact
+   * plan §3.5) and this card rendered "Not assessed yet" for all three —
+   * including over a case carrying completeness 97, which had been
+   * assessed under a policy we have since retired. */
+  const assessmentTitle =
+    props.nextStep.kind === "not_assessed"
+      ? resolveToken(tRoot, props.nextStep.titleToken)
+      : null;
   const display = props.strength ? toDisplayStrength(props.strength) : null;
   const showExplanation =
     !notAssessed &&
@@ -252,14 +260,14 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
                   color: "#6D7175",
                 }}
               >
-                {tAssessment("notAssessed.title")}
+                {assessmentTitle}
               </span>
             )}
             <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
               {props.status === "won" || props.status === "lost" || props.status === "closed"
                 ? t(`outcomeHeadline.${props.status}`)
                 : notAssessed
-                  ? tAssessment("notAssessed.title")
+                  ? assessmentTitle
                   : nextStepCopy(props.nextStep, tNext, locale)}
             </span>
           </div>
