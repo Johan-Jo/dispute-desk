@@ -292,3 +292,47 @@ describe("the explicit state is localized in all six locales", () => {
     }
   });
 });
+
+/* ── Forwarded cases do not run assessment vocabulary ─────────────────────
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.2.
+ *
+ * PROD REGRESSION — blume-box 4d4db363 (Order #345812, USD 75), forwarded to
+ * the card network 2026-07-23 with completeness 99. Its pack predates
+ * assessment snapshots, so `resolveAssessmentGate` reports "no assessment" —
+ * correctly. The Evidence tab asked anyway and rendered "Not assessed yet …
+ * nothing is needed from you" plus "Review required before submission" on a
+ * case whose evidence was already with the network.
+ *
+ * 110 forwarded-but-undecided disputes carry a pack in prod; 35 have no
+ * snapshot and render this unconditionally.
+ *
+ * `technical.md:2677` drew the same distinction for DECIDED disputes
+ * ("assessmentPresence.ts is not the bug — the caller was"). This pins the
+ * extension to forwarded ones.
+ */
+describe("a forwarded case is out of our hands", () => {
+  const src = readFileSync(
+    resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts"),
+    "utf8",
+  );
+
+  it("`submitted` joins decided in the out-of-our-hands predicate", () => {
+    expect(src).toMatch(/function isOutOfOurHands/);
+    expect(src).toMatch(/isDecided\(status\)\s*\|\|\s*status === "submitted"/);
+  });
+
+  it("nextStep is gated on that predicate, not on `decided` alone", () => {
+    // The specific regression: `nextStep: decided ? … : !assessed ? not_assessed`
+    // let a forwarded case fall through to the not_assessed branch.
+    expect(src).toMatch(/nextStep:\s*outOfOurHands/);
+    expect(src).not.toMatch(/nextStep:\s*decided\s*\n?\s*\?/);
+  });
+
+  it("the automation pill still keys on `decided`, not the wider predicate", () => {
+    // A forwarded case genuinely has no outcome yet, so `isDecided` remains
+    // correct for the outcome pill. Widening it there would claim a decision
+    // that has not happened.
+    expect(src).toMatch(/automationMode:\s*decided\s*\?\s*null/);
+  });
+});
