@@ -18,11 +18,15 @@
  * before completion. An entry names a FILE, never a blanket exemption,
  * and carries the reason it is still here.
  *
- * Migrated so far: GorgiasCommsReviewSection (delay cause),
- * CaseSummaryCard (assessment title). The five that remain all carry the
- * `savedToShopify` submission claim, which label-fact §9 assigns to the
- * COMPANION submission contract — they migrate together with it so
- * "saved" and "transmitted" are defined once across both surfaces.
+ * Migrated: GorgiasCommsReviewSection (delay cause), CaseSummaryCard
+ * (assessment title).
+ *
+ * The five that remain all render the `savedToShopify` label. Re-scoped
+ * 2026-09-08: four are 1:1 enum -> label maps over a backend-resolved state,
+ * and the fifth already branches on real facts. None asserts a falsehood, so
+ * none is urgent. They are kept listed because the key itself stays
+ * protected; the real follow-up is surfacing `unconfirmedForwarding`'s
+ * "saved, forwarding not confirmed" state, which is additive copy.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -66,21 +70,35 @@ const OWNER_DIR = path.join("lib", "disputes", "presentation");
  */
 const BASELINE: ReadonlySet<string> = new Set(
   [
-    /* Portal surfaces, all four carrying ONLY the `savedToShopify`
-     * submission claim — same companion-plan ownership as the embedded
-     * package card below. They migrate as one slice when that contract
-     * lands, so "saved", "submission pending" and "transmission confirmed"
-     * are defined once for portal and embedded together. */
+    /* Portal surfaces. RE-SCOPED 2026-09-08 after reading what actually
+     * shipped: these are 1:1 enum -> label maps keyed on the backend's own
+     * `submission_state` / pack status (e.g. `saved_to_shopify:
+     * "savedToShopify"`). They do not DERIVE a claim; they translate a state
+     * the backend resolved. That is the same category as the bare enums this
+     * detector deliberately leaves unprotected — guarding them would baseline
+     * legitimate readers and teach everyone to ignore the list.
+     *
+     * They stay listed rather than being deleted because the KEY they render
+     * is still protected, so removing them would fail the first assertion.
+     * The correct end state is a resolver-provided label, which belongs with
+     * the wider portal migration, not with this detector. */
     "app/(portal)/portal/dashboard/page.tsx",
     "app/(portal)/portal/disputes/page.tsx",
     "app/(portal)/portal/disputes/[id]/page.tsx",
     "app/(portal)/portal/packs/[packId]/page.tsx",
-    /* Submission claims (savedToShopify / forwardedToNetwork) are owned by
-     * the COMPANION plan's contract — label-fact §9 requires the two to ship
-     * in one release candidate, and redefining "saved" vs "transmitted" here
-     * would pre-empt it. This card already branches on real facts
-     * (isClosed / isNetworkSubmitted); the remaining work is adopting the
-     * companion predicates, not correcting a falsehood. */
+    /* CORRECTED 2026-09-08. The earlier note deferred this to an unwritten
+     * "companion contract". That contract exists and partly shipped:
+     * `submission-confirmation-gap.plan.md` was trued up 2026-09-07, its §0
+     * urgency WITHDRAWN (129 of 136 saves reach submitted_confirmed unaided;
+     * Shopify auto-submits at the deadline per docs/technical.md:447), and
+     * its §3 detection shipped in PR #649 as
+     * `lib/automation/unconfirmedForwarding.ts`.
+     *
+     * So there is no pending redefinition of "saved" vs "transmitted" to wait
+     * for. This card already branches on real facts (isClosed /
+     * isNetworkSubmitted) and states no falsehood. What remains is adopting
+     * `unconfirmedForwarding`'s honest third state — "saved, forwarding not
+     * confirmed" — which is a copy addition, not a correction. */
     "app/(embedded)/app/disputes/[id]/tabs/sections/CompleteDefencePackageCard.tsx",
     // Shared component — NOT in the plan's §5 migration table. Found by
     // this detector, which is the point: grep-based inventories miss
