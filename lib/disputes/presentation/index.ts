@@ -70,3 +70,20 @@ export {
   type ObservedAttemptRow,
   type ResolveBuildAttemptInput,
 } from "./resolveBuildAttempt";
+
+export {
+  mayPromiseAutomaticWork,
+  mayRenderIntegrationGuidance,
+  mayRenderLiveIntegrationCard,
+  resolveAutomationPromise,
+  resolveDeadlineFacts,
+  resolveDelayCause,
+  resolveIntegrationAvailability,
+  type AutomationPromise,
+  type DeadlineFacts,
+  type DelayCause,
+  type IntegrationAvailability,
+  type ResolveAutomationInput,
+  type ResolveDelayInput,
+  type ResolveIntegrationInput,
+} from "./resolveAvailability";
