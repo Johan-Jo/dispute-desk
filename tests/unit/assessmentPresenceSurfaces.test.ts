@@ -80,11 +80,24 @@ describe("resolveAssessmentGate", () => {
     // All three, never a subset. There is no state in which it is correct to
     // hide the band but keep the submit button — each is downstream of the
     // same missing assessment.
+    // `not_assessed` split into absent | stale | unknown (label-fact plan
+    // §3.5) so a previously-assessed case is not told "not assessed yet".
+    // The rule this test guards is unchanged and now holds across all three:
+    // none of them is more permissive than the others.
     const gate = resolveAssessmentGate({ needsRecalculation: true });
-    expect(gate.presence).toBe("not_assessed");
+    expect(gate.presence).toBe("absent");
     expect(gate.mayRenderVerdict).toBe(false);
     expect(gate.mayRenderRecommendation).toBe(false);
     expect(gate.mayOfferFilingAction).toBe(false);
+
+    for (const g of [
+      resolveAssessmentGate({ needsRecalculation: true, recalculationReason: "input_hash_mismatch" }),
+      resolveAssessmentGate({ needsRecalculation: true, readOk: false }),
+    ]) {
+      expect(g.mayRenderVerdict).toBe(false);
+      expect(g.mayRenderRecommendation).toBe(false);
+      expect(g.mayOfferFilingAction).toBe(false);
+    }
   });
 
   it("permits all three when the assessment is current", () => {

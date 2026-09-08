@@ -19,6 +19,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { latestCandidate } from "@/lib/defence/candidateVersions";
 import {
   resolveArtifact,
   type ArtifactFreshness,
@@ -94,7 +95,25 @@ export async function gatherArtifactFacts(
   }
 
   for (const disputeId of disputeIds) {
-    const raw = byDispute.get(disputeId) ?? [];
+    const rawAll = byDispute.get(disputeId) ?? [];
+
+    /*
+     * "Highest version" is NOT "the package we would file". A failed build
+     * takes the next version number without producing anything, so it
+     * SHADOWS the last real package — the defect `candidateVersions` exists
+     * to close, after it cost blume-box dispute 11051073729 (USD 120) at its
+     * deadline on 2026-08-14.
+     *
+     * The batched query above stays (plan §5 forbids a per-dispute fetch, so
+     * `fetchCandidateRows` is not usable here), but SELECTION is delegated to
+     * the one owner. `abortedNewer` is exactly the §3.4 distinction: "we hold
+     * v4" and "we hold v4 because v5's build failed" are different facts.
+     */
+    const selection = latestCandidate(
+      rawAll.map((r) => ({ ...r, version: r.version ?? Number.NaN, status: r.status })),
+    );
+    const raw: RawPackageRow[] = selection.candidate ? [selection.candidate] : [];
+    const abortedNewer = selection.abortedNewer;
 
     const artifactRows: ObservedPackageRow[] = raw.map((r) => ({
       id: r.id,
@@ -106,7 +125,15 @@ export async function gatherArtifactFacts(
       failureCode: r.failure_code,
     }));
 
-    const attemptRows: ObservedAttemptRow[] = raw.map((r) => ({
+    /*
+     * The ATTEMPT dimension is the opposite question: it must see the aborted
+     * builds the artifact dimension looks past, or a failed rebuild would be
+     * invisible and the case would read as "succeeded" off the older package.
+     * Newest-first, aborted rows included.
+     */
+    const attemptSource: RawPackageRow[] = [...abortedNewer, ...raw];
+
+    const attemptRows: ObservedAttemptRow[] = attemptSource.map((r) => ({
       id: r.id,
       version: r.version ?? Number.NaN,
       status: (r.status ?? "draft") as ObservedAttemptRow["status"],

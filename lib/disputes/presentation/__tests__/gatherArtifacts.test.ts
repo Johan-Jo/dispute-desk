@@ -76,16 +76,38 @@ describe("gatherArtifactFacts", () => {
     expect(out.get("d2")!.attempt.state).toBe("none");
   });
 
-  it("validation_failed with no pdf -> absent artifact, failed attempt", async () => {
-    // PROD: the cohort's shape before repair.
+  it("a failed rebuild does not shadow the last real package", async () => {
+    // PROD: caffd60d before repair — v1 stale WITH a pdf, v2 failed with none.
+    //
+    // The two dimensions must answer differently, and this is the whole
+    // reason they are separate. `candidateVersions` exists because a failed
+    // build takes the next version number without producing anything, which
+    // cost blume-box dispute 11051073729 (USD 120) at its deadline on
+    // 2026-08-14 when v5's failure hid a valid v4.
     const { sb } = stub([
       row({ id: "p2", dispute_id: "d1", version: 2, pdf_path: null, status: "failed", validation_status: "failed", failure_code: "validation_failed" }),
       row({ id: "p1", dispute_id: "d1", version: 1, status: "stale" }),
     ]);
     const out = await gatherArtifactFacts(sb, "shop-1", ["d1"]);
-    expect(out.get("d1")!.artifact.state).toBe("absent");
+
+    // ARTIFACT looks past the aborted build to the document we actually hold.
+    const a = out.get("d1")!.artifact;
+    expect(a.state).toBe("present");
+    if (a.state !== "present") throw new Error("unreachable");
+    expect(a.identity.version).toBe(1);
+
+    // ATTEMPT must still see the failure, or the case reads as succeeded.
     expect(out.get("d1")!.attempt.state).toBe("failed");
     expect(out.get("d1")!.attempt.cause).toBe("validation_failed");
+  });
+
+  it("a failed build with NO prior package leaves nothing to show", async () => {
+    const { sb } = stub([
+      row({ id: "p1", dispute_id: "d1", version: 1, pdf_path: null, status: "failed", validation_status: "failed", failure_code: "validation_failed" }),
+    ]);
+    const out = await gatherArtifactFacts(sb, "shop-1", ["d1"]);
+    expect(out.get("d1")!.artifact.state).toBe("absent");
+    expect(out.get("d1")!.attempt.state).toBe("failed");
   });
 
   it("skipped/no_bank_eligible_facts -> declined, not a readiness claim", async () => {

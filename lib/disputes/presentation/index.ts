@@ -93,3 +93,11 @@ export {
   type ArtifactFacts,
   type GatherArtifactOptions,
 } from "./gatherArtifacts";
+
+export {
+  assertProjection,
+  findingKey,
+  type CaseProjection,
+  type Finding,
+  type FindingKind,
+} from "./claimAssertions";
