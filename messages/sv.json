@@ -1868,7 +1868,7 @@
         "analysisDeferredBody": "Konversationer matchades, men bevisanalysen är pausad och återupptas snart. Matchade ärenden visas nedan.",
         "reconnectRequiredTitle": "Återanslut Gorgias",
         "reconnectRequiredBody": "Din Gorgias-anslutning är inte längre auktoriserad. Återanslut den i Inställningar för att återuppta kommunikationsbevis.",
-        "takingLongerNote": "Detta tar längre tid än väntat. Det kan vänta bakom annat arbete – uppdatera för att kontrollera om det finns någon uppdatering."
+        "takingLongerNote": "Detta tar längre tid än vanligt. Det körs i bakgrunden och slutförs automatiskt – uppdatera för att se om något har ändrats."
       },
       "staleBanner": {
         "title": "Ditt försvarspaket är inaktuellt",
@@ -1984,6 +1984,14 @@
         "bodyAbsent": "DisputeDesk har ännu inte bedömt det här ärendet, så det finns varken ärendestyrka eller fullständighet att visa. Bedömningen sker automatiskt när bevispaketet har byggts — du behöver inte göra något.",
         "bodyStale": "Det här ärendet bedömdes enligt en tidigare version av vår poängsättning, så tidigare ärendestyrka och fullständighet gäller inte längre. Inget har ändrats i dina bevis. DisputeDesk bedömer ärendet automatiskt på nytt innan svarsfristen — du behöver inte göra något.",
         "actionsHidden": "Det går inte att skicka förrän ärendet har bedömts."
+      },
+      "stale": {
+        "title": "Bedömd enligt en tidigare version",
+        "body": "Det här ärendet bedömdes enligt en tidigare version av vår bedömning, så tidigare ärendestyrka och fullständighet gäller inte längre. Inget har ändrats i ditt underlag."
+      },
+      "unknown": {
+        "title": "Bedömning inte tillgänglig",
+        "body": "Vi kunde inte läsa ärendets bedömning just nu. Inget har ändrats i ditt underlag – försök igen om en stund."
       }
     },
     "deadlineOnly": {

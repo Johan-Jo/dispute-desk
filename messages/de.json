@@ -1868,7 +1868,7 @@
         "analysisDeferredBody": "Konversationen wurden zugeordnet, aber die Nachweisanalyse pausiert und wird in Kürze fortgesetzt. Zugeordnete Tickets bleiben unten sichtbar.",
         "reconnectRequiredTitle": "Gorgias neu verbinden",
         "reconnectRequiredBody": "Ihre Gorgias-Verbindung ist nicht mehr autorisiert. Verbinden Sie sie in den Einstellungen neu, um Kommunikationsnachweise fortzusetzen.",
-        "takingLongerNote": "Das dauert länger als erwartet. Möglicherweise wartet es auf andere Aufgaben – aktualisieren Sie, um nach Updates zu suchen."
+        "takingLongerNote": "Das dauert länger als üblich. Der Vorgang läuft im Hintergrund und wird automatisch abgeschlossen – aktualisieren Sie, um nach Updates zu suchen."
       },
       "staleBanner": {
         "title": "Ihr Verteidigungspaket ist veraltet",
@@ -1984,6 +1984,14 @@
         "bodyAbsent": "DisputeDesk hat diesen Fall noch nicht bewertet, daher gibt es weder eine Fallstärke noch eine Vollständigkeit anzuzeigen. Die Bewertung erfolgt automatisch, sobald das Beweispaket erstellt ist — von Ihnen ist nichts erforderlich.",
         "bodyStale": "Dieser Fall wurde nach einer früheren Version unserer Bewertung eingestuft, daher gelten die bisherige Fallstärke und Vollständigkeit nicht mehr. An Ihren Beweisen hat sich nichts geändert. DisputeDesk bewertet den Fall vor der Antwortfrist automatisch neu — von Ihnen ist nichts erforderlich.",
         "actionsHidden": "Das Senden ist erst möglich, wenn dieser Fall bewertet wurde."
+      },
+      "stale": {
+        "title": "Nach einer früheren Version bewertet",
+        "body": "Dieser Fall wurde nach einer früheren Version unserer Bewertung geprüft, daher gelten die vorherige Fallstärke und Vollständigkeit nicht mehr. An Ihren Nachweisen hat sich nichts geändert."
+      },
+      "unknown": {
+        "title": "Bewertung nicht verfügbar",
+        "body": "Die Bewertung dieses Falls konnte gerade nicht gelesen werden. An Ihren Nachweisen hat sich nichts geändert – versuchen Sie es in Kürze erneut."
       }
     },
     "deadlineOnly": {

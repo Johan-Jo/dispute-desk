@@ -354,7 +354,10 @@ describe("5. no filing override while the assessment is absent or stale", () => 
         needsRecalculation: p.assessment.needsRecalculation,
         recalculationReason: p.assessment.recalculationReason,
       });
-      expect(gate.presence).toBe("not_assessed");
+      // This loop already named the two cases apart; since label-fact plan
+      // §3.5 the presence value names them apart too, so a previously
+      // assessed case is no longer told "not assessed yet".
+      expect(gate.presence).toBe(name);
       expect(gate.mayRenderVerdict).toBe(false);
       expect(gate.mayRenderRecommendation).toBe(false);
       // The one that matters: `readiness: "blocked"` on the sentinel is what

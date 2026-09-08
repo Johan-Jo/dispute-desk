@@ -1868,7 +1868,7 @@
         "analysisDeferredBody": "Conversations were matched, but evidence analysis is paused and will resume shortly. Matched tickets remain visible below.",
         "reconnectRequiredTitle": "Reconnect Gorgias",
         "reconnectRequiredBody": "Your Gorgias connection is no longer authorized. Reconnect it in Settings to resume communication evidence.",
-        "takingLongerNote": "This is taking longer than expected. It may be waiting behind other work — you can refresh to check for an update."
+        "takingLongerNote": "This is taking longer than usual. It runs in the background and will finish on its own — refresh to check for an update."
       },
       "staleBanner": {
         "title": "Your defence package is out of date",
@@ -1984,6 +1984,14 @@
         "bodyAbsent": "DisputeDesk has not assessed this case yet, so there is no case strength or completeness to show. It is assessed automatically once the evidence pack is built — nothing is needed from you.",
         "bodyStale": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence. DisputeDesk reassesses the case automatically before the response deadline — nothing is needed from you.",
         "actionsHidden": "Sending is unavailable until this case has been assessed."
+      },
+      "stale": {
+        "title": "Assessed under an earlier version",
+        "body": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence."
+      },
+      "unknown": {
+        "title": "Assessment unavailable",
+        "body": "We could not read this case's assessment just now. Nothing about your evidence has changed — try again shortly."
       }
     },
     "deadlineOnly": {
