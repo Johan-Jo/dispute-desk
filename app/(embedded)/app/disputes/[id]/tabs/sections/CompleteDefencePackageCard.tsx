@@ -1025,10 +1025,30 @@ export function CompleteDefencePackageCard({
                  everywhere else in the UI. The detail is already on the audit
                  row (`defence_package_validation_failed`), which is where a
                  support question gets answered from. */}
+          {/* TONE FOLLOWS RISK, NOT THE WORD "failed".
+   *
+   * A failed rebuild means two completely different things depending on
+   * whether a filed package already stands behind it:
+   *
+   *   no bankFacing  -> nothing is filed, the deadline is live. Critical.
+   *   bankFacing     -> v{n} is with the card network and unaffected. The
+   *                     body already says "No action is needed", so an
+   *                     amber warning contradicts its own text.
+   *
+   * Observed on blume-box 64542500 (Order #352501, USD 120): v4 filed
+   * 2026-08-15 and forwarded 2026-08-24, v5 then failed with llm_error.
+   * The card showed "Card network reviewing" and an amber alarm together —
+   * a background build failure dressed as something the merchant must act
+   * on, on a case whose outcome is already out of their hands.
+   *
+   * `info` keeps the fact visible (a merchant asking "why is there no v5?"
+   * still finds the answer) without claiming urgency that does not exist.
+   *
+   * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.4. */}
           {row.status === "failed" && (
             <Banner
-              tone={bankFacing ? "warning" : "critical"}
-              title={tPkg("rebuildFailedTitle")}
+              tone={bankFacing ? "info" : "critical"}
+              title={bankFacing ? tPkg("rebuildFailedTitleFiled") : tPkg("rebuildFailedTitle")}
             >
               <p>
                 {bankFacing
