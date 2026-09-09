@@ -211,18 +211,30 @@ describe("CompleteDefencePackageCard — a FAILED rebuild over a filed version",
   it("still reports that the rebuild failed", () => {
     /* Suppressing the false invitation must not suppress the fact — the
      * merchant has to know the refresh did not happen. */
+    /* The FILED variant of the title — a rebuild that failed behind a filed
+     * package is reported as "a newer version was not filed", not as the
+     * bare "didn't pass our checks" used when nothing is filed at all. */
     const html = render(props(failedLatest));
-    expect(contains(html, PKG.rebuildFailedTitle)).toBe(true);
+    expect(contains(html, PKG.rebuildFailedTitleFiled)).toBe(true);
   });
 
   it("says the filed version still stands, and does not shout", () => {
     /* v4 is at the bank and readback-verified; there is nothing to lose and
-     * nothing to do, so this is a warning, not a critical failure. The card
-     * used to render a red panel directly under a green "Saved to Shopify". */
+     * nothing to do.
+     *
+     * This was `critical`, then `warning`. It is now `info`, because amber
+     * still reads as "act on me" and the body directly beneath says "No
+     * action is needed" — the banner contradicted its own text. Observed on
+     * blume-box 64542500 (Order #352501), where an amber alarm sat beside
+     * "Card network reviewing" on a case already out of the merchant's
+     * hands. The unfiled case keeps `critical`: there the deadline is live
+     * and nothing is filed. Tone follows risk, not the word "failed".
+     * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.4. */
     const html = render(props(failedLatest));
     expect(html).toContain("v4 is filed with Shopify and still stands");
     // Polaris expresses banner tone as a design token, not a status class.
-    expect(html).toContain("--p-color-bg-fill-warning");
+    expect(html).toContain("--p-color-bg-fill-info");
+    expect(html).not.toContain("--p-color-bg-fill-warning");
     expect(html).not.toContain("--p-color-bg-fill-critical");
   });
 
