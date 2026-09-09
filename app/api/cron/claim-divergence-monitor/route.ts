@@ -9,6 +9,7 @@ import {
   gatherArtifactFacts,
   mayPromiseAutomaticWork,
   resolveAutomationPromise,
+  suppressesAutomaticRecoveryPromise,
   type Finding,
 } from "@/lib/disputes/presentation";
 
@@ -101,12 +102,32 @@ export async function GET(req: NextRequest) {
       if (!f) continue;
       checked += 1;
 
-      // What the surface WOULD claim under the corrected contract. Today
-      // this equals the predicate, so divergence findings come only from
-      // unmigrated consumers; as boundaries migrate this becomes the
-      // projection under test rather than an assumption.
+      /*
+       * THE PROJECTION MUST BE READ, NOT ASSUMED.
+       *
+       * The first version set `claimsAutomaticRecovery` from
+       * `mayPromiseAutomaticWork(automation)` — a shop-level flag with no
+       * per-case knowledge — and then `assertProjection` flagged
+       * `recovery_promised_over_blocker` because the attempt was declined or
+       * capped. The monitor asserted the claim and then reported itself for
+       * asserting it.
+       *
+       * It fired on four prod cases in its first run (three
+       * no_bank_eligible_facts, one daily_cap_reached) and would have fired
+       * on every declined or capped case every hour thereafter — noise that
+       * trains the reader to ignore the alert, which is worse than no alert.
+       *
+       * An assumed projection cannot detect divergence. It can only
+       * manufacture it. So the recovery claim is now derived the way the UI
+       * derives it: the shop-level promise AND the absence of a per-case
+       * blocker. A declined or capped case does not promise recovery,
+       * because `suppressesAutomaticRecoveryPromise` is exactly the
+       * predicate the surfaces use.
+       */
       const claimsPrepared = canClaimPrepared(f.artifact);
-      const claimsAutomaticRecovery = mayPromiseAutomaticWork(automation);
+      const claimsAutomaticRecovery =
+        mayPromiseAutomaticWork(automation) &&
+        !suppressesAutomaticRecoveryPromise(f.attempt);
 
       const projection = {
         disputeId: r.id,

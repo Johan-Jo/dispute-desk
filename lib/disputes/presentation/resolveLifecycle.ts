@@ -73,6 +73,23 @@ export interface LifecycleInput {
   normalizedStatus: string | null;
   /** Latest evidence pack `status`, or null when no pack exists. */
   packStatus: string | null;
+  /**
+   * Does a completed, validated document actually exist?
+   *
+   * `design-alignment-shared-presentation-model.plan.md` §9 required rung 4 to
+   * rest on a "verified completed-package state" and said the rung must be
+   * SKIPPED until such a field existed: "the mere existence of a draft record
+   * do[es] not prove a completed, ready package. Do not infer pack_prepared."
+   * No field was supplied, so the rung shipped reading pack status alone —
+   * which is how eight prod disputes rendered "Pack prepared" with
+   * `pdf_path IS NULL`, three of them at completeness 97.
+   *
+   * `resolveArtifact` now supplies that fact. Pass `canClaimPrepared(...)`
+   * here. `null` means the caller has not resolved the artifact, and rung 4
+   * keeps its historical behaviour so unmigrated callers are unaffected —
+   * an explicit `false` is what withholds the claim.
+   */
+  artifactPrepared?: boolean | null;
   /** Fallback ONLY when submissionState is missing/unrecognized:
    *  a qualifying PresentationStatus saved signal. */
   presentationSavedFallback?: boolean;
@@ -147,8 +164,13 @@ export function resolveLifecycle(input: LifecycleInput): OperationalLifecycle {
   }
 
   // Rung 4 — verified completed-but-not-saved package.
+  //
+  // Pack status alone is NOT that verification (plan §9). When the caller has
+  // resolved the artifact and it is not a validated document, the rung is
+  // skipped exactly as the plan directed, and the case falls through to the
+  // building/monitoring rungs below — which describe it truthfully.
   if (input.packStatus != null && PACK_PREPARED.has(input.packStatus)) {
-    return "pack_prepared";
+    if (input.artifactPrepared !== false) return "pack_prepared";
   }
 
   // Rung 5 — build in progress.
