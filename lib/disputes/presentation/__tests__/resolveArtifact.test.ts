@@ -155,3 +155,34 @@ describe("resolveArtifact", () => {
     expect(r.state).toBe("absent");
   });
 });
+
+/* ── Rung 4 gating (design-alignment §9) ────────────────────────────────── */
+describe("pack_prepared requires a verified document, not a pack status", () => {
+  it("canClaimPrepared is the field §9 asked for and never got", () => {
+    // §9: "the mere existence of a draft record do[es] not prove a completed,
+    // ready package. Do not infer pack_prepared" — the rung was to be SKIPPED
+    // until a verified backend state existed. It shipped reading pack status
+    // alone, which is how eight prod disputes rendered "Pack prepared" with
+    // pdf_path IS NULL, three at completeness 97.
+    const noDocument = resolveArtifact({
+      readOk: true,
+      rows: [row({ pdfPath: null, validationStatus: "failed", failureCode: "validation_failed" })],
+      freshness: "unknown",
+    });
+    expect(canClaimPrepared(noDocument)).toBe(false);
+
+    const declined = resolveArtifact({ readOk: true, rows: [], freshness: "unknown" });
+    expect(canClaimPrepared(declined)).toBe(false);
+
+    const real = resolveArtifact({ readOk: true, rows: [row()], freshness: "fresh" });
+    expect(canClaimPrepared(real)).toBe(true);
+  });
+
+  it("an unread artifact never licenses the claim either", () => {
+    // A caller that has not resolved the artifact passes null and keeps the
+    // old behaviour; a caller that HAS resolved it and found nothing must not
+    // be able to fall back to the pack status.
+    const unknown = resolveArtifact({ readOk: false, rows: [], freshness: "unknown" });
+    expect(canClaimPrepared(unknown)).toBe(false);
+  });
+});
