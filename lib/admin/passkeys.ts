@@ -109,8 +109,9 @@ export function filterTransports(
  * offering its cross-device "use a phone" sheet regardless of what we list —
  * a user whose laptop passkey is unavailable needs that fallback. Filtering
  * `hybrid` out of transports therefore did NOT remove the second prompt
- * (shipped 2026-09-05, no observable change). `hints` is the field Chrome
- * actually honours to collapse the picker to the local device.
+ * (shipped 2026-09-05, no observable change). `hints` requests a preference
+ * for the local device; it does not guarantee a single native dialog. Chrome
+ * documents that Windows-controlled UI may ignore these hints entirely.
  *
  * Typed + spread manually because @simplewebauthn/server@13 does not model
  * `hints` yet; @simplewebauthn/browser@13 spreads the whole options object
