@@ -61,9 +61,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Same on-device-only hint as the auth ceremony, so enrolling doesn't offer
-  // the phone / Google route either. Pairs with authenticatorAttachment:
-  // "platform" above — that constrains WHAT may enrol, this constrains the UI.
+  // Same on-device UI preference as the auth ceremony. Native UI may ignore
+  // hints; authenticatorAttachment: "platform" above constrains enrollment.
   const res = NextResponse.json({ ...options, hints: CLIENT_DEVICE_HINTS });
   res.cookies.set(
     WEBAUTHN_CHALLENGE_COOKIE,
