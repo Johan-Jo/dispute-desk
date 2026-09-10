@@ -128,6 +128,26 @@ interface VariantStrings {
    * then resolved favourably — never that the filing caused it.
    */
   defendedClause?: string;
+  /**
+   * Replacement for the LAST body paragraph when no submitted defence
+   * package exists.
+   *
+   * The shipped paragraph promises the record contains "the evidence
+   * submitted" and invites the team to "review what worked and reuse the
+   * pattern". Both presuppose a filing. On a win where nothing was filed
+   * — the cardholder withdrew, or the issuer never escalated — there is
+   * no evidence in the record and no pattern to reuse, so the merchant is
+   * pointed at a case file that does not contain what it was promised.
+   *
+   * Same package-presence discriminator as `defendedClause`; the
+   * substitute describes only what the record actually holds.
+   *
+   * Set on both `won` variants (chargeback and inquiry). The lost and
+   * accepted variants already describe the record without claiming
+   * evidence is in it — they say "see what evidence was available",
+   * which is true when the answer is none.
+   */
+  undefendedRecordParagraph?: string;
   /** One-line summary rendered as a small caption inside the card,
    *  below the CTA — gives the merchant a scannable "what just
    *  happened" line they can take in at a glance. Optional. */
@@ -178,6 +198,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         "Your case record stays in DisputeDesk, including the evidence submitted, timeline, and outcome, so your team can review what worked and reuse the pattern for future disputes.",
       ],
       amountLabel: "Amount protected",
+      undefendedRecordParagraph:
+        "Your case record stays in DisputeDesk, including the timeline and outcome, so your team has the full history of the case.",
       cta: "View winning case",
       resultLine: "Result: Defence accepted · Funds retained",
     },
@@ -216,6 +238,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           "Your case record stays in DisputeDesk, including the evidence submitted, timeline, and outcome, so your team can review what worked and reuse the pattern for future disputes.",
         ],
         amountLabel: "Amount protected",
+        undefendedRecordParagraph:
+          "Your case record stays in DisputeDesk, including the timeline and outcome, so your team has the full history of the case.",
         defendedClause:
           "We filed your evidence in response, and the case closed in your favour.",
         cta: "View winning case",
@@ -243,7 +267,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         ],
         amountLabel: "Amount settled with customer",
         cta: "View case record",
-        resultLine: "Result: Closed · No response submitted",
+        resultLine: "Result: Closed",
       },
     },
   },
@@ -264,6 +288,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der eingereichten Beweise, der Zeitlinie und des Ergebnisses —, damit Ihr Team analysieren kann, was funktioniert hat, und das Muster für künftige Streitfälle wiederverwenden kann.",
       ],
       amountLabel: "Geschützter Betrag",
+      undefendedRecordParagraph:
+        "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der Zeitlinie und des Ergebnisses —, damit Ihr Team den vollständigen Verlauf des Falls hat.",
       cta: "Gewonnenen Fall ansehen",
       resultLine: "Ergebnis: Verteidigung akzeptiert · Mittel behalten",
     },
@@ -302,6 +328,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der eingereichten Beweise, der Zeitlinie und des Ergebnisses —, damit Ihr Team analysieren kann, was funktioniert hat, und das Muster für künftige Streitfälle wiederverwenden kann.",
         ],
         amountLabel: "Geschützter Betrag",
+        undefendedRecordParagraph:
+          "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der Zeitlinie und des Ergebnisses —, damit Ihr Team den vollständigen Verlauf des Falls hat.",
         defendedClause:
           "Wir haben daraufhin Ihre Beweise eingereicht, und der Fall wurde zu Ihren Gunsten abgeschlossen.",
         cta: "Gewonnenen Fall ansehen",
@@ -329,7 +357,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         ],
         amountLabel: "Mit dem Kunden abgerechneter Betrag",
         cta: "Akteneintrag ansehen",
-        resultLine: "Ergebnis: Geschlossen · Keine Antwort eingereicht",
+        resultLine: "Ergebnis: Geschlossen",
       },
     },
   },
@@ -350,6 +378,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         "El registro del caso permanece en DisputeDesk, incluidas las pruebas presentadas, la cronología y el resultado, para que su equipo pueda revisar qué funcionó y reutilizar el patrón en futuras disputas.",
       ],
       amountLabel: "Importe protegido",
+      undefendedRecordParagraph:
+        "El registro del caso permanece en DisputeDesk, incluidas la cronología y el resultado, para que su equipo disponga del historial completo del caso.",
       cta: "Ver caso ganador",
       resultLine: "Resultado: Defensa aceptada · Fondos retenidos",
     },
@@ -388,6 +418,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           "El registro del caso permanece en DisputeDesk, incluidas las pruebas presentadas, la cronología y el resultado, para que su equipo pueda revisar qué funcionó y reutilizar el patrón en futuras disputas.",
         ],
         amountLabel: "Importe protegido",
+        undefendedRecordParagraph:
+          "El registro del caso permanece en DisputeDesk, incluidas la cronología y el resultado, para que su equipo disponga del historial completo del caso.",
         defendedClause:
           "Presentamos sus pruebas en respuesta, y el caso se cerró a su favor.",
         cta: "Ver caso ganador",
@@ -415,7 +447,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         ],
         amountLabel: "Importe liquidado con el cliente",
         cta: "Ver registro del caso",
-        resultLine: "Resultado: Cerrado · Sin respuesta presentada",
+        resultLine: "Resultado: Cerrado",
       },
     },
   },
@@ -436,6 +468,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         "O registro do caso permanece no DisputeDesk, incluindo as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que funcionou e reutilizar o padrão em disputas futuras.",
       ],
       amountLabel: "Valor protegido",
+      undefendedRecordParagraph:
+        "O registro do caso permanece no DisputeDesk, incluindo a linha do tempo e o resultado, para que sua equipe tenha o histórico completo do caso.",
       cta: "Ver caso vencedor",
       resultLine: "Resultado: Defesa aceita · Fundos retidos",
     },
@@ -474,6 +508,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           "O registro do caso permanece no DisputeDesk, incluindo as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que funcionou e reutilizar o padrão em disputas futuras.",
         ],
         amountLabel: "Valor protegido",
+        undefendedRecordParagraph:
+          "O registro do caso permanece no DisputeDesk, incluindo a linha do tempo e o resultado, para que sua equipe tenha o histórico completo do caso.",
         defendedClause:
           "Enviamos suas provas em resposta, e o caso foi encerrado a seu favor.",
         cta: "Ver caso vencedor",
@@ -501,7 +537,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         ],
         amountLabel: "Valor liquidado com o cliente",
         cta: "Ver registro do caso",
-        resultLine: "Resultado: Encerrado · Sem resposta enviada",
+        resultLine: "Resultado: Encerrado",
       },
     },
   },
@@ -522,6 +558,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         "Le dossier reste dans DisputeDesk, y compris les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui a fonctionné et réutiliser le schéma pour les futurs différends.",
       ],
       amountLabel: "Montant protégé",
+      undefendedRecordParagraph:
+        "Le dossier reste dans DisputeDesk, y compris la chronologie et le résultat, pour que votre équipe dispose de l'historique complet de l'affaire.",
       cta: "Voir l'affaire gagnée",
       resultLine: "Résultat : Défense acceptée · Fonds conservés",
     },
@@ -560,6 +598,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           "Le dossier reste dans DisputeDesk, y compris les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui a fonctionné et réutiliser le schéma pour les futurs différends.",
         ],
         amountLabel: "Montant protégé",
+        undefendedRecordParagraph:
+          "Le dossier reste dans DisputeDesk, y compris la chronologie et le résultat, pour que votre équipe dispose de l'historique complet de l'affaire.",
         defendedClause:
           "Nous avons soumis vos preuves en réponse, et le dossier a été clos en votre faveur.",
         cta: "Voir l'affaire gagnée",
@@ -587,7 +627,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         ],
         amountLabel: "Montant réglé avec le client",
         cta: "Voir le dossier",
-        resultLine: "Résultat : Clôturé · Aucune réponse soumise",
+        resultLine: "Résultat : Clôturé",
       },
     },
   },
@@ -608,6 +648,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         "Ärendet stannar i DisputeDesk — inklusive de inskickade bevisen, tidslinjen och utfallet — så att ditt team kan granska vad som fungerade och återanvända mönstret för framtida tvister.",
       ],
       amountLabel: "Skyddat belopp",
+      undefendedRecordParagraph:
+        "Ärendet stannar i DisputeDesk — inklusive tidslinjen och utfallet — så att ditt team har ärendets fullständiga historik.",
       cta: "Visa vunnet ärende",
       resultLine: "Resultat: Försvar accepterat · Medel behållna",
     },
@@ -646,6 +688,8 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           "Ärendet stannar i DisputeDesk — inklusive de inskickade bevisen, tidslinjen och utfallet — så att ditt team kan granska vad som fungerade och återanvända mönstret för framtida tvister.",
         ],
         amountLabel: "Skyddat belopp",
+        undefendedRecordParagraph:
+          "Ärendet stannar i DisputeDesk — inklusive tidslinjen och utfallet — så att ditt team har ärendets fullständiga historik.",
         defendedClause:
           "Vi skickade in dina bevis som svar, och ärendet avslutades till din fördel.",
         cta: "Visa vunnet ärende",
@@ -673,7 +717,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         ],
         amountLabel: "Belopp reglerat med kund",
         cta: "Visa ärende­post",
-        resultLine: "Resultat: Avslutat · Inget svar inlämnat",
+        resultLine: "Resultat: Avslutat",
       },
     },
   },
@@ -879,6 +923,18 @@ export async function sendOutcomePostedAlert(
      * outcome as the fact it is, with no claim about how it came about. */
     if (variant.defendedClause && ctx.defencePackage) {
       bodyParagraphs[0] = `${bodyParagraphs[0]} ${variant.defendedClause}`;
+    }
+
+    /* The record paragraph promises "the evidence submitted" and invites
+     * the team to "reuse the pattern". With no package there is neither.
+     * Swap in the version that describes only what the record holds.
+     *
+     * Indexed from the END: this runs before the explanation splice, but
+     * `defendedClause` above may already have grown paragraph 0, and the
+     * record paragraph is always last regardless of variant length. */
+    if (variant.undefendedRecordParagraph && !ctx.defencePackage) {
+      bodyParagraphs[bodyParagraphs.length - 1] =
+        variant.undefendedRecordParagraph;
     }
 
     if (ctx.outcome === "won" || ctx.outcome === "lost") {

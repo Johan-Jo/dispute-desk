@@ -2715,6 +2715,14 @@ The `defencePackage` lookup made this reachable in practice beyond the dormant c
 **Ordering constraint.** The clause is appended to `bodyParagraphs[0]` **before** the explanation paragraph is `splice`d in at index 1. Reversing that silently attaches it to the wrong paragraph — it reads as a non-sequitur rather than throwing, so a test pins paragraph 0's content directly.
 
 The lost and accepted inquiry variants were already clean (they state facts without attributing a cause) and are unchanged, as is the chargeback-won copy, which describes what the card network did rather than what our filing achieved.
+
+Two adjacent claims were fixed in the same pass.
+
+**The record paragraph no longer promises absent evidence.** Both `won` variants (chargeback and inquiry, all six locales) closed with *"Your case record stays in DisputeDesk, including **the evidence submitted**, timeline, and outcome, so your team can review what worked and **reuse the pattern**."* Both halves presuppose a filing. On a win where nothing was filed the merchant is pointed at a case file that does not contain what it was promised, and invited to reuse a pattern that does not exist. `VariantStrings.undefendedRecordParagraph` substitutes a version describing only what the record holds (timeline and outcome) when `defencePackage` is null. It is applied by index **from the end**, because `defendedClause` may already have grown paragraph 0 and the record paragraph is always last regardless of variant length.
+
+**The accepted-inquiry `resultLine` no longer asserts absence.** It read *"Result: Closed · No response submitted"* — the mirror image of the inquiry-won defect, and unfounded for the reason the module doc already gives for that variant: `accepted` is a **catch-all** that also reaches disputes DisputeDesk submitted, including deadline-cron sends, so it cannot know that nothing was filed. Now simply *"Result: Closed"*, matching the non-inquiry `accepted` variant, which was always correct. Asserting absence needs the same evidence as asserting presence.
+
+**Still outstanding:** the `lost` variants carry the same *"with the submitted evidence"* promise. Lower risk — a loss is only reachable on a case that went to a decision — but it is the same class of claim and is not yet guarded.
 - **No bare gateway codes** ("the billing address did not match", never "AVS = N").
 
 **Email specifics.** Inserted as `body[1]` on `won`/`lost` and their `inquiry` counterparts. **`accepted` is excluded** — it is a catch-all that also reaches disputes we submitted, so it cannot know what was filed. The lookup is failure-tolerant at both layers: a read error or missing key degrades to the email's existing wording rather than costing the merchant the notification. Historical emails are not resent (`OUTCOME_DETECTED` is dedup-guarded), so already-decided cases get the sentence in the Overview only.
