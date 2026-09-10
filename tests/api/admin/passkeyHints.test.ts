@@ -44,8 +44,10 @@ beforeEach(() => {
  * The first attempt stripped the `hybrid` transport and shipped to prod with NO
  * observable change: transports are only a routing hint, and Chrome keeps
  * offering its cross-device "use a phone" / Google sheet regardless. `hints:
- * ["client-device"]` is the field Chrome honours, so it is what must be pinned —
- * asserting on transports alone gives false confidence.
+ * ["client-device"]` requests the preferred UI. These assertions pin the response
+ * shape, not the number of OS dialogs: Windows-owned UI can ignore the hint.
+ * The page's cancellation/timeout/single-attempt behavior is exercised by
+ * e2e/passkeys/verification.spec.ts with the real browser adapter.
  */
 describe("passkey ceremonies request the on-device authenticator UI", () => {
   it("authenticate options carry hints: ['client-device']", async () => {

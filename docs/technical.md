@@ -5437,10 +5437,12 @@ How it works:
 - **Lock-out escape hatch:** if an admin loses all devices, a service-role
   operator runs `DELETE FROM admin_passkeys WHERE user_id = '<uuid>'` to reset them
   to the enroll flow (documented in the migration).
-- **Single prompt via `hints` (2026-09-05, second attempt).** Both ceremony
+- **On-device UI preference via `hints` (2026-09-05, second attempt).** Both ceremony
   routes attach `hints: ["client-device"]` (`CLIENT_DEVICE_HINTS` in
-  `lib/admin/passkeys.ts`) to the options JSON. **This is the field that actually
-  suppresses Chrome's cross-device "use a phone" / Google sheet.** The first
+  `lib/admin/passkeys.ts`) to the options JSON. **This is a preference, not a
+  guarantee that only one native window appears.** Chrome documents that hints
+  may not be respected on Windows when Chrome does not control the UI:
+  https://developer.chrome.com/blog/passkeys-updates-chrome-129#hints. The first
   attempt (below) stripped the `hybrid` transport and shipped to prod with *no
   observable change*, because `allowCredentials.transports` is only a routing
   hint — Chrome intentionally still offers the phone fallback no matter what
@@ -5449,6 +5451,18 @@ How it works:
   the whole options object into `navigator.credentials.get()`, so it arrives
   intact. Pinned by `tests/api/admin/passkeyHints.test.ts`, which asserts on the
   response body (a transports-only assertion passes even when the bug is live).
+- **Verification lifecycle (2026-09-10).** `/admin/verify-passkey` starts only
+  from the Verify button, not a mount effect. A synchronous in-flight guard
+  prevents overlapping attempts. Cancel, page unmount, and a 60-second
+  whole-attempt deadline abort both HTTP and the SimpleWebAuthn ceremony; late
+  results cannot reopen a prompt, submit an assertion, or navigate. Timeout and
+  dismissal restore an explicit retry button without automatically reopening
+  the native UI. Native browser/Windows loading windows remain browser-owned;
+  this change does not promise to suppress them. Server-side grant, challenge,
+  signature, RP, user-verification, and cookie checks are unchanged.
+  `node node_modules/@playwright/test/cli.js test --config playwright.passkeys.config.ts`
+  exercises the actual page in StrictMode with the real SimpleWebAuthn adapter
+  and simulated HTTP/OS boundaries; no live admin account or DB is used.
 - **Platform-only (fixed 2026-09-05).** Registration pins
   `authenticatorSelection.authenticatorAttachment: "platform"`, and
   `filterTransports()` in `lib/admin/passkeys.ts` strips the `hybrid` transport
