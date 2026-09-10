@@ -123,12 +123,13 @@ test("StrictMode mount stays quiet; rapid clicks launch one ceremony and preserv
 
 test("cancel aborts the native prompt; retry stays active when the old promise rejects", async ({ page }) => {
   await page.getByRole("button", { name: "Verify with passkey", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.passkeyTest.prompts)).toBe(1);
   await page.getByRole("button", { name: "Cancel verification" }).click();
   await expect(page.getByRole("alert")).toContainText("cancelled");
   expect(await page.evaluate(() => window.passkeyTest.aborts)).toBe(1);
   await page.getByRole("button", { name: "Verify with passkey", exact: true }).click();
   await expect(page.getByRole("button", { name: "Verifying…", exact: true })).toBeDisabled();
-  expect(await page.evaluate(() => window.passkeyTest.prompts)).toBe(2);
+  await expect.poll(() => page.evaluate(() => window.passkeyTest.prompts)).toBe(2);
   await page.evaluate(() => window.passkeyTest.succeed());
   await expect.poll(() => page.evaluate(() => window.passkeyTest.navigation)).toEqual(["/admin/shops"]);
 });
@@ -151,6 +152,9 @@ for (const stage of ["options", "prompt", "verification"] as const) {
       window.passkeyTest.holdVerification = stage === "verification";
     }, stage);
     await page.getByRole("button", { name: "Verify with passkey", exact: true }).click();
+    if (stage !== "options") {
+      await expect.poll(() => page.evaluate(() => window.passkeyTest.prompts)).toBe(1);
+    }
     if (stage === "verification") {
       await page.evaluate(() => window.passkeyTest.succeed());
       await expect.poll(() => page.evaluate(() => window.passkeyTest.puts)).toBe(1);
@@ -164,6 +168,7 @@ for (const stage of ["options", "prompt", "verification"] as const) {
 
 test("native dismissal is recoverable without restarting automatically", async ({ page }) => {
   await page.getByRole("button", { name: "Verify with passkey", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.passkeyTest.prompts)).toBe(1);
   await page.evaluate(() => window.passkeyTest.dismiss());
   await expect(page.getByRole("alert")).toContainText("dismissed");
   await expect(page.getByRole("button", { name: "Verify with passkey", exact: true })).toBeEnabled();
@@ -173,6 +178,7 @@ test("native dismissal is recoverable without restarting automatically", async (
 test("failed server verification never navigates to admin", async ({ page }) => {
   await page.evaluate(() => { window.passkeyTest.rejectVerification = true; });
   await page.getByRole("button", { name: "Verify with passkey", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.passkeyTest.prompts)).toBe(1);
   await page.evaluate(() => window.passkeyTest.succeed());
   await expect(page.getByRole("alert")).toContainText("Challenge expired");
   expect(await page.evaluate(() => window.passkeyTest.navigation)).toEqual([]);
@@ -180,6 +186,7 @@ test("failed server verification never navigates to admin", async ({ page }) => 
 
 test("unmount cancels the native ceremony without submitting an assertion", async ({ page }) => {
   await page.getByRole("button", { name: "Verify with passkey", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.passkeyTest.prompts)).toBe(1);
   await page.evaluate(() => window.dispatchEvent(new Event("test:unmount")));
   expect(await page.evaluate(() => window.passkeyTest.aborts)).toBe(1);
   expect(await page.evaluate(() => window.passkeyTest.puts)).toBe(0);
