@@ -27,6 +27,13 @@
  * factually wrong (K-Collective, 2026-07-16). Unknown/null phase falls
  * back to the chargeback wording, matching phaseUtils' default.
  *
+ * The inquiry-won copy additionally carries a `defendedClause`, appended
+ * ONLY when `defencePackage` is non-null. It previously asserted "Your
+ * response satisfied them" unconditionally, which claimed both that a
+ * response existed and that it caused the outcome — neither knowable
+ * from `status` + `finalizedOn`, the only fields Shopify exposes. See
+ * `VariantStrings.defendedClause`.
+ *
  * Effect-level idempotency is handled by the dispatcher
  * (`withEffectDedup` on the OUTCOME_DETECTED event key). This helper
  * does NOT add a per-dispute claim guard because the dispatcher
@@ -96,6 +103,31 @@ interface VariantStrings {
    *  the variant's emotional register. */
   amountLabel: string;
   cta: string;
+  /**
+   * Clause appended to the FIRST body paragraph only when a submitted
+   * defence package exists — i.e. only when DisputeDesk can actually
+   * point at a response it filed.
+   *
+   * This exists because the inquiry-won copy used to assert "Your
+   * response satisfied them" unconditionally. That is a causation claim
+   * (`outcomeExplanation.ts` forbids it: Shopify exposes `status` +
+   * `finalizedOn` and nothing else, so nothing in our data can say WHY a
+   * case closed) layered on top of an existence claim we equally cannot
+   * make — an inquiry closes in the merchant's favour when the cardholder
+   * withdraws or the issuer never escalates, with no response involved at
+   * all. `dormantInquiry.ts` documents live inquiries with no evidence
+   * ever submitted; if one of those resolves, the unconditional sentence
+   * credits a response that does not exist.
+   *
+   * The discriminator is package PRESENCE, matching
+   * `resolveOutcomeExplanation`. `disputes.submission_state` cannot serve
+   * here: it is also true on ~390 historical imports that closed before
+   * the shop installed the app.
+   *
+   * Even guarded, the clause states only that we filed and that the case
+   * then resolved favourably — never that the filing caused it.
+   */
+  defendedClause?: string;
   /** One-line summary rendered as a small caption inside the card,
    *  below the CTA — gives the merchant a scannable "what just
    *  happened" line they can take in at a glance. Optional. */
@@ -179,11 +211,13 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `You won the dispute on ${orderName ?? `dispute ${shortId}`}`,
         heading: "You won this dispute",
         body: [
-          "Good news — this case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to raise a formal chargeback. Your response satisfied them, and the case has been resolved in your favour.",
+          "Good news — this case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to raise a formal chargeback. The case has now been resolved in your favour.",
           "The disputed amount remains with you, and the case closed without escalating to a chargeback.",
           "Your case record stays in DisputeDesk, including the evidence submitted, timeline, and outcome, so your team can review what worked and reuse the pattern for future disputes.",
         ],
         amountLabel: "Amount protected",
+        defendedClause:
+          "We filed your evidence in response, and the case closed in your favour.",
         cta: "View winning case",
         resultLine: "Result: Inquiry resolved in your favour · Funds retained",
       },
@@ -263,11 +297,13 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Sie haben den Streitfall zu ${orderName ?? `Streitfall ${shortId}`} gewonnen`,
         heading: "Sie haben diesen Streitfall gewonnen",
         body: [
-          "Gute Nachrichten — dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor über eine formelle Rückbuchung entschieden wird. Ihre Antwort war überzeugend, und der Fall wurde zu Ihren Gunsten entschieden.",
+          "Gute Nachrichten — dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor über eine formelle Rückbuchung entschieden wird. Der Fall wurde nun zu Ihren Gunsten entschieden.",
           "Der strittige Betrag bleibt bei Ihnen, und der Fall wurde geschlossen, ohne zu einer Rückbuchung zu eskalieren.",
           "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der eingereichten Beweise, der Zeitlinie und des Ergebnisses —, damit Ihr Team analysieren kann, was funktioniert hat, und das Muster für künftige Streitfälle wiederverwenden kann.",
         ],
         amountLabel: "Geschützter Betrag",
+        defendedClause:
+          "Wir haben daraufhin Ihre Beweise eingereicht, und der Fall wurde zu Ihren Gunsten abgeschlossen.",
         cta: "Gewonnenen Fall ansehen",
         resultLine: "Ergebnis: Anfrage zu Ihren Gunsten entschieden · Mittel behalten",
       },
@@ -347,11 +383,13 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Ha ganado la disputa de ${orderName ?? shortId}`,
         heading: "Ha ganado esta disputa",
         body: [
-          "Buenas noticias: este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de decidir si abrir un contracargo formal. Su respuesta fue satisfactoria y el caso se ha resuelto a su favor.",
+          "Buenas noticias: este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de decidir si abrir un contracargo formal. El caso se ha resuelto a su favor.",
           "El importe disputado permanece con usted, y el caso se cerró sin escalar a un contracargo.",
           "El registro del caso permanece en DisputeDesk, incluidas las pruebas presentadas, la cronología y el resultado, para que su equipo pueda revisar qué funcionó y reutilizar el patrón en futuras disputas.",
         ],
         amountLabel: "Importe protegido",
+        defendedClause:
+          "Presentamos sus pruebas en respuesta, y el caso se cerró a su favor.",
         cta: "Ver caso ganador",
         resultLine: "Resultado: Consulta resuelta a su favor · Fondos retenidos",
       },
@@ -431,11 +469,13 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Você venceu a disputa de ${orderName ?? `disputa ${shortId}`}`,
         heading: "Você venceu esta disputa",
         body: [
-          "Boas notícias — este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de decidir se abriria um chargeback formal. Sua resposta foi satisfatória e o caso foi resolvido a seu favor.",
+          "Boas notícias — este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de decidir se abriria um chargeback formal. O caso foi resolvido a seu favor.",
           "O valor disputado permanece com você, e o caso foi encerrado sem escalar para um chargeback.",
           "O registro do caso permanece no DisputeDesk, incluindo as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que funcionou e reutilizar o padrão em disputas futuras.",
         ],
         amountLabel: "Valor protegido",
+        defendedClause:
+          "Enviamos suas provas em resposta, e o caso foi encerrado a seu favor.",
         cta: "Ver caso vencedor",
         resultLine: "Resultado: Consulta resolvida a seu favor · Fundos retidos",
       },
@@ -515,11 +555,13 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Vous avez gagné le différend sur ${orderName ?? `le différend ${shortId}`}`,
         heading: "Vous avez gagné ce différend",
         body: [
-          "Bonne nouvelle — ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de décider d'ouvrir une rétrofacturation formelle. Votre réponse a été jugée satisfaisante et le dossier a été tranché en votre faveur.",
+          "Bonne nouvelle — ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de décider d'ouvrir une rétrofacturation formelle. Le dossier a été tranché en votre faveur.",
           "Le montant contesté reste à vous, et le dossier a été clôturé sans donner lieu à une rétrofacturation.",
           "Le dossier reste dans DisputeDesk, y compris les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui a fonctionné et réutiliser le schéma pour les futurs différends.",
         ],
         amountLabel: "Montant protégé",
+        defendedClause:
+          "Nous avons soumis vos preuves en réponse, et le dossier a été clos en votre faveur.",
         cta: "Voir l'affaire gagnée",
         resultLine: "Résultat : Demande résolue en votre faveur · Fonds conservés",
       },
@@ -599,11 +641,13 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Du vann tvisten på ${orderName ?? `tvist ${shortId}`}`,
         heading: "Du vann denna tvist",
         body: [
-          "Goda nyheter — detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut om ett formellt återkrav. Ditt svar var övertygande och ärendet har avgjorts till din fördel.",
+          "Goda nyheter — detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut om ett formellt återkrav. Ärendet har nu avgjorts till din fördel.",
           "Det tvistade beloppet stannar hos dig, och ärendet avslutades utan att eskalera till ett återkrav.",
           "Ärendet stannar i DisputeDesk — inklusive de inskickade bevisen, tidslinjen och utfallet — så att ditt team kan granska vad som fungerade och återanvända mönstret för framtida tvister.",
         ],
         amountLabel: "Skyddat belopp",
+        defendedClause:
+          "Vi skickade in dina bevis som svar, och ärendet avslutades till din fördel.",
         cta: "Visa vunnet ärende",
         resultLine: "Resultat: Förfrågan avgjord till din fördel · Medel behållna",
       },
@@ -821,6 +865,22 @@ export async function sendOutcomePostedAlert(
      * so it cannot know what was filed; adding this sentence there would
      * be exactly the unfounded claim the derivation exists to avoid. */
     const bodyParagraphs = [...variant.body];
+
+    /* "We filed a response" — stated only when a submitted package exists.
+     *
+     * Appended BEFORE the splice below, because it belongs to the first
+     * paragraph and the splice shifts every later index by one.
+     *
+     * Guarded on package presence for the reason documented on
+     * `VariantStrings.defendedClause`: a favourable inquiry outcome does
+     * not imply a response was filed (the cardholder may have withdrawn,
+     * or the issuer never escalated), and `defencePackage` is the only
+     * signal we hold that one was. Absent it, the merchant reads the
+     * outcome as the fact it is, with no claim about how it came about. */
+    if (variant.defendedClause && ctx.defencePackage) {
+      bodyParagraphs[0] = `${bodyParagraphs[0]} ${variant.defendedClause}`;
+    }
+
     if (ctx.outcome === "won" || ctx.outcome === "lost") {
       const sentence = await outcomeExplanationSentence({
         locale,

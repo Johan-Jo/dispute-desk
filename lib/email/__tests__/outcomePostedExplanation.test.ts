@@ -93,6 +93,41 @@ function buildClient() {
   return { from: fromImpl } as unknown as never;
 }
 
+/** Same client as `buildClient`, with a store locale set — so a locale
+ *  assertion exercises the real resolveLocale path rather than a fixture. */
+function clientWithLocale(storeLocale: string) {
+  const fromImpl = (table: string): any => {
+    if (table === "shop_setup") {
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                steps: {
+                  team: { payload: { teamEmail: "merchant@example.com" } },
+                  store_profile: { payload: { storeLocale } },
+                },
+              },
+              error: null,
+            }),
+          }),
+        }),
+      };
+    }
+    return {
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { shop_domain: "test.myshopify.com" },
+            error: null,
+          }),
+        }),
+      }),
+    };
+  };
+  return { from: fromImpl } as unknown as never;
+}
+
 const BASE = {
   shopId: "shop-1",
   disputeId: "dispute-1",
@@ -170,43 +205,91 @@ describe("outcome email — explanation paragraph", () => {
   });
 
   it("renders the merchant's locale, not English", async () => {
-    mockGetServiceClient.mockReturnValue(
-      ((): never => {
-        const fromImpl = (table: string): any => {
-          if (table === "shop_setup") {
-            return {
-              select: vi.fn().mockReturnValue({
-                eq: vi.fn().mockReturnValue({
-                  single: vi.fn().mockResolvedValue({
-                    data: {
-                      steps: {
-                        team: { payload: { teamEmail: "m@example.com" } },
-                        store_profile: { payload: { storeLocale: "sv-SE" } },
-                      },
-                    },
-                    error: null,
-                  }),
-                }),
-              }),
-            };
-          }
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: { shop_domain: "test.myshopify.com" },
-                  error: null,
-                }),
-              }),
-            }),
-          };
-        };
-        return { from: fromImpl } as unknown as never;
-      })(),
-    );
+    mockGetServiceClient.mockReturnValue(clientWithLocale("sv-SE"));
     const html = await htmlFor({ ...BASE, outcome: "lost", defencePackage: DEFENDED });
     expect(html).toContain("Vi skickade in dina bevis");
     expect(html).toContain("faktureringsadress");
+  });
+});
+
+describe("inquiry-won copy — never claims a response we cannot see", () => {
+  const INQUIRY_WON = {
+    ...BASE,
+    outcome: "won" as const,
+    phase: "inquiry" as const,
+    reason: "PRODUCT_NOT_RECEIVED",
+  };
+
+  it("states the outcome without claiming a response when no package exists", async () => {
+    // The defect this guards: a dormant inquiry (see `dormantInquiry.ts` —
+    // live cases with an epoch deadline and NO evidence ever submitted) that
+    // Shopify later closes favourably used to be emailed as "Your response
+    // satisfied them." Nothing was ever filed.
+    const html = await htmlFor({ ...INQUIRY_WON, defencePackage: null });
+
+    expect(html).toContain("this case was an inquiry, not a chargeback");
+    expect(html).toContain("The case has now been resolved in your favour.");
+    // No claim that a response existed, and none that it caused the outcome.
+    expect(html).not.toContain("Your response satisfied them");
+    expect(html).not.toContain("We filed your evidence in response");
+  });
+
+  it("names the filing only when a submitted package exists", async () => {
+    const html = await htmlFor({ ...INQUIRY_WON, defencePackage: DEFENDED });
+
+    expect(html).toContain("We filed your evidence in response");
+    // Still no causation: "we filed, and it closed in your favour" — never
+    // "you won because we filed".
+    expect(html).not.toContain("Your response satisfied them");
+  });
+
+  it("appends the clause to the first paragraph, not a later one", async () => {
+    // The clause is appended before the explanation paragraph is spliced in
+    // at index 1. Getting that order wrong silently moves it onto the wrong
+    // paragraph, which reads as a non-sequitur rather than failing.
+    const html = await htmlFor({ ...INQUIRY_WON, defencePackage: DEFENDED });
+    const paras = [...html.matchAll(/<p style="font-size:14px[^"]*">([\s\S]*?)<\/p>/g)].map(
+      (m) => m[1],
+    );
+    expect(paras[0]).toContain("this case was an inquiry, not a chargeback");
+    expect(paras[0]).toContain("We filed your evidence in response");
+  });
+
+  it("guards the clause in every locale, not just English", async () => {
+    // A per-locale regression here is invisible to an English-only test, and
+    // the original claim shipped in all six.
+    for (const [locale, present, absent] of [
+      ["de-DE", "Wir haben daraufhin Ihre Beweise eingereicht", "Ihre Antwort war überzeugend"],
+      ["es-ES", "Presentamos sus pruebas en respuesta", "Su respuesta fue satisfactoria"],
+      ["pt-BR", "Enviamos suas provas em resposta", "Sua resposta foi satisfatória"],
+      ["fr-FR", "Nous avons soumis vos preuves en réponse", "jugée satisfaisante"],
+      ["sv-SE", "Vi skickade in dina bevis som svar", "Ditt svar var övertygande"],
+    ] as const) {
+      mockGetServiceClient.mockReturnValue(clientWithLocale(locale));
+
+      sendMock.mockClear();
+      const undefended = await htmlFor({ ...INQUIRY_WON, defencePackage: null });
+      expect(undefended).not.toContain(present);
+      expect(undefended).not.toContain(absent);
+
+      sendMock.mockClear();
+      const defended = await htmlFor({ ...INQUIRY_WON, defencePackage: DEFENDED });
+      expect(defended).toContain(present);
+      expect(defended).not.toContain(absent);
+    }
+  });
+
+  it("leaves the chargeback-won copy untouched", async () => {
+    // `defendedClause` is set only on the inquiry-won variant; the
+    // chargeback variants must render exactly as before.
+    const html = await htmlFor({
+      ...BASE,
+      outcome: "won",
+      phase: "chargeback",
+      defencePackage: DEFENDED,
+    });
+    expect(html).toContain("the card network accepted your defence package");
+    expect(html).not.toContain("We filed your evidence in response");
   });
 });
 

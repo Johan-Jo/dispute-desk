@@ -2698,6 +2698,23 @@ Rules that are load-bearing:
 - **Zero factors is a valid result** — falls back to the plain sentence. Never padded with filler.
 - **Never causal.** Copy says "banks weight this heavily", never "you lost because": `ShopifyPaymentsDispute` exposes only `status` + `finalizedOn` (verified across Admin GraphQL 2025-10 / 2026-01 / `unstable`), and the issuer's rationale packet is Admin-UI-only. Do not plan an ingest.
 - **Merchant-facing only.** These strings must never reach `narrative_json` or a PDF — naming our own weaknesses to an issuer is the bank-optimised-rebuttal violation.
+
+#### Inquiry-won copy: the "we responded" claim is guarded (2026-09-10)
+
+**Source:** `lib/email/sendOutcomePostedAlert.ts`, `VariantStrings.defendedClause`. Pinned by `lib/email/__tests__/outcomePostedExplanation.test.ts`.
+
+**The defect.** The inquiry-won email body opened, unconditionally and in all six locales, with *"Your response satisfied them, and the case has been resolved in your favour."* That is two unfounded claims stacked:
+
+1. **That a response existed.** Nothing in the variant selection knows this. The email is chosen from `final_outcome === "won"` plus `phase === "inquiry"` (`disputeEffectsDispatcher.outcomeVariantFor`) — both read straight off `ShopifyPaymentsDispute`. An inquiry closes in the merchant's favour when the cardholder withdraws or the issuer never escalates, with no response involved at all. `lib/disputes/dormantInquiry.ts` documents live inquiries sitting in `UNDER_REVIEW` with an epoch `evidenceDueBy` and **no evidence ever submitted**; if Shopify resolves one favourably the normal outcome path fires and credits a response that does not exist.
+2. **That it caused the outcome.** The same causation claim `outcomeExplanation.ts` forbids for the explanation paragraph, restated in a static string that bypassed the guard.
+
+The `defencePackage` lookup made this reachable in practice beyond the dormant case: the dispatcher's read is wrapped in a bare `catch { defencePackage = null }`, so a transient failure degraded the *explanation paragraph* to silence while the hardcoded claim rendered regardless.
+
+**The fix.** Paragraph 0 now states only the outcome (*"The case has now been resolved in your favour."*). The filing is a separate optional `defendedClause`, appended **only when `ctx.defencePackage` is non-null** — the same package-presence discriminator `resolveOutcomeExplanation` uses, and for the same reason (`submission_state` is true on ~390 historical imports; see above). Even guarded, the clause states that we filed and that the case then resolved favourably — never that the filing caused it.
+
+**Ordering constraint.** The clause is appended to `bodyParagraphs[0]` **before** the explanation paragraph is `splice`d in at index 1. Reversing that silently attaches it to the wrong paragraph — it reads as a non-sequitur rather than throwing, so a test pins paragraph 0's content directly.
+
+The lost and accepted inquiry variants were already clean (they state facts without attributing a cause) and are unchanged, as is the chargeback-won copy, which describes what the card network did rather than what our filing achieved.
 - **No bare gateway codes** ("the billing address did not match", never "AVS = N").
 
 **Email specifics.** Inserted as `body[1]` on `won`/`lost` and their `inquiry` counterparts. **`accepted` is excluded** — it is a catch-all that also reaches disputes we submitted, so it cannot know what was filed. The lookup is failure-tolerant at both layers: a read error or missing key degrades to the email's existing wording rather than costing the merchant the notification. Historical emails are not resent (`OUTCOME_DETECTED` is dedup-guarded), so already-decided cases get the sentence in the Overview only.
