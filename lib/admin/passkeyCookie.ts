@@ -41,6 +41,8 @@ export interface WebauthnChallengePayload {
   /** base64url challenge issued to the browser. */
   challenge: string;
   kind: "reg" | "auth";
+  /** Existing credential to revoke after a verified replacement registration. */
+  replaceCredentialId?: string;
   iat: number;
 }
 
@@ -169,7 +171,14 @@ export async function verifyChallengeValue(
   ) {
     return null;
   }
-  if (Math.floor(Date.now() / 1000) - p.iat > CHALLENGE_TTL_SECONDS) return null;
+  if (
+    p.replaceCredentialId !== undefined &&
+    (p.kind !== "reg" || typeof p.replaceCredentialId !== "string")
+  ) {
+    return null;
+  }
+  if (Math.floor(Date.now() / 1000) - p.iat > CHALLENGE_TTL_SECONDS)
+    return null;
   return p;
 }
 

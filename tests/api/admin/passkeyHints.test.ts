@@ -66,13 +66,17 @@ describe("passkey ceremonies request the on-device authenticator UI", () => {
     expect(body.hints).toEqual(["client-device"]);
   });
 
-  it("register options carry hints AND pin platform attachment", async () => {
+  it("register options require a local, non-discoverable platform credential", async () => {
     vi.mocked(listPasskeys).mockResolvedValue([]);
 
     const body = await (await REG_POST(req())).json();
     expect(body.hints).toEqual(["client-device"]);
     // Without this, a phone could enrol as the admin authenticator.
-    expect(body.authenticatorSelection.authenticatorAttachment).toBe("platform");
+    expect(body.authenticatorSelection.authenticatorAttachment).toBe(
+      "platform",
+    );
+    expect(body.authenticatorSelection.residentKey).toBe("discouraged");
+    expect(body.authenticatorSelection.requireResidentKey).toBe(false);
   });
 
   it("still returns the challenge the cookie is signed against", async () => {

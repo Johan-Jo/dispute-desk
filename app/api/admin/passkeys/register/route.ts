@@ -9,6 +9,7 @@ import {
   CLIENT_DEVICE_HINTS,
   getRpConfig,
   listPasskeys,
+  revokePasskeyByCredentialId,
   savePasskey,
 } from "@/lib/admin/passkeys";
 import {
@@ -17,6 +18,7 @@ import {
   passkeyCookieOptions,
   signChallenge,
   verifyChallengeValue,
+  verifyPasskeyCookie,
 } from "@/lib/admin/passkeyCookie";
 
 export const runtime = "nodejs";
@@ -36,6 +38,17 @@ export async function POST(req: NextRequest) {
 
   const { rpID, rpName } = getRpConfig(req);
   const existing = await listPasskeys(admin.id);
+  const replace = req.nextUrl.searchParams.get("replace") === "current";
+  const verifiedPasskey = replace ? await verifyPasskeyCookie(req) : null;
+  if (replace && (!verifiedPasskey || verifiedPasskey.userId !== admin.id)) {
+    return NextResponse.json(
+      {
+        error: "Passkey verification required",
+        code: "ADMIN_PASSKEY_REQUIRED",
+      },
+      { status: 403 },
+    );
+  }
 
   const options = await generateRegistrationOptions({
     rpName,
@@ -44,19 +57,26 @@ export async function POST(req: NextRequest) {
     userDisplayName: admin.name ?? admin.email,
     attestationType: "none",
     // Don't let the same authenticator register twice.
-    excludeCredentials: existing.map((c) => ({
-      id: c.credentialId,
-      transports: (c.transports ?? undefined) as
-        | RegistrationResponseJSON["response"]["transports"]
-        | undefined,
-    })),
+    excludeCredentials: existing
+      .filter((c) => c.credentialId !== verifiedPasskey?.credentialId)
+      .map((c) => ({
+        id: c.credentialId,
+        transports: (c.transports ?? undefined) as
+          RegistrationResponseJSON["response"]["transports"] | undefined,
+      })),
     authenticatorSelection: {
       // Bind admin access to the built-in authenticator of the machine being
       // enrolled (Windows Hello / Touch ID / Face ID). Without this, Chrome
       // also offers its cross-device "use a phone" flow, so the admin sees two
       // competing prompts instead of one device unlock.
       authenticatorAttachment: "platform",
-      residentKey: "preferred",
+      // This is a second factor selected by an explicit credential ID. A
+      // discoverable credential may be stored by Google Password Manager and
+      // then unlocked through Windows Hello, which produces two provider UIs.
+      // Keep it non-discoverable so the credential stays with the local
+      // platform authenticator used for this admin device.
+      residentKey: "discouraged",
+      requireResidentKey: false,
       userVerification: "required", // force the biometric / device unlock
     },
   });
@@ -70,6 +90,7 @@ export async function POST(req: NextRequest) {
       userId: admin.id,
       challenge: options.challenge,
       kind: "reg",
+      replaceCredentialId: verifiedPasskey?.credentialId,
       iat: Math.floor(Date.now() / 1000),
     }),
     passkeyCookieOptions(CHALLENGE_TTL_SECONDS),
@@ -94,7 +115,10 @@ export async function PUT(req: NextRequest) {
   );
   if (!challenge || challenge.kind !== "reg" || challenge.userId !== admin.id) {
     return NextResponse.json(
-      { error: "Challenge expired or invalid. Try again.", code: "CHALLENGE_INVALID" },
+      {
+        error: "Challenge expired or invalid. Try again.",
+        code: "CHALLENGE_INVALID",
+      },
       { status: 400 },
     );
   }
@@ -104,7 +128,10 @@ export async function PUT(req: NextRequest) {
     friendlyName?: string;
   } | null;
   if (!body?.response) {
-    return NextResponse.json({ error: "Missing registration response" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing registration response" },
+      { status: 400 },
+    );
   }
 
   const { rpID, origin } = getRpConfig(req);
@@ -126,10 +153,23 @@ export async function PUT(req: NextRequest) {
   }
 
   if (!verification.verified || !verification.registrationInfo) {
-    return NextResponse.json({ error: "Registration not verified" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Registration not verified" },
+      { status: 400 },
+    );
   }
 
-  const { credential } = verification.registrationInfo;
+  const { credential, credentialDeviceType } = verification.registrationInfo;
+  if (credentialDeviceType !== "singleDevice") {
+    return NextResponse.json(
+      {
+        error:
+          "Choose this device's built-in authenticator (Windows Hello, Touch ID, or Face ID), not a synced password manager.",
+        code: "SYNCED_PASSKEY_NOT_ALLOWED",
+      },
+      { status: 400 },
+    );
+  }
   await savePasskey({
     userId: admin.id,
     credentialId: credential.id,
@@ -141,6 +181,24 @@ export async function PUT(req: NextRequest) {
         ? body.friendlyName.trim().slice(0, 80)
         : null,
   });
+
+  if (
+    challenge.replaceCredentialId &&
+    challenge.replaceCredentialId !== credential.id
+  ) {
+    const removedOld = await revokePasskeyByCredentialId(
+      admin.id,
+      challenge.replaceCredentialId,
+    );
+    if (!removedOld) {
+      // Preserve the pre-replacement state if the swap cannot be completed.
+      await revokePasskeyByCredentialId(admin.id, credential.id);
+      return NextResponse.json(
+        { error: "Could not replace the existing device key. Try again." },
+        { status: 500 },
+      );
+    }
+  }
 
   const res = NextResponse.json({ ok: true });
   // Clear the single-use challenge cookie.
