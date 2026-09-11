@@ -61,7 +61,8 @@ export function getRpConfig(req: NextRequest): RpConfig {
     req.headers.get("host") ??
     req.nextUrl.host;
   const proto =
-    req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+    req.headers.get("x-forwarded-proto") ??
+    req.nextUrl.protocol.replace(":", "");
 
   const rpID = envRpId || host.split(":")[0];
   const origin = envOrigin || `${proto}://${host}`;
@@ -261,6 +262,22 @@ export async function revokePasskey(
     .from("admin_passkeys")
     .delete()
     .eq("id", id)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  return data != null;
+}
+
+/** Revoke a credential by WebAuthn credential ID after replacing it. */
+export async function revokePasskeyByCredentialId(
+  userId: string,
+  credentialId: string,
+): Promise<boolean> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .delete()
+    .eq("credential_id", credentialId)
     .eq("user_id", userId)
     .select("id")
     .maybeSingle();
