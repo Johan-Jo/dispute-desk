@@ -671,6 +671,16 @@ export async function middleware(req: NextRequest) {
     // Forward locale param as header so embedded layout can use it on the first
     // request (cookie is set in the response and isn't available until next request).
     if (localeParam) requestHeaders.set("x-shopify-locale", localeParam);
+    // Forward the raw id_token (present on essentially every embedded load —
+    // see docs/technical.md § Expiring offline tokens) so the Node-runtime
+    // embedded layout can verify it and record merchant "last login"
+    // activity. Can't do this here: verifySessionToken needs Node's
+    // `crypto.createHmac`, unavailable on this edge middleware (see
+    // looksLikeSessionToken's comment above).
+    const idTokenForLoginParam = req.nextUrl.searchParams.get("id_token");
+    if (looksLikeSessionToken(idTokenForLoginParam)) {
+      requestHeaders.set("x-dd-id-token", idTokenForLoginParam!);
+    }
 
     if (pathname === "/app/session-required") {
       const res = NextResponse.next({ request: { headers: requestHeaders } });
