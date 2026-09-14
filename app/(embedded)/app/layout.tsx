@@ -26,13 +26,15 @@ export default async function EmbeddedAppLayout({
   // middleware.ts forwards the raw id_token (edge runtime can't verify it —
   // no Node crypto); verify it here and record fire-and-forget so it never
   // adds latency to the merchant's page load. Not run under impersonation
-  // (no real Shopify session/id_token exists there).
+  // (no real Shopify session/id_token exists there). Uses the token's own
+  // verified shopDomain rather than an `x-shop-id` header — middleware's
+  // /app/* branch doesn't resolve one on the normal cookie-authenticated
+  // path (only /api/* and impersonation do).
   if (!impersonating) {
     const idToken = headerStore.get("x-dd-id-token");
-    const shopId = headerStore.get("x-shop-id");
-    if (idToken && shopId) {
+    if (idToken) {
       const verified = verifySessionToken(idToken);
-      if (verified) recordLastLogin(shopId, verified.userId);
+      if (verified) recordLastLogin(verified.shopDomain, verified.userId);
     }
   }
 
