@@ -47,11 +47,20 @@ redirect_urls = [
 #     published-on-store policy-evidence model. Standard self-serve
 #     scope (no Partner approval). SHOPIFY_SCOPES env on Vercel must be
 #     updated in the same deploy so OAuth consent matches Partners.
+#   * 2026-09-14 — adds read_users so the internal admin Shops table can
+#     resolve the numeric staff user id on the embedded session token
+#     (already free/verified — see lib/shopify/sessionToken.ts) to a
+#     real name/email via the staffMember query, for a "last login"
+#     column. Standard self-serve scope (no Partner approval). Existing
+#     installs only get it once they re-consent (next OAuth/
+#     token-exchange cycle) — see lib/shopify/staffMember.ts. SHOPIFY_SCOPES
+#     env on Vercel must be updated in the same deploy so OAuth consent
+#     matches Partners.
 #
 # Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID
 # (a separate Partners app) and carry the broader write set there
 # — never on the production app.
-scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_legal_policies,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
+scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_legal_policies,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,read_users,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"
