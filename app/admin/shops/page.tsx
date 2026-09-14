@@ -36,14 +36,6 @@ interface Shop {
   /** Most recent verified embedded-app page load. Null until a merchant
    *  opens the app after this column shipped. */
   last_login_at: string | null;
-  /** Numeric Shopify staff user id (session token `sub` claim) —
-   *  always populated alongside last_login_at. */
-  last_login_user_id: string | null;
-  /** Resolved via Shopify's staffMember query (requires read_users
-   *  scope). Null until the shop re-consents with the new scope, even
-   *  when last_login_at is populated. */
-  last_login_name: string | null;
-  last_login_email: string | null;
 }
 
 type SortDirection = "asc" | "desc";
@@ -270,27 +262,13 @@ export default function AdminShopsPage() {
               </td>
               <td className="px-6 py-4">
                 {s.last_login_at ? (
-                  <div className="flex flex-col">
-                    <span className="text-sm text-[#0F172A]">
-                      {new Date(s.last_login_at).toLocaleDateString()}{" "}
-                      {new Date(s.last_login_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <span
-                      className="text-xs text-[#94A3B8]"
-                      title={
-                        !s.last_login_name && !s.last_login_email && s.last_login_user_id
-                          ? `Shopify staff id ${s.last_login_user_id} — name unavailable until this shop re-authorizes with the read_users scope`
-                          : undefined
-                      }
-                    >
-                      {s.last_login_name ??
-                        s.last_login_email ??
-                        (s.last_login_user_id ? "Staff member (name pending)" : "—")}
-                    </span>
-                  </div>
+                  <span className="text-sm text-[#0F172A]">
+                    {new Date(s.last_login_at).toLocaleDateString()}{" "}
+                    {new Date(s.last_login_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 ) : (
                   <span className="text-xs text-[#94A3B8]">Never</span>
                 )}
