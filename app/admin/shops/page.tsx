@@ -33,6 +33,9 @@ interface Shop {
   disputeCount: number;
   packCount: number;
   monthlyRevenueUsd: number;
+  /** Most recent verified embedded-app page load. Null until a merchant
+   *  opens the app after this column shipped. */
+  last_login_at: string | null;
 }
 
 type SortDirection = "asc" | "desc";
@@ -58,6 +61,9 @@ export default function AdminShopsPage() {
   /** Sort state for the chargeback rate column. Null = default API
    *  order (created_at desc). Click toggles desc → asc → null. */
   const [chargebackSort, setChargebackSort] = useState<SortDirection | null>(null);
+  /** Sort state for the Last Login column. Same two-state cycle as
+   *  chargebackSort; nulls (never logged in) sort to the bottom. */
+  const [lastLoginSort, setLastLoginSort] = useState<SortDirection | null>(null);
 
   const fetchShops = useCallback(async () => {
     setLoading(true);
@@ -84,20 +90,39 @@ export default function AdminShopsPage() {
   // desc) per Figma `shops-admin.tsx:42-49` — clicking with no sort
   // active starts at desc.
   const sorted = useMemo(() => {
-    if (!chargebackSort) return filtered;
-    const dir = chargebackSort === "asc" ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      const ar = a.chargebackRate90d;
-      const br = b.chargebackRate90d;
-      if (ar === null && br === null) return 0;
-      if (ar === null) return 1;
-      if (br === null) return -1;
-      return (ar - br) * dir;
-    });
-  }, [filtered, chargebackSort]);
+    if (chargebackSort) {
+      const dir = chargebackSort === "asc" ? 1 : -1;
+      return [...filtered].sort((a, b) => {
+        const ar = a.chargebackRate90d;
+        const br = b.chargebackRate90d;
+        if (ar === null && br === null) return 0;
+        if (ar === null) return 1;
+        if (br === null) return -1;
+        return (ar - br) * dir;
+      });
+    }
+    if (lastLoginSort) {
+      const dir = lastLoginSort === "asc" ? 1 : -1;
+      return [...filtered].sort((a, b) => {
+        const at = a.last_login_at ? Date.parse(a.last_login_at) : null;
+        const bt = b.last_login_at ? Date.parse(b.last_login_at) : null;
+        if (at === null && bt === null) return 0;
+        if (at === null) return 1;
+        if (bt === null) return -1;
+        return (at - bt) * dir;
+      });
+    }
+    return filtered;
+  }, [filtered, chargebackSort, lastLoginSort]);
 
   const cycleChargebackSort = () => {
+    setLastLoginSort(null);
     setChargebackSort((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+
+  const cycleLastLoginSort = () => {
+    setChargebackSort(null);
+    setLastLoginSort((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
   const active = shops.filter((s) => !s.uninstalled_at).length;
@@ -159,6 +184,12 @@ export default function AdminShopsPage() {
             onSort: cycleChargebackSort,
           },
           "Installed",
+          {
+            label: "Last Login",
+            sortable: true,
+            sortDirection: lastLoginSort,
+            onSort: cycleLastLoginSort,
+          },
           { label: "Actions", align: "right" },
         ] as AdminTableHeader[]}
         loading={loading}
@@ -228,6 +259,19 @@ export default function AdminShopsPage() {
                     {new Date(s.created_at).toLocaleDateString()}
                   </span>
                 </div>
+              </td>
+              <td className="px-6 py-4">
+                {s.last_login_at ? (
+                  <span className="text-sm text-[#0F172A]">
+                    {new Date(s.last_login_at).toLocaleDateString()}{" "}
+                    {new Date(s.last_login_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[#94A3B8]">Never</span>
+                )}
               </td>
               <td className="px-6 py-4 text-right">
                 <div className="flex items-center justify-end gap-2">

@@ -1086,7 +1086,7 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 `/admin/shops/page.tsx` displays a sortable table of installed shops with billing + dispute data.
 
 - **Stats row (top):** 4 cards — Total Shops · Active (green) · Total Disputes · Total MRR (sum of `monthlyRevenueUsd` across active shops, derived from `shops.plan` via `lib/billing/plans.ts → PLANS[plan].price`).
-- **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Actions.
+- **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Last Login (sortable) · Actions.
 - **Domain column shows the REAL storefront domain**, not the myshopify alias — `meinmaison.com`, not `6a8848-dd.myshopify.com`. It reads `shops.primary_domain` via `displayShopDomain()` (`lib/shopify/domainHost.ts`), falling back to `shop_domain` when the column is null. When the two differ, the alias renders beneath in small grey type, because it is still the key every Shopify-side lookup (Admin URLs, Partners) and our own logs are addressed by. See § *Storefront domain (`shops.primary_domain`)*.
 - **Search** matches either domain (`shop_domain` OR `primary_domain`), so ops can type the brand name or the alias.
 - **Filter chips:** All Plans · Scale · Growth · Starter · Free.
@@ -1095,8 +1095,19 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
   - `disputeCount` — count of `disputes` per shop_id, batched.
   - `packCount` — count of `evidence_packs` per shop_id, batched.
   - `monthlyRevenueUsd` — `monthlyRevenueForPlan(shop.plan).monthlyUsd`.
-- **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column (matches Figma `shops-admin.tsx:42-49`). Nulls always sink regardless of direction.
+- **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column or the Last Login column (matches Figma `shops-admin.tsx:42-49`); the two sorts are mutually exclusive — activating one clears the other. Nulls always sink regardless of direction.
 - **AdminTable** sortable-header form: `headers` accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
+
+### Last login (`shops.last_login_*`)
+
+Tracks the most recent verified embedded-app page load per shop, for the "Last Login" column above. Before this (migration `20260914120000_shops_last_login.sql`), nothing recorded merchant activity — `shop_sessions` only reflects install time and token-refresh events (offline sessions always carry `user_id = null`).
+
+- **Columns:** `shops.last_login_at` (timestamptz) · `last_login_user_id` (numeric Shopify staff user id, text).
+- **Write path:** `app/(embedded)/app/layout.tsx` runs on every `/app/*` page render (Node runtime). `middleware.ts` forwards the raw `id_token` query param (present on essentially every embedded load — see § *Expiring offline tokens*) as the `x-dd-id-token` header, because the edge runtime has no `crypto.createHmac` to verify it. The layout verifies it via `verifySessionToken()` and calls `lib/shopify/recordLastLogin.ts` — fire-and-forget, never blocks the page render. Skipped entirely under SuperAdmin impersonation (no real Shopify session exists there).
+- **`recordLastLogin` takes `shopDomain`, not `shops.id`.** Middleware's `/app/*` branch never resolves an internal shop id into a header on the normal cookie-authenticated path — only the `/api/*` branch and the impersonation branches set `x-shop-id`. The first cut of this took `shopInternalId` from that header and therefore silently no-op'd on every real merchant page load (shipped and reverted same day, 2026-09-14). The verified token's own `shopDomain` doesn't depend on which middleware branch the request took.
+- **Throttling:** `recordLastLogin()` only writes once per 5 minutes per shop (read-then-maybe-write) so a merchant clicking around the app doesn't hammer `shops` on every navigation. A different `last_login_user_id` within the window still bumps the row, so a staff handoff isn't hidden for up to 5 minutes.
+- **WHEN, not WHO — deliberately.** Resolving `last_login_user_id` to a name needs Shopify's `staffMember` query, gated behind the **`read_users`** scope. That scope was added and then rolled back the same day (migration `20260914170000` drops the `last_login_name` / `last_login_email` columns): adding a scope to the live app changes its consent set and pushes already-installed merchants through a re-auth, and a re-auth landing on the legacy OAuth callback mints a **non-expiring token that Shopify now rejects outright** — killing webhooks, dispute sync, policy ingest and pack builds for that shop (reproduced on dev `surasvenne` while building this). Not a risk worth taking for a display name. Nothing in this path calls the Admin API.
+- **Never a merchant-facing feature** — internal admin only, same trust boundary as the rest of `/admin/shops`.
 
 ### Deleting a shop (admin purge)
 
