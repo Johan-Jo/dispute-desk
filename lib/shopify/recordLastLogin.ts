@@ -1,15 +1,24 @@
 /**
  * Records merchant "last login" activity on `shops` for the internal
- * admin Shops table. Called from middleware.ts on every verified
- * embedded (/app/*) page load.
+ * admin Shops table. Called from app/(embedded)/app/layout.tsx on every
+ * verified embedded (/app/*) page load.
+ *
+ * Takes `shopDomain` (not an internal shop id) and resolves it here:
+ * middleware.ts's `/app/*` branch never resolves shops.id into a
+ * request header on the normal cookie-authenticated path (only the
+ * `/api/*` branch and the impersonation branches do, via `x-shop-id`)
+ * — that gap meant an earlier version of this taking `shopInternalId`
+ * silently no-op'd on every real merchant page load. `shopDomain` comes
+ * straight from the verified session token instead, so it doesn't
+ * depend on which middleware branch a given request took.
  *
  * Two constraints shape this:
- *   - Middleware is a per-request hot path — this must never block the
- *     merchant's page load on a write, and must not hit the DB on every
- *     single request (a merchant clicking around fires dozens of loads
- *     a minute). Throttled to ~once per LOGIN_THROTTLE_MS per shop via a
- *     cheap read-then-maybe-write, and the caller in middleware.ts does
- *     not await this — it's fire-and-forget like persistShopCurrency.
+ *   - Called from a page render — this must never block the merchant's
+ *     page load on a write, and must not hit the DB on every single
+ *     request (a merchant clicking around fires dozens of loads a
+ *     minute). Throttled to ~once per LOGIN_THROTTLE_MS per shop via a
+ *     cheap read-then-maybe-write, and the caller does not await this —
+ *     it's fire-and-forget like persistShopCurrency.
  *   - The Shopify user id is free (already-verified JWT `sub` claim);
  *     resolving it to a name/email costs an extra Admin API call, so
  *     that resolution is skipped entirely when the throttle window
@@ -22,10 +31,10 @@ import { fetchStaffMember } from "./staffMember";
 const LOGIN_THROTTLE_MS = 5 * 60 * 1000;
 
 export function recordLastLogin(
-  shopInternalId: string,
+  shopDomain: string,
   shopifyUserId: string,
 ): void {
-  void recordLastLoginAsync(shopInternalId, shopifyUserId).catch((err) => {
+  void recordLastLoginAsync(shopDomain, shopifyUserId).catch((err) => {
     console.warn(
       "[recordLastLogin] failed",
       err instanceof Error ? err.message : err,
@@ -34,7 +43,7 @@ export function recordLastLogin(
 }
 
 async function recordLastLoginAsync(
-  shopInternalId: string,
+  shopDomain: string,
   shopifyUserId: string,
 ): Promise<void> {
   const db = getServiceClient();
@@ -42,9 +51,12 @@ async function recordLastLoginAsync(
 
   const { data: shopRow } = await db
     .from("shops")
-    .select("last_login_at, last_login_user_id, last_login_name, last_login_email")
-    .eq("id", shopInternalId)
+    .select("id, last_login_at, last_login_user_id, last_login_name, last_login_email")
+    .eq("shop_domain", shopDomain)
     .maybeSingle();
+
+  if (!shopRow) return;
+  const shopInternalId = shopRow.id as string;
 
   const lastAt = shopRow?.last_login_at ? Date.parse(shopRow.last_login_at) : 0;
   const withinThrottle = Date.now() - lastAt < LOGIN_THROTTLE_MS;
