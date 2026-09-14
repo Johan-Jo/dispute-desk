@@ -278,12 +278,17 @@ export default function AdminShopsPage() {
                         minute: "2-digit",
                       })}
                     </span>
-                    <span className="text-xs text-[#94A3B8]">
+                    <span
+                      className="text-xs text-[#94A3B8]"
+                      title={
+                        !s.last_login_name && !s.last_login_email && s.last_login_user_id
+                          ? `Shopify staff id ${s.last_login_user_id} — name unavailable until this shop re-authorizes with the read_users scope`
+                          : undefined
+                      }
+                    >
                       {s.last_login_name ??
                         s.last_login_email ??
-                        (s.last_login_user_id
-                          ? `User ${s.last_login_user_id}`
-                          : "—")}
+                        (s.last_login_user_id ? "Staff member (name pending)" : "—")}
                     </span>
                   </div>
                 ) : (
