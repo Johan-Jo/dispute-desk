@@ -226,7 +226,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // matches the modal verbatim.
   const tEvidence = useTranslations("disputes.evidenceTab");
   const tExtra = useTranslations("disputes.overviewExtra");
-  const tSignal = useTranslations("disputes.signalLabel");
   const tSource = useTranslations("disputes.sourceCaption");
   const tItemStrength = useTranslations("disputes.itemStrength");
   const tPill = useTranslations("disputes.overviewPill");
@@ -2006,16 +2005,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                         /* fall through to generic label */
                       }
                     }
-                    // signalLabel.<signalId> is now the canonical key
-                    // (no more spec.label fallback). When the lookup
-                    // returns the key path verbatim, fall back to the
-                    // raw signalId so the row still renders something
-                    // identifiable.
+                    // The label is `spec.labelKey` — NOT `spec.signalId`.
+                    // `signalId` is a scoring DEDUP identity: several
+                    // fields deliberately share one (avs_cvv_match and
+                    // tds_authentication are both "payment_auth"), so it
+                    // is not a label and has no guaranteed i18n key.
+                    // Building `signalLabel.<signalId>` happened to work
+                    // for 19 of 20 specs because the two strings collide;
+                    // returned_parcel_outcome (signalId "parcel_outcome")
+                    // is the one that does not, and it leaked the raw key
+                    // path to merchants. Resolve labelKey off the root
+                    // translator, exactly as lib/argument/caseStrength.ts
+                    // does. Guarded by the labelKey-resolves invariant in
+                    // lib/argument/__tests__/canonicalEvidence.test.ts.
                     try {
-                      const k = tSignal(spec.signalId);
-                      return k && k !== spec.signalId ? k : spec.signalId;
+                      return tRoot(spec.labelKey);
                     } catch {
-                      return spec.signalId;
+                      return spec.labelKey;
                     }
                   })()}
                 </p>

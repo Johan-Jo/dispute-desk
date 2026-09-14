@@ -12,6 +12,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import {
   deriveDefencePackageActionState,
   deriveSubmitEffects,
@@ -167,5 +169,120 @@ describe("submit-response handling", () => {
     expect(e.markPending).toBe(true);
     expect(e.notifySubmitted).toBe(true);
     expect(e.error).toBeNull();
+  });
+});
+
+/* ── Terminal states suppress the blocker banner ──────────────────────────
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.1.
+ *
+ * PROD REGRESSION — blume-box 4d4db363 (Order #345812, USD 75), forwarded to
+ * the card network 2026-07-23. The card rendered, stacked:
+ *
+ *   "Review required … Regenerate the package to produce a version that can
+ *    be submitted"
+ *   "Sent to card network … Shopify can no longer swap the forwarded PDF"
+ *
+ * `canRegenerate` already refused; `showReviewRequired` did not, so the only
+ * instruction the banner carries outlived the ability to follow it.
+ */
+describe("a forwarded or closed dispute shows no review-required banner", () => {
+  it("network-submitted: the banner is suppressed, and Regenerate is too", () => {
+    const state = blocked({ isNetworkSubmitted: true });
+    expect(state.packageBlocked).toBe(true); // the refusal itself still stands
+    expect(state.canRegenerate).toBe(false);
+    expect(state.showReviewRequired).toBe(false);
+  });
+
+  it("closed: same", () => {
+    const state = blocked({ isClosed: true });
+    expect(state.canRegenerate).toBe(false);
+    expect(state.showReviewRequired).toBe(false);
+  });
+
+  it("still actionable: the banner remains, because Regenerate is possible", () => {
+    // The guard must not silence a case the merchant CAN still fix — that
+    // would trade one silent failure for another.
+    const state = blocked({ isNetworkSubmitted: false, isClosed: false });
+    expect(state.canRegenerate).toBe(true);
+    expect(state.showReviewRequired).toBe(true);
+  });
+
+  it("the banner never outlives Regenerate", () => {
+    // The invariant behind the fix, stated directly: the banner's only
+    // instruction is "regenerate", so it may never render where that is
+    // refused for a terminal reason.
+    for (const over of [
+      { isNetworkSubmitted: true },
+      { isClosed: true },
+      { isNetworkSubmitted: true, isClosed: true },
+    ]) {
+      const state = blocked(over);
+      expect(state.showReviewRequired && !state.canRegenerate).toBe(false);
+    }
+  });
+
+  it("an unblocked forwarded package shows no banner either", () => {
+    expect(safe({ isNetworkSubmitted: true }).showReviewRequired).toBe(false);
+  });
+});
+
+/* ── A failed rebuild behind a filed package is not an alarm ──────────────
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.4.
+ *
+ * PROD — blume-box 64542500 (Order #352501, USD 120): v4 filed 2026-08-15,
+ * forwarded to the card network 2026-08-24; v5 then failed with llm_error.
+ * The card rendered "Card network reviewing" beside an amber warning whose
+ * own body read "No action is needed" — an alarm contradicting its own text,
+ * on a case already out of the merchant's hands.
+ *
+ * The banner keys on `bankFacing`, not on the action state, so this pins the
+ * copy contract the component relies on: a filed package behind a failed
+ * rebuild gets the calm title + body pair.
+ */
+describe("rebuild-failed copy has a filed and an unfiled variant", () => {
+  const en = JSON.parse(
+    readFileSync(resolve(__dirname, "../../messages/en.json"), "utf8"),
+  );
+
+  function findPkgNode(o: unknown): Record<string, string> | null {
+    if (o && typeof o === "object") {
+      const rec = o as Record<string, unknown>;
+      if (typeof rec.rebuildFailedTitle === "string") return rec as Record<string, string>;
+      for (const v of Object.values(rec)) {
+        const r = findPkgNode(v);
+        if (r) return r;
+      }
+    }
+    return null;
+  }
+
+  const pkg = findPkgNode(en)!;
+
+  it("both title variants exist and differ", () => {
+    expect(pkg.rebuildFailedTitle).toBeTruthy();
+    expect(pkg.rebuildFailedTitleFiled).toBeTruthy();
+    expect(pkg.rebuildFailedTitleFiled).not.toBe(pkg.rebuildFailedTitle);
+  });
+
+  it("the filed variant does not demand action, and the unfiled one does", () => {
+    // The filed body says "No action is needed"; a title implying otherwise
+    // is what made the banner read as an alarm.
+    expect(pkg.rebuildFailedBodyFiled).toMatch(/No action is needed/i);
+    expect(pkg.rebuildFailedBodyUnfiled).toMatch(/Regenerate it before the deadline/i);
+  });
+
+  it("the card picks tone and title off `bankFacing`", () => {
+    const src = readFileSync(
+      resolve(
+        __dirname,
+        "../../app/(embedded)/app/disputes/[id]/tabs/sections/CompleteDefencePackageCard.tsx",
+      ),
+      "utf8",
+    );
+    // info when a filed package stands behind it; critical when nothing is filed.
+    expect(src).toMatch(/tone=\{bankFacing \? "info" : "critical"\}/);
+    expect(src).toMatch(/bankFacing \? tPkg\("rebuildFailedTitleFiled"\)/);
   });
 });

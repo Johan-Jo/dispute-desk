@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     userVerification: "required",
     // `listPasskeys` strips `hybrid` (see filterTransports). Note transports are
     // only a routing hint — on their own they do NOT suppress Chrome's phone
-    // sheet; `hints` below is what does that.
+    // sheet; `hints` below requests the local-device UI preference.
     allowCredentials: creds.map((c) => ({
       id: c.credentialId,
       transports: (c.transports ?? undefined) as
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
     })),
   });
 
-  // Ask the browser for the on-device authenticator UI only (no "use a phone"
-  // / Google sheet). @simplewebauthn/server@13 doesn't model `hints`, so it is
+  // Prefer the on-device authenticator UI. Native Windows UI may ignore this
+  // hint. @simplewebauthn/server@13 doesn't model `hints`, so it is
   // attached here; the browser lib spreads it into navigator.credentials.get().
   const res = NextResponse.json({ ...options, hints: CLIENT_DEVICE_HINTS });
   res.cookies.set(

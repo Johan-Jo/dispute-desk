@@ -61,7 +61,8 @@ export function getRpConfig(req: NextRequest): RpConfig {
     req.headers.get("host") ??
     req.nextUrl.host;
   const proto =
-    req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+    req.headers.get("x-forwarded-proto") ??
+    req.nextUrl.protocol.replace(":", "");
 
   const rpID = envRpId || host.split(":")[0];
   const origin = envOrigin || `${proto}://${host}`;
@@ -109,8 +110,9 @@ export function filterTransports(
  * offering its cross-device "use a phone" sheet regardless of what we list —
  * a user whose laptop passkey is unavailable needs that fallback. Filtering
  * `hybrid` out of transports therefore did NOT remove the second prompt
- * (shipped 2026-09-05, no observable change). `hints` is the field Chrome
- * actually honours to collapse the picker to the local device.
+ * (shipped 2026-09-05, no observable change). `hints` requests a preference
+ * for the local device; it does not guarantee a single native dialog. Chrome
+ * documents that Windows-controlled UI may ignore these hints entirely.
  *
  * Typed + spread manually because @simplewebauthn/server@13 does not model
  * `hints` yet; @simplewebauthn/browser@13 spreads the whole options object
@@ -260,6 +262,22 @@ export async function revokePasskey(
     .from("admin_passkeys")
     .delete()
     .eq("id", id)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  return data != null;
+}
+
+/** Revoke a credential by WebAuthn credential ID after replacing it. */
+export async function revokePasskeyByCredentialId(
+  userId: string,
+  credentialId: string,
+): Promise<boolean> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .delete()
+    .eq("credential_id", credentialId)
     .eq("user_id", userId)
     .select("id")
     .maybeSingle();

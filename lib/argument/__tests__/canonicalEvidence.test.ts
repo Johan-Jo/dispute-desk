@@ -5,6 +5,8 @@
  * and supporting-field invariants.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_EVIDENCE,
@@ -23,6 +25,74 @@ describe("canonical evidence registry — invariants", () => {
       expect(["strong", "moderate", "supporting"], field).toContain(spec.category);
       expect(typeof spec.excludedFromStrength, field).toBe("boolean");
     }
+  });
+
+  /* ── labelKey must RESOLVE, in every locale ──────────────────────
+   *
+   * The shape assertion above (`/^disputes\./`) was not enough. It
+   * passes for a key that points at nothing, and a UI that resolves it
+   * then renders the key path itself to the merchant.
+   *
+   * That is exactly what shipped: OverviewTab built the label as
+   * `disputes.signalLabel.${spec.signalId}` instead of reading
+   * `spec.labelKey`. `signalId` is a scoring DEDUP identity, not a
+   * label — several fields deliberately share one (avs_cvv_match and
+   * tds_authentication are both "payment_auth"). For 19 of 20 specs the
+   * two strings happen to be identical, so the mistake was invisible;
+   * returned_parcel_outcome (signalId "parcel_outcome", labelKey
+   * ...signalLabel.returned_parcel_outcome) is the single spec where
+   * they diverge, and merchants saw the literal string
+   * "disputes.signalLabel.parcel_outcome" on the one row asking them to
+   * act.
+   *
+   * These two tests close the class rather than the instance: the first
+   * pins every labelKey to a real translation in all six locales, the
+   * second pins the divergence itself so nobody "tidies" signalId to
+   * match labelKey and silently re-enables the shortcut.
+   */
+  const LOCALES = ["en", "de", "es", "fr", "pt", "sv"] as const;
+
+  function lookup(messages: Record<string, unknown>, dotted: string): unknown {
+    return dotted
+      .split(".")
+      .reduce<unknown>(
+        (node, part) =>
+          node && typeof node === "object"
+            ? (node as Record<string, unknown>)[part]
+            : undefined,
+        messages,
+      );
+  }
+
+  function loadMessages(locale: string): Record<string, unknown> {
+    const file = path.join(process.cwd(), "messages", `${locale}.json`);
+    return JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+  }
+
+  it.each(LOCALES)("every labelKey resolves to a non-empty string in %s", (locale) => {
+    const messages = loadMessages(locale);
+    for (const [field, spec] of Object.entries(CANONICAL_EVIDENCE)) {
+      const value = lookup(messages, spec.labelKey);
+      expect(typeof value, `${locale}: ${field} → ${spec.labelKey}`).toBe("string");
+      expect((value as string).trim(), `${locale}: ${field} → ${spec.labelKey}`).not.toBe("");
+    }
+  });
+
+  it("signalId is NOT a label — it must never be used to build a signalLabel key", () => {
+    // Documents the divergence that caused the bug. If a future edit
+    // makes every signalId coincide with its labelKey suffix, the
+    // `disputes.signalLabel.${signalId}` shortcut starts working again
+    // by accident and the next diverging spec breaks in prod instead of
+    // in CI. Keep at least one spec honest about the distinction.
+    const parcel = CANONICAL_EVIDENCE.returned_parcel_outcome;
+    expect(parcel.signalId).toBe("parcel_outcome");
+    expect(parcel.labelKey).toBe("disputes.signalLabel.returned_parcel_outcome");
+    expect(`disputes.signalLabel.${parcel.signalId}`).not.toBe(parcel.labelKey);
+
+    // And the shortcut key genuinely does not exist — this is what the
+    // merchant saw rendered verbatim.
+    const en = loadMessages("en");
+    expect(lookup(en, `disputes.signalLabel.${parcel.signalId}`)).toBeUndefined();
   });
 
   it("supportingOnly fields are strict — supportingOnly === true ⇒ category 'supporting' AND excludedFromStrength true (P2.1.1)", () => {

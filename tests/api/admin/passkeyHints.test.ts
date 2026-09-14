@@ -44,8 +44,10 @@ beforeEach(() => {
  * The first attempt stripped the `hybrid` transport and shipped to prod with NO
  * observable change: transports are only a routing hint, and Chrome keeps
  * offering its cross-device "use a phone" / Google sheet regardless. `hints:
- * ["client-device"]` is the field Chrome honours, so it is what must be pinned —
- * asserting on transports alone gives false confidence.
+ * ["client-device"]` requests the preferred UI. These assertions pin the response
+ * shape, not the number of OS dialogs: Windows-owned UI can ignore the hint.
+ * The page's cancellation/timeout/single-attempt behavior is exercised by
+ * e2e/passkeys/verification.spec.ts with the real browser adapter.
  */
 describe("passkey ceremonies request the on-device authenticator UI", () => {
   it("authenticate options carry hints: ['client-device']", async () => {
@@ -64,13 +66,17 @@ describe("passkey ceremonies request the on-device authenticator UI", () => {
     expect(body.hints).toEqual(["client-device"]);
   });
 
-  it("register options carry hints AND pin platform attachment", async () => {
+  it("register options require a local, non-discoverable platform credential", async () => {
     vi.mocked(listPasskeys).mockResolvedValue([]);
 
     const body = await (await REG_POST(req())).json();
     expect(body.hints).toEqual(["client-device"]);
     // Without this, a phone could enrol as the admin authenticator.
-    expect(body.authenticatorSelection.authenticatorAttachment).toBe("platform");
+    expect(body.authenticatorSelection.authenticatorAttachment).toBe(
+      "platform",
+    );
+    expect(body.authenticatorSelection.residentKey).toBe("discouraged");
+    expect(body.authenticatorSelection.requireResidentKey).toBe(false);
   });
 
   it("still returns the challenge the cookie is signed against", async () => {

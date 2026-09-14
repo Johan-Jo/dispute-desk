@@ -46,6 +46,7 @@ import {
   type ReactNode,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import { delayNoteKey, resolveDelayCause } from "@/lib/disputes/presentation";
 import { useTranslations } from "next-intl";
 import {
   Banner,
@@ -395,17 +396,26 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const reconnectRequired = comms.errorCode === "reconnect_required";
   const processing = run ? RUN_PROCESSING_STATUSES.has(run.status) : false;
 
-  // A run stuck in ANY processing status past the grace period is either
-  // waiting behind other background work (single worker slot per shop) or
-  // genuinely stalled. Either way, surface an honest note + a Refresh so the
-  // merchant is never trapped on a spinner that looks stuck forever.
-  // `now === null` before the clock's first tick.
-  const processingTooLong =
-    processing &&
-    now !== null &&
-    run != null &&
-    Date.parse(run.startedAt) > 0 &&
-    now - Date.parse(run.startedAt) >= QUEUED_GRACE_MS;
+  // A run stuck in ANY processing status past the grace period gets an honest
+  // note + a Refresh, so the merchant is never trapped on a spinner that looks
+  // stuck forever. `now === null` before the clock's first tick.
+  //
+  // The CAUSE is resolved, not assumed. The old copy asserted "waiting behind
+  // other background work" from the timer alone; on blume-box it fired while
+  // the shop had zero other queued or running jobs and the wait was simply the
+  // worker's tick interval. `resolveDelayCause` will only return
+  // `queue_backlog` on an observed positive count — and this component has no
+  // queue observation, so it reports elapsed time and nothing more.
+  const delayCause = resolveDelayCause({
+    queueReadOk: false,
+    otherActiveJobCount: null,
+    elapsedMs:
+      now !== null && run != null && Date.parse(run.startedAt) > 0
+        ? now - Date.parse(run.startedAt)
+        : 0,
+    thresholdMs: QUEUED_GRACE_MS,
+  });
+  const processingTooLong = processing && delayCause !== "unknown";
 
   // ── Status line ──
   let statusLine: ReactNode = null;
@@ -427,7 +437,7 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
         {processingTooLong && (
           <BlockStack gap="150">
             <Text as="p" tone="subdued" variant="bodySm">
-              {t("status.takingLongerNote")}
+              {t(delayNoteKey(delayCause))}
             </Text>
             <div>
               <Button
