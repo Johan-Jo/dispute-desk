@@ -8,6 +8,7 @@ import { EmbeddedAppChrome } from "@/components/embedded/EmbeddedAppChrome";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 import { verifySessionToken } from "@/lib/shopify/sessionToken";
 import { recordLastLogin } from "@/lib/shopify/recordLastLogin";
+import { recordPageView } from "@/lib/shopify/recordPageView";
 
 export default async function EmbeddedAppLayout({
   children,
@@ -30,12 +31,38 @@ export default async function EmbeddedAppLayout({
   // verified shopDomain rather than an `x-shop-id` header — middleware's
   // /app/* branch doesn't resolve one on the normal cookie-authenticated
   // path (only /api/* and impersonation do).
+  // Page-view logging. Unlike `recordLastLogin` above, this runs for BOTH
+  // merchants and impersonating admins: a view log with our sessions missing
+  // would read as "the merchant never opened this page" wherever we had been
+  // looking instead. See lib/shopify/recordPageView.ts.
+  const path = headerStore.get("x-dd-path");
+
   if (!impersonating) {
     const idToken = headerStore.get("x-dd-id-token");
     if (idToken) {
       const verified = verifySessionToken(idToken);
-      if (verified) recordLastLogin(verified.shopDomain, verified.userId);
+      if (verified) {
+        recordLastLogin(verified.shopDomain, verified.userId);
+        if (path)
+          recordPageView({
+            shopDomain: verified.shopDomain,
+            actorType: "merchant",
+            actorId: verified.userId,
+            path,
+          });
+      }
     }
+  } else if (path) {
+    // Middleware verified the impersonation cookie and injected these.
+    const shopId = headerStore.get("x-shop-id");
+    const adminUserId = headerStore.get("x-dd-admin-user-id");
+    if (shopId)
+      recordPageView({
+        shopId,
+        actorType: "admin",
+        actorId: adminUserId || null,
+        path,
+      });
   }
 
   return (

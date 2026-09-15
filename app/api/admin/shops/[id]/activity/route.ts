@@ -46,12 +46,27 @@ export async function GET(
 
   if (!all) q = q.in("actor_type", ["merchant", "admin"]);
 
-  const { data, error } = await q;
+  // Page views, merged into the same timeline. A view and an action on the same
+  // dispute, interleaved, is what actually answers "what did they do" -- an
+  // action list alone misses the browsing that is most of a merchant's session.
+  const viewsQuery = sb
+    .from("shop_page_views")
+    .select("id, viewed_at, actor_type, actor_id, path, route, dispute_id")
+    .eq("shop_id", id)
+    .order("viewed_at", { ascending: false })
+    .limit(limit);
+
+  const [{ data, error }, { data: views, error: viewsError }] =
+    await Promise.all([q, viewsQuery]);
+
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
+  if (viewsError)
+    return NextResponse.json({ error: viewsError.message }, { status: 500 });
 
   return NextResponse.json({
     events: data ?? [],
+    pageViews: views ?? [],
     attributionTrustworthyFrom: ATTRIBUTION_TRUSTWORTHY_FROM,
   });
 }
