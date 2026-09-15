@@ -40,7 +40,7 @@ import {
 
 const intlMiddleware = createNextIntlMiddleware(routing);
 const localePathRegex = new RegExp(
-  `^\\/(${PATH_LOCALE_PREFIX_PATTERN})(\\/.*)?$`
+  `^\\/(${PATH_LOCALE_PREFIX_PATTERN})(\\/.*)?$`,
 );
 
 /** Forwarded to root layout: only `/app/*` should load `app-bridge.js` (avoids App Bridge on marketing). */
@@ -84,13 +84,15 @@ export async function middleware(req: NextRequest) {
   // --- Embedded app entry: Shopify loads application_url (/) in iframe; redirect to /app with same query ---
   if (pathname === "/" && req.nextUrl.searchParams.has("shop")) {
     const appUrl = new URL("/app", req.url);
-    req.nextUrl.searchParams.forEach((value, key) => appUrl.searchParams.set(key, value));
+    req.nextUrl.searchParams.forEach((value, key) =>
+      appUrl.searchParams.set(key, value),
+    );
     return NextResponse.redirect(appUrl);
   }
 
   // --- Legacy BCP-47 marketing URLs → two-letter paths ---
   const legacyMatch = pathname.match(
-    /^\/(en-US|de-DE|fr-FR|es-ES|pt-BR|sv-SE)(\/?.*)?$/
+    /^\/(en-US|de-DE|fr-FR|es-ES|pt-BR|sv-SE)(\/?.*)?$/,
   );
   if (legacyMatch) {
     const messagesLocale = legacyMatch[1] as Locale;
@@ -99,7 +101,9 @@ export async function middleware(req: NextRequest) {
       const rest = (legacyMatch[2] ?? "").replace(/^\//, "");
       const base = seg === DEFAULT_PATH_LOCALE ? "" : `/${seg}`;
       const targetPath = rest ? `${base}/${rest}` : base || "/";
-      return NextResponse.redirect(new URL(targetPath + req.nextUrl.search, req.url));
+      return NextResponse.redirect(
+        new URL(targetPath + req.nextUrl.search, req.url),
+      );
     }
   }
 
@@ -156,7 +160,10 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith("/api/webhooks")) {
       const rl = checkRateLimit("webhooks:global", 1000);
       if (!rl.allowed) {
-        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+        return NextResponse.json(
+          { error: "Too many requests" },
+          { status: 429 },
+        );
       }
       return nextWithAppBridge(req, "0");
     }
@@ -200,7 +207,8 @@ export async function middleware(req: NextRequest) {
       // Without this exemption the middleware returns 401 before the
       // route runs, which is why pixel events never landed before today.
       pathname === "/api/sessions/ingest" ||
-      (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log") ||
+      (process.env.DD_DEBUG_AGENT_LOG === "1" &&
+        pathname === "/api/debug/agent-log") ||
       // TEMP: read-only cay-collective dispute reconcile diagnostic. Self-gates
       // on CRON_SECRET inside the route (that is the auth). Remove with the route.
       pathname === "/api/debug/cay-dispute-reconcile"
@@ -233,7 +241,7 @@ export async function middleware(req: NextRequest) {
               }
             },
           },
-        }
+        },
       );
 
       const {
@@ -243,7 +251,7 @@ export async function middleware(req: NextRequest) {
       if (!user) {
         return NextResponse.json(
           { error: "Unauthorized", code: "ADMIN_SESSION_REQUIRED" },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -259,7 +267,7 @@ export async function middleware(req: NextRequest) {
       if (!grant) {
         return NextResponse.json(
           { error: "Forbidden", code: "ADMIN_GRANT_REQUIRED" },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
@@ -274,8 +282,11 @@ export async function middleware(req: NextRequest) {
         const passkey = await verifyPasskeyCookie(req);
         if (!passkey || passkey.userId !== user.id) {
           return NextResponse.json(
-            { error: "Passkey verification required", code: "ADMIN_PASSKEY_REQUIRED" },
-            { status: 403 }
+            {
+              error: "Passkey verification required",
+              code: "ADMIN_PASSKEY_REQUIRED",
+            },
+            { status: 403 },
           );
         }
       }
@@ -297,14 +308,25 @@ export async function middleware(req: NextRequest) {
     {
       const imp = await verifyImpersonation(req);
       if (imp) {
-        if (imp.mode === "read" && req.method !== "GET") {
+        // The page-view beacon is the ONE exemption. It is a POST, but it
+        // writes telemetry about the ADMIN's own browsing -- never merchant
+        // data -- and read-mode admin browsing is exactly the activity this
+        // log exists to make visible. Blocking it meant every read-mode
+        // impersonation session went unrecorded while write-mode sessions
+        // logged fine (found by self-test on dev, 2026-09-15).
+        //
+        // Safe because /api/page-view derives shop and actor from this same
+        // verified cookie, never from the request body: the worst an admin
+        // can do through it is record that they looked at a page.
+        const isPageViewBeacon = pathname === "/api/page-view";
+        if (imp.mode === "read" && req.method !== "GET" && !isPageViewBeacon) {
           return NextResponse.json(
             {
               error:
                 "This is a read-only admin preview. Enable write mode to make changes.",
               code: "IMPERSONATION_READ_ONLY",
             },
-            { status: 403 }
+            { status: 403 },
           );
         }
         const rl = checkRateLimit(`shop:${imp.shopId}`, 100);
@@ -315,10 +337,10 @@ export async function middleware(req: NextRequest) {
               status: 429,
               headers: {
                 "Retry-After": String(
-                  Math.ceil((rl.resetAt - Date.now()) / 1000)
+                  Math.ceil((rl.resetAt - Date.now()) / 1000),
                 ),
               },
-            }
+            },
           );
         }
         const requestHeaders = new Headers(req.headers);
@@ -380,7 +402,7 @@ export async function middleware(req: NextRequest) {
           error: "Shop mismatch. Reload the app from Shopify Admin.",
           code: "SHOP_MISMATCH",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -473,7 +495,7 @@ export async function middleware(req: NextRequest) {
             getAll: () => req.cookies.getAll(),
             setAll: () => {},
           },
-        }
+        },
       );
       const {
         data: { user },
@@ -530,8 +552,8 @@ export async function middleware(req: NextRequest) {
               "Unauthorized. Install or re-open the app from Shopify Admin.",
             code: "SESSION_REQUIRED",
           },
-          { status: 401 }
-        )
+          { status: 401 },
+        ),
       );
     }
 
@@ -540,7 +562,12 @@ export async function middleware(req: NextRequest) {
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Try again shortly." },
-        { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          },
+        },
       );
     }
 
@@ -551,7 +578,7 @@ export async function middleware(req: NextRequest) {
     return expireStaleCookies(
       NextResponse.next({
         request: { headers: requestHeaders },
-      })
+      }),
     );
   }
 
@@ -574,7 +601,7 @@ export async function middleware(req: NextRequest) {
             }
           },
         },
-      }
+      },
     );
 
     const {
@@ -607,7 +634,7 @@ export async function middleware(req: NextRequest) {
             }
           },
         },
-      }
+      },
     );
 
     const {
@@ -630,7 +657,9 @@ export async function middleware(req: NextRequest) {
       .maybeSingle();
 
     if (!grant) {
-      return NextResponse.redirect(new URL("/admin/login?reason=no_access", req.url));
+      return NextResponse.redirect(
+        new URL("/admin/login?reason=no_access", req.url),
+      );
     }
 
     // --- Passkey second factor (custom WebAuthn) ---
@@ -639,7 +668,8 @@ export async function middleware(req: NextRequest) {
     // lock-out). Every other /admin/* page requires the verified-session cookie;
     // absent it, route to verify (if a passkey exists) or enroll (if none).
     const isPasskeyPage =
-      pathname === "/admin/enroll-passkey" || pathname === "/admin/verify-passkey";
+      pathname === "/admin/enroll-passkey" ||
+      pathname === "/admin/verify-passkey";
     if (!isPasskeyPage) {
       const passkey = await verifyPasskeyCookie(req);
       if (!passkey || passkey.userId !== user.id) {
@@ -682,6 +712,28 @@ export async function middleware(req: NextRequest) {
       requestHeaders.set("x-dd-id-token", idTokenForLoginParam!);
     }
 
+    // Forward the pathname so the embedded layout can record the page view.
+    // A server component cannot read its own pathname, and this is the only
+    // place that has it. See lib/shopify/recordPageView.ts.
+    requestHeaders.set("x-dd-path", pathname);
+
+    // Shop identity for page-view logging, independent of `id_token`.
+    //
+    // WHY THIS IS NOT THE id_token PATH. Shopify puts `id_token` in the URL
+    // when the app is OPENED from Admin, not on in-app navigation. Gating the
+    // recorder on it (as the first version did) meant merchant views were
+    // captured only at the entry point: clicking into a dispute logged
+    // nothing, while impersonated admin views -- whose cookie is verified per
+    // request -- logged everything. Observed on dev 2026-09-15: 34 server-side
+    // hits on /app/disputes/[id] produced zero merchant rows, and
+    // `shops.last_login_at` (same gate) froze at the landing time.
+    //
+    // `shopify_shop_id` is set by this same /app/* branch with a 30-day life,
+    // so it rides every subsequent navigation. A cookie read, not a DB lookup:
+    // this is edge middleware on every page load.
+    const shopIdCookie = req.cookies.get("shopify_shop_id")?.value;
+    if (shopIdCookie) requestHeaders.set("x-dd-shop-id", shopIdCookie);
+
     if (pathname === "/app/session-required") {
       const res = NextResponse.next({ request: { headers: requestHeaders } });
       if (localeParam) {
@@ -709,6 +761,10 @@ export async function middleware(req: NextRequest) {
         requestHeaders.set("x-shop-domain", imp.shopDomain);
         requestHeaders.set("x-shop-id", imp.shopId);
         requestHeaders.set(IMPERSONATION_MODE_HEADER, imp.mode);
+        // Impersonated page views are recorded too — see recordPageView.ts on
+        // why an unlabelled gap would be worse than no log at all.
+        requestHeaders.set("x-dd-path", pathname);
+        requestHeaders.set("x-dd-admin-user-id", imp.adminUserId ?? "");
         const res = NextResponse.next({ request: { headers: requestHeaders } });
         // Sliding TTL: re-mint with a fresh iat on every impersonated page load
         // so an actively-used session never expires mid-debugging (the fixed TTL
@@ -751,7 +807,11 @@ export async function middleware(req: NextRequest) {
       const backToAdmin = NextResponse.redirect(
         new URL("/admin/shops?impersonation=expired", req.url),
       );
-      backToAdmin.cookies.set(IMPERSONATION_COOKIE, "", impersonationCookieOptions(0));
+      backToAdmin.cookies.set(
+        IMPERSONATION_COOKIE,
+        "",
+        impersonationCookieOptions(0),
+      );
       return backToAdmin;
     }
 
@@ -765,11 +825,17 @@ export async function middleware(req: NextRequest) {
       // complete. Cryptographic verification happens in the node route,
       // not here (edge runtime has no crypto.createHmac).
       if (looksLikeSessionToken(idTokenParam) && shopParam) {
-        const exchangeUrl = new URL("/api/auth/shopify/token-exchange", req.url);
+        const exchangeUrl = new URL(
+          "/api/auth/shopify/token-exchange",
+          req.url,
+        );
         exchangeUrl.searchParams.set("id_token", idTokenParam!);
         exchangeUrl.searchParams.set("shop", shopParam);
         if (hostParam) exchangeUrl.searchParams.set("host", hostParam);
-        exchangeUrl.searchParams.set("return_to", pathname + req.nextUrl.search);
+        exchangeUrl.searchParams.set(
+          "return_to",
+          pathname + req.nextUrl.search,
+        );
         return NextResponse.redirect(exchangeUrl);
       }
 
@@ -822,7 +888,9 @@ export async function middleware(req: NextRequest) {
                 .maybeSingle();
               if (sessionRow?.id) {
                 // Connected — restore the cookies and render the shell.
-                const res = NextResponse.next({ request: { headers: requestHeaders } });
+                const res = NextResponse.next({
+                  request: { headers: requestHeaders },
+                });
                 const cookieOpts = {
                   httpOnly: true,
                   secure: true,

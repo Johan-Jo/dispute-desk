@@ -177,7 +177,8 @@ async function main() {
       shop_id: dispute.shop_id,
       dispute_id: disputeId,
       pack_id: existing.id,
-      actor_type: "merchant",
+      actor_type: "script",
+    actor_id: "build-one-pack.mjs",
       event_type: "job_queued",
       event_payload: {
         jobId: job.id,
@@ -242,7 +243,8 @@ async function main() {
     shop_id: dispute.shop_id,
     dispute_id: disputeId,
     pack_id: pack.id,
-    actor_type: "merchant",
+    actor_type: "script",
+    actor_id: "build-one-pack.mjs",
     event_type: "job_queued",
     event_payload: {
       jobId: job.id,

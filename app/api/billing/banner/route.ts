@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, type PlanId } from "@/lib/billing/plans";
@@ -28,10 +29,7 @@ import type { SubscriptionState } from "@/lib/billing/subscriptionState";
 export const runtime = "nodejs";
 
 type PreviewVariant =
-  | "grace"
-  | "subscription_expired"
-  | "low_credits"
-  | "free_out_of_packs";
+  "grace" | "subscription_expired" | "low_credits" | "free_out_of_packs";
 
 function isPreviewVariant(v: unknown): v is PreviewVariant {
   return (
@@ -43,6 +41,7 @@ function isPreviewVariant(v: unknown): v is PreviewVariant {
 }
 
 export async function GET(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
@@ -60,7 +59,8 @@ export async function GET(req: NextRequest) {
   if (preview) {
     await sb.from("audit_events").insert({
       shop_id: shopId,
-      actor_type: "merchant",
+      actor_type: auditActor.actorType,
+      actor_id: auditActor.actorId,
       event_type: "billing_banner_preview",
       event_payload: { preview, requested_at: new Date().toISOString() },
     });
@@ -80,27 +80,24 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const [
-    { data: shop },
-    { data: entitlement },
-    { data: balance },
-  ] = await Promise.all([
-    sb.from("shops").select("plan").eq("id", shopId).maybeSingle(),
-    sb
-      .from("plan_entitlements")
-      .select(
-        "subscription_state, billing_cycle_ends_at, low_credits_banner_dismissed_cycle, grace_banner_dismissed_cycle",
-      )
-      .eq("shop_id", shopId)
-      .maybeSingle(),
-    sb
-      .from("pack_balance")
-      .select("remaining_packs")
-      .eq("shop_id", shopId)
-      .maybeSingle(),
-  ]);
+  const [{ data: shop }, { data: entitlement }, { data: balance }] =
+    await Promise.all([
+      sb.from("shops").select("plan").eq("id", shopId).maybeSingle(),
+      sb
+        .from("plan_entitlements")
+        .select(
+          "subscription_state, billing_cycle_ends_at, low_credits_banner_dismissed_cycle, grace_banner_dismissed_cycle",
+        )
+        .eq("shop_id", shopId)
+        .maybeSingle(),
+      sb
+        .from("pack_balance")
+        .select("remaining_packs")
+        .eq("shop_id", shopId)
+        .maybeSingle(),
+    ]);
 
-  const planId = ((shop?.plan as PlanId | null) ?? "free");
+  const planId = (shop?.plan as PlanId | null) ?? "free";
   const plan = getPlan(planId);
 
   const state: BillingBannerState = computeBillingBannerState({
@@ -115,8 +112,7 @@ export async function GET(req: NextRequest) {
     graceBannerDismissedCycle:
       (entitlement?.grace_banner_dismissed_cycle as string | null) ?? null,
     remainingPacks: (balance?.remaining_packs as number | null) ?? null,
-    monthlyPackLimit:
-      plan.packsPerMonth > 0 ? plan.packsPerMonth : null,
+    monthlyPackLimit: plan.packsPerMonth > 0 ? plan.packsPerMonth : null,
     planId: plan.id,
   });
 

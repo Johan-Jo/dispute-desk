@@ -8380,3 +8380,147 @@ A cohort query failure emails a monitor failure and returns 500; it never
 returns `ok:true` with zero findings.
 
 Evidence SQL: `scripts/sql/label-fact-divergence.sql` (Q1–Q5).
+
+---
+
+## Audit actor attribution
+
+`audit_events.actor_type` answers **who did this**. Until 2026-09-15 it could
+not: the column allowed only `merchant|system`, and every request-scoped write
+site hardcoded `"merchant"`. An operator acting through SuperAdmin
+"View as merchant" was recorded as the merchant, and operator-run scripts had
+to pick between two wrong labels.
+
+The failure was concrete. Asked what shop `ea035a1b` (Mein Maison) did after a
+06:53 UTC login, `audit_events` showed 14 `merchant` rows — 8 of which were
+`scripts/build-one-pack.mjs` runs. The merchant did none of them.
+
+### The vocabulary
+
+| `actor_type` | Meaning | `actor_id` |
+|---|---|---|
+| `merchant` | A human in the merchant's own Shopify session | null (see below) |
+| `admin` | A human on our side, via View-as-merchant impersonation | `adminUserId` |
+| `script` | An operator-run script | script filename |
+| `system` | Autonomous: cron, job handlers, webhooks | job/cron id, or null |
+
+`merchant` carries no `actor_id`: the Shopify staff id is not available on the
+`/api/*` path (middleware forwards `x-shop-id`, not the session token's `sub`).
+A known gap, not an oversight — `actor_type` already answers "was this us or
+them?", which is the question the trail actually failed. Resolving a staff id
+to a *name* needs the `read_users` scope, which was deliberately reverted
+(see *Expiring Offline Tokens*).
+
+### Rules
+
+- **Never hardcode `actorType` on a request-scoped path.** Use
+  `resolveAuditActor(req)` (`lib/audit/resolveActor.ts`). It returns `admin`
+  when the impersonation cookie verifies, `merchant` otherwise, and degrades to
+  `merchant` rather than throwing when there is no cookie jar — an audit write
+  must never be why a merchant's action 500s.
+- **Scripts write `actor_type: "script"`** with `actor_id` set to the filename.
+- `tests/unit/auditActorAttribution.test.ts` enforces both from source. A new
+  route fails it until the actor is resolved.
+
+### Pre-2026-09-15 rows
+
+Rows written before the fix record `merchant` for every request-scoped write,
+admin actions included. The admin activity panel marks them *(actor unverified)*
+rather than implying the history is clean. Only the 8 `build-one-pack.mjs` rows
+were corrected (migration `20260915120100`), because the script's own `note`
+payload identified them unambiguously; impersonated writes left no such trace
+and cannot be recovered.
+
+### Migrations
+
+- `20260915120000_audit_actor_vocabulary.sql` — widens the CHECK to
+  `merchant|admin|script|system`. Must precede any code writing the new values.
+- `20260915120100_audit_backfill_script_rows.sql` — relabels the 8 rows. Uses
+  the transaction-local `app.allow_audit_mutation` GUC (per
+  *E2E fixtures and audit immutability*), **not** `disable trigger`, which would
+  lift immutability table-wide for the duration. Asserts the match count is
+  exactly 8 (or 0, for environments with nothing to fix) and aborts otherwise,
+  so a drifting predicate cannot silently rewrite real merchant actions.
+
+### Admin surface
+
+`/admin/shops/[id]` carries an **Activity** panel (`components/admin/ShopActivity.tsx`,
+fed by `GET /api/admin/shops/:id/activity`). People only by default —
+`merchant` + `admin`. `system` and `script` are behind "Include automation"
+because automation outnumbers real actions by roughly 10:1 on an active shop
+and buries what the page exists to show.
+
+### Known gap
+
+`lib/audit/logEvent.ts` is **not** the only writer, despite what its docblock
+claimed until 2026-09-15: ~56 call sites insert into `audit_events` directly,
+bypassing the `EventType` union (which is why `gorgias_message_approved` and
+`billing_subscription_created` appear in the table but not in the type).
+Those sites now attribute their actor correctly; routing them through the
+helper is separate work. See `docs/plans/audit-actor-attribution.plan.md`.
+
+---
+
+## Page-view logging (`shop_page_views`)
+
+`audit_events` records **actions**. The dominant merchant behaviour is not
+acting — it is looking. Mein Maison logged in at 06:53 UTC on 2026-09-15,
+browsed, and left; asked what they did, the database could answer only with
+automation rows. Viewing left no durable trace.
+
+(Vercel runtime logs *do* capture page hits — an earlier note claiming page-view
+data "does not exist" was wrong. But they expire in about a day, are keyed by
+route rather than shop, and join to nothing. A diagnostic tool, not a feature.)
+
+### The table
+
+`shop_page_views(shop_id, actor_type, actor_id, path, route, dispute_id, viewed_at)`
+
+- **`actor_type` is `merchant` or `admin`.** Admin (View-as-merchant) sessions
+  are recorded deliberately: if only merchants were logged, "no rows for this
+  page" would read as *the merchant never opened it* when it might mean *we
+  opened it and did not record it*. Indistinguishable absence is the same defect
+  the actor-attribution work fixed — see *Audit actor attribution* above.
+- **`path` vs `route`.** `path` is the URL as requested, so "which dispute did
+  they open" is answerable. `route` is the normalised pattern
+  (`/app/disputes/[id]`) so aggregates do not produce one bucket per dispute.
+  Demo-mode fixture paths (`/app/disputes/dp-2403`) normalise too — they are not
+  real disputes, and treating them as distinct routes is how an early volume
+  estimate for this feature wrongly counted fixtures as merchant traffic.
+- **Not an `audit_events` event type.** That table is append-only with triggers
+  rejecting UPDATE/DELETE; these rows have a 90-day retention policy that would
+  fight those triggers every night, and navigation would bury real actions.
+
+### How it is recorded
+
+`middleware.ts` forwards `x-dd-path` on both `/app/*` branches (a server
+component cannot read its own pathname), plus `x-dd-shop-id` (merchant branch,
+read from the `shopify_shop_id` cookie) and `x-dd-admin-user-id` (impersonation
+branch).
+
+**Merchant recording must NOT be gated on `id_token`.** Shopify supplies it when
+the app is opened from Admin, not on in-app navigation. The first version gated
+on it and captured only entry loads: 34 server-side hits on `/app/disputes/[id]`
+produced zero rows, while impersonated admin views — whose cookie is verified per
+request — recorded everything. `shopify_shop_id` is a 30-day cookie set by the
+same branch, so it rides every navigation at the cost of a cookie read rather
+than a DB lookup in edge middleware. `app/(embedded)/app/layout.tsx` calls
+`recordPageView()` (`lib/shopify/recordPageView.ts`) fire-and-forget, exactly
+like `recordLastLogin` — it must never block or throw into a merchant's render.
+
+**No throttle**, unlike `recordLastLogin`'s 5-minute window: there, only the
+latest login matters; here every view *is* the signal, and collapsing repeats
+would discard the navigation sequence the table exists to capture.
+
+### Retention
+
+90 days, swept daily by `/api/cron/cleanup-page-views` (03:30 UTC, `cronEnvGate`
+first per the cron rule). Batched at 5000 rows/run so the job stays bounded as
+the customer base grows. Measured volume today is tens of rows a day
+platform-wide across four shops.
+
+### Surface
+
+`/admin/shops/[id]` merges views and actions into one actor-labelled timeline.
+A view and an action on the same dispute, interleaved, is what actually answers
+"what did they do".

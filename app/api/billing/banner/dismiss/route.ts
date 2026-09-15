@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getServiceClient } from "@/lib/supabase/server";
 import { DISMISSAL_COLUMN } from "@/lib/billing/bannerState";
@@ -27,6 +28,7 @@ function isDismissibleVariant(v: unknown): v is DismissibleVariant {
 }
 
 export async function POST(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
@@ -49,10 +51,7 @@ export async function POST(req: NextRequest) {
     );
   }
   if (!cycleEnd) {
-    return NextResponse.json(
-      { error: "cycleEnd required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "cycleEnd required" }, { status: 400 });
   }
 
   const column = DISMISSAL_COLUMN[variant];
@@ -69,7 +68,8 @@ export async function POST(req: NextRequest) {
 
   await sb.from("audit_events").insert({
     shop_id: shopId,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "billing_banner_dismissed",
     event_payload: { variant, cycle_end: cycleEnd },
   });

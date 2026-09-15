@@ -25,6 +25,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -35,6 +36,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -46,9 +48,7 @@ export async function POST(
   const sb = getServiceClient();
   const { data: existing, error } = await sb
     .from("defence_packages")
-    .select(
-      "id, dispute_id, shop_id, source_pack_id, version, status",
-    )
+    .select("id, dispute_id, shop_id, source_pack_id, version, status")
     .eq("id", id)
     .eq("shop_id", shopId)
     .single();
@@ -69,7 +69,8 @@ export async function POST(
       shopId: existing.shop_id,
       disputeId: existing.dispute_id,
       packId: existing.source_pack_id,
-      actorType: "merchant",
+      actorType: auditActor.actorType,
+      actorId: auditActor.actorId,
       eventType: "defence_package_stale",
       eventPayload: {
         packageId: id,
@@ -93,7 +94,8 @@ export async function POST(
     shopId: existing.shop_id,
     disputeId: existing.dispute_id,
     packId: existing.source_pack_id,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "defence_package_regenerated",
     eventPayload: {
       previousPackageId: id,

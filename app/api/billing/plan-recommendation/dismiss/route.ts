@@ -14,12 +14,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getServiceClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
@@ -55,7 +57,8 @@ export async function POST(req: NextRequest) {
 
   await sb.from("audit_events").insert({
     shop_id: shopId,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "plan_recommendation_dismissed",
     event_payload: { dismissed_plan: recommendedPlan },
   });
