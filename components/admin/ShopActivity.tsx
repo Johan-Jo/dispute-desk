@@ -49,7 +49,6 @@ interface Entry {
   actorId: string | null;
   /** Raw path for a view row — shown so "which page" is answerable. */
   path?: string;
-  disputeId?: string | null;
 }
 
 const ACTOR_STYLE: Record<AuditRow["actor_type"], string> = {
@@ -82,26 +81,24 @@ function friendlyPath(route: string): string | null {
 }
 
 /**
- * What a view row shows for the page that was visited: a readable name, the
- * raw path, and where the path links to (null = plain text, no dead link).
+ * What a view row shows for the page that was visited.
  *
- * Exported and pure so the decision is testable. The first version of this
- * panel rendered only the name -- "Viewed a dispute", which does not say WHICH
- * dispute -- while the API had been returning `path` and `dispute_id` all
- * along. A data-shape assertion stays green through that kind of bug; only
- * asserting the rendered decision catches it.
+ * EVERY row is openable, and every one opens the MERCHANT's own page under
+ * View-as-merchant — not an admin equivalent. The point of clicking a row in
+ * this timeline is to see what the merchant saw; our admin view of a dispute is
+ * a different page showing different things, and for most routes (Coverage,
+ * Help, Insights, Settings) no admin equivalent exists at all.
+ *
+ * An earlier version linked only dispute detail, and linked it to
+ * `/admin/disputes/<id>`. That made every other row look deliberately inert,
+ * and sent the one working link to the wrong place.
  */
 export function viewTarget(
   route: string,
   path: string,
-  disputeId: string | null,
-): { label: string; path: string; href: string | null } {
+): { label: string; path: string } {
   const name = friendlyPath(route);
-  return {
-    label: name ? `Viewed ${name}` : "Viewed",
-    path,
-    href: disputeId ? `/admin/disputes/${disputeId}` : null,
-  };
+  return { label: name ? `Viewed ${name}` : "Viewed", path };
 }
 
 /** Turn `review_approved` into `Review approved`. */
@@ -114,6 +111,7 @@ export function ShopActivity({ shopId }: { shopId: string }) {
   const [rows, setRows] = useState<Entry[] | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [cutoff, setCutoff] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -131,7 +129,7 @@ export function ShopActivity({ shopId }: { shopId: string }) {
           actorId: r.actor_id,
         }));
         const views: Entry[] = (d.pageViews ?? []).map((v: PageViewRow) => {
-          const t = viewTarget(v.route, v.path, v.dispute_id);
+          const t = viewTarget(v.route, v.path);
           return {
             id: v.id,
             at: v.viewed_at,
@@ -140,7 +138,6 @@ export function ShopActivity({ shopId }: { shopId: string }) {
             label: t.label,
             actorId: v.actor_id,
             path: t.path,
-            disputeId: v.dispute_id,
           };
         });
         setRows(
@@ -157,6 +154,36 @@ export function ShopActivity({ shopId }: { shopId: string }) {
   }, [shopId, showAll]);
 
   const cutoffMs = cutoff ? Date.parse(cutoff) : null;
+
+  /**
+   * Open a visited page as the merchant sees it.
+   *
+   * Mints a READ-mode impersonation session for this shop and lands directly on
+   * the path from the row. Read mode deliberately: opening a page to see what
+   * someone looked at must never be able to change anything. The window is
+   * opened synchronously and its location set after the request resolves —
+   * popup blockers reject a window.open that happens inside an await.
+   */
+  async function openAsMerchant(path: string) {
+    const w = window.open("", "_blank", "noopener");
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId, mode: "read", targetPath: path }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.targetUrl) {
+        w?.close();
+        setOpenError(data?.error ?? "Could not open the merchant view.");
+        return;
+      }
+      if (w) w.location.href = data.targetUrl;
+    } catch {
+      w?.close();
+      setOpenError("Could not open the merchant view.");
+    }
+  }
 
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-lg p-5 mb-6">
@@ -175,6 +202,12 @@ export function ShopActivity({ shopId }: { shopId: string }) {
           Include automation
         </label>
       </div>
+
+      {openError && (
+        <div className="mb-3 text-sm text-[#991B1B] bg-[#FEE2E2] rounded-md px-3 py-2">
+          {openError}
+        </div>
+      )}
 
       {rows === null ? (
         <div className="text-sm text-[#64748B]">Loading…</div>
@@ -216,18 +249,14 @@ export function ShopActivity({ shopId }: { shopId: string }) {
                   {r.kind === "view" && r.path && (
                     <>
                       {" "}
-                      {r.disputeId ? (
-                        <a
-                          href={`/admin/disputes/${r.disputeId}`}
-                          className="font-mono text-xs text-[#1D4ED8] hover:underline break-all"
-                        >
-                          {r.path}
-                        </a>
-                      ) : (
-                        <span className="font-mono text-xs text-[#94A3B8] break-all">
-                          {r.path}
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openAsMerchant(r.path!)}
+                        title="Open this page as the merchant sees it (read-only)"
+                        className="font-mono text-xs text-[#1D4ED8] hover:underline break-all cursor-pointer bg-transparent border-0 p-0"
+                      >
+                        {r.path}
+                      </button>
                     </>
                   )}
                   {preAttribution && r.kind === "action" && (

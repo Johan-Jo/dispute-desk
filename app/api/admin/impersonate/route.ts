@@ -34,9 +34,24 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     shopId?: unknown;
     mode?: unknown;
+    targetPath?: unknown;
   } | null;
   const shopId = typeof body?.shopId === "string" ? body.shopId : "";
   const mode: ImpersonationMode = body?.mode === "write" ? "write" : "read";
+
+  // Optional deep link into a specific embedded page, so the Activity timeline
+  // can open the page the merchant actually looked at rather than dropping the
+  // operator on the dashboard to navigate there by hand.
+  //
+  // Constrained to same-origin /app/* paths: a caller-supplied target is a
+  // redirect, and an unchecked one is an open redirect. Must start with a
+  // single "/app" and carry no scheme or protocol-relative prefix.
+  const rawTarget =
+    typeof body?.targetPath === "string" ? body.targetPath : "";
+  const targetPath =
+    rawTarget.startsWith("/app") && !rawTarget.startsWith("//")
+      ? rawTarget
+      : "/app";
 
   if (!shopId) {
     return NextResponse.json({ error: "shopId is required" }, { status: 400 });
@@ -76,7 +91,7 @@ export async function POST(req: NextRequest) {
 
   const res = NextResponse.json({
     ok: true,
-    targetUrl: "/app",
+    targetUrl: targetPath,
     shopDomain: shop.shop_domain,
     mode,
   });
