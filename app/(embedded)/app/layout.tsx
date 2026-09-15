@@ -39,19 +39,28 @@ export default async function EmbeddedAppLayout({
 
   if (!impersonating) {
     const idToken = headerStore.get("x-dd-id-token");
-    if (idToken) {
-      const verified = verifySessionToken(idToken);
-      if (verified) {
-        recordLastLogin(verified.shopDomain, verified.userId);
-        if (path)
-          recordPageView({
-            shopDomain: verified.shopDomain,
-            actorType: "merchant",
-            actorId: verified.userId,
-            path,
-          });
-      }
-    }
+    const verified = idToken ? verifySessionToken(idToken) : null;
+    if (verified) recordLastLogin(verified.shopDomain, verified.userId);
+
+    // Deliberately NOT gated on the token. Shopify supplies `id_token` when the
+    // app is opened from Admin, not on in-app navigation, so gating here meant
+    // a merchant clicking into a dispute recorded nothing (dev, 2026-09-15: 34
+    // server-side hits on /app/disputes/[id], zero rows). Middleware forwards
+    // `x-dd-shop-id` from the cookie precisely so this does not depend on it.
+    //
+    // `actorId` is therefore only present on entry loads, where the verified
+    // token carries the staff id. Knowing WHICH pages were visited matters more
+    // than knowing which staff member on every hop -- and a missing row would
+    // read as "never visited", which is the failure this table exists to avoid.
+    const shopId = headerStore.get("x-dd-shop-id");
+    if (path && (shopId || verified))
+      recordPageView({
+        shopId: shopId ?? null,
+        shopDomain: verified?.shopDomain ?? null,
+        actorType: "merchant",
+        actorId: verified?.userId ?? null,
+        path,
+      });
   } else if (path) {
     // Middleware verified the impersonation cookie and injected these.
     const shopId = headerStore.get("x-shop-id");
