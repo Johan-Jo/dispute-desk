@@ -31,6 +31,13 @@ import { getServiceClient } from "@/lib/supabase/server";
 
 export type PageViewActor = "merchant" | "admin";
 
+/**
+ * Two reporters (server layout + client beacon) can describe one navigation.
+ * Anything inside this window for the same shop+path+actor is treated as the
+ * same view rather than a second one.
+ */
+const DEDUP_WINDOW_MS = 5000;
+
 /** UUID anywhere in the path — how a dispute id appears in /app/disputes/<id>. */
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -91,6 +98,7 @@ async function recordPageViewAsync({
   if (!path) return;
 
   const db = getServiceClient();
+  const cleanPath = path.split("?")[0];
 
   // Impersonation gives us the internal id directly (middleware injects
   // `x-shop-id`); the merchant path gives a domain from the session token.
@@ -106,11 +114,27 @@ async function recordPageViewAsync({
     resolvedShopId = data.id;
   }
 
+  // Dedup. The server layout and the client beacon both fire for a navigation
+  // that reaches the server, so the same (shop, path) can arrive twice within
+  // milliseconds. Suppress a repeat inside a short window: a page genuinely
+  // revisited seconds later is indistinguishable from a double-report, and
+  // over-counting a view is still a false record.
+  const since = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString();
+  const { data: recent } = await db
+    .from("shop_page_views")
+    .select("id")
+    .eq("shop_id", resolvedShopId)
+    .eq("path", cleanPath)
+    .eq("actor_type", actorType)
+    .gte("viewed_at", since)
+    .limit(1);
+  if (recent && recent.length > 0) return;
+
   await db.from("shop_page_views").insert({
     shop_id: resolvedShopId,
     actor_type: actorType,
     actor_id: actorId ?? null,
-    path: path.split("?")[0],
+    path: cleanPath,
     route: normaliseRoute(path),
     dispute_id: extractDisputeId(path),
   });
