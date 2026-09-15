@@ -8458,3 +8458,60 @@ bypassing the `EventType` union (which is why `gorgias_message_approved` and
 `billing_subscription_created` appear in the table but not in the type).
 Those sites now attribute their actor correctly; routing them through the
 helper is separate work. See `docs/plans/audit-actor-attribution.plan.md`.
+
+---
+
+## Page-view logging (`shop_page_views`)
+
+`audit_events` records **actions**. The dominant merchant behaviour is not
+acting — it is looking. Mein Maison logged in at 06:53 UTC on 2026-09-15,
+browsed, and left; asked what they did, the database could answer only with
+automation rows. Viewing left no durable trace.
+
+(Vercel runtime logs *do* capture page hits — an earlier note claiming page-view
+data "does not exist" was wrong. But they expire in about a day, are keyed by
+route rather than shop, and join to nothing. A diagnostic tool, not a feature.)
+
+### The table
+
+`shop_page_views(shop_id, actor_type, actor_id, path, route, dispute_id, viewed_at)`
+
+- **`actor_type` is `merchant` or `admin`.** Admin (View-as-merchant) sessions
+  are recorded deliberately: if only merchants were logged, "no rows for this
+  page" would read as *the merchant never opened it* when it might mean *we
+  opened it and did not record it*. Indistinguishable absence is the same defect
+  the actor-attribution work fixed — see *Audit actor attribution* above.
+- **`path` vs `route`.** `path` is the URL as requested, so "which dispute did
+  they open" is answerable. `route` is the normalised pattern
+  (`/app/disputes/[id]`) so aggregates do not produce one bucket per dispute.
+  Demo-mode fixture paths (`/app/disputes/dp-2403`) normalise too — they are not
+  real disputes, and treating them as distinct routes is how an early volume
+  estimate for this feature wrongly counted fixtures as merchant traffic.
+- **Not an `audit_events` event type.** That table is append-only with triggers
+  rejecting UPDATE/DELETE; these rows have a 90-day retention policy that would
+  fight those triggers every night, and navigation would bury real actions.
+
+### How it is recorded
+
+`middleware.ts` forwards `x-dd-path` on both `/app/*` branches (a server
+component cannot read its own pathname), plus `x-dd-admin-user-id` on the
+impersonation branch. `app/(embedded)/app/layout.tsx` calls
+`recordPageView()` (`lib/shopify/recordPageView.ts`) fire-and-forget, exactly
+like `recordLastLogin` — it must never block or throw into a merchant's render.
+
+**No throttle**, unlike `recordLastLogin`'s 5-minute window: there, only the
+latest login matters; here every view *is* the signal, and collapsing repeats
+would discard the navigation sequence the table exists to capture.
+
+### Retention
+
+90 days, swept daily by `/api/cron/cleanup-page-views` (03:30 UTC, `cronEnvGate`
+first per the cron rule). Batched at 5000 rows/run so the job stays bounded as
+the customer base grows. Measured volume today is tens of rows a day
+platform-wide across four shops.
+
+### Surface
+
+`/admin/shops/[id]` merges views and actions into one actor-labelled timeline.
+A view and an action on the same dispute, interleaved, is what actually answers
+"what did they do".

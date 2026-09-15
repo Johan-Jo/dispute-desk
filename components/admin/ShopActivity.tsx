@@ -29,6 +29,26 @@ interface AuditRow {
   dispute_id: string | null;
 }
 
+interface PageViewRow {
+  id: string;
+  viewed_at: string;
+  actor_type: "merchant" | "admin";
+  actor_id: string | null;
+  path: string;
+  route: string;
+  dispute_id: string | null;
+}
+
+/** One timeline entry, from either source. */
+interface Entry {
+  id: string;
+  at: string;
+  actor: AuditRow["actor_type"];
+  kind: "action" | "view";
+  label: string;
+  actorId: string | null;
+}
+
 const ACTOR_STYLE: Record<AuditRow["actor_type"], string> = {
   merchant: "bg-[#DBEAFE] text-[#1E40AF]",
   admin: "bg-[#FEF3C7] text-[#92400E]",
@@ -43,6 +63,19 @@ const ACTOR_LABEL: Record<AuditRow["actor_type"], string> = {
   system: "System",
 };
 
+/** Human label for a visited route. */
+function friendlyPath(route: string, path: string): string {
+  const NAMES: Record<string, string> = {
+    "/app": "Dashboard",
+    "/app/disputes": "Disputes list",
+    "/app/disputes/[id]": "a dispute",
+    "/app/settings": "Settings",
+    "/app/billing": "Billing",
+    "/app/insights/initial-analysis": "Insights",
+  };
+  return NAMES[route] ?? path;
+}
+
 /** Turn `review_approved` into `Review approved`. */
 function humanEvent(t: string): string {
   const s = t.replace(/_/g, " ");
@@ -50,7 +83,7 @@ function humanEvent(t: string): string {
 }
 
 export function ShopActivity({ shopId }: { shopId: string }) {
-  const [rows, setRows] = useState<AuditRow[] | null>(null);
+  const [rows, setRows] = useState<Entry[] | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [cutoff, setCutoff] = useState<string | null>(null);
 
@@ -61,7 +94,27 @@ export function ShopActivity({ shopId }: { shopId: string }) {
       .then((r) => r.json())
       .then((d) => {
         if (!live) return;
-        setRows(d.events ?? []);
+        const actions: Entry[] = (d.events ?? []).map((r: AuditRow) => ({
+          id: r.id,
+          at: r.created_at,
+          actor: r.actor_type,
+          kind: "action" as const,
+          label: humanEvent(r.event_type),
+          actorId: r.actor_id,
+        }));
+        const views: Entry[] = (d.pageViews ?? []).map((v: PageViewRow) => ({
+          id: v.id,
+          at: v.viewed_at,
+          actor: v.actor_type,
+          kind: "view" as const,
+          label: `Viewed ${friendlyPath(v.route, v.path)}`,
+          actorId: v.actor_id,
+        }));
+        setRows(
+          [...actions, ...views].sort(
+            (a, b) => Date.parse(b.at) - Date.parse(a.at),
+          ),
+        );
         setCutoff(d.attributionTrustworthyFrom ?? null);
       })
       .catch(() => live && setRows([]));
@@ -101,27 +154,29 @@ export function ShopActivity({ shopId }: { shopId: string }) {
       ) : (
         <div className="divide-y divide-[#F1F5F9]">
           {rows.map((r) => {
-            const ts = Date.parse(r.created_at);
+            const ts = Date.parse(r.at);
             const preAttribution =
-              cutoffMs !== null && ts < cutoffMs && r.actor_type === "merchant";
+              cutoffMs !== null && ts < cutoffMs && r.actor === "merchant";
             return (
               <div key={r.id} className="py-2.5 flex items-start gap-3 text-sm">
                 <span className="text-[#64748B] tabular-nums whitespace-nowrap">
-                  {new Date(r.created_at).toLocaleDateString()}{" "}
-                  {new Date(r.created_at).toLocaleTimeString([], {
+                  {new Date(r.at).toLocaleDateString()}{" "}
+                  {new Date(r.at).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
                 </span>
                 <span
-                  className={`px-2 py-0.5 ${ACTOR_STYLE[r.actor_type]} text-xs font-semibold rounded-full whitespace-nowrap`}
-                  title={r.actor_id ?? undefined}
+                  className={`px-2 py-0.5 ${ACTOR_STYLE[r.actor]} text-xs font-semibold rounded-full whitespace-nowrap`}
+                  title={r.actorId ?? undefined}
                 >
-                  {ACTOR_LABEL[r.actor_type]}
+                  {ACTOR_LABEL[r.actor]}
                 </span>
-                <span className="text-[#0F172A] flex-1">
-                  {humanEvent(r.event_type)}
-                  {preAttribution && (
+                <span
+                  className={`flex-1 ${r.kind === "view" ? "text-[#64748B]" : "text-[#0F172A]"}`}
+                >
+                  {r.label}
+                  {preAttribution && r.kind === "action" && (
                     <span
                       className="ml-2 text-xs text-[#94A3B8]"
                       title="Before 2026-09-15 every request-scoped write was recorded as 'merchant', including admin actions under View-as-merchant. This row's actor is not reliable."
