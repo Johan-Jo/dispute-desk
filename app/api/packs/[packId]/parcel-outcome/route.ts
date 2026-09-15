@@ -51,6 +51,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -90,6 +91,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -106,11 +108,15 @@ export async function POST(
   const reason = REASONS.includes(parsed.reason as ParcelReason)
     ? (parsed.reason as ParcelReason)
     : null;
-  const disposition = DISPOSITIONS.includes(parsed.disposition as ParcelDisposition)
+  const disposition = DISPOSITIONS.includes(
+    parsed.disposition as ParcelDisposition,
+  )
     ? (parsed.disposition as ParcelDisposition)
     : null;
   const note =
-    typeof parsed.note === "string" ? parsed.note.trim().replace(/\s+/g, " ") : "";
+    typeof parsed.note === "string"
+      ? parsed.note.trim().replace(/\s+/g, " ")
+      : "";
 
   if (!reason) {
     return NextResponse.json(
@@ -168,7 +174,8 @@ export async function POST(
       .select("submission_state, submitted_at")
       .eq("id", pack.dispute_id)
       .single();
-    disputeSubmissionState = (disputeRow?.submission_state as string | null) ?? null;
+    disputeSubmissionState =
+      (disputeRow?.submission_state as string | null) ?? null;
     if (disputeSubmissionState === "submitted_confirmed") {
       return NextResponse.json(
         {
@@ -241,7 +248,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "item_added",
     eventPayload: {
       type: "shipping",
@@ -260,7 +268,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "parcel_outcome_recorded",
     eventPayload: { evidenceItemId: item.id, reason, disposition, answeredAt },
   });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -52,6 +53,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -69,12 +71,13 @@ export async function POST(
   const acknowledgedRisk = parsed.acknowledgedRisk === true;
 
   if (!field || typeof field !== "string") {
-    return NextResponse.json(
-      { error: "field is required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "field is required" }, { status: 400 });
   }
-  if (value !== null && value !== "force_include" && value !== "force_exclude") {
+  if (
+    value !== null &&
+    value !== "force_include" &&
+    value !== "force_exclude"
+  ) {
     return NextResponse.json(
       { error: "value must be 'force_include', 'force_exclude', or null" },
       { status: 400 },
@@ -95,7 +98,8 @@ export async function POST(
   if (isInternalOnlyForceInclude && !acknowledgedRisk) {
     return NextResponse.json(
       {
-        error: "Force-including an internal-only signal requires explicit risk acknowledgement.",
+        error:
+          "Force-including an internal-only signal requires explicit risk acknowledgement.",
         code: "OVERRIDE_NEEDS_CONFIRMATION",
       },
       { status: 409 },
@@ -174,7 +178,9 @@ export async function POST(
   // override is permanently traceable. Reviewing the case later, ops
   // can grep `evidence_inclusion_overridden_with_warning` to see every
   // explicit risk acknowledgement.
-  const eventType: "evidence_inclusion_overridden" | "evidence_inclusion_overridden_with_warning" =
+  const eventType:
+    | "evidence_inclusion_overridden"
+    | "evidence_inclusion_overridden_with_warning" =
     isInternalOnlyForceInclude && acknowledgedRisk
       ? "evidence_inclusion_overridden_with_warning"
       : "evidence_inclusion_overridden";
@@ -183,7 +189,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType,
     eventPayload: {
       field,

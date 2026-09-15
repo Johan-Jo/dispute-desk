@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
@@ -30,6 +31,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -44,7 +46,10 @@ export async function POST(
     body = BodySchema.parse(await req.json());
   } catch (err) {
     return NextResponse.json(
-      { error: "Validation failed", details: err instanceof Error ? err.message : "unknown" },
+      {
+        error: "Validation failed",
+        details: err instanceof Error ? err.message : "unknown",
+      },
       { status: 422 },
     );
   }
@@ -69,22 +74,20 @@ export async function POST(
     );
   }
 
-  const { error: upsertErr } = await sb
-    .from("defence_manual_evidence")
-    .upsert(
-      {
-        package_id: id,
-        evidence_item_id: body.evidenceItemId,
-        filename: body.filename,
-        file_type: body.fileType ?? null,
-        description: body.description ?? null,
-        bank_eligible: body.bankEligible,
-        include_in_package: body.includeInPackage,
-        include_in_bank_narrative: body.includeInBankNarrative,
-        evidence_category: body.evidenceCategory ?? null,
-      },
-      { onConflict: "package_id,evidence_item_id" },
-    );
+  const { error: upsertErr } = await sb.from("defence_manual_evidence").upsert(
+    {
+      package_id: id,
+      evidence_item_id: body.evidenceItemId,
+      filename: body.filename,
+      file_type: body.fileType ?? null,
+      description: body.description ?? null,
+      bank_eligible: body.bankEligible,
+      include_in_package: body.includeInPackage,
+      include_in_bank_narrative: body.includeInBankNarrative,
+      evidence_category: body.evidenceCategory ?? null,
+    },
+    { onConflict: "package_id,evidence_item_id" },
+  );
   if (upsertErr) {
     return NextResponse.json(
       { error: `Upsert failed: ${upsertErr.message}` },
@@ -96,7 +99,8 @@ export async function POST(
     shopId: pkg.shop_id,
     disputeId: pkg.dispute_id,
     packId: pkg.source_pack_id,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "manual_evidence_added_to_package",
     eventPayload: {
       packageId: id,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -20,7 +21,9 @@ function reconcileAfterRuleWrite(shopId: string): void {
   });
 }
 
-function shopContextOrUnauthorized(req: NextRequest): { shopId: string } | NextResponse {
+function shopContextOrUnauthorized(
+  req: NextRequest,
+): { shopId: string } | NextResponse {
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
     return NextResponse.json(
@@ -36,7 +39,7 @@ function shopContextOrUnauthorized(req: NextRequest): { shopId: string } | NextR
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const ctx = shopContextOrUnauthorized(req);
@@ -63,7 +66,7 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const ctx = shopContextOrUnauthorized(req);
@@ -72,7 +75,9 @@ export async function PATCH(
   const sb = getServiceClient();
 
   const allowed = ["name", "match", "action", "enabled", "priority"];
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const updates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key];
   }
@@ -99,8 +104,9 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const ctx = shopContextOrUnauthorized(req);
   if (ctx instanceof NextResponse) return ctx;
@@ -121,7 +127,8 @@ export async function DELETE(
 
   await logAuditEvent({
     shopId: rule.shop_id,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "rule_deleted",
     eventPayload: { rule_id: id },
   });

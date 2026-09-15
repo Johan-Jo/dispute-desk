@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getTopUp, TOPUP_EXPIRY_DAYS } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
@@ -14,6 +15,7 @@ export const runtime = "nodejs";
  * Shopify redirects here after merchant approves/declines the one-time charge.
  */
 export async function GET(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const sp = req.nextUrl.searchParams;
   const shopId = sp.get("shop_id");
   const sku = sp.get("sku");
@@ -26,7 +28,8 @@ export async function GET(req: NextRequest) {
   const topUp = getTopUp(sku);
   const sb = getServiceClient();
 
-  const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const appUrl =
+    process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const host = sp.get("host") ?? "";
   const shop = sp.get("shop") ?? "";
 
@@ -78,8 +81,14 @@ export async function GET(req: NextRequest) {
     // `verify_failed` was the legacy param; keeping it for backwards
     // compatibility with any deep links that bookmarked it. The new
     // `topup_failed` is what the billing page renders going forward.
-    billingUrl.searchParams.set("verify_failed", verification.reason ?? "unknown");
-    billingUrl.searchParams.set("topup_failed", verification.reason ?? "unknown");
+    billingUrl.searchParams.set(
+      "verify_failed",
+      verification.reason ?? "unknown",
+    );
+    billingUrl.searchParams.set(
+      "topup_failed",
+      verification.reason ?? "unknown",
+    );
     return NextResponse.redirect(billingUrl.toString());
   }
 
@@ -102,7 +111,8 @@ export async function GET(req: NextRequest) {
 
   await sb.from("audit_events").insert({
     shop_id: shopId,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "topup_purchased",
     event_payload: {
       sku,
