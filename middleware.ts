@@ -308,7 +308,18 @@ export async function middleware(req: NextRequest) {
     {
       const imp = await verifyImpersonation(req);
       if (imp) {
-        if (imp.mode === "read" && req.method !== "GET") {
+        // The page-view beacon is the ONE exemption. It is a POST, but it
+        // writes telemetry about the ADMIN's own browsing -- never merchant
+        // data -- and read-mode admin browsing is exactly the activity this
+        // log exists to make visible. Blocking it meant every read-mode
+        // impersonation session went unrecorded while write-mode sessions
+        // logged fine (found by self-test on dev, 2026-09-15).
+        //
+        // Safe because /api/page-view derives shop and actor from this same
+        // verified cookie, never from the request body: the worst an admin
+        // can do through it is record that they looked at a page.
+        const isPageViewBeacon = pathname === "/api/page-view";
+        if (imp.mode === "read" && req.method !== "GET" && !isPageViewBeacon) {
           return NextResponse.json(
             {
               error:
