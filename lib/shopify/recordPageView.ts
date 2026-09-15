@@ -31,13 +31,6 @@ import { getServiceClient } from "@/lib/supabase/server";
 
 export type PageViewActor = "merchant" | "admin";
 
-/**
- * Two reporters (server layout + client beacon) can describe one navigation.
- * Anything inside this window for the same shop+path+actor is treated as the
- * same view rather than a second one.
- */
-const DEDUP_WINDOW_MS = 5000;
-
 /** UUID anywhere in the path — how a dispute id appears in /app/disputes/<id>. */
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -114,23 +107,17 @@ async function recordPageViewAsync({
     resolvedShopId = data.id;
   }
 
-  // Dedup. The server layout and the client beacon both fire for a navigation
-  // that reaches the server, so the same (shop, path) can arrive twice within
-  // milliseconds. Suppress a repeat inside a short window: a page genuinely
-  // revisited seconds later is indistinguishable from a double-report, and
-  // over-counting a view is still a false record.
-  const since = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString();
-  const { data: recent } = await db
-    .from("shop_page_views")
-    .select("id")
-    .eq("shop_id", resolvedShopId)
-    .eq("path", cleanPath)
-    .eq("actor_type", actorType)
-    .gte("viewed_at", since)
-    .limit(1);
-  if (recent && recent.length > 0) return;
-
-  await db.from("shop_page_views").insert({
+  // Dedup is enforced by the DATABASE, not by a check here. The server layout
+  // and the client beacon describe one navigation and run concurrently, so a
+  // read-then-write guard has both of them read "nothing recent" before either
+  // inserts -- measured on dev 2026-09-15, the same path landed twice 0.29s
+  // apart through a 5-second window. A check-then-act cannot dedup concurrent
+  // writers.
+  //
+  // `uq_shop_page_views_dedup` (migration 20260915200000) makes the second
+  // insert fail on a unique violation instead. 23505 is the expected outcome
+  // of a deduped double-report, not an error worth surfacing.
+  const { error } = await db.from("shop_page_views").insert({
     shop_id: resolvedShopId,
     actor_type: actorType,
     actor_id: actorId ?? null,
@@ -138,4 +125,8 @@ async function recordPageViewAsync({
     route: normaliseRoute(path),
     dispute_id: extractDisputeId(path),
   });
+
+  // 23505 = unique violation: the other reporter won the race and this IS the
+  // duplicate. Expected, not a failure.
+  if (error && error.code !== "23505") throw new Error(error.message);
 }
