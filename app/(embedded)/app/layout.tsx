@@ -5,6 +5,7 @@
 import { headers } from "next/headers";
 import { AppNavSidebar } from "./AppNavSidebar";
 import { EmbeddedAppChrome } from "@/components/embedded/EmbeddedAppChrome";
+import { PageViewBeacon } from "@/components/embedded/PageViewBeacon";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 import { verifySessionToken } from "@/lib/shopify/sessionToken";
 import { recordLastLogin } from "@/lib/shopify/recordLastLogin";
@@ -76,6 +77,10 @@ export default async function EmbeddedAppLayout({
 
   return (
     <>
+      {/* Client-side page-view reporting. The server recorder above misses
+          router transitions served from Next's cache without a round-trip --
+          which is every click into a dispute in a warm session. */}
+      <PageViewBeacon />
       <s-page heading="DisputeDesk" />
       {impersonating ? null : <AppNavSidebar />}
       <EmbeddedAppChrome>{children}</EmbeddedAppChrome>
