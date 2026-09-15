@@ -47,6 +47,9 @@ interface Entry {
   kind: "action" | "view";
   label: string;
   actorId: string | null;
+  /** Raw path for a view row — shown so "which page" is answerable. */
+  path?: string;
+  disputeId?: string | null;
 }
 
 const ACTOR_STYLE: Record<AuditRow["actor_type"], string> = {
@@ -64,16 +67,18 @@ const ACTOR_LABEL: Record<AuditRow["actor_type"], string> = {
 };
 
 /** Human label for a visited route. */
-function friendlyPath(route: string, path: string): string {
+function friendlyPath(route: string): string | null {
   const NAMES: Record<string, string> = {
     "/app": "Dashboard",
     "/app/disputes": "Disputes list",
-    "/app/disputes/[id]": "a dispute",
+    "/app/disputes/[id]": "Dispute",
     "/app/settings": "Settings",
     "/app/billing": "Billing",
     "/app/insights/initial-analysis": "Insights",
+    "/app/help": "Help",
+    "/app/coverage": "Coverage",
   };
-  return NAMES[route] ?? path;
+  return NAMES[route] ?? null;
 }
 
 /** Turn `review_approved` into `Review approved`. */
@@ -102,14 +107,19 @@ export function ShopActivity({ shopId }: { shopId: string }) {
           label: humanEvent(r.event_type),
           actorId: r.actor_id,
         }));
-        const views: Entry[] = (d.pageViews ?? []).map((v: PageViewRow) => ({
-          id: v.id,
-          at: v.viewed_at,
-          actor: v.actor_type,
-          kind: "view" as const,
-          label: `Viewed ${friendlyPath(v.route, v.path)}`,
-          actorId: v.actor_id,
-        }));
+        const views: Entry[] = (d.pageViews ?? []).map((v: PageViewRow) => {
+          const name = friendlyPath(v.route);
+          return {
+            id: v.id,
+            at: v.viewed_at,
+            actor: v.actor_type,
+            kind: "view" as const,
+            label: name ? `Viewed ${name}` : "Viewed",
+            actorId: v.actor_id,
+            path: v.path,
+            disputeId: v.dispute_id,
+          };
+        });
         setRows(
           [...actions, ...views].sort(
             (a, b) => Date.parse(b.at) - Date.parse(a.at),
@@ -176,6 +186,27 @@ export function ShopActivity({ shopId }: { shopId: string }) {
                   className={`flex-1 ${r.kind === "view" ? "text-[#64748B]" : "text-[#0F172A]"}`}
                 >
                   {r.label}
+                  {/* The URL itself. "Viewed a dispute" does not say WHICH,
+                      and which page they opened is the whole question this
+                      log exists to answer. Dispute paths link through to the
+                      internal dispute view. */}
+                  {r.kind === "view" && r.path && (
+                    <>
+                      {" "}
+                      {r.disputeId ? (
+                        <a
+                          href={`/admin/disputes/${r.disputeId}`}
+                          className="font-mono text-xs text-[#1D4ED8] hover:underline break-all"
+                        >
+                          {r.path}
+                        </a>
+                      ) : (
+                        <span className="font-mono text-xs text-[#94A3B8] break-all">
+                          {r.path}
+                        </span>
+                      )}
+                    </>
+                  )}
                   {preAttribution && r.kind === "action" && (
                     <span
                       className="ml-2 text-xs text-[#94A3B8]"
