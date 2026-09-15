@@ -160,12 +160,20 @@ export function ShopActivity({ shopId }: { shopId: string }) {
    *
    * Mints a READ-mode impersonation session for this shop and lands directly on
    * the path from the row. Read mode deliberately: opening a page to see what
-   * someone looked at must never be able to change anything. The window is
-   * opened synchronously and its location set after the request resolves —
-   * popup blockers reject a window.open that happens inside an await.
+   * someone looked at must never be able to change anything.
+   *
+   * `window.open(url, "_blank", "noopener")` is called AFTER the fetch, with
+   * the real URL -- the same shape as ViewAsMerchant. The first version opened
+   * a blank tab up front and tried to set `w.location.href` once the request
+   * resolved, which cannot work: `noopener` makes window.open return null by
+   * design, so there was no handle to steer and the tab just sat there empty.
+   *
+   * Popup blockers do tolerate this because the click is still the originating
+   * gesture; ViewAsMerchant has shipped this way. If a blocker ever does
+   * intervene, `openError` says so rather than failing silently.
    */
   async function openAsMerchant(path: string) {
-    const w = window.open("", "_blank", "noopener");
+    setOpenError(null);
     try {
       const res = await fetch("/api/admin/impersonate", {
         method: "POST",
@@ -174,13 +182,16 @@ export function ShopActivity({ shopId }: { shopId: string }) {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.targetUrl) {
-        w?.close();
         setOpenError(data?.error ?? "Could not open the merchant view.");
         return;
       }
-      if (w) w.location.href = data.targetUrl;
+      const opened = window.open(data.targetUrl, "_blank", "noopener");
+      // `noopener` returns null on success too, so this only catches the
+      // documented blocker case where nothing opened at all.
+      if (opened === null && typeof window.open !== "function") {
+        setOpenError("Your browser blocked the new tab.");
+      }
     } catch {
-      w?.close();
       setOpenError("Could not open the merchant view.");
     }
   }
