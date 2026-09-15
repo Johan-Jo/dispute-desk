@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase/server";
 import { grantCredits } from "@/lib/billing/consumePack";
@@ -38,6 +39,7 @@ const cancelSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const raw = await req.json().catch(() => ({}));
   const body = {
     ...raw,
@@ -72,7 +74,8 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
-  const subs = activeResult.data?.currentAppInstallation?.activeSubscriptions ?? [];
+  const subs =
+    activeResult.data?.currentAppInstallation?.activeSubscriptions ?? [];
 
   // 2. Cancel each active subscription. There SHOULD only be one at
   //    a time (Shopify enforces this for app billing), but guard
@@ -86,7 +89,8 @@ export async function POST(req: NextRequest) {
       variables: { id: sub.id, prorate: false },
       correlationId: `billing-cancel-${shop_id}-${sub.id}`,
     });
-    const userErrors = cancelResult.data?.appSubscriptionCancel?.userErrors ?? [];
+    const userErrors =
+      cancelResult.data?.appSubscriptionCancel?.userErrors ?? [];
     if (userErrors.length > 0) {
       cancelErrors.push(userErrors.map((e) => e.message).join("; "));
     }
@@ -95,7 +99,8 @@ export async function POST(req: NextRequest) {
   if (cancelErrors.length > 0) {
     await sb.from("audit_events").insert({
       shop_id,
-      actor_type: "merchant",
+      actor_type: auditActor.actorType,
+      actor_id: auditActor.actorId,
       event_type: "billing_cancel_failed",
       event_payload: { errors: cancelErrors, subscription_count: subs.length },
     });
@@ -173,7 +178,8 @@ export async function POST(req: NextRequest) {
 
   await sb.from("audit_events").insert({
     shop_id,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "billing_cancelled",
     event_payload: {
       cancelled_subscription_ids: subs.map((s) => s.id),

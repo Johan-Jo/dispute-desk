@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { Resend } from "resend";
@@ -24,7 +25,10 @@ const MAX_NOTE = 2000;
 
 function clean(value: unknown, max: number): string {
   if (typeof value !== "string") return "";
-  return value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .trim()
+    .slice(0, max);
 }
 
 /**
@@ -87,6 +91,7 @@ async function sendResponseNotification(msg: {
 }
 
 export async function POST(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
@@ -201,7 +206,8 @@ export async function POST(req: NextRequest) {
 
   await sb.from("audit_events").insert({
     shop_id: shopId,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "merchant_message_answered",
     event_payload: {
       message_id: messageId,

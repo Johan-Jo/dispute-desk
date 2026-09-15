@@ -26,6 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -50,6 +51,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -128,7 +130,8 @@ export async function POST(
       shopId: pack.shop_id,
       disputeId: pack.dispute_id,
       packId,
-      actorType: "merchant",
+      actorType: auditActor.actorType,
+      actorId: auditActor.actorId,
       eventType: "pack_regenerate_requested",
       eventPayload: {
         trigger: "post_save_evidence_upload",
@@ -175,7 +178,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "pack_regenerate_requested",
     eventPayload: {
       trigger: "post_save_evidence_upload",

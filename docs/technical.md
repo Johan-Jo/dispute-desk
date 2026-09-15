@@ -8380,3 +8380,81 @@ A cohort query failure emails a monitor failure and returns 500; it never
 returns `ok:true` with zero findings.
 
 Evidence SQL: `scripts/sql/label-fact-divergence.sql` (Q1–Q5).
+
+---
+
+## Audit actor attribution
+
+`audit_events.actor_type` answers **who did this**. Until 2026-09-15 it could
+not: the column allowed only `merchant|system`, and every request-scoped write
+site hardcoded `"merchant"`. An operator acting through SuperAdmin
+"View as merchant" was recorded as the merchant, and operator-run scripts had
+to pick between two wrong labels.
+
+The failure was concrete. Asked what shop `ea035a1b` (Mein Maison) did after a
+06:53 UTC login, `audit_events` showed 14 `merchant` rows — 8 of which were
+`scripts/build-one-pack.mjs` runs. The merchant did none of them.
+
+### The vocabulary
+
+| `actor_type` | Meaning | `actor_id` |
+|---|---|---|
+| `merchant` | A human in the merchant's own Shopify session | null (see below) |
+| `admin` | A human on our side, via View-as-merchant impersonation | `adminUserId` |
+| `script` | An operator-run script | script filename |
+| `system` | Autonomous: cron, job handlers, webhooks | job/cron id, or null |
+
+`merchant` carries no `actor_id`: the Shopify staff id is not available on the
+`/api/*` path (middleware forwards `x-shop-id`, not the session token's `sub`).
+A known gap, not an oversight — `actor_type` already answers "was this us or
+them?", which is the question the trail actually failed. Resolving a staff id
+to a *name* needs the `read_users` scope, which was deliberately reverted
+(see *Expiring Offline Tokens*).
+
+### Rules
+
+- **Never hardcode `actorType` on a request-scoped path.** Use
+  `resolveAuditActor(req)` (`lib/audit/resolveActor.ts`). It returns `admin`
+  when the impersonation cookie verifies, `merchant` otherwise, and degrades to
+  `merchant` rather than throwing when there is no cookie jar — an audit write
+  must never be why a merchant's action 500s.
+- **Scripts write `actor_type: "script"`** with `actor_id` set to the filename.
+- `tests/unit/auditActorAttribution.test.ts` enforces both from source. A new
+  route fails it until the actor is resolved.
+
+### Pre-2026-09-15 rows
+
+Rows written before the fix record `merchant` for every request-scoped write,
+admin actions included. The admin activity panel marks them *(actor unverified)*
+rather than implying the history is clean. Only the 8 `build-one-pack.mjs` rows
+were corrected (migration `20260915120100`), because the script's own `note`
+payload identified them unambiguously; impersonated writes left no such trace
+and cannot be recovered.
+
+### Migrations
+
+- `20260915120000_audit_actor_vocabulary.sql` — widens the CHECK to
+  `merchant|admin|script|system`. Must precede any code writing the new values.
+- `20260915120100_audit_backfill_script_rows.sql` — relabels the 8 rows. Uses
+  the transaction-local `app.allow_audit_mutation` GUC (per
+  *E2E fixtures and audit immutability*), **not** `disable trigger`, which would
+  lift immutability table-wide for the duration. Asserts the match count is
+  exactly 8 (or 0, for environments with nothing to fix) and aborts otherwise,
+  so a drifting predicate cannot silently rewrite real merchant actions.
+
+### Admin surface
+
+`/admin/shops/[id]` carries an **Activity** panel (`components/admin/ShopActivity.tsx`,
+fed by `GET /api/admin/shops/:id/activity`). People only by default —
+`merchant` + `admin`. `system` and `script` are behind "Include automation"
+because automation outnumbers real actions by roughly 10:1 on an active shop
+and buries what the page exists to show.
+
+### Known gap
+
+`lib/audit/logEvent.ts` is **not** the only writer, despite what its docblock
+claimed until 2026-09-15: ~56 call sites insert into `audit_events` directly,
+bypassing the `EventType` union (which is why `gorgias_message_approved` and
+`billing_subscription_created` appear in the table but not in the type).
+Those sites now attribute their actor correctly; routing them through the
+helper is separate work. See `docs/plans/audit-actor-attribution.plan.md`.

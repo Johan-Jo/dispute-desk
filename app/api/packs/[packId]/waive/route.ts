@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -33,6 +34,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -72,9 +74,7 @@ export async function POST(
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select(
-      "id, shop_id, dispute_id, status, waived_items, checklist_v2",
-    )
+    .select("id, shop_id, dispute_id, status, waived_items, checklist_v2")
     .eq("id", packId)
     .eq("shop_id", shopId)
     .single();
@@ -167,7 +167,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "evidence_waived",
     eventPayload: { field, reason, note, label: fieldLabel },
   });
@@ -189,6 +190,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -209,9 +211,7 @@ export async function DELETE(
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select(
-      "id, shop_id, dispute_id, status, waived_items, checklist_v2",
-    )
+    .select("id, shop_id, dispute_id, status, waived_items, checklist_v2")
     .eq("id", packId)
     .eq("shop_id", shopId)
     .single();
@@ -224,7 +224,10 @@ export async function DELETE(
   const updatedWaivedItems = existing.filter((w) => w.field !== field);
 
   if (updatedWaivedItems.length === existing.length) {
-    return NextResponse.json({ error: "Field not found in waived items" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Field not found in waived items" },
+      { status: 404 },
+    );
   }
 
   // Patch in place: flip the row from "waived" back to "missing" and
@@ -264,7 +267,8 @@ export async function DELETE(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "evidence_unwaived",
     eventPayload: { field },
   });

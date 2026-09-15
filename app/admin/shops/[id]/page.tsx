@@ -24,6 +24,7 @@ import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
 import { PostOutcomeInsights } from "@/components/admin/PostOutcomeInsights";
 import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
 import { ShopMerchantMessages } from "@/components/admin/ShopMerchantMessages";
+import { ShopActivity } from "@/components/admin/ShopActivity";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 
 interface ShopDetail {
@@ -75,7 +76,11 @@ function formatMoney(amount: number, currency: string): string {
   }
 }
 
-export default function AdminShopDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminShopDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [data, setData] = useState<ShopDetail | null>(null);
   const [saving, setSaving] = useState(false);
@@ -101,7 +106,9 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         plan: overridePlan,
-        pack_limit_override: overridePackLimit ? parseInt(overridePackLimit) : null,
+        pack_limit_override: overridePackLimit
+          ? parseInt(overridePackLimit)
+          : null,
         admin_notes: notes || null,
       }),
     });
@@ -150,7 +157,9 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
                   Shopify-side lookup (Admin URLs, Partners) and our own logs
                   are keyed by. */}
               <p className="text-sm text-[#94A3B8] mb-1 min-h-[1.25rem]">
-                {displayShopDomain(shop) !== shop.shop_domain ? shop.shop_domain : null}
+                {displayShopDomain(shop) !== shop.shop_domain
+                  ? shop.shop_domain
+                  : null}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <span
@@ -200,6 +209,10 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
+      {/* Who did what on this shop. People only by default -- automation
+          rows outnumber real actions ~10:1 and bury them. */}
+      <ShopActivity shopId={shop.id} />
+
       <ShopRiskProfile shopId={shop.id} />
 
       {/* Compact post-outcome context (plan §14.2). Counts and a link, never a
@@ -245,11 +258,15 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="bg-white rounded-lg border border-[#E2E8F0] p-6">
-        <h3 className="text-lg font-semibold text-[#0F172A] mb-4">Admin Overrides</h3>
+        <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
+          Admin Overrides
+        </h3>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#64748B] mb-1">Plan Override</label>
+            <label className="block text-sm font-medium text-[#64748B] mb-1">
+              Plan Override
+            </label>
             <select
               value={overridePlan}
               onChange={(e) => setOverridePlan(e.target.value)}
@@ -276,7 +293,9 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#64748B] mb-1">Admin Notes</label>
+            <label className="block text-sm font-medium text-[#64748B] mb-1">
+              Admin Notes
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

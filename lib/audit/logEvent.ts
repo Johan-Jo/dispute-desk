@@ -180,11 +180,25 @@ export type EventType =
   // covers the whole row, so it could not even confirm WHICH field changed.
   | "automation_settings_changed";
 
+/**
+ * WHO acted. Widened from `"merchant" | "system"` on 2026-09-15 (migration
+ * 20260915120000 carries the matching DB CHECK).
+ *
+ *   merchant — a human in the merchant's own Shopify session.
+ *   admin    — a human on OUR side, acting through SuperAdmin
+ *              "View as merchant". Resolve with `resolveAuditActor(req)`;
+ *              never hardcode `"merchant"` on a request-scoped path, or an
+ *              operator's action is recorded as the merchant's.
+ *   script   — an operator-run script. `actorId` is the script filename.
+ *   system   — autonomous: cron, job handlers, webhooks.
+ */
+export type AuditActorType = "merchant" | "admin" | "script" | "system";
+
 export interface AuditLogInput {
   shopId: string;
   disputeId?: string | null;
   packId?: string | null;
-  actorType: "merchant" | "system";
+  actorType: AuditActorType;
   actorId?: string | null;
   eventType: EventType;
   eventPayload?: Record<string, unknown>;
@@ -192,8 +206,16 @@ export interface AuditLogInput {
 
 /**
  * Append-only audit event writer.
- * This is the ONLY function that writes to audit_events.
  * The table has DB triggers rejecting UPDATE and DELETE.
+ *
+ * NOT the only writer. ~56 call sites insert into `audit_events` directly via
+ * `sb.from("audit_events").insert(...)`, bypassing both this function and the
+ * `EventType` union above (which is why event types such as
+ * `gorgias_message_approved` and `billing_subscription_created` appear in the
+ * table but not in the union). This docblock claimed exclusivity until
+ * 2026-09-15; it was never true. Routing those sites through here is worth
+ * doing and is deliberately NOT part of the actor-attribution change --
+ * see docs/plans/audit-actor-attribution.plan.md "Out of scope".
  */
 export async function logAuditEvent(input: AuditLogInput): Promise<void> {
   const db = getServiceClient();
