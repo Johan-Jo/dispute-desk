@@ -8494,8 +8494,17 @@ route rather than shop, and join to nothing. A diagnostic tool, not a feature.)
 ### How it is recorded
 
 `middleware.ts` forwards `x-dd-path` on both `/app/*` branches (a server
-component cannot read its own pathname), plus `x-dd-admin-user-id` on the
-impersonation branch. `app/(embedded)/app/layout.tsx` calls
+component cannot read its own pathname), plus `x-dd-shop-id` (merchant branch,
+read from the `shopify_shop_id` cookie) and `x-dd-admin-user-id` (impersonation
+branch).
+
+**Merchant recording must NOT be gated on `id_token`.** Shopify supplies it when
+the app is opened from Admin, not on in-app navigation. The first version gated
+on it and captured only entry loads: 34 server-side hits on `/app/disputes/[id]`
+produced zero rows, while impersonated admin views — whose cookie is verified per
+request — recorded everything. `shopify_shop_id` is a 30-day cookie set by the
+same branch, so it rides every navigation at the cost of a cookie read rather
+than a DB lookup in edge middleware. `app/(embedded)/app/layout.tsx` calls
 `recordPageView()` (`lib/shopify/recordPageView.ts`) fire-and-forget, exactly
 like `recordLastLogin` — it must never block or throw into a merchant's render.
 

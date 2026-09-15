@@ -706,6 +706,23 @@ export async function middleware(req: NextRequest) {
     // place that has it. See lib/shopify/recordPageView.ts.
     requestHeaders.set("x-dd-path", pathname);
 
+    // Shop identity for page-view logging, independent of `id_token`.
+    //
+    // WHY THIS IS NOT THE id_token PATH. Shopify puts `id_token` in the URL
+    // when the app is OPENED from Admin, not on in-app navigation. Gating the
+    // recorder on it (as the first version did) meant merchant views were
+    // captured only at the entry point: clicking into a dispute logged
+    // nothing, while impersonated admin views -- whose cookie is verified per
+    // request -- logged everything. Observed on dev 2026-09-15: 34 server-side
+    // hits on /app/disputes/[id] produced zero merchant rows, and
+    // `shops.last_login_at` (same gate) froze at the landing time.
+    //
+    // `shopify_shop_id` is set by this same /app/* branch with a 30-day life,
+    // so it rides every subsequent navigation. A cookie read, not a DB lookup:
+    // this is edge middleware on every page load.
+    const shopIdCookie = req.cookies.get("shopify_shop_id")?.value;
+    if (shopIdCookie) requestHeaders.set("x-dd-shop-id", shopIdCookie);
+
     if (pathname === "/app/session-required") {
       const res = NextResponse.next({ request: { headers: requestHeaders } });
       if (localeParam) {

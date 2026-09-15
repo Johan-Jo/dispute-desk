@@ -61,14 +61,32 @@ Verified against live dev traffic and current `middleware.ts`:
 | Actor | Identified by | Present per load? |
 |---|---|---|
 | `admin` | `dd_impersonation` cookie → `x-shop-id`, mode header, `adminUserId` | Yes — re-verified every load (`middleware.ts:706-711`), sliding TTL |
-| `merchant` | `x-dd-id-token` → `verifySessionToken()` → `shopDomain`, `userId` | Yes — Shopify sends `id_token` on essentially every embedded load |
+| `merchant` | `x-dd-shop-id` (from the `shopify_shop_id` cookie) | Yes — 30-day cookie, rides every navigation. NOT `id_token`: that arrives only on app entry |
 
-**An earlier draft of this plan claimed the merchant path only gets `id_token` on
-initial load, creating an asymmetry needing a middleware fix.** That was wrong:
-`middleware.ts:674-683` documents it as present on essentially every embedded
-load, and prod `shops.last_login_at` advances through the day across all four
-shops, which only happens if the token keeps arriving. **No middleware change is
-needed for identity.** The one genuinely missing piece is the *path*.
+**CORRECTED 2026-09-15, after the feature shipped and failed this exact case.**
+
+An early draft claimed the merchant path only gets `id_token` on initial load.
+A later draft "corrected" that to: the token arrives on essentially every
+embedded load, citing the `middleware.ts:674-683` comment and the fact that
+`shops.last_login_at` advances through the day across all four prod shops.
+
+**The first draft was right and the correction was wrong.** `last_login_at`
+advances because merchants RE-ENTER the app, not because the token rides every
+page. Proven on dev: 34 server-side hits on `/app/disputes/[id]` produced zero
+merchant page-view rows, and `last_login_at` — gated on the same token — froze
+at the landing time of 16:59:03 while browsing continued past 16:59:22.
+
+The lesson worth keeping: this was inferred from a code comment plus a
+correlation, and not tested until a live merchant session contradicted it.
+
+**So the merchant path needs a shop identity that does NOT depend on the query
+param.** `shopify_shop_id` is a cookie set by the same `/app/*` branch with a
+30-day life, so it rides every navigation and costs a cookie read rather than a
+DB lookup in edge middleware. Middleware forwards it as `x-dd-shop-id`.
+
+The admin path never had this problem: the impersonation cookie is verified per
+request. Before the fix, the feature worked better for us than for merchants —
+the lopsided coverage its own design set out to prevent.
 
 ## Work
 
