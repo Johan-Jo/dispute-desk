@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordPageView } from "@/lib/shopify/recordPageView";
 import { verifyImpersonation } from "@/lib/admin/impersonation";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 
 export const runtime = "nodejs";
 
@@ -40,23 +41,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "bad_path" }, { status: 400 });
   }
 
-  const imp = await verifyImpersonation(req);
-  if (imp) {
-    recordPageView({
-      shopId: imp.shopId,
-      actorType: "admin",
-      actorId: imp.adminUserId ?? null,
-      path,
-    });
-    return NextResponse.json({ ok: true });
-  }
+  // Same actor resolution as every other request-scoped write -- an admin
+  // under View-as-merchant must not be recorded as the merchant. See
+  // lib/audit/resolveActor.ts and the invariant in
+  // tests/unit/auditActorAttribution.test.ts, which caught this route
+  // hardcoding "merchant" on its first version.
+  const actor = await resolveAuditActor(req);
 
-  // Merchant: middleware resolves the shop for /api/* and injects x-shop-id.
-  const shopId = req.headers.get("x-shop-id");
+  // Impersonation carries the shop on its own cookie; a merchant request gets
+  // one injected by middleware. Never from the request body -- a
+  // client-supplied shop id would let any caller write rows against another
+  // shop.
+  const imp = await verifyImpersonation(req);
+  const shopId = imp?.shopId ?? req.headers.get("x-shop-id");
   if (!shopId || shopId === "demo") {
     return NextResponse.json({ ok: false, reason: "no_shop" });
   }
 
-  recordPageView({ shopId, actorType: "merchant", actorId: null, path });
+  recordPageView({
+    shopId,
+    actorType: actor.actorType === "admin" ? "admin" : "merchant",
+    actorId: actor.actorId,
+    path,
+  });
   return NextResponse.json({ ok: true });
 }
