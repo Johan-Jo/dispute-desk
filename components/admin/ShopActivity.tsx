@@ -81,6 +81,29 @@ function friendlyPath(route: string): string | null {
   return NAMES[route] ?? null;
 }
 
+/**
+ * What a view row shows for the page that was visited: a readable name, the
+ * raw path, and where the path links to (null = plain text, no dead link).
+ *
+ * Exported and pure so the decision is testable. The first version of this
+ * panel rendered only the name -- "Viewed a dispute", which does not say WHICH
+ * dispute -- while the API had been returning `path` and `dispute_id` all
+ * along. A data-shape assertion stays green through that kind of bug; only
+ * asserting the rendered decision catches it.
+ */
+export function viewTarget(
+  route: string,
+  path: string,
+  disputeId: string | null,
+): { label: string; path: string; href: string | null } {
+  const name = friendlyPath(route);
+  return {
+    label: name ? `Viewed ${name}` : "Viewed",
+    path,
+    href: disputeId ? `/admin/disputes/${disputeId}` : null,
+  };
+}
+
 /** Turn `review_approved` into `Review approved`. */
 function humanEvent(t: string): string {
   const s = t.replace(/_/g, " ");
@@ -108,15 +131,15 @@ export function ShopActivity({ shopId }: { shopId: string }) {
           actorId: r.actor_id,
         }));
         const views: Entry[] = (d.pageViews ?? []).map((v: PageViewRow) => {
-          const name = friendlyPath(v.route);
+          const t = viewTarget(v.route, v.path, v.dispute_id);
           return {
             id: v.id,
             at: v.viewed_at,
             actor: v.actor_type,
             kind: "view" as const,
-            label: name ? `Viewed ${name}` : "Viewed",
+            label: t.label,
             actorId: v.actor_id,
-            path: v.path,
+            path: t.path,
             disputeId: v.dispute_id,
           };
         });
