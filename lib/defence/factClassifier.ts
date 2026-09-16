@@ -326,6 +326,62 @@ function firstTrackingEntry(
 }
 
 /**
+ * Every shipment's reconciled delivery status on this section, sorted and
+ * de-duplicated, plus the newest return timestamp.
+ *
+ * ── Why this exists ──────────────────────────────────────────────────
+ *
+ * `evidence_hash` (lib/defence/computeEvidenceHash.ts) is what tells the
+ * submission path that a finalized package no longer matches the facts —
+ * it hashes each approved fact's `value`. Until 2026-09-16 the delivery
+ * fact's value carried `proofType, carrier, trackingNumber, trackingUrl,
+ * deliveredAt, signedByName` and **no delivery status**, so a
+ * `Delivered → Returned` transition reached the hash only INDIRECTLY, via
+ * `proofType` flipping to `returned_to_sender`.
+ *
+ * That coupling holds for a single-shipment order and breaks for several.
+ * `resolveProofType` (lib/packs/sources/fulfillmentSource.ts) computes a
+ * best-tier across shipments: one parcel delivered with a timestamp holds
+ * the tier at `delivered_confirmed` and the `sawReturned` flag from a
+ * second, returned parcel is discarded. `proofType` does not move, the
+ * hash does not move, and a package contradicted by its own tracking stays
+ * fileable.
+ *
+ * Hashing the statuses under their own name makes the coverage structural
+ * rather than incidental: any shipment changing state changes the value,
+ * independent of tier arithmetic. Sorted + de-duplicated so a reordering of
+ * `fulfillments[]` — which carries no meaning — cannot rotate the hash.
+ *
+ * See docs/plans/tracking-app-delivery-signals.plan.md §8.1.1.
+ */
+function deliveryStatusesOf(payload: Record<string, unknown>): {
+  deliveryStatuses: string[];
+  returnedAt: string | null;
+} {
+  const fulfillments = Array.isArray(payload.fulfillments) ? payload.fulfillments : [];
+  const statuses = new Set<string>();
+  let returnedAt: string | null = null;
+
+  for (const f of fulfillments) {
+    if (!f || typeof f !== "object") continue;
+    const ct = (f as { carrierTracking?: unknown }).carrierTracking;
+    if (!ct || typeof ct !== "object") continue;
+
+    const status = (ct as { deliveryStatus?: unknown }).deliveryStatus;
+    if (typeof status !== "string" || !status.trim()) continue;
+    statuses.add(status.trim());
+
+    if (status.trim() !== "Returned") continue;
+    const ev = (f as { carrierTerminalEvent?: unknown }).carrierTerminalEvent;
+    const at =
+      ev && typeof ev === "object" ? (ev as { happenedAt?: unknown }).happenedAt : null;
+    if (typeof at === "string" && at && (!returnedAt || at > returnedAt)) returnedAt = at;
+  }
+
+  return { deliveryStatuses: [...statuses].sort(), returnedAt };
+}
+
+/**
  * Per-passage ids carried by a communication section, if it has any.
  *
  * Reads the section rather than the payload because the payload is already a
@@ -455,6 +511,13 @@ function extractValue(
         }),
         deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
         signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
+        // Reconciled per-shipment delivery state, hashed under its own name so
+        // `evidence_hash` moves on ANY status change — including a return on
+        // one parcel of a multi-shipment order, where `proofType` alone does
+        // not move. See `deliveryStatusesOf` for the full reasoning. These are
+        // hash/staleness inputs; the narrative cites `proofType`, the carrier
+        // and the tracking number, never these fields directly.
+        ...deliveryStatusesOf(p),
         // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It
         // was the licence the LLM read for "delivered to the verified
         // address", and its input was a billing-vs-shipping city comparison.
