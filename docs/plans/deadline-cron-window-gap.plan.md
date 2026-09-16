@@ -1,6 +1,11 @@
 # Deadline crons cannot reach deadlines before 08:00 UTC
 
-Status: FIXED — PR #736 open to develop (2026-09-16)
+Status: **SHIPPED TO PRODUCTION** — PR #736 → develop, promoted via #739 (2026-09-16)
+
+Landed as `lib/cron/deadlineWindow.ts` across all three call sites. The one open
+follow-up is §7 question 3: whether the 71 historical `lost` disputes with 03:00 UTC
+deadlines were winnable, which would quantify what this defect actually cost. Not a
+blocker; the fix stands on the mechanism alone.
 Severity: live scheduling defect, silent, currently forfeiting responses
 Found while investigating `docs/plans/tracking-app-delivery-signals.plan.md` — but
 **independent of it**. Fix this regardless of what happens to the ParcelPanel work.

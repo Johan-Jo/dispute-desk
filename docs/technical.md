@@ -1656,6 +1656,75 @@ is **not** an identification flag — it is written only by `lib/carriers/lookup
 Querying `carrier_normalized IS NULL` reports ~99.99% unidentified on every shop and
 is wrong; it measures "DHL lookups performed".
 
+##### Tracking-app delivery signals (`lib/carriers/trackingApps/`)
+
+Reads delivery state from a tracking app the **merchant** installed, for carriers we
+have no adapter for. Built after dispute `4b81afe1` (#98141): a YunExpress parcel was
+returned to sender on 2026-09-07 and DisputeDesk filed a not-as-described defence
+contradicted by the merchant's own tracking. ParcelPanel had the parcel classified as
+`Exception_008` the whole time — we never read it.
+
+**Why HTTP and not metafields.** `lib/shopify/trackingApps.ts` already supports a
+`parcelpanel` metafield namespace. Probed four orders on `6a8848-dd` via live Admin
+GraphQL: ParcelPanel writes **no metafields at all**. (`Fulfillment` also has no
+`metafields` field in API 2026-01, so that half of the reader can never return
+anything.) The reader was not mis-filtered — it was unfed. The endpoint is the only
+source that holds this.
+
+`parcelPanelMap.ts` — pure mapping. **Latest valid state by event time**, not most
+severe: a parcel can be `Returned` at T1 and redelivered at T2, and severity ranking
+would pin it at `Returned` forever. A tie rule breaks exact `date_carbon` collisions
+only — `Returned` beats `DeliveredToPickup` (one event described twice), but
+`Returned` vs `Delivered` at one timestamp is **refused**, emitting no signal plus a
+conflict rather than a guess. `date_carbon` is compared as a string: the format is
+fixed-width so lexicographic order is chronological, and parsing would invent a
+timezone ParcelPanel does not document.
+
+Two traps pinned in tests: the return event's text reads `"Zugestellt(Rücksendung an
+Absender)"` — *delivered*, with only the parenthetical saying it went back — so
+`Exception_008` gates the phrase match; and `substatus` is blank on 4 of 30 events in
+the real payload, so the mapper never keys solely on it.
+
+`parcelPanelSource.ts` — fetch, with **three outcomes, never two**: `signal`,
+`no_terminal_state` (we looked, it is moving — a fact), `unavailable` (we could not
+find out — an absence of knowledge). Conflating the last two is the original bug in
+new clothes. **A nonexistent tracking number returns 403, and so does a throttled
+request**, so every 403 is `unavailable` and never "no return". A changed response
+shape degrades to `unavailable` too.
+
+**Pacing is measured, not guessed.** Characterised against the live endpoint
+2026-09-16: 12 requests unpaced → throttled; 40 @ 2s → throttled at #29; 40 @ 4s →
+clean. `MIN_REQUEST_INTERVAL_MS` is 5s, below the measured boundary with margin,
+because the budget's shape (window, quota, per-IP vs per-shop) is still unknown. The
+limiter is per shop domain and process-local, so it does not survive a cold start — a
+burst across concurrent lambdas can still throttle, which fails closed by design.
+
+**Provenance and risk.** The endpoint is undocumented, found by reading the minified
+bundle the merchant's tracking page loads, and gated on Origin/Referer (the direct
+`pp-proxy.parcelwill.com/api/` host is 403 regardless). Every probe used one shop —
+whether the path generalises to other ParcelPanel merchants is **unverified**, as we
+have no second ParcelPanel shop.
+
+**The integration point that nearly got missed.** `lib/carriers/reconcile.ts` now
+exports `isTerminalEvidenceSource`, replacing an inline
+`source.startsWith("carrier_api")` in `fulfillmentSource.ts`. A tracking-app
+`Returned` reconciles correctly and wins the election, but under the old predicate it
+would **still** not have populated the per-shipment `carrierTracking` block — so
+`hasReturnedToSenderShipment` would have stayed false and the gate dark, with the
+right answer one field away. Widened deliberately rather than by disguising a tracking
+app as a carrier API: provenance keeps riding in `trackingSource`, so nothing is
+presented to a bank as a carrier POD. Shopify-native sources are deliberately excluded.
+
+`existingSignalsFor` also now admits a tracking-app `Exception` as `Returned` (it
+previously kept only `Delivered`). Inert on current shops, correct if any app writes
+those metafields.
+
+The returned-to-sender gate itself (`lib/automation/returnedToSender.ts`) was already
+built, in July, for cay-collective #13195 — it caps strength at `weak`, blocks
+auto-submit and argues in its own header why it is not a fatal-loss trigger. Nothing
+about it changed; it had simply never been handed a signal.
+`returnedParcelEndToEnd.test.ts` asserts the whole chain on the real 30-event payload.
+
 ##### Bank-facing tracking links (`lib/carriers/trackingLinkUrl.ts`)
 
 **Never print the merchant's raw tracking URL.** Every tracking link that reaches an issuer — or the merchant — is rebuilt by `resolveTrackingLinkUrl()`, the single owner. Shopify's `fulfillments[].tracking[].url` is written by whatever shipping app the merchant runs, and measured across 349,405 prod rows on 2026-08-14 it is frequently unusable as a citation: 121,851 (35%) plain `http://`; 3,244 with an **empty** identifier (`?tracknum=`, `?tLabels=`); 2,303 with no identifier at all (`https://gtagsm.com/tracking/`, `http://ppxtrack.com`); 21,729 on the retired `wwwapps.ups.com/WebTracking` host. An issuer who follows such a link lands on a blank search box and reads it as *"this merchant has no delivery proof"* — the opposite of what the row asserts.

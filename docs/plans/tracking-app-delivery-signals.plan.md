@@ -1,9 +1,85 @@
 # Returned-parcel blindness: tracking-app delivery signals
 
-Status: IN PROGRESS (rev 5, 2026-09-16). Phase 1 + the §8.1.1(3) hash fix are in
-PR #737 to develop, with tests 13/14/17 passing AND verified to fail without the
-fix. Phases 2-4 (the ParcelPanel source, freshness gates, backfill) not started.
+Status: **PHASES 1-3 DELIVERED (rev 6, 2026-09-16). Phase 2 is unwired by design.
+Phases 4 and the freshness work (§8.1) are NOT started and need a decision first —
+see §0.**
 Origin: dispute `4b81afe1-7f7b-4908-aa25-dad6c8df3922` (shop `6a8848-dd`, order #98141)
+
+## 0. Where this stands — READ FIRST
+
+### Shipped to production (`master`, 2026-09-16)
+
+| what | PR | effect |
+|---|---|---|
+| Rolling deadline window | #736 | Deadlines before 08:00 UTC are reachable. Was silently unreachable for 321 prod disputes. |
+| Consolidator identification (10 slugs) | #737 | YunExpress et al. now emit the unsupported-carrier demand signal instead of vanishing. **Fixes no case** — buys visibility. |
+| Delivery status in `evidence_hash` | #737 | A `Delivered → Returned` change now moves the hash **by construction**, including on multi-shipment orders where `proofType` does not move. |
+| These plan documents | #738 | — |
+
+Promoted via #739 with per-change approval. No migrations.
+
+### On `develop`, NOT in production
+
+**Phase 2 — the ParcelPanel source (#740).** The mapper, the fetch layer with its
+three-outcome contract, the measured pacing, and the `isTerminalEvidenceSource`
+integration point. Fully tested against real payloads, including an end-to-end
+assertion that the returned-to-sender gate fires on the real #98141 timeline.
+
+**It has no call sites.** `fetchParcelPanelState` is invoked only by its own tests.
+This is deliberate, not an oversight: calling a throttling, undocumented external
+endpoint inside the pack build is precisely what needs the §8 fail-closed handling
+and the §8.1 freshness invariants, and those need a schema decision (below). Merging
+Phase 2 to prod today would change no behaviour whatsoever — a rebuild would run the
+same collectors and produce the same pack.
+
+### What is NOT done, and what blocks each
+
+1. **Wiring Phase 2 into the pack build.** Blocked on §8.1 — which needs open
+   question 7 answered: the `allow_stale_observation` consent marker requires either
+   a new `jobs` column or a `dedupe_key` convention. **This is a schema decision and
+   it is the user's to make.**
+2. **Submission-time freshness (§8.1).** Both invariants specified, tests enumerated,
+   insertion points identified. Not written.
+3. **Phase 4 backfill (§11).** 70 open disputes on unidentified carriers. Pointless
+   before (1).
+4. **blume-box (§11).** 0% tracking-app coverage across 54,920 unidentifiable rows.
+   **No phase here addresses it.** Needs real adapters or a paid aggregator.
+
+### What this work did and did not achieve
+
+**Did:** made the returned-parcel case detectable end-to-end, proved the existing
+gate fires once fed, closed a silent scheduling defect affecting 321 disputes, and
+made delivery-state drift invalidate a stale package by construction.
+
+**Did not:** fix any dispute that was already open. `4b81afe1` (#98141, EUR 37.90)
+was conceded on the evidence. A second dispute surfaced in the process —
+`83bc28ad` (#98289, EUR 19.95) — and is a **different failure entirely**: see §0.1.
+
+### 0.1 The second dispute, and what it reveals
+
+Investigating the shared 2026-09-17 03:00 UTC deadline surfaced `83bc28ad` (#98289),
+same shop, same carrier, similar amount. It is **not** a returned parcel:
+
+| | #98141 | #98289 |
+|---|---|---|
+| reason | `PRODUCT_UNACCEPTABLE` | `PRODUCT_NOT_RECEIVED` |
+| `status_num` | `2 = Ausnahme` | `2 = Unterwegs` |
+| final event | 2026-09-07 `Zugestellt(Rücksendung an Absender)` | 2026-09-16 `im Ziel-Paketzentrum bearbeitet` |
+| reality | returned to sender | **still in transit, 32 days, never arrived** |
+
+Note both report `status_num: 2` under different names — one more reason the mapper
+walks the event timeline rather than trusting that field (§7.1.1).
+
+#98289 is unwinnable and correctly scored `weak`: for an INR chargeback the argument
+is delivery proof, and none exists because the parcel never arrived. **Nothing in
+this plan would have saved it.** Neither dispute was actioned further; both were left
+per the user's decision.
+
+**The larger finding is a prevention gap, not an evidence gap.** A parcel sat
+undelivered for a month and nobody noticed until the cardholder complained. Detecting
+stuck in-flight parcels — before they become chargebacks — is plausibly worth more
+than winning the disputes they turn into, and is **out of scope here**. Worth its own
+plan.
 
 Rev 2 superseded rev 1: the urgent-case set shrank from three disputes to one (§2);
 the returned-parcel gate turns out to already exist and already do the right thing
@@ -1069,9 +1145,26 @@ source, the three-outcome contract, and the refresh policy.
 
 ## 15. Open questions
 
-0. **§2.2 — the 00:00–08:00 UTC deadline gap (321 disputes) needs its own plan.**
-   Should that be written now, or tracked as backlog? It is independent of the
-   carrier work and arguably higher-impact.
+**Resolved during implementation (2026-09-16):**
+
+- ~~0. The 00:00–08:00 UTC deadline gap needs its own plan.~~ **DONE** —
+  `deadline-cron-window-gap.plan.md`, fixed and shipped to prod (#736 → #739).
+- ~~1. Concede `4b81afe1`?~~ **Conceded** by the user; execution record at §2.4.
+  `83bc28ad` (#98289) was investigated and left alone — see §0.1.
+- ~~9. How to add `deliveryStatus` to the hashed value without mass regeneration.~~
+  **Moot** — prod holds exactly 1 `final` package (May 2026, closed dispute).
+  Shipped plainly; no hash versioning.
+- ~~The throttle budget is unknown / no safe interval established.~~ **Measured**
+  2026-09-16: 40 requests at 2s throttle at #29; 40 at 4s are clean.
+  `MIN_REQUEST_INTERVAL_MS = 5s`, below the boundary with margin. §9.1's
+  characterisation step is complete.
+
+**Still open — (7) blocks all remaining work:**
+
+7. **§8.1.5 — how does the worker learn a merchant consented to stale observation?**
+   The `allow_stale_observation` marker needs either a new `jobs` column or a
+   `dedupe_key` convention. **A schema decision, and the gate to everything else:**
+   without it §8.1 cannot be written, and without §8.1 Phase 2 stays unwired.
 1. §2.3 — concede `4b81afe1`? (Recommended, but for record-accuracy rather than
    money: §2.2 shows nothing will file it either way. Awaiting approval; nothing
    executed. ~9 h of window left at time of writing.)
@@ -1084,12 +1177,27 @@ source, the three-outcome contract, and the refresh policy.
 5. §11 — does blume-box's 54,920-row tail justify a paid aggregator?
 6. §10 — should the carrier-API cache rule be audited for the same bug now, or
    tracked separately?
-7. §8.1.5 — interim unconditional worker gate (option 2, no migration), or record the
-   enqueuer on `jobs` properly (option 1)? Recommend option 2 now, option 1 as a
-   separate change.
-8. §8.1.1 — is `FRESHNESS_MAX_AGE = 24 h` the right trade? It cannot be settled until
-   §9.1 gives a real throughput number; flagging that the two are coupled.
-9. ~~§8.1.1(3) — how to add `deliveryStatus` to the hashed value without triggering
-   mass regeneration.~~ **RESOLVED**: prod holds exactly 1 `final` package (May, closed
-   dispute), so the regeneration cost is nil. Ship it plainly; no hash versioning.
-   Re-measure before shipping.
+8. §8.1.1 — is `FRESHNESS_MAX_AGE = 24 h` the right trade? Now answerable: §9.1
+   measured ~5 s/request per shop domain, so refreshing 70 open disputes costs
+   minutes, not hours. 24 h is comfortable. Confirm when §8.1 is written.
+
+(Questions 7 and 9 are listed above under the resolved/blocking split; 0 and 1 are
+resolved there too.)
+
+## 16. If someone picks this up later
+
+Read §0 first, then §8.1.1 (the two invariants) and §6.1 (the integration point that
+nearly got missed). The three things most likely to be re-derived painfully:
+
+1. **`carrier_normalized` is not an identification flag** (§3.1). Querying it reports
+   99.99% unidentified and is wrong.
+2. **A fresh lookup does not certify an old pack** (§8.1.1). Observation freshness and
+   artifact agreement are different properties; checking only the first lets the
+   worker file a contradictory PDF behind a freshly-refreshed shipment.
+3. **403 from ParcelPanel is ambiguous** (§9) — throttle or unknown parcel, the status
+   code cannot tell them apart. It can never be read as "no return".
+
+And the shape of the whole problem: the returned-to-sender gate, the reconciliation
+rules and the `Returned` vocabulary were all **already built** before this work
+started. The defect was never missing logic — it was that nothing ever handed them a
+signal for a carrier without an adapter.
