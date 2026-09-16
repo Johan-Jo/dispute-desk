@@ -50,7 +50,7 @@ function shipment(opts: {
 function deliveryFact(payload: Record<string, unknown>): EvidenceFact {
   return {
     id: "f-delivery",
-    category: "delivery_confirmation",
+    category: "delivery_proof",
     label: "Delivery confirmation",
     value: extractValueForTest("delivery_proof", payload),
     source: "shopify_order",
