@@ -32,6 +32,23 @@ export type CarrierSlug =
   | "colissimo"
   | "correos"
   | "ctt"
+  // Cross-border consolidators and regional carriers added 2026-09-16 after a
+  // prod census found 39.2% of 508,858 tracking rows unidentifiable — led by
+  // YunExpress at 104,262 rows, the carrier on the returned-parcel case that
+  // prompted the census (dispute 4b81afe1 / #98141). Identification only:
+  // none of these has an adapter, so they resolve to `unsupported_carrier`
+  // and emit the demand-signal email instead of vanishing into
+  // `unknown_carrier`. See docs/plans/tracking-app-delivery-signals.plan.md §5.
+  | "yunexpress"
+  | "sunyou"
+  | "cne_express"
+  | "fourpx"
+  | "yanwen"
+  | "cainiao"
+  | "canada_post"
+  | "intelcom"
+  | "stallion_express"
+  | "purolator"
   | "fake_carrier";
 
 /** One tracking entry as Shopify stores it on a fulfillment. */
