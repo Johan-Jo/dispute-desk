@@ -7970,6 +7970,54 @@ implements the port over today's storage (latest candidate only — never a sear
 for "the newest SAFE version", which on this fleet would be a fallback into the
 defect) and is the module CP-B's selector replaces.
 
+### The deadline selection window — rolling, not calendar-day
+
+Both deadline crons — `defence-package-deadline-rebuild` (06:00 UTC) and
+`defence-package-deadline-submit` (08:00 UTC) — select `due_at` through the one
+shared helper `lib/cron/deadlineWindow.ts`:
+
+```
+[ now , now + 24h + margin )
+```
+
+**What this fixed (2026-09-16).** Both routes previously selected by CALENDAR DAY
+in UTC (`Date.UTC(y, m, d, 0,0,0)` .. `+24h`) while running at a fixed hour. For
+any deadline *earlier* than that hour the window failed in both directions: the
+run on the previous day could not see it (outside that day), and the run on the
+day itself fired **after it had already expired**. An 03:00 UTC deadline was
+therefore structurally unreachable — the 08:00 run selected it five hours late and
+attempted a filing Shopify would refuse.
+
+The comment above the old code described a rolling window ("due today or before
+tomorrow's 08:00 UTC"); the code implemented a calendar day. The helper implements
+what the comment always said.
+
+Measured on prod at the time of the fix: **321 disputes carried an 03:00 UTC
+deadline** — the second most common hour in the book after 23:00 — of which 319
+were never filed. That figure is **exposure, not losses**: 201 of the 321 were
+`won` regardless, most being inquiries Shopify resolves without merchant evidence.
+The mechanism was real and silent, but the realised damage was far smaller than
+the raw count suggests. Found via dispute `4b81afe1` (#98141).
+
+Two invariants the helper must keep, both pinned in
+`tests/unit/deadlineWindow.test.ts`:
+
+1. **Never select an expired deadline.** The lower bound is `now`, not the start
+   of the UTC day. Filing after expiry is wasted work and writes audit noise that
+   cannot succeed.
+2. **The horizon exceeds the cron interval** (`SUBMIT_WINDOW_MARGIN_MS` = 2h on
+   top of 24h), so every deadline is seen by at least one run before it expires
+   and a late or skipped run does not open a hole. Re-selection is harmless —
+   both routes filter on `evidence_saved_to_shopify_at IS NULL`.
+
+`REBUILD_WINDOW_MARGIN_MS` (4h) deliberately **leads** the submit margin, so
+anything the submit cron will consider has already had a rebuild pass. This
+preserves the 06:00 → 08:00 ordering intent: a pack is rebuilt before it is filed,
+never after. The legacy pre-canonical route
+(`defence-package-deadline-submit/legacyRoute.ts`) uses the same helper — it is the
+path that runs while `CANONICAL_PIPELINE` is off, so fixing only the canonical
+route would have left the live behaviour unchanged.
+
 ### The deadline path — P-6
 
 `app/api/cron/defence-package-deadline-submit/route.ts` is the ACTUAL submitter.

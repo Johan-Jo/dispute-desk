@@ -53,6 +53,10 @@ import {
 } from "@/lib/defence/finalizeRpc";
 import { cronEnvGate } from "@/lib/cron/envGate";
 import {
+  deadlineWindow,
+  SUBMIT_WINDOW_MARGIN_MS,
+} from "@/lib/cron/deadlineWindow";
+import {
   classifyUnconfirmedSaves,
   summariseUnconfirmed,
   CONFIRMATION_GRACE_HOURS,
@@ -116,14 +120,15 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
 
-  // "Today" boundaries in UTC. We scan for due_at within the next 24h
-  // (i.e. due today or before tomorrow's 08:00 UTC) so the morning cron
-  // catches deadlines that fall later the same day.
+  // ROLLING window from now — see `lib/cron/deadlineWindow.ts` for why a
+  // calendar day was wrong. In short: this route runs at 08:00 UTC, so a
+  // calendar-day window could only ever reach a deadline before 08:00 on
+  // the run AFTER it had already expired. 321 prod disputes sit at 03:00.
   const now = new Date();
-  const startOfToday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0),
+  const { from: windowFrom, to: windowTo } = deadlineWindow(
+    now,
+    SUBMIT_WINDOW_MARGIN_MS,
   );
-  const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
 
   // Disputes still awaiting evidence submission, with deadline today.
   //
@@ -157,8 +162,8 @@ export async function GET(req: NextRequest) {
     .select(
       "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state",
     )
-    .gte("due_at", startOfToday.toISOString())
-    .lt("due_at", endOfToday.toISOString())
+    .gte("due_at", windowFrom.toISOString())
+    .lt("due_at", windowTo.toISOString())
     .is("evidence_saved_to_shopify_at", null)
     .or(
       `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")}),review_state.eq.approved`,
