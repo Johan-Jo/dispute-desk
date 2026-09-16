@@ -37,6 +37,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import {
+  deadlineWindow,
+  REBUILD_WINDOW_MARGIN_MS,
+} from "@/lib/cron/deadlineWindow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,13 +85,15 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
 
-  // "Today" boundaries in UTC. Match the deadline-submit cron's window
-  // exactly so the same disputes are scanned by both runs.
+  // ROLLING window from now — see `lib/cron/deadlineWindow.ts`. Its horizon
+  // LEADS the submit cron's, so anything that route will consider tomorrow has
+  // already had a rebuild pass. A calendar-day window gave early-morning
+  // deadlines neither a rebuild nor a submit.
   const now = new Date();
-  const startOfToday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0),
+  const { from: windowFrom, to: windowTo } = deadlineWindow(
+    now,
+    REBUILD_WINDOW_MARGIN_MS,
   );
-  const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
 
   const merchantActionableStatuses = [
     "new",
@@ -100,8 +106,8 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select("id, shop_id, due_at")
-    .gte("due_at", startOfToday.toISOString())
-    .lt("due_at", endOfToday.toISOString())
+    .gte("due_at", windowFrom.toISOString())
+    .lt("due_at", windowTo.toISOString())
     .is("evidence_saved_to_shopify_at", null)
     .or(
       `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")})`,
