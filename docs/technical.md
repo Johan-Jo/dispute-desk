@@ -1629,6 +1629,33 @@ The event connection is queried **newest-first** (`events(first: 30, sortKey: HA
 
 Direct carrier-API delivery verification for carriers whose events never reach Shopify (`DHL Freight` is not on Shopify's supported-carriers list → zero native events). Module contents: `types.ts` (exhaustive `CarrierLookupResult` discriminated union — never a nullable return; `success` with `deliveryStatus: null` = in-transit, distinct from `not_found`), `registry.ts` (two layers: carrier **identification** from company string/URL hostname vs **adapter resolution** — an identified carrier with no adapter is `unsupported_carrier`, NOT an API failure; unidentifiable = `unknown_carrier`, metrics only), `urlTracking.ts` (parse-only, DHL host allowlist — never fetches merchant tracking URLs; handles encoding/repeated params/malicious input), `dhl.ts` (P0 adapter, Unified Shipment Tracking API, `DHL-API-Key` header auth, both `DHL_API_KEY`+`DHL_API_SECRET` required to enable, 10s timeout, one bounded retry for transient failures, 429 honours `Retry-After`; URL-derived `tracking-id=` beats the stored confirmation number — the DHL Freight trap; a UPS adapter was scoped 2026-07 but shelved — UPS blocks developer accounts for non-EU/non-US companies, so no creds are obtainable; UPS stays identified-but-unsupported and, under always-verify, emits the demand-signal email), `fakeCarrier.ts` (test-only carrier-neutrality adapter), `alerts.ts` (support notifications to `CARRIER_ALERT_EMAIL` ?? `support@disputedesk.app` via the shared `sendAdminEmail`; atomic dedup through the `carrier_alert_touch` RPC — 6h window for operational errors, 7d per merchant+carrier for unsupported-carrier alerts with 10/100/1000 threshold re-alerts; emails carry masked tracking refs (last 4) and URL hostnames only, never full numbers/customer data/payloads; all alerting failures are logged and swallowed — pack builds never break). Classification reuses `classifyDeliveryTimeline` (multilingual pickup/return-aware) with DHL's structured `statusCode` as fallback. Env vars are set on both Vercel projects for production/preview/development.
 
+###### Consolidator identification (2026-09-16)
+
+A prod census found **39.2% of 508,858 tracking rows unidentifiable** — computed by
+replaying the `KNOWN_CARRIERS` regexes in SQL, since identification is derived inside
+`detectCarrier` and never persisted. Top misses: `YunExpress` (104,262 rows),
+`SUNYOU` (4,082), `Canada Post` (5,414), `Intelcom` (3,916), `Stallion Express`
+(3,726), `Purolator`, `CNE Express`. All landed in `unknown_carrier` — metrics only,
+no email — so the gap was invisible until queried.
+
+Ten slugs were added to identification: `yunexpress`, `sunyou`, `cne_express`,
+`fourpx`, `yanwen`, `cainiao`, `canada_post`, `intelcom`, `stallion_express`,
+`purolator`. **None has an adapter**, so they resolve to `unsupported_carrier` and
+emit the demand-signal email (deduped per merchant+carrier per 7 days) instead of
+disappearing. This fixes no case on its own — it makes the next such gap announce
+itself. Pinned in `lib/carriers/__tests__/consolidatorIdentification.test.ts`.
+
+Deliberately NOT identified: `Other` (28,822 rows — a placeholder), empty/null
+(16,609), and `UPS2`/`FEDEX2`/`FEDEXAPI` (fulfilment-service artefacts whose
+tracking-number format was never verified against the real carrier). A wrong
+identification is worse than none: it would route a lookup to the wrong carrier's API.
+
+**A measurement trap worth knowing.** `shopify_fulfillment_trackings.carrier_normalized`
+is **not** an identification flag — it is written only by `lib/carriers/lookupCache.ts`
+*after a successful adapter lookup*. Only 65 rows in prod have it set, all DHL.
+Querying `carrier_normalized IS NULL` reports ~99.99% unidentified on every shop and
+is wrong; it measures "DHL lookups performed".
+
 ##### Bank-facing tracking links (`lib/carriers/trackingLinkUrl.ts`)
 
 **Never print the merchant's raw tracking URL.** Every tracking link that reaches an issuer — or the merchant — is rebuilt by `resolveTrackingLinkUrl()`, the single owner. Shopify's `fulfillments[].tracking[].url` is written by whatever shipping app the merchant runs, and measured across 349,405 prod rows on 2026-08-14 it is frequently unusable as a citation: 121,851 (35%) plain `http://`; 3,244 with an **empty** identifier (`?tracknum=`, `?tLabels=`); 2,303 with no identifier at all (`https://gtagsm.com/tracking/`, `http://ppxtrack.com`); 21,729 on the retired `wwwapps.ups.com/WebTracking` host. An issuer who follows such a link lands on a blank search box and reads it as *"this merchant has no delivery proof"* — the opposite of what the row asserts.
@@ -8094,6 +8121,32 @@ Forwarding confirmation is `submitted_confirmed` plus a `submitted_at` whose pro
 `lib/postOutcome/snapshotContract.ts` types the immutable submission-time record. Evidence sits in exactly one of `availableBeforeSubmission`, `arrivedAfterSubmission` or `availabilityUnknown` — enforced by `validateSnapshotContract`, because that split is what separates a real omission finding from blaming the pipeline for a time-travel failure.
 
 The inventory is reconstructed from `defence_packages.facts_json` / `narrative_json`, **not** `defence_evidence_facts` (zero rows for all 50 analyzable disputes). The package JSON is already frozen at build time, which is the immutability the contract needs.
+
+**Delivery status is a hash input (2026-09-16).** `evidence_hash` is what tells the
+submission path that a finalized package no longer matches current facts. Until this
+change the delivery fact's hashed `value` carried `proofType, carrier, trackingNumber,
+trackingUrl, deliveredAt, signedByName` and **no delivery status** — so a
+`Delivered → Returned` transition moved the hash only *indirectly*, through `proofType`
+flipping to `returned_to_sender`.
+
+That coupling holds for one shipment and **breaks for several**. `resolveProofType`
+(`lib/packs/sources/fulfillmentSource.ts`) takes a best-tier across shipments: one
+parcel delivered with a timestamp pins `proofType` at `delivered_confirmed`, and the
+`sawReturned` flag from a second, returned parcel is discarded. `proofType` does not
+move, the hash does not move, and a package contradicted by its own tracking stays
+fileable.
+
+`extractValue`'s `delivery_proof`/`shipping_tracking` branch now also emits
+`deliveryStatuses` (sorted, de-duplicated across shipments) and `returnedAt` (newest
+return timestamp), so any shipment changing state changes the hash independent of tier
+arithmetic. Sorting matters: `fulfillments[]` ordering carries no meaning and must not
+rotate the hash. These are staleness inputs only — the narrative still cites
+`proofType`, the carrier and the tracking number, never these fields.
+
+Pinned in `lib/defence/__tests__/deliveryStatusInEvidenceHash.test.ts`, including the
+multi-shipment case, which **fails without the fix**. Blast radius at the time of the
+change was nil: prod held exactly 1 `final` package (May 2026, closed dispute), so no
+mass regeneration followed — packages move `draft → submitted` in practice.
 
 Hashing goes through `lib/hashing/canonicalJson.ts`, extracted from `computeEvidenceHash` so the two cannot drift. The drop set is a parameter: `computeEvidenceHash` drops volatile timestamps, snapshots drop **nothing** — there, `created_at` is the evidence. `lib/hashing/__tests__/canonicalJson.test.ts` pins byte-equivalence with the pre-extraction implementation, since every stored `evidence_hash` was produced by it and drift would silently mark live packages stale.
 
