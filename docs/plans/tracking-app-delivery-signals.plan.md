@@ -25,19 +25,24 @@ three-outcome contract, the measured pacing, and the `isTerminalEvidenceSource`
 integration point. Fully tested against real payloads, including an end-to-end
 assertion that the returned-to-sender gate fires on the real #98141 timeline.
 
-**It has no call sites.** `fetchParcelPanelState` is invoked only by its own tests.
-This is deliberate, not an oversight: calling a throttling, undocumented external
-endpoint inside the pack build is precisely what needs the §8 fail-closed handling
-and the §8.1 freshness invariants, and those need a schema decision (below). Merging
-Phase 2 to prod today would change no behaviour whatsoever — a rebuild would run the
-same collectors and produce the same pack.
+**WIRED 2026-09-17.** `resolveShipments.ts`'s `unsupported_carrier` branch now asks
+the tracking app before giving up, bounded at 3 lookups per order and honouring the
+three-outcome contract.
+
+An earlier revision of this section called the wiring *blocked* on §8.1. **That was
+wrong, and worth recording as a correction:** reading a delivery signal and *filing*
+on one are different risks. A `Returned` signal only ever makes automation stricter —
+the returned-to-sender gate caps strength at `weak` and blocks auto-submit, so a
+false positive costs a missed auto-submit, never a bad filing. §8.1 governs whether a
+*stale* signal may be filed on, which is genuinely separate and still open. Treating
+a sequencing choice as a dependency delayed the fix by a day, during which the
+2026-09-17 alert arrived for a live case (#99277) the pipeline still could not see.
 
 ### What is NOT done, and what blocks each
 
-1. **Wiring Phase 2 into the pack build.** Blocked on §8.1 — which needs open
-   question 7 answered: the `allow_stale_observation` consent marker requires either
-   a new `jobs` column or a `dedupe_key` convention. **This is a schema decision and
-   it is the user's to make.**
+1. **Submission-time freshness (§8.1).** Still open, still needs question 7's schema
+   decision. It does NOT block anything already shipped — the wiring only ever ADDS
+   knowledge; it removes no guard.
 2. **Submission-time freshness (§8.1).** Both invariants specified, tests enumerated,
    insertion points identified. Not written.
 3. **Phase 4 backfill (§11).** 70 open disputes on unidentified carriers. Pointless

@@ -20,6 +20,7 @@ import {
 } from "../parcelPanelSource";
 import returnedFixture from "./fixtures/dispute-4b81afe1-returned.json";
 import deliveredFixture from "./fixtures/order-100094-delivered.json";
+import failedAttemptFixture from "./fixtures/order-99277-failed-attempts.json";
 
 const checkpointsOf = (f: unknown) =>
   (f as { data: { tracking: Array<{ trackinfo: unknown[] }> } }).data.tracking[0]
@@ -60,6 +61,58 @@ describe("mapping the real returned parcel (test 1)", () => {
     const final = checkpointsOf(returnedFixture)[0] as { StatusDescription: string };
     expect(final.StatusDescription).toContain("Zugestellt");
     expect(mapCheckpoint(final as never)).toBe("Returned");
+  });
+});
+
+describe("out-for-delivery is not a pickup point (order #99277)", () => {
+  /**
+   * A real trap, caught by probing the live parcel from the 2026-09-17
+   * unsupported-carrier alert rather than by reading the code.
+   *
+   * ParcelPanel's `checkpoint_status: "pickup"` does NOT mean "waiting at a
+   * pickup point" — on this parcel it pairs with `OutForDelivery_001` and
+   * "Der Zusteller ist auf dem Weg zu Ihnen!" (the courier is on the way).
+   * Reading the field name literally elected `DeliveredToPickup` for a parcel
+   * that was merely out for delivery, and kept claiming the customer could
+   * collect it through two subsequent failed attempts.
+   */
+  it("yields no terminal signal — two failed attempts is not a terminal state", () => {
+    const r = electSignal(checkpointsOf(failedAttemptFixture));
+    expect(r.status).toBeNull();
+    expect(r.conflict).toBe(false);
+  });
+
+  it("the out-for-delivery event alone maps to nothing", () => {
+    expect(
+      mapCheckpoint({
+        date_carbon: "2026-09-14 08:05:00",
+        checkpoint_status: "pickup",
+        substatus: "OutForDelivery_001",
+        StatusDescription: "Der Zusteller ist auf dem Weg zu Ihnen! 🚚, Raunheim (DE)",
+      }),
+    ).toBeNull();
+  });
+
+  it("a failed attempt only becomes DeliveredToPickup when the text says so", () => {
+    const base = {
+      date_carbon: "2026-09-15 16:55:00",
+      checkpoint_status: "undelivered",
+      substatus: "FailedAttempt_001",
+    };
+    // #99277's real text — no pickup location named.
+    expect(
+      mapCheckpoint({
+        ...base,
+        StatusDescription: "Es tut uns leid, aber Ihr Paket konnte nicht wie vereinbart zugestellt werden, Raunheim (DE)",
+      }),
+    ).toBeNull();
+    // #98141's text, which DOES name where to collect it.
+    expect(
+      mapCheckpoint({
+        ...base,
+        StatusDescription: "Die Lieferung wird nach [Werftstr. 29] gebracht. Der früheste Abholzeitpunkt ist auf der Benachrichtigungskarte zu finden.",
+      }),
+    ).toBe("DeliveredToPickup");
   });
 });
 
