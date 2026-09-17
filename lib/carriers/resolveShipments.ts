@@ -55,6 +55,7 @@ import {
   reconcileDeliveryState,
   type DeliverySignal,
 } from "@/lib/carriers/reconcile";
+import { fetchParcelPanelState } from "@/lib/carriers/trackingApps/parcelPanelSource";
 import type {
   CarrierLookupStatus,
   NormalizedCarrierShipment,
@@ -101,14 +102,33 @@ const EMAIL_WORTHY: Record<string, Parameters<typeof reportCarrierFailure>[0]["c
 
 const RETRYABLE = new Set(["rate_limited", "timeout", "network_error", "unavailable"]);
 
+/**
+ * Tracking-app lookups permitted per pack build (per ORDER, across all its
+ * shipments).
+ *
+ * The source paces itself at 5s per shop domain against a throttling
+ * endpoint, so this is a wall-clock bound in disguise: 3 lookups ≈ 10s added
+ * to a build. Almost every disputed order has one or two shipments, so in
+ * practice nothing is skipped; a pathological 10-parcel order degrades to
+ * "the first three are verified" rather than stalling the build for a minute.
+ */
+const MAX_TRACKING_APP_LOOKUPS_PER_BUILD = 3;
+
 export async function resolveCarrierShipments(input: {
   shopId: string;
   orderGid: string;
   disputeId: string | null;
   correlationId: string;
+  /** Storefront host the Shopify app proxy is mounted on (`shops.primary_domain`),
+   *  used for tracking-app lookups. Absent — or still the `*.myshopify.com`
+   *  host — simply disables them; nothing else changes. */
+  storefrontDomain?: string | null;
   fulfillments: FulfillmentForResolution[];
 }): Promise<Map<string, CarrierShipmentSignal>> {
   const out = new Map<string, CarrierShipmentSignal>();
+  // ONE budget for the whole order, not per shipment — see
+  // `tryTrackingAppSource` for why this is bounded by count.
+  const budget = { remaining: MAX_TRACKING_APP_LOOKUPS_PER_BUILD };
   try {
     const cache = await getCachedLookups(
       input.shopId,
@@ -117,7 +137,7 @@ export async function resolveCarrierShipments(input: {
 
     for (const f of input.fulfillments) {
       try {
-        const resolved = await resolveOne(input, f, cache);
+        const resolved = await resolveOne(input, f, cache, budget);
         if (resolved) out.set(f.id, resolved);
       } catch (err) {
         // Belt-and-braces: a bug in resolution must never fail the pack.
@@ -139,15 +159,125 @@ export async function resolveCarrierShipments(input: {
   return out;
 }
 
+/**
+ * Ask the merchant's own tracking app about a shipment whose carrier we have
+ * no adapter for.
+ *
+ * ── Why this is bounded ──────────────────────────────────────────────
+ *
+ * The ParcelPanel endpoint throttles. Measured 2026-09-16: 40 requests at 2s
+ * apart throttle at #29; 40 at 4s are clean. The source paces itself at 5s
+ * per shop domain, which means a 6-parcel order would add ~30s to a pack
+ * build. `MAX_TRACKING_APP_LOOKUPS_PER_BUILD` caps that: the first few
+ * shipments are looked up, the rest fall through exactly as before.
+ *
+ * Bounding on COUNT rather than elapsed time is deliberate — a time budget
+ * makes the pack's contents depend on how busy the box was, so the same
+ * order could produce different evidence on two runs.
+ *
+ * ── Why `unavailable` returns null ───────────────────────────────────
+ *
+ * `unavailable` means we could not find out (throttled, 5xx, changed shape,
+ * or — because ParcelPanel answers 403 for an unknown parcel too — possibly
+ * no such tracking number). It is NOT a fact about the parcel, so it must
+ * not become a signal. Returning null leaves this shipment exactly as it was
+ * before this branch existed: Shopify-side sources only.
+ *
+ * What `unavailable` must NOT do is silently license an auto-filing on
+ * delivery data we failed to verify. That is the submission-time freshness
+ * work (plan §8.1) and it is deliberately NOT decided here — this function
+ * only ever ADDS knowledge, never removes a guard.
+ */
+async function tryTrackingAppSource(args: {
+  input: {
+    shopId: string;
+    orderGid: string;
+    disputeId: string | null;
+    correlationId: string;
+    storefrontDomain?: string | null;
+  };
+  fulfillmentId: string;
+  entry: TrackingEntryInfo;
+  carrier: string;
+  budget: { remaining: number };
+}): Promise<CarrierShipmentSignal | null> {
+  const { input, fulfillmentId, entry, carrier, budget } = args;
+
+  const domain = (input.storefrontDomain ?? "").trim();
+  const number = (entry.number ?? "").trim();
+  if (!domain || !number) return null;
+
+  if (budget.remaining <= 0) {
+    logCarrierEvent("tracking_app_budget_exhausted", {
+      carrier,
+      fulfillmentId,
+      correlationId: input.correlationId,
+    });
+    return null;
+  }
+  budget.remaining -= 1;
+
+  const result = await fetchParcelPanelState({
+    shopDomain: domain,
+    trackingNumber: number,
+  });
+
+  if (result.outcome === "unavailable") {
+    logCarrierEvent("tracking_app_unavailable", {
+      carrier,
+      fulfillmentId,
+      reason: result.reason,
+      correlationId: input.correlationId,
+    });
+    return null;
+  }
+
+  if (result.outcome === "no_terminal_state") {
+    // A FACT: we looked, the parcel is still moving. Distinct from
+    // `unavailable`, and still not a terminal signal.
+    logCarrierEvent("tracking_app_no_terminal_state", {
+      carrier,
+      fulfillmentId,
+      correlationId: input.correlationId,
+    });
+    return null;
+  }
+
+  logCarrierEvent("tracking_app_signal", {
+    carrier,
+    fulfillmentId,
+    status: result.status,
+    correlationId: input.correlationId,
+  });
+
+  return {
+    fulfillmentId,
+    carrier,
+    signal: {
+      status: result.status,
+      // `date_carbon` is naive local time with no zone (see parcelPanelMap).
+      // Kept verbatim: reconciliation compares these lexicographically and
+      // inventing a UTC offset we cannot verify would be worse than none.
+      at: result.at,
+      source: result.source,
+    },
+    lookupStatus: "success",
+    podName: null,
+    returnReason: null,
+  };
+}
+
 async function resolveOne(
   input: {
     shopId: string;
     orderGid: string;
     disputeId: string | null;
     correlationId: string;
+    storefrontDomain?: string | null;
   },
   f: FulfillmentForResolution,
   cache: Map<string, CachedLookup>,
+  budget: { remaining: number },
 ): Promise<CarrierShipmentSignal | null> {
   // Always-verify (v2): we no longer gate the carrier lookup on whether
   // Shopify-side sources already have a terminal signal — a carrier POD
@@ -188,6 +318,23 @@ async function resolveOne(
         fulfillmentId: f.id,
         correlationId: input.correlationId,
       });
+
+      // No adapter — but the MERCHANT may already pay a tracking app that
+      // queries this carrier for them. Ask it before giving up.
+      //
+      // This branch used to `continue` here, which is how dispute 4b81afe1
+      // (#98141) filed a not-as-described defence on a parcel ParcelPanel had
+      // classified as returned-to-sender nine hours before the chargeback
+      // opened. The demand-signal email above told us we were blind; it could
+      // not tell us what we were blind TO.
+      const appSignal = await tryTrackingAppSource({
+        input,
+        fulfillmentId: f.id,
+        entry,
+        carrier: detection.carrier,
+        budget,
+      });
+      if (appSignal) return appSignal;
       continue;
     }
 

@@ -197,6 +197,10 @@ async function resolveDeliveryStates(
       orderGid: ctx.orderGid ?? order.id,
       disputeId: ctx.disputeId,
       correlationId: ctx.correlationId ?? `pack-${ctx.packId}`,
+      // Enables the tracking-app fallback for carriers with no adapter.
+      // Null on a shop still using its myshopify host — the app proxy is not
+      // reachable there, so those lookups stay off.
+      storefrontDomain: ctx.storefrontDomain ?? null,
       fulfillments: order.fulfillments.map((f) => ({
         id: f.id,
         trackingInfo: f.trackingInfo.map((t) => ({

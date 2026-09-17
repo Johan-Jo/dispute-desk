@@ -102,9 +102,20 @@ export function mapCheckpoint(c: ParcelPanelCheckpoint): CarrierDeliveryStatus |
     return null;
   }
 
+  // `checkpoint_status: "pickup"` does NOT mean "waiting at a pickup point".
+  // Observed on order #99277 (2026-09-17): `pickup` + `OutForDelivery_001` +
+  // "Der Zusteller ist auf dem Weg zu Ihnen! 🚚" — the courier is EN ROUTE.
+  // Reading the field name literally elected `DeliveredToPickup` for a parcel
+  // that was merely out for delivery, and then two failed attempts later it
+  // still claimed the customer could collect it.
+  //
+  // So the substatus decides, and the bare `pickup` checkpoint is only a
+  // terminal state when the text actually says the parcel is waiting.
+  if (sub.startsWith("OutForDelivery")) return null;
   if (cp === "pickup" || sub.startsWith("AvailableForPickup")) {
     if (COLLECTED_PHRASES.test(desc)) return "CollectedAtPickup";
-    return "DeliveredToPickup";
+    if (PICKUP_ARRIVAL_PHRASES.test(desc)) return "DeliveredToPickup";
+    return null;
   }
 
   // transit / blank / info_received / InTransit_* / OutForDelivery_* and
