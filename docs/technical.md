@@ -4239,10 +4239,39 @@ terms carry. A pack with no persisted fingerprint yields no current hash, and an
 unverifiable snapshot is not a fresh one.
 
 **The list checks the two staleness dimensions it can check truthfully** —
-policy version, and `rebuild_pending` — and withholds a band otherwise. It never
-falls back to the legacy `case_strength` summary, which carries no freshness of
-its own. The `?strength=` filter reads the same source as the pill, so a filter
-and a display can no longer disagree about one row.
+policy version, and `rebuild_pending` — and withholds a band otherwise, *for a
+pack that has not been filed*. The `?strength=` filter reads the same source as
+the pill, so a filter and a display can no longer disagree about one row.
+
+**A FILED pack recovers the band it carried when it was filed** (2026-09-17,
+`resolveDisplayStrengthOverall`). The strict refusal above protects a LIVE
+decision: the merchant is still choosing what to do, the evidence underneath can
+still move, so a superseded band would misinform. A pack with
+`saved_to_shopify_at` set has none of those properties — the evidence went to the
+network and nothing beneath it can change — so "what did we score this when we
+filed it" is a historical fact, and refusing to state a fact because it *might*
+be stale is a category error. Staleness is not possible on a frozen row.
+
+For a filed pack only, resolution falls back in order: the usable snapshot → a
+superseded-policy/old-shape snapshot's `strength.overall` → the legacy
+`pack_json.case_strength.overall`. The legacy summary is trusted *here and
+nowhere else*: the standing objection to it is that it cannot prove it is
+current, which is a question nobody is asking of a frozen row. Measured on prod
+across all 190 packs carrying both forms, legacy and canonical agreed 190/190 —
+it was never inaccurate, only unprovable.
+
+The **signal counts** beside the band are read only from a snapshot that passed
+the strict predicate. A recovered band is one field; pairing it with invented
+zeros that looked authoritative would be a worse lie than the blank. The list
+renders the pill only (the subtitle was removed 2026-07), so nothing reads them.
+
+This was worth doing because the withheld band was not a rare edge: 89 filed
+blume-box disputes, 15 surasvenne and 1 cay-collective rendered an empty Case
+strength column. 99 of those 105 recover; the 6 that do not (surasvenne
+`#1068`–`#1074`) were built before strength was persisted in any form and
+correctly keep the em-dash. The recovery deliberately does **not** rebuild
+anything — no jobs, no pack credits, no LLM generations, no merchant emails, and
+no write to `pack_json`.
 
 `display-only` rows (contributions, the improvement hint) are still derived.
 They produce labels, not a band, and cannot reconstruct completeness or
