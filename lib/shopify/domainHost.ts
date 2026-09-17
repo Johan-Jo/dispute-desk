@@ -45,3 +45,29 @@ export function displayShopDomain(shop: {
   const domain = shop.primary_domain?.trim() || shop.shop_domain;
   return domain.replace(/^www\./i, "");
 }
+
+/**
+ * The host a Shopify APP PROXY is reachable on, or null.
+ *
+ * Distinct from `displayShopDomain` in two ways that matter, which is why it
+ * is a separate function rather than a reuse:
+ *
+ *   1. `www.` is KEPT. This value is sent in a real request and used as the
+ *      Origin/Referer; stripping a subdomain that actually serves the store
+ *      would produce a 403 or a redirect.
+ *   2. A shop still on its `*.myshopify.com` host returns **null**, not the
+ *      myshopify domain. A proxy call there is refused, so the honest answer
+ *      is "no storefront host", which disables tracking-app lookups cleanly
+ *      rather than burning a request per shipment on a guaranteed failure.
+ *
+ * Never write the result back to `shops.primary_domain`.
+ */
+export function storefrontDomainOf(shop: {
+  primary_domain?: string | null;
+  shop_domain: string;
+}): string | null {
+  const domain = shop.primary_domain?.trim();
+  if (!domain) return null;
+  if (/\.myshopify\.com$/i.test(domain)) return null;
+  return domain;
+}

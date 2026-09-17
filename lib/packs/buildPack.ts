@@ -9,6 +9,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { storefrontDomainOf } from "@/lib/shopify/domainHost";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
@@ -194,7 +195,7 @@ export async function buildPack(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("id, shop_domain")
+    .select("id, shop_domain, primary_domain")
     .eq("id", pack.shop_id)
     .single();
   if (!shop) throw new Error(`Shop not found: ${pack.shop_id}`);
@@ -367,6 +368,7 @@ export async function buildPack(
     disputeReason: dispute.reason,
     orderGid: dispute.order_gid,
     shopDomain: shop.shop_domain,
+    storefrontDomain: storefrontDomainOf(shop),
     accessToken: decryptAccessToken(session.access_token_encrypted),
     correlationId: opts?.correlationId,
     order,

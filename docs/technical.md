@@ -1705,6 +1705,40 @@ bundle the merchant's tracking page loads, and gated on Origin/Referer (the dire
 whether the path generalises to other ParcelPanel merchants is **unverified**, as we
 have no second ParcelPanel shop.
 
+**Wired into the pack build (2026-09-17).** `resolveShipments.ts`'s
+`unsupported_carrier` branch used to send the demand-signal email and then
+`continue`. It now asks the tracking app before giving up. The email still fires —
+it is about the adapter gap, which is unchanged — but it is no longer the only thing
+that happens.
+
+Three properties, pinned in `lib/carriers/__tests__/trackingAppFallback.test.ts`:
+
+- **`unavailable` produces no map entry at all**, not an entry with `signal: null`
+  that downstream code could read as "checked, nothing there". The shipment is left
+  exactly as it was before this branch existed.
+- **Bounded by count, not time** — `MAX_TRACKING_APP_LOOKUPS_PER_BUILD = 3` per
+  order. The source paces at 5 s per shop domain, so this is a wall-clock bound in
+  disguise (~10 s added to a build). Counting rather than timing is deliberate: a
+  time budget makes a pack's contents depend on how busy the box was, so the same
+  order could yield different evidence on two runs.
+- **Skipped when it cannot work** — no storefront domain, no tracking number, or a
+  carrier that has an adapter.
+
+The storefront host comes from `shops.primary_domain` via `storefrontDomainOf`
+(`lib/shopify/domainHost.ts`), which is deliberately NOT `displayShopDomain`: it
+keeps `www.` (the value is sent as a real Origin/Referer) and returns **null** for a
+shop still on `*.myshopify.com`, where the proxy is unreachable. Null disables the
+lookups cleanly rather than burning a request per shipment on a guaranteed 403.
+
+**A mapping trap found by probing live data, not by reading code.** ParcelPanel's
+`checkpoint_status: "pickup"` does **not** mean "waiting at a pickup point". On order
+#99277 it paired with `OutForDelivery_001` and *"Der Zusteller ist auf dem Weg zu
+Ihnen!"* — the courier is en route. The first implementation read the field name
+literally and elected `DeliveredToPickup` for a parcel merely out for delivery, then
+kept claiming the customer could collect it through two subsequent failed attempts.
+The substatus now decides, and a bare `pickup` checkpoint is terminal only when the
+text says the parcel is actually waiting. Pinned with that payload as a fixture.
+
 **The integration point that nearly got missed.** `lib/carriers/reconcile.ts` now
 exports `isTerminalEvidenceSource`, replacing an inline
 `source.startsWith("carrier_api")` in `fulfillmentSource.ts`. A tracking-app
