@@ -36,6 +36,31 @@ function isCarrierApi(source: string): boolean {
   return source.startsWith("carrier_api");
 }
 
+/**
+ * Sources whose terminal state may populate the per-shipment
+ * `carrierTracking` block — the input the returned-to-sender gate reads
+ * (`hasReturnedToSenderShipment`, lib/packs/contradictionGate.ts).
+ *
+ * Was `source.startsWith("carrier_api")`, inline at
+ * `lib/packs/sources/fulfillmentSource.ts`. That silently excluded
+ * tracking-app signals: a ParcelPanel `Returned` would reconcile correctly,
+ * win the election, and STILL leave `carrierTracking` null — so the gate
+ * stayed dark and the pack kept arguing a delivery that never happened.
+ *
+ * Widened deliberately rather than by disguising a tracking app as a carrier
+ * API: provenance keeps riding in `trackingSource`, so nothing here is
+ * presented to a bank as a carrier proof-of-delivery. What these sources
+ * share is that a human-meaningful terminal state was actually OBSERVED,
+ * which is the property the gate needs.
+ *
+ * Shopify-native signals are deliberately absent. They are already the
+ * baseline every other path reads; admitting them here would let a stale
+ * native flag masquerade as an observed carrier result.
+ */
+export function isTerminalEvidenceSource(source: string): boolean {
+  return isCarrierApi(source) || source.startsWith("tracking_app_");
+}
+
 /** Newest-dated signal wins; undated signals lose to dated ones; on a
  *  timestamp tie (or two undated), the carrier API's own record of its
  *  shipment outranks secondhand sources. */

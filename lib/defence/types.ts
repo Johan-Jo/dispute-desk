@@ -658,6 +658,22 @@ export interface EvidenceBasisRow {
   label: string;
   /** Terse value rendered next to the label (e.g. "MATCH", "Sent 2026-05-12"). */
   value: string;
+  /**
+   * A carrier tracking link, carried STRUCTURALLY rather than concatenated
+   * into `value`.
+   *
+   * The URL used to be appended to `value` as text, so both renderers printed
+   * a dead string: a reviewer had to select a 120-character DHL URL, copy it
+   * and paste it into a browser to see the parcel. Nobody does that — the
+   * package asserts "the carrier confirmed delivery" and the one control that
+   * would let the reader check it was unusable. `label` is the anchor text so
+   * the raw URL never has to be shown at all.
+   *
+   * Null on every row that has no link (rule 3 of `resolveTrackingLinkUrl`
+   * deliberately returns no URL rather than one that opens an empty search
+   * form). Renderers MUST fall back to plain text on null.
+   */
+  link: { url: string; label: string } | null;
 }
 
 // ── Run telemetry ────────────────────────────────────────────────────

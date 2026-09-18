@@ -167,34 +167,42 @@ async function loadPageData(): Promise<PageData> {
   // Classification drift — top unmatched fact patterns for orders
   // Shopify rated LOW that became chargebacks. Joined to disputes
   // through has_chargeback.
+  // The table now stores one row per distinct phrasing with an occurrence
+  // count, so the top-N comes straight from the DB. This previously pulled
+  // 2000 raw rows and tallied them here — against 6.5M rows that made the
+  // "top drift patterns" an arbitrary sliver rather than the real top-N.
   const driftSamples: PageData["driftSamples"] = [];
   const { data: parseMisses } = await sb
     .from("fraud_intel_parse_misses")
-    .select("fact_text, fact_sentiment")
-    .gte("observed_at", sinceIso)
-    .limit(2000);
-  const driftAgg = new Map<string, { count: number; sentiment: string | null }>();
+    .select("fact_text, fact_sentiment, occurrences")
+    .gte("last_seen_at", sinceIso)
+    .order("occurrences", { ascending: false })
+    .limit(20);
   for (const m of parseMisses ?? []) {
-    const key = m.fact_text;
-    const entry = driftAgg.get(key) ?? { count: 0, sentiment: m.fact_sentiment };
-    entry.count++;
-    driftAgg.set(key, entry);
+    driftSamples.push({
+      fact: m.fact_text,
+      sentiment: m.fact_sentiment,
+      count: m.occurrences,
+    });
   }
-  for (const [fact, v] of driftAgg) {
-    driftSamples.push({ fact, sentiment: v.sentiment, count: v.count });
-  }
-  driftSamples.sort((a, b) => b.count - a.count);
 
-  const { count: parseMissCount } = await sb
+  // Total sightings in the window — the sum of the counts, not a row count.
+  // A row count would now report distinct phrasings and silently change what
+  // this number means.
+  const { data: missTotals } = await sb
     .from("fraud_intel_parse_misses")
-    .select("id", { head: true, count: "exact" })
-    .gte("observed_at", sinceIso);
+    .select("occurrences")
+    .gte("last_seen_at", sinceIso);
+  const parseMissCount = (missTotals ?? []).reduce(
+    (sum, r) => sum + (r.occurrences ?? 0),
+    0,
+  );
 
   return {
     windowDays: WINDOW_DAYS,
     ordersInWindow,
     disputesInWindow,
-    parseMissCount: parseMissCount ?? 0,
+    parseMissCount,
     avsBuckets,
     attemptBuckets,
     distanceBuckets,

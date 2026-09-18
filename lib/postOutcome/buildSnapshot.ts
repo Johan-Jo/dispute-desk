@@ -162,6 +162,39 @@ export function platformSaveVerified(pkg: RawPackageRow | null): boolean {
   return (response as Record<string, unknown>).verified === true;
 }
 
+/** The PDF file GID this package uploaded, from its save response. */
+export function responseFileGid(pkg: RawPackageRow | null): string | null {
+  const response = pkg?.shopify_response;
+  if (!response || typeof response !== "object") return null;
+  const gid = (response as Record<string, unknown>).fileGid;
+  return typeof gid === "string" ? gid : null;
+}
+
+/** Whether the platform confirmed and verified this package's save. */
+function saveVerified(pkg: RawPackageRow): boolean {
+  const r = pkg.shopify_response;
+  if (!r || typeof r !== "object") return false;
+  return (r as Record<string, unknown>).verified === true;
+}
+
+/**
+ * The file the dispute's evidence record currently holds.
+ *
+ * Captured from 2026-09-01 on; absent on every earlier snapshot, which is why
+ * the tie resolver keeps an ordering fallback rather than treating absence as
+ * "no match".
+ */
+export function snapshotEvidenceFileGid(dispute: RawDisputeRow): string | null {
+  const snap = dispute.raw_snapshot;
+  if (!snap || typeof snap !== "object") return null;
+  const ev = (snap as Record<string, unknown>).disputeEvidence;
+  if (!ev || typeof ev !== "object") return null;
+  const file = (ev as Record<string, unknown>).uncategorizedFile;
+  if (!file || typeof file !== "object") return null;
+  const id = (file as Record<string, unknown>).id;
+  return typeof id === "string" ? id : null;
+}
+
 export function responseEvidenceGid(pkg: RawPackageRow | null): string | null {
   const response = pkg?.shopify_response;
   if (!response || typeof response !== "object") return null;
@@ -207,9 +240,34 @@ export function resolvePackageTie(
   packages: RawPackageRow[],
 ): { tie: PackageEvidenceTie; pkg: RawPackageRow | null } {
   if (packages.length === 0) return { tie: "NONE", pkg: null };
+
+  // 1. The file the evidence record holds names the package outright. Shopify
+  //    keeps ONE mutable evidence record per dispute and every save replaces
+  //    its uncategorizedFile, so this is the only signal that discriminates
+  //    between versions. Only accept it when it picks out exactly one.
+  const evidenceFileGid = snapshotEvidenceFileGid(dispute);
+  if (evidenceFileGid) {
+    const matches = packages.filter((p) => responseFileGid(p) === evidenceFileGid);
+    if (matches.length === 1) {
+      return { tie: "EVIDENCE_FILE_MATCH", pkg: matches[0] };
+    }
+  }
+
   if (packages.length > 1) {
+    // 2. No captured file GID. Shopify replaces the attached file on every
+    //    save, so the last VERIFIED save is what the record ended up holding.
+    //    An unverified later attempt did not replace anything, which is why
+    //    this filters rather than taking the maximum submitted_at outright.
+    const verified = packages
+      .filter(saveVerified)
+      .filter((p) => p.submitted_at)
+      .sort((a, b) => (a.submitted_at! < b.submitted_at! ? 1 : -1));
+    if (verified.length > 0) {
+      return { tie: "LATEST_VERIFIED_SAVE", pkg: verified[0] };
+    }
     return { tie: "AMBIGUOUS_MULTIPLE_PACKAGES", pkg: null };
   }
+
   const pkg = packages[0];
   const gid = responseEvidenceGid(pkg);
   const tie: PackageEvidenceTie =
@@ -319,6 +377,8 @@ function factsToEvidence(
 function gorgiasToEvidence(
   rows: RawGorgiasRow[],
   submissionInstant: string | null,
+  /** Passage ids the package's issuer-facing communication facts name. */
+  citedCommunicationItemIds: ReadonlySet<string>,
 ): {
   before: SnapshotEvidenceItem[];
   after: SnapshotEvidenceItem[];
@@ -340,12 +400,15 @@ function gorgiasToEvidence(
       // one absent from the PDF is correct behaviour, not a defect.
       signalValue: null,
       inclusionEligible: approved,
-      // Always false, and deliberately so: a passage enters a package as ONE
-      // aggregate `customer_communication` fact with `sourceRef: null`, so no
-      // per-passage inclusion flag can be derived. Stage 3 reads the absence of
-      // a linkage as INCLUSION_UNVERIFIABLE rather than as an omission —
-      // claiming inclusion here would be inventing the link.
-      presentInSubmittedPackage: false,
+      // From 2026-09-01 a communication fact carries `approvedItemIds` — the
+      // passages it actually stands for — so inclusion is a lookup.
+      //
+      // Before that the passage entered as ONE aggregate fact with
+      // `sourceRef: null` and no per-passage identity, so nothing could be
+      // derived. `false` keeps that case reading as INCLUSION_UNVERIFIABLE in
+      // Stage 3 rather than as an omission: claiming inclusion with no link
+      // would be inventing it, and claiming omission would be worse.
+      presentInSubmittedPackage: citedCommunicationItemIds.has(row.id),
     };
 
     if (!submissionInstant) {
@@ -412,10 +475,34 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
   const { dispute } = inputs;
   const reconstructionGaps: string[] = [];
 
+  /**
+   * Passage ids the submitted package's issuer-facing communication facts name.
+   *
+   * Only bank-included facts count: a passage carried in a fact we deliberately
+   * withheld never reached the issuer, and calling it present would claim the
+   * opposite. Routed through THE predicate rather than re-spelled — C-1 exists
+   * because two spellings of this rule drifted (lib/defence/bankInclusion.ts).
+   */
+  const citedCommunicationItemIds = new Set<string>();
+  for (const p of inputs.submittedPackages) {
+    for (const fact of parseFacts(p.facts_json)) {
+      if (fact.category !== "customer_communication") continue;
+      if (!isBankIncludedFact(fact)) continue;
+      const ids = fact.value?.approvedItemIds;
+      if (!Array.isArray(ids)) continue;
+      for (const id of ids) if (typeof id === "string") citedCommunicationItemIds.add(id);
+    }
+  }
+
   const { tie, pkg } = resolvePackageTie(dispute, inputs.submittedPackages);
   if (tie === "AMBIGUOUS_MULTIPLE_PACKAGES") {
     reconstructionGaps.push(
       `${inputs.submittedPackages.length} submitted packages exist; the forwarded one is not identifiable.`,
+    );
+  }
+  if (tie === "LATEST_VERIFIED_SAVE") {
+    reconstructionGaps.push(
+      `${inputs.submittedPackages.length} submitted packages exist; the forwarded one is inferred from save order because no evidence file GID was captured.`,
     );
   }
 
@@ -453,7 +540,11 @@ export function assembleSnapshot(inputs: SnapshotInputs): SnapshotBuildResult {
   const factEvidence = factsToEvidence(facts, submissionInstant);
   const factIds = new Set(factEvidence.map((e) => e.id));
 
-  const gorgias = gorgiasToEvidence(inputs.gorgias, submissionInstant);
+  const gorgias = gorgiasToEvidence(
+    inputs.gorgias,
+    submissionInstant,
+    citedCommunicationItemIds,
+  );
 
   // The outcome must be a real won/lost. `outcome_source` being absent does not
   // by itself make it unreliable — Shopify is the source for every prod case —

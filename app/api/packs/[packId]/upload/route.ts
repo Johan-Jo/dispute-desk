@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -25,12 +26,18 @@ const MANUAL_UPLOAD_STORAGE_BUCKET = "evidence-packs";
  * Anything else falls through to a generic message; the raw text is
  * still logged server-side for support.
  */
-function merchantUploadMessage(err: { message?: string }, fileType: string): string {
+function merchantUploadMessage(
+  err: { message?: string },
+  fileType: string,
+): string {
   const raw = (err?.message ?? "").toLowerCase();
   if (raw.includes("mime type") || raw.includes("invalid_mime_type")) {
     return `This Shopify store hasn't allowed ${fileType || "this file type"} uploads in evidence storage yet. Contact DisputeDesk support — it's a one-time setting.`;
   }
-  if (raw.includes("exceeded the maximum allowed size") || raw.includes("payload too large")) {
+  if (
+    raw.includes("exceeded the maximum allowed size") ||
+    raw.includes("payload too large")
+  ) {
     return "This file is larger than your storage limit allows. Try a dispute evidence file under 4 MB or contact support.";
   }
   if (raw.includes("duplicate") || raw.includes("already exists")) {
@@ -47,8 +54,9 @@ function merchantUploadMessage(err: { message?: string }, fileType: string): str
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ packId: string }> }
+  { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -59,14 +67,15 @@ export async function POST(
   }
   const db = getServiceClient();
 
-  let pack: { id: string; shop_id: string; dispute_id: string | null } | null = (
-    await db
-      .from("evidence_packs")
-      .select("id, shop_id, dispute_id")
-      .eq("id", packId)
-      .eq("shop_id", shopId)
-      .single()
-  ).data;
+  let pack: { id: string; shop_id: string; dispute_id: string | null } | null =
+    (
+      await db
+        .from("evidence_packs")
+        .select("id, shop_id, dispute_id")
+        .eq("id", packId)
+        .eq("shop_id", shopId)
+        .single()
+    ).data;
 
   // Library pack (template-installed): may exist only in packs table. Lazy-create evidence_packs row so uploads work.
   if (!pack) {
@@ -87,8 +96,10 @@ export async function POST(
     });
     if (insertErr) {
       return NextResponse.json(
-        { error: `Could not enable uploads for this pack: ${insertErr.message}` },
-        { status: 500 }
+        {
+          error: `Could not enable uploads for this pack: ${insertErr.message}`,
+        },
+        { status: 500 },
       );
     }
     pack = {
@@ -120,7 +131,8 @@ export async function POST(
         shopId: pack.shop_id,
         disputeId: pack.dispute_id,
         packId,
-        actorType: "merchant",
+        actorType: auditActor.actorType,
+        actorId: auditActor.actorId,
         eventType: "evidence_upload_rejected_window_closed",
         eventPayload: {
           packId,
@@ -173,7 +185,10 @@ export async function POST(
     .eq("source", "manual_upload");
 
   const usedBytes = sumEvidencePayloadFileSizes(existingManualRows);
-  if (usedBytes + file.size > SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES) {
+  if (
+    usedBytes + file.size >
+    SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES
+  ) {
     const remaining = Math.max(
       0,
       SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES - usedBytes,
@@ -213,7 +228,7 @@ export async function POST(
     });
     return NextResponse.json(
       { error: merchantUploadMessage(uploadErr, file.type) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -250,7 +265,7 @@ export async function POST(
   if (itemErr) {
     return NextResponse.json(
       { error: `Failed to record item: ${itemErr.message}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -258,7 +273,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "item_added",
     eventPayload: {
       type: "manual_upload",

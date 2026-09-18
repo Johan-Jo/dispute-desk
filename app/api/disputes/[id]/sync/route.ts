@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
@@ -18,6 +19,7 @@ interface RouteParams {
  * Re-fetch a single dispute from Shopify and upsert into the local DB.
  */
 export async function POST(_req: NextRequest, { params }: RouteParams) {
+  const auditActor = await resolveAuditActor(_req);
   const { id } = await params;
   const sb = getServiceClient();
 
@@ -43,7 +45,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     if (err instanceof NoBackgroundSessionError) {
       return NextResponse.json(
         { error: "Shop or session not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
     throw err;
@@ -53,7 +55,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
   if (!node) {
     return NextResponse.json(
       { error: "Dispute not found in Shopify" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -95,7 +97,8 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
   await sb.from("audit_events").insert({
     shop_id: dispute.shop_id,
     dispute_id: id,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "disputes_synced",
     event_payload: { single: true, dispute_gid: dispute.dispute_gid },
   });

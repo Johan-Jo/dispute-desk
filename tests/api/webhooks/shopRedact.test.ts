@@ -1,16 +1,16 @@
 /**
- * Tests for POST /api/webhooks/shop/redact — GDPR mandatory
- * full-shop deletion 48h post-uninstall.
+ * Tests for POST /api/webhooks/shop/redact — GDPR mandatory full-shop
+ * deletion 48h post-uninstall.
  *
- *   - 401 when HMAC fails
- *   - 200 with skipped:invalid_json on malformed body
- *   - 400 when shop domain missing
- *   - 200 with skipped:unknown_shop when shop isn't in our DB
- *     (idempotent — re-deliveries after the first cascade are no-ops)
- *   - 200 happy path: cascade deletes from every per-shop table in
- *     dependency order, returns deletedCounts
- *   - Per-table delete error (e.g. table doesn't exist) is logged but
- *     does NOT short-circuit the rest of the cascade
+ * The route delegates the erasure to the `admin_purge_shop` SQL function.
+ * It previously walked a hardcoded table list with one PostgREST DELETE per
+ * table, which could not complete: `audit_events` / `dispute_events` refuse
+ * deletes via BEFORE DELETE triggers, the loop swallowed that error, and the
+ * final `shops` delete then failed too — leaving shops permanently
+ * half-redacted while still answering 200.
+ *
+ * So the assertions here are mostly about NOT repeating that: one atomic
+ * call, and a failure that is reported rather than hidden behind a 200.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -30,79 +30,37 @@ import { POST } from "@/app/api/webhooks/shop-redact/route";
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockVerify = vi.mocked(verifyShopifyWebhook);
 
-interface ShopifySupabaseSpies {
-  deleteCalls: Array<{ table: string; eqColumn: string; eqValue: string }>;
+interface Spies {
+  rpcCalls: Array<{ fn: string; args: unknown }>;
 }
 
 function setupSupabase(opts: {
   shopRow?: { id: string } | null;
-  /** Tables that should return an error from delete (e.g. simulating
-   *  a missing table). Default: none. */
-  errorTables?: Set<string>;
-  /** Per-table row count returned by .select() after delete. Default 0. */
-  rowsByTable?: Record<string, number>;
-}): ShopifySupabaseSpies {
-  const deleteCalls: ShopifySupabaseSpies["deleteCalls"] = [];
+  /** Simulate the purge function itself failing. */
+  rpcError?: string;
+}): Spies {
+  const rpcCalls: Spies["rpcCalls"] = [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fromImpl = (table: string): any => {
-    if (table === "shops") {
-      // shops.select for the lookup, then shops.delete in the cascade.
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn((_col: string, _val: string) => {
-          return {
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: opts.shopRow ?? null,
-              error: null,
-            }),
-            select: vi.fn().mockResolvedValue({
-              data: opts.errorTables?.has("shops")
-                ? null
-                : Array((opts.rowsByTable ?? {})["shops"] ?? 0).fill({ id: "x" }),
-              error: opts.errorTables?.has("shops") ? { message: "shops missing", code: "42P01" } : null,
-            }),
-          };
+  mockGetServiceClient.mockReturnValue({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () =>
+            Promise.resolve({ data: opts.shopRow ?? null, error: null }),
         }),
-        delete: vi.fn(() => ({
-          eq: vi.fn((col: string, val: string) => {
-            deleteCalls.push({ table, eqColumn: col, eqValue: val });
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: opts.errorTables?.has(table)
-                  ? null
-                  : Array((opts.rowsByTable ?? {})[table] ?? 0).fill({ id: "x" }),
-                error: opts.errorTables?.has(table)
-                  ? { message: `${table} missing`, code: "42P01" }
-                  : null,
-              }),
-            };
-          }),
-        })),
-      };
-    }
-    // Every other table — just supports .delete().eq().select()
-    return {
-      delete: vi.fn(() => ({
-        eq: vi.fn((col: string, val: string) => {
-          deleteCalls.push({ table, eqColumn: col, eqValue: val });
-          return {
-            select: vi.fn().mockResolvedValue({
-              data: opts.errorTables?.has(table)
-                ? null
-                : Array((opts.rowsByTable ?? {})[table] ?? 0).fill({ id: "x" }),
-              error: opts.errorTables?.has(table)
-                ? { message: `${table} missing`, code: "42P01" }
-                : null,
-            }),
-          };
-        }),
-      })),
-    };
-  };
+      }),
+    }),
+    rpc: (fn: string, args: unknown) => {
+      rpcCalls.push({ fn, args });
+      return Promise.resolve(
+        opts.rpcError
+          ? { data: null, error: { message: opts.rpcError } }
+          : { data: { ok: true, shop_domain: "demo.myshopify.com" }, error: null },
+      );
+    },
+  } as never);
 
-  mockGetServiceClient.mockReturnValue({ from: fromImpl } as never);
-  return { deleteCalls };
+  return { rpcCalls };
 }
 
 const PAYLOAD = JSON.stringify({
@@ -124,14 +82,14 @@ function makeReq(opts: { body: string; hmac?: string | null; shopHeader?: string
 describe("POST /api/webhooks/shop/redact", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns 401 when HMAC fails (no DB calls)", async () => {
+  it("returns 401 when HMAC fails, and purges nothing", async () => {
     mockVerify.mockReturnValue(false);
     const spies = setupSupabase({ shopRow: { id: "shop-1" } });
 
     const res = await POST(makeReq({ body: PAYLOAD, hmac: "bad" }));
 
     expect(res.status).toBe(401);
-    expect(spies.deleteCalls.length).toBe(0);
+    expect(spies.rpcCalls).toEqual([]);
   });
 
   it("returns 200 with skipped:invalid_json on malformed body", async () => {
@@ -147,7 +105,7 @@ describe("POST /api/webhooks/shop/redact", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 200 with skipped:unknown_shop when shop isn't in our DB (idempotent re-delivery)", async () => {
+  it("returns 200 with skipped:unknown_shop for an already-purged shop (idempotent re-delivery)", async () => {
     mockVerify.mockReturnValue(true);
     const spies = setupSupabase({ shopRow: null });
 
@@ -155,49 +113,40 @@ describe("POST /api/webhooks/shop/redact", () => {
 
     expect(res.status).toBe(200);
     expect((await res.json()).skipped).toBe("unknown_shop");
-    expect(spies.deleteCalls.length).toBe(0);
+    expect(spies.rpcCalls).toEqual([]);
   });
 
-  it("happy path: cascade deletes from every per-shop table; final delete uses id= on shops", async () => {
+  it("happy path: one atomic admin_purge_shop call for the resolved shop", async () => {
     mockVerify.mockReturnValue(true);
     const spies = setupSupabase({ shopRow: { id: "shop-1" } });
 
     const res = await POST(makeReq({ body: PAYLOAD, hmac: "ok" }));
 
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(typeof body.deletedCounts).toBe("object");
-
-    // Every table got a delete call. Last call must be against the
-    // shops table itself with id= (not shop_id=).
-    expect(spies.deleteCalls.length).toBeGreaterThan(10);
-    const last = spies.deleteCalls[spies.deleteCalls.length - 1];
-    expect(last.table).toBe("shops");
-    expect(last.eqColumn).toBe("id");
-    expect(last.eqValue).toBe("shop-1");
-
-    // Every other call should use shop_id=
-    for (let i = 0; i < spies.deleteCalls.length - 1; i++) {
-      expect(spies.deleteCalls[i].eqColumn).toBe("shop_id");
-      expect(spies.deleteCalls[i].eqValue).toBe("shop-1");
-    }
+    expect((await res.json()).purged).toEqual({
+      ok: true,
+      shop_domain: "demo.myshopify.com",
+    });
+    // Exactly one call — not a per-table loop, which is what allowed a
+    // partial erasure to look like a success.
+    expect(spies.rpcCalls).toEqual([
+      { fn: "admin_purge_shop", args: { p_shop_id: "shop-1" } },
+    ]);
   });
 
-  it("per-table error does NOT short-circuit the cascade — every other table still deleted", async () => {
+  it("returns 500 when the purge fails, so Shopify retries instead of assuming success", async () => {
+    // The regression that mattered: the old loop logged its errors and
+    // still answered 200, so an incomplete redaction was never retried
+    // and never noticed.
     mockVerify.mockReturnValue(true);
-    const spies = setupSupabase({
+    setupSupabase({
       shopRow: { id: "shop-1" },
-      // Simulate two tables that don't exist in this schema.
-      errorTables: new Set(["shop_daily_metrics", "shop_reconcile_schedule"]),
+      rpcError: "audit_events is append-only: DELETE not allowed",
     });
 
     const res = await POST(makeReq({ body: PAYLOAD, hmac: "ok" }));
 
-    expect(res.status).toBe(200);
-    const counts = (await res.json()).deletedCounts as Record<string, number>;
-    expect(counts.shop_daily_metrics).toBe(-1); // -1 marks failure
-    expect(counts.shop_reconcile_schedule).toBe(-1);
-    // shops itself was still reached at the end
-    expect(counts.shops).toBeGreaterThanOrEqual(0);
+    expect(res.status).toBe(500);
+    expect((await res.json()).ok).toBeUndefined();
   });
 });

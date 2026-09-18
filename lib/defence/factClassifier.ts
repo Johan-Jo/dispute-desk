@@ -273,7 +273,19 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
     case "order_confirmation":
       return "order_record";
     case "product_description":
-      return "order_record";
+      // `product_listing`, NOT `order_record`. It mapped to `order_record`
+      // until 2026-09-01, which made the listing-as-purchased — the one fact
+      // that answers "did what we supplied match what we promised?" —
+      // indistinguishable from the order confirmation. The consequence was
+      // structural: `product_unacceptable.criticalCategories` named
+      // `order_record`, so every not-as-described case satisfied its own
+      // critical category with an order confirmation and rendered as a `full`
+      // package. Measured on prod the same day: 0 of 252 not-as-described
+      // disputes carried a `product_description` item, and all 252 rendered
+      // firm. The signal layer already drew this line —
+      // `canonicalEvidence.ts` gives the field `signalId: "product_listing"`
+      // — only the fact-category layer collapsed it.
+      return "product_listing";
     case "duplicate_explanation":
       return "duplicate_explanation";
     default:
@@ -311,6 +323,86 @@ function firstTrackingEntry(
     }
   }
   return urlOnly;
+}
+
+/**
+ * Every shipment's reconciled delivery status on this section, sorted and
+ * de-duplicated, plus the newest return timestamp.
+ *
+ * ── Why this exists ──────────────────────────────────────────────────
+ *
+ * `evidence_hash` (lib/defence/computeEvidenceHash.ts) is what tells the
+ * submission path that a finalized package no longer matches the facts —
+ * it hashes each approved fact's `value`. Until 2026-09-16 the delivery
+ * fact's value carried `proofType, carrier, trackingNumber, trackingUrl,
+ * deliveredAt, signedByName` and **no delivery status**, so a
+ * `Delivered → Returned` transition reached the hash only INDIRECTLY, via
+ * `proofType` flipping to `returned_to_sender`.
+ *
+ * That coupling holds for a single-shipment order and breaks for several.
+ * `resolveProofType` (lib/packs/sources/fulfillmentSource.ts) computes a
+ * best-tier across shipments: one parcel delivered with a timestamp holds
+ * the tier at `delivered_confirmed` and the `sawReturned` flag from a
+ * second, returned parcel is discarded. `proofType` does not move, the
+ * hash does not move, and a package contradicted by its own tracking stays
+ * fileable.
+ *
+ * Hashing the statuses under their own name makes the coverage structural
+ * rather than incidental: any shipment changing state changes the value,
+ * independent of tier arithmetic. Sorted + de-duplicated so a reordering of
+ * `fulfillments[]` — which carries no meaning — cannot rotate the hash.
+ *
+ * See docs/plans/tracking-app-delivery-signals.plan.md §8.1.1.
+ */
+function deliveryStatusesOf(payload: Record<string, unknown>): {
+  deliveryStatuses: string[];
+  returnedAt: string | null;
+} {
+  const fulfillments = Array.isArray(payload.fulfillments) ? payload.fulfillments : [];
+  const statuses = new Set<string>();
+  let returnedAt: string | null = null;
+
+  for (const f of fulfillments) {
+    if (!f || typeof f !== "object") continue;
+    const ct = (f as { carrierTracking?: unknown }).carrierTracking;
+    if (!ct || typeof ct !== "object") continue;
+
+    const status = (ct as { deliveryStatus?: unknown }).deliveryStatus;
+    if (typeof status !== "string" || !status.trim()) continue;
+    statuses.add(status.trim());
+
+    if (status.trim() !== "Returned") continue;
+    const ev = (f as { carrierTerminalEvent?: unknown }).carrierTerminalEvent;
+    const at =
+      ev && typeof ev === "object" ? (ev as { happenedAt?: unknown }).happenedAt : null;
+    if (typeof at === "string" && at && (!returnedAt || at > returnedAt)) returnedAt = at;
+  }
+
+  return { deliveryStatuses: [...statuses].sort(), returnedAt };
+}
+
+/**
+ * Per-passage ids carried by a communication section, if it has any.
+ *
+ * Reads the section rather than the payload because the payload is already a
+ * summary by the time it reaches here — the identity lives in the collector's
+ * own data (`lib/packs/sources/gorgiasCommSource.ts`).
+ */
+function communicationItemIds(section: PackSectionLike): string[] {
+  const conversations = section.data?.conversations;
+  if (!Array.isArray(conversations)) return [];
+  const ids: string[] = [];
+  for (const c of conversations) {
+    const messages = (c as Record<string, unknown> | null)?.messages;
+    if (!Array.isArray(messages)) continue;
+    for (const m of messages) {
+      const id = (m as Record<string, unknown> | null)?.evidenceMessageId;
+      if (typeof id === "string" && id) ids.push(id);
+    }
+  }
+  // Sorted and deduped: this value is hashed (computeEvidenceHash), so an
+  // unstable order would change the hash without the evidence changing.
+  return [...new Set(ids)].sort();
 }
 
 function extractValue(
@@ -419,6 +511,13 @@ function extractValue(
         }),
         deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
         signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
+        // Reconciled per-shipment delivery state, hashed under its own name so
+        // `evidence_hash` moves on ANY status change — including a return on
+        // one parcel of a multi-shipment order, where `proofType` alone does
+        // not move. See `deliveryStatusesOf` for the full reasoning. These are
+        // hash/staleness inputs; the narrative cites `proofType`, the carrier
+        // and the tracking number, never these fields directly.
+        ...deliveryStatusesOf(p),
         // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It
         // was the licence the LLM read for "delivered to the verified
         // address", and its input was a billing-vs-shipping city comparison.
@@ -426,12 +525,27 @@ function extractValue(
         // (see `extractValue`), so a historical pack cannot reintroduce it.
       };
     }
-    case "customer_communication":
+    case "customer_communication": {
+      // Which approved passages this fact actually stands for.
+      //
+      // The value is a SUMMARY — a count and a confirmation flag — so a
+      // package used to record that communication evidence went in without
+      // recording which passages. A decided case then could not be traced back
+      // to what was filed, and the post-outcome analyser could only classify
+      // every approved passage INCLUSION_UNVERIFIABLE: not omitted, not
+      // included, unknowable. These ids close that.
+      //
+      // Empty for a source that carries no per-item identity (a Shopify
+      // timeline aggregate), and the analyser keeps reading an empty list as
+      // unverifiable rather than as "nothing was included".
+      const approvedItemIds = communicationItemIds(section);
       return {
         customerConfirmsOrder: p.customerConfirmsOrder === true,
         messageCount: typeof p.messageCount === "number" ? p.messageCount : null,
         lastMessageAt: typeof p.lastMessageAt === "string" ? p.lastMessageAt : null,
+        ...(approvedItemIds.length > 0 ? { approvedItemIds } : {}),
       };
+    }
     case "customer_account_info":
       // Prior orders EXCLUDING the disputed one. `totalOrders` mirrors
       // Shopify's numberOfOrders, which counts the disputed order itself

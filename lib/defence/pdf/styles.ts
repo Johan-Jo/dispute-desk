@@ -244,6 +244,17 @@ export const styles = StyleSheet.create({
     fontSize: 9.5,
     color: SLATE_TEXT,
   },
+  /**
+   * The clickable tracking link inside an Evidence Basis value cell.
+   * Underlined and coloured so a reviewer can SEE it is clickable — an
+   * un-styled link in a PDF is indistinguishable from the text around it,
+   * and a control nobody notices is a control nobody uses.
+   */
+  tableCellLink: {
+    fontSize: 9.5,
+    color: NAVY_ACCENT,
+    textDecoration: "underline",
+  },
 
   // ─── Footer (fixed) ──────────────────────────────────────────────────
   footer: {

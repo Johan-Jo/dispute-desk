@@ -173,6 +173,38 @@ export async function persistAnalysis(
     }
   }
 
+  // The newest analysis of a dispute is the current one. Everything earlier for
+  // that dispute is superseded — pointed at the replacement, never deleted, so
+  // the old conclusion and any review taken on it stay auditable (plan §13).
+  //
+  // This first shipped as "strictly LOWER analyzer versions", on the reasoning
+  // that two rows at the same version differ only by snapshot hash and are
+  // therefore parallel valid views. That was wrong the first time it mattered.
+  // When `disputeEvidence.uncategorizedFile` began arriving, 48 disputes were
+  // re-analysed at the SAME analyzer version against a genuinely better
+  // snapshot; the older rows were not a second opinion, they were the same
+  // question answered with less information. The list showed 98 current rows
+  // for 50 disputes.
+  //
+  // A changed snapshot hash means the record improved. Supersede on it.
+  const { data: older } = await sb
+    .from("post_outcome_analyses")
+    .select("id")
+    .eq("dispute_id", analysis.disputeId)
+    .neq("id", inserted.id)
+    .is("superseded_by_id", null)
+    .returns<Array<{ id: string }>>();
+
+  for (const row of older ?? []) {
+    // Best-effort: a failure here leaves a duplicate on the list, which is
+    // visible and fixable. Throwing would discard an analysis already written.
+    try {
+      await supersedeAnalysis(row.id, inserted.id);
+    } catch {
+      /* left for the next run */
+    }
+  }
+
   return {
     analysisId: inserted.id,
     alreadyExisted: false,

@@ -5,7 +5,15 @@ import {
   startRegistration,
   startAuthentication,
 } from "@simplewebauthn/browser";
-import { Fingerprint, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import {
+  Fingerprint,
+  Plus,
+  Trash2,
+  Pencil,
+  Check,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 interface Passkey {
@@ -45,7 +53,9 @@ export default function AdminPasskeysPage() {
     setBusy(true);
     setError(null);
     try {
-      const optRes = await fetch("/api/admin/passkeys/register", { method: "POST" });
+      const optRes = await fetch("/api/admin/passkeys/register", {
+        method: "POST",
+      });
       if (!optRes.ok) throw new Error("Could not start enrollment.");
       const options = await optRes.json();
       const regResponse = await startRegistration({ optionsJSON: options });
@@ -63,10 +73,14 @@ export default function AdminPasskeysPage() {
         throw new Error(j?.error ?? "Enrollment failed.");
       }
       // Re-assert so this session stays valid (also refreshes the cookie).
-      const authOpt = await fetch("/api/admin/passkeys/authenticate", { method: "POST" });
+      const authOpt = await fetch("/api/admin/passkeys/authenticate", {
+        method: "POST",
+      });
       if (authOpt.ok) {
         const authOptions = await authOpt.json();
-        const authResp = await startAuthentication({ optionsJSON: authOptions });
+        const authResp = await startAuthentication({
+          optionsJSON: authOptions,
+        });
         await fetch("/api/admin/passkeys/authenticate", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -87,10 +101,60 @@ export default function AdminPasskeysPage() {
     }
   }, [load]);
 
+  const replaceCurrentDevice = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const optRes = await fetch(
+        "/api/admin/passkeys/register?replace=current",
+        {
+          method: "POST",
+        },
+      );
+      if (!optRes.ok) throw new Error("Could not start replacement.");
+      const options = await optRes.json();
+      const regResponse = await startRegistration({ optionsJSON: options });
+      const verifyRes = await fetch("/api/admin/passkeys/register", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          response: regResponse,
+          friendlyName:
+            typeof navigator !== "undefined" ? navigator.platform : null,
+        }),
+      });
+      if (!verifyRes.ok) {
+        const j = await verifyRes.json().catch(() => null);
+        throw new Error(j?.error ?? "Replacement failed.");
+      }
+      const authOpt = await fetch("/api/admin/passkeys/authenticate", {
+        method: "POST",
+      });
+      if (!authOpt.ok)
+        throw new Error("Replaced, but verification could not start.");
+      const authResp = await startAuthentication({
+        optionsJSON: await authOpt.json(),
+      });
+      const authVerify = await fetch("/api/admin/passkeys/authenticate", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: authResp }),
+      });
+      if (!authVerify.ok) throw new Error("Replaced, but verification failed.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Replacement failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [load]);
+
   const revoke = useCallback(
     async (id: string) => {
       setError(null);
-      const res = await fetch(`/api/admin/passkeys/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/passkeys/${id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         setError(j?.error ?? "Could not remove passkey.");
@@ -127,15 +191,26 @@ export default function AdminPasskeysPage() {
         subtitle="Manage the devices that can unlock your admin access"
         icon={Fingerprint}
         actions={
-          <button
-            type="button"
-            onClick={addDevice}
-            disabled={busy}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50"
-          >
-            <Plus className="w-4 h-4" />
-            {busy ? "Adding…" : "Add this device"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={replaceCurrentDevice}
+              disabled={busy}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-[#CBD5E1] text-[#334155] text-sm font-semibold rounded-lg hover:bg-[#F8FAFC] transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Replace current device key
+            </button>
+            <button
+              type="button"
+              onClick={addDevice}
+              disabled={busy}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              {busy ? "Adding…" : "Add this device"}
+            </button>
+          </div>
         }
       />
 
@@ -223,9 +298,10 @@ export default function AdminPasskeysPage() {
       </div>
 
       <p className="mt-4 text-xs text-[#94A3B8]">
-        Each device (this computer, your phone, another laptop) registers its own
-        passkey. Passkeys sync automatically within the same Apple or Google
-        account. You can&rsquo;t remove your only passkey — add another device first.
+        Each computer registers its own device-bound admin key. Use Replace
+        current device key once if an older key opens a password-manager window
+        before the device unlock. You can&rsquo;t remove your only key — add
+        another device first.
       </p>
     </div>
   );

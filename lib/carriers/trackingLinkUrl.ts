@@ -36,11 +36,23 @@
  * identifier-less one is dropped rather than printed.
  *
  * Precedence, deliberately in this order:
+ *   0. The NUMBER's own format, where it contradicts the matched carrier
+ *      and that carrier cannot resolve it (`routeByNumberFormat` +
+ *      `CANNOT_RESOLVE_USPS_NETWORK`). A `420…` IMpb barcode is a USPS
+ *      parcel whoever's name is on the label.
  *   1. A canonical template for an identified carrier + a usable number.
  *   2. The merchant's URL, IF it already carries an identifier — upgraded
  *      to https and repaired where the repair is known-safe.
  *   3. Nothing. A row prints its number and carrier with NO link rather
  *      than a link that proves the merchant wrong.
+ *
+ * ── ON THE CARRIER STRING'S RELIABILITY ───────────────────────────────
+ *
+ * `company` is free text and, for last-mile-injection services, names the
+ * CONSOLIDATOR rather than the network holding the scan record. Prod
+ * 2026-09-03: 30,983 rows labelled "DHL" and 5,578 labelled "TechSHIP"
+ * carry USPS-network numbers. Rule 0 exists because of that — a carrier
+ * name is a hint, a barcode format is evidence.
  *
  * ── WHAT THIS MODULE REFUSES TO DO ────────────────────────────────────
  *
@@ -191,6 +203,68 @@ const TEMPLATES: Record<TrackingLinkCarrier, (id: string) => string> = {
   stallion: (id) => `https://stallionexpress.ca/track/?tracking=${id}`,
   fleet_optics: (id) => `https://track.fleetopticsinc.com/?tracking_number=${id}`,
 };
+
+/**
+ * IMpb (Intelligent Mail package barcode): `420` + a 5-digit destination ZIP
+ * followed by the 22-digit USPS tracking number. Shipping platforms print the
+ * full 30-digit barcode, but only the INNER 22 digits are trackable — USPS
+ * does resolve the full string, DHL Express does not resolve either.
+ */
+const IMPB_RE = /^420\d{5}(9\d{21})$/;
+
+/** A bare 22-digit USPS number (`9` + 21 digits). */
+const USPS_22_RE = /^9\d{21}$/;
+
+/**
+ * Route by the NUMBER's own format, before the merchant's carrier string.
+ *
+ * ── THE DEFECT THIS CLOSES ────────────────────────────────────────────
+ *
+ * The merchant's `company` is free text, and for last-mile-injection
+ * services it names the CONSOLIDATOR, not the carrier that actually holds
+ * the scan record. Measured on prod 2026-09-03:
+ *
+ *   company "DHL"      → 5,162 IMpb + 25,821 bare-22 USPS numbers
+ *   company "TechSHIP" → 5,251 IMpb +    327 bare-22 USPS numbers
+ *
+ * That is 36,561 shipments whose link we built from the `dhl` template and
+ * pointed at dhl.com, which cannot resolve a USPS number — the reviewer got
+ * DHL's tracking page with nothing on it. Reported by the maintainer against
+ * blume-box parcel 420774699261290416102420744039 ("I end up on a DHL page
+ * with no code posted"), and it is the same failure the module header already
+ * warns about: an issuer who clicks and sees an empty page reads "this
+ * merchant has no delivery proof", the opposite of what the row asserts.
+ *
+ * A `420…` barcode is self-identifying — it is a USPS-network number no
+ * matter whose name is on the label — so the format is STRONGER evidence
+ * than the company string and is consulted first. Returns the carrier AND
+ * the identifier to track with, because for IMpb those differ: the printed
+ * 30-digit barcode is not what goes in the URL.
+ *
+ * Deliberately narrow: only the two USPS-network formats, which are
+ * unambiguous. Everything else falls through to the company/host matching
+ * below, unchanged.
+ */
+/**
+ * Carriers whose template CANNOT resolve a USPS-network number, so a
+ * format-based override is warranted. DHL Express is the measured case:
+ * 36,561 prod shipments labelled "DHL"/"TechSHIP" carry a USPS-network
+ * number and matched `dhl`, producing a tracking page with nothing on it.
+ *
+ * `dhl_ecommerce` is deliberately ABSENT — it injects into the USPS network
+ * but tracks those same numbers on its own webtrack host, browser-verified
+ * 2026-08-14 to render fuller scan history than USPS does.
+ */
+const CANNOT_RESOLVE_USPS_NETWORK = new Set<TrackingLinkCarrier>(["dhl"]);
+
+function routeByNumberFormat(
+  number: string,
+): { carrier: TrackingLinkCarrier; id: string } | null {
+  const impb = IMPB_RE.exec(number);
+  if (impb) return { carrier: "usps", id: impb[1] };
+  if (USPS_22_RE.test(number)) return { carrier: "usps", id: number };
+  return null;
+}
 
 /**
  * Company-string → template carrier. Ordered: the FIRST match wins, so
@@ -417,7 +491,29 @@ export interface TrackingLinkResult {
  */
 export function resolveTrackingLinkUrl(input: TrackingLinkInput): TrackingLinkResult {
   const number = (input.number ?? "").trim();
+
   const carrier = identifyTrackingLinkCarrier(input.company, input.url);
+
+  // Rule 0 — the number's own format OVERRIDES the carrier match, but only
+  // where the matched carrier demonstrably cannot resolve that number.
+  //
+  // A `420…` IMpb or a bare 22-digit USPS number is a USPS-network parcel
+  // whatever the label says. `dhl` (DHL Express) resolves neither, which is
+  // the reported empty page. `dhl_ecommerce` DOES resolve them — browser-
+  // verified on its own webtrack host, with richer scan history than USPS
+  // gives — so it is deliberately NOT overridden here.
+  //
+  // Narrow on purpose: an override is only justified by a template that is
+  // known-wrong for this number, never by a general preference for USPS.
+  // See `routeByNumberFormat` for the measured prod scale.
+  const byFormat = isPlausibleIdentifier(number) ? routeByNumberFormat(number) : null;
+  if (byFormat && (carrier === null || CANNOT_RESOLVE_USPS_NETWORK.has(carrier))) {
+    return {
+      url: TEMPLATES[byFormat.carrier](encodeURIComponent(byFormat.id)),
+      source: "canonical",
+      carrier: byFormat.carrier,
+    };
+  }
 
   if (carrier && isPlausibleIdentifier(number)) {
     return {

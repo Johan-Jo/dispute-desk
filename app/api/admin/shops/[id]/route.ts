@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { computeStoreRevenue } from "@/lib/admin/storeRevenue";
+import { getAdminSessionUser } from "@/lib/admin/auth";
 
 export const runtime = "nodejs";
 
@@ -56,4 +57,90 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
 
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE — permanently purge a shop and every row belonging to it.
+ *
+ * For clearing dev stores, our own test installs and app-review throwaways
+ * out of the admin list. This is a REAL delete, not an uninstall flag: the
+ * merchant has to install the app again, and nothing is recoverable.
+ *
+ * The work happens inside the `admin_purge_shop` SQL function rather than
+ * here, for two reasons:
+ *
+ *   1. **Atomicity.** A loop of PostgREST deletes is not a transaction — a
+ *      failure halfway leaves a half-erased shop. That is precisely how the
+ *      GDPR `shop/redact` handler fails today.
+ *   2. **The append-only tables.** `audit_events` and `dispute_events` carry
+ *      BEFORE DELETE triggers that refuse every delete. The function opts in
+ *      via a transaction-scoped flag those triggers recognise; ordinary
+ *      traffic still cannot delete or update either table.
+ *
+ * Requires `?confirm=<shop_domain>` matching the row exactly. The shop being
+ * deleted is chosen from a list of similar-looking myshopify domains, and an
+ * id in a URL is not something a human can eyeball — so the caller has to
+ * name the shop it means.
+ */
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  // Defence in depth: middleware already gates /api/admin/*, but this is the
+  // most destructive route in the app, so it re-checks rather than trusting
+  // an upstream matcher that a future refactor might narrow.
+  const admin = await getAdminSessionUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const sb = getServiceClient();
+  const { data: shop } = await sb
+    .from("shops")
+    .select("id, shop_domain")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!shop) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const confirm = req.nextUrl.searchParams.get("confirm");
+  if (confirm !== shop.shop_domain) {
+    return NextResponse.json(
+      {
+        error: "Confirmation does not match",
+        detail: `Pass ?confirm=${shop.shop_domain} to purge this shop.`,
+      },
+      { status: 400 },
+    );
+  }
+
+  // Logged BEFORE the purge: the shop's own audit rows are about to be
+  // deleted along with everything else, so an audit row written after the
+  // fact would have nothing to attach to. This one is written against the
+  // shop and dies with it — the durable record is the server log below.
+  await logAuditEvent({
+    shopId: id,
+    actorType: "system",
+    eventType: "admin_shop_purge_requested",
+    eventPayload: { shop_domain: shop.shop_domain, admin_email: admin.email },
+  });
+
+  const { data, error } = await sb.rpc("admin_purge_shop", { p_shop_id: id });
+
+  if (error) {
+    console.error("[admin] shop purge failed", {
+      shopId: id,
+      shopDomain: shop.shop_domain,
+      message: error.message,
+    });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // The surviving record of the deletion, since every table that could have
+  // held one has just been emptied.
+  console.log(
+    `[admin] shop purged: ${shop.shop_domain} by ${admin.email}`,
+    JSON.stringify(data),
+  );
+
+  return NextResponse.json({ ok: true, purged: data });
 }

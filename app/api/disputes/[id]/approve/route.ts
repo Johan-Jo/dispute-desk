@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
@@ -17,8 +18,9 @@ export const runtime = "nodejs";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -43,7 +45,7 @@ export async function POST(
   if (!dispute.needs_review) {
     return NextResponse.json(
       { error: "Dispute is not in the review queue" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -55,7 +57,8 @@ export async function POST(
   await logAuditEvent({
     shopId: dispute.shop_id,
     disputeId: id,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "rule_overridden",
     eventPayload: { action: "approved_from_review_queue" },
   });

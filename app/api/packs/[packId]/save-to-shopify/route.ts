@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -22,8 +23,9 @@ export const runtime = "nodejs";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ packId: string }> }
+  { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -36,7 +38,9 @@ export async function POST(
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, status, completeness_score, submission_readiness")
+    .select(
+      "id, shop_id, dispute_id, status, completeness_score, submission_readiness",
+    )
     .eq("id", packId)
     .eq("shop_id", shopId)
     .single();
@@ -55,9 +59,10 @@ export async function POST(
       {
         error: "PACK_NOT_READY",
         status: pack.status,
-        message: "Pack is not in a submittable state. Only successfully built packs can be submitted.",
+        message:
+          "Pack is not in a submittable state. Only successfully built packs can be submitted.",
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -67,19 +72,29 @@ export async function POST(
 
   if (readiness === "blocked") {
     return NextResponse.json(
-      { error: "PACK_BLOCKED", message: "Submission is blocked — required evidence missing." },
-      { status: 422 }
+      {
+        error: "PACK_BLOCKED",
+        message: "Submission is blocked — required evidence missing.",
+      },
+      { status: 422 },
     );
   }
 
   if (score === 0) {
     return NextResponse.json(
-      { error: "PACK_INCOMPLETE", message: "Pack has no evidence collected. Add evidence before saving to Shopify." },
-      { status: 422 }
+      {
+        error: "PACK_INCOMPLETE",
+        message:
+          "Pack has no evidence collected. Add evidence before saving to Shopify.",
+      },
+      { status: 422 },
     );
   }
 
-  const parsed = await parseJsonBody<{ confirmLowCompleteness?: boolean; confirmWarnings?: boolean }>(req);
+  const parsed = await parseJsonBody<{
+    confirmLowCompleteness?: boolean;
+    confirmWarnings?: boolean;
+  }>(req);
   if (parsed instanceof NextResponse) return parsed;
   const body = parsed;
 
@@ -90,8 +105,14 @@ export async function POST(
 
   if ((hasWarnings || hasLowScore) && !confirmed) {
     return NextResponse.json(
-      { error: "PACK_HAS_WARNINGS", score, readiness, message: "High-impact evidence is missing. Send confirmWarnings: true to proceed." },
-      { status: 422 }
+      {
+        error: "PACK_HAS_WARNINGS",
+        score,
+        readiness,
+        message:
+          "High-impact evidence is missing. Send confirmWarnings: true to proceed.",
+      },
+      { status: 422 },
     );
   }
 
@@ -105,15 +126,20 @@ export async function POST(
   // evidence pack `saving`, so a safe-but-draft (or PDF-less) candidate used
   // to put the UI into a save-in-progress state for a job the worker was
   // always going to refuse.
-  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string, {
-    requireFileable: true,
-  });
+  const preflight = await preflightLatestCandidate(
+    sb,
+    pack.dispute_id as string,
+    {
+      requireFileable: true,
+    },
+  );
   if (preflightBlocks(preflight)) {
     await logAuditEvent({
       shopId: pack.shop_id,
       disputeId: pack.dispute_id,
       packId,
-      actorType: "merchant",
+      actorType: auditActor.actorType,
+      actorId: auditActor.actorId,
       eventType: "defence_package_blocked_unsafe_claim",
       eventPayload: {
         packageId: preflightCandidate(preflight)?.id ?? null,
@@ -145,7 +171,7 @@ export async function POST(
   if (!dispute?.dispute_evidence_gid) {
     return NextResponse.json(
       { error: "No dispute_evidence_gid found. Cannot save to Shopify." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -168,7 +194,8 @@ export async function POST(
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "evidence_saved_to_shopify",
     eventPayload: { trigger: "manual", queued: true },
   });

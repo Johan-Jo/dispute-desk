@@ -387,6 +387,13 @@ export function useDisputeWorkspace(disputeId: string) {
   const fetchAll = useCallback(async () => {
     const res = await fetch(
       `/api/disputes/${disputeId}/workspace?locale=${encodeURIComponent(locale)}`,
+      // NEVER from cache. This response decides whether the merchant is shown
+      // a case strength, a completeness score and a send button, or the
+      // "not assessed" banner instead — and Shopify Admin keeps this iframe
+      // alive for hours, so a cached copy can outlive the pack it describes.
+      // The refetch-on-focus below is pointless if the browser answers it from
+      // the same stale entry.
+      { cache: "no-store" },
     );
     if (!res.ok) {
       setClientState((s) => ({ ...s, loading: false }));

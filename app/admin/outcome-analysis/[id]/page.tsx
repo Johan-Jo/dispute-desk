@@ -3,6 +3,13 @@ import Link from "next/link";
 import { ArrowLeft, Microscope } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  actionClassLabel,
+  categoryLabel,
+  categorySoWhat,
+  confidenceLabel,
+  severityLabel,
+} from "@/lib/postOutcome/labels";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getReviewState } from "@/lib/postOutcome/reviews";
 import { ReviewControls } from "./ReviewControls";
@@ -181,10 +188,21 @@ export default async function AnalysisDetailPage({
                     {f.title}
                   </div>
                   <div className="text-xs text-[#64748B] whitespace-nowrap">
-                    {f.confidence} · {f.severity} · {f.action_class}
+                    {confidenceLabel(f.confidence)} · {severityLabel(f.severity)} ·{" "}
+                    {actionClassLabel(f.action_class)}
                   </div>
                 </div>
+                {/* Name the category in English before the description, so the
+                    finding reads as a statement rather than a taxonomy code. */}
+                <div className="text-xs font-medium text-[#475569] mt-1">
+                  {categoryLabel(f.category)}
+                </div>
                 <p className="text-sm text-[#334155] mt-2">{f.description}</p>
+                {categorySoWhat(f.category) && (
+                  <p className="text-xs text-[#475569] mt-1 italic">
+                    {categorySoWhat(f.category)}
+                  </p>
+                )}
                 <p className="text-xs text-[#64748B] mt-2">
                   <strong>Observed:</strong> {f.observed_fact}
                 </p>

@@ -346,7 +346,20 @@
     "buildingMonitoringDesc": "DisputeDesk is working",
     "underReviewCard": "Under review",
     "underReviewCardDesc": "Response sent",
-    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)"
+    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)",
+    "merchantMessage": {
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "cta": "Send",
+      "dismiss": "Dismiss",
+      "subtitle": "Leave an email or phone number and we'll call you back within one business day.",
+      "helper": "Fill in email or phone — either one is enough.",
+      "error": "That didn't go through. Please try again.",
+      "thanksTitle": "Thank you — we'll be in touch",
+      "thanksBody": "Thanks! We'll be in touch within one business day.",
+      "sending": "Sending…",
+      "nameLabel": "Name"
+    }
   },
   "disputes": {
     "title": "Disputes",
@@ -801,8 +814,8 @@
         "insufficient": "No evidence available."
       },
       "fatalLoss": {
-        "refund_issued": "A refund was already issued for this order — the bank will treat this as a confession of liability, so the case cannot win as-is.",
-        "inr_no_fulfillment": "The order was never fulfilled and the dispute reason is item-not-received — there is no factual basis to defend the charge."
+        "refund_issued": "A refund covering this charge was already issued, so the bank will read a defence as an admission that the money is owed. Nothing is needed from you — let this one close. If the refund was issued BEFORE the customer disputed, tell us: a pre-dispute credit is one of the strongest arguments there is, and we will rebuild the defence around it.",
+        "inr_no_fulfillment": "The customer says the item never arrived, and this order has no shipment on record — so there is nothing factual to argue with. If it DID ship, add the tracking number and we will rebuild the defence automatically. If it never shipped, check your email for what to do next — the options depend on whether this is still an inquiry or already a chargeback."
       },
       "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed.",
       "returnedToSender": {
@@ -1544,6 +1557,7 @@
         "notEnoughEvidenceBody": "The classifier did not find any bank-eligible approved facts for this dispute. Upload additional supporting documents or wait for the next sync to include freshly collected evidence.",
         "validationFailedFallback": "Validation found unsupported claims in the generated narrative.",
         "rebuildFailedTitle": "Latest rebuild didn't pass our checks",
+        "rebuildFailedTitleFiled": "A newer version was not filed",
         "rebuildFailedBodyFiled": "Defence package v{bankVersion} is filed with Shopify and still stands. A newer version was generated but did not pass our evidence checks, so it was not filed. No action is needed — regenerate if you'd like to try again.",
         "rebuildFailedBodyUnfiled": "The defence package did not pass our evidence checks, so nothing has been filed for this dispute. Regenerate it before the deadline.",
         "newEvidenceAvailableBody": "Recent updates (uploads, status changes, or new auto-collected signals) aren't reflected in this draft yet. Click Regenerate below to build a new version that includes them — the rebuild takes 2–3 minutes and runs in the background.",
@@ -1855,7 +1869,7 @@
         "analysisDeferredBody": "Conversations were matched, but evidence analysis is paused and will resume shortly. Matched tickets remain visible below.",
         "reconnectRequiredTitle": "Reconnect Gorgias",
         "reconnectRequiredBody": "Your Gorgias connection is no longer authorized. Reconnect it in Settings to resume communication evidence.",
-        "takingLongerNote": "This is taking longer than expected. It may be waiting behind other work — you can refresh to check for an update."
+        "takingLongerNote": "This is taking longer than usual. It runs in the background and will finish on its own — refresh to check for an update."
       },
       "staleBanner": {
         "title": "Your defence package is out of date",
@@ -1969,8 +1983,16 @@
       "notAssessed": {
         "title": "Not assessed yet",
         "bodyAbsent": "DisputeDesk has not assessed this case yet, so there is no case strength or completeness to show. It is assessed automatically once the evidence pack is built — nothing is needed from you.",
-        "bodyStale": "The evidence on this case changed after it was last assessed, so the previous case strength and completeness no longer describe it. DisputeDesk reassesses it automatically — nothing is needed from you.",
+        "bodyStale": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence. DisputeDesk reassesses the case automatically before the response deadline — nothing is needed from you.",
         "actionsHidden": "Sending is unavailable until this case has been assessed."
+      },
+      "stale": {
+        "title": "Assessed under an earlier version",
+        "body": "This case was assessed under an earlier version of our scoring, so the previous case strength and completeness no longer apply. Nothing has changed about your evidence."
+      },
+      "unknown": {
+        "title": "Assessment unavailable",
+        "body": "We could not read this case's assessment just now. Nothing about your evidence has changed — try again shortly."
       }
     },
     "deadlineOnly": {
@@ -1991,7 +2013,8 @@
       "reviewItem": {
         "generic": "This item needs your confirmation before it can be used."
       }
-    }
+    },
+    "multipleOnOrder": "{index} of {total} on this order"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",

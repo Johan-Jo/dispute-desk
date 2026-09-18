@@ -101,8 +101,34 @@ export type SubmissionConfirmationSource =
 
 /** How the package was tied to the saved platform evidence (plan §4.4 cond. 2). */
 export const PACKAGE_EVIDENCE_TIES = [
-  /** `shopify_response.evidenceGid` matches `disputes.dispute_evidence_gid`. */
+  /**
+   * The dispute's evidence record holds THIS package's uploaded file
+   * (`disputeEvidence.uncategorizedFile.id` === `shopify_response.fileGid`).
+   *
+   * The strongest tie there is, and the only one that discriminates between
+   * versions. Shopify keeps one mutable evidence record per dispute and each
+   * save replaces its file, so the file GID names the package the issuer
+   * actually holds.
+   */
+  "EVIDENCE_FILE_MATCH",
+  /**
+   * `shopify_response.evidenceGid` matches `disputes.dispute_evidence_gid`.
+   *
+   * Weaker than it looks: the evidence GID identifies the DISPUTE's evidence
+   * record, so every package saved against a dispute carries the same one
+   * (verified on prod — versions 2, 3 and 5 of one dispute all matched). It
+   * confirms this package was saved to this dispute, and nothing about which
+   * version survived.
+   */
   "EVIDENCE_GID_MATCH",
+  /**
+   * Several submitted packages, no captured file GID, but the saves can be
+   * ordered and the last verified one is what the evidence record holds.
+   *
+   * Inference from Shopify's replace-on-save semantics rather than a recorded
+   * fact, so it is ranked below a file match and named differently.
+   */
+  "LATEST_VERIFIED_SAVE",
   /** Several submitted packages; the forwarded one is not identifiable. */
   "AMBIGUOUS_MULTIPLE_PACKAGES",
   "NONE",

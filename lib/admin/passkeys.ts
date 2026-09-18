@@ -61,13 +61,64 @@ export function getRpConfig(req: NextRequest): RpConfig {
     req.headers.get("host") ??
     req.nextUrl.host;
   const proto =
-    req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+    req.headers.get("x-forwarded-proto") ??
+    req.nextUrl.protocol.replace(":", "");
 
   const rpID = envRpId || host.split(":")[0];
   const origin = envOrigin || `${proto}://${host}`;
 
   return { rpID, origin, rpName: "DisputeDesk Admin" };
 }
+
+// ── Transport policy ───────────────────────────────────────────────────────
+
+/**
+ * Transports we advertise to the browser. Deliberately excludes `hybrid`.
+ *
+ * Chrome on Windows reports Windows Hello credentials as `["hybrid","internal"]`
+ * because Windows *can* also proxy a phone. If we echo `hybrid` back in
+ * `allowCredentials`, Chrome opens its cross-device sheet (the Google / "use a
+ * phone" picker) alongside the Windows Hello dialog — two prompts for what is
+ * meant to be a single device-local check. Admin access is intentionally bound
+ * to the platform authenticator on an enrolled machine, so `hybrid` is dropped
+ * both when storing a new credential and when listing existing ones.
+ */
+const ALLOWED_TRANSPORTS = ["internal", "usb", "nfc", "ble"] as const;
+
+export function filterTransports(
+  transports: string[] | null | undefined,
+): string[] | null {
+  if (!transports) return null;
+  const kept = transports.filter((t) =>
+    (ALLOWED_TRANSPORTS as readonly string[]).includes(t),
+  );
+  // Empty means "no usable hint" — omit rather than send [], which some browsers
+  // read as "no transport works".
+  return kept.length > 0 ? kept : null;
+}
+
+// ── WebAuthn UI hints ──────────────────────────────────────────────────────
+
+/**
+ * WebAuthn `hints` telling the browser which authenticator UI to surface.
+ *
+ * `client-device` = the platform authenticator built into this machine
+ * (Windows Hello / Touch ID / Face ID).
+ *
+ * **Why this and not `allowCredentials.transports`:** transports are only a
+ * *hint about how to reach a credential*, and Chrome deliberately keeps
+ * offering its cross-device "use a phone" sheet regardless of what we list —
+ * a user whose laptop passkey is unavailable needs that fallback. Filtering
+ * `hybrid` out of transports therefore did NOT remove the second prompt
+ * (shipped 2026-09-05, no observable change). `hints` requests a preference
+ * for the local device; it does not guarantee a single native dialog. Chrome
+ * documents that Windows-controlled UI may ignore these hints entirely.
+ *
+ * Typed + spread manually because @simplewebauthn/server@13 does not model
+ * `hints` yet; @simplewebauthn/browser@13 spreads the whole options object
+ * into `navigator.credentials.get()`, so it reaches Chrome intact.
+ */
+export const CLIENT_DEVICE_HINTS = ["client-device"] as const;
 
 // ── admin_passkeys queries ─────────────────────────────────────────────────
 
@@ -83,7 +134,7 @@ export async function listPasskeys(userId: string): Promise<StoredPasskey[]> {
     credentialId: r.credential_id as string,
     publicKey: fromPgHex(r.public_key as string),
     counter: Number(r.counter ?? 0),
-    transports: (r.transports as string[] | null) ?? null,
+    transports: filterTransports(r.transports as string[] | null),
     friendlyName: (r.friendly_name as string | null) ?? null,
   }));
 }
@@ -108,7 +159,7 @@ export async function getPasskeyByCredentialId(
     credentialId: data.credential_id as string,
     publicKey: fromPgHex(data.public_key as string),
     counter: Number(data.counter ?? 0),
-    transports: (data.transports as string[] | null) ?? null,
+    transports: filterTransports(data.transports as string[] | null),
     friendlyName: (data.friendly_name as string | null) ?? null,
   };
 }
@@ -127,7 +178,7 @@ export async function savePasskey(input: {
     credential_id: input.credentialId,
     public_key: toPgHex(input.publicKey),
     counter: input.counter,
-    transports: input.transports,
+    transports: filterTransports(input.transports),
     friendly_name: input.friendlyName,
   });
   if (error) throw new Error(`Failed to store passkey: ${error.message}`);
@@ -211,6 +262,22 @@ export async function revokePasskey(
     .from("admin_passkeys")
     .delete()
     .eq("id", id)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  return data != null;
+}
+
+/** Revoke a credential by WebAuthn credential ID after replacing it. */
+export async function revokePasskeyByCredentialId(
+  userId: string,
+  credentialId: string,
+): Promise<boolean> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .delete()
+    .eq("credential_id", credentialId)
     .eq("user_id", userId)
     .select("id")
     .maybeSingle();

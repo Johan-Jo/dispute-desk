@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
@@ -13,8 +14,9 @@ export const runtime = "nodejs";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ packId: string }> }
+  { params }: { params: Promise<{ packId: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { packId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -45,13 +47,11 @@ export async function POST(
   await logAuditEvent({
     shopId: pack.shop_id,
     packId: pack.id,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType: "job_queued",
     eventPayload: { jobId, jobType: "render_pdf" },
   });
 
-  return NextResponse.json(
-    { jobId, status: "queued" },
-    { status: 202 }
-  );
+  return NextResponse.json({ jobId, status: "queued" }, { status: 202 });
 }

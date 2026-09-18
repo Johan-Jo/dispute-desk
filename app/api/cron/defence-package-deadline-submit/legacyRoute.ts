@@ -38,6 +38,10 @@ import {
   parseFinalizeRpcResult,
 } from "@/lib/defence/finalizeRpc";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import {
+  deadlineWindow,
+  SUBMIT_WINDOW_MARGIN_MS,
+} from "@/lib/cron/deadlineWindow";
 
 
 interface Summary {
@@ -74,14 +78,14 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
 
   const sb = getServiceClient();
 
-  // "Today" boundaries in UTC. We scan for due_at within the next 24h
-  // (i.e. due today or before tomorrow's 08:00 UTC) so the morning cron
-  // catches deadlines that fall later the same day.
+  // ROLLING window from now — see `lib/cron/deadlineWindow.ts`. A calendar-day
+  // window could never reach a deadline earlier than this cron's own hour until
+  // the run AFTER it had expired.
   const now = new Date();
-  const startOfToday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0),
+  const { from: windowFrom, to: windowTo } = deadlineWindow(
+    now,
+    SUBMIT_WINDOW_MARGIN_MS,
   );
-  const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
 
   // Disputes still awaiting evidence submission, with deadline today.
   //
@@ -115,8 +119,8 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
     .select(
       "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, normalized_status, review_state",
     )
-    .gte("due_at", startOfToday.toISOString())
-    .lt("due_at", endOfToday.toISOString())
+    .gte("due_at", windowFrom.toISOString())
+    .lt("due_at", windowTo.toISOString())
     .is("evidence_saved_to_shopify_at", null)
     .or(
       `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")}),review_state.eq.approved`,

@@ -7,7 +7,10 @@ import { getServiceClient } from "@/lib/supabase/server";
  * whenever coverage, fatal-loss or risk-weakness fired. It now projects what
  * the build path persisted and computes nothing. */
 import { extractShopId } from "@/lib/middleware/extractShopId";
-import { assessmentSnapshotUsability } from "@/lib/evidence/model/assessmentSnapshot";
+import {
+  assessmentSnapshotUsability,
+  resolveDisplayStrengthOverall,
+} from "@/lib/evidence/model/assessmentSnapshot";
 import {
   gatherPresentations,
   type DisputeRowFacts,
@@ -227,22 +230,29 @@ export async function GET(req: NextRequest) {
        * `?strength=strong` and then rendered as unassessed. A filter and a
        * display disagreeing about one row is worse than either being wrong
        * alone — the merchant filters to Strong and gets a list of blanks. */
-      .select("dispute_id, created_at, rebuild_pending, pack_json->case_assessment")
+      .select(
+        "dispute_id, created_at, rebuild_pending, saved_to_shopify_at, pack_json->case_assessment, pack_json->case_strength",
+      )
       .eq("shop_id", shopId)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
     const latestOverall = new Map<string, string | null>();
     for (const p of strengthPacks ?? []) {
       if (!p.dispute_id || latestOverall.has(p.dispute_id)) continue;
-      // ONE predicate, shared with the pill below. An unusable snapshot
-      // contributes `null`, which matches no strength filter.
-      const usability = assessmentSnapshotUsability({
-        snapshot: (p as { case_assessment?: unknown }).case_assessment,
-        rebuildPending: (p as { rebuild_pending?: unknown }).rebuild_pending,
-      });
+      // ONE resolver, shared with the pill below — including its filed-pack
+      // recovery. A dispute whose band the list RENDERS must also be findable
+      // by the filter, or we recreate the exact divergence this predicate was
+      // introduced to end (filter to Strong, get a list of blanks) with the
+      // sign flipped: a visible Strong pill that `?strength=strong` misses.
+      // A dispute with no band contributes `null` and matches nothing.
       latestOverall.set(
         p.dispute_id,
-        usability.usable ? usability.strength.overall : null,
+        resolveDisplayStrengthOverall({
+          snapshot: (p as { case_assessment?: unknown }).case_assessment,
+          rebuildPending: (p as { rebuild_pending?: unknown }).rebuild_pending,
+          legacyCaseStrength: (p as { case_strength?: unknown }).case_strength,
+          savedToShopifyAt: (p as { saved_to_shopify_at?: unknown }).saved_to_shopify_at,
+        }),
       );
     }
     const matchingIds: string[] = [];
@@ -368,7 +378,10 @@ export async function GET(req: NextRequest) {
     const { data: csPacks } = await sb
       .from("evidence_packs")
       .select(
-        "id, dispute_id, status, created_at, rebuild_pending, pack_json->case_assessment",
+        // `saved_to_shopify_at` + the legacy summary are selected so a FILED
+        // pack can still state the band it carried when it was filed. See
+        // `resolveDisplayStrengthOverall`.
+        "id, dispute_id, status, created_at, rebuild_pending, saved_to_shopify_at, pack_json->case_assessment, pack_json->case_strength",
       )
       .in("dispute_id", disputeIds)
       .not("status", "in", "(failed,queued,building)")
@@ -395,21 +408,39 @@ export async function GET(req: NextRequest) {
        * A pack with no `case_assessment` is UNASSESSED on this surface. That
        * is the honest answer and the same one the detail page gives; the packs
        * it applies to are the ones PR 3's rebuild exists to refresh. */
-      /* THE SAME PREDICATE THE FILTER USES.
+      /* THE SAME RESOLVER THE FILTER USES.
        *
-       * It answers four questions together — snapshot present, current
-       * assessment shape, current policy, no pending rebuild — because
-       * checking a subset is what let the two surfaces disagree. Both can only
-       * WITHHOLD a band; neither can manufacture one. */
-      const usability = assessmentSnapshotUsability({
+       * For an UNSUBMITTED pack it is exactly the four-question usability
+       * predicate — snapshot present, current assessment shape, current policy,
+       * no pending rebuild — because checking a subset is what let the two
+       * surfaces disagree, and a live case is the one that must not be told a
+       * stale band.
+       *
+       * For a FILED pack it additionally recovers the band the pack carried
+       * when it was filed. Nothing under a submitted pack can move, so that
+       * band is a historical fact rather than a claim about the present. See
+       * `resolveDisplayStrengthOverall`. */
+      const displayOverall = resolveDisplayStrengthOverall({
         snapshot: (p as { case_assessment?: unknown }).case_assessment,
         rebuildPending: (p as { rebuild_pending?: unknown }).rebuild_pending,
+        legacyCaseStrength: (p as { case_strength?: unknown }).case_strength,
+        savedToShopifyAt: (p as { saved_to_shopify_at?: unknown }).saved_to_shopify_at,
       });
-      if (!usability.usable) {
+      if (displayOverall === null) {
         unassessedDisputes.add(p.dispute_id);
         continue;
       }
-      const cs = usability.strength as {
+      /* The SIGNAL COUNTS are read only from a snapshot that passed the strict
+       * predicate. A recovered band is one field; the counts beside it are not
+       * recoverable with the same confidence, and pairing a real band with
+       * invented zeros that looked authoritative would be a worse lie than the
+       * blank we are fixing. The list renders the pill only (the subtitle was
+       * removed in 2026-07), so nothing on this surface reads them. */
+      const strict = assessmentSnapshotUsability({
+        snapshot: (p as { case_assessment?: unknown }).case_assessment,
+        rebuildPending: (p as { rebuild_pending?: unknown }).rebuild_pending,
+      });
+      const cs = (strict.usable ? strict.strength : { overall: displayOverall }) as {
         overall: string;
         strongCount?: number;
         moderateCount?: number;
@@ -424,7 +455,7 @@ export async function GET(req: NextRequest) {
        * than it is precise, which is the safe direction. */
 
       strengthByDispute.set(p.dispute_id, {
-        overall: cs.overall,
+        overall: displayOverall,
         strongCount: cs.strongCount ?? 0,
         moderateCount: cs.moderateCount ?? 0,
         supportingCount: cs.supportingCount ?? 0,

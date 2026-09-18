@@ -346,7 +346,20 @@
     "buildingMonitoringDesc": "O DisputeDesk está trabalhando",
     "underReviewCard": "Em análise",
     "underReviewCardDesc": "Resposta enviada",
-    "winRateDenominatorNote": "ganhas ÷ decididas (ganhas, perdidas, aceitas)"
+    "winRateDenominatorNote": "ganhas ÷ decididas (ganhas, perdidas, aceitas)",
+    "merchantMessage": {
+      "emailLabel": "E-mail",
+      "phoneLabel": "Telefone",
+      "cta": "Enviar",
+      "dismiss": "Fechar",
+      "subtitle": "Deixe um e-mail ou telefone e ligamos de volta dentro de um dia útil.",
+      "helper": "Preencha e-mail ou telefone — basta um.",
+      "error": "Não foi possível enviar. Tente novamente.",
+      "thanksTitle": "Obrigado — entraremos em contacto",
+      "thanksBody": "Obrigado! Entraremos em contacto dentro de um dia útil.",
+      "sending": "A enviar…",
+      "nameLabel": "Nome"
+    }
   },
   "disputes": {
     "title": "Disputas",
@@ -939,6 +952,7 @@
         "notEnoughEvidenceBody": "O classificador não encontrou fatos aprovados elegíveis ao banco para este estorno. Faça upload de documentos de apoio adicionais ou aguarde a próxima sincronização para incluir evidências recém-coletadas.",
         "validationFailedFallback": "A validação encontrou alegações não comprovadas na narrativa gerada.",
         "rebuildFailedTitle": "A última regeneração não passou nas nossas verificações",
+        "rebuildFailedTitleFiled": "Uma versão mais recente não foi apresentada",
         "rebuildFailedBodyFiled": "O pacote de defesa v{bankVersion} está apresentado na Shopify e continua válido. Uma versão mais recente foi gerada, mas não passou nas nossas verificações de evidências, por isso não foi apresentada. Não é preciso fazer nada — regenere se quiser tentar novamente.",
         "rebuildFailedBodyUnfiled": "O pacote de defesa não passou nas nossas verificações de evidências, por isso nada foi apresentado para esta disputa. Regenere-o antes do prazo.",
         "newEvidenceAvailableBody": "Atualizações recentes (uploads, mudanças de status ou novos sinais coletados automaticamente) ainda não estão refletidas neste rascunho. Clique em Regenerar abaixo para construir uma nova versão que as inclua — a reconstrução leva de 2 a 3 minutos e roda em segundo plano.",
@@ -1431,8 +1445,8 @@
         "insufficient": "Nenhuma evidência disponível."
       },
       "fatalLoss": {
-        "refund_issued": "Já foi emitido um reembolso para este pedido — o banco tratará isso como uma confissão de responsabilidade, portanto o caso não pode ser vencido como está.",
-        "inr_no_fulfillment": "O pedido nunca foi cumprido e o motivo da disputa é \"produto não recebido\" — não há base factual para defender a cobrança."
+        "refund_issued": "Já foi emitido um reembolso que cobre esta cobrança, por isso o banco leria uma defesa como admissão de que o valor é devido. Nada é necessário da sua parte — deixe este caso encerrar. Se o reembolso foi emitido ANTES de o cliente contestar, avise-nos: um crédito anterior à contestação é um dos argumentos mais fortes que existem e reconstruiremos a defesa com base nisso.",
+        "inr_no_fulfillment": "O cliente diz que o artigo nunca chegou e este pedido não tem qualquer envio registado — portanto não há factos para argumentar. Se foi enviado, adicione o número de rastreio e reconstruiremos a defesa automaticamente. Se nunca foi enviado, consulte o seu e-mail: os próximos passos dependem de isto ainda ser uma consulta ou já um estorno."
       },
       "creditAlreadyIssued": "Esta transação já foi reembolsada antes de a disputa ser aberta. A resposta mais forte é o próprio reembolso — o titular do cartão já foi reembolsado, portanto nada mais é devido.",
       "returnedToSender": {
@@ -1855,7 +1869,7 @@
         "analysisDeferredBody": "Conversas foram associadas, mas a análise de evidências está pausada e será retomada em breve. Os tickets associados permanecem visíveis abaixo.",
         "reconnectRequiredTitle": "Reconectar o Gorgias",
         "reconnectRequiredBody": "Sua conexão com o Gorgias não está mais autorizada. Reconecte-a nas Configurações para retomar as evidências de comunicação.",
-        "takingLongerNote": "Isto está a demorar mais do que o esperado. Pode estar a aguardar atrás de outras tarefas — atualize para verificar se há novidades."
+        "takingLongerNote": "Isto está a demorar mais do que o habitual. É executado em segundo plano e será concluído automaticamente — atualize para verificar se há novidades."
       },
       "staleBanner": {
         "title": "Seu pacote de defesa está desatualizado",
@@ -1969,8 +1983,16 @@
       "notAssessed": {
         "title": "Ainda sem avaliação",
         "bodyAbsent": "O DisputeDesk ainda não avaliou este caso, por isso não há solidez nem grau de completude para mostrar. É avaliado automaticamente assim que o pacote de provas for criado — não precisa de fazer nada.",
-        "bodyStale": "As provas deste caso mudaram depois da última avaliação, por isso a solidez e a completude anteriores já não o descrevem. O DisputeDesk reavalia-o automaticamente — não precisa de fazer nada.",
+        "bodyStale": "Este caso foi avaliado segundo uma versão anterior da nossa pontuação, por isso a solidez e a completude anteriores já não se aplicam. Nada mudou nas suas provas. O DisputeDesk reavalia o caso automaticamente antes do prazo de resposta — não precisa de fazer nada.",
         "actionsHidden": "O envio não está disponível enquanto este caso não for avaliado."
+      },
+      "stale": {
+        "title": "Avaliado numa versão anterior",
+        "body": "Este caso foi avaliado numa versão anterior da nossa pontuação, pelo que a solidez e a integridade anteriores já não se aplicam. Nada mudou nas suas provas."
+      },
+      "unknown": {
+        "title": "Avaliação indisponível",
+        "body": "Não foi possível ler a avaliação deste caso neste momento. Nada mudou nas suas provas — tente novamente dentro de momentos."
       }
     },
     "deadlineOnly": {
@@ -1991,7 +2013,8 @@
       "reviewItem": {
         "generic": "Este item precisa da sua confirmação antes de poder ser utilizado."
       }
-    }
+    },
+    "multipleOnOrder": "{index} de {total} neste pedido"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banco não pode processar",
