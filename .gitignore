@@ -102,3 +102,10 @@ embedded-app-all-code.txt
 # on every build; committing it would mean the file goes stale every
 # time DefencePackageDocument.tsx or its deps change.
 /scripts/pdf-worker/defence-package-document.bundle.mjs
+tmp/
+
+# Local scratch that is regenerated or sample-only, never shared:
+#   .snapshots/ — scripts/ working snapshots
+#   evidence-basis-sample.pdf — a one-off render kept for eyeballing
+/scripts/.snapshots/
+/evidence-basis-sample.pdf

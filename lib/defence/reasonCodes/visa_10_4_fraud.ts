@@ -92,6 +92,10 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
   ],
   criticalCategories: ["payment_authentication", "billing_match"],
   allowedFactCategories: [
+    // Admitted since `product_description` split out of `order_record`
+    // (2026-09-01). Ranking is unchanged here — only `product_unacceptable`
+    // promotes it — but the fact stays as citable as it was before.
+    "product_listing",
     "payment_authentication",
     "payment_auth",
     "billing_match",

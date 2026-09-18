@@ -80,11 +80,24 @@ describe("resolveAssessmentGate", () => {
     // All three, never a subset. There is no state in which it is correct to
     // hide the band but keep the submit button — each is downstream of the
     // same missing assessment.
+    // `not_assessed` split into absent | stale | unknown (label-fact plan
+    // §3.5) so a previously-assessed case is not told "not assessed yet".
+    // The rule this test guards is unchanged and now holds across all three:
+    // none of them is more permissive than the others.
     const gate = resolveAssessmentGate({ needsRecalculation: true });
-    expect(gate.presence).toBe("not_assessed");
+    expect(gate.presence).toBe("absent");
     expect(gate.mayRenderVerdict).toBe(false);
     expect(gate.mayRenderRecommendation).toBe(false);
     expect(gate.mayOfferFilingAction).toBe(false);
+
+    for (const g of [
+      resolveAssessmentGate({ needsRecalculation: true, recalculationReason: "input_hash_mismatch" }),
+      resolveAssessmentGate({ needsRecalculation: true, readOk: false }),
+    ]) {
+      expect(g.mayRenderVerdict).toBe(false);
+      expect(g.mayRenderRecommendation).toBe(false);
+      expect(g.mayOfferFilingAction).toBe(false);
+    }
   });
 
   it("permits all three when the assessment is current", () => {
@@ -277,5 +290,49 @@ describe("the explicit state is localized in all six locales", () => {
       expect(typeof lookup(cat, gate.titleToken.key)).toBe("string");
       expect(typeof lookup(cat, gate.bodyToken.key)).toBe("string");
     }
+  });
+});
+
+/* ── Forwarded cases do not run assessment vocabulary ─────────────────────
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.2.
+ *
+ * PROD REGRESSION — blume-box 4d4db363 (Order #345812, USD 75), forwarded to
+ * the card network 2026-07-23 with completeness 99. Its pack predates
+ * assessment snapshots, so `resolveAssessmentGate` reports "no assessment" —
+ * correctly. The Evidence tab asked anyway and rendered "Not assessed yet …
+ * nothing is needed from you" plus "Review required before submission" on a
+ * case whose evidence was already with the network.
+ *
+ * 110 forwarded-but-undecided disputes carry a pack in prod; 35 have no
+ * snapshot and render this unconditionally.
+ *
+ * `technical.md:2677` drew the same distinction for DECIDED disputes
+ * ("assessmentPresence.ts is not the bug — the caller was"). This pins the
+ * extension to forwarded ones.
+ */
+describe("a forwarded case is out of our hands", () => {
+  const src = readFileSync(
+    resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts"),
+    "utf8",
+  );
+
+  it("`submitted` joins decided in the out-of-our-hands predicate", () => {
+    expect(src).toMatch(/function isOutOfOurHands/);
+    expect(src).toMatch(/isDecided\(status\)\s*\|\|\s*status === "submitted"/);
+  });
+
+  it("nextStep is gated on that predicate, not on `decided` alone", () => {
+    // The specific regression: `nextStep: decided ? … : !assessed ? not_assessed`
+    // let a forwarded case fall through to the not_assessed branch.
+    expect(src).toMatch(/nextStep:\s*outOfOurHands/);
+    expect(src).not.toMatch(/nextStep:\s*decided\s*\n?\s*\?/);
+  });
+
+  it("the automation pill still keys on `decided`, not the wider predicate", () => {
+    // A forwarded case genuinely has no outcome yet, so `isDecided` remains
+    // correct for the outcome pill. Widening it there would claim a decision
+    // that has not happened.
+    expect(src).toMatch(/automationMode:\s*decided\s*\?\s*null/);
   });
 });

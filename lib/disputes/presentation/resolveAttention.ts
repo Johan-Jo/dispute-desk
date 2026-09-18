@@ -74,8 +74,13 @@ export const MERCHANT_TASK_ATTENTION_REASONS: readonly string[] = [
 ];
 
 export interface AttentionInput {
-  /** `disputes.attention_reason` (meaningful when needs_attention). */
+  /** `disputes.attention_reason` — authoritative on its own. A blocking
+   *  reason is honoured even when `needsAttention` is false, because
+   *  `updateNormalizedStatus` overwrites that boolean without clearing the
+   *  reason (see `resolveAttention` for the incident). */
   attentionReason: string | null;
+  /** `disputes.needs_attention`. Retained for the REQUESTED reasons and as a
+   *  signal in its own right; never a veto over a blocking reason. */
   needsAttention: boolean;
   /** Shop-level integration state: `integrations.status =
    *  'needs_attention'` with `meta.error_code='reconnect_required'` —
@@ -153,7 +158,30 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
   // 2 — blocking: work halted pending the merchant (deadline or not).
   // The specific cause travels with the result so surfaces can label
   // it truthfully (evidence needed vs approval vs billing).
-  const reason = input.needsAttention ? input.attentionReason : null;
+  /* `attention_reason` stands on its own — it is NOT gated on the
+   * `needs_attention` boolean.
+   *
+   * WHY (2026-09-03). The two columns are written together by the pipeline
+   * (pipeline.ts:121-124), but `updateNormalizedStatus.ts:60` later overwrites
+   * `needs_attention` alone, from `deriveNormalizedStatus` — which reads
+   * Shopify status + pack state and knows nothing about `attention_reason`.
+   * So any status sync can flip the boolean to false and leave the reason
+   * orphaned. Measured on prod: 7 rows disagreed this way, 3 of them still
+   * open, including #99413.
+   *
+   * The consequence was silence. `auto_build_off` means the merchant has
+   * automatic evidence building switched off, so NO pack will ever be built —
+   * and this gate discarded it, resolving attention to `none`. The page then
+   * rendered "Building your evidence pack… no action needed from you" over a
+   * dispute where nothing was building and the deadline was running.
+   *
+   * A reason in `BLOCKING_ATTENTION_REASONS` is a statement about the
+   * pipeline's own state, not a notification preference. It is authoritative
+   * whenever present; the boolean is treated as a hint that can be stale, not
+   * a veto. The stale-attention guards above (terminal / transmission
+   * confirmed) still clear it, which is the case the boolean was really
+   * protecting against. */
+  const reason = input.attentionReason;
   const approvalGate =
     input.automationMode === "review" &&
     input.packStatus === "ready" &&
@@ -173,8 +201,16 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
   // "you can add something" state we surface — a CONCRETE, matched Gorgias
   // conversation awaiting approval (gorgias_evidence_ready), not a generic
   // suggestion.
+  /* The REQUESTED reasons stay gated on `needsAttention`, deliberately.
+   * Unlike the blocking set, these are notification-shaped
+   * (`gorgias_evidence_ready`, `review_deadline_approaching`): the boolean is
+   * how a resurfacing cron says "raise this now" and how it is dismissed
+   * again. Un-gating them would resurrect asks the merchant already cleared —
+   * a different bug from the one above, so the narrowing stops here. */
   if (
-    (reason != null && REQUESTED_ATTENTION_REASONS.has(reason)) ||
+    (input.needsAttention &&
+      reason != null &&
+      REQUESTED_ATTENTION_REASONS.has(reason)) ||
     input.gorgiasActionableCount > 0
   ) {
     return { attention: "requested", blockingReason: null, internalIssue };

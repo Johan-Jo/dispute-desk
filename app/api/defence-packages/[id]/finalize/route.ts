@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -30,6 +31,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -41,7 +43,9 @@ export async function POST(
   const sb = getServiceClient();
   const { data: pkg, error } = await sb
     .from("defence_packages")
-    .select("id, dispute_id, shop_id, source_pack_id, version, status, validation_status, pdf_path")
+    .select(
+      "id, dispute_id, shop_id, source_pack_id, version, status, validation_status, pdf_path",
+    )
     .eq("id", id)
     .eq("shop_id", shopId)
     .single();
@@ -97,7 +101,8 @@ export async function POST(
       shopId: pkg.shop_id,
       disputeId: pkg.dispute_id,
       packId: pkg.source_pack_id,
-      actorType: "merchant",
+      actorType: auditActor.actorType,
+      actorId: auditActor.actorId,
       eventType: "defence_package_blocked_unsafe_claim",
       eventPayload: {
         packageId: pkg.id,
@@ -157,14 +162,17 @@ export async function POST(
   // candidates and returns `already_done` only after re-checking revision,
   // version, currency and fileability under the lock.
 
-  const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
-    p_package_id: id,
-    p_expected_revision: contentRevision,
-    p_expected_version: pkg.version,
-    // The merchant Finalize route NEVER enqueues. Approval and filing are
-    // separate steps, and a repeated click must not become a second filing.
-    p_enqueue_save: false,
-  });
+  const { data: rpcData, error: rpcErr } = await sb.rpc(
+    "finalize_defence_package",
+    {
+      p_package_id: id,
+      p_expected_revision: contentRevision,
+      p_expected_version: pkg.version,
+      // The merchant Finalize route NEVER enqueues. Approval and filing are
+      // separate steps, and a repeated click must not become a second filing.
+      p_enqueue_save: false,
+    },
+  );
   if (rpcErr) {
     return NextResponse.json(
       { error: `Finalize failed: ${rpcErr.message}` },
@@ -181,12 +189,17 @@ export async function POST(
   });
 
   if (result.kind === "malformed") {
-    console.error("[defence finalize] malformed RPC reply", result.detail, rpcData);
+    console.error(
+      "[defence finalize] malformed RPC reply",
+      result.detail,
+      rpcData,
+    );
     return NextResponse.json(
       {
         error: "PACKAGE_CHECK_UNAVAILABLE",
         code: "PACKAGE_CHECK_UNAVAILABLE",
-        message: "We could not complete the approval just now. Please try again in a few minutes.",
+        message:
+          "We could not complete the approval just now. Please try again in a few minutes.",
       },
       { status: 503 },
     );
@@ -224,7 +237,8 @@ export async function POST(
         shopId: pkg.shop_id,
         disputeId: pkg.dispute_id,
         packId: pkg.source_pack_id,
-        actorType: "merchant",
+        actorType: auditActor.actorType,
+        actorId: auditActor.actorId,
         eventType: "defence_package_superseded",
         eventPayload: {
           supersededId: result.supersededId,
@@ -239,7 +253,8 @@ export async function POST(
       shopId: pkg.shop_id,
       disputeId: pkg.dispute_id,
       packId: pkg.source_pack_id,
-      actorType: "merchant",
+      actorType: auditActor.actorType,
+      actorId: auditActor.actorId,
       eventType: "defence_package_finalized",
       eventPayload: {
         packageId: id,

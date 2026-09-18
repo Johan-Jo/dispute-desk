@@ -15,8 +15,10 @@
  *     · Outcomes — three rows with colored 40×40 icon boxes
  *       (Won / Lost / Pending).
  *   - Disputes by payment method — progress bars joined from
- *     `shopify_orders.payment_method` (Card / Klarna / wallets),
- *     with an "unmatched" hint for the backfill gap.
+ *     `shopify_orders.payment_method` (Card / PayPal / Klarna /
+ *     wallets), with a "not classified" hint counting the coverage
+ *     gaps (no method recorded, or order not synced) that are held
+ *     out of the split rather than folded into "Other".
  *   - Trend (90d-shaped) — dual-bar chart per bucket
  *     (disputes red + orders gray) with rotated MMM-D axis labels.
  *   - Additional Signals — three cards
@@ -91,7 +93,11 @@ interface ShopRiskProfileResponse {
     google_pay: number;
     shop_pay: number;
     klarna: number;
+    paypal: number;
     other: number;
+    /** Order synced but no payment_method stored. A coverage gap, not
+     *  a method — never charted as a slice of the split. */
+    unknown: number;
     unmatched: number;
   };
   klarnaSubProductBreakdown: {
@@ -300,8 +306,18 @@ export function ShopRiskProfile({ shopId }: Props) {
   ].sort((a, b) => b.count - a.count);
 
   const pm = data.paymentMethodBreakdown;
+  // Only real payment methods form the denominator. `unknown` (order
+  // synced, no method stored) and `unmatched` (order not synced) are
+  // coverage gaps and are reported beside the split, never inside it.
   const totalPaymentMethods =
-    pm.card + pm.apple_pay + pm.google_pay + pm.shop_pay + pm.klarna + pm.other;
+    pm.card +
+    pm.apple_pay +
+    pm.google_pay +
+    pm.shop_pay +
+    pm.klarna +
+    pm.paypal +
+    pm.other;
+  const uncharted = pm.unknown + pm.unmatched;
 
   // Klarna sub-product split (only meaningful when there are Klarna
   // disputes). pay_later — Klarna consumer credit — historically drives
@@ -319,6 +335,7 @@ export function ShopRiskProfile({ shopId }: Props) {
     .sort((a, b) => b.count - a.count);
   const paymentRows = [
     { key: "card", label: "Card", count: pm.card, barClass: "bg-[#1D4ED8]" },
+    { key: "paypal", label: "PayPal", count: pm.paypal, barClass: "bg-[#003087]" },
     { key: "klarna", label: "Klarna", count: pm.klarna, barClass: "bg-[#FFB3C7]" },
     { key: "apple_pay", label: "Apple Pay", count: pm.apple_pay, barClass: "bg-[#0F172A]" },
     { key: "google_pay", label: "Google Pay", count: pm.google_pay, barClass: "bg-[#22C55E]" },
@@ -549,12 +566,22 @@ export function ShopRiskProfile({ shopId }: Props) {
               <CreditCard className="w-4 h-4 text-[#64748B]" />
               Disputes by payment method ({periodVerbose})
             </h3>
-            {pm.unmatched > 0 && (
+            {uncharted > 0 && (
               <span
                 className="text-xs text-[#94A3B8]"
-                title="Disputes whose order isn't in shopify_orders yet (backfill gap). Excluded from the split below."
+                title={[
+                  pm.unknown > 0
+                    ? `${pm.unknown} synced but with no payment method recorded`
+                    : null,
+                  pm.unmatched > 0
+                    ? `${pm.unmatched} whose order isn't in shopify_orders yet (backfill gap)`
+                    : null,
+                  "Both are coverage gaps, not payment methods — excluded from the split below.",
+                ]
+                  .filter(Boolean)
+                  .join(". ")}
               >
-                {pm.unmatched} unmatched
+                {uncharted} not classified
               </span>
             )}
           </div>
@@ -573,8 +600,8 @@ export function ShopRiskProfile({ shopId }: Props) {
             </div>
           ) : (
             <div className="text-sm text-[#64748B]">
-              {pm.unmatched > 0
-                ? "Payment method unavailable — linked orders not yet synced."
+              {uncharted > 0
+                ? "Payment method unavailable — no method recorded on the linked orders."
                 : "No disputes in window."}
             </div>
           )}

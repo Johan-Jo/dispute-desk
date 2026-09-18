@@ -9,6 +9,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { storefrontDomainOf } from "@/lib/shopify/domainHost";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
@@ -71,6 +72,7 @@ import { klarnaInquiryTemplateOverride } from "@/lib/packs/klarnaInquiryTemplate
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 import {
+  assessmentInputHashTerms,
   buildCaseAssessmentSnapshot,
   persistableGateFingerprint,
 } from "@/lib/evidence/model/assessmentSnapshot";
@@ -193,7 +195,7 @@ export async function buildPack(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("id, shop_domain")
+    .select("id, shop_domain, primary_domain")
     .eq("id", pack.shop_id)
     .single();
   if (!shop) throw new Error(`Shop not found: ${pack.shop_id}`);
@@ -366,6 +368,7 @@ export async function buildPack(
     disputeReason: dispute.reason,
     orderGid: dispute.order_gid,
     shopDomain: shop.shop_domain,
+    storefrontDomain: storefrontDomainOf(shop),
     accessToken: decryptAccessToken(session.access_token_encrypted),
     correlationId: opts?.correlationId,
     order,
@@ -1077,6 +1080,24 @@ export async function buildPack(
      * across write and read, so what the reader observes is evidence drift:
      * the thing it can actually see. */
     case_assessment_gates: persistableGateFingerprint(gateAssessment),
+
+    /* DIAGNOSTIC ONLY — the three input-hash terms as they were at write time.
+     *
+     * `freshness.inputHash` is one equality over model + gates + payloads, so a
+     * reader that finds a mismatch cannot say WHICH term moved. On 2026-09-01
+     * that cost a full investigation: a merchant saw "the evidence on this case
+     * changed" on a case whose hash re-derived byte-identically, and there was
+     * nothing on the row to narrow it down.
+     *
+     * Nothing reads these to make a decision — `evaluateFreshness` is still the
+     * only freshness authority, and it still compares the composite. They exist
+     * so the next mismatch names its own cause. Short digests, never the terms
+     * themselves: a term is the case's whole evidence payload. */
+    case_assessment_hash_terms: assessmentInputHashTerms({
+      model: canonicalModel,
+      gates: gateAssessment,
+      payloadSource: caseStrengthPayloadSource,
+    }),
   };
 
   // Update the pack row (dual-write: v1 checklist + v2 checklist).

@@ -48,22 +48,45 @@ export type PaymentMethodBucket =
   | "google_pay"
   | "shop_pay"
   | "klarna"
-  | "other";
+  | "paypal"
+  | "other"
+  | "unknown";
+
+/** Wallet values as Shopify actually emits them on
+ *  `CardPaymentDetails.wallet`, lower-cased by pickPaymentMethod.
+ *
+ *  Shop Pay is the trap: Shopify returns `SHOPIFY_PAY`, so the column
+ *  holds `shopify_pay`, while this classifier used to test only for
+ *  `shop_pay` — every Shop Pay order silently fell through to "other".
+ *  Both spellings map here so neither the stored value nor the product
+ *  name can drift the bucket again. */
+const WALLET_BUCKETS: Record<string, PaymentMethodBucket> = {
+  apple_pay: "apple_pay",
+  google_pay: "google_pay",
+  shopify_pay: "shop_pay",
+  shop_pay: "shop_pay",
+};
 
 /** Map a stored `shopify_orders.payment_method` value to a dashboard
  *  bucket. The column holds families like `card | apple_pay |
- *  google_pay | shop_pay | klarna | <local method name>`. Wallet and
- *  Klarna are named explicitly; every other non-null local method
- *  (ideal, affirm, etc.) folds into "other". */
+ *  google_pay | shopify_pay | klarna | paypal | <local method name>`.
+ *
+ *  Two distinct kinds of "not one of the named buckets" exist, and
+ *  collapsing them is what made this dashboard unreadable:
+ *    - "other"   — a real method we simply don't chart (ideal, affirm).
+ *    - "unknown" — no method was ever derived for the order. That is a
+ *                  coverage gap, not a payment method, and callers must
+ *                  exclude it from the split rather than report it as
+ *                  a method the merchant used. */
 export function classifyPaymentMethod(
   method: string | null | undefined,
 ): PaymentMethodBucket {
-  if (!method) return "other";
-  const m = method.toLowerCase();
+  const m = method?.trim().toLowerCase();
+  if (!m) return "unknown";
   if (m === "card") return "card";
-  if (m === "apple_pay") return "apple_pay";
-  if (m === "google_pay") return "google_pay";
-  if (m === "shop_pay") return "shop_pay";
+  const wallet = WALLET_BUCKETS[m];
+  if (wallet) return wallet;
   if (m.startsWith("klarna")) return "klarna";
+  if (m.startsWith("paypal")) return "paypal";
   return "other";
 }

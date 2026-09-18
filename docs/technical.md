@@ -157,14 +157,43 @@ write fails) returns the original session so the caller's own
 background code funnels through (directly, or via `makeAuthedRequest`) —
 calls `ensureFreshSession` before returning, which covers the large
 majority of Shopify Admin API traffic without touching individual call
-sites. The two remaining direct `loadSession(shopId,"offline")` callers
+sites. The remaining direct `loadSession(shopId,"offline")` callers
 that hit Shopify themselves (`app/api/cron/orders-reconciliation`,
-`app/api/webhooks/shop-update`) call `ensureFreshSession` explicitly.
+`app/api/webhooks/shop-update`, `lib/disputes/syncDisputes.ts`) call
+`ensureFreshSession` explicitly.
+
+> **`syncDisputes` was NOT on this list until 2026-08-30.** It read
+> `shop_sessions` directly and used whatever ciphertext it found,
+> ignoring `expires_at` entirely — see *Session-health watchdog* below
+> for the outage that caused. Any new code path that talks to the Admin
+> API must go through `getShopBackgroundSession`/`makeAuthedRequest`, or
+> call `ensureFreshSession` itself. A raw `.from("shop_sessions")` read
+> feeding a Shopify call is a bug; `tests/unit/sessionHealthWatchdog.test.ts`
+> pins this for `syncDisputes`.
 Belt-and-suspenders: `makeAuthedRequest` detects an auth-invalid response
 (`detectAuthInvalidReason`, shared with `assertNotAuthInvalid`) on an
 expiring-token session and forces exactly one refresh + retry — covers
 clock skew / early Shopify-side invalidation that slips past the
 proactive 5-minute skew window.
+
+### Session-health watchdog (`/api/cron/session-health`)
+
+Hourly at **:20** (`vercel.json`), offset from `sync-disputes` at :00 so every token is renewed *between* syncs. It sweeps every installed shop and:
+
+1. **Refreshes proactively.** Runs each offline session through `ensureFreshSession()`. Tokens live 60 minutes and `needsRefresh()` fires at 5 minutes of headroom, so an hourly sweep renews around mid-life. **A shop with zero Shopify traffic now stays connected on this sweep alone** — previously refresh only ever happened as a side effect of *other* traffic.
+2. **Proves the token works.** One `webhookSubscriptions` query doubles as the liveness probe. `ensureFreshSession` never throws — on failure it logs and returns the *stale* session — so a refresh "succeeding" is not evidence of anything. Only a live 200 is.
+3. **Verifies webhooks against Shopify.** Re-registers any missing `ORDERS_CREATE`/`ORDERS_UPDATED` via `registerOrderWebhooks`, then **re-reads** to confirm it stuck. Registration at install is fire-and-forget (the OAuth callback logs failures and continues), so "we called create once" is never evidence a subscription exists.
+4. **Is loud.** Anything unresolved writes an `audit_events` row (`session_health_alert`) *and* emails ops.
+
+**The outage this closes (2026-08-30, Mein Maison / `6a8848-dd`).** Two silent faults compounded and nothing alerted for ~20 hours:
+
+- Its expiring token hit its 1-hour expiry and **nothing ever refreshed it**, because it received no order webhooks and therefore no traffic on any refresh-carrying path. `syncDisputes` then authenticated with a dead token on ~50% of hourly runs.
+- Those runs still recorded **`succeeded`**: `syncDisputes` *collects* GraphQL errors into `SyncResult.errors` rather than throwing, and the job handler ignored the return value. Vercel showed zero runtime errors throughout.
+- Separately, its `ORDERS_CREATE`/`ORDERS_UPDATED` subscriptions were **missing entirely** (4 of 8 live shops were), so no order data arrived at all — and the dead token made that impossible to even diagnose, since reading subscriptions requires a working token.
+
+Three fixes, each closing one layer: `syncDisputes` now refreshes (cause), the job handler now throws when `errors.length > 0` (why it was invisible), and this watchdog (so neither can recur unnoticed). Pinned by `tests/unit/sessionHealthWatchdog.test.ts`.
+
+**Operator tooling.** `scripts/shopify/check-tokens.mjs` health-checks every shop's stored token against the live API; `scripts/shopify/check-webhooks.mjs` reports actual subscriptions; `scripts/shopify/refresh-session.ts` and `scripts/shopify/repair-order-webhooks.ts` repair one shop or all, using the app's own code paths.
 
 **Migrating the installed base:** the token-exchange route no longer
 skips the exchange when an offline session already exists — it only
@@ -1057,21 +1086,105 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 `/admin/shops/page.tsx` displays a sortable table of installed shops with billing + dispute data.
 
 - **Stats row (top):** 4 cards — Total Shops · Active (green) · Total Disputes · Total MRR (sum of `monthlyRevenueUsd` across active shops, derived from `shops.plan` via `lib/billing/plans.ts → PLANS[plan].price`).
-- **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Actions.
+- **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Last Login (sortable) · Actions.
+- **Domain column shows the REAL storefront domain**, not the myshopify alias — `meinmaison.com`, not `6a8848-dd.myshopify.com`. It reads `shops.primary_domain` via `displayShopDomain()` (`lib/shopify/domainHost.ts`), falling back to `shop_domain` when the column is null. When the two differ, the alias renders beneath in small grey type, because it is still the key every Shopify-side lookup (Admin URLs, Partners) and our own logs are addressed by. See § *Storefront domain (`shops.primary_domain`)*.
+- **Search** matches either domain (`shop_domain` OR `primary_domain`), so ops can type the brand name or the alias.
 - **Filter chips:** All Plans · Scale · Growth · Starter · Free.
 - **Data source:** `/api/admin/shops` returns the shop row plus 4 computed fields per shop:
   - `chargebackRate90d{,Numerator,Denominator,Available}` — single batched `shop_daily_metrics` read for the trailing 90 UTC days, aggregated in JS.
   - `disputeCount` — count of `disputes` per shop_id, batched.
   - `packCount` — count of `evidence_packs` per shop_id, batched.
   - `monthlyRevenueUsd` — `monthlyRevenueForPlan(shop.plan).monthlyUsd`.
-- **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column (matches Figma `shops-admin.tsx:42-49`). Nulls always sink regardless of direction.
+- **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column or the Last Login column (matches Figma `shops-admin.tsx:42-49`); the two sorts are mutually exclusive — activating one clears the other. Nulls always sink regardless of direction.
 - **AdminTable** sortable-header form: `headers` accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
+
+### Last login (`shops.last_login_*`)
+
+Tracks the most recent verified embedded-app page load per shop, for the "Last Login" column above. Before this (migration `20260914120000_shops_last_login.sql`), nothing recorded merchant activity — `shop_sessions` only reflects install time and token-refresh events (offline sessions always carry `user_id = null`).
+
+- **Columns:** `shops.last_login_at` (timestamptz) · `last_login_user_id` (numeric Shopify staff user id, text).
+- **Write path:** `app/(embedded)/app/layout.tsx` runs on every `/app/*` page render (Node runtime). `middleware.ts` forwards the raw `id_token` query param (present on essentially every embedded load — see § *Expiring offline tokens*) as the `x-dd-id-token` header, because the edge runtime has no `crypto.createHmac` to verify it. The layout verifies it via `verifySessionToken()` and calls `lib/shopify/recordLastLogin.ts` — fire-and-forget, never blocks the page render. Skipped entirely under SuperAdmin impersonation (no real Shopify session exists there).
+- **`recordLastLogin` takes `shopDomain`, not `shops.id`.** Middleware's `/app/*` branch never resolves an internal shop id into a header on the normal cookie-authenticated path — only the `/api/*` branch and the impersonation branches set `x-shop-id`. The first cut of this took `shopInternalId` from that header and therefore silently no-op'd on every real merchant page load (shipped and reverted same day, 2026-09-14). The verified token's own `shopDomain` doesn't depend on which middleware branch the request took.
+- **Throttling:** `recordLastLogin()` only writes once per 5 minutes per shop (read-then-maybe-write) so a merchant clicking around the app doesn't hammer `shops` on every navigation. A different `last_login_user_id` within the window still bumps the row, so a staff handoff isn't hidden for up to 5 minutes.
+- **WHEN, not WHO — deliberately.** Resolving `last_login_user_id` to a name needs Shopify's `staffMember` query, gated behind the **`read_users`** scope. That scope was added and then rolled back the same day (migration `20260914170000` drops the `last_login_name` / `last_login_email` columns): adding a scope to the live app changes its consent set and pushes already-installed merchants through a re-auth, and a re-auth landing on the legacy OAuth callback mints a **non-expiring token that Shopify now rejects outright** — killing webhooks, dispute sync, policy ingest and pack builds for that shop (reproduced on dev `surasvenne` while building this). Not a risk worth taking for a display name. Nothing in this path calls the Admin API.
+- **Never a merchant-facing feature** — internal admin only, same trust boundary as the rest of `/admin/shops`.
+
+### Deleting a shop (admin purge)
+
+`DELETE /api/admin/shops/[id]?confirm=<shop_domain>` permanently removes a shop and every row belonging to it. For clearing dev stores, internal test installs and app-review throwaways out of the admin list. **A real delete, not an uninstall flag** — nothing is recoverable and the merchant must install the app again.
+
+- **UI:** trash icon per row on `/admin/shops` (`components/admin/DeleteShopButton.tsx`). The dialog names what will be destroyed and requires the operator to **type the myshopify domain**. The list is full of near-identical names (`6mjjvm-tc`, `xxda51-v1`, `isj-153`), so a plain "Are you sure?" is not a real check against a mis-click. The same typed value is the API's `?confirm=`, so the guard holds server-side too.
+- **Auth:** middleware gates `/api/admin/*` already; the route re-checks `getAdminSessionUser()` anyway, because this is the most destructive endpoint in the app and a future matcher refactor must not silently open it.
+
+#### Why the work lives in SQL (`admin_purge_shop`)
+
+Two reasons, both learned the hard way:
+
+1. **Atomicity.** A loop of PostgREST deletes is not a transaction — a failure halfway leaves a half-erased shop.
+2. **The append-only tables.** `audit_events` and `dispute_events` carry `BEFORE DELETE` triggers that raise `append-only: DELETE not allowed`. Because every per-shop table cascades from `shops`, a plain `delete from shops` hits those triggers and **aborts the whole transaction** (verified on dev 2026-09-06 in a rolled-back transaction).
+
+`admin_purge_shop(uuid)` (migration `20260906170000`) sets `app.allow_append_only_delete` — transaction-scoped via `set_config(..., true)`, so it cannot leak past COMMIT — and the triggers yield to exactly that flag. **Ordinary traffic is unaffected: an unflagged DELETE is still refused, and UPDATE stays forbidden on both tables even with the flag set** (rewriting history is never legitimate; erasing a shop wholesale is). Both properties are covered by the trigger probes recorded above.
+
+The function **discovers its target tables from the FK graph** (`pg_constraint` where `confrelid = shops`) rather than a hardcoded list. A hand-maintained list rots the moment a migration adds a per-shop table — silently, since the new table's rows just survive the purge — and cannot be written correctly by hand anyway: `evidence_items`, `pack_templates` and `integration_secrets` hang off a parent rather than off `shops`, so a plausible hand-written list fails with `column "shop_id" does not exist`. Their rows go via their own `ON DELETE CASCADE` when the parent is removed.
+
+#### Index every `shop_id` FK
+
+Postgres indexes the **referenced** side of a foreign key automatically, never the referencing side. So `delete from shops` must prove no child row still points at it, and a child table with no index on `shop_id` costs a full sequential scan — **once per FK, whether or not the shop has any rows there**.
+
+`fraud_intel_parse_misses` (1371 MB / 6.5M rows) had no such index. Measured on prod 2026-09-06 for a shop with **zero orders** and 194 audit rows:
+
+| step | before | after |
+|---|---|---|
+| `delete from shops` | 6.605 s | 0.027 s |
+| full `admin_purge_shop` | 14.17 s | 0.03 s |
+
+Through the admin UI the purge blew the statement timeout outright (`canceling statement due to statement timeout`). The shop's own deletes took 3 ms — the entire cost was FK validation against tables it had no rows in, which is why an empty shop was as slow as a busy one. Fixed in `20260906190000` for all four unindexed FKs.
+
+**When adding a per-shop table, index its `shop_id`.** It is not optional bookkeeping: without it, that table's full size is added to the cost of deleting *any* shop. To audit, list FKs to `shops` whose referencing column has no leading index:
+
+```sql
+select c.conrelid::regclass::text as tbl, a.attname
+  from pg_constraint c
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+ where c.contype = 'f' and c.confrelid = 'public.shops'::regclass
+   and not exists (select 1 from pg_index i
+                    where i.indrelid = c.conrelid and i.indkey[0] = a.attnum);
+```
+
+#### The two escape hatches
+
+Two transaction-scoped GUCs let privileged paths through the append-only triggers. Ordinary application traffic sets neither, so the immutability invariant is unchanged for every normal request.
+
+| GUC | DELETE | UPDATE | Used by |
+|---|---|---|---|
+| `app.allow_audit_mutation` | yes | yes | E2E fixture teardown (`delete_e2e_fixture_dispute`), ops wipe scripts |
+| `app.allow_append_only_delete` | yes | **no** | `admin_purge_shop` |
+
+The purge flag is deliberately narrower: erasing a shop wholesale is legitimate, rewriting its history never is.
+
+**Do not rewrite `reject_audit_mutation()` with a fresh `create or replace` body.** Migration `20260906170000` did exactly that to add the purge flag and silently dropped the older `app.allow_audit_mutation` branch, breaking `delete_e2e_fixture_dispute` and turning the e2e suite red (caught on the PR, restored in `20260906180000`). Any future change to these triggers must carry **both** branches forward.
+
+#### GDPR `shop/redact`
+
+`app/api/webhooks/shop-redact/route.ts` delegates to `admin_purge_shop`. It previously walked a hardcoded table list with one PostgREST DELETE per table, which **could not complete**: the append-only triggers refused two of those tables, the loop swallowed the error and continued, and the final `shops` delete then failed as well — leaving shops permanently half-redacted while still answering `200`. A purge failure now returns `500` so Shopify retries, rather than hiding an incomplete erasure behind a success.
+
+### Storefront domain (`shops.primary_domain`)
+
+`shops.shop_domain` is the **myshopify alias** — `6a8848-dd.myshopify.com` for a store customers actually reach at `meinmaison.com`. It is the correct key for every Shopify-side call (Admin API host, Admin URLs, Partners, session lookup) and must never be replaced by the storefront domain in those paths. It is a poor *identifier for humans*, which is what ops surfaces need.
+
+`shops.primary_domain` (migration `20260906150000_shops_primary_domain.sql`) stores the storefront's real domain, taken from `Shop.primaryDomain.url` and normalised to a bare lowercase host by `toDomainHost()` in `lib/shopify/domainHost.ts` — normalising at the write keeps the value directly comparable to `shop_domain`, instead of leaving each read site to strip the scheme its own way.
+
+- **Written by** `persistShopCurrency` (`lib/shopify/persistShopCurrency.ts`), alongside `currency_code` and `shop_name`, from the one `fetchShopDetails` call it already makes. Call sites: OAuth callback, embedded token-exchange, and the `shop/update` webhook — so a merchant switching domains propagates on its own.
+- **Nullable and best-effort.** A failed enrichment must never block an install. Every read goes through `displayShopDomain()`, which falls back to `shop_domain`.
+- **A leading `www.` is stripped for DISPLAY only.** Shopify reports `www.blume.com` as that shop's genuine primary domain and the column stores it verbatim — faithful to the source, and still correct if the value is ever used for matching. `displayShopDomain()` renders `blume.com`, because that is how anyone refers to the merchant in a list meant for scanning. Never write the stripped form back. The pages decide whether to show the alias line by comparing the **displayed** value to `shop_domain`, not the raw column.
+- **Equal to the alias when the shop has no custom domain** — that is correct, not a fallback: the myshopify host genuinely *is* that shop's primary domain. The UI collapses to a single line whenever the two match.
+- **Backfill:** `node scripts/backfill-shop-primary-domain.mjs --env-file .env.production.local` (dry-run; add `--apply` to write) fills the column for shops installed before it existed. Uses the stored offline token per `[[reference_merchant_admin_token_and_env_files]]`; skips uninstalled shops and dead tokens with a warning rather than failing the run. It also fills a missing `shop_name` on the same roundtrip.
 
 ### Admin shop detail (`/admin/shops/[id]`, Figma `pages/admin/shop-detail.tsx`)
 
 The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Figma-aligned custom layout:
 
-- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` shop domain + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
+- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` storefront domain (`displayShopDomain()`, with the myshopify alias on a small grey line below when it differs) + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
 - **Risk Profile card** — see next section.
 - **Quick Stats footer:** 3 cards (Monthly Revenue · Evidence Packs · Total Disputes). **Monthly Revenue is the merchant's own store revenue (GMV) over the trailing 30 days** — `sum(shopify_orders.order_total)` in the shop's dominant currency, via `computeStoreRevenue(shopId)` (`lib/admin/storeRevenue.ts`), surfaced by `GET /api/admin/shops/[id]` as `storeRevenue`. This replaced the old subscription-price display (which showed "$0 / Free plan" and read as broken). Packs + disputes are `count(*)`.
 - **Admin Overrides card:** unchanged (plan override, pack limit override, admin notes).
@@ -1093,7 +1206,7 @@ The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Fi
   - Outcomes — three rows with colored 40×40 icon boxes (Won / Lost / Pending) + helper rate. Each row carries a muted `{n} cb · {m} inq` phase suffix (`outcomePhase`) next to its count.
 
   Every reason and outcome row shows the same `{n} cb · {m} inq` phase suffix (via `reasonPhase` / `outcomePhase`), because phase is a first-class dimension of the panel — on an inquiry-heavy shop an un-split count is "mostly inquiries in disguise".
-- **Disputes by payment method (full-width):** progress bars for Card / Klarna / Apple Pay / Google Pay / Shop Pay / Other, sorted largest-first, only rendering non-zero rows. **Nested Klarna sub-product split** (`klarnaSubProductBreakdown`): when there are Klarna disputes, a sub-block breaks them into Pay Later / Pay Now / Slice It / Unspecified, derived from the raw `shopify_orders.payment_method` string (which carries `klarna_pay_later` etc. for orders ingested before GraphQL collapsed it to bare `klarna`; bare `klarna` → *Unspecified*, labelled honestly). Surfaces the higher-risk pay_later share at a glance (pay_later = Klarna consumer credit, historically more chargebacks than pay_now — cay-collective 2026-07: 21 pay_later / 1 slice_it / 44 unspecified among disputes). Data is joined at composition time: for every in-window dispute, `disputes.order_gid` is looked up against `shopify_orders.shopify_order_id` (chunked `IN()` queries) and the stored `shopify_orders.payment_method` family is bucketed via `classifyPaymentMethod`. Disputes whose order isn't in `shopify_orders` yet (backfill gap) are counted as **`unmatched`** and shown as a right-aligned "N unmatched" hint rather than being silently dropped — so the split is honest about coverage. The disputes table itself has no payment method; it lives on `shopify_orders` (migration `20260702130000_shopify_orders_payment_method.sql`).
+- **Disputes by payment method (full-width):** progress bars for Card / PayPal / Klarna / Apple Pay / Google Pay / Shop Pay / Other, sorted largest-first, only rendering non-zero rows. **Nested Klarna sub-product split** (`klarnaSubProductBreakdown`): when there are Klarna disputes, a sub-block breaks them into Pay Later / Pay Now / Slice It / Unspecified, derived from the raw `shopify_orders.payment_method` string (which carries `klarna_pay_later` etc. for orders ingested before GraphQL collapsed it to bare `klarna`; bare `klarna` → *Unspecified*, labelled honestly). Surfaces the higher-risk pay_later share at a glance (pay_later = Klarna consumer credit, historically more chargebacks than pay_now — cay-collective 2026-07: 21 pay_later / 1 slice_it / 44 unspecified among disputes). Data is joined at composition time: for every in-window dispute, `disputes.order_gid` is looked up against `shopify_orders.shopify_order_id` (chunked `IN()` queries) and the stored `shopify_orders.payment_method` family is bucketed via `classifyPaymentMethod`. Three buckets carry "not charted", and **they are deliberately distinct** — collapsing them is what broke this card before 2026-08-29: **`other`** = a real method outside the charted set (iDEAL, Affirm); **`unknown`** = the order is synced but stored no `payment_method`; **`unmatched`** = the dispute's order isn't in `shopify_orders` yet (backfill gap). Only `other` is a payment method, so only `other` enters the percentage split; `unknown` + `unmatched` are summed into a right-aligned "N not classified" hint. Previously `classifyPaymentMethod(null)` returned `"other"`, so a coverage gap was charted as a method the merchant never used — on a PayPal-heavy shop (`6a8848-dd`, 2026-08-29) that read **86.6% "Other"**. The disputes table itself has no payment method; it lives on `shopify_orders` (migration `20260702130000_shopify_orders_payment_method.sql`).
 - **Trend chart (full-width):** dual-bar per bucket — disputes red + orders gray, side-by-side. Bucket plan adapts to period: 30d → 4 weekly buckets, 90d → 13 weekly, 180d → 13 bi-weekly, all → 12 monthly. Axis labels are formatted "MMM D" (e.g. "Apr 3") and render **flat/horizontal** in a row below the bars (compact enough not to need rotation).
 - **Additional Signals (3 cards):**
   - Inquiry ratio — `inquiry / chargeback` ratio formatted as `X.X:1` ("Inquiries per chargeback"), or "—" when chargeback count is zero.
@@ -1247,7 +1360,9 @@ Three tables + columns on `shops`:
   - geography: `country`, **`is_cross_border`**, **`distance_bucket`** (nullable freeform `local|regional|international|long_distance_domestic|…`; persisted at ingest so future cross-border analytics never re-derive from raw addresses)
   - money: `currency`, `order_total`, `payment_gateway`, **`payment_method`**
     - `payment_gateway` is only `paymentGatewayNames[0]` — the top-level gateway, which is `shopify_payments` for virtually every Shopify Payments order and therefore collapses card / Apple Pay / Klarna / other BNPL & local methods into one value.
-    - **`payment_method`** is the actual method family, derived by `pickPaymentMethod` (in `lib/shopify/queries/ordersForBackfill.ts`) from the primary transaction's `paymentDetails` union: `card` | `apple_pay` | `google_pay` | `shop_pay` | a local/BNPL method name | `null`. The local method name is Shopify's `paymentMethodName` verbatim (lower-cased), so BNPL sub-products surface at their real granularity — e.g. Klarna appears as `klarna_pay_later`, `klarna_pay_now`, `klarna_slice_it` (and bare `klarna` on older orders), *not* a single collapsed `klarna`. Group with `payment_method LIKE 'klarna%'` when you want the family total. (Observed on `cay-collective` 2026-07-02: ~50% Klarna across those variants, ~26% card, ~19% Apple Pay, remainder `manual`/`gift_card`/`cash` → `null`.) **Klarna and other BNPL/local methods only surface here** — they come back as `LocalPaymentMethodsPaymentDetails`, *not* `CardPaymentDetails`, yet still report `payment_gateway = shopify_payments`. Mutable (re-ingest updates to the latest observed value); the `risk_*_initial` immutability trigger does not cover it. Both `ORDERS_FOR_BACKFILL_QUERY` and `ORDER_FOR_INGEST_QUERY` select the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment so backfill and webhook ingest derive it identically. Historical rows synced before the column existed are backfilled by `scripts/backfill-payment-method.mjs` (re-reads `paymentDetails` per order; only writes non-null methods, never overwrites with null). Migration: `20260702130000_shopify_orders_payment_method.sql`; index `(shop_id, payment_method) where payment_method is not null`.
+    - **`payment_method`** is the actual method family, derived by `pickPaymentMethod` (in `lib/shopify/queries/ordersForBackfill.ts`) from the primary transaction's `paymentDetails` union, **falling back to the transaction `gateway` when that gateway names the method itself**: `card` | `apple_pay` | `google_pay` | `shopify_pay` | `paypal` | a local/BNPL method name | `null`. The local method name is Shopify's `paymentMethodName` verbatim (lower-cased), so BNPL sub-products surface at their real granularity — e.g. Klarna appears as `klarna_pay_later`, `klarna_pay_now`, `klarna_slice_it` (and bare `klarna` on older orders), *not* a single collapsed `klarna`. Group with `payment_method LIKE 'klarna%'` when you want the family total. (Observed on `cay-collective` 2026-07-02: ~50% Klarna across those variants, ~26% card, ~19% Apple Pay, remainder `manual`/`gift_card`/`cash` → `null`.) **Klarna and other BNPL/local methods only surface here** — they come back as `LocalPaymentMethodsPaymentDetails`, *not* `CardPaymentDetails`, yet still report `payment_gateway = shopify_payments`. Mutable (re-ingest updates to the latest observed value); the `risk_*_initial` immutability trigger does not cover it. Both `ORDERS_FOR_BACKFILL_QUERY` and `ORDER_FOR_INGEST_QUERY` select the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment so backfill and webhook ingest derive it identically. Historical rows synced before the column existed are backfilled by `scripts/backfill-payment-method.mjs` (re-reads `paymentDetails` per order; only writes non-null methods, never overwrites with null). Migration: `20260702130000_shopify_orders_payment_method.sql`; index `(shop_id, payment_method) where payment_method is not null`.
+
+    **Gateway fallback (2026-08-29).** A PayPal or standalone-Klarna transaction is typed as the bare `PaymentDetails` interface — neither union fragment matches, so `paymentMethodName` and `wallet` are both absent and the method stored `null`. On a PayPal-heavy merchant that meant ~86% of orders had no method, and the admin Risk Profile charted them as `"other"`. `pickPaymentMethod` now falls back to the normalized transaction gateway *unless* that gateway is generic. The deny-list is deliberately the small, stable side of the problem: `GENERIC_GATEWAYS` (exact match: `shopify_payments`, `manual`, `bogus`, `checkout`/`checkout_com`, `mollie`, `worldpay`, `authorize_net`, `cybersource`, `nuvei`) plus `ACQUIRER_FAMILIES` (**substring** match: `stripe`, `braintree`, `adyen`) — the substring test is what catches connector spellings like `stripe_connect` and `carro_stripe`, both live in prod, without needing a new entry per integration. Everything else names its own method, so a new BNPL brand classifies correctly the day it appears. `paymentDetails` stays authoritative when present, so Klarna routed *through* Shopify Payments is never relabelled. Existing rows repaired by migration `20260829210000_backfill_payment_method_from_gateway.sql` (idempotent; `payment_method IS NULL` only) — 110,026 PayPal + 20,554 Klarna + 16,050 Amazon Pay rows resolved in prod; 125,063 stayed `null` (genuinely unknown, now reported as `unknown` rather than `other`).
   - status: `financial_status`, `fulfillment_status`, `cancel_reason`
   - **immutable risk snapshot:** `risk_level_initial`, `risk_recommendation_initial`, `risk_provider_initial` — enforced by `shopify_orders_lock_initial_risk_trg` (BEFORE UPDATE trigger raises `check_violation` if any of the three previously-set non-null values change). The trigger permits the `null → first-observed` transition, so backfill can populate the snapshot lazily.
   - fraud protection: `fraud_protection_level` (`fully_protected | partially_protected | not_protected | pending | not_eligible | not_available`)
@@ -1325,7 +1440,7 @@ Bucket semantics that the dashboard tooltip copy commits to:
 - `orders_fulfilled_high_risk`: subset of `orders_high` where `fulfillment_status` ∈ `{FULFILLED, PARTIAL, PARTIALLY_FULFILLED}`. Drives the high-risk fulfillment-rate KPI (critical metric per PRD §13).
 - `fraud_disputes`: count of disputes initiated on this UTC day with `reason = 'FRAUDULENT'` (Shopify's canonical code post the 2026-04 normalization migration).
 - `chargebacks`: subset of total disputes with `phase = 'chargeback'`.
-- `fully_protected_value`: sum of `order_total` where `fraud_protection_level = 'PROTECTED'`.
+- `fully_protected_value`: sum of `order_total` where `fraud_protection_level` is a **covered** status — `COVERED_STATUSES` (`{PROTECTED, ACTIVE}`) **imported from `lib/packs/sources/coverageSource.ts`**, not redeclared. Until 2026-08-29 this was a local `new Set(["PROTECTED"])`, which disagreed with the Coverage Gate: a shop whose Protect orders were all `ACTIVE` saw *"Shopify Protect coverage 0%"* for the very orders the pipeline refuses to auto-save **because** they are covered. Numerator and denominator must never drift again — pinned by `snapshotFraudDailyMetrics.test.ts`.
 - `eligible_protected_value`: sum of `order_total` where `fraud_protection_level` ∈ `{PROTECTED, ACTIVE, PENDING}` — orders Shopify Protect could underwrite if a chargeback lands.
 
 `backfillFraudDailyMetrics(shopId)` is the bulk-backfill path: bounded scan of distinct UTC dates with rows in `shopify_orders`, snapshot each one. Triggered automatically by the order-backfill orchestrator when it flips `historical_import_status = 'complete'` — guarantees the dashboard window selectors have rollup data the moment the banner unlocks.
@@ -1514,11 +1629,142 @@ The event connection is queried **newest-first** (`events(first: 30, sortKey: HA
 
 Direct carrier-API delivery verification for carriers whose events never reach Shopify (`DHL Freight` is not on Shopify's supported-carriers list → zero native events). Module contents: `types.ts` (exhaustive `CarrierLookupResult` discriminated union — never a nullable return; `success` with `deliveryStatus: null` = in-transit, distinct from `not_found`), `registry.ts` (two layers: carrier **identification** from company string/URL hostname vs **adapter resolution** — an identified carrier with no adapter is `unsupported_carrier`, NOT an API failure; unidentifiable = `unknown_carrier`, metrics only), `urlTracking.ts` (parse-only, DHL host allowlist — never fetches merchant tracking URLs; handles encoding/repeated params/malicious input), `dhl.ts` (P0 adapter, Unified Shipment Tracking API, `DHL-API-Key` header auth, both `DHL_API_KEY`+`DHL_API_SECRET` required to enable, 10s timeout, one bounded retry for transient failures, 429 honours `Retry-After`; URL-derived `tracking-id=` beats the stored confirmation number — the DHL Freight trap; a UPS adapter was scoped 2026-07 but shelved — UPS blocks developer accounts for non-EU/non-US companies, so no creds are obtainable; UPS stays identified-but-unsupported and, under always-verify, emits the demand-signal email), `fakeCarrier.ts` (test-only carrier-neutrality adapter), `alerts.ts` (support notifications to `CARRIER_ALERT_EMAIL` ?? `support@disputedesk.app` via the shared `sendAdminEmail`; atomic dedup through the `carrier_alert_touch` RPC — 6h window for operational errors, 7d per merchant+carrier for unsupported-carrier alerts with 10/100/1000 threshold re-alerts; emails carry masked tracking refs (last 4) and URL hostnames only, never full numbers/customer data/payloads; all alerting failures are logged and swallowed — pack builds never break). Classification reuses `classifyDeliveryTimeline` (multilingual pickup/return-aware) with DHL's structured `statusCode` as fallback. Env vars are set on both Vercel projects for production/preview/development.
 
+###### Consolidator identification (2026-09-16)
+
+A prod census found **39.2% of 508,858 tracking rows unidentifiable** — computed by
+replaying the `KNOWN_CARRIERS` regexes in SQL, since identification is derived inside
+`detectCarrier` and never persisted. Top misses: `YunExpress` (104,262 rows),
+`SUNYOU` (4,082), `Canada Post` (5,414), `Intelcom` (3,916), `Stallion Express`
+(3,726), `Purolator`, `CNE Express`. All landed in `unknown_carrier` — metrics only,
+no email — so the gap was invisible until queried.
+
+Ten slugs were added to identification: `yunexpress`, `sunyou`, `cne_express`,
+`fourpx`, `yanwen`, `cainiao`, `canada_post`, `intelcom`, `stallion_express`,
+`purolator`. **None has an adapter**, so they resolve to `unsupported_carrier` and
+emit the demand-signal email (deduped per merchant+carrier per 7 days) instead of
+disappearing. This fixes no case on its own — it makes the next such gap announce
+itself. Pinned in `lib/carriers/__tests__/consolidatorIdentification.test.ts`.
+
+Deliberately NOT identified: `Other` (28,822 rows — a placeholder), empty/null
+(16,609), and `UPS2`/`FEDEX2`/`FEDEXAPI` (fulfilment-service artefacts whose
+tracking-number format was never verified against the real carrier). A wrong
+identification is worse than none: it would route a lookup to the wrong carrier's API.
+
+**A measurement trap worth knowing.** `shopify_fulfillment_trackings.carrier_normalized`
+is **not** an identification flag — it is written only by `lib/carriers/lookupCache.ts`
+*after a successful adapter lookup*. Only 65 rows in prod have it set, all DHL.
+Querying `carrier_normalized IS NULL` reports ~99.99% unidentified on every shop and
+is wrong; it measures "DHL lookups performed".
+
+##### Tracking-app delivery signals (`lib/carriers/trackingApps/`)
+
+Reads delivery state from a tracking app the **merchant** installed, for carriers we
+have no adapter for. Built after dispute `4b81afe1` (#98141): a YunExpress parcel was
+returned to sender on 2026-09-07 and DisputeDesk filed a not-as-described defence
+contradicted by the merchant's own tracking. ParcelPanel had the parcel classified as
+`Exception_008` the whole time — we never read it.
+
+**Why HTTP and not metafields.** `lib/shopify/trackingApps.ts` already supports a
+`parcelpanel` metafield namespace. Probed four orders on `6a8848-dd` via live Admin
+GraphQL: ParcelPanel writes **no metafields at all**. (`Fulfillment` also has no
+`metafields` field in API 2026-01, so that half of the reader can never return
+anything.) The reader was not mis-filtered — it was unfed. The endpoint is the only
+source that holds this.
+
+`parcelPanelMap.ts` — pure mapping. **Latest valid state by event time**, not most
+severe: a parcel can be `Returned` at T1 and redelivered at T2, and severity ranking
+would pin it at `Returned` forever. A tie rule breaks exact `date_carbon` collisions
+only — `Returned` beats `DeliveredToPickup` (one event described twice), but
+`Returned` vs `Delivered` at one timestamp is **refused**, emitting no signal plus a
+conflict rather than a guess. `date_carbon` is compared as a string: the format is
+fixed-width so lexicographic order is chronological, and parsing would invent a
+timezone ParcelPanel does not document.
+
+Two traps pinned in tests: the return event's text reads `"Zugestellt(Rücksendung an
+Absender)"` — *delivered*, with only the parenthetical saying it went back — so
+`Exception_008` gates the phrase match; and `substatus` is blank on 4 of 30 events in
+the real payload, so the mapper never keys solely on it.
+
+`parcelPanelSource.ts` — fetch, with **three outcomes, never two**: `signal`,
+`no_terminal_state` (we looked, it is moving — a fact), `unavailable` (we could not
+find out — an absence of knowledge). Conflating the last two is the original bug in
+new clothes. **A nonexistent tracking number returns 403, and so does a throttled
+request**, so every 403 is `unavailable` and never "no return". A changed response
+shape degrades to `unavailable` too.
+
+**Pacing is measured, not guessed.** Characterised against the live endpoint
+2026-09-16: 12 requests unpaced → throttled; 40 @ 2s → throttled at #29; 40 @ 4s →
+clean. `MIN_REQUEST_INTERVAL_MS` is 5s, below the measured boundary with margin,
+because the budget's shape (window, quota, per-IP vs per-shop) is still unknown. The
+limiter is per shop domain and process-local, so it does not survive a cold start — a
+burst across concurrent lambdas can still throttle, which fails closed by design.
+
+**Provenance and risk.** The endpoint is undocumented, found by reading the minified
+bundle the merchant's tracking page loads, and gated on Origin/Referer (the direct
+`pp-proxy.parcelwill.com/api/` host is 403 regardless). Every probe used one shop —
+whether the path generalises to other ParcelPanel merchants is **unverified**, as we
+have no second ParcelPanel shop.
+
+**Wired into the pack build (2026-09-17).** `resolveShipments.ts`'s
+`unsupported_carrier` branch used to send the demand-signal email and then
+`continue`. It now asks the tracking app before giving up. The email still fires —
+it is about the adapter gap, which is unchanged — but it is no longer the only thing
+that happens.
+
+Three properties, pinned in `lib/carriers/__tests__/trackingAppFallback.test.ts`:
+
+- **`unavailable` produces no map entry at all**, not an entry with `signal: null`
+  that downstream code could read as "checked, nothing there". The shipment is left
+  exactly as it was before this branch existed.
+- **Bounded by count, not time** — `MAX_TRACKING_APP_LOOKUPS_PER_BUILD = 3` per
+  order. The source paces at 5 s per shop domain, so this is a wall-clock bound in
+  disguise (~10 s added to a build). Counting rather than timing is deliberate: a
+  time budget makes a pack's contents depend on how busy the box was, so the same
+  order could yield different evidence on two runs.
+- **Skipped when it cannot work** — no storefront domain, no tracking number, or a
+  carrier that has an adapter.
+
+The storefront host comes from `shops.primary_domain` via `storefrontDomainOf`
+(`lib/shopify/domainHost.ts`), which is deliberately NOT `displayShopDomain`: it
+keeps `www.` (the value is sent as a real Origin/Referer) and returns **null** for a
+shop still on `*.myshopify.com`, where the proxy is unreachable. Null disables the
+lookups cleanly rather than burning a request per shipment on a guaranteed 403.
+
+**A mapping trap found by probing live data, not by reading code.** ParcelPanel's
+`checkpoint_status: "pickup"` does **not** mean "waiting at a pickup point". On order
+#99277 it paired with `OutForDelivery_001` and *"Der Zusteller ist auf dem Weg zu
+Ihnen!"* — the courier is en route. The first implementation read the field name
+literally and elected `DeliveredToPickup` for a parcel merely out for delivery, then
+kept claiming the customer could collect it through two subsequent failed attempts.
+The substatus now decides, and a bare `pickup` checkpoint is terminal only when the
+text says the parcel is actually waiting. Pinned with that payload as a fixture.
+
+**The integration point that nearly got missed.** `lib/carriers/reconcile.ts` now
+exports `isTerminalEvidenceSource`, replacing an inline
+`source.startsWith("carrier_api")` in `fulfillmentSource.ts`. A tracking-app
+`Returned` reconciles correctly and wins the election, but under the old predicate it
+would **still** not have populated the per-shipment `carrierTracking` block — so
+`hasReturnedToSenderShipment` would have stayed false and the gate dark, with the
+right answer one field away. Widened deliberately rather than by disguising a tracking
+app as a carrier API: provenance keeps riding in `trackingSource`, so nothing is
+presented to a bank as a carrier POD. Shopify-native sources are deliberately excluded.
+
+`existingSignalsFor` also now admits a tracking-app `Exception` as `Returned` (it
+previously kept only `Delivered`). Inert on current shops, correct if any app writes
+those metafields.
+
+The returned-to-sender gate itself (`lib/automation/returnedToSender.ts`) was already
+built, in July, for cay-collective #13195 — it caps strength at `weak`, blocks
+auto-submit and argues in its own header why it is not a fatal-loss trigger. Nothing
+about it changed; it had simply never been handed a signal.
+`returnedParcelEndToEnd.test.ts` asserts the whole chain on the real 30-event payload.
+
 ##### Bank-facing tracking links (`lib/carriers/trackingLinkUrl.ts`)
 
 **Never print the merchant's raw tracking URL.** Every tracking link that reaches an issuer — or the merchant — is rebuilt by `resolveTrackingLinkUrl()`, the single owner. Shopify's `fulfillments[].tracking[].url` is written by whatever shipping app the merchant runs, and measured across 349,405 prod rows on 2026-08-14 it is frequently unusable as a citation: 121,851 (35%) plain `http://`; 3,244 with an **empty** identifier (`?tracknum=`, `?tLabels=`); 2,303 with no identifier at all (`https://gtagsm.com/tracking/`, `http://ppxtrack.com`); 21,729 on the retired `wwwapps.ups.com/WebTracking` host. An issuer who follows such a link lands on a blank search box and reads it as *"this merchant has no delivery proof"* — the opposite of what the row asserts.
 
 Resolution order:
+0. **Number format overrides the carrier string** — where the two disagree AND the matched carrier demonstrably cannot resolve the number. A `420` + 5-digit-ZIP + 22-digit **IMpb** barcode, or a bare 22-digit `9…` USPS number, is a USPS-network parcel whoever's name is on the label; for IMpb only the **inner 22 digits** are tracked (the `420`+ZIP prefix is a routing header). Measured prod 2026-09-03: **30,983** rows labelled `DHL` and **5,578** labelled `TechSHIP` carry USPS-network numbers — 36,561 shipments whose bank-facing link was built from the DHL Express template and opened a DHL page with nothing on it (reported by the maintainer against blume-box parcel `420774699261290416102420744039`). The override is scoped by `CANNOT_RESOLVE_USPS_NETWORK` (currently `dhl` alone): `dhl_ecommerce` injects into the same USPS network but resolves those numbers on its own webtrack host with **richer** scan history, so it is deliberately not overridden. A carrier name is a hint; a barcode format is evidence.
 1. **Canonical template** — an identified carrier (company string first, URL host second) plus a plausible tracking number produces the carrier's own deep link (`TEMPLATES` allowlist: UPS `tracknum=`, USPS `TrackConfirmAction?qtc_tLabels1=`, FedEx `trknbr=`, DHL, DHL eCommerce, Canada Post, PostNord, Purolator `pin=` singular, Colissimo, Dragonfly/Intelcom, Evri, Stallion, Fleet Optics).
 2. **Merchant URL** — only if it actually references a shipment (`urlReferencesShipment()`); upgraded to https, and USPS's `_input` endpoint rewritten to the results endpoint.
 3. **Null** — print carrier + number with **no link** rather than a link that appears to disprove the row.
@@ -1532,6 +1778,8 @@ Sub-brands resolve before parents (DHL eCommerce ≠ DHL Express — an eCommerc
 **Not verified by render** (consent walls or untested): PostNord, Colissimo, Canada Post, Purolator, Dragonfly, Evri, Stallion, Fleet Optics. Their host+path come from carrier-issued redirects, carrier-owned route tables and official plugin source — treat as correct-endpoint-but-unproven-render. Carriers with an unavoidable recipient-postcode gate (DPD Germany) or no GET deep-link at all (DPD Ireland) intentionally have **no** template and fall through to rules 2/3. A template that renders an empty form is worse than no template, since rule 3 would have printed nothing.
 
 A tracking link is a **convenience for the reviewer, never the proof itself** — carriers purge tracking data after ~90–120 days, so a link read months later may legitimately show nothing. The durable evidence is the carrier-confirmed timestamp and POD persisted on `shopify_fulfillment_trackings`.
+
+**The link must be CLICKABLE, not printed.** The resolved URL is carried on `EvidenceBasisRow.link` (`{url, label}`) as structured data — never concatenated into the row's `value` text. Both renderers turn it into a real anchor: `<Link src>` in the PDF (a genuine `/Link` + `/URI` annotation, asserted on the rendered **bytes** in `DefencePackageDocument.test.ts` — a `<Link>` that renders without producing the annotation is not clickable in any reader, and only the output can prove it) and `<a target="_blank" rel="noopener noreferrer">` in the embedded HTML preview. Anchor text is carrier + number, so the raw URL never appears. Until 2026-09-03 the URL was appended to the value string, so both surfaces printed a dead ~120-character URL a reviewer had to select, copy and paste by hand — which nobody does, leaving the delivery claim unverifiable in the one document that asserts it. `link` is `null` whenever rule 3 applies, and renderers fall back to plain text.
 
 Call sites (all four go through the one owner): `lib/defence/pdf/evidenceBasisRows.ts` (PDF Evidence Basis table), `lib/defence/factClassifier.ts` (the value the LLM narrative cites verbatim), `lib/argument/evidenceLineItem.ts` and `lib/argument/deliveryPresentation.ts` (merchant UI). Contract pinned by `lib/carriers/__tests__/trackingLinkUrl.test.ts`, whose URL literals are real prod strings (`scripts/sql/tracking-url-shapes.sql`).
 
@@ -1557,6 +1805,14 @@ Service-role only RLS. Hot-path indexes on `(shop_id, proxy_detected)`, `(shop_i
 - `parse_miss_reason = 'unmatched_phrases'` = parser was invoked but failed to match any of the present facts. Distinguishes Shopify reword events from data-genuinely-absent.
 
 **`fraud_intel_parse_misses`** — surface table for fact strings the parser didn't match. Drives the `/admin/fraud-intel` ops widget so we can monitor parser drift when Shopify rewords a signal.
+
+**Aggregated, one row per distinct phrasing** (since `20260906200000`): the key is `(shop_id, fact_text, parser_version)`, carrying `occurrences`, `first_seen_at` and `last_seen_at`. It is written **only** through `record_parse_misses(jsonb)`, which groups the batch and then upserts-and-increments — never a plain `insert`.
+
+Why it changed: the parser deliberately matches only the six signals GraphQL does not expose, so **every other fact Shopify sends is recorded as a miss by design**. Storing one row per sighting meant the table grew with every order forever. On prod 2026-09-06 it held **6,500,217 rows for 23,890 distinct phrasings** (most of those templated, e.g. `Shipping address is N km…`) at **1371 MB** — the largest table in the database, and, as an unindexed FK to `shops`, the direct cause of the admin shop-delete timing out. It also broke its own widget: the page pulled 2000 raw rows and tallied them in JS, so against 6.5M rows the "top drift patterns" list was an arbitrary sliver rather than the real top-N. The widget now reads `occurrences` and orders in the database.
+
+The diagnostic value was always in the distinct set, never the sighting count per order — which is what an occurrence counter preserves exactly.
+
+**When adding a write path for misses, call `record_parse_misses`.** A direct `insert` would violate the unique key or, worse, silently reintroduce per-sighting rows. A vitest case asserts the batch writer uses the RPC and never inserts into this table directly.
 
 #### Parser (`lib/fraudIntel/factParser.ts`)
 
@@ -1843,10 +2099,11 @@ Classifier: [`lib/disputes/paymentContext.ts`](../lib/disputes/paymentContext.ts
 ### Behavior for a non-card dispute
 - **Classification** is computed in `buildPack.ts` from the live order and persisted to `pack_json.payment_context` (+ `pack_json.skipped_sections`).
 - **Reason-code resolver** short-circuits to `confidence: "not_card_network"` (not `unknown`).
-- **Reason routing** falls back to the Shopify reason enum: `resolveReasonCodeModuleForContext` maps `PRODUCT_NOT_RECEIVED → inr_product_not_received`, `CREDIT_NOT_PROCESSED → credit_not_processed`, etc., so BNPL disputes reuse the existing delivery-proof / refund-record modules instead of collapsing to `generic_fallback`. Card disputes keep routing on the network code.
+- **Reason routing** falls back to the Shopify reason enum: `resolveReasonCodeModuleForContext` maps `PRODUCT_NOT_RECEIVED → inr_product_not_received`, `CREDIT_NOT_PROCESSED → credit_not_processed`, etc., so BNPL disputes reuse the existing delivery-proof / refund-record modules instead of collapsing to `generic_fallback`. Card disputes keep routing on the network code. **`FRAUDULENT → visa_10_4_fraud` (2026-09-01):** a wallet/BNPL "fraudulent" claim is an unauthorized-transaction claim and that is the module which argues one; it fell to `generic_fallback` before. The module's card-only evidence cannot leak — `payment_authentication` and `billing_match` have no members off the card rail, and the payment overlay hard-bans AVS/CVV/3DS vocabulary — and because those two ARE its `criticalCategories`, a non-card unauthorized case renders **hedged** rather than asserting an authorization it cannot evidence. `GENERAL` and `INCORRECT_ACCOUNT_DETAILS` are deliberately left unmapped: `generic_fallback` is already their correct destination (Visa 12.x has no dedicated module), so an entry would be a no-op that reads like coverage.
 - **Narrative overlay** ([`lib/defence/paymentOverlays.ts`](../lib/defence/paymentOverlays.ts)) adds a payment-method system-prompt block AND supplies `BNPL_PROHIBITED_CARD_PHRASES` that `validateNarrative` **hard-rejects** (AVS, CVV, 3-D Secure, CE 3.0, FPT, cardholder authentication, issuer fraud score, card-network liability shift, representment, chargeback reason code). Enforced on the narrative, retry, and composed-PDF validation passes.
   - **Klarna inquiry template (dynamic)** ([`lib/packs/klarnaInquiryTemplate.ts`](../lib/packs/klarnaInquiryTemplate.ts)): the card/generic inquiry templates (`20260411150000`) foreground card constructs (AVS/CVV) that don't apply to Klarna. `buildPack` swaps to a **Klarna-tuned inquiry template** when `paymentContext.family === "klarna"` AND `dispute.phase === "inquiry"` — resolved by reason (PRODUCT_NOT_RECEIVED → `klarna_pnr_inquiry`, CREDIT_NOT_PROCESSED → `klarna_refund_inquiry`, PRODUCT_UNACCEPTABLE → `klarna_not_as_described_inquiry`, FRAUDULENT/UNRECOGNIZED → `klarna_unauthorized_inquiry`, DUPLICATE → `klarna_duplicate_inquiry`; others fall back to the card `general_inquiry`). The swap happens in buildPack because that's the only point that knows the payment method for certain (from `derivePaymentContext(order)`) — the pipeline stamps `(reason, phase)` before the order is fetched. Klarna items key to Klarna-relevant collectors (delivery/POD, refund record, resolution offered, order breakdown) and **never** AVS/CVV/3DS/fraud/IP. Kept OUT of `reason_template_mappings` (2-D `(reason, phase)` key with no payment dimension — repointing it would wrongly catch card inquiries). Card inquiries and all Klarna **chargebacks** are unchanged. The swap is recorded in `pack_json.template_override` (`{from, to, reason: "klarna_inquiry"}`) so admin shows why the template differs from what the pipeline stamped. Templates + i18n (6 locales): migration `20260705140000_klarna_inquiry_template_variants.sql`.
   - **Klarna narrative is reason-aware** ([`lib/defence/klarnaOverlay.ts`](../lib/defence/klarnaOverlay.ts)): when `family === "klarna"` and the dispute reason (+ optional sub-product) is available, `paymentOverlayFor` returns a **Klarna category-specific** overlay instead of the generic BNPL one. The Shopify reason enum maps to a Klarna dispute category (Goods/Services Not Received, Faulty/Not-as-Described, Incorrect Amount, Refund-not-processed, Unauthorized Purchase) and each injects Klarna's real evidence expectations (verified against docs.klarna.com 2026-07-04): Goods-Not-Received foregrounds a genuine **Proof of Delivery** per Klarna's Merchant Protection Program (carrier + tracking + delivery date/address/recipient; signature for higher-value orders; a tracking link alone is insufficient); Faulty foregrounds the resolution offered + return label; Incorrect Amount foregrounds the invoice tied to the order; Refund-not-processed foregrounds the refund record + entitlement; Unauthorized foregrounds delivery + account/identity (never card auth). The overlay also names the sub-product (Pay Later / Pay Now) and notes Klarna's single time-boxed submission. It invents **no Klarna reason code** (the Shopify-Payments-Klarna path exposes none) and asserts no card constructs. Affirm / other BNPL / local methods (and Klarna without a reason) keep the neutral generic BNPL overlay.
+  - **PayPal narrative is wallet-framed and reason-aware** ([`lib/defence/paypalOverlay.ts`](../lib/defence/paypalOverlay.ts), 2026-09-01): PayPal previously fell to the generic BNPL overlay, whose opening sentence reads *"paid via a Buy-Now-Pay-Later or local payment method (e.g. Klarna, Affirm)"*. PayPal is a **wallet**, not an instalment product, and its dispute process is buyer protection. That mis-framing was not cosmetic. Two separate measurements establish the scale, and they say different things: **518 of one merchant's 522 disputes carry no `network_reason_code`** (prod, 2026-09-01) — which establishes *not card*, not *PayPal* — and a **live Admin-API probe of 462 of those disputed orders found 456 (98.7%) paid by PayPal wallet** (2026-08-30). Together they mean the BNPL text was the framing on essentially that merchant's entire dispute book. Do not restate the first figure as though it measured PayPal; `network_reason_code` absence is a card-rail statement, and conflating the two is the same class of error as reading a payment method off `payment_gateway`. `paymentOverlayFor` now routes `family === "paypal"` to `buildPaypalOverlay`, which states the rail correctly (no card network, no issuer, no cardholder, no reason code; explicitly *not* BNPL) and foregrounds per-reason evidence: item-not-received → delivery/access; not-as-described → listing-as-purchased + resolution, with an explicit *"DELIVERY IS NOT CONFORMITY"* instruction; refund-not-processed → the refund record; unauthorized → transaction/account linkage and fulfillment, with an explicit ban on offering a successful payment or order record as authorization proof; duplicate → the two-transaction comparison; cancelled-recurring → the cancellation-vs-charge timeline. It asserts **no** PayPal adjudication rules and never claims Seller Protection applies unless an approved fact establishes it. Same `BNPL_PROHIBITED_CARD_PHRASES` hard-rejection set as every other non-card rail.
 - **Intentional skips**: `fraudRiskSource` and `threeDSecureSource` short-circuit for BNPL; the reasons are recorded in `pack_json.skipped_sections` and shown in admin.
 - **PDF reason-code display (no card code for Klarna)**: the reason-code modules carry a card-network reference `displayName` (e.g. `"Visa 13.1 / Mastercard 4855"`) that is correct for card disputes but **wrong on a Klarna PDF** — Klarna has no network reason code and the funding card is structurally unavailable (Klarna is payer of record; the merchant only ever sees Klarna's virtual settlement card via MCS, never the consumer's real instrument — PSD2). For `isNonCardPayment`, `buildDefencePackageJob` now sets `meta.reasonCodeDisplay` from [`klarnaDisputeCategoryDisplay(dispute.reason)`](../lib/defence/klarnaDisputeCategory.ts) — Klarna's OWN dispute category derived from the Shopify reason enum (e.g. `"Klarna dispute — Goods not received"`), never a Visa/MC code. This is a display label, not an invented Klarna reason *code* (the Shopify-Payments-Klarna path exposes none to us). The PDF's "Card network" row already renders `—` for Klarna (`orderContext.cardNetwork` is null). Card disputes are unchanged. Verified empirically (cay-collective, 500-order probe 2026-07-04): 0/242 Klarna orders expose any card brand via `paymentDetails`/`paymentDescriptor`/`receiptJson`.
 - **CE 3.0 / FPT** remain card-only → `not_applicable` for BNPL (unchanged, correct).
@@ -2295,6 +2552,34 @@ Package versions on those disputes: draft 4, stale 4, submitted 7, failed 2, sup
 
 Risk assessment collection removed (2026-04-20). `Order.riskAssessments` does not exist on Shopify Admin API `2026-01` and caused every pack build with an `order_gid` to fail. The `risk_analysis` field is no longer emitted by the collector; it was `recommended`/`blocking: false`, so its absence does not affect completeness scoring. Migration to `orderRisks` is a follow-up.
 
+### Unobservable ≠ zero (Risk Intelligence tiles)
+
+A rate whose signal we have no way to capture must render `—`, never `0%`. Two tiles on `/app/insights/initial-analysis` were asserting facts they could not know:
+
+- **Signed for at delivery.** `shopify_orders.signed_by_name` is written **only** by the carrier-lookup layer (`lib/carriers/lookupCache.ts`), and the adapter registry currently holds **DHL alone**. A shop shipping via YunExpress / SUNYOU / CNE therefore never gets a lookup — on one merchant, **142,093 tracking rows with zero resolved lookups**, rendered as a confident `0%`. The insights route now runs one cheap existence check (`shopify_fulfillment_trackings` with `last_carrier_lookup_at IS NOT NULL`) and returns **`signedForObservable: false`** with a `null` rate, so the tile shows `—` plus *"Not available for your carriers"*. Adding a carrier adapter flips this on automatically — no per-shop configuration.
+- **High-risk fulfilled.** A `null` rate here means a **zero denominator** (no high-risk orders to fulfil), which is *good news*. The generic *"no prior period"* caption made it read as a data gap on a shop with 4,543 prior-window orders. `KpiTile`/`DeltaPill` now accept `noComparisonLabel` so the tile says *"no high-risk orders"* instead.
+
+The general rule: **distinguish "we measured zero" from "we cannot measure"**, and never let our own coverage gaps read as merchant facts.
+
+### PaymentDetails union coverage (silent-data-loss trap)
+
+`OrderTransaction.paymentDetails` is a **GraphQL union**. An inline-fragment spread only matches the members it names, and a member with **no matching fragment returns a bare `{ __typename }`** — no GraphQL error, no warning, just silently absent fields. This is the single most dangerous shape in the orders schema, because a partial spread looks exactly like "this order had no payment data".
+
+The four concrete members (introspected live against Admin API 2026-01) are pinned in **`TYPED_PAYMENT_DETAILS_MEMBERS`** (`lib/shopify/queries/ordersForBackfill.ts`):
+
+| Member | Fields | Notes |
+|---|---|---|
+| `CardPaymentDetails` | `avsResultCode`, `cvvResultCode`, `bin`, `company`, `wallet`, … | The only member carrying card signals |
+| `LocalPaymentMethodsPaymentDetails` | `paymentMethodName` | Klarna, iDEAL, Bancontact, … |
+| `PaypalWalletPaymentDetails` | `paymentMethodName` | **PayPal settled through Shopify Payments** |
+| `ShopPayInstallmentsPaymentDetails` | `paymentMethodName` | Shopify's own BNPL |
+
+**Three queries must spread all four, always:** `ORDERS_FOR_BACKFILL_QUERY`, `ORDER_FOR_INGEST_QUERY` (webhook path), `ORDER_DETAIL_QUERY` (per-dispute pack build). `lib/shopify/queries/__tests__/paymentDetailsUnion.test.ts` fails CI if any query drops a member, or if the canonical list changes without the queries following.
+
+**The incident (2026-08-29).** Only the first two members were spread. `paymentGatewayNames` reads `"shopify_payments"` for PayPal orders too, so nothing looked wrong — but `pickPaymentMethod` fell through to `null` and every PayPal order persisted `payment_method = NULL` **plus an entirely empty `shopify_order_risk_signals` row** (no AVS, CVV, BIN, or card brand). On one merchant that was **2,577 of 3,583 Shopify Payments orders in 30 days — 72% of payment volume** — starving both the Risk Intelligence KPIs and the fraud-signal layer. It surfaced only as a suspiciously clean Risk Intelligence page (`3-DS auth 1%`, `high-risk 0.0%`, `acceptance 100%`).
+
+**Two rules that follow.** (1) `pickPaymentMethod` and `derivePaymentContext` key the two wallet/installments members off **`__typename`, not `paymentMethodName`** — the live API returned the name as absent, so the union member itself is the only reliable signal. (2) `paypal` and `shop_pay_installments` are members of `NON_CARD_FAMILIES` in `lib/disputes/paymentContext.ts`: PayPal carries **no card network and no AVS/CVV/3DS**, so the card-scheme paths (CE 3.0, FPT) must treat it as not-applicable exactly as they do Klarna. Before the fix a PayPal dispute fell through to the gateway fallback and could be mistaken for a card sale.
+
 ### 3-D Secure Collection
 
 `threeDSecureSource.ts` reads 3DS authentication signals from `OrderTransaction.receiptJson` for **Shopify Payments only**. The Admin GraphQL typed schema does NOT expose 3DS on any `PaymentDetails` union member in 2026-01 (verified across `CardPaymentDetails`, `PaypalWalletPaymentDetails`, `ShopPayInstallmentsPaymentDetails`, `LocalPaymentMethodsPaymentDetails`); the data only lives inside the JSON-scalar receipt blob, which Shopify documents as gateway-defined and explicitly *not a stable contract*.
@@ -2499,7 +2784,28 @@ The "Chronology of Events" bullets (PDF + embedded, via `lib/defence/chronology.
 | Trigger | Detection rule |
 |---|---|
 | `refund_issued` | `order.totalRefundedSet.amount >= dispute.amount` AND `dispute.amount > 0` AND the credit did **not** precede the dispute (see below) |
-| `inr_no_fulfillment` | `dispute.reason ∈ {PRODUCT_NOT_RECEIVED, ITEM_NOT_RECEIVED}` AND `order.displayFulfillmentStatus === "UNFULFILLED"` AND `order.fulfillments.length === 0` |
+| `inr_no_fulfillment` | `dispute.reason ∈ {PRODUCT_NOT_RECEIVED, ITEM_NOT_RECEIVED}` AND `order.fulfillments.length === 0` — **`displayFulfillmentStatus` is deliberately NOT read** (see note below) |
+
+**No fulfillment beats no status name (2026-08-31).** The `inr_no_fulfillment` trigger twice shipped an allow-list of `displayFulfillmentStatus` values, and twice the list was missing a member. First `UNFULFILLED` alone; `ON_HOLD` was added 2026-08-13 after six held blume-box disputes slipped a gate whose entire purpose is "nothing shipped, so there is no delivery evidence to argue with". Enumerating did not close the class — it moved the hole. On 2026-08-31, blume-box **#360499** (`PRODUCT_NOT_RECEIVED`, $85.41) slipped again as **`IN_PROGRESS`**: the single line item was committed to a fulfillment order that was never created, so Shopify itself held zero fulfillments and zero tracking numbers. It scored 42 / `ready_with_warnings` and was queued to auto-file a delivery argument for a parcel that never left the warehouse.
+
+The status test was **redundant and incomplete** — the worst combination, since it could only ever subtract true positives. `order.fulfillments.length === 0` already carries the whole argument: no fulfillment row means nothing shipped, whatever Shopify names the status. Verified against production 2026-08-31: `PARTIALLY_FULFILLED` carries a fulfillment in 866/866 orders and `FULFILLED` in 470,488/470,490, so dropping the list **cannot** newly fire on an order that shipped; meanwhile `IN_PROGRESS` (474 orders), `CANCELLED` (312) and `REQUEST_DECLINED` (6) became reachable for the first time. Blast radius was a single live dispute. **Do not reintroduce a status list** — if a future status needs excluding, exclude it by a fact about shipping. `lib/automation/__tests__/fatalLoss.test.ts` pins every never-shipped status prod emits, and the suppressing side asserts a fulfillment row rather than a status name.
+
+**The merchant is told what to DO, by email (2026-09-04).** Standing down is not neutral: **Shopify auto-compiles and files its own scrape of the order at the deadline whether or not we send anything**, and on an unfulfilled INR order that scrape argues *against* the merchant. Until now the only signal was a line of in-app `strengthReason` copy that explained the verdict and stopped — so a merchant not watching the app found out when they lost. `lib/email/sendFatalLossAlert.ts` now fires from the pipeline's fatal-loss branch (`notifyFatalLoss` in `lib/automation/pipeline.ts`).
+
+The copy leads with the **action**, not the verdict, and the `strengthReason` strings in all six locales were rewritten the same way:
+
+| Trigger | What the merchant is told to do |
+|---|---|
+| `inr_no_fulfillment` | **Branches on the dispute PHASE, because "refund it" is not always legal advice.** (a) *If it did ship* — add the tracking number; the pack rebuilds automatically and the case becomes defensible. Asking for this is what stops us silently conceding a winnable case whose only defect is a 3PL bookkeeping gap. (b) *If it never shipped* — **on a `chargeback`**: nothing to do and nothing to refund (see below), plus the bank-withdrawal route; **on an `inquiry`**: refund now, since no money has moved and it settles before the fee attaches. |
+| `refund_issued` | **No action** — arguing tells the bank the money is owed. Plus the escape hatch: if the credit predates the dispute, say so and we rebuild around it (a pre-dispute credit is among the strongest representments available). |
+
+**NEVER tell a merchant to refund an open chargeback.** The first version of this email said *"refund the order"* on every `inr_no_fulfillment` case. That is advice the merchant **cannot follow**: Shopify's own help centre states *"You can't issue a refund after a cardholder initiates a chargeback"* ([resolve-chargeback](https://help.shopify.com/en/manual/payments/chargebacks/resolve-chargeback)) — the refund control is blocked, the disputed amount **and** the fee are already debited, and a refund forced through by other means pays the customer twice (a documented merchant complaint). The only route that reverses a chargeback is the cardholder asking their bank to **withdraw** it, then submitting the withdrawal letter as evidence.
+
+The distinction is `disputes.phase`, which the row already carries and the gate already reads for refund timing: on an **inquiry** *"no money is taken during the investigation"*, so refunding is both possible and the cheap resolution — it settles the case before it escalates into a chargeback with a fee. Prod at the time: 143 open chargebacks vs 29 inquiries, so both paths are live. **An unknown phase is treated as a chargeback**, since guessing "inquiry" emits impossible advice while guessing "chargeback" only under-promises. The same rule governs the noun: an inquiry is called an *inquiry* in the subject and the body, never a chargeback — calling it one contradicts the very next line telling the merchant no money has been taken.
+
+The in-app `strengthReason` token is keyed on the fatal-loss reason ALONE (`caseStrength.ts`), with no phase in scope, so it must never name a phase-dependent action. It points at the email instead, which has the phase.
+
+**Honesty rules, inherited from `sendDefenceDeadlineFallbackAlert` and pinned by test:** never imply we filed something (we did not); never say *"nothing has been filed"* either, because Shopify still files its scrape — the accurate claim is scoped to us. **Deduped on the audit log**, once per `(dispute, reason)` via a `fatal_loss_alert_sent` event, because every pack rebuild re-enters this branch (#360499 rebuilt three times in a week) and a merchant emailed the same warning on each one stops reading them. The stamp is written **only on a successful send**, so a missing `RESEND_API_KEY` or unconfigured team email cannot permanently suppress the alert. Fire-and-forget — a failed send never fails the pipeline.
 
 **`refund_record` on the fraud checklist (2026-08-01).** `refund_record` was absent from BOTH fraud templates (`REASON_TEMPLATES.FRAUDULENT` and `REASON_TEMPLATES_V2.FRAUDULENT`), and `reconcileChecklistWithCollectedFields` only flips the *status* of rows the template already has — it never adds one for a collected field the template omits. So on a refunded fraud dispute the refund was collected by `orderSource`, reached the bank narrative as a strong `bankEligible` fact, and appeared on **no merchant surface at all**: not the Evidence tab, not the checklist, not the score. Third instance of the same sync-gap (fixed for `PRODUCT_UNACCEPTABLE` 2026-07-23 and `CREDIT_NOT_PROCESSED` before it). Added under a new requirement mode **`required_if_refunded`**: decisive when `OrderContext.hasRefund` is true, and `unavailable` — never `missing` — when it isn't, so the ~all fraud orders that were never refunded don't gain an unsatisfiable "add a refund record" nag (the dishonest-nag pattern from the product-listing work). `hasRefund` is derived in `buildPack.ts` from `order.refunds.length > 0 || totalRefundedSet > 0` — any refund, partial included; the amount comparison belongs to the fatal-loss gate, not to "should the merchant see this".
 
@@ -2616,6 +2922,8 @@ Every guard until now policed an **assertion** and deliberately skipped the same
 Enforced in `lib/defence/factClassifier.ts`, which hands the writer a `citableReason` and never the disposition — the same two-layer non-disclosure rule the fatal-loss message follows.
 
 **Canonical field:** `returned_parcel_outcome`, `evidence` domain, own `signalId: "parcel_outcome"` (NOT `delivery` — sharing that signal would let a merchant's answer lift an `invalid` delivery row to `supporting`), and **`excludedFromStrength: true`**. It exists to be cited, not counted; the gate owns the verdict. Answering honestly must not appear to improve the score.
+
+**Label bug — `signalId` is not a label (fixed 2026-09-10, cay-collective #13638).** The Overview evidence row built its title as `` `disputes.signalLabel.${spec.signalId}` `` instead of reading `spec.labelKey`, so this row rendered the literal string **`disputes.signalLabel.parcel_outcome`** to merchants. `signalId` is a *scoring dedup identity*, not a label — several fields deliberately share one (`avs_cvv_match` and `tds_authentication` are both `payment_auth`). For 19 of the 20 canonical specs the signalId and the labelKey suffix happen to be identical, so the shortcut worked by coincidence; `returned_parcel_outcome` (signalId `parcel_outcome`) is the single spec where they diverge — by design, per the paragraph above — and it was therefore the only row that leaked. The fallback made it worse: on lookup failure the code returned the key path itself, so the developer string landed on the one row asking the merchant to act. `OverviewTab.tsx` now resolves `tRoot(spec.labelKey)`, matching `lib/argument/caseStrength.ts`, and the row reads "Returned parcel" (all 6 locales already had the translation). **Class fix:** `lib/argument/__tests__/canonicalEvidence.test.ts` now asserts every `labelKey` in `CANONICAL_EVIDENCE` resolves to a non-empty string in all six locales, and pins the signalId/labelKey divergence so nobody "tidies" them into agreement and silently re-enables the shortcut. Note the pre-existing shape assertion (`labelKey` matches `/^disputes\./`) did **not** catch this — a key can be well-formed and point at nothing; `verify-i18n-parity.mjs` did not either, since the key exists and simply was not the one being used.
 
 **Checklist:** new requirement mode **`required_if_returned_to_sender`**, driven by `OrderContext.hasReturnedToSenderParcel`. On the ~all orders where nothing came back the row resolves `unavailable`, never `missing` — same anti-nag rule as `required_if_refunded`.
 
@@ -3164,10 +3472,18 @@ Regression coverage: `lib/packs/sources/__tests__/fraudRiskSource.test.ts` cover
 One resolver interpretation of every dispute, consumed by the dashboard, the disputes list, and the detail page so the three surfaces can never disagree. Spec: `docs/plans/design-alignment-shared-presentation-model.plan.md`; module: **`lib/disputes/presentation/`**.
 
 **Four independent dimensions** (never collapsed into one "Needs action / Done" label):
-1. **Operational lifecycle** (`resolveLifecycle.ts`) — objective facts only: `building_evidence · monitoring · pack_prepared · saved_to_shopify · under_review · won · lost · closed`. "Sent to card network" is a **milestone**, not a state: `submission_state='submitted_confirmed'` (or `normalized_status='submitted_to_bank'`) ⇒ current state `under_review`. `submission_state` is authoritative for saved; `pack.savedToShopifyAt` is display-only. `pack_prepared` = the verified `evidence_packs.status='ready'` (or `save_failed`). A failed build never claims "Monitoring". Terminal-without-outcome (`closed_at` set, `final_outcome` null) resolves to neutral `closed`.
+1. **Operational lifecycle** (`resolveLifecycle.ts`) — objective facts only: `building_evidence · monitoring · pack_prepared · saved_to_shopify · under_review · won · lost · closed`. "Sent to card network" is a **milestone**, not a state: `submission_state='submitted_confirmed'` (or `normalized_status='submitted_to_bank'`) ⇒ current state `under_review`. **`normalized_status='submitted_to_bank'` is an INFERENCE and yields to our own record (fixed 2026-09-03):** it derives from Shopify status `under_review`, which for a **chargeback** plausibly means "forwarded to the network" but for an **inquiry** is just the ordinary open state from creation. Believing it over `submission_state` told 38 open prod disputes (27 inquiries; 29 with a live deadline) "The response has been sent and can no longer be changed" while `submission_state='not_saved'` and both `submitted_at` and `evidence_saved_to_shopify_at` were NULL — nothing had been sent. Worse, `resolveAttention` suppresses **all** merchant attention on this same predicate, so on #99413 the real blocker (`auto_build_off` — no pack would ever be built) was hidden behind "No action required" while the deadline ran. `isTransmissionConfirmed` now honours the inference only when our own record does not positively contradict it: a `submission_state` of `not_saved` overrules it; absent/unrecognized still defers to Shopify, so the narrowing touches only cases where we positively know better. Regression: `tests/unit/presentationResolvers.test.ts`. `submission_state` is authoritative for saved; `pack.savedToShopifyAt` is display-only. `pack_prepared` = the verified `evidence_packs.status='ready'` (or `save_failed`). A failed build never claims "Monitoring". Terminal-without-outcome (`closed_at` set, `final_outcome` null) resolves to neutral `closed`.
 2. **Merchant attention** (`resolveAttention.ts`) — `none · requested · blocking · technical_error` (plus the now-inert `recommended`/`opportunity` enum members). Deterministic ladder; only `blocking`/`requested`/merchant-resolvable `technical_error` are genuine tasks (`ACTION_REQUIRED_ATTENTION`). Internal failures (`submission_failed`, pack build failures, `submission_uncertain`, `gorgiasEvidenceStale`) surface transparency copy only (`internalIssue`), never Action required. **The generic `recommended`/`opportunity` "customer communication may strengthen this" states were REMOVED as emitted attention (2026-07-27):** virtually every dispute improves with customer communication, so flagging it on a few and not others was arbitrary and confusing. The resolver no longer returns them (the enum values remain for back-compat but are never produced); `concreteContribution` is still computed for other consumers. The ONLY "you can add something" attention is `requested` — a concrete, matched Gorgias conversation awaiting approval (`gorgias_evidence_ready`). Deadline risk amplifies emphasis; it is not an attention value. **Attention deep-link + spotlight (generalized 2026-07-27):** `lib/disputes/attentionDeepLink.ts` maps an attention/reason → the workspace `?section=` key (`gorgias_evidence_ready`/`requested` → `gorgias-comms`). The dashboard banner deep-links STRAIGHT to the single action-required dispute (+ section) when `merchantActionCount === 1` (via `stats.singleActionDispute`), else to the filtered list; each list row that carries a `requested` attention appends `?section=gorgias-comms` to its detail href; and the Overview "Review communication" CTA fires the same scroll+pulse in-page via `actions.focusGorgiasReview()` (client-state `focusSection` nonce) — so from anywhere, the merchant lands ON the exact card to act on.
 3. **Evidence strength** (`resolveStrength.ts`) — pass-through of `caseStrength.overall`; `insufficient` ⇒ `not_assessed` (distinct from weak). Never re-derived in UI.
 4. **External lifecycle** — `transmissionConfirmed` + outcome; saved never implies sent.
+
+**Turning auto-build back ON replays the disputes it blocked (fixed 2026-09-03).** A dispute the pipeline exited on `auto_build_off` never retries by itself: `disputeEffectsDispatcher` wraps the pipeline in `withEffectDedup`, which burns its claim BEFORE running the effect, so a second attempt is `already_applied`. Neither rebuild cron rescues it — `refresh-open-disputes` needs delivery to move, and the deadline rebuild counts a pack-less dispute as `skippedNoPack`. So `PATCH /api/automation/settings` saving the flag and stopping meant every dispute already blocked stayed blocked, with no pack and no queued job, until its deadline passed. Observed on `6a8848-dd`: the merchant enabled auto-build, the audit row recorded `false → true`, and 11 live disputes did not move; #99413's pack had to be built by hand. The route now calls `scheduleBlockedBuildReplay` on the **false→true edge only** (read off the `changes` diff it already computes, so the settings page's all-fields PATCH does not sweep on a no-op). This is the same sweep, guards and 200-dispute live-deadlines-only cap that arriving CREDITS already use — `replayBlockedBuilds` was simply never wired to this second trigger. Fire-and-forget: a failed sweep never rolls back a saved setting. Regression: `tests/unit/automationSettingsAudit.test.ts`.
+
+**One order can carry several REAL disputes — the list says so (2026-09-03).** An order paid in multiple card transactions can have each transaction disputed separately, producing distinct Shopify disputes on one order. Order #92389 is the verified case: two transactions (€55.95 + €50.36 = the €106.31 order total, two line items), both disputed, Shopify returning `14263058766` and `14263025998`, each `NEEDS_RESPONSE` with its own amount and the same deadline. The list keys a row visually on the ORDER, so these arrived as two rows differing only in amount — indistinguishable from duplicate ingest, and reported as such. **They are not duplicates:** platform-wide, 31 orders carry multiple disputes (63 total; 3 with two open at once) and every one has distinct dispute GIDs AND distinct amounts. A true duplicate would repeat an amount; none do. `orderDisputeCounts` (`disputeListHelpers.ts`) groups the current page by `order_gid` — falling back to `order_name` only when the gid is absent, so two real orders sharing a display name are never merged — and both the desktop table and the mobile card render an `{index} of {total} on this order` marker. Scope is the current page: a sibling on another page is not counted, because a marker pointing at a row that is nowhere on screen is worse than none. Regressions: `tests/unit/orderDisputeCounts.test.ts` and `tests/unit/disputeListSiblingMarker.render.test.tsx` (renders both surfaces).
+
+**`attention_reason` is authoritative on its own; `needs_attention` is not a veto (fixed 2026-09-03).** The pipeline writes both together (`pipeline.ts:121-124`), but `updateNormalizedStatus.ts:60` later overwrites `needs_attention` alone from `deriveNormalizedStatus`, which reads Shopify status + pack state and knows nothing about `attention_reason`. Any status sync could therefore flip the boolean false and orphan the reason — 7 prod rows disagreed that way, 3 still open. `resolveAttention` gated the reason behind the boolean, so a blocked case resolved to `attention: "none"` and the blocker vanished before reaching any surface. On #99413 (`auto_build_off` — the merchant has automatic evidence building switched OFF, so no pack will ever be built) the page rendered *"Building your evidence pack… usually within a few hours"* and *"No action needed from you"* over a live Sep 22 deadline. A reason in `BLOCKING_ATTENTION_REASONS` is a statement about the pipeline's own state, not a notification preference, so it is now honoured whenever present; the stale-attention guards (terminal / transmission-confirmed) still clear it. The REQUESTED reasons (`gorgias_evidence_ready`, `review_deadline_approaching`) stay gated, deliberately — there the boolean is how a cron raises and dismisses an ask.
+
+**The detail hero states a blocking cause instead of narrating progress (2026-09-03).** `resolveAttention` emits seven `blockingReason` values; `OverviewTab` handled one (`approval_gate`, via `showApprovalDecide`) and everything else fell through to the lifecycle headline. So even with the resolver fixed, `auto_build_off` had no branch and the page was unchanged. Precedence now lives in `lib/disputes/presentation/heroCopy.ts` (`heroBlockingCopy`) — a pure function the component and the tests both call — and reuses the `presentation.attentionBlocking{,Sub}` keys the list and the header pill already use, so the three surfaces cannot drift. Terminal lifecycles keep their headline; `approval_gate` keeps its dedicated block (it offers the actual approve/hold controls). Regressions: `tests/unit/heroBlockingCopy.test.ts` (both layers, from the raw column values) and **`tests/unit/disputeHeroBlocked.render.test.tsx`, which renders the real `OverviewTab` via `renderToStaticMarkup` and asserts the markup** — a pure-function assertion cannot prove the page reads the helper, which is precisely how the first fix attempt was reported as done while the merchant still saw the old copy.
 
 **Server integration:** `serverFacts.ts#gatherPresentations(sb, shopId, rows)` batches the fact queries (latest pack, checklist, rules mode, Gorgias reconnect flag) and attaches a `presentation` to: `/api/disputes` rows (+ `aggregates.merchant_action_required`, `attention=tasks|comm` filter), `/api/dashboard/stats` (`operationalBuckets` — mutually-exclusive partition, Closed windowed by period — + `merchantActionCount`), and `/api/disputes/:id/workspace`.
 
@@ -4042,6 +4358,16 @@ Dashboard (`app/(embedded)/app/`):
 
 **Section order (identical on desktop and mobile):** Operational Summary → KPIs → Outcome Breakdown → Recent Disputes Preview → Recent Activity Feed → Charts (Win Rate Trend + Dispute Categories, side-by-side on desktop) → Help.
 
+**CSV export — every filtered row, not the visible page (2026-08-31).** The Export button built its file from `visibleDisputes`, the 25 rows the current page had in memory. A merchant with 1,125 disputes exported 25 and got no indication the other 1,100 were missing — a truncated export is worse than a failed one, because it looks complete and gets reconciled against processor statements. It also carried no dispute-opened date: `initiated_at` is the date the cardholder actually filed the chargeback, is what the table sorts and renders, and was the one date the file lacked.
+
+`exportCsv` now walks `/api/disputes` at `per_page=100` (the API's cap) until a short page or `total_pages` is reached, with a 200-page backstop so a pagination bug cannot spin forever in the browser. Filter params come from `buildFilterParams()` — the SAME builder `fetchDisputes` uses — so the file can never disagree with the table; the client-side search box is applied to the fetched rows through the shared `matchesQuery` predicate for the same reason. The button shows a loading state, since a large shop takes several round-trips. New column `csvDisputeDate` (`disputes.csvDisputeDate`, added across all 6 locales, matching the established "initiated" terminology). Escaping moved to `csvEscape` in `disputeListHelpers.ts` and is now RFC-4180 — the inline version quoted on comma alone and never doubled an embedded quote, so one customer name containing `"` would shift every later column on that row; pinned by `disputeListHelpers.test.ts`. Output is CRLF-joined with a UTF-8 BOM so Excel renders accented names correctly.
+
+**CSV export follow-ups (2026-08-31, same day).** Three defects the first pass left, all reported from a real export:
+
+1. **The currency column was the one field not escaped.** `formatCurrency` emits a thousands separator (`$1,375.00`), so every dispute over 999 split across two CSV fields and shifted all later columns — 37 of 1,125 live blume-box disputes, plus a VND row (`₫3,139,148`) that split across three. The escaping pass had wrapped the date and text columns and missed this one. `statusLabelForCsv` is now wrapped too, on the same reasoning. Pinned by tests using the exact live values.
+2. **Sequential pagination was slow.** The walk issued one request per page, each awaiting the previous — 12 round-trips for 1,125 disputes, every one re-running the list route's `gatherPresentations` + case-strength work the CSV never reads. Page 1 is now fetched first for `total_pages`, and the remainder go out in a single `Promise.all`; wall-clock is roughly one request instead of N. `Promise.all` preserves index order so the file keeps the merchant's sort, and a failed page contributes nothing instead of aborting the export.
+3. **The filename was the constant `disputes.csv`.** Every download collided in the merchant's Downloads folder with nothing indicating shop or date — and these files arrive attached to support tickets. Now `disputes-history-<shop>-<YYYY-MM-DD>.csv` via `disputesExportFilename`, with the handle read from the embedded admin URL (`shopHandleFromLocation`: `?shop=` param, falling back to the `/store/<handle>/` referrer path). The shop segment is **omitted rather than guessed** when unreadable, the date is the merchant's LOCAL calendar day, and the handle is sanitised for filesystem safety.
+
 **Mobile actions bar** stacks search full-width, then pairs Filter + Sort 50/50 — Export is desktop-only. **Desktop exposes the same Sort popover** in the filters bar (between Filter and Export). Sort (`sortMode` state in the page) maps via `resolveSort(sortMode, tab)` to `/api/disputes?sort=…&sort_dir=…`. **The default sort for the all/active tabs is `urgency`** — a server-side compound order (open disputes first via `closed_at` nullsFirst, then `due_at asc` nullsLast, then `created_at desc` as a stable tiebreaker) so the most pressing cases are always on page 1 instead of buried behind newer-but-not-urgent rows. Previously the default was `initiated_at desc` (newest-created first), which is why urgent disputes landed several pages deep. `due_date` is a separate explicit option (plain `due_at asc`, does **not** sink closed rows); the closed tab defaults to `closed_at desc`. The `urgency` compound sort is implemented in `app/api/disputes/route.ts` (the `sort=urgency` branch); `resolveSort` behavior is pinned by `app/(embedded)/app/disputes/__tests__/resolveSort.test.ts`.
 
 **Hard constraints** enforced at 320 / 375 / 393 px: no tables on mobile, no `overflow-x` anywhere, `document.scrollingElement.scrollWidth === clientWidth`, `:active` press state on every tappable card (not just `:hover`).
@@ -4237,6 +4563,75 @@ claiming otherwise would be the `order_not_loaded` lie in a new place. What the
 reader *can* observe, evidence drift, is exactly what the model and payload
 terms carry. A pack with no persisted fingerprint yields no current hash, and an
 unverifiable snapshot is not a fresh one.
+
+**A categorization change is a POLICY change (2026-09-01).** `SCORING_POLICY_VERSION`
+is now **2**. PR #641 moved a clean `same_country` IP fact from `supporting` to
+`moderate` in `lib/argument/canonicalEvidence.ts` — correct on its merits, but
+it shipped without bumping the constant, and the category reaches the input
+hash: `categorizeEvidenceField` -> `fromLegacyCategory` (`moderate` ->
+`corroborating`, was `contextual`) -> `modelFingerprint` hashes `quality` per
+record. Every snapshot written before that deploy therefore hashed to a value
+the new rules cannot reproduce.
+
+The merchant-visible consequence: 63 open production packs reported
+`input_hash_mismatch`, whose copy reads *"The evidence on this case changed
+after it was last assessed."* Nothing about that evidence had changed — the
+rules for hashing it had. Those cases lost their strength band, completeness
+score **and** send action together (`resolveAssessmentGate` sets all three
+false at once).
+
+The bump is the mechanism that change should have used. `evaluateFreshness`
+checks `policyVersion` **before** `inputHash`, so an old snapshot now reports
+`policy_version_superseded` — the truthful reason, which routes to the "not yet
+assessed" copy rather than the false "your evidence changed" one.
+
+**The rule:** changing what `categorizeEvidenceField` returns for any field
+MUST bump `SCORING_POLICY_VERSION` in the same PR. A bump invalidates every
+persisted snapshot, which is correct and intended; leaving it unbumped tells
+the whole fleet their evidence moved.
+
+**A bump does not re-derive anything.** Only `buildPack` writes the snapshot,
+and the nightly `refresh-open-disputes` cron rebuilds only when a carrier
+delivery status moves — so a policy-stale pack never self-heals. Run
+`scripts/rebuild-policy-v2-stale-packs.mjs` (dry-run by default, `--limit=N`
+for a canary, `--apply` to enqueue) AFTER the bump deploys; rebuilding first
+just re-writes the old version. `buildPack` does not consume pack quota, so the
+rebuild spends no merchant credits, and jobs are queued at `priority: 90` so
+they sit below interactive work. Verify with
+`scripts/sql/policy-v2-verify.sql`.
+
+Scope: the bump touches only the workspace read path. The filing selector
+compares `plan.policyVersion` (`caseSelectionContext.ts:227`) and the
+automation decision carries its own `AUTOMATION_POLICY_VERSION`, so neither is
+affected and no case is blocked from filing.
+
+**Naming which term moved (2026-09-01).** `evaluateFreshness` answers one
+boolean over model + gates + payloads, so a mismatch could say only "something
+changed". A merchant was shown *"the evidence on this case changed after it was
+last assessed"* on a case whose snapshot re-derived byte-identically from
+`pack_json`, and nothing on the row could narrow it down. Two things closed
+that gap:
+
+- `assessmentInputHashTerms()` (`lib/evidence/model/assessmentSnapshot.ts`)
+  returns a short digest per term. It calls the SAME three private fingerprint
+  functions the composite hash calls, so it cannot drift from the predicate it
+  explains, and nothing branches on it — `evaluateFreshness` is still the only
+  freshness authority.
+- `buildPack` persists the write-time digests at
+  `pack_json.case_assessment_hash_terms`, so the reader has something to
+  compare against. The workspace route logs `movedTerms` on mismatch **only**;
+  the healthy path costs nothing. Packs built before this field report
+  `movedTerms: null` — which means "cannot attribute yet", never "no term
+  moved", since the composite hash already disagreed.
+
+**The workspace response is never cached.** `app/api/disputes/[id]/workspace`
+sets `dynamic = "force-dynamic"` and the client fetch sends
+`cache: "no-store"`. This is a correctness rule, not a performance one: the
+response carries `needsRecalculation`, the strength band, the completeness
+score and whether the case may be filed, and Shopify Admin keeps the embedded
+iframe alive for hours. A cached copy is precisely the "stale number rendered
+as current" this layer exists to prevent, and it defeats the refetch-on-focus
+mitigation. Both halves are set deliberately rather than relying on either.
 
 **The list checks the two staleness dimensions it can check truthfully** —
 policy version, and `rebuild_pending` — and withholds a band otherwise, *for a
@@ -5169,7 +5564,7 @@ How it works:
   `admin_impersonation_ended` `audit_events` (`actor_type: "system"`, `admin: true`,
   `adminUserId`), visible in `/admin/audit`.
 
-### Passkey second factor (custom WebAuthn — Face ID / Windows Hello)
+### Passkey second factor (custom WebAuthn — Windows Hello / Touch ID / Face ID)
 
 `/admin` requires a **passkey** in addition to the Supabase session + grant. The
 gate is three conditions: `valid session` **AND** `active grant` **AND**
@@ -5212,8 +5607,49 @@ How it works:
 - **Lock-out escape hatch:** if an admin loses all devices, a service-role
   operator runs `DELETE FROM admin_passkeys WHERE user_id = '<uuid>'` to reset them
   to the enroll flow (documented in the migration).
-- **Enroll copy:** "Add Face ID, Windows Hello, or a security key…" — the biometric
-  check stays on-device; the server only verifies a cryptographic assertion.
+- **On-device UI preference via `hints` (2026-09-05, second attempt).** Both ceremony
+  routes attach `hints: ["client-device"]` (`CLIENT_DEVICE_HINTS` in
+  `lib/admin/passkeys.ts`) to the options JSON. **This is a preference, not a
+  guarantee that only one native window appears.** Chrome documents that hints
+  may not be respected on Windows when Chrome does not control the UI:
+  https://developer.chrome.com/blog/passkeys-updates-chrome-129#hints. The first
+  attempt (below) stripped the `hybrid` transport and shipped to prod with *no
+  observable change*, because `allowCredentials.transports` is only a routing
+  hint — Chrome intentionally still offers the phone fallback no matter what
+  transports are listed. `@simplewebauthn/server@13` does not model `hints`, so
+  it is spread onto the response manually; `@simplewebauthn/browser@13` spreads
+  the whole options object into `navigator.credentials.get()`, so it arrives
+  intact. Pinned by `tests/api/admin/passkeyHints.test.ts`, which asserts on the
+  response body (a transports-only assertion passes even when the bug is live).
+- **Verification lifecycle (2026-09-10).** `/admin/verify-passkey` starts only
+  from the Verify button, not a mount effect. A synchronous in-flight guard
+  prevents overlapping attempts. Cancel, page unmount, and a 60-second
+  whole-attempt deadline abort both HTTP and the SimpleWebAuthn ceremony; late
+  results cannot reopen a prompt, submit an assertion, or navigate. Timeout and
+  dismissal restore an explicit retry button without automatically reopening
+  the native UI. Native browser/Windows loading windows remain browser-owned;
+  this change does not promise to suppress them. Server-side grant, challenge,
+  signature, RP, user-verification, and cookie checks are unchanged.
+  `node node_modules/@playwright/test/cli.js test --config playwright.passkeys.config.ts`
+  exercises the actual page in StrictMode with the real SimpleWebAuthn adapter
+  and simulated HTTP/OS boundaries; no live admin account or DB is used.
+- **Platform-only (fixed 2026-09-05).** Registration pins
+  `authenticatorSelection.authenticatorAttachment: "platform"`, and
+  `filterTransports()` in `lib/admin/passkeys.ts` strips the `hybrid` transport
+  both on write (`savePasskey`) and on read (`listPasskeys`,
+  `getPasskeyByCredentialId`). **Why:** Chrome on Windows reports a Windows Hello
+  credential as `["hybrid","internal"]` because Windows can also proxy a phone.
+  Echoing `hybrid` back in `allowCredentials` made Chrome open its cross-device
+  "use a phone" / Google picker *at the same time* as the Windows Hello dialog —
+  two competing prompts for one device unlock. Filtering on read means credentials
+  already stored with `hybrid` are fixed without a re-enroll. `usb`/`nfc`/`ble`
+  are still allowed (a plugged-in security key doesn't open the phone sheet); an
+  all-`hybrid` credential yields `null`, not `[]`, because some browsers read an
+  empty array as "no transport works". Pinned by
+  `tests/unit/passkeyTransports.test.ts` — do not re-add `hybrid`.
+- **Enroll copy:** "Add this device's built-in unlock — Windows Hello, Touch ID or
+  Face ID…" — the biometric check stays on-device; the server only verifies a
+  cryptographic assertion.
 - **Manager page (`/admin/passkeys`):** list / rename / revoke registered devices,
   and "Add this device" (runs the register + re-assert ceremony inline). Backed by
   `GET /api/admin/passkeys` and `PATCH`/`DELETE /api/admin/passkeys/[id]` — these
@@ -5224,6 +5660,131 @@ How it works:
   enrollment is intentional: `admin_passkeys` holds one row per device, and
   iCloud Keychain / Google Password Manager sync a passkey within one ecosystem
   automatically.
+
+## Targeted merchant messages (admin → one shop)
+
+Ops can put a dismissible banner on a single merchant's embedded
+dashboard, optionally asking for a contact channel. Built for the case
+where an account shows real recoverable value but every email address
+on file has gone unanswered.
+
+**Where:** Admin → Shops → (shop) → *In-app message* card
+(`components/admin/ShopMerchantMessages.tsx`).
+
+**Data:** `merchant_messages` (migration
+`20260905120000_merchant_messages.sql`). One row = one message to one
+shop. RLS on with no policies — service-role access only, same posture
+as the other ops tables.
+
+| Column | Meaning |
+|---|---|
+| `title` / `body` | Banner copy, admin-authored free text |
+| `ask_for_contact` | Show email/phone inputs + submit |
+| `tone` | Polaris banner tone (`info`/`success`/`warning`/`critical`) |
+| `status` | `draft` (never renders) / `published` / `archived` |
+| `expires_at` | Optional auto-expiry |
+| `dismissed_at` | Merchant dismissed it |
+| `responded_at`, `response_name`, `response_email`, `response_phone`, `response_note` | Merchant's reply |
+
+**Copy is deliberately NOT tokenized.** These are one-off human notes
+written for a specific merchant in that merchant's language. No library
+code derives them and nothing persists them into pack data, so the
+structural-i18n rule (CLAUDE.md #5) doesn't apply. Only the surrounding
+form chrome (`dashboard.merchantMessage.*`) is localized across the six
+locales.
+
+**Merchant surface:** `DashboardMerchantMessageBanner` renders the
+newest active message (published, not dismissed, unexpired). It lives in
+`EmbeddedAppChrome`, so it shows on **every** embedded page — not just
+the dashboard — and sits **above** the scope and billing banners: an ops
+message awaiting an answer outranks both. It is a dismissible Polaris
+`Banner`, **not** a blocking modal; a modal that intercepts the session
+would be hostile to the merchant and a Shopify App Store review risk.
+Dismissal is server-side and per-message, so it holds across the
+merchant's devices and across pages.
+
+**Visual spec:** the "Red top alert banner" Claude Design handoff
+(`Dashboard.dc.html`) — a white card with a solid `#B42318` header bar
+carrying a warning triangle, the title, and a dismiss X; a `#FCA5A5`
+border; and a red-tinted lift shadow. Transcribed literally rather than
+expressed as a Polaris `<Banner>`: Polaris has no solid-header variant,
+and the design's whole purpose is to outshout the tonal banners around
+it. Contact inputs are 40px-tall fields and the Send button is the
+design system's `danger` variant (`#EF4444`, hover `#DC2626`).
+
+The Send button enables on a plausible email **or** ≥7 phone digits —
+either channel alone is a complete answer, matching the design's own
+validation. After a successful send the button reads "Sent" and the
+helper line becomes the thank-you.
+
+`tone` is still stored per message and the composer defaults to
+`critical`, but note the merchant-facing banner now renders the red
+design for every message regardless of tone; `tone` currently affects
+only what an admin sees in the composer. Wire it through if softer
+variants are ever needed.
+
+**Routes**
+
+| Route | Purpose |
+|---|---|
+| `GET /api/dashboard/message` | Active message for the current shop |
+| `POST /api/dashboard/message/dismiss` | Merchant dismissed |
+| `POST /api/dashboard/message/respond` | Merchant's reply → emails ops, stores on the row |
+| `GET,POST /api/admin/shops/[id]/messages` | List / create |
+| `PATCH,DELETE /api/admin/shops/[id]/messages/[messageId]` | Publish, archive, edit, delete |
+
+Every merchant-facing write is scoped by `shop_id` as well as message
+id, so a uuid belonging to another shop cannot be dismissed or answered
+from the wrong session. Replies are HTML-escaped before they reach the
+ops inbox. Both invariants are pinned in
+`lib/merchantMessages/__tests__/respondRoute.test.ts`.
+
+The contact row is **Name · Email · Phone · Send**. Name is captured
+because these messages typically ask *who is responsible for the
+account*, so it is the field that answers the question — but it is
+deliberately **not** part of the send-enable rule: a name with no
+channel is not reachable, so email-or-phone still gates Send.
+
+Message bodies render with `white-space: pre-wrap`. The admin composes
+them in a textarea, so the paragraph breaks they type are meaningful —
+a bilingual message needs its halves to stay apart. Without this the
+first real merchant message rendered as one run-on paragraph with the
+divider swallowed mid-sentence.
+
+**Confirmation state.** Once the merchant submits, the whole form is
+replaced by a green confirmation panel echoing the address/number we
+received. A filled-in-but-disabled form read as "still editable" and
+left merchants unsure whether anything had happened.
+
+That panel is component state, so it lasts only until the merchant
+navigates. The durable half is in `getActiveMerchantMessage`, which
+filters on **`responded_at IS NULL`** alongside `dismissed_at`: an
+answered message stops being active and the banner never returns.
+Without that filter a merchant who replied met the empty form again on
+their very next page view, asking a second time for what they had just
+given us. Pinned in `lib/merchantMessages/__tests__/activeMessage.test.ts`.
+
+**Delivery is tracked, not assumed.** Responses email
+`ADMIN_NOTIFY_EMAIL` (default `oi@johan.com.br`), and the outcome is
+recorded on the row (`response_notified_at` / `response_notify_error`,
+migration `20260906090000`). This route deliberately does **not** use
+the shared `sendAdminEmail` helper: that returns `void` and swallows
+failures, which is right for background drift alerts but wrong here —
+a merchant reply that never reaches ops is the one failure this feature
+cannot afford to hide. The admin card shows a warning on any reply
+whose notification did not go out, so a silent miss is never mistaken
+for "nobody replied". The reply itself is always stored first, so a
+mail failure never loses the contact details.
+
+⚠️ **Dev cannot send these emails.** The `disputedesk-dev` Vercel
+project has no `RESEND_API_KEY` (only Production does), so on
+`dev.disputedesk.app` every response records
+`response_notify_error: "RESEND_API_KEY not set"` and no mail is sent.
+This is environment configuration, not a code defect — verify email
+delivery on production.
+
+Replies are also logged as a `merchant_message_answered` audit event
+with `actor_type='merchant'`.
 
 ## Multi-Language (i18n)
 
@@ -5583,7 +6144,8 @@ Copy keys `rebuildFailedTitle` / `rebuildFailedBodyFiled` / `rebuildFailedBodyUn
 `failure_reason`) never reaches the markup, and that the tone flips with `bankFacing`.
 **A detector change without a `VALIDATOR_VERSION` bump kills the cases it fixes (2026-08-14).**
 `evaluateGenerationGuard` refuses to regenerate a case whose latest package is `failed` unless
-one of three inputs moved — `prompt_version`, `validator_version`, `evidence_hash` — because
+one of four inputs moved — `prompt_version`, `validator_version`, `composition_version`,
+`evidence_hash` (the fourth added 2026-09-03, see below) — because
 rebuilding under the rules that failed it just reproduces the failure. #561 changed claim
 DETECTION in `claimCapabilities.ts` and left `VALIDATOR_VERSION` at 1. The guard then read
 prompt 14 / validator 1 / same evidence on blume-box `11051073729` and correctly concluded
@@ -5593,6 +6155,29 @@ prompt 14 / validator 1 / same evidence on blume-box `11051073729` and correctly
 were dead the same way. This is precisely the PERMANENT DEATH failure the constant's own
 docblock describes (`#12936` three weeks past deadline, `#353605` losing its deadline), caused
 by the omission it warns about.
+
+**And a TEMPLATE change without a `COMPOSITION_VERSION` bump does the same thing (2026-09-03) —
+the third instance of this class.** The fallback thesis `executiveSummary:any:any` opened with
+"This representment addresses …". `representment` is in `BNPL_PROHIBITED_CARD_PHRASES`, which
+`validateComposedDocument` hard-rejects on every non-card rail — so the moment a family with no
+thesis of its own landed on PayPal, composition failed and the dispute filed nothing. On prod
+that was `product_not_as_described`: 26 packages, 100% failure. `ecbb03aa` fixed it by editing
+the one template string — touching no prompt, no validator and no evidence, so all three retry
+inputs still matched and the guard read "same attempt" for all 27 cases. The fix shipped and
+every case it was written to save stayed dead; 9 were past deadline when it was found.
+
+`COMPOSITION_VERSION = 1` (`lib/defence/pdf/thesisTemplates.ts`), persisted per row as
+`defence_packages.composition_version`. **Any change to composed prose — template text,
+`renderThesis`'s fallback chain, `thesisTokens` extractors, or the fallback/section text in
+`composePdfBlocks` — must bump it in the same commit.** NULL means pre-versioning and is read as
+"changed", which is what gives the 27 stuck packages exactly one rebuild under the corrected
+templates. `lib/defence/pdf/__tests__/compositionVersionBump.test.ts` pins the value;
+`thesisTemplatesAreRailNeutral.test.ts` stops the underlying defect recurring by asserting no
+template contains a phrase banned on a non-card rail.
+
+The recurring lesson, three times over: **a fix that changes the rules without changing anything
+the guard can see leaves its own beneficiaries permanently blocked.** Any new layer that can
+decide a package's verdict needs a version the guard reads.
 
 `VALIDATOR_VERSION = 2`. **Any change to `claimGuards.ts`, `factPredicates.ts`,
 `claimCapabilities.ts` (derivation OR detection), `FORBIDDEN_PHRASES` /
@@ -6678,6 +7263,54 @@ saveToShopifyJob (flag on) → blocks on any non-final defence-package status; s
                               buffer to the defence package PDF; marks status=submitted on verify-ok.
 ```
 
+#### Prompt-module drift: the DB row beats the file (2026-09-02 incident)
+
+`resolveReasonCodeModule` lets a `defence_prompt_modules` row override the file default's `promptBody` and its five guidance lists (`prioritize`, `avoid`, `mustNotClaim`, `criticalCategories`, `allowedFactCategories`). **The row wins.** So a reviewed, tested, deployed change to `lib/defence/reasonCodes/*.ts` has *no effect in production* while a stale row sits above it — and until now, nothing said so.
+
+Measured on prod 2026-09-02: **all seven modules were drifted**, none marked `intentional_override`.
+
+- `product_unacceptable` still carried `criticalCategories: ["order_record"]` and delivery-second ranking, so the conformity change shipped the previous day did nothing. It had been reported as live.
+- `visa_10_4_fraud` was drifted in prompt **body** across five commits and ~7 weeks — including work that removed concrete claim examples from runtime prompts and closed prompt paths to a claim the validator refuses. Production generated fraud narratives without those guards throughout.
+
+This was the **second** occurrence; the first (2026-05-16) is why `scripts/reconcile-defence-prompt-modules.mts` exists. Detection existed both times — `detectPromptModuleDrift` — rendered on an admin page nobody watched. *A detector nothing consumes is not a control.*
+
+**Three guards now:**
+
+1. **`GET /api/cron/prompt-module-drift`** (daily, 07:15 UTC) runs `detectPromptModuleDrift` in prod and emails ops on any non-intentional drift, naming the modules and the remedy. Not a CI check: CI cannot see the production database, and a build-time check would verify the wrong DB and pass while prod stayed broken — exactly the failure being guarded.
+2. **`lib/defence/promptModuleGuidanceKeys.ts`** holds the overridable-field list once. It was written out three times; a sixth field added to the resolver but missed by the detector would drift invisibly.
+3. **`promptModuleOverrideCoverage.test.ts`** fails the build if the resolver reads an override field the shared list does not name, or names one it ignores.
+
+**Remedy when the cron fires:** `npx tsx scripts/reconcile-defence-prompt-modules.mts --env-file .env.production.local --apply`. The script now requires `--env-file`, prints the resolved database before writing, and dry-runs by default — it was hardcoded to `.env.local` (dev), so "reconciling prod" reconciled dev and printed a confident success. Rows meant to diverge should be marked `intentional_override=true`; both the script and the cron respect that.
+
+#### Thesis fallback must be rail-neutral (2026-09-02 incident)
+
+`renderThesis` falls back `(section, family, mode)` → `(section, family, "any")` → `(section, "any", "any")` → null. The last entry, `executiveSummary:any:any`, is therefore the thesis for **every family that has none of its own** — today `product_not_as_described`, `duplicate_processing`, `cancelled_recurring`, `processing_error`, `authorization_error` and `fallback`.
+
+It opened with *"This representment addresses …"*. `representment` is a card-network term of art and sits in `BNPL_PROHIBITED_CARD_PHRASES`, which `validateComposedDocument` **hard-rejects on every non-card rail**. So the moment such a family landed on PayPal, the composed document was rejected and the dispute filed nothing — the merchant's package failed at the last step and Shopify submitted its own scrape at the deadline.
+
+**Blast radius on prod:** `product_unacceptable` × `paypal` failed **26 of 26** (100%). The same module on the card rail passed (3 of 3), and `inr_product_not_received` on PayPal passed (20 of 20) because that family has its own thesis and never reaches the fallback. Latent since **2026-08-30**, when PR #621 made packs classify as `paypal` instead of `other` and switched the ban on; invisible until a batch of rebuilds ran through it, because no PayPal not-as-described pack had been built in between.
+
+**Fix + guard.** The generic thesis now reads *"This response addresses …"*. `lib/defence/pdf/__tests__/thesisTemplatesAreRailNeutral.test.ts` fails the build if any thesis template contains a `BNPL_PROHIBITED_CARD_PHRASES` match, singles out the generic fallbacks, and pins `representment` by name so a revert is a red test. `validateComposedDocument` remains the runtime net — but runtime here means an unfileable package, so the catch belongs at build time.
+
+**The general rule:** a template reachable by any family on any rail may not assume a rail. Card-specific vocabulary belongs in a family template whose family only ever settles on card, gated by `requiredTokens`.
+
+#### Conformity evidence — the not-as-described family (2026-09-01)
+
+`categoryForField("product_description")` returned **`order_record`** until 2026-09-01, which made the listing-as-purchased — the one fact that answers *"did what we supplied match what we promised?"* — indistinguishable from the order confirmation. The signal layer had always drawn the line (`canonicalEvidence.ts` gives the field `signalId: "product_listing"`); only the fact-category layer collapsed it. Three consequences followed:
+
+1. `product_unacceptable.criticalCategories` named `order_record`, which the order confirmation satisfies on essentially every case — so the family's critical category **could never fail** and `derivePackageMode` never dropped a not-as-described package to hedged framing.
+2. `delivery_proof` sat **second** in that module's `prioritize` list, putting possession above conformity in the one family where possession is not in dispute: the buyer agrees the parcel arrived and says its contents were wrong.
+3. Measured on prod the same day: **0 of 252** not-as-described disputes carried a `product_description` item, and all 252 rendered as `full` (firm) packages.
+
+What changed:
+
+- `product_description` now classifies as **`product_listing`**, its own `EvidenceFactCategory` (already a valid member via the `SignalId` union — no type widening needed).
+- `product_unacceptable`: `prioritize` leads with `product_listing`, `delivery_proof` drops below `customer_communication`, `criticalCategories` becomes `["product_listing"]`, and `promptBody` gains an explicit **"DELIVERY IS NOT CONFORMITY"** rule. Version 2 → 3.
+- **Non-regression invariant:** every module that admits `order_record` also admits `product_listing`, so splitting the category narrows nothing — a product listing stays exactly as citable as it was. Enforced by a test in `lib/defence/reasonCodes/__tests__/conformityEvidence.test.ts` that fails on any module violating it.
+- `inr_product_not_received` is unchanged: delivery remains its critical category and leads its `prioritize`.
+
+**Blast radius.** `packageMode` governs narrative **tone** (firm vs hedged), not whether evidence is filed, and it is not an auto-save gate — nothing in `lib/automation/` reads it. Strength scoring is untouched: `product_description` remains `supportingOnly: true` / `excludedFromStrength: true` in `canonicalEvidence.ts`. The practical effect is that a not-as-described package with no conformity evidence now argues hedged instead of firm, which is the honest rendering of what it actually holds.
+
 ### Data model
 
 Single migration: `supabase/migrations/20260515220000_defence_packages.sql`.
@@ -6947,6 +7580,66 @@ never cited, and it must never appear in `model.fields`.
 stay in the `evidence` domain even though they are never or only conditionally
 bank-facing — they are *scored*, so removing them from `fields` would silently
 stop scoring them. Bank exposure is expressed by `citationPolicy`, not domain.
+
+#### Record identity is derivation-path-independent
+
+`recordId` is `${fieldKey}#${instanceKey}`. `instanceKey` is the **natural**
+per-instance key where one exists (`fulfillmentId` / tracking number for
+delivery, `conversationId` for comms, `evidenceItemId` / `storagePath` for
+uploads) and otherwise the **within-field ordinal** — never provenance.
+
+That last clause is load-bearing. `deriveCaseEvidenceModel` is fed the same
+underlying evidence **twice**: once from `sections` (from `pack_json.sections`,
+where `evidenceItemId` is `null`) and once from the mirrored `evidence_items`
+row (which carries a uuid). Until 2026-09-03 the fallback was
+`evidenceItemId ?? source ?? "unknown"`, so one fact minted two ids —
+`no_return_initiated#shopify_order` **and**
+`no_return_initiated#1419a997-…` — the dedup in `push()` (which keys on
+`recordId`, and whose comment already promised exactly this) never fired, and
+the duplicate rode through `plan_json.included[]` → `selectPlanFacts` →
+`buildEvidenceBasisRows` onto the merchant- and bank-facing Evidence Basis as
+two identical rows. Measured on prod: **169 of 169** packages with a plan
+carried at least one duplicated field; 59 were already submitted or final.
+
+Provenance is carried on `provenance` (`evidenceItemId`, `origin`), so nothing
+is lost by keeping it out of the identity. **Do not fix a duplicate row in a
+renderer** — the plan is what the narrative writer, `validateNarrative`'s
+referential layer and `usedFactIds` all join against, so a label-level dedup
+would hide the symptom while those kept seeing two records. Pinned by
+`lib/evidence/model/__tests__/recordIdentity.test.ts`, which also asserts that
+genuine parcel A / parcel B are **not** collapsed.
+
+Because `recordId` feeds `modelFingerprint`, this changed every `inputHash`
+once, fleet-wide — the documented R4 record-id-migration condition. Open packs
+go stale on deploy; there is no grandfathering escape hatch.
+
+**Stale is not regenerated, and the distinction is a cost decision.** Nothing
+enqueues a `build_pack` in response to an `input_hash_mismatch`:
+`evaluateFreshness` only returns a verdict; no job handler or cron route reads
+the hash to trigger a build; `defence-package-deadline-rebuild` scans
+**due-today disputes only** (skipping anything rebuilt within 6h); and
+`refresh-open-disputes` fires only when delivery status actually moves. A stale
+pack is therefore marked non-fileable until something independently rebuilds
+it — a nearing deadline, or delivery landing — both of which would have
+happened regardless. **A record-id migration costs no extra LLM spend.**
+Measured after the 2026-09-04 deploy: zero `build_pack` jobs in the following
+12 hours.
+
+Do not describe this as a "rebuild wave" — that framing was stated in the
+PR for this change and was wrong.
+
+**The corollary, which cost a merchant-visible regression on 2026-09-04: if
+nothing rebuilds automatically, nothing is REPAIRED automatically either.** A
+fix to the derivation changes how packs are *built*; every already-stored
+`plan_json` / `facts_json` keeps its old content until that pack is rebuilt.
+The duplicate rows stayed on the live package for order #352535 after the fix
+deployed, because the package was built two days earlier and the UI renders
+stored JSON. When shipping a derivation fix, state explicitly which existing
+rows it does NOT touch, and repair them deliberately — `scripts/sql/
+rebuild-duplicated-packs.sql` scopes the candidates (open, unfiled, actually
+duplicated) so the spend is bounded and chosen rather than assumed. Related trap: package counts are
+`defence_packages` ROWS, and several accumulate per dispute (draft, stale,
+failed, superseded), so a 170-package figure is not 170 disputes.
 
 ### Invariant vs intentional across surfaces
 
@@ -7436,6 +8129,54 @@ implements the port over today's storage (latest candidate only — never a sear
 for "the newest SAFE version", which on this fleet would be a fallback into the
 defect) and is the module CP-B's selector replaces.
 
+### The deadline selection window — rolling, not calendar-day
+
+Both deadline crons — `defence-package-deadline-rebuild` (06:00 UTC) and
+`defence-package-deadline-submit` (08:00 UTC) — select `due_at` through the one
+shared helper `lib/cron/deadlineWindow.ts`:
+
+```
+[ now , now + 24h + margin )
+```
+
+**What this fixed (2026-09-16).** Both routes previously selected by CALENDAR DAY
+in UTC (`Date.UTC(y, m, d, 0,0,0)` .. `+24h`) while running at a fixed hour. For
+any deadline *earlier* than that hour the window failed in both directions: the
+run on the previous day could not see it (outside that day), and the run on the
+day itself fired **after it had already expired**. An 03:00 UTC deadline was
+therefore structurally unreachable — the 08:00 run selected it five hours late and
+attempted a filing Shopify would refuse.
+
+The comment above the old code described a rolling window ("due today or before
+tomorrow's 08:00 UTC"); the code implemented a calendar day. The helper implements
+what the comment always said.
+
+Measured on prod at the time of the fix: **321 disputes carried an 03:00 UTC
+deadline** — the second most common hour in the book after 23:00 — of which 319
+were never filed. That figure is **exposure, not losses**: 201 of the 321 were
+`won` regardless, most being inquiries Shopify resolves without merchant evidence.
+The mechanism was real and silent, but the realised damage was far smaller than
+the raw count suggests. Found via dispute `4b81afe1` (#98141).
+
+Two invariants the helper must keep, both pinned in
+`tests/unit/deadlineWindow.test.ts`:
+
+1. **Never select an expired deadline.** The lower bound is `now`, not the start
+   of the UTC day. Filing after expiry is wasted work and writes audit noise that
+   cannot succeed.
+2. **The horizon exceeds the cron interval** (`SUBMIT_WINDOW_MARGIN_MS` = 2h on
+   top of 24h), so every deadline is seen by at least one run before it expires
+   and a late or skipped run does not open a hole. Re-selection is harmless —
+   both routes filter on `evidence_saved_to_shopify_at IS NULL`.
+
+`REBUILD_WINDOW_MARGIN_MS` (4h) deliberately **leads** the submit margin, so
+anything the submit cron will consider has already had a rebuild pass. This
+preserves the 06:00 → 08:00 ordering intent: a pack is rebuilt before it is filed,
+never after. The legacy pre-canonical route
+(`defence-package-deadline-submit/legacyRoute.ts`) uses the same helper — it is the
+path that runs while `CANONICAL_PIPELINE` is off, so fixing only the canonical
+route would have left the live behaviour unchanged.
+
 ### The deadline path — P-6
 
 `app/api/cron/defence-package-deadline-submit/route.ts` is the ACTUAL submitter.
@@ -7476,3 +8217,543 @@ Automation decides what to DO; the argument decides what to SAY. Nothing under
 decision snapshot carries no narrative, no package id and no plan field.
 Enforced structurally by `branchBoundary.test.ts`.
 
+## Post-decision merchant learning
+
+Terminal disputes use `lib/disputes/outcomeExplanation.ts` for a merchant-only explanation of the recorded outcome. The filing sentence continues to use the submitted defence-package timestamp, but a lost case's **What likely weakened this case** panel evaluates the complete workspace evidence map (`pack.evidenceItemsByField`), not only `defencePackage.bankFacing.facts_json`. This distinction is intentional: AVS failures, cardholder/buyer name mismatches, prior chargebacks and risky IP signals are correctly withheld from the issuer-facing response, yet remain essential learning for the merchant after a decision.
+
+Fraud-loss factors are ranked by operational relevance: payment-verification failure, cardholder/buyer mismatch, prior chargebacks, location/network risk, then delivery gaps. The panel shows up to four observed or carefully qualified signals and a prevention recommendation. It explicitly states that the issuer does not disclose its exact reasoning; no factor is presented as proven causation. This path is display-only and must never feed `narrative_json`, a PDF, or a Shopify evidence mutation.
+
+## Post-outcome analysis foundation (internal admin — schema + contracts only)
+
+Plan: `docs/plans/post-outcome-evidence-analysis.plan.md`. This section covers what has shipped so far — the taxonomy, the analysis-level gate, the immutable snapshot contract, and the tables. There is no analyzer, no job and no admin page yet; nothing writes to these tables in production.
+
+Related but distinct from **Post-decision merchant learning** above: that path explains a decided case *to the merchant* and is display-only. This one analyses the package DisputeDesk actually filed, for *internal product learning*, and merchants have no access to it.
+
+### Saved to Shopify is not sent to the network
+
+The load-bearing distinction. `defence_packages.shopify_response` proves Shopify **stored** the evidence and read it back (`verified`, `finalStatus: saved_to_shopify_verified`, `evidenceGid`, `fileGid`). It does **not** prove Shopify forwarded anything to the issuer or card network. Neither does `defence_packages.status = 'submitted'`, which means submitted *to Shopify*.
+
+Measured in prod 2026-08-30 across the 53 submitted packages on decided disputes:
+
+| `submission_state` | `status` | `verified` | `disputes.submitted_at` | Packages |
+|---|---|---|---|---|
+| `submitted_confirmed` | `submitted` | true | present | 49 |
+| `saved_to_shopify` | `submitted` | true | **NULL** | 4 |
+
+Those four read as "submitted" by both the package status and the save confirmation while Shopify never reported forwarding them — and one of them is the platform's only decided win. So `platform_save_confirmation` and `submission_confirmation_source` are separate columns, and a check constraint forbids the first satisfying the second.
+
+Forwarding confirmation is `submitted_confirmed` plus a `submitted_at` whose provenance is Shopify's own `evidenceSentOn`. The absence of a `submission_logs` row is **not** disqualifying — that table is empty platform-wide; provenance of the timestamp matters, not a separate log id.
+
+### Analysis levels
+
+`lib/postOutcome/analysisLevel.ts` resolves how much the analyzer may conclude. `FULL_POST_OUTCOME` requires all four: the exact package is reconstructable; it ties to the saved platform evidence (`shopify_response.evidenceGid` = `disputes.dispute_evidence_gid`); forwarding is confirmed; the outcome is reliable. A verified save with no forwarding report is `PACKAGE_INTEGRITY_ONLY`. Several submitted packages with no identifiable forwarded one is a data-integrity limitation, never a promotion. Shopify Payments is `PARTIAL_CASE_FILE` at the provider level permanently — we never receive the buyer's narrative or the adjudicator's rationale. Klarna and PayPal stay outcome-only until a real connector supplies their case records.
+
+### Snapshot contract
+
+`lib/postOutcome/snapshotContract.ts` types the immutable submission-time record. Evidence sits in exactly one of `availableBeforeSubmission`, `arrivedAfterSubmission` or `availabilityUnknown` — enforced by `validateSnapshotContract`, because that split is what separates a real omission finding from blaming the pipeline for a time-travel failure.
+
+The inventory is reconstructed from `defence_packages.facts_json` / `narrative_json`, **not** `defence_evidence_facts` (zero rows for all 50 analyzable disputes). The package JSON is already frozen at build time, which is the immutability the contract needs.
+
+**Delivery status is a hash input (2026-09-16).** `evidence_hash` is what tells the
+submission path that a finalized package no longer matches current facts. Until this
+change the delivery fact's hashed `value` carried `proofType, carrier, trackingNumber,
+trackingUrl, deliveredAt, signedByName` and **no delivery status** — so a
+`Delivered → Returned` transition moved the hash only *indirectly*, through `proofType`
+flipping to `returned_to_sender`.
+
+That coupling holds for one shipment and **breaks for several**. `resolveProofType`
+(`lib/packs/sources/fulfillmentSource.ts`) takes a best-tier across shipments: one
+parcel delivered with a timestamp pins `proofType` at `delivered_confirmed`, and the
+`sawReturned` flag from a second, returned parcel is discarded. `proofType` does not
+move, the hash does not move, and a package contradicted by its own tracking stays
+fileable.
+
+`extractValue`'s `delivery_proof`/`shipping_tracking` branch now also emits
+`deliveryStatuses` (sorted, de-duplicated across shipments) and `returnedAt` (newest
+return timestamp), so any shipment changing state changes the hash independent of tier
+arithmetic. Sorting matters: `fulfillments[]` ordering carries no meaning and must not
+rotate the hash. These are staleness inputs only — the narrative still cites
+`proofType`, the carrier and the tracking number, never these fields.
+
+Pinned in `lib/defence/__tests__/deliveryStatusInEvidenceHash.test.ts`, including the
+multi-shipment case, which **fails without the fix**. Blast radius at the time of the
+change was nil: prod held exactly 1 `final` package (May 2026, closed dispute), so no
+mass regeneration followed — packages move `draft → submitted` in practice.
+
+Hashing goes through `lib/hashing/canonicalJson.ts`, extracted from `computeEvidenceHash` so the two cannot drift. The drop set is a parameter: `computeEvidenceHash` drops volatile timestamps, snapshots drop **nothing** — there, `created_at` is the evidence. `lib/hashing/__tests__/canonicalJson.test.ts` pins byte-equivalence with the pre-extraction implementation, since every stored `evidence_hash` was produced by it and drift would silently mark live packages stale.
+
+### Tables
+
+`post_outcome_analyses` (unique on `dispute_id, analyzer_version, source_snapshot_sha256` — retries resume, new analyzer versions add rows, nothing overwrites), `post_outcome_findings` (one primary per analysis; `DEFINITE`/`HIGH` must carry evidence or rule refs, by constraint), `post_outcome_analysis_reviews` (append-only; an `EDITED`/`REJECTED` review must state a reason), `merchant_niche_classifications` (append-only, table only — benchmarking needs 3+ peer merchants per matched cohort and prod has 3 shops with analyzable decided cases, so the panel is deferred).
+
+All service-role only, RLS enabled with no policies.
+
+### Versioning
+
+`ANALYZER_VERSION` in `lib/postOutcome/analyzerVersion.ts` — bump on any change that could alter output for an unchanged snapshot. Reason modules version independently so shipping one does not invalidate analyses from another. `REASON_MODULE_VERSIONS` currently holds `FRAUDULENT` only: it covers 47 of the 50 analyzable prod cases, where the plan's original `PRODUCT_UNACCEPTABLE` choice covers exactly one.
+
+`reason_specific_status` distinguishes `NOT_YET_SUPPORTED` (no module for this reason) from `NOT_RECONSTRUCTABLE` (module exists, this case's facts are absent). Only the first is fixed by shipping code.
+
+### Snapshot builder
+
+`lib/postOutcome/buildSnapshot.ts` is pure and synchronous — every classification rule lives there, unit-testable against fixtures. `lib/postOutcome/loadSnapshotInputs.ts` is the only part that touches the database. The split is deliberate: the rules are the risky part (a rule that mistakes a late arrival for an omission is a false accusation against the pipeline), the queries are the boring part.
+
+**The submission instant.** Evidence is dated against Shopify's `evidenceSentOn`, else `disputes.submitted_at`, else the package's own `submitted_at`. Everything at or before it is available; everything after is `arrivedAfterSubmission`. Get it wrong and approved evidence legitimately captured post-filing becomes a phantom omission.
+
+`lifecycle.submittedAt` is set only when forwarding is confirmed **and** we hold at least one package of our own. Shopify auto-files its own scrape, so `disputes.submitted_at` is set on 688 decided disputes while only 50 have a package of ours; attributing that timestamp to our submission would put a forwarding time on ~888 historical imports.
+
+**Ambiguity is detected, never resolved by guessing.** More than one submitted package means we cannot say which Shopify sent. Picking "the newest" would be a plausible-sounding fabrication. The gate checks the tie *before* reconstructability — otherwise a multi-package dispute falls through to `OUTCOME_METADATA_ONLY` and the data-integrity limitation is silently lost. A true forwarding timestamp is still kept in that state: the forwarding fact is about the dispute, the ambiguity is about the package.
+
+**Two shared owners, not local re-spellings.** `inclusionEligible` calls `isBankIncludedFact` from `lib/defence/bankInclusion.ts` (widened to a structural `BankInclusionFlags` so a `facts_json` parse can use it). Package queries route through `fetchCandidateRows` in `lib/defence/candidateVersions.ts`. Both are enforced by existing CI invariants, and both caught real defects in the first draft — an inclusion rule that admitted `submissionRisk` facts, and a raw `.order("version")` of the shape that once let an aborted build shadow a filed package.
+
+**Shadow runner.** `npx tsx scripts/post-outcome-shadow.mts --env-file .env.production.local` builds a snapshot per decided dispute and reports the level split, confirmation sources and reconstruction gaps. Read-only; writes nothing. Against prod it reproduces the audited split exactly — 47 `FULL_POST_OUTCOME`, 1 `PACKAGE_INTEGRITY_ONLY` (the sole win, saved but never forwarded), 2 data-integrity limitations, zero contract errors, 50 unique snapshot hashes, avg 10.8 evidence items and 5.5 assertions.
+
+### Stage 2 — lifecycle and submission checks
+
+`lib/postOutcome/checks/lifecycle.ts`. Pure; reads only the snapshot. Against the 50 prod cases it emits **4 findings** — 2 `PROCEDURAL_OR_SUBMISSION_FAILURE` (saved, never forwarded) and 2 `DATA_INTEGRITY_FAILURE` (forwarded package unidentifiable) — all schema-valid.
+
+**The deadline check reads OUR timestamp, and that distinction is worth 41 false findings.** `raw_snapshot.evidenceSentOn` is when *Shopify forwarded*; `defence_packages.submitted_at` is when *we handed over*. Measured on prod 2026-08-30:
+
+| | |
+|---|---|
+| we submitted after the deadline | **0 / 53** |
+| we saved after the deadline | 0 / 53 |
+| Shopify forwarded after the deadline | **41 / 53** |
+| mean lead time we gave | 147 h (min 4.4 h) |
+| mean lag Shopify added | 47 h |
+
+A deadline check reading the platform's timestamp as ours reports 41 late filings that never happened, against a pipeline that filed a median six days early. `SnapshotSubmittedPackage.submittedToPlatformAt` exists to keep the two apart (contract v2).
+
+**Findings vs observations.** A finding asserts a defect and names an owner; an observation asserts neither. The platform forwarding evidence after its own deadline (40 of 50 cases) is real and worth an admin's attention, but it is not ours to fix and no outcome can be attributed to it — so it is a `LifecycleObservation`, not a finding. `lib/postOutcome/findings.ts` holds both types plus `validateFinding`, which refuses causal language (plan §9), refuses `DEFINITE`/`HIGH` findings with no provenance, and refuses win-only categories on a case whose analysis level cannot support an evidence-effectiveness claim.
+
+### Stage 3 — evidence inventory comparison
+
+`lib/postOutcome/checks/evidenceComparison.ts`. Classifies every snapshot item against the exact submitted package. Across the 50 prod cases: 367 `AVAILABLE_BUT_NOT_APPROVED`, 152 `INCLUDED_ACCURATELY`, 12 `PENDING_AND_CORRECTLY_EXCLUDED`, 6 `INCLUSION_UNVERIFIABLE`, 2 `AVAILABLE_BUT_OMITTED`, 1 `ARRIVED_AFTER_SUBMISSION`.
+
+**"Present" means it reached the issuer**, not that it sits in `facts_json`. A package records internal-only and submission-risk facts that are deliberately withheld from the bank; counting those as present would claim the issuer saw evidence we intentionally held back. Presence is also checked *before* eligibility — an eligibility-first ordering labelled 367 prod facts "pending and correctly excluded", including ones that were in the issuer-facing package.
+
+**`INCLUSION_UNVERIFIABLE` is a new classification the data forced.** A Gorgias passage enters a package as one aggregate `customer_communication` fact — `sourceRef: null`, `messageCount: null`, no per-message linkage. On a dispute with five approved passages and one such fact, the record cannot say whether four were dropped or all five were summarised. `INCLUDED_ACCURATELY` would issue a false clean bill; `AVAILABLE_BUT_OMITTED` would be a false accusation. It is distinct from `AVAILABILITY_UNKNOWN`, where we cannot tell the item existed at all — here availability is certain and only inclusion is opaque. The gap itself raises a `DATA_QUALITY` finding, because until per-passage provenance is recorded this stage can never answer the plan's central question for communications evidence.
+
+**`AVAILABLE_EVIDENCE_OMITTED` names its mechanism.** Two are possible and they have different owners: *never carried* (no fact from that source exists) and *built, withheld* (a fact was derived then not cleared for issuer-facing use). The live example is prod dispute #345617 — two approved passages (`delivery_recognition`, `resolution_attempt`), one derived Gorgias fact carrying `bankEligible: false`. The absence is proven, so the finding is `DEFINITE`; whether it was a mistake is a review decision, so severity stays `MEDIUM` and the text says so. This is *not* the deliberate refund/cancellation exclusion (PR#352) — neither message is in those categories.
+
+### Stage 4 — assertion and rule integrity
+
+`lib/postOutcome/checks/assertionIntegrity.ts`. Checks each narrative section's declared `usedFactIds` against the package's own facts. The prose itself is not checked — deciding whether a sentence overstates its evidence needs reading, not joins — so an assertion is `UNSUPPORTED` only when a cited fact is absent, and `NOT_MACHINE_VERIFIABLE` otherwise. Plan §7 Stage 4: inability to verify is not evidence of falsehood.
+
+Measured across the 53 submitted packages of decided prod disputes:
+
+| | |
+|---|---|
+| narrative sections | 308 |
+| sections with no declared support | 0 |
+| citations to a fact not in the package | 0 |
+| citations to an internal-only fact | 0 |
+| citations to a fact the Evidence Basis suppresses | **370**, across 53/53 packages |
+| sections whose support is **entirely** suppressed | **63** |
+
+The build-time validator's `unknown_fact_id` and `internal_only_fact_referenced` rules are holding. Those checks are kept regardless — a rule that currently never fires is exactly the one that quietly stops being enforced.
+
+**The 370 are C-1**, the known divergence documented in `lib/defence/bankInclusion.ts`: the generator's input filter (`reachesLlmPayloadLegacy`) admits facts that `isBankIncludedFact` refuses, so the narrative can argue from a fact the appendix will not list. Convergence is deliberately deferred there pending "its own measured delta" — so this is recorded as an **observation**, not re-reported as 53 defects. The measured delta is now available: `neverShouldHaveSeen: 0`, and the divergence is cited 370 times across every filed package, concentrated in `order_record` (151), `ip_location` (110) and `payment_authentication` (59).
+
+**The 63 do get a finding.** A section whose entire declared support is suppressed argues to the issuer with no listed evidence behind it — 26 of them `paymentAuthenticationArgument`, 25 `transactionOverviewArgument`. Confidence is `MODERATE`, because what the record proves is the absence of listed support, not that the prose overstates. Across the 50 analyzable disputes this raises 27 `UNSUPPORTED_OR_OVERSTATED_ASSERTION` findings.
+
+### Stage 5 — the FRAUDULENT reason module
+
+`lib/postOutcome/reasons/fraudulent.ts`. Ships first because that is where the cases are: 45 of the 47 fully-analyzable prod disputes are FRAUDULENT losses, against one for the plan's original `PRODUCT_UNACCEPTABLE` pick.
+
+Every case in the cohort is a loss, so nothing here may claim a configuration would have worked. The module reports only what the record proves: a supporting signal was held and not shown; an adverse signal *was* shown; an element was absent.
+
+**Signal polarity is the whole job.** "We held an AVS result" and "we held an AVS result that matched" are different facts, and only the second is evidence for the merchant. Withholding a *failed* AVS is correct — a bank-facing rebuttal never volunteers a weakness. A module counting only presence would flag 27 correct suppressions as defects and miss the 14 real disclosures. Unrecognised payloads are `NEUTRAL`; the module never guesses polarity from a shape it does not know.
+
+Measured across the 50 FRAUDULENT/lost submitted packages:
+
+| element | held | shown | note |
+|---|---|---|---|
+| `ip_location` | 50 | **0** | 45 of them `same_country` |
+| `payment_authentication` | 49 | 22 | shown `avs=N` ×14, `avs=Y/Z` ×7; withheld ×27 are Mastercard with null codes |
+| `prior_customer_history` | 50 | 12 | |
+| `delivery_proof` | 35 | 35 | 15 packages hold none |
+| `customer_communication` | 15 | 2 | |
+
+Two patterns worth naming. `ip_location` is held on every package and shown on none, though 45 carry `same_country` — an order placed from the cardholder's own country is corroboration on an unauthorised-transaction claim. And `avs=N` reached the issuer 14 times: all built under prompt v9–v10 (2026-07-22 → 2026-08-09). From prompt v13 / validator v1 (2026-08-12) the codes are null, because the `citable` gate in `factClassifier` closed it. So the module's most severe finding is, on today's data, a **confirmation that a shipped fix changed filed output**. It still fires and carries the prompt version, so a reviewer sees the boundary instead of chasing a closed defect.
+
+Across the 45 cases the module raises 14 `INCORRECT_EVIDENCE_INTERPRETATION` (adverse disclosed, DEFINITE/HIGH), 44 `INCORRECT_EVIDENCE_INTERPRETATION` (supporting withheld, MODERATE/MEDIUM), and 39 `MISSING_ACQUIRABLE_EVIDENCE`. Zero schema-invalid.
+
+### Step 8 — bounded synthesis and the schema gate
+
+`lib/postOutcome/composeAnalysis.ts` runs every stage over one snapshot and assembles the record the admin page reads: one primary finding, a status, a structured summary.
+
+**It is deterministic, in a codebase that has an LLM, on purpose.** Plan §12 forbids the synthesis layer from changing deterministic classifications, inventing evidence, assigning a bank rationale, or marking a finding `DEFINITE` without deterministic support. A template-driven composer satisfies all four by construction; a generative one would have to be policed into satisfying them, and that policing (`findCausalLanguageViolations`) is a backstop, not a licence. Nothing here writes prose — every sentence a reviewer reads was authored by a check that had the structured facts in hand.
+
+**A finding that fails the gate is dropped, not softened.** `validateFinding` runs on every produced finding; failures land in `rejectedFindings` and never reach `findings`. The gate refuses causal language, `DEFINITE`/`HIGH` findings with no provenance, and win-only categories on a case whose level cannot support an evidence-effectiveness claim.
+
+**"Found nothing" is distinguished from "could not look."** At `FULL_POST_OUTCOME` or `PACKAGE_INTEGRITY_ONLY`, silence means the stages ran and the record showed no material gap → `NO_MATERIAL_GAP_OBSERVED`. At `OUTCOME_METADATA_ONLY` there was nothing to read → `INDETERMINATE`. `summary.stagesRun` records which stages executed, so an empty result can always be told from a skipped one. `reason_specific_status` separates `NOT_YET_SUPPORTED` (no module), `BLOCKED` (level too low), and `NOT_RECONSTRUCTABLE` (module ran, this case's facts absent).
+
+Composed over the 50 prod cases: **50 `COMPLETED`, 0 findings rejected, 49 actionable**, one `NO_MATERIAL_GAP_OBSERVED`. Primary findings: 24 `UNSUPPORTED_OR_OVERSTATED_ASSERTION`, 20 `INCORRECT_EVIDENCE_INTERPRETATION`, 2 `PROCEDURAL_OR_SUBMISSION_FAILURE`, 2 `DATA_INTEGRITY_FAILURE`, 1 `AVAILABLE_EVIDENCE_OMITTED`. Reason module: 45 `SUPPORTED`, 3 `NOT_YET_SUPPORTED`, 2 `BLOCKED`.
+
+### Step 9 — persistence and review
+
+`lib/postOutcome/persistAnalysis.ts` writes a composed analysis; `lib/postOutcome/reviews.ts` handles the append-only review flow.
+
+**Idempotency comes from one index**, `UNIQUE(dispute_id, analyzer_version, source_snapshot_sha256)`, which gives all four plan §13 behaviours with no bookkeeping: a retry conflicts and returns the existing row; a new analyzer version writes a new row; a repaired snapshot moves the hash and writes a new row; an unchanged re-run does nothing. Nothing here UPDATEs an analysis — a completed analysis is immutable, and superseding is an insert plus a pointer.
+
+**Findings are written immediately after the parent, and a failure deletes it.** An analysis with no findings and one whose findings failed to insert look identical afterwards, and the second is a silent lie — the admin page would read "no material gap observed" from a case that had six. Supabase offers no client-side transaction, so the compensating delete is the honest approximation; it is safe because the parent is worthless without its children.
+
+**Reviews are append-only and the current state is derived, never stored.** A reviewer who changes their mind leaves both decisions in the record. Overrides apply from the latest review only, so a superseded edit cannot leak back into the effective values. Ties on `created_at` break by `id`: Postgres `now()` is transaction time, so same-transaction inserts tie exactly, and an audit surface that shows a different answer on each refresh is worse than one that picks a stable winner.
+
+**Authorisation lives next to the write.** `assertReviewer` checks the active `internal_admin_grants` row itself rather than trusting the calling route — a route that forgot `hasAdminSession` would otherwise write an unauthorised confirmation indistinguishable from a real one. A review is what promotes a hypothesis into something allowed to drive a rule change (plan §17), so the check belongs at that boundary.
+
+Exercised against dev: analysis insert, save-vs-forwarding stored as separate columns, primary-finding uniqueness, `REJECTED`-without-notes refusal, append-only history retained, and cascade delete of findings and reviews.
+
+### Step 11 — comparable cohorts and sufficiency gates
+
+`lib/postOutcome/cohorts.ts` plus the `outcome_cohort_snapshots` table. No UI reads either yet (plan §25.6 defers the benchmark panel); the gates ship now because they are what stops a misleading average the day the data arrives.
+
+**The gates are enforced by the type, not a flag.** The obvious shape — `{ winRate, sufficient }` — makes every caller responsible for checking, and the one that forgets renders a percentage from four cases. `CohortResult` is a discriminated union instead: rates exist *only* on the `SUFFICIENT` variant. An insufficient cohort carries raw counts and its blocking dimensions, and is structurally incapable of yielding a percentage.
+
+Floors (plan §15.6): 3 peer merchants excluding the subject, 30 peer cases, 10 subject cases. `>=`, so exactly-at-floor passes — pinned by test, since a later "tighten by one" would change a product promise silently. The same floors are a check constraint on the table, because an application-layer typo that relaxes them would otherwise ship unnoticed.
+
+**Refusals are stored, not discarded.** `status` may be `INSUFFICIENT_SAMPLE` or `NO_COMPARABLE_COHORT`, and a non-sufficient row must carry blockers. Those rows are the point: with 3 merchants holding analyzable cases, every benchmark today correctly refuses, and recording the refusal makes "when did this become answerable?" a query rather than a guess.
+
+**Dimension rules that matter on this data.** `UNKNOWN` card network never merges with a known one — 49 of 50 prod cases carry an unknown network, so a merge would pool nearly everything. An unclassified niche cannot enter a niche benchmark in either direction. The subject is excluded from its own peer set structurally, by passing peers and subject through separate predicates rather than one filter someone can drop.
+
+A test runs the real production shape (47 blume-box + 1 cay-collective + 1 surasvenne, no niches classified) and asserts every benchmark refuses with no rate property present. A gate that only works on synthetic data is not a gate.
+
+### Step 12 — the Outcome Analysis admin page
+
+`/admin/outcome-analysis` (list) and `/admin/outcome-analysis/[id]` (detail), with `POST /api/admin/outcome-analysis/[id]/review`. Internal admin only; merchants have no access. Nav entry sits beside Intelligence, deliberately apart from Operations/Exceptions — the question here is "what should we change", never "what should someone do about this dispute today".
+
+**Every metric names its denominator.** Outcome rates use decided disputes, finding rates use eligible analysed disputes, and `summarise()` returns counts rather than pre-computed percentages — a stored rate is how a denominator gets lost between the query and the card. Summary cards are computed from the same filtered rows as the table, so a card can never disagree with the table beneath it.
+
+**Chargebacks by default.** Phase defaults to `chargeback` rather than "all", so a blended inquiry/chargeback figure requires someone to ask for it explicitly (plan §15.2).
+
+**"Saved only" is never rendered as submitted.** The Submitted column shows the confirmation *source*, and the detail page leads with lifecycle — because whether the package was forwarded bounds what everything below it is allowed to mean. A non-forwarded case carries an explicit banner withholding conclusions about what the issuer saw.
+
+**Findings are labelled hypotheses.** A banner states that automated findings are unreviewed until a human confirms them and that nothing on the page changes rules, templates or scoring on its own (plan §17).
+
+**Default ordering encodes what the page is for**: unreviewed actionable findings first (by confidence), then failures and integrity limitations, then by date. Sorting by date alone would bury the one `DEFINITE` omission under 47 routine analyses.
+
+**Review notes are required in three places.** `EDITED` and `REJECTED` need a note — the button is disabled without one, the API rejects it, and a check constraint refuses it. Three layers for a text box is deliberate: that note is the only record of why a reviewer disagreed with the analyzer, and a rejection with no reason is indistinguishable afterwards from a mis-click.
+
+Benchmarking is absent by design, with a footer saying so: it needs three peer merchants in a matched cohort and the current population cannot form one.
+
+### The `section_support_not_bank_citable` rule
+
+`lib/defence/validateNarrative.ts` gained a rule for the defect the post-outcome analyzer surfaced: a narrative section whose *entire* declared support consists of facts the Evidence Basis will not list, so the argument reaches the issuer with nothing behind it.
+
+**It is a warning, not an error, and `SUPPORT_CITABILITY_BLOCKING = false` is the switch.** The defect is real — 63 such sections across the 53 filed packages on decided disputes, and 45 of those packages carry bank-facing IP prose past the gate `deviceLocationEligibility.ts` centralises. But `validateNarrative` failing means `status: "failed"`, no PDF, and the next version number — the state in which an aborted build shadowed a validated package and a dispute went to forfeit. On today's population a blocking rule would fail roughly 45 of 53 fraud packages, so the merchant would file *nothing*, which is worse than filing an unevidenced paragraph.
+
+Promoting it needs one of two upstream changes first, so the sections gain support rather than disappearing:
+
+- supporting-tier facts become citable, so the Evidence Basis lists them; or
+- the narrative writer stops being fed facts it may not cite, so the sections are omitted at generation instead of failed at validation.
+
+`VALIDATOR_VERSION` is deliberately **not** bumped. Pass/fail behaviour is unchanged, and a bump makes previously-failed packages eligible for a rebuild — spending model budget to reach the same answer. Bump it when the switch flips.
+
+`ValidationResult.warnings` is optional: it is purely additive, and a caller or test double that predates it is still a valid result. Warnings are recorded per build as a `defence_package_validation_warning` audit event, so the rule is measurable on live traffic before anyone decides to enforce it.
+
+### Step 13 — compact integration into shop and dispute detail
+
+`components/admin/PostOutcomeInsights.tsx`, fed by `GET /api/admin/outcome-analysis/summary`, appears on `/admin/shops/[id]` (plan §14.2) and internal dispute detail (plan §14.3). Both are additive — the merchant-facing Review and Forward surfaces are untouched.
+
+**It is not a second findings table.** Plan §14.2 says the shop page must not become another Outcome Analysis surface; two tables over the same data drift the moment one is edited. This shows counts and links out.
+
+**"Confirmed" counts reviewed findings only.** An unreviewed finding is a hypothesis (plan §17), and a card labelled *confirmed* that counted hypotheses would be precisely the failure this feature exists to prevent. When nothing is reviewed the panel says so, rather than showing zero without explanation.
+
+The dispute-level view repeats the forwarding caveat: if the platform stored the evidence but never reported forwarding it, the panel withholds conclusions about what the issuer saw rather than presenting the analysis as settled. "Nothing analysed" renders an explicit message, since it is a common and legitimate state — most decided disputes carry no package of ours — and an empty shell would read as a loading failure.
+
+### Step 15 — learning actions
+
+`learning_actions`, `learning_action_evidence`, `learning_action_evaluations`, plus the lifecycle state machine in `lib/postOutcome/learningActions.ts`. **Nothing can be approved today** — zero findings have been reviewed, so every approval path refuses. The contract ships ahead of the data deliberately: it is easier to fix a rule before anyone depends on it than to tighten one afterwards.
+
+**This never deploys anything.** `deployment_ref` records *which release* performed a change; making the change stays a separate authorised act. An approval workflow that can also ship the change is one that will eventually ship a change nobody approved.
+
+**The approval gate is a trigger, not a check constraint**, because the rule needs a subquery: every backing finding must carry a `CONFIRMED` or `EDITED` review. A `REJECTED` review counts as reviewed but is not support. This is the line between "a human confirmed this pattern" and "an automated hypothesis changed production" (plan §17), so it is enforced in the database as well as in `checkTransition`.
+
+Verified against dev — each of these is refused: approving with zero findings, approving on an unreviewed finding, approving on a rejected review, an approved row with no approver, a deployment with no release pointer, a `PLATFORM`-scoped action backed by one finding, a `PROMISING` verdict on an insufficient sample, and a `PROMISING` verdict alongside a guardrail regression. Approving on a confirmed review is accepted.
+
+**Verdicts stay inside the evidence.** `INSUFFICIENT` yields `INSUFFICIENT_SAMPLE` however good the numbers look — plan §18 forbids a percentage claim below the thresholds, and "promising" off four cases is that claim in a different word. A `DIRECTIONAL` sample can say "no clear change" but never "promising". A guardrail regression outranks any improvement.
+
+`ROLL_BACK` is reachable from every post-deployment state, without a detour through `MEASURING`: the moment you need a rollback is the moment something is wrong, and a state machine that makes you route around it is one that gets bypassed.
+
+### Migration version collisions
+
+`supabase db push` keys on the version prefix, not the filename. Two branches that
+independently pick the same timestamp produce a collision that fails in the worst
+direction: whichever version reaches an environment's history first wins, and the
+other file is silently **skipped** as already-applied.
+
+That happened here. `20260831090000_outcome_cohort_snapshots.sql` collided with
+`20260831090000_shops_onboarding_digest_sent_at.sql` on another branch. Dev had
+already recorded that version, so a later push would have skipped the cohort
+migration entirely — the table existed on dev only because its DDL had been run
+by hand, and prod would never have received it with nothing complaining. Renumbered
+to `20260831150000`.
+
+Before adding a migration on a shared dev database, check the version is free:
+
+```sql
+select version, name from supabase_migrations.schema_migrations
+where version >= '<your prefix>' order by version;
+```
+
+A name in that list that is not your file is a collision, not a coincidence.
+
+### IP location: tier aligned with the collector (2026-08-31)
+
+`categorizeEvidenceField` rated a clean `same_country` IP match as `supporting`. Its comment called that "still bank-facing, just less decisive" — but `supporting` is precisely the tier that makes a fact **not** bank-eligible (`bankEligible = cat === "strong" || "moderate"`), so the row was excluded from the Evidence Basis while four other parts of the system treated it as bank-facing:
+
+- `computeBankEligible` in `deviceLocationSource` returns **true** for it
+- `computeFieldScore` in the same collector rates it **Moderate**
+- the collector emits an **approved bank sentence** (`bankParagraph` → `bankLocationSummary`) that the narrative quotes verbatim — the 2026-08-11 fix for the model inventing IP prose. Populated on 62/66, then 46/46, then 24/24 facts from prompt v13 on; deliberately empty for `different_country`
+- `evidenceBasisRows` carries a `same_country` cell string that could never render, because nothing reached it
+
+Measured 2026-08-31: **45 of 53** filed packages on decided disputes asserted the approved IP sentence to the issuer while the Evidence Basis listed no IP row. The package argued a point and withheld its own evidence.
+
+`same_country` now categorises as `moderate`, same as `same_city`. `different_country` and any payload failing the collector's gate stay `supporting`, so nothing adverse becomes citable.
+
+**Blast radius.** 132 facts across 64 disputes and 2 shops. 65 sit on decided disputes (analysis only). Of the 67 on open disputes, 25 are already `submitted_to_bank` and 7 `submitted_to_shopify` — already filed. **One** dispute is in `new`, the only case early enough for the change to affect an automation decision.
+
+**This is a bank-visible behaviour change and also a scoring one.** `moderate` carries strength weight 2 where `supporting` carries 0, so affected disputes score higher and could cross a strength band, and strength gates auto-save. That is the intended reading — evidence good enough to show an issuer should count — but it is a real consequence, not a side effect to discover later.
+
+## Label–fact divergence: claim ownership in the presentation model
+
+**Plans:** `docs/plans/label-fact-divergence.plan.md`, completing two
+requirements the earlier plans specified but the implementation never
+delivered:
+
+- **`design-alignment-shared-presentation-model.plan.md` §9 / §12.** That plan
+  specified dimension 1 as deriving from a *"verified completed-package
+  state"*, and stated the rule outright: *"`queued`/`building`/`saving`/`failed`
+  and the mere existence of a draft record do not prove a completed, ready
+  package. **Do not infer `pack_prepared`**"* — with the rung to be SKIPPED
+  until a reliable backend field was confirmed. No such field was supplied, and
+  `resolveLifecycle` shipped `PACK_PREPARED = {ready, save_failed}` instead:
+  the pack-status inference the plan forbade. `resolveArtifact` supplies the
+  missing verified state (`pdf_path` + `validation_status = 'ok'`), so
+  `pack_prepared` is emitted on a fact rather than a proxy.
+- **`not-assessed-banner.plan.md` step 3 (copy).** That plan root-caused the
+  "Not assessed yet" banner on an assessed case to PR #641 changing
+  `ip_location_check` categorization without bumping `SCORING_POLICY_VERSION`;
+  the bump to 2 and the 63-pack rebuild are done. Its step 3 — copy that stops
+  telling a previously-assessed merchant "Not assessed yet" — is the
+  `absent`/`stale`/`unknown` split below.
+
+Seven merchant-visible claims were rendered without checking the fact they
+asserted — `saved_to_shopify_verified` without `evidenceSentOn`, "Pack
+prepared" without `pdf_path`, "reassesses automatically" without
+`auto_build_enabled`, "waiting behind other work" without a queue read, the
+Gorgias card without an integration, "Cited in the PDF" without a document,
+and "Not assessed yet" over a case carrying completeness 97. Each was fixed at
+its own render site, and the class survived every time.
+
+Measured on prod 2026-09-05: **eight open disputes** showed
+`evidence_packs.status='ready'` (three at completeness 97) whose newest defence
+package had `pdf_path IS NULL`.
+
+### The dimensions
+
+`lib/disputes/presentation/` had four independent dimensions. It now has nine,
+composed rather than merged — an earlier response may be transmission-confirmed
+while a later build fails, and neither fact may erase the other.
+
+| Dimension | Resolver | States |
+|---|---|---|
+| 5. Artifact | `resolveArtifact` | `unknown` / `absent` / `present` (+ freshness, validation) |
+| 6. Build attempt | `resolveBuildAttempt` | `unknown` / `none` / `queued` / `running` / `succeeded` / `declined` / `not_required` / `capped` / `failed` |
+| 7. Automation | `resolveAutomationPromise` | `unknown` / `will_not_run` / `may_run` |
+| 8. Integration | `resolveIntegrationAvailability` | `unknown` / `never_connected` / `connected` / `reconnect_required` / `disconnected_with_history` |
+| 9. Delay + deadline | `resolveDelayCause`, `resolveDeadlineFacts` | `unknown` / `elapsed_only` / `queue_backlog` |
+
+Assessment presence (`lib/disputes/assessmentPresence.ts`) split from
+`current | not_assessed` into **`current` / `absent` / `stale` / `unknown`**.
+`stale` is no more permissive than `absent`: a number computed under a retired
+policy is not a number.
+
+### Rules that hold everywhere
+
+- **A failed read is `unknown`, never `absent`.** `absent` is a positive claim
+  ("we looked, there is nothing"); an infrastructure failure must not be able
+  to make it. Every resolver takes an explicit `readOk`.
+- **Pack status never proves a document.** `resolveArtifact` takes no pack
+  status input at all, so `ready` or `save_failed` with no PDF resolves
+  `absent` by construction.
+- **`capped` before generic failure.** `daily_cap_reached` is persisted as
+  `status='failed'`; testing failure first reports a budget stop as a defect.
+- **`covered_shopify` ≠ `no_bank_eligible_facts`.** Opposite merchant meanings;
+  an unrecognised skip cause stays neutral and is flagged rather than asserting
+  either.
+- **Selection goes through `candidateVersions`.** "Highest version" is not "the
+  package we would file". The artifact dimension looks past an aborted build;
+  the attempt dimension still sees it.
+
+### Enforcement
+
+`lib/disputes/presentation/__tests__/claimOwnership.invariant.test.ts` walks
+every production `.ts`/`.tsx` with the TypeScript AST — not grep, which an
+aliased translator or helper wrapper defeats — and fails when a protected claim
+token is constructed outside `lib/disputes/presentation/`. Six bypass specimens
+must fail; a pure renderer consuming a resolved claim must pass. A second
+assertion fails when a baseline entry no longer violates, so the list cannot
+become permanent.
+
+The bare enum values (`saved_to_shopify`, `pack_prepared`) are deliberately
+unprotected: API routes and pipeline code read them to *decide*, which is
+legitimate. The guard covers the claim **tokens** a merchant sees.
+
+### Monitoring
+
+`GET /api/cron/claim-divergence-monitor` (hourly, `cronEnvGate`) runs the real
+resolvers over real facts and reports two separate categories:
+
+- **divergence** — a claim not licensed by its predicate. A bug in us.
+- **stranded** — the label is honest and the case is still unfileable.
+
+A cohort query failure emails a monitor failure and returns 500; it never
+returns `ok:true` with zero findings.
+
+Evidence SQL: `scripts/sql/label-fact-divergence.sql` (Q1–Q5).
+
+---
+
+## Audit actor attribution
+
+`audit_events.actor_type` answers **who did this**. Until 2026-09-15 it could
+not: the column allowed only `merchant|system`, and every request-scoped write
+site hardcoded `"merchant"`. An operator acting through SuperAdmin
+"View as merchant" was recorded as the merchant, and operator-run scripts had
+to pick between two wrong labels.
+
+The failure was concrete. Asked what shop `ea035a1b` (Mein Maison) did after a
+06:53 UTC login, `audit_events` showed 14 `merchant` rows — 8 of which were
+`scripts/build-one-pack.mjs` runs. The merchant did none of them.
+
+### The vocabulary
+
+| `actor_type` | Meaning | `actor_id` |
+|---|---|---|
+| `merchant` | A human in the merchant's own Shopify session | null (see below) |
+| `admin` | A human on our side, via View-as-merchant impersonation | `adminUserId` |
+| `script` | An operator-run script | script filename |
+| `system` | Autonomous: cron, job handlers, webhooks | job/cron id, or null |
+
+`merchant` carries no `actor_id`: the Shopify staff id is not available on the
+`/api/*` path (middleware forwards `x-shop-id`, not the session token's `sub`).
+A known gap, not an oversight — `actor_type` already answers "was this us or
+them?", which is the question the trail actually failed. Resolving a staff id
+to a *name* needs the `read_users` scope, which was deliberately reverted
+(see *Expiring Offline Tokens*).
+
+### Rules
+
+- **Never hardcode `actorType` on a request-scoped path.** Use
+  `resolveAuditActor(req)` (`lib/audit/resolveActor.ts`). It returns `admin`
+  when the impersonation cookie verifies, `merchant` otherwise, and degrades to
+  `merchant` rather than throwing when there is no cookie jar — an audit write
+  must never be why a merchant's action 500s.
+- **Scripts write `actor_type: "script"`** with `actor_id` set to the filename.
+- `tests/unit/auditActorAttribution.test.ts` enforces both from source. A new
+  route fails it until the actor is resolved.
+
+### Pre-2026-09-15 rows
+
+Rows written before the fix record `merchant` for every request-scoped write,
+admin actions included. The admin activity panel marks them *(actor unverified)*
+rather than implying the history is clean. Only the 8 `build-one-pack.mjs` rows
+were corrected (migration `20260915120100`), because the script's own `note`
+payload identified them unambiguously; impersonated writes left no such trace
+and cannot be recovered.
+
+### Migrations
+
+- `20260915120000_audit_actor_vocabulary.sql` — widens the CHECK to
+  `merchant|admin|script|system`. Must precede any code writing the new values.
+- `20260915120100_audit_backfill_script_rows.sql` — relabels the 8 rows. Uses
+  the transaction-local `app.allow_audit_mutation` GUC (per
+  *E2E fixtures and audit immutability*), **not** `disable trigger`, which would
+  lift immutability table-wide for the duration. Asserts the match count is
+  exactly 8 (or 0, for environments with nothing to fix) and aborts otherwise,
+  so a drifting predicate cannot silently rewrite real merchant actions.
+
+### Admin surface
+
+`/admin/shops/[id]` carries an **Activity** panel (`components/admin/ShopActivity.tsx`,
+fed by `GET /api/admin/shops/:id/activity`). People only by default —
+`merchant` + `admin`. `system` and `script` are behind "Include automation"
+because automation outnumbers real actions by roughly 10:1 on an active shop
+and buries what the page exists to show.
+
+### Known gap
+
+`lib/audit/logEvent.ts` is **not** the only writer, despite what its docblock
+claimed until 2026-09-15: ~56 call sites insert into `audit_events` directly,
+bypassing the `EventType` union (which is why `gorgias_message_approved` and
+`billing_subscription_created` appear in the table but not in the type).
+Those sites now attribute their actor correctly; routing them through the
+helper is separate work. See `docs/plans/audit-actor-attribution.plan.md`.
+
+---
+
+## Page-view logging (`shop_page_views`)
+
+`audit_events` records **actions**. The dominant merchant behaviour is not
+acting — it is looking. Mein Maison logged in at 06:53 UTC on 2026-09-15,
+browsed, and left; asked what they did, the database could answer only with
+automation rows. Viewing left no durable trace.
+
+(Vercel runtime logs *do* capture page hits — an earlier note claiming page-view
+data "does not exist" was wrong. But they expire in about a day, are keyed by
+route rather than shop, and join to nothing. A diagnostic tool, not a feature.)
+
+### The table
+
+`shop_page_views(shop_id, actor_type, actor_id, path, route, dispute_id, viewed_at)`
+
+- **`actor_type` is `merchant` or `admin`.** Admin (View-as-merchant) sessions
+  are recorded deliberately: if only merchants were logged, "no rows for this
+  page" would read as *the merchant never opened it* when it might mean *we
+  opened it and did not record it*. Indistinguishable absence is the same defect
+  the actor-attribution work fixed — see *Audit actor attribution* above.
+- **`path` vs `route`.** `path` is the URL as requested, so "which dispute did
+  they open" is answerable. `route` is the normalised pattern
+  (`/app/disputes/[id]`) so aggregates do not produce one bucket per dispute.
+  Demo-mode fixture paths (`/app/disputes/dp-2403`) normalise too — they are not
+  real disputes, and treating them as distinct routes is how an early volume
+  estimate for this feature wrongly counted fixtures as merchant traffic.
+- **Not an `audit_events` event type.** That table is append-only with triggers
+  rejecting UPDATE/DELETE; these rows have a 90-day retention policy that would
+  fight those triggers every night, and navigation would bury real actions.
+
+### How it is recorded
+
+`middleware.ts` forwards `x-dd-path` on both `/app/*` branches (a server
+component cannot read its own pathname), plus `x-dd-shop-id` (merchant branch,
+read from the `shopify_shop_id` cookie) and `x-dd-admin-user-id` (impersonation
+branch).
+
+**Merchant recording must NOT be gated on `id_token`.** Shopify supplies it when
+the app is opened from Admin, not on in-app navigation. The first version gated
+on it and captured only entry loads: 34 server-side hits on `/app/disputes/[id]`
+produced zero rows, while impersonated admin views — whose cookie is verified per
+request — recorded everything. `shopify_shop_id` is a 30-day cookie set by the
+same branch, so it rides every navigation at the cost of a cookie read rather
+than a DB lookup in edge middleware. `app/(embedded)/app/layout.tsx` calls
+`recordPageView()` (`lib/shopify/recordPageView.ts`) fire-and-forget, exactly
+like `recordLastLogin` — it must never block or throw into a merchant's render.
+
+**No throttle**, unlike `recordLastLogin`'s 5-minute window: there, only the
+latest login matters; here every view *is* the signal, and collapsing repeats
+would discard the navigation sequence the table exists to capture.
+
+### Retention
+
+90 days, swept daily by `/api/cron/cleanup-page-views` (03:30 UTC, `cronEnvGate`
+first per the cron rule). Batched at 5000 rows/run so the job stays bounded as
+the customer base grows. Measured volume today is tens of rows a day
+platform-wide across four shops.
+
+### Surface
+
+`/admin/shops/[id]` merges views and actions into one actor-labelled timeline.
+A view and an action on the same dispute, interleaved, is what actually answers
+"what did they do".

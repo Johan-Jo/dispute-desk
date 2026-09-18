@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
  * Batch signal-writer contract. `upsertSignalRows` collapses a whole
- * backfill page (100 orders) into ONE upsert + one grouped miss-insert,
+ * backfill page (100 orders) into ONE upsert + one grouped miss-RPC,
  * replacing the per-order round-trip loop that dominated per-page latency
  * on large historical imports (blume-box, 2026-07-20).
  *
@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  *   2. same (shop_id, shopify_order_id) conflict key,
  *   3. dedup on the conflict key (last wins) so PostgREST never sees the
  *      same row twice in one statement,
- *   4. misses flushed in a single grouped insert,
+ *   4. misses flushed in a single grouped RPC (upsert-and-increment),
  *   5. empty input is a no-op (no DB call).
  */
 
@@ -51,10 +51,11 @@ function rawOrder(id: string, overrides: Partial<RawBackfillOrder> = {}): RawBac
   };
 }
 
-/** Minimal Supabase-client stub that records upsert/insert payloads. */
+/** Minimal Supabase-client stub that records upsert/insert/rpc payloads. */
 function makeClientStub() {
   const upsertCalls: Array<{ rows: unknown[]; opts: unknown }> = [];
   const insertCalls: Array<{ table: string; rows: unknown[] }> = [];
+  const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
   const client = {
     from(table: string) {
       return {
@@ -68,8 +69,12 @@ function makeClientStub() {
         },
       };
     },
+    rpc(fn: string, args: Record<string, unknown>) {
+      rpcCalls.push({ fn, args });
+      return Promise.resolve({ error: null });
+    },
   };
-  return { client, upsertCalls, insertCalls };
+  return { client, upsertCalls, insertCalls, rpcCalls };
 }
 
 describe("upsertSignalRows — batched page write", () => {
@@ -104,8 +109,8 @@ describe("upsertSignalRows — batched page write", () => {
     expect(rows[0].client_ip).toBe("203.0.113.9"); // last wins
   });
 
-  it("flushes parse-misses across the page in a single grouped insert", async () => {
-    const { client, insertCalls } = makeClientStub();
+  it("flushes parse-misses across the page in a single grouped RPC call", async () => {
+    const { client, rpcCalls, insertCalls } = makeClientStub();
     mockGetServiceClient.mockReturnValue(client as never);
 
     const missOrder = (id: string) =>
@@ -127,9 +132,17 @@ describe("upsertSignalRows — batched page write", () => {
       { shopId: "shop-1", shopifyOrderId: "gid://shopify/Order/2", raw: missOrder("gid://shopify/Order/2") },
     ]);
 
-    const missInserts = insertCalls.filter((c) => c.table === "fraud_intel_parse_misses");
-    expect(missInserts).toHaveLength(1);
-    expect(missInserts[0].rows).toHaveLength(2);
+    // One RPC for the whole page. `record_parse_misses` upserts on
+    // (shop_id, fact_text, parser_version) and adds to the existing count,
+    // so the two sightings of the same phrasing become occurrences=2 on a
+    // single row rather than two appended rows.
+    const missCalls = rpcCalls.filter((c) => c.fn === "record_parse_misses");
+    expect(missCalls).toHaveLength(1);
+    expect(missCalls[0].args.p_misses).toHaveLength(2);
+
+    // And never via a raw insert — appending is what grew this table to 6.5M
+    // rows for 23,890 distinct phrasings.
+    expect(insertCalls.filter((c) => c.table === "fraud_intel_parse_misses")).toHaveLength(0);
   });
 
   it("is a no-op on empty input (no client call)", async () => {

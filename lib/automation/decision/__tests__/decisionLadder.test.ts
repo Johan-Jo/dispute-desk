@@ -9,8 +9,6 @@
  * separate ladders, which is the point of the epic.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { GateDecision } from "@/lib/pipeline/contracts";
 import { CONTRACT_FIXTURES, FIXTURE_DUE_AT } from "@/lib/pipeline/contracts/__fixtures__/cases";
@@ -20,8 +18,8 @@ import {
   type CaseAutomationDecisionInput,
 } from "../deriveCaseAutomationDecision";
 import { AUTOMATION_POLICY_VERSION } from "../policy";
+import { COVERED_STATUSES } from "@/lib/packs/sources/coverageSource";
 
-const ROOT = join(__dirname, "..", "..", "..", "..");
 
 function input(
   overrides: Partial<CaseAutomationDecisionInput> = {},
@@ -108,18 +106,15 @@ describe("Coverage Gate — preserved", () => {
   });
 
   it("COVERED_STATUSES stays exactly {PROTECTED, ACTIVE}", () => {
-    const src = readFileSync(
-      join(ROOT, "lib", "packs", "sources", "coverageSource.ts"),
-      "utf8",
-    );
-    const match = src.match(/const COVERED_STATUSES = new Set<string>\(\[([^\]]*)\]\)/);
-    expect(match, "COVERED_STATUSES must still be a literal set").not.toBeNull();
-    const members = match![1]
-      .split(",")
-      .map((m) => m.trim().replace(/"/g, ""))
-      .filter(Boolean);
-    // Exactly two. `PENDING` falls through to normal flow until Shopify decides.
-    expect(members.sort()).toEqual(["ACTIVE", "PROTECTED"]);
+    // Asserted against the imported VALUE, not a regex over the source
+    // text. The old source-scrape broke the moment the constant gained
+    // an `export` keyword (2026-08-29, when the insights fraud rollup
+    // started importing it instead of maintaining a divergent copy) —
+    // failing on the declaration's spelling rather than on any actual
+    // widening, which is exactly the wrong thing for a guard to do.
+    // Exactly two. `PENDING` falls through to normal flow until Shopify
+    // decides (PRD v1.1 §4).
+    expect([...COVERED_STATUSES].sort()).toEqual(["ACTIVE", "PROTECTED"]);
   });
 
   it("only `covered_shopify` triggers the gate — no widening here", () => {

@@ -108,11 +108,6 @@ export interface ShopRiskProfile {
     "fraud" | "fulfillment" | "refund" | "quality" | "subscription" | "other",
     { chargeback: number; inquiry: number }
   >;
-  /** Dispute mix by payment-method family, joined from
-   *  `shopify_orders.payment_method` via `disputes.order_gid`.
-   *  `unmatched` = disputes whose order isn't in `shopify_orders`
-   *  yet (backfill gap) — surfaced so the split isn't silently
-   *  under-counted. */
   /** Klarna sub-product split among the Klarna disputes in the window.
    *  pay_later (Klarna consumer credit) historically drives more
    *  chargebacks than pay_now (immediate debit); this surfaces the mix so
@@ -126,13 +121,25 @@ export interface ShopRiskProfile {
     slice_it: number;
     klarna_unspecified: number;
   };
+  /** Dispute mix by payment-method family, joined from
+   *  `shopify_orders.payment_method` via `disputes.order_gid`.
+   *
+   *  `other` is the only one of the trailing three that is a payment
+   *  method — a real method outside the charted set (iDEAL, Affirm).
+   *  The other two are coverage gaps and must be excluded from any
+   *  percentage split:
+   *    `unknown`   — the order is synced but stored no payment_method.
+   *    `unmatched` — the dispute's order isn't in `shopify_orders` yet.
+   */
   paymentMethodBreakdown: {
     card: number;
     apple_pay: number;
     google_pay: number;
     shop_pay: number;
     klarna: number;
+    paypal: number;
     other: number;
+    unknown: number;
     unmatched: number;
   };
   /** Outcome mix in the period. `pending` = open / no terminal
@@ -454,15 +461,25 @@ export async function getShopRiskProfile(
   // ── Payment-method breakdown (join shopify_orders.payment_method) ─
   // The disputes table has no payment method; it lives on
   // shopify_orders, joined by order_gid == shopify_order_id (the GID).
-  // Disputes whose order isn't in shopify_orders (backfill gap) count
-  // as `unmatched` so the split is honest rather than under-counted.
+  //
+  // Three buckets carry "we could not chart this", and they mean
+  // different things — keeping them apart is the whole point:
+  //   unmatched — the dispute's order isn't in shopify_orders yet
+  //               (backfill gap).
+  //   unknown   — the order IS here but stored no payment_method.
+  //   other     — a real method outside the charted set (ideal, affirm).
+  // Only `other` is a payment method, so only `other` belongs in the
+  // split. Folding the first two into it reported a method the merchant
+  // never used, at whatever share the coverage gap happened to be.
   const paymentMethodBreakdown = {
     card: 0,
     apple_pay: 0,
     google_pay: 0,
     shop_pay: 0,
     klarna: 0,
+    paypal: 0,
     other: 0,
+    unknown: 0,
     unmatched: 0,
   };
   // Klarna sub-product split among the Klarna disputes. Derived from the

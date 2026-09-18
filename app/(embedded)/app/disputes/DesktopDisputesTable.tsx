@@ -18,6 +18,7 @@ import {
   figmaStatus,
   formatCurrency,
   orderLabel,
+  orderDisputeCounts,
   translateReason,
   type Dispute,
   type FigmaCaseStrength,
@@ -125,6 +126,7 @@ export function DesktopDisputesTable({
   numberLocale,
   t,
 }: Props) {
+  const siblings = orderDisputeCounts(disputes);
   return (
     <div
       style={{
@@ -158,6 +160,8 @@ export function DesktopDisputesTable({
 
       {/* Rows */}
       <div>
+        {/* Sibling markers for orders carrying more than one dispute. Computed
+            once per render rather than per row — see `orderDisputeCounts`. */}
         {disputes.map((d, rowIdx) => {
           // Attention rows deep-link to the relevant spotlighted section
           // (e.g. a Gorgias-review row lands on the Evidence tab's review
@@ -219,6 +223,26 @@ export function DesktopDisputesTable({
                 >
                   {orderLabel(d)}
                 </div>
+                {siblings.get(d.id) && (
+                  /* Two disputes on one order differ only by amount in this
+                     column, which reads as a duplicate. Name the relationship
+                     instead of leaving it to be inferred. */
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6D7175",
+                      lineHeight: 1.4,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {t("disputes.multipleOnOrder", {
+                      index: siblings.get(d.id)!.index,
+                      total: siblings.get(d.id)!.total,
+                    })}
+                  </div>
+                )}
                 <div
                   style={{
                     fontSize: 14,

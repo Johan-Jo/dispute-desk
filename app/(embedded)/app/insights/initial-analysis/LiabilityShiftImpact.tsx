@@ -194,14 +194,22 @@ function RatioPill({
   t,
 }: {
   label: string;
-  ratio: number;
-  counterfactual?: number;
+  /** NULL when the period has no card volume. These are Visa/Mastercard
+   *  programme ratios, so a merchant whose disputes are PayPal or Klarna
+   *  has no such ratio — rendering 0.00% would assert a clean pass against
+   *  a programme that is not measuring them. */
+  ratio: number | null;
+  counterfactual?: number | null;
   threshold: number;
   band: Band;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const notApplicable = ratio === null;
   const showCounterfactual =
-    counterfactual !== undefined && counterfactual > ratio + 0.00001;
+    !notApplicable &&
+    counterfactual !== undefined &&
+    counterfactual !== null &&
+    counterfactual > (ratio as number) + 0.00001;
   return (
     <div
       style={{
@@ -217,13 +225,19 @@ function RatioPill({
           <Text as="span" variant="bodySm" tone="subdued">
             {label}
           </Text>
-          <Badge tone={BAND_TONE[band]}>{t(`band.${band}`)}</Badge>
+          {/* No band badge when the programme does not apply — a green
+              "healthy" chip is as misleading as a red one here. */}
+          {notApplicable ? null : (
+            <Badge tone={BAND_TONE[band]}>{t(`band.${band}`)}</Badge>
+          )}
         </InlineStack>
-        <Text as="p" variant="headingLg">
-          {fmtPct(ratio)}
+        <Text as="p" variant="headingLg" tone={notApplicable ? "subdued" : undefined}>
+          {notApplicable ? "—" : fmtPct(ratio as number)}
         </Text>
         <Text as="span" variant="bodySm" tone="subdued">
-          {t("threshold", { value: fmtPct(threshold) })}
+          {notApplicable
+            ? t("notApplicable")
+            : t("threshold", { value: fmtPct(threshold) })}
         </Text>
         {showCounterfactual && (
           <Text as="span" variant="bodySm" tone="subdued">

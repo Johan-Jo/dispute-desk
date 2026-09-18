@@ -4,6 +4,9 @@ import {
   resolveSort,
   figmaStatus,
   figmaReviewChip,
+  csvEscape,
+  disputesExportFilename,
+  shopHandleFromLocation,
   type Dispute,
 } from "../disputeListHelpers";
 
@@ -177,5 +180,103 @@ describe("resolveSort", () => {
 
   it("maps 'closed_desc' to closed_at descending", () => {
     expect(resolveSort("closed_desc", "closed")).toEqual({ sort: "closed_at", sort_dir: "desc" });
+  });
+});
+
+
+/* The disputes CSV export is reconciled against processor statements, so a
+ * silently shifted column is worse than a visible failure. A merchant reported
+ * the export truncating to one page on 2026-08-31; these pin the escaping half
+ * of that fix. */
+describe("csvEscape", () => {
+  it("leaves an ordinary value untouched", () => {
+    expect(csvEscape("Fred Vitus")).toBe("Fred Vitus");
+    expect(csvEscape("")).toBe("");
+  });
+
+  it("quotes a value containing a comma", () => {
+    expect(csvEscape("Vitus, Fred")).toBe('\"Vitus, Fred\"');
+  });
+
+  it("quotes AND doubles an embedded quote — the old version did neither", () => {
+    // The previous inline escaper only quoted on comma, so this value passed
+    // through raw and broke every column after it on the row.
+    expect(csvEscape('Fred \"Bunny\" Vitus')).toBe(
+      '\"Fred \"\"Bunny\"\" Vitus\"',
+    );
+  });
+
+  it("quotes values containing CR or LF", () => {
+    expect(csvEscape("line1\nline2")).toBe('\"line1\nline2\"');
+    expect(csvEscape("line1\rline2")).toBe('\"line1\rline2\"');
+  });
+
+  it("round-trips a value that is both quoted and comma-bearing", () => {
+    expect(csvEscape('a,\"b')).toBe('\"a,\"\"b\"');
+  });
+});
+
+
+/* The bug a merchant actually hit: a formatted amount over 999 carries a
+ * thousands separator, and the currency column was the one field the escaping
+ * pass missed. 37 of 1,125 live disputes shifted every later column. */
+describe("csvEscape on formatted currency", () => {
+  it("quotes an amount with a thousands separator", () => {
+    expect(csvEscape("$1,375.00")).toBe('\"$1,375.00\"');
+  });
+
+  it("quotes a non-USD amount with grouped digits", () => {
+    // VND: the live row that split across three CSV fields.
+    expect(csvEscape("₫3,139,148")).toBe('\"₫3,139,148\"');
+  });
+
+  it("leaves a sub-thousand amount alone", () => {
+    expect(csvEscape("$210.00")).toBe("$210.00");
+  });
+});
+
+describe("disputesExportFilename", () => {
+  const when = new Date(2026, 7, 31); // 31 Aug 2026, local time
+
+  it("names the content, the shop and the date", () => {
+    expect(disputesExportFilename("blume-box", when)).toBe(
+      "disputes-history-blume-box-2026-08-31.csv",
+    );
+  });
+
+  it("omits the shop segment rather than inventing one", () => {
+    expect(disputesExportFilename(null, when)).toBe(
+      "disputes-history-2026-08-31.csv",
+    );
+  });
+
+  it("zero-pads so files sort chronologically", () => {
+    expect(disputesExportFilename("s", new Date(2026, 0, 5))).toBe(
+      "disputes-history-s-2026-01-05.csv",
+    );
+  });
+
+  it("sanitises a handle that would break a filename", () => {
+    expect(disputesExportFilename("My Shop/../etc", when)).toBe(
+      "disputes-history-my-shop-etc-2026-08-31.csv",
+    );
+  });
+});
+
+describe("shopHandleFromLocation", () => {
+  it("reads the handle from the shop query param", () => {
+    expect(
+      shopHandleFromLocation("?shop=blume-box.myshopify.com&host=x", ""),
+    ).toBe("blume-box");
+  });
+
+  it("falls back to the admin referrer path", () => {
+    expect(
+      shopHandleFromLocation("", "https://admin.shopify.com/store/cay-collective/apps/disputedesk-1"),
+    ).toBe("cay-collective");
+  });
+
+  it("returns null when neither is available", () => {
+    expect(shopHandleFromLocation("", "")).toBeNull();
   });
 });

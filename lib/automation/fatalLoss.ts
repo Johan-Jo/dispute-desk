@@ -11,8 +11,11 @@
  *   1. refundIssued      — order.totalRefundedSet.amount >= dispute.amount,
  *                          and the credit did NOT precede the dispute
  *                          (see below)
- *   2. inrNoFulfillment  — reason === PRODUCT_NOT_RECEIVED AND order has
- *                          no successful fulfillment
+ *   2. inrNoFulfillment  — reason === PRODUCT_NOT_RECEIVED AND the order
+ *                          carries NO fulfillment at all. Decided purely on
+ *                          `fulfillments.length === 0`, never on the name of
+ *                          `displayFulfillmentStatus` — see the note at the
+ *                          trigger before reintroducing a status list.
  *
  * ── Refund timing (corrected 2026-08-01) ──
  * A refund is only a losing position when it lands ON or AFTER the
@@ -143,23 +146,33 @@ export function detectFatalLoss(
     typeof disputeReason === "string" &&
     INR_REASON_CODES.has(disputeReason.toUpperCase());
   if (isInr) {
-    /* ON_HOLD IS UNFULFILLED FOR THIS PURPOSE.
+    /* NOTHING SHIPPED IS THE WHOLE TEST — DO NOT RE-ADD A STATUS LIST.
      *
-     * `displayFulfillmentStatus` has more members than the two this gate
-     * originally tested, and `ON_HOLD` — the state Shopify Flow leaves an
-     * order in when it flags the risk but does not cancel — matched neither.
-     * So a held INR order slipped a gate whose whole point is "nothing
-     * shipped, so there is no delivery evidence to argue with".
+     * This condition used to enumerate `displayFulfillmentStatus` members:
+     * first `UNFULFILLED` alone, then `UNFULFILLED || ON_HOLD` after six
+     * held blume-box disputes slipped the gate on 2026-08-13. Enumerating
+     * did not close the class, it just moved the hole: on 2026-08-31
+     * blume-box #360499 (PRODUCT_NOT_RECEIVED, $85.41) slipped again as
+     * `IN_PROGRESS` — a line item committed to a fulfillment order that was
+     * never created, so `fulfillments` was empty and nothing had shipped.
+     * It scored 42 and was queued to auto-file a delivery argument for a
+     * parcel that never left the warehouse.
      *
-     * Measured on production 2026-08-13: six open blume-box disputes are
-     * `ON_HOLD`, PAID, never cancelled and never refunded. The goods never
-     * left the warehouse — structurally identical to UNFULFILLED for the
-     * purpose of this gate, and the `fulfillmentCount === 0` conjunct still
-     * proves nothing shipped either way.
+     * `fulfillments.length === 0` already carries the entire argument: if no
+     * fulfillment exists there is no delivery evidence to argue with, whatever
+     * Shopify calls the status. The status test was redundant AND incomplete,
+     * which is the worst combination — it could only ever subtract true
+     * positives. Verified against production 2026-08-31: `PARTIALLY_FULFILLED`
+     * carries a fulfillment in 866 of 866 orders and `FULFILLED` in 470,488 of
+     * 470,490, so dropping the list cannot newly fire on a shipped order, while
+     * `IN_PROGRESS` (474), `CANCELLED` (312) and `REQUEST_DECLINED` (6) become
+     * reachable for the first time.
+     *
+     * If a future status needs EXCLUDING, exclude it by a fact about shipping,
+     * not by adding a name to a list.
      */
-    const status = order.displayFulfillmentStatus ?? null;
     const fulfillmentCount = order.fulfillments?.length ?? 0;
-    if ((status === "UNFULFILLED" || status === "ON_HOLD") && fulfillmentCount === 0) {
+    if (fulfillmentCount === 0) {
       return {
         triggered: true,
         reason: "inr_no_fulfillment",

@@ -39,8 +39,10 @@ import {
   summariseComposedErrors,
   VALIDATOR_VERSION,
 } from "@/lib/defence/validateNarrative";
+import { suppressUnsupportedSections } from "@/lib/defence/suppressUnsupportedSections";
 import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
+import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
@@ -203,7 +205,7 @@ export async function handleBuildDefencePackage(
   const { data: priorLatest } = await sb
     .from("defence_packages")
     .select(
-      "id, version, status, validation_status, failure_code, prompt_version, validator_version, evidence_hash",
+      "id, version, status, validation_status, failure_code, prompt_version, validator_version, composition_version, evidence_hash",
     )
     .eq("dispute_id", pkg.dispute_id)
     .neq("id", pkg.id)
@@ -213,6 +215,7 @@ export async function handleBuildDefencePackage(
   const priorGuard = evaluateGenerationGuard(priorLatest, {
     promptVersion: CURRENT_PROMPT_VERSION,
     validatorVersion: VALIDATOR_VERSION,
+    compositionVersion: COMPOSITION_VERSION,
     /* The draft under construction carries the hash the enqueue site computed,
      * so the comparison is against the same evidence that decision used. */
     evidenceHash: typeof pkg.evidence_hash === "string" ? pkg.evidence_hash : null,
@@ -571,6 +574,18 @@ export async function handleBuildDefencePackage(
     ...reasonCodeFamily.prohibitedBankPhrases,
     ...paymentProhibited,
   ];
+  // Drop argument sections whose every supporting fact is withheld from the
+  // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
+  // disputes: 51 such sections across 27 cases. Blocking them would mean
+  // status:"failed" and no PDF at all, so the letter loses the paragraph
+  // instead of the merchant losing the filing.
+  const suppression = suppressUnsupportedSections({
+    narrative: narrativeRes.narrative,
+    approvedFacts: planFacts,
+    internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+  });
+  narrativeRes.narrative = suppression.narrative;
+
   let validation = validateNarrative({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -580,6 +595,45 @@ export async function handleBuildDefencePackage(
     extraHardPhrases: hardPhrases,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
+  // Non-blocking findings are recorded whether or not the package passes.
+  // Without this the rule is invisible on live traffic, and "detect first,
+  // block later" needs the detection to actually land somewhere.
+  // Removing content from a filed document is not something to do silently.
+  if (suppression.suppressed.length > 0 || suppression.declinedToEmptyLetter) {
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_section_suppressed",
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        suppressed: suppression.suppressed,
+        // True means every argument rested on withheld facts, so nothing was
+        // removed and the warnings stand. Worth seeing: it is the population
+        // the citability rule could never be promoted for.
+        declinedToEmptyLetter: suppression.declinedToEmptyLetter,
+      },
+    });
+  }
+
+  const validationWarnings = validation.warnings ?? [];
+  if (validationWarnings.length > 0) {
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_validation_warning",
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        warnings: validationWarnings,
+      },
+    });
+  }
+
   if (!validation.ok) {
     const feedback = validation.errors.map(
       (e) =>
@@ -632,6 +686,17 @@ export async function handleBuildDefencePackage(
       // Re-validate the retry output. If it still fails, persist the
       // retry result (closer to correct than the first attempt) along
       // with its errors.
+      // The retry output needs the same treatment; without this a retried
+      // package keeps the unsupported section the first pass had removed.
+      const retrySuppression = suppressUnsupportedSections({
+        narrative: retryRes.narrative,
+        approvedFacts: planFacts,
+        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+      });
+      retryRes.narrative = retrySuppression.narrative;
+      suppression.suppressed = retrySuppression.suppressed;
+      suppression.declinedToEmptyLetter = retrySuppression.declinedToEmptyLetter;
+
       const retryValidation = validateNarrative({
         narrative: retryRes.narrative,
         approvedFacts: planFacts,
@@ -675,6 +740,10 @@ export async function handleBuildDefencePackage(
          * still in force", so the guard blocks both and the case never
          * recovers — the state fourteen disputes were in on 2026-08-12. */
         validator_version: VALIDATOR_VERSION,
+        /* Same argument for the composed-prose rules: a composed failure can
+         * be caused by a template alone, so the retry decision needs to see
+         * which templates produced it (2026-09-03). */
+        composition_version: COMPOSITION_VERSION,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packageId);
@@ -952,6 +1021,7 @@ export async function handleBuildDefencePackage(
          * to say which rules produced it, or it cannot be retried when they
          * change. */
         validator_version: VALIDATOR_VERSION,
+        composition_version: COMPOSITION_VERSION,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packageId);
@@ -1273,6 +1343,7 @@ export async function handleBuildDefencePackage(
        * success carrying a stale version would make the NEXT failure look
        * older than it is. */
       validator_version: VALIDATOR_VERSION,
+      composition_version: COMPOSITION_VERSION,
       updated_at: new Date().toISOString(),
       ...canonicalIdentityColumns,
     })

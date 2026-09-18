@@ -21,12 +21,21 @@ import {
   Package,
 } from "lucide-react";
 import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
+import { PostOutcomeInsights } from "@/components/admin/PostOutcomeInsights";
 import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
+import { ShopMerchantMessages } from "@/components/admin/ShopMerchantMessages";
+import { ShopActivity } from "@/components/admin/ShopActivity";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 
 interface ShopDetail {
   shop: {
     id: string;
+    /** The myshopify alias. Always present, and the only host Shopify-side
+     *  URLs (Admin, Partners) may be built from. */
     shop_domain: string;
+    /** The real storefront domain. Null pre-backfill or on enrichment
+     *  failure — display falls back to `shop_domain`. */
+    primary_domain: string | null;
     plan: string;
     created_at: string;
     uninstalled_at: string | null;
@@ -39,6 +48,18 @@ interface ShopDetail {
   packs: number;
   storeRevenue?: { total: number; currency: string; orderCount: number };
 }
+
+/**
+ * Sections are tabbed rather than stacked: Activity is a long, growing list and
+ * placing it above the risk profile pushed everything that describes the shop
+ * below the fold. Overview is the default -- Activity is opened deliberately.
+ */
+type ShopTab = "overview" | "activity";
+
+const SHOP_TABS: { key: ShopTab; label: string }[] = [
+  { key: "overview", label: "Overview" },
+  { key: "activity", label: "Activity" },
+];
 
 const PLAN_LABEL: Record<string, string> = {
   free: "Free",
@@ -67,9 +88,14 @@ function formatMoney(amount: number, currency: string): string {
   }
 }
 
-export default function AdminShopDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminShopDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [data, setData] = useState<ShopDetail | null>(null);
+  const [activeTab, setActiveTab] = useState<ShopTab>("overview");
   const [saving, setSaving] = useState(false);
   const [overridePlan, setOverridePlan] = useState("");
   const [overridePackLimit, setOverridePackLimit] = useState("");
@@ -93,7 +119,9 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         plan: overridePlan,
-        pack_limit_override: overridePackLimit ? parseInt(overridePackLimit) : null,
+        pack_limit_override: overridePackLimit
+          ? parseInt(overridePackLimit)
+          : null,
         admin_notes: notes || null,
       }),
     });
@@ -135,7 +163,17 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
               <Store className="w-6 h-6 text-[#1D4ED8]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#0F172A] mb-1">{shop.shop_domain}</h1>
+              <h1 className="text-2xl font-bold text-[#0F172A]">
+                {displayShopDomain(shop)}
+              </h1>
+              {/* Keep the alias on screen when it differs — it is what every
+                  Shopify-side lookup (Admin URLs, Partners) and our own logs
+                  are keyed by. */}
+              <p className="text-sm text-[#94A3B8] mb-1 min-h-[1.25rem]">
+                {displayShopDomain(shop) !== shop.shop_domain
+                  ? shop.shop_domain
+                  : null}
+              </p>
               <div className="flex flex-wrap items-center gap-3">
                 <span
                   className={`px-2.5 py-1 ${planPillClass} text-xs font-semibold rounded-full`}
@@ -184,96 +222,138 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      <ShopRiskProfile shopId={shop.id} />
-
-      {/* Quick Stats footer — Figma `shop-detail.tsx:418-449` */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <DollarSign className="w-5 h-5 text-[#64748B]" />
-            <div className="text-sm text-[#64748B]">Monthly Revenue</div>
-          </div>
-          {storeRevenue ? (
-            <>
-              <div className="text-2xl font-bold text-[#0F172A]">
-                {formatMoney(storeRevenue.total, storeRevenue.currency)}
-              </div>
-              <div className="text-xs text-[#94A3B8] mt-1">
-                {storeRevenue.orderCount.toLocaleString()} orders · last 30 days
-              </div>
-            </>
-          ) : (
-            <div className="text-2xl font-bold text-[#94A3B8]">—</div>
-          )}
-        </div>
-
-        <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <Package className="w-5 h-5 text-[#64748B]" />
-            <div className="text-sm text-[#64748B]">Evidence Packs</div>
-          </div>
-          <div className="text-2xl font-bold text-[#0F172A]">{packs}</div>
-        </div>
-
-        <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <AlertCircle className="w-5 h-5 text-[#64748B]" />
-            <div className="text-sm text-[#64748B]">Total Disputes</div>
-          </div>
-          <div className="text-2xl font-bold text-[#0F172A]">{disputes}</div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-[#E2E8F0] p-6">
-        <h3 className="text-lg font-semibold text-[#0F172A] mb-4">Admin Overrides</h3>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#64748B] mb-1">Plan Override</label>
-            <select
-              value={overridePlan}
-              onChange={(e) => setOverridePlan(e.target.value)}
-              className="py-2.5 px-4 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
-            >
-              <option value="free">Free</option>
-              <option value="starter">Starter</option>
-              <option value="growth">Growth</option>
-              <option value="scale">Scale</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#64748B] mb-1">
-              Pack Limit Override (blank = plan default)
-            </label>
-            <input
-              type="number"
-              value={overridePackLimit}
-              onChange={(e) => setOverridePackLimit(e.target.value)}
-              placeholder="Plan default"
-              className="w-48 py-2.5 px-4 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#64748B] mb-1">Admin Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
-            />
-          </div>
-
+      {/* Tabs. Activity is its own tab, not stacked above the shop's own
+          details -- it is an unbounded list and was burying everything else. */}
+      <div className="flex items-center gap-1 border-b border-[#E2E8F0] mb-6 overflow-x-auto">
+        {SHOP_TABS.map((tab) => (
           <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2.5 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50"
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative ${
+              activeTab === tab.key
+                ? "text-[#1D4ED8]"
+                : "text-[#64748B] hover:text-[#0F172A]"
+            }`}
           >
-            {saving ? "Saving..." : "Save Overrides"}
+            {tab.label}
+            {activeTab === tab.key && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1D4ED8] rounded-t" />
+            )}
           </button>
-        </div>
+        ))}
       </div>
+
+      {activeTab === "activity" ? (
+        <ShopActivity shopId={shop.id} />
+      ) : (
+        <>
+          <ShopRiskProfile shopId={shop.id} />
+
+          {/* Compact post-outcome context (plan §14.2). Counts and a link, never a
+          second findings table — two tables over the same data drift. */}
+          <PostOutcomeInsights shopId={shop.id} />
+
+          {/* Quick Stats footer — Figma `shop-detail.tsx:418-449` */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <DollarSign className="w-5 h-5 text-[#64748B]" />
+                <div className="text-sm text-[#64748B]">Monthly Revenue</div>
+              </div>
+              {storeRevenue ? (
+                <>
+                  <div className="text-2xl font-bold text-[#0F172A]">
+                    {formatMoney(storeRevenue.total, storeRevenue.currency)}
+                  </div>
+                  <div className="text-xs text-[#94A3B8] mt-1">
+                    {storeRevenue.orderCount.toLocaleString()} orders · last 30
+                    days
+                  </div>
+                </>
+              ) : (
+                <div className="text-2xl font-bold text-[#94A3B8]">—</div>
+              )}
+            </div>
+
+            <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <Package className="w-5 h-5 text-[#64748B]" />
+                <div className="text-sm text-[#64748B]">Evidence Packs</div>
+              </div>
+              <div className="text-2xl font-bold text-[#0F172A]">{packs}</div>
+            </div>
+
+            <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <AlertCircle className="w-5 h-5 text-[#64748B]" />
+                <div className="text-sm text-[#64748B]">Total Disputes</div>
+              </div>
+              <div className="text-2xl font-bold text-[#0F172A]">
+                {disputes}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-[#E2E8F0] p-6">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
+              Admin Overrides
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-1">
+                  Plan Override
+                </label>
+                <select
+                  value={overridePlan}
+                  onChange={(e) => setOverridePlan(e.target.value)}
+                  className="py-2.5 px-4 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
+                >
+                  <option value="free">Free</option>
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="scale">Scale</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-1">
+                  Pack Limit Override (blank = plan default)
+                </label>
+                <input
+                  type="number"
+                  value={overridePackLimit}
+                  onChange={(e) => setOverridePackLimit(e.target.value)}
+                  placeholder="Plan default"
+                  className="w-48 py-2.5 px-4 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-1">
+                  Admin Notes
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
+                />
+              </div>
+
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2.5 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Overrides"}
+              </button>
+            </div>
+          </div>
+
+          <ShopMerchantMessages shopId={id} />
+        </>
+      )}
     </div>
   );
 }

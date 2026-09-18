@@ -428,3 +428,89 @@ describe("validateNarrative", () => {
     });
   });
 });
+
+describe("section_support_not_bank_citable", () => {
+  /**
+   * A section whose whole declared support is non-citable reaches the issuer
+   * with nothing the Evidence Basis will list. Measured on prod: 63 such
+   * sections across 53 filed packages, 26 of them paymentAuthenticationArgument.
+   */
+  const supportingOnly = fact({
+    id: "f-supporting",
+    category: "ip_location",
+    label: "Order origin",
+    value: { locationMatch: "same_country" },
+    // The real shape: the classifier calls it supporting, and
+    // bankEligible = strength in {strong, moderate}, so it is never citable.
+    strength: "supporting",
+    bankEligible: false,
+    includeInBankNarrative: false,
+    submissionRisk: false,
+  });
+
+  it("warns, and does NOT fail the package", () => {
+    // Blocking would fail ~45 of 53 fraud packages, and a failed package has no
+    // PDF and takes the next version number. Filing nothing is worse than
+    // filing an unevidenced paragraph.
+    const result = validateNarrative({
+      narrative: narrative({
+        paymentAuthenticationArgument: {
+          text: "The order IP geolocated to the same country as the billing address.",
+          usedFactIds: ["f-supporting"],
+        },
+      }),
+      approvedFacts: [supportingOnly],
+      reasonCodeModule,
+      packageMode: "full",
+      internalOnlyFactIds: [],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+    const warning = (result.warnings ?? []).find(
+      (w: ValidationError) => w.rule === "section_support_not_bank_citable",
+    );
+    expect(warning).toBeDefined();
+    expect(warning?.section).toBe("paymentAuthenticationArgument");
+    expect(warning?.severity).toBe("warning");
+    expect(warning?.checkedFactIds).toEqual(["f-supporting"]);
+  });
+
+  it("stays silent when at least one cited fact is citable", () => {
+    const result = validateNarrative({
+      narrative: narrative({
+        paymentAuthenticationArgument: {
+          text: "Address and security code both matched.",
+          usedFactIds: ["f0", "f-supporting"],
+        },
+      }),
+      approvedFacts: [fact(), supportingOnly],
+      reasonCodeModule,
+      packageMode: "full",
+      internalOnlyFactIds: [],
+    });
+    expect(
+      (result.warnings ?? []).filter(
+        (w: ValidationError) => w.rule === "section_support_not_bank_citable",
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("ignores a section that cites nothing at all", () => {
+    // No declared support is a different condition, and not this rule's job.
+    const result = validateNarrative({
+      narrative: narrative({
+        conclusion: { text: "The merchant asks that the dispute be reversed.", usedFactIds: [] },
+      }),
+      approvedFacts: [fact()],
+      reasonCodeModule,
+      packageMode: "full",
+      internalOnlyFactIds: [],
+    });
+    expect(
+      (result.warnings ?? []).filter(
+        (w: ValidationError) => w.rule === "section_support_not_bank_citable",
+      ),
+    ).toHaveLength(0);
+  });
+});

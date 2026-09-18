@@ -73,6 +73,16 @@ export const ORDER_FOR_INGEST_QUERY = /* GraphQL */ `
           ... on LocalPaymentMethodsPaymentDetails {
             paymentMethodName
           }
+          # PayPal / Shop Pay Installments are separate union members.
+          # Must stay in sync with TYPED_PAYMENT_DETAILS_MEMBERS —
+          # an unspread member returns a bare {__typename} and the
+          # order silently persists payment_method = NULL.
+          ... on PaypalWalletPaymentDetails {
+            paymentMethodName
+          }
+          ... on ShopPayInstallmentsPaymentDetails {
+            paymentMethodName
+          }
         }
       }
       metafields(first: 8) {

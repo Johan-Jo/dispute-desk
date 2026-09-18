@@ -131,6 +131,20 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
               ... on LocalPaymentMethodsPaymentDetails {
                 paymentMethodName
               }
+              # PayPal-through-Shopify-Payments and Shop Pay Installments
+              # are their OWN union members — NOT CardPaymentDetails and
+              # NOT LocalPaymentMethodsPaymentDetails. Without these two
+              # fragments Shopify returns a bare __typename-only object
+              # such order stored payment_method = NULL (2026-08-29:
+              # 2,577 of 3,583 Shopify Payments orders on 6a8848-dd, i.e.
+              # 72% of payment volume, invisible to the payment KPIs and
+              # to the AVS/CVV/BIN risk-signal writer).
+              ... on PaypalWalletPaymentDetails {
+                paymentMethodName
+              }
+              ... on ShopPayInstallmentsPaymentDetails {
+                paymentMethodName
+              }
             }
           }
           # Tracking-app metafields. When the merchant has AfterShip /
@@ -241,10 +255,34 @@ export interface RawBackfillTransaction {
   paymentDetails?: RawPaymentDetails | null;
 }
 
-/** Raw paymentDetails union — only CardPaymentDetails carries the
- *  signals we want. Non-card payment methods (Shop Pay, Apple Pay,
- *  gift card, manual) are typed as the base interface; the writer
- *  treats them as null. */
+/** Every CONCRETE member of Shopify's `PaymentDetails` union, as
+ *  returned by schema introspection on Admin API 2026-01.
+ *
+ *  This list exists because the union is a silent-failure trap: an
+ *  inline-fragment spread only matches the members it names, and a
+ *  member with no matching fragment comes back as a bare
+ *  `{__typename}` — no error, no warning, just missing data. On
+ *  2026-08-29 the queries spread only `CardPaymentDetails` and
+ *  `LocalPaymentMethodsPaymentDetails`, so every PayPal-through-
+ *  Shopify-Payments order landed with `payment_method = NULL` and an
+ *  entirely empty risk-signals row (no AVS, CVV, BIN, brand). On one
+ *  merchant that was 2,577 of 3,583 Shopify Payments orders in 30 days.
+ *
+ *  `ordersForBackfill.test.ts` asserts every member here is spread by
+ *  all three order queries, so adding a member to this list without
+ *  updating the queries fails CI rather than silently losing data.
+ *  When Shopify adds a union member, add it here first. */
+export const TYPED_PAYMENT_DETAILS_MEMBERS = [
+  "CardPaymentDetails",
+  "LocalPaymentMethodsPaymentDetails",
+  "PaypalWalletPaymentDetails",
+  "ShopPayInstallmentsPaymentDetails",
+] as const;
+
+/** Raw paymentDetails union. `CardPaymentDetails` carries the full
+ *  card-signal set; the other three members carry only
+ *  `paymentMethodName`. Members we do not model fall back to the
+ *  transaction gateway rather than being treated as null. */
 export interface RawPaymentDetails {
   __typename?: string | null;
   avsResultCode?: string | null;
@@ -435,11 +473,12 @@ export interface ShopifyOrderRow {
   customer_shopify_id: string | null;
   payment_gateway: string | null;
   /** Payment-method family derived from the primary transaction's
-   *  paymentDetails union: card | apple_pay | google_pay | shop_pay |
-   *  klarna | <local method name> | null. Distinct from payment_gateway
-   *  (which is the top-level gateway, ~always shopify_payments). Null
-   *  when the method can't be determined — we never guess. See
-   *  pickPaymentMethod. */
+   *  paymentDetails union, falling back to the transaction gateway when
+   *  that gateway IS a payment method: card | apple_pay | google_pay |
+   *  shopify_pay | klarna | paypal | <local method name> | null.
+   *  Distinct from payment_gateway (the top-level gateway, which for a
+   *  card sale is the acquirer). Null only when the method genuinely
+   *  can't be determined — we never guess. See pickPaymentMethod. */
   payment_method: string | null;
   financial_status: string | null;
   fulfillment_status: string | null;
@@ -546,21 +585,99 @@ export function pickThreeDsAuthenticated(
 }
 
 /**
- * Pure helper: derive the payment-method family from an order's
- * transactions. Reads the primary sale/authorization transaction's
- * `paymentDetails` union — the ONLY place Shopify distinguishes
- * card vs. wallet vs. Klarna/BNPL, since `paymentGatewayNames` is
- * "shopify_payments" for all of them.
+ * Card acquirers and generic gateways: the gateway name says nothing
+ * about *how* the shopper paid, because any card (or a wallet, or a
+ * BNPL product routed through the same acquirer) can arrive on it.
+ * For these, an unresolved `paymentDetails` leaves the method genuinely
+ * unknown and `pickPaymentMethod` returns null.
  *
- * Mapping:
+ * Every OTHER gateway names the payment method by naming itself —
+ * `paypal` is PayPal, `klarna` is Klarna, `amazon_pay` is Amazon Pay.
+ * Deny-listing the acquirers (a small, stable set) rather than
+ * allow-listing the alternative-payment brands (a long tail that grows
+ * every year) is what keeps this closed: a new BNPL brand is classified
+ * correctly on the day it appears, with no code change.
+ */
+const GENERIC_GATEWAYS = new Set([
+  "shopify_payments",
+  "checkout",
+  "checkout_com",
+  "mollie",
+  "worldpay",
+  "authorize_net",
+  "cybersource",
+  "nuvei",
+  "manual",
+  "bogus",
+]);
+
+/**
+ * Acquirer families. An acquirer reaches Shopify under many connector
+ * names — prod carries `stripe_connect` and `carro_stripe` alongside
+ * plain `stripe` — and every one of them hides a card behind it. Match
+ * the family as a substring so the next connector is handled on the day
+ * it appears, instead of silently becoming a "payment method" named
+ * after somebody's integration.
+ *
+ * Safe as a substring test: no real payment method embeds these names.
+ */
+const ACQUIRER_FAMILIES = ["stripe", "braintree", "adyen"];
+
+function isGenericGateway(gw: string): boolean {
+  if (GENERIC_GATEWAYS.has(gw)) return true;
+  return ACQUIRER_FAMILIES.some((family) => gw.includes(family));
+}
+
+/** Normalize a raw gateway string for comparison. Shopify is not
+ *  consistent about case or separators across gateways — this shop's
+ *  rows carry both `paypal` and `Klarna`. */
+function normalizeGateway(gateway: string | null | undefined): string | null {
+  const g = gateway?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return g ? g : null;
+}
+
+/**
+ * Pure helper: derive the payment-method family from an order's
+ * transactions. Prefers the primary sale/authorization transaction's
+ * `paymentDetails` union — the ONLY place Shopify distinguishes card
+ * vs. wallet vs. Klarna/BNPL *within* one gateway, since
+ * `paymentGatewayNames` is "shopify_payments" for all of them.
+ *
+ * Mapping, in order:
  *   - LocalPaymentMethodsPaymentDetails -> `paymentMethodName`
  *     lower-cased (e.g. "klarna", "ideal"). This is how Klarna and
- *     other local/BNPL methods surface.
+ *     other local/BNPL methods surface *inside* Shopify Payments.
  *   - CardPaymentDetails with a wallet  -> the wallet lower-cased
- *     ("apple_pay", "google_pay", "shop_pay").
+ *     ("apple_pay", "google_pay", "shopify_pay").
  *   - CardPaymentDetails without wallet -> "card".
- *   - anything else / no paymentDetails -> null. We never guess; a
- *     null method is "unknown", not a negative signal.
+ *   - PaypalWalletPaymentDetails        -> "paypal".
+ *   - ShopPayInstallmentsPaymentDetails -> "shop_pay_installments".
+ *   - no usable paymentDetails, but the transaction ran on a gateway
+ *     that IS a payment method (PayPal, Klarna as its own gateway,
+ *     Amazon Pay, …) -> that gateway, normalized.
+ *   - anything else -> null. We never guess; a null method is
+ *     "unknown", not a negative signal.
+ *
+ * The typed members and the gateway fallback are BOTH needed, and they
+ * were added independently against the same symptom (2026-08-30):
+ *   - The union fragments are the authoritative read — they say what the
+ *     method WAS, straight from Shopify, and are the only way to get
+ *     card signals (AVS/CVV/BIN) for those orders.
+ *   - The gateway fallback still catches a transaction typed as the bare
+ *     `PaymentDetails` interface (standalone-Klarna, Amazon Pay, or any
+ *     future union member we have not yet spread), where neither
+ *     `paymentMethodName` nor `wallet` is present. Without it a
+ *     PayPal-heavy merchant saw ~86% of orders as an unnamed "other".
+ * Typed members are checked FIRST because the gateway is a coarser
+ * signal — "shopify_payments" is the gateway for card, PayPal, Klarna
+ * and wallets alike, so it cannot distinguish them on its own.
+ *
+ * The two wallet/installments members are keyed off `__typename` rather
+ * than `paymentMethodName`, because the union member itself is the
+ * reliable signal — if Shopify returns a null/absent name we still know
+ * exactly what the method was. Falling through to null here is what
+ * silently dropped 72% of a merchant's payment volume out of the KPIs
+ * (see TYPED_PAYMENT_DETAILS_MEMBERS).
  *
  * Picks the same primary transaction rule as pickThreeDsAuthenticated
  * (first SUCCESS sale/auth, else the first transaction) so all derived
@@ -576,17 +693,32 @@ export function pickPaymentMethod(
         (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
         t.status === "SUCCESS",
     ) ?? transactions[0];
-  const pd = tx?.paymentDetails;
-  if (!pd) return null;
+  if (!tx) return null;
 
-  const local = pd.paymentMethodName?.trim();
+  const pd = tx.paymentDetails;
+
+  const local = pd?.paymentMethodName?.trim();
   if (local) return local.toLowerCase();
 
-  if (pd.__typename === "CardPaymentDetails") {
+  if (pd?.__typename === "CardPaymentDetails") {
     const wallet = pd.wallet?.trim();
     if (wallet) return wallet.toLowerCase();
     return "card";
   }
+
+  // Typename-keyed read for the union members whose ONLY field is
+  // `paymentMethodName` — if that comes back null we still know the
+  // method from the member itself. Authoritative, so checked before the
+  // coarser gateway fallback below.
+  if (pd?.__typename === "PaypalWalletPaymentDetails") return "paypal";
+  if (pd?.__typename === "ShopPayInstallmentsPaymentDetails") {
+    return "shop_pay_installments";
+  }
+
+  // paymentDetails told us nothing (bare interface / unspread member).
+  // The gateway still can.
+  const gw = normalizeGateway(tx.gateway);
+  if (gw && !isGenericGateway(gw)) return gw;
 
   return null;
 }

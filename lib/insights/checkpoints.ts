@@ -115,8 +115,50 @@ function hours(v: number | null): string {
 
 // ─── Rules ────────────────────────────────────────────────────────
 
+/** Does card-network framing describe this merchant?
+ *
+ *  `undefined` means the caller has not been taught about rails yet — keep
+ *  the previous unconditional behaviour rather than suppressing, so a
+ *  card-only merchant never loses a real breach warning to a plumbing gap. */
+function cardProgrammesApply(input: CheckpointInput): boolean {
+  return input.cardFramingApplies !== false;
+}
+
+/** The rate a card programme should be judged on: the card-rail rate when we
+ *  have it, else the legacy blended figure. Never mix the two silently — the
+ *  blended one is what overstated a PayPal shop's exposure 8x. */
+function cardRate(input: CheckpointInput): number | null {
+  return input.cardChargebackRate90d !== undefined
+    ? input.cardChargebackRate90d
+    : input.chargebackRate90d;
+}
+
+/** Emitted in place of a VAMP/ECM verdict when the merchant's disputes are
+ *  mostly not on a card network. This is the state that did not exist
+ *  before: previously every merchant got healthy / consider / breach, and
+ *  `healthy` was as wrong as `breach` for a Klarna or PayPal shop — it told
+ *  them they were fine against a threshold they are not measured by. */
+function notApplicable(
+  id: string,
+  cardDisputeShare: number | null | undefined,
+): Checkpoint {
+  return {
+    id,
+    severity: "info",
+    titleKey: `fraudIntel.checkpoint_${id}_not_applicable_title`,
+    bodyKey: `fraudIntel.checkpoint_${id}_not_applicable_body`,
+    values: {
+      cardShare:
+        cardDisputeShare == null ? "0%" : pct(cardDisputeShare * 100, 0),
+    },
+  };
+}
+
 function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
-  const rate = input.chargebackRate90d;
+  if (!cardProgrammesApply(input)) {
+    return notApplicable("chargeback_rate_vs_vamp", input.cardDisputeShare);
+  }
+  const rate = cardRate(input);
   if (rate === null) return null;
   let severity: CheckpointSeverity;
   if (rate >= VAMP_EXCESSIVE_PCT) severity = "breach";
@@ -137,8 +179,17 @@ function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
 }
 
 function ruleChargebackRateEcm(input: CheckpointInput): Checkpoint | null {
-  const rate = input.chargebackRate90d;
-  const count = input.chargebackOrders90d;
+  if (!cardProgrammesApply(input)) {
+    return notApplicable("chargeback_rate_vs_ecm", input.cardDisputeShare);
+  }
+  const rate = cardRate(input);
+  // Count must come from the same rail as the rate. ECM's floor is 100
+  // card chargebacks a month; feeding it a blended count would re-create the
+  // rail mixing this whole change exists to remove.
+  const count =
+    input.cardChargebackCount90d !== undefined
+      ? input.cardChargebackCount90d
+      : input.chargebackCount90d;
   if (rate === null) return null;
   // ECM requires BOTH ratio AND ≥100 disputes/month. We have a 90-day
   // count so we approximate monthly as count/3. If monthly is below

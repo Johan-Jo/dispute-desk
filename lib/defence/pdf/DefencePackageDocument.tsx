@@ -21,7 +21,7 @@
  */
 
 import React from "react";
-import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { Document, Link, Page, Text, View } from "@react-pdf/renderer";
 import { styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
@@ -328,7 +328,24 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
             wrap={false}
           >
             <Text style={styles.tableCellLabel}>{r.label}</Text>
-            <Text style={styles.tableCellValue}>{r.value}</Text>
+            {/* The tracking link is a real PDF link annotation, not a URL
+                printed as text. A reviewer clicks the carrier + number and
+                lands on the parcel; they never have to select, copy and
+                paste a 120-character URL — which, in practice, nobody does,
+                leaving the delivery claim unverifiable in the one document
+                that asserts it. `link` is null on every row without a
+                citable URL, and this falls back to plain text. */}
+            <Text style={styles.tableCellValue}>
+              {r.value}
+              {r.link ? (
+                <>
+                  {" · "}
+                  <Link src={r.link.url} style={styles.tableCellLink}>
+                    {r.link.label}
+                  </Link>
+                </>
+              ) : null}
+            </Text>
           </View>
         ))}
       </View>

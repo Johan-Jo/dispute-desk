@@ -39,6 +39,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { TAB_INDEX } from "../workspace-components/types";
 import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
+import { heroBlockingCopy } from "@/lib/disputes/presentation/heroCopy";
 import { ATTENTION_CHIP, STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
@@ -63,6 +64,7 @@ import {
 } from "@/lib/automation/merchantUiHiddenFields";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
+import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -224,7 +226,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // matches the modal verbatim.
   const tEvidence = useTranslations("disputes.evidenceTab");
   const tExtra = useTranslations("disputes.overviewExtra");
-  const tSignal = useTranslations("disputes.signalLabel");
   const tSource = useTranslations("disputes.sourceCaption");
   const tItemStrength = useTranslations("disputes.itemStrength");
   const tPill = useTranslations("disputes.overviewPill");
@@ -296,6 +297,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const submitted = isReadOnly;
   const submittedAt = data.pack?.savedToShopifyAt ?? null;
+  const outcomeDecisionAt = resolveOutcomeDecisionDate({
+    closedAt: dispute.closedAt,
+    submittedAt,
+  });
 
   // "held" | "cancelled" | null — see lib/disputes/heldOrCancelledUnrefunded.ts.
   // Fails closed: a pack built before `refunded` was persisted returns null
@@ -375,6 +380,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    * Terminal disputes therefore leave the assessment vocabulary behind
    * entirely and state what we filed and the likely deciding factor.
    * The gate itself is untouched and still governs every live case. */
+  /* A halt is STATED, not narrated as progress. The precedence lives in
+   * `heroBlockingCopy` — a pure function the tests call too, so a green test
+   * means this page picks that key rather than merely that the key exists.
+   * See its docblock for the #99413 incident that motivated extracting it. */
+  const heroBlocking = heroBlockingCopy({
+    lifecycle,
+    attention: presentation?.attention ?? null,
+    blockingReason: presentation?.blockingReason ?? null,
+  });
+
   const isDecided = lifecycle === "won" || lifecycle === "lost";
   const decidedOutcome: "won" | "lost" | null =
     lifecycle === "won" ? "won" : lifecycle === "lost" ? "lost" : null;
@@ -389,22 +404,62 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       | { submitted_at?: string | null; facts_json?: unknown }
       | null
       | undefined;
+    /* Post-decision learning is merchant-only and must see the complete
+     * assessment, including facts correctly withheld from the issuer. The
+     * previous implementation read only bankFacing.facts_json, making AVS,
+     * name and account-history warnings disappear and allowing an unsigned
+     * parcel to become the headline. */
+    const assessmentFacts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
+      ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
+    );
     const explanation = resolveOutcomeExplanation({
       outcome: decidedOutcome,
       reason: dispute.reason ?? null,
+      customerName: dispute.customerName ?? null,
       pack: bankFacing
-        ? { submittedAt: bankFacing.submitted_at ?? null, facts: bankFacing.facts_json }
+        ? {
+            submittedAt: bankFacing.submitted_at ?? null,
+            facts: assessmentFacts.length > 0 ? assessmentFacts : bankFacing.facts_json,
+          }
         : null,
     });
     const filedAt =
       explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
+    /* The learning panel below owns the factor explanation on lost cases.
+     * Feeding the same factor into this filing sentence rendered an exact
+     * duplicate immediately above the panel. Keep the richer explanation for
+     * outcome emails (which have no panel), but make the Overview hero a
+     * concise filing/outcome summary. */
+    const heroExplanation =
+      decidedOutcome === "lost" && explanation.kind === "we_defended_with_facts"
+        ? ({ kind: "we_defended_no_facts", filedAt: explanation.filedAt } as const)
+        : explanation;
     const token = outcomeExplanationToken(
-      explanation,
+      heroExplanation,
       decidedOutcome,
       filedAt ? formatDate(filedAt) : null,
     );
     return token ? resolveToken(tRoot, token) : null;
   })();
+
+  const outcomeLearningFactors = (() => {
+    if (decidedOutcome !== "lost") return null;
+    const facts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
+      ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
+    );
+    return resolveOutcomeExplanation({
+      outcome: "lost",
+      reason: dispute.reason ?? null,
+      customerName: dispute.customerName ?? null,
+      pack: data.defencePackage?.bankFacing
+        ? { submittedAt: null, facts }
+        : null,
+    });
+  })();
+  const outcomeLearningList =
+    outcomeLearningFactors?.kind === "we_defended_with_facts"
+      ? outcomeLearningFactors.factors
+      : [];
 
   // Hero tone follows LIFECYCLE, not strength (plan §8: strength never
   // creates alarm or a green "ready" glow). Calm indigo default; green
@@ -525,6 +580,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     ) {
       return t(`hero.title.preSubmit.${heroVariant}`);
     }
+    /* A BLOCKING cause outranks the lifecycle headline (2026-09-03).
+     *
+     * The hero previously described only what the pipeline was DOING, and
+     * handled exactly one blocking reason (`approval_gate`, via
+     * `showApprovalDecide`). The resolver emits seven. So on #99413 —
+     * `auto_build_off`, meaning the merchant has automatic evidence building
+     * switched off and NO pack will ever be built — the page rendered
+     * "Building your evidence pack… usually within a few hours" and "No
+     * action needed from you", over a live deadline.
+     *
+     * A lifecycle of `building_evidence` is not false there so much as
+     * unreachable: the build is halted pending the merchant. When the shared
+     * resolver says work is blocked, the hero says WHY, using the same copy
+     * keys the list and the header pill already use (`attentionLabelKey`) so
+     * the three surfaces cannot drift. Terminal states keep their headline —
+     * nothing is blocked once the case is decided. */
+    if (heroBlocking) return tp(heroBlocking.titleKey);
     switch (lifecycle) {
       case "won":
         return t("hero.title.closed.won");
@@ -558,14 +630,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       const reason = (strengthReasonText ?? "").trim();
       return reason.length > 0 ? reason : null;
     }
+    if (heroBlocking) return tp(heroBlocking.subtitleKey);
     switch (lifecycle) {
       case "won":
         return t("hero.subtitle.closedWon", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+          decisionDate: outcomeDecisionAt ? formatDate(outcomeDecisionAt) : "none",
         });
       case "lost":
         return t("hero.subtitle.closedLost", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+          decisionDate: outcomeDecisionAt ? formatDate(outcomeDecisionAt) : "none",
         });
       case "closed":
         return t("hero.subtitle.closedUnknown", {
@@ -1030,6 +1103,28 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: 0, lineHeight: 1.55, maxWidth: 760 }}>
                   {outcomeExplanationText}
                 </p>
+                {outcomeLearningList.length > 0 ? (
+                  <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "rgba(255,255,255,0.62)" }}>
+                    <Text as="p" variant="bodySm" fontWeight="semibold">
+                      {tRoot("disputes.outcomeExplanation.learning.title")}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {tRoot("disputes.outcomeExplanation.learning.caveat")}
+                    </Text>
+                    <ul style={{ margin: "8px 0", paddingLeft: 20, color: heroTone.bodyColor }}>
+                      {outcomeLearningList.slice(0, 4).map((factor) => (
+                        <li key={factor.code} style={{ fontSize: 12.5, lineHeight: 1.55 }}>
+                          {resolveToken(tRoot, factor.token)}
+                        </li>
+                      ))}
+                    </ul>
+                    {resolveReasonFamily(dispute.reason ?? null) === "fraud" ? (
+                      <Text as="p" variant="bodySm">
+                        {tRoot("disputes.outcomeExplanation.learning.fraudRecommendation")}
+                      </Text>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : null
           ) : (
@@ -1910,16 +2005,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                         /* fall through to generic label */
                       }
                     }
-                    // signalLabel.<signalId> is now the canonical key
-                    // (no more spec.label fallback). When the lookup
-                    // returns the key path verbatim, fall back to the
-                    // raw signalId so the row still renders something
-                    // identifiable.
+                    // The label is `spec.labelKey` — NOT `spec.signalId`.
+                    // `signalId` is a scoring DEDUP identity: several
+                    // fields deliberately share one (avs_cvv_match and
+                    // tds_authentication are both "payment_auth"), so it
+                    // is not a label and has no guaranteed i18n key.
+                    // Building `signalLabel.<signalId>` happened to work
+                    // for 19 of 20 specs because the two strings collide;
+                    // returned_parcel_outcome (signalId "parcel_outcome")
+                    // is the one that does not, and it leaked the raw key
+                    // path to merchants. Resolve labelKey off the root
+                    // translator, exactly as lib/argument/caseStrength.ts
+                    // does. Guarded by the labelKey-resolves invariant in
+                    // lib/argument/__tests__/canonicalEvidence.test.ts.
                     try {
-                      const k = tSignal(spec.signalId);
-                      return k && k !== spec.signalId ? k : spec.signalId;
+                      return tRoot(spec.labelKey);
                     } catch {
-                      return spec.signalId;
+                      return spec.labelKey;
                     }
                   })()}
                 </p>

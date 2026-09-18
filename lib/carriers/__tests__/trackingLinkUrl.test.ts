@@ -17,20 +17,40 @@ import {
 
 describe("resolveTrackingLinkUrl — canonical templates", () => {
   it("DHL prints the identifier under BOTH spellings so the results page opens directly", () => {
+    // A genuine DHL Express waybill — the case the duplicated `trackingid=` /
+    // `tracking-id=` spelling was reported working for.
+    //
+    // This case USED to be pinned with an IMpb number (`420115809261…`) taken
+    // from a TechSHIP row, asserting it resolved to dhl.com. That assertion
+    // was never verified against a live parcel: it pinned the URL SPELLING
+    // and silently carried an unverified claim about the number's carrier.
+    // It was wrong — a `420…` barcode is a USPS-network number and DHL
+    // Express renders an empty page for it, which is exactly the failure the
+    // maintainer reported on 2026-09-03. See the number-format describe block.
+    const r = resolveTrackingLinkUrl({
+      company: "DHL Express",
+      number: "473325380010451152",
+      url: "https://www.dhl.com/us-en/home/tracking.html?submit=1&tracking-id=473325380010451152",
+    });
+    // The reported working form: submit=1 + trackingid= + tracking-id=.
+    expect(r.url).toBe(
+      "https://www.dhl.com/us-en/home/tracking.html?submit=1" +
+        "&trackingid=473325380010451152" +
+        "&tracking-id=473325380010451152",
+    );
+    expect(r.source).toBe("canonical");
+    expect(r.carrier).toBe("dhl");
+  });
+
+  it("a TechSHIP IMpb barcode goes to USPS, not the DHL page it used to open", () => {
+    // The regression this file previously pinned the WRONG way round.
     const r = resolveTrackingLinkUrl({
       company: "TechSHIP",
       number: "420115809261290416102420734108",
       url: "https://www.dhl.com/us-en/home/tracking.html?submit=1&tracking-id=420115809261290416102420734108",
     });
-    // The reported working form: submit=1 + trackingid= + tracking-id=.
-    expect(r.url).toBe(
-      "https://www.dhl.com/us-en/home/tracking.html?submit=1" +
-        "&trackingid=420115809261290416102420734108" +
-        "&tracking-id=420115809261290416102420734108",
-    );
-    expect(r.source).toBe("canonical");
-    // Identified from the URL host — "TechSHIP" names no carrier we know.
-    expect(r.carrier).toBe("dhl");
+    expect(r.carrier).toBe("usps");
+    expect(r.url).toBe("https://tools.usps.com/tracking/9261290416102420734108");
   });
 
   it("UPS uses tracknum= on www.ups.com, never the retired wwwapps host", () => {
@@ -234,5 +254,95 @@ describe("resolveTrackingLinkUrl — merchant fallback repair", () => {
     }
     // A javascript: URL must never survive to a PDF.
     expect(trackingLinkUrl({ company: null, number: null, url: "javascript:alert(1)" })).toBeNull();
+  });
+});
+
+/**
+ * Routing by the NUMBER's format, when the merchant's carrier string
+ * disagrees with it.
+ *
+ * Reported by the maintainer 2026-09-03 against a live blume-box package:
+ * "if I click it, I end up on a DHL page with no code posted." The parcel's
+ * carrier read "TechSHIP", the number was the IMpb barcode
+ * 420774699261290416102420744039, and we built a dhl.com link from it —
+ * which DHL Express cannot resolve, because the number belongs to the USPS
+ * network.
+ *
+ * Prod scale of the misroute at the time (shopify_fulfillment_trackings):
+ *   company "DHL"      → 5,162 IMpb + 25,821 bare-22 USPS numbers
+ *   company "TechSHIP" → 5,251 IMpb +    327 bare-22 USPS numbers
+ * = 36,561 shipments whose bank-facing link could not resolve.
+ */
+describe("routes by number format when the carrier string disagrees", () => {
+  // The exact parcel from the reported package (blume-box dispute 46caa8fe).
+  const IMPB = "420774699261290416102420744039";
+  const INNER = "9261290416102420744039";
+
+  it("sends an IMpb barcode to USPS, tracking the INNER 22 digits", () => {
+    const r = resolveTrackingLinkUrl({
+      company: "TechSHIP",
+      number: IMPB,
+      url: "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=" + IMPB,
+    });
+    expect(r.carrier).toBe("usps");
+    expect(r.source).toBe("canonical");
+    // The 420 + destination-ZIP prefix is a routing header, not part of the
+    // trackable identifier.
+    expect(r.url).toBe(`https://tools.usps.com/tracking/${INNER}`);
+    expect(r.url).not.toContain("dhl.com");
+  });
+
+  it("does the same when the carrier literally says DHL", () => {
+    const r = resolveTrackingLinkUrl({ company: "DHL", number: IMPB, url: null });
+    expect(r.url).toBe(`https://tools.usps.com/tracking/${INNER}`);
+  });
+
+  it("sends a bare 22-digit USPS number to USPS even when labelled DHL", () => {
+    // 25,821 prod rows under company "DHL" are exactly this shape.
+    const r = resolveTrackingLinkUrl({
+      company: "DHL",
+      number: "9274890990112751308700",
+      url: null,
+    });
+    expect(r.carrier).toBe("usps");
+    expect(r.url).toBe("https://tools.usps.com/tracking/9274890990112751308700");
+  });
+
+  it("leaves a genuine DHL Express number on DHL", () => {
+    // The rule must be narrow: only the two unambiguous USPS-network
+    // formats are rerouted. A real DHL waybill keeps its own template.
+    const r = resolveTrackingLinkUrl({
+      company: "DHL Express",
+      number: "473325380010451152",
+      url: null,
+    });
+    expect(r.carrier).toBe("dhl");
+    expect(r.url).toContain("dhl.com");
+  });
+
+  it("leaves UPS, FedEx and PostNord untouched", () => {
+    expect(resolveTrackingLinkUrl({ company: "UPS", number: "1Z8TM37L6827673944" }).carrier).toBe("ups");
+    expect(resolveTrackingLinkUrl({ company: "FedEx", number: "876489753690" }).carrier).toBe("fedex");
+    expect(
+      resolveTrackingLinkUrl({ company: "PostNord SE", number: "00573132901873456413" }).carrier,
+    ).toBe("postnord");
+  });
+
+  it("does NOT hijack DHL eCommerce, which resolves those numbers itself", () => {
+    // DHL eCommerce injects into the USPS network — 65,360 prod rows carry a
+    // bare-22 number — but tracks them on its own webtrack host, verified in
+    // a real browser to render FULLER scan history than USPS does.
+    //
+    // This is the guard on the override's scope: the rule exists to fix a
+    // template that cannot resolve the number, not to prefer USPS generally.
+    const r = resolveTrackingLinkUrl({
+      company: "DHL eCommerce",
+      number: "9274890990112751308700",
+      url: null,
+    });
+    expect(r.carrier).toBe("dhl_ecommerce");
+    expect(r.url).toBe(
+      "https://webtrack.dhlglobalmail.com/?trackingnumber=9274890990112751308700",
+    );
   });
 });

@@ -35,8 +35,41 @@ import { definitionFor } from "./definitions";
 import type { CaseEvidenceModel } from "./types";
 import type { RelevanceLevel } from "./vocabulary";
 
-/** Bumped when the scoring inputs or policy change. Recorded on every result. */
-export const SCORING_POLICY_VERSION = 1;
+/**
+ * Bumped when the scoring inputs or policy change. Recorded on every result.
+ *
+ * ── 2 (2026-09-01) — the IP-tier recategorization ─────────────────────
+ *
+ * PR #641 moved a clean `same_country` IP fact from `supporting` to
+ * `moderate` (`lib/argument/canonicalEvidence.ts`). That is a POLICY change,
+ * and it reaches the assessment input hash: `categorizeEvidenceField` decides
+ * a record's legacy category, `fromLegacyCategory` turns `moderate` into
+ * quality `corroborating` (it was `contextual`), and `modelFingerprint` hashes
+ * `quality` per record. So every snapshot written before the deploy hashes to
+ * a value the current rules no longer reproduce.
+ *
+ * It shipped without this bump, and the consequence was not academic. A pack
+ * built 2026-08-27 was read on 09-01 and reported `input_hash_mismatch` — the
+ * reason whose merchant copy reads *"The evidence on this case changed after
+ * it was last assessed."* Nothing about that merchant's evidence had changed;
+ * the rules for hashing it had. 55 open production packs carrying a
+ * `same_country` IP fact were showing "Not assessed yet" with the strength
+ * band, the completeness score AND the send action withdrawn
+ * (`resolveAssessmentGate` sets all three false together).
+ *
+ * The bump is what that change should have carried. `evaluateFreshness` checks
+ * `policyVersion` BEFORE `inputHash`, so an old snapshot now reports
+ * `policy_version_superseded` — which is the truthful reason, routes to the
+ * "not yet assessed" copy instead of the false "your evidence changed" one,
+ * and is exactly the case the version field was introduced for: *"a policy
+ * bump invalidates snapshots even when inputs are identical."*
+ *
+ * THE RULE THIS ENCODES: changing what `categorizeEvidenceField` returns for
+ * any field is a policy change and MUST bump this constant in the same PR.
+ * A category feeds `quality`, `quality` is hashed, and an unbumped rule change
+ * tells every merchant on the fleet that their evidence moved.
+ */
+export const SCORING_POLICY_VERSION = 2;
 
 export interface CaseAssessment {
   assessmentVersion: number;

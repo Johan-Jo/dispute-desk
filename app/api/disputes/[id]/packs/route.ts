@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
@@ -14,8 +15,9 @@ import { sendFreeOutOfPacksEmail } from "@/lib/email/billingLifecycle";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id: disputeId } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -61,7 +63,7 @@ export async function POST(
     }
     return NextResponse.json(
       { error: quota.reason, upgrade_required: true, usage: quota },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -83,7 +85,7 @@ export async function POST(
         completenessScore: existing.completeness_score,
         message: "Active pack already exists for this dispute",
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
@@ -103,7 +105,7 @@ export async function POST(
   if (packErr || !pack) {
     return NextResponse.json(
       { error: `Failed to create pack: ${packErr?.message}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -120,7 +122,7 @@ export async function POST(
   if (jobErr || !job) {
     return NextResponse.json(
       { error: `Failed to enqueue job: ${jobErr?.message}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -128,15 +130,17 @@ export async function POST(
     shop_id: dispute.shop_id,
     dispute_id: disputeId,
     pack_id: pack.id,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "job_queued",
-    event_payload: { jobId: job.id, trigger: body.template_id ? "manual_template" : "manual_generate", template_id: body.template_id ?? null },
+    event_payload: {
+      jobId: job.id,
+      trigger: body.template_id ? "manual_template" : "manual_generate",
+      template_id: body.template_id ?? null,
+    },
   });
 
-  return NextResponse.json(
-    { packId: pack.id, jobId: job.id },
-    { status: 202 }
-  );
+  return NextResponse.json({ packId: pack.id, jobId: job.id }, { status: 202 });
 }
 
 /**
@@ -146,7 +150,7 @@ export async function POST(
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: disputeId } = await params;
   const shopId = extractShopId(req);
@@ -170,7 +174,9 @@ export async function GET(
 
   const { data: packs } = await db
     .from("evidence_packs")
-    .select("id, status, completeness_score, created_by, created_at, updated_at")
+    .select(
+      "id, status, completeness_score, created_by, created_at, updated_at",
+    )
     .eq("dispute_id", disputeId)
     .eq("shop_id", shopId)
     .order("created_at", { ascending: false });
