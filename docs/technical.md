@@ -8512,7 +8512,19 @@ Measured 2026-08-31: **45 of 53** filed packages on decided disputes asserted th
 
 `same_country` now categorises as `moderate`, same as `same_city`. `different_country` and any payload failing the collector's gate stay `supporting`, so nothing adverse becomes citable.
 
-**Blast radius.** 132 facts across 64 disputes and 2 shops. 65 sit on decided disputes (analysis only). Of the 67 on open disputes, 25 are already `submitted_to_bank` and 7 `submitted_to_shopify` — already filed. **One** dispute is in `new`, the only case early enough for the change to affect an automation decision.
+**Blast radius, re-measured 2026-09-20 on prod** (the 2026-08-31 figures below it were three weeks stale by the time this shipped): **145 facts across 67 disputes, 141 packages, 2 shops.** 90 sit on decided disputes (analysis only). Of the rest, all but four are already filed. **Four** disputes are undecided and unfiled — `#353605` (deadline already passed), `#351821`, `#351820`, `#352535`.
+
+**The automation risk is smaller than this change's own warning claimed.** The note below says `moderate` carries strength weight 2 where `supporting` carries 0, so a case "could cross a strength band, and strength gates auto-save". Traced 2026-09-20, the mechanism does not reach that far:
+
+- the band is decided by **counts, not the weighted score** (`caseStrength.ts`): `strongCount >= 2` → strong; `strongCount === 1 && moderateCount >= 1` → moderate; else weak;
+- promoting a fact from `supporting` to `moderate` increments `moderateCount` and **never** `strongCount`, and `strong` requires two strong signals;
+- the automation ladder sends `moderate` to `hold_for_deadline`, not `auto_file` (`deriveCaseAutomationDecision.ts` rung 9). Only `strong` reaches `auto_file`.
+
+So the realistic worst case is one dispute moving `weak → moderate`, which moves it from *blocked* to *waiting for its deadline* — not to an earlier filing. Of the four exposed disputes, three are already `moderate` (no band change possible) and one (`#351821`, weak) can move. Reaching `auto_file` would need a second **strong** signal, which this change cannot manufacture.
+
+**`SCORING_POLICY_VERSION` bumped 2 → 3 in the same PR**, per the rule in `assessment.ts`. This invalidates every v2 snapshot, which is the intended behaviour: those snapshots were scored under a categorization the engine no longer applies. Filed packs keep showing their band via `resolveDisplayStrengthOverall`, so the list stays populated; **unsubmitted** packs show "not yet assessed" until their next rebuild, which is the correct answer for a live case whose rules just changed. Option B — extending recovery to unsubmitted packs to avoid the blank — was considered and rejected: it would show a merchant mid-decision a band computed under rules this bump declares wrong, which is the exact failure the version field exists to prevent.
+
+**The rule is now mechanised.** `lib/argument/__tests__/categorizationPolicyBump.test.ts` pins the observed output of `categorizeEvidenceField` over one payload per branch, paired with the policy version in a single snapshot. Changing a category without bumping fails CI with a diff naming what moved. The rule had existed only as a comment since v2, which is why this very change sat on a branch for three weeks with the categorization altered and the constant untouched.
 
 **This is a bank-visible behaviour change and also a scoring one.** `moderate` carries strength weight 2 where `supporting` carries 0, so affected disputes score higher and could cross a strength band, and strength gates auto-save. That is the intended reading — evidence good enough to show an issuer should count — but it is a real consequence, not a side effect to discover later.
 
