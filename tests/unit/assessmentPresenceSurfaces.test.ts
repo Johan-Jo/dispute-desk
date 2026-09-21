@@ -134,6 +134,52 @@ describe("resolveAssessmentGate", () => {
       absent.bodyToken.key,
     );
   });
+
+  /* ── THE TITLE A POLICY BUMP SHOWS ──────────────────────────────────
+   *
+   * The case above pins that the BODIES differ. Nothing pinned the TITLE, and
+   * that gap is not theoretical: while preparing the v2→v3 bump, the change
+   * was described — in a commit message, a PR body and a docs paragraph — as
+   * making merchants see "Not assessed yet". It does not, and cannot.
+   *
+   * The distinction is the whole reason `AssessmentPresence` was split:
+   *   `absent` = never scored          → "Not assessed yet"
+   *   `stale`  = scored under old rules → "Assessed under an earlier version"
+   *
+   * Telling a merchant who HAS been assessed that they have not is the defect
+   * this module was created to end (the header pill once read "Not assessed
+   * yet" over a case carrying completeness 97). A policy bump is the single
+   * most likely trigger for that regression, because it invalidates snapshots
+   * fleet-wide in one commit — so the guarantee is pinned here explicitly
+   * rather than inferred from the body assertions above.
+   */
+  it("a superseded policy reads 'assessed under an earlier version', never 'not assessed yet'", () => {
+    const superseded = resolveAssessmentGate({
+      needsRecalculation: true,
+      recalculationReason: "policy_version_superseded",
+    });
+    const absent = resolveAssessmentGate({
+      needsRecalculation: true,
+      recalculationReason: "snapshot_absent",
+    });
+
+    expect(superseded.presence).toBe("stale");
+    expect(superseded.titleToken.key).toBe("disputes.assessmentState.stale.title");
+    // The explicit negative: a bump must never borrow the never-scored title.
+    expect(superseded.titleToken.key).not.toBe(absent.titleToken.key);
+    expect(absent.titleToken.key).toBe("disputes.assessmentState.notAssessed.title");
+
+    /* `input_hash_mismatch` — "your evidence changed" — is the OTHER message a
+     * bump must not produce. It is the false one merchants saw on pre-bump
+     * packs after an unbumped categorization change, and routing a policy
+     * bump to it would reintroduce exactly that. Same presence, but the
+     * reasons stay distinct at the source so the two can never be conflated. */
+    const hashMismatch = resolveAssessmentGate({
+      needsRecalculation: true,
+      recalculationReason: "input_hash_mismatch",
+    });
+    expect(hashMismatch.presence).toBe("stale");
+  });
 });
 
 /* ── 3. The surfaces consult it ──────────────────────────────────────── */
