@@ -68,8 +68,21 @@ import type { RelevanceLevel } from "./vocabulary";
  * any field is a policy change and MUST bump this constant in the same PR.
  * A category feeds `quality`, `quality` is hashed, and an unbumped rule change
  * tells every merchant on the fleet that their evidence moved.
+ *
+ * ── v3 (2026-09-20): `ip_location_check` same_country → moderate ──────
+ *
+ * The rule above was stated but never MECHANISED, so the next change to
+ * `categorizeEvidenceField` was free to arrive without a bump — and did. The
+ * `same_country` tier fix sat on a branch for three weeks carrying exactly the
+ * defect this comment warns about. A rule that only exists in prose gets
+ * violated by the next person who does not read the prose.
+ *
+ * `categorizationPolicyBump.test.ts` now pins the mapping table this constant
+ * describes. Changing any category without bumping fails CI with a diff of
+ * what moved. The test is the enforcement; this paragraph is only its
+ * explanation.
  */
-export const SCORING_POLICY_VERSION = 2;
+export const SCORING_POLICY_VERSION = 3;
 
 export interface CaseAssessment {
   assessmentVersion: number;
