@@ -626,6 +626,92 @@ describe("Cross-page consistency", () => {
     );
   });
 
+  /* ── THE WINDOW CLOSED AND NOTHING WAS FILED ────────────────────────
+   *
+   * The two cases above stop a decision overriding the lifecycle once it has
+   * been CARRIED OUT. Neither covers a decision that can no longer be carried
+   * out at all — the pre-save rungs never advance when the deadline passes
+   * unfiled, so the "still pending" test kept answering yes forever.
+   *
+   * Live on prod 2026-09-21, 6a8848-dd:
+   *   #90627 — approved, due 30 Aug 03:00 UTC, never filed. Three weeks on,
+   *            the list still read "Scheduled to submit — Set to submit
+   *            automatically on the deadline".
+   *   #90055 — due 26 Aug, no pack. Read "Building evidence · No action
+   *            required", telling the merchant to relax about the one case
+   *            that had actually slipped.
+   *
+   * Both are casualties of the pre-#736 cron-window gap (a `due_at` before
+   * the 08:00 UTC run was unreachable in both directions). The gap is fixed;
+   * the UI went on promising a submit the cron could no longer make.
+   */
+  describe("a deadline that passed with nothing filed", () => {
+    const AFTER = new Date("2026-09-21T12:00:00Z");
+    const DUE = "2026-08-30T03:00:00Z";
+
+    it("#90627: an approved decision stops claiming it is scheduled", () => {
+      const p = resolvePresentation({ ...basePresentation, packStatus: "ready" });
+      // The rung that never advances — this is why lifecycle alone missed it.
+      expect(p.lifecycle).toBe("pack_prepared");
+
+      // Before the deadline the promise is still true.
+      expect(
+        listPrimaryState(p, "approved", {
+          evidenceDueAt: DUE,
+          now: new Date("2026-08-29T12:00:00Z"),
+        }).labelKey,
+      ).toBe("presentation.reviewDecision.approved");
+
+      // After it, the row states the fact instead.
+      expect(
+        listPrimaryState(p, "approved", { evidenceDueAt: DUE, now: AFTER }).labelKey,
+      ).toBe("presentation.listState.deadline_missed");
+    });
+
+    it("#90055: a no-pack case stops saying 'no action required'", () => {
+      const p = resolvePresentation({ ...basePresentation });
+      expect(p.lifecycle).toBe("building_evidence");
+      expect(
+        listPrimaryState(p, null, {
+          evidenceDueAt: "2026-08-26T03:00:00Z",
+          now: AFTER,
+        }).labelKey,
+      ).toBe("presentation.listState.deadline_missed");
+    });
+
+    it("a FILED dispute past its deadline is untouched", () => {
+      /* The guard on the whole change. Once the evidence is saved the
+       * lifecycle has advanced off the pre-save rungs, so a passed deadline
+       * is unremarkable — it must keep reading as saved, not as missed. */
+      const p = resolvePresentation({
+        ...basePresentation,
+        submissionState: "saved_to_shopify",
+        packStatus: "saved_to_shopify",
+      });
+      expect(
+        listPrimaryState(p, "approved", { evidenceDueAt: DUE, now: AFTER }).labelKey,
+      ).toBe("presentation.lifecycle.saved_to_shopify");
+    });
+
+    it("a caller that passes no deadline keeps the old behaviour", () => {
+      /* Omitting the deadline means "I cannot judge the clock", never "the
+       * clock has not run out" — the resolver must not infer one for them. */
+      const p = resolvePresentation({ ...basePresentation, packStatus: "ready" });
+      expect(listPrimaryState(p, "approved").labelKey).toBe(
+        "presentation.reviewDecision.approved",
+      );
+    });
+
+    it("an unparseable or absent due date is not an expired one", () => {
+      const p = resolvePresentation({ ...basePresentation, packStatus: "ready" });
+      for (const evidenceDueAt of ["not-a-date", null, undefined]) {
+        expect(
+          listPrimaryState(p, "approved", { evidenceDueAt, now: AFTER }).labelKey,
+        ).toBe("presentation.reviewDecision.approved");
+      }
+    });
+  });
+
   it("a saved-editable case is calm everywhere (no task, no warning)", () => {
     const p = resolvePresentation({
       ...basePresentation,

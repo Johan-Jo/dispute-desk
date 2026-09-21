@@ -5959,13 +5959,15 @@
       "recommended": "Kommunikation empfohlen",
       "requested": "Kommunikation prüfen",
       "blocking": "Freigabe erforderlich",
-      "technical_error": "Technische Aufmerksamkeit erforderlich"
+      "technical_error": "Technische Aufmerksamkeit erforderlich",
+      "deadline_missed": "Antwortfrist abgelaufen"
     },
     "listStateSub": {
       "recommended": "Kundenkommunikation kann diese Antwort stärken",
       "requested": "Prüfen Sie die vorgeschlagenen Kundennachrichten",
       "blocking": "DisputeDesk wartet auf Ihre Freigabe",
-      "technical_error": "Verbindung wiederherstellen, um die Überwachung fortzusetzen"
+      "technical_error": "Verbindung wiederherstellen, um die Überwachung fortzusetzen",
+      "deadline_missed": "Die Frist verstrich, bevor eine Antwort gesendet wurde"
     },
     "internalIssue": "DisputeDesk hat ein technisches Problem erkannt und arbeitet an der Lösung. Derzeit ist keine Aktion von Ihnen erforderlich.",
     "deadlineLabel": "Shopify-Antwortfrist",
