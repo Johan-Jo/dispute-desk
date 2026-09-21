@@ -1087,7 +1087,7 @@ The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Fi
   - Total orders — count. Normally shows the period-vs-prior trend pill (increase = green); when the selected window reaches back before the earliest `shop_daily_metrics` row (`ordersCoveragePartial`), it instead shows a muted "since {date}" caveat so the capped count isn't misread as the true total. See *Daily-metrics rollup coverage* below.
   - Amount at risk — red value, split by phase in a muted subline (`{cb $} cb · {inq $} inq`) plus "{n} pending" (active disputes only, all-time). Chargeback exposure is more urgent than inquiry exposure, hence the split.
   - Total invoiced — `monthlyPrice × monthsInPeriod` via `totalInvoicedForPeriod()`. Marked approximate via a "≈" tooltip ("Approximate: monthly price × months in window. No invoice history yet.") — see `lib/admin/shopBilling.ts`. **When the shop is on the Free plan (`monthlyRevenue.planId === "free"`) the card renders "Free plan / No subscription revenue" instead of a bare `$0`** (which read as broken data). The Quick-Stats "Monthly Revenue" card on the detail page gets the same treatment.
-  - Win rate — green value, with a muted `cb {rate}% · inq {rate}%` per-phase subline (`winRatePhase`; "—" when that phase has no decided disputes) and "{n} won". Denominator is `won + lost`, so "Pending" disputes don't deflate the rate. Inquiries and chargebacks often win at very different rates, hence the split.
+  - Win rate (DisputeDesk) — green value, **restricted to disputes DisputeDesk actually filed** (`winRateAttributed`, see *Submission attribution* below). Renders "—" (never `0%`) when we filed nothing decided in the window: a 0% would read as "we lost every case" when the truth is "we handled none of them". A divider then carries the unattributed figures as muted context: `All disputes: {rate}%` with the `cb {rate}% · inq {rate}%` per-phase subline (`winRatePhase`; "—" when that phase has no decided disputes), plus a `Filed by us {n} · Shopify {n} · unknown {n}` split. Denominator in both cases is `won + lost`, so "Pending" disputes don't deflate the rate. Inquiries and chargebacks often win at very different rates, hence the phase split. The Outcomes panel's "Won" row helper is explicitly labelled `{rate}% win rate (all disputes)` so the two numbers can't be confused.
 - **Charts grid (2 cols):**
   - Dispute breakdown — **six** curated progress bars sorted largest-first: Fraud / Unauthorized, Item not received, Refund not processed, Item not as described, Subscription canceled, Other. Previously three buckets (fraud/fulfillment/other), which collapsed Refund (`CREDIT_NOT_PROCESSED`), Subscription, Billing, etc. into an unhelpful "Other". Mapping is `FAMILY_TO_BUCKET` in `lib/admin/shopRisk.ts` over `DISPUTE_REASON_FAMILIES`: Fraud + Authorization → fraud; Fulfillment → fulfillment; Refund → refund; Quality → quality; Subscription → subscription; General/Billing/Technical/Compliance/unknown → other.
   - Outcomes — three rows with colored 40×40 icon boxes (Won / Lost / Pending) + helper rate. Each row carries a muted `{n} cb · {m} inq` phase suffix (`outcomePhase`) next to its count.
@@ -1101,6 +1101,26 @@ The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Fi
   - Data completeness — `% = (snapshot rows in window) / (window days)`. Surfaced as a value + horizontal progress bar.
 
 Numbers come from `shop_daily_metrics` (order denominator, coverage, freshness) + the local `disputes` table (dispute counts, reason/outcome/payment-method mix, chargeback-rate numerator) + `shopify_orders.payment_method` (method breakdown) + `shops.plan` (billing) — no live Shopify calls. Period-vs-prior deltas use a same-length prior window immediately before the current one; for the "All time" view there's no prior window so deltas show "—". `getShopRiskProfile(shopId, { period })` in `lib/admin/shopRisk.ts` is the single composer.
+
+#### Submission attribution — who filed the evidence (`lib/admin/filedBy.ts`)
+
+`disputes.normalized_status` cannot answer "did DisputeDesk do this?". `deriveNormalizedStatus` maps Shopify's `under_review` → `submitted_to_bank`, and `submission_state = "submitted_confirmed"` → `submitted`; `submitted_confirmed` is itself set in `applyDisputeSnapshot` purely from Shopify's `evidenceSentOn`. That timestamp says evidence reached the bank — **not who put it there.** Shopify auto-files its own scrape at the deadline, and a merchant can submit by hand in Shopify Admin. All three paths land on the identical badge.
+
+`resolveFiledBy({ evidence_saved_to_shopify_at, submission_state })` is the one resolver:
+
+| Verdict | Condition | Meaning |
+|---|---|---|
+| `disputedesk` | `evidence_saved_to_shopify_at` is set | Written **only** by `saveToShopifyJob`. Ours, whether or not the platform later confirmed forwarding (it often never reports it — see `docs/plans/submission-confirmation-gap.plan.md`). |
+| `shopify` | no save of ours, but `submission_state ∈ {submitted_confirmed, manual_submission_reported}` | Shopify's auto-file **or** a manual Admin submit. Shopify exposes no actor on `evidenceSentOn`, so these two are genuinely indistinguishable and are deliberately **not** guessed apart. |
+| `unknown` | neither signal | Includes disputes that reached the issuer with no submission recorded on either side. |
+
+Measured on prod 2026-09-21 the three buckets partition the table exactly (137 + 699 + 370 = 1,206 disputes). The motivating case: **`6a8848-dd` had 579 disputes, 537 of them decided, and zero DisputeDesk saves** — including 206 wins. Any win rate over that set describes Shopify, not this product.
+
+**Not to be confused with `postOutcome`'s `SubmissionConfirmationSource`** (`lib/postOutcome/taxonomy.ts`), which answers a different question — *how well can we prove forwarding happened* — and returns `SHOPIFY_EVIDENCE_SENT_ON` whenever the platform confirmed, whether or not we saved anything (`resolveConfirmationSource` checks our save only as a fallback). It therefore collapses exactly this distinction, and is in any case not usable as a data source: only 50 of 1,092 decided prod disputes carry a post-outcome analysis.
+
+Consumers: the admin disputes list (**Filed by** column + `filed_by` filter, applied server-side in `app/api/admin/disputes/route.ts` so pagination and counts stay honest) and `getShopRiskProfile` (`winRateAttributed`, `filedByBreakdown`).
+
+**Still unattributed (deliberate, 2026-09-21):** `lib/disputes/metrics.ts` — the merchant-facing dashboard and analytics win rate — computes `won`/`lost` over `final_outcome` alone, with no attribution filter. Correcting it changes numbers merchants already see, so it was scoped out of the admin change rather than folded in silently. The admin overview KPI at `app/admin/page.tsx` reads that same module and inherits the gap.
 
 #### Daily-metrics rollup coverage
 
@@ -1686,7 +1706,7 @@ Snapshot columns on `disputes` for fast rendering without recalculating from eve
 - `GET/POST /api/disputes/:id/notes` — support notes (admin/support auth)
 - `POST /api/admin/disputes/:id/override` — admin field override with snapshot consistency (admin auth)
 - `POST /api/disputes/:id/resync` — single-dispute resync respecting override locks (admin/support auth)
-- `GET /api/admin/disputes` — cross-shop disputes list with note_count and override indicators (admin auth)
+- `GET /api/admin/disputes` — cross-shop disputes list with note_count and override indicators (admin auth). Supports `?filed_by=disputedesk|shopify|unknown`, which filters on the derived submission attribution (see *Submission attribution*). It is not a stored column, so the route reproduces `resolveFiledBy`'s conditions as PostgREST filters — applied server-side rather than on the returned page, so the 50-row page and the reported total stay consistent.
 
 ### Phase 3 event types
 
