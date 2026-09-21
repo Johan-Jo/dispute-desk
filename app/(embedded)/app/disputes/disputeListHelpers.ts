@@ -65,7 +65,12 @@ export function rowPrimaryState(
   t: Translate,
 ): { label: string; sub: string } {
   if (d.presentation) {
-    const keys = listPrimaryState(d.presentation, d.review_state ?? null);
+    // The deadline is passed so a row whose window closed unfiled says so,
+    // instead of promising a submit the cron can no longer make.
+    const keys = listPrimaryState(d.presentation, d.review_state ?? null, {
+      evidenceDueAt: d.due_at,
+      now: new Date(),
+    });
     return { label: t(keys.labelKey), sub: t(keys.subKey) };
   }
   return { label: figmaNextAction(d, t), sub: "" };

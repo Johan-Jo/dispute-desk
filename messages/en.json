@@ -5958,13 +5958,15 @@
       "recommended": "Communication recommended",
       "requested": "Review communication",
       "blocking": "Approval required",
-      "technical_error": "Technical attention required"
+      "technical_error": "Technical attention required",
+      "deadline_missed": "Response window closed"
     },
     "listStateSub": {
       "recommended": "Customer communication may strengthen this response",
       "requested": "Review the suggested customer messages",
       "blocking": "DisputeDesk is waiting for your approval",
-      "technical_error": "Reconnect to restore monitoring"
+      "technical_error": "Reconnect to restore monitoring",
+      "deadline_missed": "The deadline passed before a response was sent"
     },
     "reviewDecision": {
       "approved": "Scheduled",

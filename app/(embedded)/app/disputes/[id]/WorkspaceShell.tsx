@@ -180,9 +180,14 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   // the deadline). Mirrors the list-status fix (listPrimaryState).
   // Dropped once the decision has been carried out — a filed dispute must
   // not keep wearing a "Scheduled" chip (effectiveReviewDecision).
+  // Also dropped once the window has CLOSED unfiled: a decision that can no
+  // longer be carried out is not a standing decision. Without the deadline the
+  // pre-save rungs never advance, so the chip read "Scheduled" three weeks
+  // after the deadline on 6a8848-dd #90627.
   const reviewState = effectiveReviewDecision(
     presentation?.lifecycle,
     dispute.reviewState ?? null,
+    { evidenceDueAt: dispute.dueAt ?? null, now: new Date() },
   );
   if (reviewState) {
     // Calm, non-alarming tones — a decision is not a warning.
