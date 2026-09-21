@@ -5959,13 +5959,15 @@
       "recommended": "Comunicación recomendada",
       "requested": "Revisar comunicación",
       "blocking": "Aprobación requerida",
-      "technical_error": "Atención técnica requerida"
+      "technical_error": "Atención técnica requerida",
+      "deadline_missed": "Plazo de respuesta cerrado"
     },
     "listStateSub": {
       "recommended": "La comunicación con el cliente puede fortalecer esta respuesta",
       "requested": "Revise los mensajes de cliente sugeridos",
       "blocking": "DisputeDesk está esperando su aprobación",
-      "technical_error": "Vuelva a conectar para restaurar la supervisión"
+      "technical_error": "Vuelva a conectar para restaurar la supervisión",
+      "deadline_missed": "El plazo venció antes de enviar una respuesta"
     },
     "internalIssue": "DisputeDesk detectó un problema técnico y está trabajando para resolverlo. Por el momento no se requiere ninguna acción de su parte.",
     "deadlineLabel": "Fecha límite de respuesta de Shopify",
