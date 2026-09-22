@@ -210,6 +210,54 @@ export interface EvidenceLineItem {
   /** Raw tracking number, so a renderer can show it as the link text
    *  even when it isn't wrapped in a facts token. */
   trackingNumber?: string | null;
+  /**
+   * One entry per PARCEL, when the order shipped in several.
+   *
+   * `trackingUrl` / `trackingNumber` above describe a single shipment and
+   * cannot represent a split: `buildDeliveryFacts` used to fill carrier,
+   * number and url from three INDEPENDENT first-non-null scans over every
+   * fulfillment, so a two-parcel order collapsed to whichever values came
+   * first — and could even pair one parcel's carrier with another's number.
+   *
+   * Live case (blume-box dispute 4576ee51, order #360980, $129): two line
+   * items shipped separately — "The Back to School Bundle" ($89) via GOFO,
+   * in transit; "Sunburst Mineral SPF 50 Sunscreen" ($40) via USPS. The
+   * USPS fulfillment sorted first, so the row showed ONLY its unusable
+   * reference and dropped the working GOFO link entirely — hiding the
+   * shipment carrying 69% of the disputed value from an INR defence.
+   *
+   * Empty for a single-parcel order, which keeps the scalar fields above
+   * as the only source and that rendering byte-identical.
+   */
+  parcels?: DeliveryParcel[];
+}
+
+/** One shipped parcel: what is in it, who carries it, and where it is. */
+export interface DeliveryParcel {
+  /** Merchant's carrier string, e.g. "GOFO", "USPS". */
+  carrier: string | null;
+  /** Tracking number as the merchant's app wrote it. */
+  number: string | null;
+  /** Canonical link, or null when no citable link exists for this parcel
+   *  (`trackingLinkUrl` rule 3 — an unusable reference gets NO link rather
+   *  than one that opens an empty page in front of an issuer). */
+  url: string | null;
+  /** Line-item titles in this parcel, so the merchant can tell two parcels
+   *  apart by CONTENT rather than by carrier name alone. */
+  items: string[];
+  /**
+   * Shopify's `displayStatus` for the fulfillment, verbatim and
+   * un-interpreted (e.g. "IN_TRANSIT", "FULFILLED", "DELIVERED").
+   *
+   * Deliberately NOT mapped to a delivered/not-delivered boolean.
+   * "FULFILLED" is Shopify's word for "the merchant handed it off" and is
+   * NOT a delivery claim — conflating the two is what makes a letter assert
+   * delivery on a parcel still in transit. Absence of a delivery scan is
+   * likewise never evidence of non-delivery: on the case above the USPS
+   * reference cannot be looked up at all, so its state is UNKNOWN, not
+   * negative.
+   */
+  displayStatus: string | null;
 }
 
 /** Audit-derived record of the merchant's most recent acknowledged
@@ -1349,7 +1397,12 @@ function shortDate(iso: unknown): string | null {
 function buildDeliveryFacts(
   proof: DeliveryProofType,
   payload: Record<string, unknown> | null,
-): { factsTokens: I18nToken[]; trackingUrl: string | null; trackingNumber: string | null } {
+): {
+  factsTokens: I18nToken[];
+  trackingUrl: string | null;
+  trackingNumber: string | null;
+  parcels: DeliveryParcel[];
+} {
   const p = payload ?? {};
   const fulfillments = Array.isArray(p.fulfillments) ? p.fulfillments : [];
   let carrier: string | null = null;
@@ -1357,6 +1410,7 @@ function buildDeliveryFacts(
   let trackingUrl: string | null = null;
   let shippedAt: string | null = null;
   let estimatedDeliveryAt: string | null = null;
+  const parcels: DeliveryParcel[] = [];
   for (const f of fulfillments) {
     if (!f || typeof f !== "object") continue;
     const ff = f as Record<string, unknown>;
@@ -1364,6 +1418,17 @@ function buildDeliveryFacts(
     if (estimatedDeliveryAt == null && typeof ff.estimatedDeliveryAt === "string") {
       estimatedDeliveryAt = ff.estimatedDeliveryAt;
     }
+    // Titles of the line items in THIS fulfillment — what lets the
+    // merchant tell a two-parcel order apart by content.
+    const itemTitles = (Array.isArray(ff.items) ? ff.items : [])
+      .map((it) =>
+        it && typeof it === "object"
+          ? (it as Record<string, unknown>).title
+          : null,
+      )
+      .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+      .map((t) => t.trim());
+
     const tracking = Array.isArray(ff.tracking) ? ff.tracking : [];
     for (const t of tracking) {
       if (!t || typeof t !== "object") continue;
@@ -1377,9 +1442,28 @@ function buildDeliveryFacts(
         (typeof tr.number === "string" && tr.number.trim() ? tr.number.trim() : null) ??
         (url ? numberFromTrackingUrl(url) : null);
       const car = typeof tr.carrier === "string" && tr.carrier.trim() ? tr.carrier.trim() : null;
+      // Scalars keep first-non-null for the single-parcel path (and as
+      // the collapsed row's headline). `parcels` below is what a
+      // multi-parcel order is actually rendered from — these three can
+      // legitimately come from DIFFERENT fulfillments, so they must
+      // never be presented as one parcel's identity when there are
+      // several. See the `parcels` doc comment.
       if (trackingNumber == null) trackingNumber = num;
       if (trackingUrl == null) trackingUrl = url;
       if (carrier == null) carrier = car;
+
+      // Per-parcel entry: carrier, number and url read TOGETHER off the
+      // same tracking object, so they can never be crossed.
+      parcels.push({
+        carrier: car,
+        number: num,
+        url: trackingLinkUrl({ company: car, number: num, url }),
+        items: itemTitles,
+        displayStatus:
+          typeof ff.displayStatus === "string" && ff.displayStatus.trim()
+            ? ff.displayStatus.trim()
+            : null,
+      });
     }
   }
   const deliveredAt = typeof p.deliveredAt === "string" ? p.deliveredAt : null;
@@ -1449,7 +1533,14 @@ function buildDeliveryFacts(
     url: trackingUrl,
   });
 
-  return { factsTokens, trackingUrl: canonicalUrl, trackingNumber };
+  // Only a genuine SPLIT gets a per-parcel list. One parcel keeps the
+  // scalar fields as its single source and renders exactly as before.
+  return {
+    factsTokens,
+    trackingUrl: canonicalUrl,
+    trackingNumber,
+    parcels: parcels.length > 1 ? parcels : [],
+  };
 }
 
 /** Collapse the two delivery rows into one, in place. Returns a new
@@ -1532,6 +1623,7 @@ function collapseDeliveryRows(
             factsTokens: facts.factsTokens,
             trackingUrl: facts.trackingUrl,
             trackingNumber: facts.trackingNumber,
+            parcels: facts.parcels,
             ...(useProofReason(li)
               ? {
                   reason: resolveTokenEn(proofReasonToken),

@@ -213,8 +213,108 @@ export function EvidenceRow({
     .filter((s) => s && s.trim().length > 0);
   const trackingUrl = lineItem?.trackingUrl ?? null;
   const trackingNumber = lineItem?.trackingNumber ?? null;
+
+  // A split shipment renders one line PER PARCEL. The single-parcel
+  // path below is untouched: `parcels` is only populated when the order
+  // genuinely shipped in more than one.
+  //
+  // Status is Shopify's `displayStatus`, mapped to copy that never
+  // overstates it. "FULFILLED" means the merchant handed the parcel off,
+  // NOT that it arrived, so it reads "Handed to carrier — delivery not
+  // confirmed". An unrecognised or missing status reads "Status unknown"
+  // rather than defaulting to a negative: on the case this was built for
+  // one parcel's reference cannot be looked up at all, and "we can't
+  // check" is not the same claim as "it wasn't delivered".
+  const parcels = lineItem?.parcels ?? [];
+  const parcelStatusLabel = (status: string | null): string => {
+    switch ((status ?? "").toUpperCase()) {
+      case "DELIVERED":
+        return t("deliveryProof.parcelStatusDelivered");
+      case "IN_TRANSIT":
+      case "OUT_FOR_DELIVERY":
+      case "ATTEMPTED_DELIVERY":
+        return t("deliveryProof.parcelStatusInTransit");
+      case "FULFILLED":
+      case "SUBMITTED":
+        return t("deliveryProof.parcelStatusHandedToCarrier");
+      default:
+        return t("deliveryProof.parcelStatusUnknown");
+    }
+  };
+  // Split shipment: one block PER PARCEL, under a heading that states the
+  // split outright. A merchant seeing two stacked tracking lines has to
+  // INFER that the order shipped separately; on an item-not-received
+  // dispute that inference is the whole point — "one parcel arrived, the
+  // other is still moving" is a different defence from "the order is late".
+  // So the count, and the fact that different carriers are involved, are
+  // stated rather than implied.
+  const distinctCarriers = new Set(
+    parcels.map((p) => (p.carrier ?? "").trim().toLowerCase()).filter(Boolean),
+  ).size;
+  const parcelsLine =
+    parcels.length > 1 ? (
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ color: "#202223", fontWeight: 600 }}>
+          {distinctCarriers > 1
+            ? t("deliveryProof.parcelsHeading", {
+                count: parcels.length,
+                carrierCount: distinctCarriers,
+              })
+            : t("deliveryProof.parcelsHeadingSameCarrier", {
+                count: parcels.length,
+              })}
+        </div>
+        {parcels.map((parcel, i) => (
+          <div
+            key={`${parcel.number ?? "parcel"}-${i}`}
+            style={{
+              display: "grid",
+              gap: 2,
+              paddingLeft: 10,
+              borderLeft: "2px solid #E1E3E5",
+            }}
+          >
+            <div style={{ color: "#8C9196", fontSize: 12 }}>
+              {t("deliveryProof.parcelLabel", {
+                index: i + 1,
+                count: parcels.length,
+              })}
+            </div>
+            {parcel.items.length > 0 ? (
+              <div style={{ color: "#202223" }}>{parcel.items.join(", ")}</div>
+            ) : null}
+            <div>
+              {parcel.carrier ? `${parcel.carrier} · ` : ""}
+              {parcel.number ? (
+                parcel.url ? (
+                  <a
+                    href={parcel.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#2C6ECB", textDecoration: "none" }}
+                  >
+                    {parcel.number} ↗
+                  </a>
+                ) : (
+                  parcel.number
+                )
+              ) : null}
+              {" · "}
+              {parcelStatusLabel(parcel.displayStatus)}
+            </div>
+            {parcel.number && !parcel.url ? (
+              <div style={{ color: "#8C9196", fontSize: 12 }}>
+                {t("deliveryProof.parcelNoLink")}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    ) : null;
+
   const factsLine =
-    factsSegments.length > 0 || trackingNumber ? (
+    parcelsLine ??
+    (factsSegments.length > 0 || trackingNumber ? (
       <>
         {factsSegments.join(" · ")}
         {trackingNumber ? (
@@ -235,7 +335,7 @@ export function EvidenceRow({
           </>
         ) : null}
       </>
-    ) : null;
+    ) : null);
 
   const pill = strengthPill(
     lineItem
