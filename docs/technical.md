@@ -2311,6 +2311,25 @@ legacy path (`plan_json IS NULL`) and keeps pre-plan behaviour byte-identical.
 Note `CANONICAL_PIPELINE=off` currently produces the same `null`; separating
 those two states is open (plan §D7a).
 
+**KNOWN GAP — the strength score does NOT respect the plan.** Measured
+2026-09-22: 399 plan-excluded records are counted by `calculateCaseStrength`
+today, because the score is computed in `buildPack.ts` (evidence-pack stage)
+and the plan is derived later in `buildDefencePackageJob` — the score cannot
+see it. 104 prod evidence packs have a score and no defence package at all,
+so for those no plan will ever exist.
+
+This is deliberate, not an oversight. Running the real scorer over all 97
+affected prod disputes with their own persisted gates moved **one** band
+(`moderate → weak`, a $25.41 dispute); the band thresholds absorb the rest.
+Closing it would mean moving fact classification and reason-module
+resolution earlier into pack build, or rescoring after the plan exists —
+a stage-boundary change, not a wire. Full reasoning and the reopen criteria
+are in the plan doc §P3b-ii.
+
+Consequence to be aware of: on a given dispute the **displayed** evidence is
+plan-accurate while the **strength number** may still include excluded
+records. The display is the honest one.
+
 Guards: `tests/unit/planProjectionAgreement.test.ts` (behavioural),
 `tests/unit/documentProvenance.test.ts` (map vs rendered document),
 `tests/unit/planAuthorityContainment.test.ts` (structural — supplementary

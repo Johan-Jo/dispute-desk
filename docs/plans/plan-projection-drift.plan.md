@@ -1,6 +1,12 @@
 # Plan-projection drift — the merchant tabs do not read the plan
 
-**Status:** proposed (revised 2026-09-22) · **Date:** 2026-09-21 · **Owner:** unassigned
+**Status:** **IMPLEMENTED** on `develop` (PRs #760, #761) · revised 2026-09-22
+· **Date:** 2026-09-21 · **Owner:** unassigned
+
+**Shipped:** P0, P1, P1b, P2, P3a, P3b-i, P5, docs. **Closed unbuilt:**
+P3b-ii (measured — see below). **Deferred:** P4 (pending U8), U6 (no live
+case). **Not in production** — `develop` only; the migration is applied to
+dev, not prod.
 **Verified against:** `develop` @ `7721a04b` — all five key files byte-identical to that commit in this working tree.
 **Trigger:** blume-box dispute `4576ee51-53ec-4ed2-8c66-65b04bb31d72` — the
 Overview and Evidence tabs claim "Used as positive bank argument · 3" and
@@ -533,8 +539,9 @@ display fix wait on the scoring investigation.)*
   merchant is told, using authorities that already exist. Holding an honest
   label hostage to an unrelated scoring question would leave a known-false
   claim on screen for no benefit.
-- **Only P3b-ii (actual scoring policy) waits on P3a**, because only it
-  changes numbers.
+- **Only P3b-ii (actual scoring policy) waited on P3a**, because only it
+  changes numbers. *(Resolved 2026-09-22: P3a ran, P3b-ii is closed unbuilt
+  — 1 band move across 97 disputes, worth $25.41.)*
 
 The two tracks share no code path: P3b-i filters display rows, P3b-ii would
 change `calculateCaseStrength` inputs. Landing P3b-i first is also what
@@ -824,9 +831,13 @@ Report, per open dispute:
 `[[feedback_canary_before_bulk]]` — read 2–3 cases in full before the sweep.
 
 **Exit:** a table of band movements + automation-decision changes, plus the
-enumeration from (1). **If the delta set is empty, P3b-ii is dropped and no
-scoring change is made.** P3b-i is unaffected either way — it never waited
-on this (D6).
+enumeration from (1).
+
+**RUN 2026-09-22 — see P3b-ii below for the result.** The delta was not
+empty (1 of 97 moved band), but it was small enough that P3b-ii was closed
+unbuilt rather than dropped-as-empty. The enumeration from (1) stands: 399
+plan-excluded records ARE scored today. P3b-i was unaffected either way — it
+never waited on this (D6).
 
 #### P3a RESULT (prod, 2026-09-22) — U4 is ANSWERED, and the delta is NOT empty
 
@@ -883,12 +894,66 @@ pin `snapshot.strength` byte-identical across the change. (This is a claim
 about which code P3b-i edits, not a forecast about scoring — cf. D4, where
 no zero-impact prediction is made.)
 
-**P3b-ii (scoring policy, NOT in scope without explicit approval).** Only if
-P3a shows real divergence. Then it is a policy change, and it carries:
-`ASSESSMENT_POLICY_VERSION` bump → every persisted snapshot stale →
-fleet-wide rebuild → automation re-decides. Specify freshness/policy-version
-handling and rebuild cost **before** proposing it. D5's no-backfill promise
-does not cover this.
+**P3b-ii (scoring policy) — MEASURED AND CLOSED, 2026-09-22. Not doing it.**
+
+Decision: **the score keeps counting plan-excluded evidence.** Documented,
+deliberate, revisit-if-the-numbers-change.
+
+**The measurement.** The real `calculateCaseStrength` was run over all **97**
+affected prod disputes, twice each — today's scored checklist vs one with
+plan-excluded fields removed — using each dispute's **own persisted gates**
+(`pack_json.case_assessment_gates`), not a test fixture. Skipped: 0.
+
+```
+measured           : 97  (skipped 0)
+band CHANGED       : 1
+actionable         : 9 (needs_response)
+  of those, moved  : 1
+--- band transitions ---
+  moderate -> weak               1
+```
+
+The other 88 are `lost` / `won` / already filed — their score can no longer
+affect an outcome. The nine still awaiting response:
+
+| dispute | band | score | shop | amount | due |
+|---|---|---|---|---|---|
+| `2e38fcee` | **moderate → weak** | 4→2 | 6a8848-dd | $25.41 | Oct 6 |
+| `bf8e7526` | moderate → moderate | 4→2 | cay-collective | $1,397 | Oct 8 |
+| `cd0caead` | moderate → moderate | 4→2 | cay-collective | $332 | Oct 2 |
+| `0d1aaabb` | weak → weak | 2→0 | cay-collective | $975 | Oct 3 |
+| 5 others | unchanged | unchanged | — | — | — |
+
+**Why this closes it.** The inflation is real — 399 records, confirmed — but
+the band thresholds absorb nearly all of it. One dispute, worth **$25.41**,
+crosses a band. The fix would be a pipeline re-architecture (see below),
+which this evidence does not justify.
+
+**What the fix would actually require — and why it is not a wire.** The score
+is computed in `buildPack.ts`, which holds **neither** input the plan needs:
+no resolved reason-code module, no classified facts. Both first exist in
+`buildDefencePackageJob`, a later stage. Worse, **104 prod evidence packs
+have no defence package at all** — they carry a score and will never carry a
+plan unless a package is built. So "make the score plan-aware" means either
+moving fact classification and module resolution earlier into pack build, or
+recomputing the score after the plan exists (changing a number the merchant
+has already been shown). Either is a stage-boundary move, not a patch.
+
+*(The earlier framing of the blocker as "the rebuild cost" was wrong and is
+withdrawn. `ASSESSMENT_POLICY_VERSION` / snapshot staleness is a real
+consequence, but the actual obstacle is the ordering above.)*
+
+**Confidence limit, stated.** This measured **band movement**, not the
+downstream automation decision: `deriveCaseAutomationDecision` needs more
+context than the exported snapshot carries, so bands were reported rather
+than decisions guessed. For `2e38fcee`, moderate→weak is the transition that
+could flip auto-save to blocked — on a $25.41 dispute.
+
+**Reopen if:** the affected population grows materially, a band-crossing case
+is high-value, or the pipeline is restructured for another reason (at which
+point ordering the plan before the score becomes cheap). Repeat the
+measurement with `scripts/sql/_p3a_m2_export.sql` + the real scorer — do not
+re-derive it in SQL.
 
 ### P4 — Reconcile the evidence model (919 rows)
 
@@ -1202,9 +1267,9 @@ command or artefact that would settle it.)*
 | U1 | Is the 127/172 `facts_json` shortfall origin **A** (missing record→fact) or **B** (bank-inclusion filter)? §2 predicts fileable packs are all B. | Instrument `selectPlanFacts(...).missingRecordIds` per pack and cross-tabulate against `document_validation_passed` / `document_failure_codes`. Prediction: `plan_fact_mismatch` ⇒ never fileable. A fileable pack with nonempty `missingRecordIds` falsifies it and is a Sev-2. |
 | U2 | Which package version does each merchant claim actually describe today? | Read the workspace payload for the **28** prod packs where `latest ≠ submitted` and record, per claim, which row supplied it. Query: `scripts/sql/_pkg_identity_split.sql`. |
 | U3 | Do the **8** packs flagged `saved_to_shopify_at` with **no** submitted package row represent a real submission? | Join to `shopify_response` / `submitted_at` on every version for those packs; decide whether the evidence-pack flag or the package status is authoritative. Until settled, "Submitted to Shopify" cannot be derived from either alone. |
-| U4 | Does plan-filtering the scored checklist ever change `overall`? **No prediction is offered** — plan exclusion and model relevance are independent (§3.3), so the `not_applicable` skip does not bound the answer. | P3a: first **enumerate** plan-excluded records whose relevance is *not* `not_applicable` (those are scored today); then run both checklists through `calculateCaseStrength` for every open dispute and report the delta set. Empty delta ⇒ P3b-ii is dropped. |
-| U5 | Does a band move change **when** we file, not just whether? | Feed P3a's deltas through `deriveCaseAutomationDecision` and diff `hold_for_deadline` / `park_for_review` / early-file outcomes. |
-| U6 | For an excluded delivery record whose sibling is included, what should render? | Enumerate prod packs with ≥2 `delivery_proof`/`shipping_tracking` records under one field and mixed disposition; decide the rule with the maintainer **before** coding `collapseDeliveryRows`. Not inferable from the existing rank sort. |
+| U4 | ~~Does plan-filtering the scored checklist ever change `overall`?~~ **ANSWERED 2026-09-22: yes, for 1 of 97.** Closed — see P3b-ii. | Measured with the real scorer and each dispute's own gates. 399 records are scored today; band thresholds absorb all but one $25.41 dispute. |
+| U5 | Does the one band move (`2e38fcee`, moderate→weak, $25.41) change the automation decision? | **PARTIALLY OPEN, deliberately.** P3a measured bands, not decisions — `deriveCaseAutomationDecision` needs context the export lacked, and guessing was refused. Only reachable case is a $25.41 dispute, so this was not pursued further. Re-run if P3b-ii reopens. |
+| U6 | For an excluded delivery record whose sibling is included, what should render? | **DECIDED 2026-09-22: split into per-record rows** (maintainer). **NOT BUILT** — measured first: **0** prod disputes currently have a field with both an included and an excluded record, so there is nothing to build against. Current behaviour is safe (such a row degrades to non-positive and keeps the plan's reason — pinned by tests). Build it against the first real case; do not write a speculative splitting path across the 11 render sites. |
 | U7 | How many submitted packages violate **today's specified checks**? | Replay `documentValidation` over historical `narrative_json` + `plan_json`; count `submitted` packages failing `orphaned_claim` / `plan_fact_mismatch`. **Scope of the answer:** this detects violations of those specific checks on packages that carry a plan. It does **not** establish whether any unsupported claim ever reached an issuer — legacy-route packages have no plan to replay against, and a claim can be unsupported in ways these two codes do not model. Report it as "N packages violate checks X and Y", never as a clean bill of health. |
 | U8 | How does the evidence model's `relevance` axis relate to plan disposition? It reports `not_applicable` for facts the PDF **does** cite. | Tabulate `relevance` × plan disposition × `facts_json` membership across the 171 packs. This governs the **separate** registry/scoring work moved out of P4 — `relevance` gates scoring (`assessment.ts:135`), so any reseeding inherits D5/P3b-ii's rebuild constraints. Not a P4 blocker: P4 is projection-only and touches no model field. |
 | U9 | Are there consumers of `usedAsPositiveBankEvidence` outside the 11 enumerated files (e.g. emails, PDFs, admin)? | Re-run the Layer 5 grep across `app/ lib/ components/ emails/ scripts/` at implementation time and diff against the §6 table. Enumerate from the tool, never from this list. |
