@@ -65,7 +65,12 @@ export function rowPrimaryState(
   t: Translate,
 ): { label: string; sub: string } {
   if (d.presentation) {
-    const keys = listPrimaryState(d.presentation, d.review_state ?? null);
+    // The deadline is passed so a row whose window closed unfiled says so,
+    // instead of promising a submit the cron can no longer make.
+    const keys = listPrimaryState(d.presentation, d.review_state ?? null, {
+      evidenceDueAt: d.due_at,
+      now: new Date(),
+    });
     return { label: t(keys.labelKey), sub: t(keys.subKey) };
   }
   return { label: figmaNextAction(d, t), sub: "" };
@@ -205,6 +210,56 @@ export function formatListDisputeId(id: string): string {
 
 export function orderLabel(d: Dispute): string {
   return d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—");
+}
+
+/**
+ * How many disputes in THIS list share each order, and each one's position.
+ *
+ * WHY (2026-09-03). One order can carry several genuinely distinct disputes:
+ * an order paid in two card transactions can have each transaction disputed
+ * separately. Order #92389 is the reported case — €55.95 + €50.36 = the
+ * €106.31 order total, two Shopify disputes 2½ minutes apart, both valid and
+ * both needing their own response.
+ *
+ * The list keys a row visually on the ORDER, so those arrive as two rows
+ * reading `#92389 · Lisa Oestereich · Product Not Received` differing only in
+ * amount — which reads as a duplicate-ingest bug rather than as two real
+ * disputes. It was reported as one. Verified against Shopify's API: 31 orders
+ * platform-wide carry multiple disputes (63 total, 3 with two OPEN at once),
+ * and every one has distinct dispute GIDs AND distinct amounts. There are no
+ * true duplicates — only this display ambiguity.
+ *
+ * Grouping is by `order_gid` (the stable id) and falls back to `order_name`
+ * only when the gid is absent, so two different orders that happen to share a
+ * display name are never merged.
+ *
+ * SCOPE: counts within the CURRENT page of results, which is what the reader
+ * can see. A sibling on another page is not counted — a marker claiming "1 of
+ * 2" while the second row is nowhere on screen would be more confusing than
+ * none, and the honest fix for that is server-side aggregation, not a guess
+ * here.
+ */
+export function orderDisputeCounts(
+  disputes: readonly Dispute[],
+): Map<string, { index: number; total: number }> {
+  const key = (d: Dispute): string | null =>
+    d.order_gid ?? (d.order_name ? `name:${d.order_name}` : null);
+
+  const byOrder = new Map<string, Dispute[]>();
+  for (const d of disputes) {
+    const k = key(d);
+    if (k == null) continue;
+    const list = byOrder.get(k);
+    if (list) list.push(d);
+    else byOrder.set(k, [d]);
+  }
+
+  const out = new Map<string, { index: number; total: number }>();
+  for (const group of byOrder.values()) {
+    if (group.length < 2) continue;
+    group.forEach((d, i) => out.set(d.id, { index: i + 1, total: group.length }));
+  }
+  return out;
 }
 
 export function formatDueDate(iso: string | null, dateLocale: string): string {
@@ -726,4 +781,77 @@ export function figmaKpis(
     earliestDueInDays,
     earliestOverdue,
   };
+}
+
+/* CSV field escaping, RFC-4180.
+ *
+ * Quote when the value contains a comma, a double quote, CR or LF, and double
+ * any embedded quote. The disputes export previously quoted on comma alone and
+ * never escaped an embedded quote, so a single customer name containing one
+ * would shift every subsequent column on that row — silent corruption in a
+ * file merchants reconcile against processor statements.
+ *
+ * Exported for test; `page.tsx` holds the only caller. */
+export function csvEscape(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/* Filename for the disputes CSV: what it is, whose it is, when it was pulled.
+ *
+ * It used to be the constant "disputes.csv", so every download a merchant made
+ * collided in their Downloads folder ("disputes (3).csv") with nothing to say
+ * which shop or which day it covered. Support tickets arrive with these files
+ * attached; an undated, unattributed one is guesswork.
+ *
+ * `shopHandle` is best-effort — see `shopHandleFromLocation`. When it is
+ * unknown the shop segment is simply omitted rather than filled with a
+ * placeholder, so the name stays honest.
+ *
+ * Date is the LOCAL calendar day (not UTC): the merchant's "today" is the one
+ * they will look for. Format is YYYY-MM-DD so the files sort chronologically.
+ */
+export function disputesExportFilename(
+  shopHandle: string | null,
+  now: Date,
+): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  /* Filesystem-safe: strip anything that is not alphanumeric/dash/underscore,
+   * collapse runs, and cap the length so a pathological handle cannot produce
+   * an unusable filename. */
+  const safe = (shopHandle ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return safe
+    ? `disputes-history-${safe}-${stamp}.csv`
+    : `disputes-history-${stamp}.csv`;
+}
+
+/* The Shopify store handle, read from the embedded admin URL.
+ *
+ * Embedded apps run in an iframe under
+ * `admin.shopify.com/store/<handle>/apps/...`. `window.location` inside the
+ * frame is the app's own URL, so the handle is taken from the `shop` query
+ * param App Bridge puts there, falling back to the referrer/ancestor path.
+ * Returns null when nothing is readable — the caller drops the segment rather
+ * than guessing. Never throws: this runs during a download click. */
+export function shopHandleFromLocation(
+  search: string,
+  referrer: string,
+): string | null {
+  try {
+    const shopParam = new URLSearchParams(search).get("shop");
+    if (shopParam) {
+      // "blume-box.myshopify.com" -> "blume-box"
+      const handle = shopParam.split(".")[0]?.trim();
+      if (handle) return handle;
+    }
+    const m = /\/store\/([^/?#]+)/.exec(referrer);
+    if (m?.[1]) return m[1];
+  } catch {
+    /* fall through */
+  }
+  return null;
 }

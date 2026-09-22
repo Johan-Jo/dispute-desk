@@ -15,45 +15,21 @@
  *   - Normalise numeric ids to strings (so `1` and `"1"` hash the same).
  *   - Drop null / undefined values (presence sentinel handles nulls).
  *   - Skip the `confidence` numeric — it's a heuristic, not a fact.
+ *
+ * The canonicalisation itself lives in `lib/hashing/canonicalJson.ts` — shared
+ * with post-outcome analysis snapshots so the two hashers cannot drift apart.
+ * The volatile-key drop set below is this caller's own policy, not the
+ * canonicaliser's default.
  */
 
-import { createHash } from "node:crypto";
+import {
+  sha256Canonical,
+  VOLATILE_TIMESTAMP_KEYS,
+} from "@/lib/hashing/canonicalJson";
 import type {
   EvidenceFact,
   ManualEvidenceRecord,
 } from "./types";
-
-const VOLATILE_KEYS = new Set([
-  "created_at",
-  "createdAt",
-  "updated_at",
-  "updatedAt",
-  "uploaded_at",
-  "uploadedAt",
-  "generated_at",
-  "generatedAt",
-]);
-
-function canonicalise(value: unknown): unknown {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number") return String(value);
-  if (typeof value === "boolean" || typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(canonicalise);
-  if (typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    const keys = Object.keys(value as Record<string, unknown>)
-      .filter((k) => !VOLATILE_KEYS.has(k))
-      .sort();
-    for (const k of keys) {
-      const v = (value as Record<string, unknown>)[k];
-      if (v === null || v === undefined) continue;
-      out[k] = canonicalise(v);
-    }
-    return out;
-  }
-  // function / symbol / bigint — should never appear in fact data.
-  return null;
-}
 
 /** Stripped EvidenceFact projection — only the load-bearing properties.
  *  Hash never moves when label / confidence / merchant_visible drift. */
@@ -94,12 +70,12 @@ export function computeEvidenceHash(input: {
     .sort((a, b) => a.id.localeCompare(b.id))
     .map(projectManual);
 
-  const canonical = canonicalise({
-    reasonCode: input.reasonCode ?? null,
-    facts,
-    manual,
-  });
-
-  const json = JSON.stringify(canonical);
-  return createHash("sha256").update(json).digest("hex");
+  return sha256Canonical(
+    {
+      reasonCode: input.reasonCode ?? null,
+      facts,
+      manual,
+    },
+    { dropKeys: VOLATILE_TIMESTAMP_KEYS },
+  );
 }

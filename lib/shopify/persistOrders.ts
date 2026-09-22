@@ -82,14 +82,45 @@ export async function persistOrders(
     result.ordersInserted = inserts.length;
   }
 
-  // Mutable-column UPDATE for existing rows. risk_*_initial is
-  // intentionally excluded — the trigger would reject any attempt to
-  // change it, and re-asserting the same value is wasted work.
+  // Mutable-column write for existing rows, as ONE batched upsert.
+  //
+  // This used to be a `for (const o of updates)` loop issuing one
+  // round-trip per order. That is invisible on a first-time historical
+  // import (every row is an INSERT, which takes the batched path above)
+  // and pathological on a re-ingest, where every row is an UPDATE:
+  // measured at ~476 ms/order — 47.6 s for a 100-order page against
+  // 2.6 s to fetch the same page from Shopify (prod, 2026-08-30).
+  // A backfill/repair is exactly the all-UPDATE case.
+  //
+  // `risk_*_initial` stays out of the payload, upholding contract 1 in
+  // the module header: this writer never asserts those columns after the
+  // first insert. Because they are omitted, `onConflict` leaves the
+  // stored values untouched and the
+  // `shopify_orders_lock_initial_risk` trigger sees no change. (The
+  // trigger only raises when the new value `is distinct from` the old,
+  // so even re-sending identical values would pass — but omitting them
+  // keeps the contract true by construction rather than by luck.)
+  //
+  // `id` is likewise omitted: these rows already exist, and the conflict
+  // target resolves them by (shop_id, shopify_order_id).
+  //
+  // `created_at_shopify`, `currency` and `order_total` ARE carried even
+  // though they are immutable in practice. They are NOT NULL with no
+  // default, and an upsert whose conflict target misses would INSERT —
+  // which happens if a row is deleted between the existence lookup above
+  // and this write (retention cleanup, a concurrent reconcile). Carrying
+  // them makes that path insert a valid row instead of throwing a
+  // not-null violation. They re-assert their own values on the normal
+  // update path, which is a no-op.
   const nowIso = new Date().toISOString();
-  for (const o of updates) {
-    const { error } = await sb
-      .from("shopify_orders")
-      .update({
+  if (updates.length > 0) {
+    const { error } = await sb.from("shopify_orders").upsert(
+      updates.map((o) => ({
+        shop_id: shopId,
+        shopify_order_id: o.shopify_order_id,
+        created_at_shopify: o.created_at_shopify,
+        currency: o.currency,
+        order_total: o.order_total,
         processed_at: o.processed_at,
         cancelled_at: o.cancelled_at,
         fulfilled_at: o.fulfilled_at,
@@ -107,15 +138,13 @@ export async function persistOrders(
         signed_by_name: o.signed_by_name,
         tracking_source: o.tracking_source,
         updated_at: nowIso,
-      })
-      .eq("shop_id", shopId)
-      .eq("shopify_order_id", o.shopify_order_id);
+      })),
+      { onConflict: "shop_id,shopify_order_id" },
+    );
     if (error) {
-      throw new Error(
-        `shopify_orders update failed for ${o.shopify_order_id}: ${error.message}`,
-      );
+      throw new Error(`shopify_orders update failed: ${error.message}`);
     }
-    result.ordersUpdated++;
+    result.ordersUpdated = updates.length;
   }
 
   // ── Risk assessments: hash-gated append ──────────────────────────
@@ -131,6 +160,35 @@ export async function persistOrders(
 
   const toInsert: ShopifyOrderRiskAssessmentRow[] = [];
 
+  // Existing hashes for every order in the batch, in ONE query.
+  // This was previously a per-order lookup inside the loop below — the
+  // same N+1 shape as the orders update, and the second-largest cost on
+  // a re-ingest. The result is grouped per order so the dedup decision
+  // below is unchanged: an incoming hash is dropped only when it already
+  // exists for *that same* (shop, order).
+  const orderIdsWithHashes = [...byOrder.keys()];
+  const existingByOrder = new Map<string, Set<string>>();
+  if (orderIdsWithHashes.length > 0) {
+    const { data: existingRows, error: hashErr } = await sb
+      .from("shopify_order_risk_assessments")
+      .select("shopify_order_id, risk_payload_hash")
+      .eq("shop_id", shopId)
+      .in("shopify_order_id", orderIdsWithHashes)
+      .not("risk_payload_hash", "is", null);
+    if (hashErr) {
+      throw new Error(
+        `shopify_order_risk_assessments hash lookup failed: ${hashErr.message}`,
+      );
+    }
+    for (const r of existingRows ?? []) {
+      const row = r as { shopify_order_id: string; risk_payload_hash: string };
+      if (!row.risk_payload_hash) continue;
+      const set = existingByOrder.get(row.shopify_order_id) ?? new Set<string>();
+      set.add(row.risk_payload_hash);
+      existingByOrder.set(row.shopify_order_id, set);
+    }
+  }
+
   for (const [shopifyOrderId, rows] of byOrder) {
     const incomingHashes = new Set(
       rows
@@ -145,19 +203,8 @@ export async function persistOrders(
       continue;
     }
 
-    // Look up the existing hashes for this order. If any incoming
-    // hash already exists for this (shop, order), drop the duplicate.
-    const { data: existing } = await sb
-      .from("shopify_order_risk_assessments")
-      .select("risk_payload_hash")
-      .eq("shop_id", shopId)
-      .eq("shopify_order_id", shopifyOrderId)
-      .not("risk_payload_hash", "is", null);
-    const existingHashes = new Set(
-      (existing ?? [])
-        .map((r) => (r as { risk_payload_hash: string }).risk_payload_hash)
-        .filter((h): h is string => typeof h === "string" && h.length > 0),
-    );
+    const existingHashes =
+      existingByOrder.get(shopifyOrderId) ?? new Set<string>();
 
     for (const row of rows) {
       const hash = row.risk_payload_hash;

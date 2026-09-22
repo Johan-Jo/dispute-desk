@@ -41,6 +41,32 @@ export async function GET(req: NextRequest) {
   const recommendedPlan = row.recommended_plan as string;
   const dismissedPlan = (row.dismissed_plan as string | null) ?? null;
 
+  // The card's subtitle reads "Based on {orders} orders and {chargebacks}
+  // chargebacks in the last 90 days". `plan_recommendations` stores neither,
+  // so read them from the same rollup the Insights page uses rather than
+  // invoking the heavy initial-analysis endpoint just for two integers.
+  //
+  // `chargeback_count` is the DISPUTE count and `order_count` the denominator
+  // — they are NOT interchangeable. Crossing them is what told a merchant they
+  // averaged 4,878 chargebacks a month against a true ~100 (see
+  // lib/insights/checkpoints.types.ts). Keep them distinct here too.
+  const windowStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const { data: metricRows } = await sb
+    .from("shop_daily_metrics")
+    .select("order_count, chargeback_count")
+    .eq("shop_id", shopId)
+    .gte("date", windowStart);
+
+  let ordersAnalyzed = 0;
+  let chargebackCount90d = 0;
+  for (const m of metricRows ?? []) {
+    ordersAnalyzed += (m as { order_count: number | null }).order_count ?? 0;
+    chargebackCount90d +=
+      (m as { chargeback_count: number | null }).chargeback_count ?? 0;
+  }
+
   return NextResponse.json({
     recommendation: {
       recommendedPlan: recommendedPlan as PlanId,
@@ -51,5 +77,7 @@ export async function GET(req: NextRequest) {
       partialHistory: !!row.partial_history,
     },
     show: shouldShowRecommendationBanner(recommendedPlan, dismissedPlan),
+    ordersAnalyzed,
+    chargebackCount90d,
   });
 }

@@ -49,6 +49,11 @@ jobs:
       - name: Unit tests
         run: npx vitest run --reporter=verbose
 
+      - name: Passkey browser regressions
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test --config playwright.passkeys.config.ts
+
       - name: Security audit
         # Gate on critical vulns in PRODUCTION deps only — dev tooling (test
         # runner, Vercel CLI) never reaches the deployed runtime, so its

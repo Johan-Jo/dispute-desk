@@ -43,6 +43,7 @@ import {
   type CarrierShipmentSignal,
 } from "@/lib/carriers/resolveShipments";
 import {
+  isTerminalEvidenceSource,
   reconcileDeliveryState,
   type DeliverySignal,
 } from "@/lib/carriers/reconcile";
@@ -149,6 +150,22 @@ function existingSignalsFor(
       source: tracking.trackingSource ?? "tracking_app",
     });
   }
+  // `Exception` is how every supported tracking app spells returned-to-sender,
+  // and until 2026-09-16 this reader threw it away — only `Delivered` became a
+  // signal. Harmless today on the shops we have (ParcelPanel writes no
+  // metafields at all; see `lib/carriers/trackingApps/parcelPanelSource.ts`),
+  // correct the moment any app does write them.
+  //
+  // Only `Exception` is admitted. `AttemptFail` is not a terminal state on its
+  // own — a failed attempt without a pickup location means the parcel is still
+  // moving — and `InTransit`/`OutForDelivery` are never negative signals.
+  if (tracking.deliveryStatus === "Exception") {
+    signals.push({
+      status: "Returned",
+      at: tracking.deliveredAtTracking,
+      source: tracking.trackingSource ?? "tracking_app",
+    });
+  }
   return signals;
 }
 
@@ -180,6 +197,10 @@ async function resolveDeliveryStates(
       orderGid: ctx.orderGid ?? order.id,
       disputeId: ctx.disputeId,
       correlationId: ctx.correlationId ?? `pack-${ctx.packId}`,
+      // Enables the tracking-app fallback for carriers with no adapter.
+      // Null on a shop still using its myshopify host — the app proxy is not
+      // reachable there, so those lookups stay off.
+      storefrontDomain: ctx.storefrontDomain ?? null,
       fulfillments: order.fulfillments.map((f) => ({
         id: f.id,
         trackingInfo: f.trackingInfo.map((t) => ({
@@ -249,7 +270,14 @@ function extractTrackingData(
     native.category === "delivered" || native.category === "collected_at_pickup"
       ? native.at
       : null;
-  const carrierWon = !!state.current && state.current.source.startsWith("carrier_api");
+  // Kept as `carrierWon` to avoid churn across this file, but the question it
+  // asks is now "did an OBSERVED terminal state win the election" — which
+  // includes vetted tracking-app sources, not just carrier APIs. See
+  // `isTerminalEvidenceSource`: this predicate is the integration point that
+  // would otherwise have left the returned-to-sender gate dark, because a
+  // ParcelPanel `Returned` reconciles correctly and still would not have
+  // populated `carrierTracking` below.
+  const carrierWon = !!state.current && isTerminalEvidenceSource(state.current.source);
   const carrierDeliveredAt =
     carrierWon &&
     (state.current?.status === "Delivered" ||

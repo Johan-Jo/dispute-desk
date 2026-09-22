@@ -21,6 +21,12 @@ export type EventType =
   // "system" with `admin: true` — matching the `admin_override` convention.
   | "admin_impersonation_started"
   | "admin_impersonation_ended"
+  // Internal-admin hard purge of a shop (app/api/admin/shops/[id] DELETE).
+  // Written immediately BEFORE the purge, so it is deleted along with
+  // everything else moments later — it exists to mark intent inside the
+  // transaction window, not to survive it. The durable record is the
+  // server-side log line the route writes after `admin_purge_shop` returns.
+  | "admin_shop_purge_requested"
   | "billing_activated"
   | "billing_declined"
   | "billing_verification_failed"
@@ -99,6 +105,15 @@ export type EventType =
   | "defence_package_superseded"
   | "defence_package_validation_failed"
   | "defence_package_validation_retry"
+  /** Non-blocking validation findings. Recorded so a rule can be measured on
+   *  live traffic before it is allowed to fail a package. */
+  | "defence_package_validation_warning"
+  /** An argument section was dropped because every fact it cited was withheld
+   *  from the Evidence Basis. Content removed from a filed document. */
+  | "defence_package_section_suppressed"
+  /** Evidence saved to the platform with no forwarding confirmation, past the
+   *  grace window. Reported by the daily deadline cron. */
+  | "defence_package_forwarding_unconfirmed"
   /** PR-C1 (2026-08-07): a persisted package candidate was refused at a
    *  save / forward / deadline path because it carries a retired delivery
    *  fact or an address-delivery assertion. Nothing was written to Shopify. */
@@ -152,13 +167,38 @@ export type EventType =
   | "review_approved"
   | "review_conceded"
   | "review_cleared"
-  | "review_resurfaced_by_reminder";
+  | "review_resurfaced_by_reminder"
+  // Automation settings changed — PATCH /api/automation/settings.
+  // Payload `{ changes: { field: { from, to } }, impersonated }`.
+  //
+  // Added 2026-08-31 because these writes were completely untracked.
+  // `shop_settings` carries no actor column and nothing logged the change, so
+  // when a merchant's `auto_build_enabled` was found false — silently halting
+  // pack generation, with two disputes a day from their deadline and no pack
+  // built — there was no way to tell who turned it off, when, or whether it
+  // was the merchant or someone on our side using impersonation. `updated_at`
+  // covers the whole row, so it could not even confirm WHICH field changed.
+  | "automation_settings_changed";
+
+/**
+ * WHO acted. Widened from `"merchant" | "system"` on 2026-09-15 (migration
+ * 20260915120000 carries the matching DB CHECK).
+ *
+ *   merchant — a human in the merchant's own Shopify session.
+ *   admin    — a human on OUR side, acting through SuperAdmin
+ *              "View as merchant". Resolve with `resolveAuditActor(req)`;
+ *              never hardcode `"merchant"` on a request-scoped path, or an
+ *              operator's action is recorded as the merchant's.
+ *   script   — an operator-run script. `actorId` is the script filename.
+ *   system   — autonomous: cron, job handlers, webhooks.
+ */
+export type AuditActorType = "merchant" | "admin" | "script" | "system";
 
 export interface AuditLogInput {
   shopId: string;
   disputeId?: string | null;
   packId?: string | null;
-  actorType: "merchant" | "system";
+  actorType: AuditActorType;
   actorId?: string | null;
   eventType: EventType;
   eventPayload?: Record<string, unknown>;
@@ -166,8 +206,16 @@ export interface AuditLogInput {
 
 /**
  * Append-only audit event writer.
- * This is the ONLY function that writes to audit_events.
  * The table has DB triggers rejecting UPDATE and DELETE.
+ *
+ * NOT the only writer. ~56 call sites insert into `audit_events` directly via
+ * `sb.from("audit_events").insert(...)`, bypassing both this function and the
+ * `EventType` union above (which is why event types such as
+ * `gorgias_message_approved` and `billing_subscription_created` appear in the
+ * table but not in the union). This docblock claimed exclusivity until
+ * 2026-09-15; it was never true. Routing those sites through here is worth
+ * doing and is deliberately NOT part of the actor-attribution change --
+ * see docs/plans/audit-actor-attribution.plan.md "Out of scope".
  */
 export async function logAuditEvent(input: AuditLogInput): Promise<void> {
   const db = getServiceClient();

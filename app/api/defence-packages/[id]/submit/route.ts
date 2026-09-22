@@ -17,6 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -36,6 +37,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -92,7 +94,8 @@ export async function POST(
       shopId: pkg.shop_id as string,
       disputeId: pkg.dispute_id as string,
       packId: pkg.source_pack_id as string,
-      actorType: "merchant",
+      actorType: auditActor.actorType,
+      actorId: auditActor.actorId,
       eventType: "defence_package_blocked_unsafe_claim",
       eventPayload: {
         packageId: pkg.id,
@@ -135,16 +138,20 @@ export async function POST(
         error: "PACKAGE_NOT_FILEABLE",
         code: "PACKAGE_NOT_FILEABLE",
         reasons: ["candidate_revision_unavailable"],
-        message: "This defence package could not be verified. Refresh and try again.",
+        message:
+          "This defence package could not be verified. Refresh and try again.",
       },
       { status: 409 },
     );
   }
 
-  const { data: rpcData, error: rpcErr } = await sb.rpc("enqueue_defence_package_save", {
-    p_package_id: pkg.id as string,
-    p_expected_revision: contentRevision,
-  });
+  const { data: rpcData, error: rpcErr } = await sb.rpc(
+    "enqueue_defence_package_save",
+    {
+      p_package_id: pkg.id as string,
+      p_expected_revision: contentRevision,
+    },
+  );
   if (rpcErr) {
     return NextResponse.json(
       { error: `Enqueue failed: ${rpcErr.message}` },
@@ -157,12 +164,17 @@ export async function POST(
   const result = parseEnqueueRpcResult(rpcData);
 
   if (result.kind === "malformed") {
-    console.error("[defence submit] malformed RPC reply", result.detail, rpcData);
+    console.error(
+      "[defence submit] malformed RPC reply",
+      result.detail,
+      rpcData,
+    );
     return NextResponse.json(
       {
         error: "PACKAGE_CHECK_UNAVAILABLE",
         code: "PACKAGE_CHECK_UNAVAILABLE",
-        message: "We could not queue this save just now. Please try again in a few minutes.",
+        message:
+          "We could not queue this save just now. Please try again in a few minutes.",
       },
       { status: 503 },
     );

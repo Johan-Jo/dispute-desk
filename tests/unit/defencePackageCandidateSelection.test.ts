@@ -161,6 +161,14 @@ const ALLOWED = new Set([
   /* Loads all versions for the canonical selector and filters through
    * `candidateVersions` on the very next line. */
   "lib/defence/package/loadFileableSelection.ts",
+  /* Same shape, for PRESENTATION rather than filing: loads all versions for a
+   * BATCH of disputes (plan §5 forbids a per-dispute fetch, so
+   * `fetchCandidateRows` is unusable here) and passes each dispute's rows
+   * through `latestCandidate` before anything is resolved. It also needs
+   * `abortedNewer`, because the artifact dimension must look PAST a failed
+   * build while the attempt dimension must still see it — "we hold v4" and
+   * "we hold v4 because v5 failed" are different merchant-facing facts. */
+  "lib/disputes/presentation/gatherArtifacts.ts",
   /* "The last SUBMITTED package", for the material-change comparison. Filtered
    * to `status='submitted'`, which a failed build can never be. */
   "lib/automation/rebuildOutcome.ts",

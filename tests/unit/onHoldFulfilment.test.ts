@@ -131,8 +131,17 @@ describe("fatal loss — an INR dispute on a held order is unwinnable", () => {
     expect(detectFatalLoss(order("UNFULFILLED"), "PRODUCT_NOT_RECEIVED", 104).triggered).toBe(true);
   });
 
+  /* A FULFILLED order carries a fulfillment row — 470,488 of 470,490 in
+   * production on 2026-08-31. The suppressing fact is that row, not the status
+   * name: the gate deliberately no longer reads `displayFulfillmentStatus`,
+   * because keying on it is what let `IN_PROGRESS` (#360499) and `ON_HOLD`
+   * slip through. Passing `[]` here would assert a state that does not occur
+   * and would re-pin the bug. */
   it("does NOT trigger on a fulfilled order", () => {
-    expect(detectFatalLoss(order("FULFILLED"), "PRODUCT_NOT_RECEIVED", 104).triggered).toBe(false);
+    expect(
+      detectFatalLoss(order("FULFILLED", [{ id: "gid://1" }]), "PRODUCT_NOT_RECEIVED", 104)
+        .triggered,
+    ).toBe(false);
   });
 
   it("does NOT trigger on a held order for a NON-INR reason", () => {

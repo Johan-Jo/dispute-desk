@@ -336,6 +336,47 @@ export function computeAssessmentInputHash(inputs: AssessmentInputs): InputHash 
   });
 }
 
+/**
+ * WHICH of the three terms moved — for diagnosis only, never for a decision.
+ *
+ * ── WHY THIS EXISTS ───────────────────────────────────────────────────
+ *
+ * `evaluateFreshness` collapses model + gates + payloads into ONE equality,
+ * so a mismatch says only "something changed". On 2026-09-01 a merchant was
+ * shown "the evidence on this case changed after it was last assessed" on a
+ * case whose snapshot re-derived byte-identically from `pack_json` — and the
+ * composite hash could not say which half of the comparison was lying. The
+ * whole investigation was spent reconstructing, by hand, what this function
+ * returns in one line.
+ *
+ * Per-term SUB-HASHES, not the terms themselves: a term is the full evidence
+ * payload for the case, and this value reaches a log. A 16-char prefix is
+ * enough to say "the model term moved and the other two did not", which is
+ * the only question being asked, and it cannot leak merchant content.
+ *
+ * NOT A SECOND HASH. It calls the same three private fingerprint functions
+ * `computeAssessmentInputHash` calls, so it cannot drift from the predicate it
+ * explains. Nothing branches on the result — `evaluateFreshness` remains the
+ * one freshness authority.
+ */
+export interface AssessmentHashTermDigests {
+  model: string;
+  gates: string;
+  payloads: string;
+}
+
+export function assessmentInputHashTerms(
+  inputs: AssessmentInputs,
+): AssessmentHashTermDigests {
+  const fieldKeys = Object.values(inputs.model.fields).map((f) => f.fieldKey);
+  const short = (v: unknown) => sha256(v).slice(0, 16);
+  return {
+    model: short(modelFingerprint(inputs.model)),
+    gates: short(gateFingerprint(inputs.gates)),
+    payloads: short(payloadFingerprint(inputs.payloadSource, fieldKeys)),
+  };
+}
+
 /* ── the snapshot ──────────────────────────────────────────────────── */
 
 /**
@@ -505,4 +546,82 @@ export function assessmentSnapshotUsability(
     return { usable: false, reason: "missing_strength" };
   }
   return { usable: true, strength: strength as CaseAssessmentSnapshot["strength"] };
+}
+
+/* ── the grade of a pack that was already FILED ────────────────────── */
+
+/**
+ * The band to display for a dispute's latest pack, INCLUDING the case where
+ * the snapshot is no longer usable but the pack has already been submitted.
+ *
+ * ── WHY A FILED PACK IS DIFFERENT ─────────────────────────────────────
+ *
+ * `assessmentSnapshotUsability` withholds a band whenever it cannot prove the
+ * band still describes the case. That is right for a LIVE case: the merchant is
+ * still deciding what to do, the evidence underneath can still move, and a
+ * stale grade would misinform a decision that has not been taken yet.
+ *
+ * A submitted pack has none of those properties. `saved_to_shopify_at` is set,
+ * the evidence went to the network, and nothing underneath it can change any
+ * more. "What did we score this when we filed it" is then a HISTORICAL FACT,
+ * not a live assessment — and refusing to state a fact on the grounds that it
+ * might be stale is a category error. Staleness is not possible on a frozen
+ * row.
+ *
+ * So for a filed pack this falls back, in order:
+ *   1. the usable snapshot (identical to every other surface);
+ *   2. a superseded-policy / old-shape canonical snapshot's `strength.overall`;
+ *   3. the legacy `pack_json.case_strength.overall`.
+ *
+ * ── WHY STEP 3 IS TRUSTED HERE AND NOWHERE ELSE ───────────────────────
+ *
+ * The legacy four-field summary is refused on live surfaces because it carries
+ * no freshness of its own — it cannot say which evidence it describes. That
+ * objection is about whether it is CURRENT, and on a filed pack nothing is
+ * asking it to be. Measured on prod 2026-09-17 across all 190 packs carrying
+ * both forms, the legacy field and the canonical snapshot agreed on 190 of 190
+ * — it was never inaccurate, only unprovable, which is a different defect and
+ * not one that matters once the row is frozen.
+ *
+ * Returns `null` when the pack is unsubmitted (the caller must then use
+ * `assessmentSnapshotUsability` and withhold) or when no band was ever
+ * persisted in any form.
+ */
+export interface FiledPackStrengthInput {
+  snapshot: unknown;
+  rebuildPending: unknown;
+  /** `evidence_packs.pack_json.case_strength` — the legacy summary. */
+  legacyCaseStrength: unknown;
+  /** `evidence_packs.saved_to_shopify_at`. Non-null ⇒ the pack was filed. */
+  savedToShopifyAt: unknown;
+}
+
+function readOverall(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const overall = (value as { overall?: unknown }).overall;
+  return typeof overall === "string" && overall.length > 0 ? overall : null;
+}
+
+export function resolveDisplayStrengthOverall(
+  input: FiledPackStrengthInput,
+): string | null {
+  const usability = assessmentSnapshotUsability({
+    snapshot: input.snapshot,
+    rebuildPending: input.rebuildPending,
+  });
+  if (usability.usable) return usability.strength.overall;
+
+  // Not usable. Only a FILED pack may fall back; an unsubmitted one keeps the
+  // strict refusal, because that is the case the refusal exists to protect.
+  if (input.savedToShopifyAt === null || input.savedToShopifyAt === undefined) {
+    return null;
+  }
+
+  const snap = input.snapshot;
+  if (snap && typeof snap === "object" && !Array.isArray(snap)) {
+    const fromSnapshot = readOverall((snap as { strength?: unknown }).strength);
+    if (fromSnapshot) return fromSnapshot;
+  }
+
+  return readOverall(input.legacyCaseStrength);
 }

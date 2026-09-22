@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { isBillingTestMode } from "@/lib/billing/testMode";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { getPlan } from "@/lib/billing/plans";
 import { checkTrialEligibility } from "@/lib/billing/trialEligibility";
-import { validateBody, billingSubscribeSchema } from "@/lib/middleware/validate";
+import {
+  validateBody,
+  billingSubscribeSchema,
+} from "@/lib/middleware/validate";
 import {
   APP_SUBSCRIPTION_CREATE_MUTATION,
   type AppSubscriptionCreateResult,
@@ -54,6 +58,7 @@ function resolveShopDomainFromInputs(
  * Creates a Shopify recurring subscription and returns the approval URL.
  */
 export async function POST(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const raw = await req.json();
   const body = {
     ...raw,
@@ -75,7 +80,10 @@ export async function POST(req: NextRequest) {
   // resolve the live shop by domain — otherwise upgrade wrongly reports
   // "Reconnect this store". (Same class of bug as the /api/setup/* override.)
   let effectiveShopId = shop_id;
-  let session: { access_token_encrypted: string; shop_domain: string | null } | null = null;
+  let session: {
+    access_token_encrypted: string;
+    shop_domain: string | null;
+  } | null = null;
 
   async function loadOffline(id: string) {
     const { data } = await sb
@@ -106,8 +114,11 @@ export async function POST(req: NextRequest) {
 
   if (!session || !effectiveShopId) {
     return NextResponse.json(
-      { error: "Reconnect this store to upgrade. Use “Clear shop & reconnect” in the sidebar, then open the app from Shopify Admin." },
-      { status: 404 }
+      {
+        error:
+          "Reconnect this store to upgrade. Use “Clear shop & reconnect” in the sidebar, then open the app from Shopify Admin.",
+      },
+      { status: 404 },
     );
   }
   const resolvedShopId: string = effectiveShopId;
@@ -119,7 +130,7 @@ export async function POST(req: NextRequest) {
         error:
           'Store session is invalid (missing shop domain). Use "Clear shop & reconnect" in the sidebar, then open the app from Shopify Admin.',
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -135,7 +146,8 @@ export async function POST(req: NextRequest) {
   const trialEligibility = await checkTrialEligibility(resolvedShopId);
   const trialDays = trialEligibility.eligible ? plan.trialDays : 0;
 
-  const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const appUrl =
+    process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const callbackUrl = new URL(`${appUrl}/api/billing/callback`);
   callbackUrl.searchParams.set("shop_id", resolvedShopId);
   callbackUrl.searchParams.set("plan_id", plan_id);
@@ -160,7 +172,9 @@ export async function POST(req: NextRequest) {
   // offline token surfaced as "[API] Invalid API key or access token"
   // (dev, 2026-07-26). The session-existence checks above still guard
   // shop resolution; the helper re-reads the session internally.
-  let result: Awaited<ReturnType<typeof makeAuthedRequest<AppSubscriptionCreateResult>>>;
+  let result: Awaited<
+    ReturnType<typeof makeAuthedRequest<AppSubscriptionCreateResult>>
+  >;
   try {
     result = await makeAuthedRequest<AppSubscriptionCreateResult>({
       shopId: resolvedShopId,
@@ -185,7 +199,10 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     if (e instanceof NoBackgroundSessionError) {
       return NextResponse.json(
-        { error: "Reconnect this store to upgrade. Use “Clear shop & reconnect” in the sidebar, then open the app from Shopify Admin." },
+        {
+          error:
+            "Reconnect this store to upgrade. Use “Clear shop & reconnect” in the sidebar, then open the app from Shopify Admin.",
+        },
         { status: 404 },
       );
     }
@@ -197,7 +214,8 @@ export async function POST(req: NextRequest) {
   // managed-pricing / scope failure became a silent 200 with no
   // confirmationUrl — the merchant saw only the generic "didn't go
   // through" banner and the logs showed nothing (dev, 2026-07-26).
-  const gqlErrors = (result as { errors?: Array<{ message: string }> }).errors ?? [];
+  const gqlErrors =
+    (result as { errors?: Array<{ message: string }> }).errors ?? [];
   if (gqlErrors.length > 0) {
     const messages = gqlErrors.map((e) => e.message);
     console.error("[billing/subscribe] Shopify GraphQL errors", {
@@ -213,17 +231,21 @@ export async function POST(req: NextRequest) {
   if (userErrors.length > 0) {
     return NextResponse.json(
       { error: userErrors.map((e) => e.message).join(", ") },
-      { status: 422 }
+      { status: 422 },
     );
   }
 
   if (!mutation?.confirmationUrl) {
-    return NextResponse.json({ error: "No confirmation URL returned" }, { status: 500 });
+    return NextResponse.json(
+      { error: "No confirmation URL returned" },
+      { status: 500 },
+    );
   }
 
   await sb.from("audit_events").insert({
     shop_id: resolvedShopId,
-    actor_type: "merchant",
+    actor_type: auditActor.actorType,
+    actor_id: auditActor.actorId,
     event_type: "billing_subscription_created",
     event_payload: {
       plan_id,

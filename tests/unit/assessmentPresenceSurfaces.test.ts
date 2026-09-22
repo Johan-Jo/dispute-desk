@@ -80,11 +80,24 @@ describe("resolveAssessmentGate", () => {
     // All three, never a subset. There is no state in which it is correct to
     // hide the band but keep the submit button — each is downstream of the
     // same missing assessment.
+    // `not_assessed` split into absent | stale | unknown (label-fact plan
+    // §3.5) so a previously-assessed case is not told "not assessed yet".
+    // The rule this test guards is unchanged and now holds across all three:
+    // none of them is more permissive than the others.
     const gate = resolveAssessmentGate({ needsRecalculation: true });
-    expect(gate.presence).toBe("not_assessed");
+    expect(gate.presence).toBe("absent");
     expect(gate.mayRenderVerdict).toBe(false);
     expect(gate.mayRenderRecommendation).toBe(false);
     expect(gate.mayOfferFilingAction).toBe(false);
+
+    for (const g of [
+      resolveAssessmentGate({ needsRecalculation: true, recalculationReason: "input_hash_mismatch" }),
+      resolveAssessmentGate({ needsRecalculation: true, readOk: false }),
+    ]) {
+      expect(g.mayRenderVerdict).toBe(false);
+      expect(g.mayRenderRecommendation).toBe(false);
+      expect(g.mayOfferFilingAction).toBe(false);
+    }
   });
 
   it("permits all three when the assessment is current", () => {
@@ -120,6 +133,52 @@ describe("resolveAssessmentGate", () => {
     expect(resolveAssessmentGate({ needsRecalculation: true }).bodyToken.key).toBe(
       absent.bodyToken.key,
     );
+  });
+
+  /* ── THE TITLE A POLICY BUMP SHOWS ──────────────────────────────────
+   *
+   * The case above pins that the BODIES differ. Nothing pinned the TITLE, and
+   * that gap is not theoretical: while preparing the v2→v3 bump, the change
+   * was described — in a commit message, a PR body and a docs paragraph — as
+   * making merchants see "Not assessed yet". It does not, and cannot.
+   *
+   * The distinction is the whole reason `AssessmentPresence` was split:
+   *   `absent` = never scored          → "Not assessed yet"
+   *   `stale`  = scored under old rules → "Assessed under an earlier version"
+   *
+   * Telling a merchant who HAS been assessed that they have not is the defect
+   * this module was created to end (the header pill once read "Not assessed
+   * yet" over a case carrying completeness 97). A policy bump is the single
+   * most likely trigger for that regression, because it invalidates snapshots
+   * fleet-wide in one commit — so the guarantee is pinned here explicitly
+   * rather than inferred from the body assertions above.
+   */
+  it("a superseded policy reads 'assessed under an earlier version', never 'not assessed yet'", () => {
+    const superseded = resolveAssessmentGate({
+      needsRecalculation: true,
+      recalculationReason: "policy_version_superseded",
+    });
+    const absent = resolveAssessmentGate({
+      needsRecalculation: true,
+      recalculationReason: "snapshot_absent",
+    });
+
+    expect(superseded.presence).toBe("stale");
+    expect(superseded.titleToken.key).toBe("disputes.assessmentState.stale.title");
+    // The explicit negative: a bump must never borrow the never-scored title.
+    expect(superseded.titleToken.key).not.toBe(absent.titleToken.key);
+    expect(absent.titleToken.key).toBe("disputes.assessmentState.notAssessed.title");
+
+    /* `input_hash_mismatch` — "your evidence changed" — is the OTHER message a
+     * bump must not produce. It is the false one merchants saw on pre-bump
+     * packs after an unbumped categorization change, and routing a policy
+     * bump to it would reintroduce exactly that. Same presence, but the
+     * reasons stay distinct at the source so the two can never be conflated. */
+    const hashMismatch = resolveAssessmentGate({
+      needsRecalculation: true,
+      recalculationReason: "input_hash_mismatch",
+    });
+    expect(hashMismatch.presence).toBe("stale");
   });
 });
 
@@ -277,5 +336,49 @@ describe("the explicit state is localized in all six locales", () => {
       expect(typeof lookup(cat, gate.titleToken.key)).toBe("string");
       expect(typeof lookup(cat, gate.bodyToken.key)).toBe("string");
     }
+  });
+});
+
+/* ── Forwarded cases do not run assessment vocabulary ─────────────────────
+ *
+ * Plan: docs/plans/terminal-state-vocabulary.plan.md §5.2.
+ *
+ * PROD REGRESSION — blume-box 4d4db363 (Order #345812, USD 75), forwarded to
+ * the card network 2026-07-23 with completeness 99. Its pack predates
+ * assessment snapshots, so `resolveAssessmentGate` reports "no assessment" —
+ * correctly. The Evidence tab asked anyway and rendered "Not assessed yet …
+ * nothing is needed from you" plus "Review required before submission" on a
+ * case whose evidence was already with the network.
+ *
+ * 110 forwarded-but-undecided disputes carry a pack in prod; 35 have no
+ * snapshot and render this unconditionally.
+ *
+ * `technical.md:2677` drew the same distinction for DECIDED disputes
+ * ("assessmentPresence.ts is not the bug — the caller was"). This pins the
+ * extension to forwarded ones.
+ */
+describe("a forwarded case is out of our hands", () => {
+  const src = readFileSync(
+    resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts"),
+    "utf8",
+  );
+
+  it("`submitted` joins decided in the out-of-our-hands predicate", () => {
+    expect(src).toMatch(/function isOutOfOurHands/);
+    expect(src).toMatch(/isDecided\(status\)\s*\|\|\s*status === "submitted"/);
+  });
+
+  it("nextStep is gated on that predicate, not on `decided` alone", () => {
+    // The specific regression: `nextStep: decided ? … : !assessed ? not_assessed`
+    // let a forwarded case fall through to the not_assessed branch.
+    expect(src).toMatch(/nextStep:\s*outOfOurHands/);
+    expect(src).not.toMatch(/nextStep:\s*decided\s*\n?\s*\?/);
+  });
+
+  it("the automation pill still keys on `decided`, not the wider predicate", () => {
+    // A forwarded case genuinely has no outcome yet, so `isDecided` remains
+    // correct for the outcome pill. Widening it there would claim a decision
+    // that has not happened.
+    expect(src).toMatch(/automationMode:\s*decided\s*\?\s*null/);
   });
 });

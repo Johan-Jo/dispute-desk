@@ -21,6 +21,17 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { VAMP_PER_TRANSACTION_FEE_USD } from "./thresholds";
+import { classifyRail } from "@/lib/insights/railSegmentation";
+
+/** Payment methods that settle on a card network and therefore appear in
+ *  Visa/Mastercard settlement records. Kept in sync with `classifyRail`. */
+const CARD_RAIL_METHODS = [
+  "card",
+  "apple_pay",
+  "google_pay",
+  "shop_pay",
+  "shopify_pay",
+];
 
 export interface CalculateRatiosInput {
   shopId: string;
@@ -31,10 +42,12 @@ export interface CalculateRatiosInput {
 export interface CalculateRatiosResult {
   shopId: string;
   periodMonth: string;
-  vampRatioCalculated: number;
-  vampRatioWithoutDd: number;
-  mcEcmRatio: number;
-  mcEfmRatio: number;
+  /** NULL when the period has no card volume — the programme does not
+   *  measure this merchant. Never 0, which would read as a clean pass. */
+  vampRatioCalculated: number | null;
+  vampRatioWithoutDd: number | null;
+  mcEcmRatio: number | null;
+  mcEfmRatio: number | null;
   ce30ExcludedCount: number;
   fptExcludedCount: number;
   estimatedFeesAvoidedUsd: number;
@@ -59,20 +72,60 @@ export async function calculateRatiosForMonth(
   // PAID and PARTIALLY_REFUNDED in the settled denominator — a partial
   // refund still represents a settled card-network transaction
   // (matches Visa TC05 settled semantics).
+  // CARD RAIL ONLY. TC05 is a Visa settlement record: a PayPal or Klarna
+  // order is never one, so counting them here inflated the denominator with
+  // transactions Visa cannot see. Combined with the numerator fix below this
+  // makes the ratio mean what its name claims.
   const { count: settledCount = 0 } = await sb
     .from("shopify_orders")
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId)
     .gte("created_at_shopify", periodStartIso)
     .lt("created_at_shopify", periodEndIso)
-    .in("financial_status", ["PAID", "PARTIALLY_REFUNDED"]);
+    .in("financial_status", ["PAID", "PARTIALLY_REFUNDED"])
+    .in("payment_method", CARD_RAIL_METHODS);
 
-  const { data: disputes } = await sb
+  const { data: allDisputes } = await sb
     .from("disputes")
-    .select("id, reason, phase, amount, network_reason_code, final_outcome, initiated_at")
+    .select(
+      "id, reason, phase, amount, network_reason_code, final_outcome, initiated_at, order_gid",
+    )
     .eq("shop_id", shopId)
     .gte("initiated_at", periodStartIso)
     .lt("initiated_at", periodEndIso);
+
+  // Keep only card-rail disputes. TC40 and TC15 are Visa transaction codes;
+  // a PayPal buyer-protection claim or a Klarna dispute is neither, and
+  // counting them made "VAMP" a number with a Visa label and no Visa
+  // content. Measured before this fix: Mein Maison showed 2.79% VAMP off a
+  // book that is ~99% PayPal, and cay-collective 0.55% off one that is 100%
+  // Klarna.
+  //
+  // A dispute whose order we cannot resolve is EXCLUDED, not assumed card.
+  // Assuming card is what produced the original misread; an unresolvable
+  // dispute is a coverage gap, and a gap must not inflate a compliance
+  // ratio the merchant may act on.
+  const disputeGids = (allDisputes ?? [])
+    .map((d) => (d as { order_gid: string | null }).order_gid)
+    .filter((g): g is string => !!g);
+  const railByGid = new Map<string, string | null>();
+  for (let i = 0; i < disputeGids.length; i += 200) {
+    const { data: orderRows } = await sb
+      .from("shopify_orders")
+      .select("shopify_order_id, payment_method")
+      .eq("shop_id", shopId)
+      .in("shopify_order_id", disputeGids.slice(i, i + 200));
+    for (const r of (orderRows ?? []) as Array<{
+      shopify_order_id: string;
+      payment_method: string | null;
+    }>) {
+      railByGid.set(r.shopify_order_id, r.payment_method);
+    }
+  }
+  const disputes = (allDisputes ?? []).filter((d) => {
+    const gid = (d as { order_gid: string | null }).order_gid;
+    return gid ? classifyRail(railByGid.get(gid) ?? null) === "card" : false;
+  });
 
   let tc40 = 0;
   let tc15 = 0;
@@ -132,7 +185,11 @@ export async function calculateRatiosForMonth(
     }
   }
 
-  const safeRatio = (n: number, d: number) => (d > 0 ? n / d : 0);
+  // Returns null — NOT 0 — for an empty denominator. "This merchant has no
+  // card volume" and "this merchant has no card disputes" are different
+  // statements, and rendering the first as a confident green 0.00% VAMP pill
+  // asserts compliance with a programme that is not measuring them at all.
+  const safeRatio = (n: number, d: number) => (d > 0 ? n / d : null);
   const vampRatio = safeRatio(tc40 + tc15, settledCount ?? 0);
   // Counterfactual: re-add the excluded wins to the numerator.
   const vampWithoutDd = safeRatio(

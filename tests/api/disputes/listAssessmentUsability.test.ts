@@ -95,6 +95,11 @@ const DISPUTE_ROW = {
 function setup(opts: {
   snapshot: unknown;
   rebuildPending?: boolean;
+  /** `evidence_packs.saved_to_shopify_at`. Default null = NOT filed, which is
+   *  the case every strict-refusal assertion below depends on. */
+  savedToShopifyAt?: string | null;
+  /** `pack_json.case_strength` — the legacy four-field summary. */
+  legacyCaseStrength?: unknown;
 }) {
   const packRow = {
     id: "p1",
@@ -102,7 +107,9 @@ function setup(opts: {
     status: "ready",
     created_at: "2026-08-02T00:00:00.000Z",
     rebuild_pending: opts.rebuildPending ?? false,
+    saved_to_shopify_at: opts.savedToShopifyAt ?? null,
     case_assessment: opts.snapshot,
+    case_strength: opts.legacyCaseStrength ?? null,
   };
 
   const from = vi.fn((table: string) => {
@@ -241,5 +248,71 @@ describe("an ABSENT snapshot", () => {
 
     setup({ snapshot: null });
     expect((await listWith("?strength=strong")).disputes ?? []).toEqual([]);
+  });
+});
+
+/* ── A PACK THAT WAS ALREADY FILED ──────────────────────────────────────
+ *
+ * Every case above is UNSUBMITTED (`saved_to_shopify_at` defaults to null),
+ * and the strict refusal is right there: the merchant is still deciding, the
+ * evidence can still move, so a stale band would misinform a live decision.
+ *
+ * A filed pack has no such exposure. `saved_to_shopify_at` is set, the evidence
+ * went to the network, and nothing underneath can change. The band it carried
+ * when it was filed is a historical fact, and withholding it left 89 filed
+ * blume-box disputes showing an empty Case strength column on the list
+ * (measured on prod 2026-09-17).
+ */
+describe("a FILED pack whose snapshot is no longer usable", () => {
+  const FILED = "2026-08-12T00:00:00.000Z";
+
+  it("recovers the band from a superseded-policy snapshot", async () => {
+    setup({
+      snapshot: strongSnapshot({ policyVersion: ASSESSMENT_POLICY_VERSION - 1 }),
+      savedToShopifyAt: FILED,
+    });
+    const body = await listWith("");
+    expect(body.disputes?.[0]?.caseStrength?.overall).toBe("strong");
+  });
+
+  it("recovers the band from the legacy summary when there is no snapshot", async () => {
+    setup({
+      snapshot: null,
+      savedToShopifyAt: FILED,
+      legacyCaseStrength: { overall: "moderate" },
+    });
+    const body = await listWith("");
+    expect(body.disputes?.[0]?.caseStrength?.overall).toBe("moderate");
+  });
+
+  it("is FINDABLE by the filter it now renders for", async () => {
+    /* The original defect with the sign flipped. A band the list renders but
+     * the filter cannot find is the same divergence — merchant filters to
+     * Strong, and a visibly-Strong row is missing from the results. */
+    setup({
+      snapshot: strongSnapshot({ policyVersion: ASSESSMENT_POLICY_VERSION - 1 }),
+      savedToShopifyAt: FILED,
+    });
+    const body = await listWith("?strength=strong");
+    expect(body.disputes?.map((d) => d.id)).toEqual([DISPUTE_ID]);
+  });
+
+  it("still shows nothing when no band was EVER persisted", async () => {
+    // surasvenne #1068–#1074: filed, but built before strength was persisted
+    // in any form. There is nothing to recover and the em-dash is correct.
+    setup({ snapshot: null, savedToShopifyAt: FILED, legacyCaseStrength: null });
+    expect((await listWith("")).disputes?.[0]?.caseStrength).toBeNull();
+  });
+
+  it("does NOT recover for an unsubmitted pack", async () => {
+    /* The guard on the whole change. If this ever passes, the recovery has
+     * leaked onto live cases and a merchant mid-decision is being shown a band
+     * the engine would no longer produce. */
+    setup({
+      snapshot: strongSnapshot({ policyVersion: ASSESSMENT_POLICY_VERSION - 1 }),
+      savedToShopifyAt: null,
+      legacyCaseStrength: { overall: "strong" },
+    });
+    expect((await listWith("")).disputes?.[0]?.caseStrength).toBeNull();
   });
 });

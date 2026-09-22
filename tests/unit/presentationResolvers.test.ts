@@ -14,6 +14,7 @@ import {
   ACTION_REQUIRED_ATTENTION,
   dashboardBucket,
   isActiveNormalizedStatus,
+  isTransmissionConfirmed,
   resolveAttention,
   resolveLifecycle,
   resolvePresentation,
@@ -86,10 +87,89 @@ describe("resolveLifecycle", () => {
     expect(
       resolveLifecycle({ ...baseLifecycle, submissionState: "submitted_confirmed" }),
     ).toBe("under_review");
-    // External Shopify under_review status (normalized submitted_to_bank).
+    /* External Shopify under_review status (normalized submitted_to_bank).
+     * `submissionState` is left unrecognized here on purpose: the Shopify
+     * inference is allowed to stand when our own records say nothing. It is
+     * only overruled by a POSITIVE `not_saved` — see the regression below. */
     expect(
-      resolveLifecycle({ ...baseLifecycle, normalizedStatus: "submitted_to_bank" }),
+      resolveLifecycle({
+        ...baseLifecycle,
+        submissionState: null,
+        normalizedStatus: "submitted_to_bank",
+      }),
     ).toBe("under_review");
+  });
+
+  /* ── the false "response has been sent" (2026-09-03) ──────────────────
+   *
+   * `normalized_status = 'submitted_to_bank'` is an INFERENCE from Shopify
+   * status `under_review` (normalizeStatus.ts:40). For a CHARGEBACK that
+   * plausibly means "forwarded to the network". For an INQUIRY it is simply
+   * the ordinary open state, true from the moment it is created.
+   *
+   * Trusting it over our own save record told 38 open prod disputes (27
+   * inquiries; 29 with a live deadline) "The response has been sent and can no
+   * longer be changed" while submission_state = 'not_saved' and both
+   * submitted_at and evidence_saved_to_shopify_at were NULL. Nothing had been
+   * sent. And because `resolveAttention` suppresses ALL merchant attention on
+   * this same predicate, the real blocker on #99413 — `auto_build_off`, no
+   * pack would ever be built — was hidden behind "No action required" while
+   * the deadline ran down. */
+  it("does NOT claim transmission when our own record says not_saved", () => {
+    expect(
+      isTransmissionConfirmed({
+        submissionState: "not_saved",
+        normalizedStatus: "submitted_to_bank",
+      }),
+    ).toBe(false);
+    // #99413 exactly: an inquiry Shopify calls under_review, nothing saved,
+    // no pack. It must not read as "sent" — it has not even been built.
+    expect(
+      resolveLifecycle({
+        ...baseLifecycle,
+        submissionState: "not_saved",
+        normalizedStatus: "submitted_to_bank",
+        packStatus: null,
+      }),
+    ).not.toBe("under_review");
+  });
+
+  it("keeps trusting Shopify when we have no contradicting record", () => {
+    // The narrowing is deliberately minimal: only a positive `not_saved`
+    // overrules the inference. Absent/unknown still defers to Shopify, so a
+    // dispute we never tracked locally is not wrongly reopened.
+    for (const state of [null, "submission_uncertain", "manual_submission_reported"]) {
+      expect(
+        isTransmissionConfirmed({
+          submissionState: state,
+          normalizedStatus: "submitted_to_bank",
+        }),
+      ).toBe(true);
+    }
+  });
+
+  it("our own confirmed save still outranks everything", () => {
+    expect(
+      isTransmissionConfirmed({
+        submissionState: "submitted_confirmed",
+        normalizedStatus: "in_progress",
+      }),
+    ).toBe(true);
+  });
+
+  it("a real blocker stays visible on such a dispute instead of being suppressed", () => {
+    // The second half of the #99413 defect: attention is suppressed on
+    // transmissionConfirmed, so the false positive hid `auto_build_off`.
+    const p = resolvePresentation({
+      ...basePresentation,
+      submissionState: "not_saved",
+      normalizedStatus: "submitted_to_bank",
+      packStatus: null,
+      needsAttention: true,
+      attentionReason: "auto_build_off",
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("auto_build_off");
   });
 
   it("saved: submission_state is authoritative", () => {
@@ -544,6 +624,92 @@ describe("Cross-page consistency", () => {
     expect(listPrimaryState(won, "approved").labelKey).toBe(
       "presentation.lifecycle.won",
     );
+  });
+
+  /* ── THE WINDOW CLOSED AND NOTHING WAS FILED ────────────────────────
+   *
+   * The two cases above stop a decision overriding the lifecycle once it has
+   * been CARRIED OUT. Neither covers a decision that can no longer be carried
+   * out at all — the pre-save rungs never advance when the deadline passes
+   * unfiled, so the "still pending" test kept answering yes forever.
+   *
+   * Live on prod 2026-09-21, 6a8848-dd:
+   *   #90627 — approved, due 30 Aug 03:00 UTC, never filed. Three weeks on,
+   *            the list still read "Scheduled to submit — Set to submit
+   *            automatically on the deadline".
+   *   #90055 — due 26 Aug, no pack. Read "Building evidence · No action
+   *            required", telling the merchant to relax about the one case
+   *            that had actually slipped.
+   *
+   * Both are casualties of the pre-#736 cron-window gap (a `due_at` before
+   * the 08:00 UTC run was unreachable in both directions). The gap is fixed;
+   * the UI went on promising a submit the cron could no longer make.
+   */
+  describe("a deadline that passed with nothing filed", () => {
+    const AFTER = new Date("2026-09-21T12:00:00Z");
+    const DUE = "2026-08-30T03:00:00Z";
+
+    it("#90627: an approved decision stops claiming it is scheduled", () => {
+      const p = resolvePresentation({ ...basePresentation, packStatus: "ready" });
+      // The rung that never advances — this is why lifecycle alone missed it.
+      expect(p.lifecycle).toBe("pack_prepared");
+
+      // Before the deadline the promise is still true.
+      expect(
+        listPrimaryState(p, "approved", {
+          evidenceDueAt: DUE,
+          now: new Date("2026-08-29T12:00:00Z"),
+        }).labelKey,
+      ).toBe("presentation.reviewDecision.approved");
+
+      // After it, the row states the fact instead.
+      expect(
+        listPrimaryState(p, "approved", { evidenceDueAt: DUE, now: AFTER }).labelKey,
+      ).toBe("presentation.listState.deadline_missed");
+    });
+
+    it("#90055: a no-pack case stops saying 'no action required'", () => {
+      const p = resolvePresentation({ ...basePresentation });
+      expect(p.lifecycle).toBe("building_evidence");
+      expect(
+        listPrimaryState(p, null, {
+          evidenceDueAt: "2026-08-26T03:00:00Z",
+          now: AFTER,
+        }).labelKey,
+      ).toBe("presentation.listState.deadline_missed");
+    });
+
+    it("a FILED dispute past its deadline is untouched", () => {
+      /* The guard on the whole change. Once the evidence is saved the
+       * lifecycle has advanced off the pre-save rungs, so a passed deadline
+       * is unremarkable — it must keep reading as saved, not as missed. */
+      const p = resolvePresentation({
+        ...basePresentation,
+        submissionState: "saved_to_shopify",
+        packStatus: "saved_to_shopify",
+      });
+      expect(
+        listPrimaryState(p, "approved", { evidenceDueAt: DUE, now: AFTER }).labelKey,
+      ).toBe("presentation.lifecycle.saved_to_shopify");
+    });
+
+    it("a caller that passes no deadline keeps the old behaviour", () => {
+      /* Omitting the deadline means "I cannot judge the clock", never "the
+       * clock has not run out" — the resolver must not infer one for them. */
+      const p = resolvePresentation({ ...basePresentation, packStatus: "ready" });
+      expect(listPrimaryState(p, "approved").labelKey).toBe(
+        "presentation.reviewDecision.approved",
+      );
+    });
+
+    it("an unparseable or absent due date is not an expired one", () => {
+      const p = resolvePresentation({ ...basePresentation, packStatus: "ready" });
+      for (const evidenceDueAt of ["not-a-date", null, undefined]) {
+        expect(
+          listPrimaryState(p, "approved", { evidenceDueAt, now: AFTER }).labelKey,
+        ).toBe("presentation.reviewDecision.approved");
+      }
+    });
   });
 
   it("a saved-editable case is calm everywhere (no task, no warning)", () => {

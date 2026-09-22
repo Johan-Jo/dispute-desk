@@ -22,6 +22,7 @@ import {
 import { computeEvidenceHash } from "./computeEvidenceHash";
 import { CURRENT_PROMPT_VERSION } from "./narrativeWriter";
 import { VALIDATOR_VERSION } from "./validateNarrative";
+import { COMPOSITION_VERSION } from "./pdf/thesisTemplates";
 import { classifyFacts } from "./factClassifier";
 import {
   resolveReasonCodeModule,
@@ -179,7 +180,7 @@ export async function maybeEnqueueDefencePackage(
   const { data: latest } = await sb
     .from("defence_packages")
     .select(
-      "id, version, status, evidence_hash, validation_status, failure_code, prompt_version, validator_version",
+      "id, version, status, evidence_hash, validation_status, failure_code, prompt_version, validator_version, composition_version",
     )
     .eq("dispute_id", pack.dispute_id)
     .order("version", { ascending: false })
@@ -208,6 +209,7 @@ export async function maybeEnqueueDefencePackage(
   const guard = evaluateGenerationGuard(latest, {
     promptVersion: CURRENT_PROMPT_VERSION,
     validatorVersion: VALIDATOR_VERSION,
+    compositionVersion: COMPOSITION_VERSION,
     evidenceHash,
   });
   if (!guard.blocked && guard.retryBasis.length > 0) {

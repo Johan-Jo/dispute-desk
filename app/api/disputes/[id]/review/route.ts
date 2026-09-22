@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
@@ -40,6 +41,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auditActor = await resolveAuditActor(req);
   const { id } = await params;
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
@@ -124,7 +126,8 @@ export async function POST(
   await logAuditEvent({
     shopId: dispute.shop_id,
     disputeId: id,
-    actorType: "merchant",
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
     eventType,
     eventPayload: { action, from, to },
   });

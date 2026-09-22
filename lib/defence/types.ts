@@ -482,6 +482,11 @@ export type ValidationErrorRule =
   | "omitted_section_inconsistent"
   | "narrow_mode_aggressive_conclusion"
   | "internal_only_fact_referenced"
+  /** Every fact the section declares as support is one the Evidence Basis will
+   *  not list, so the argument reaches the issuer with nothing behind it.
+   *  Emitted as a WARNING, not an error — see SUPPORT_CITABILITY_BLOCKING in
+   *  validateNarrative.ts for why, and what promoting it would cost. */
+  | "section_support_not_bank_citable"
   | "missing_required_section";
 
 export interface ValidationError {
@@ -500,11 +505,28 @@ export interface ValidationError {
    *  ("thesis" | "llm" | "fallback") so failure_reason can route
    *  human attention to the right place. */
   layer?: "narrative" | "thesis" | "llm" | "fallback";
+  /** Defaults to "error". A "warning" is recorded and never fails the build. */
+  severity?: "error" | "warning";
 }
 
 export interface ValidationResult {
   ok: boolean;
   errors: ValidationError[];
+  /**
+   * Non-blocking findings. `ok` ignores these entirely.
+   *
+   * They exist so a rule can be measured on live traffic before it is allowed
+   * to fail a package. A failed package has no PDF and takes the next version
+   * number, which is how an aborted build once shadowed a validated one and a
+   * dispute went to forfeit — so "detect first, block later" is the only safe
+   * order for a new rule with a wide blast radius.
+   *
+   * Optional because it is purely additive: a caller (or a test double) that
+   * predates it is still a valid ValidationResult, and forcing every one of
+   * them to change would be churn in service of a field none of them set.
+   * Read it as `warnings ?? []`.
+   */
+  warnings?: ValidationError[];
 }
 
 // ── Claim guards ─────────────────────────────────────────────────────
@@ -636,6 +658,22 @@ export interface EvidenceBasisRow {
   label: string;
   /** Terse value rendered next to the label (e.g. "MATCH", "Sent 2026-05-12"). */
   value: string;
+  /**
+   * A carrier tracking link, carried STRUCTURALLY rather than concatenated
+   * into `value`.
+   *
+   * The URL used to be appended to `value` as text, so both renderers printed
+   * a dead string: a reviewer had to select a 120-character DHL URL, copy it
+   * and paste it into a browser to see the parcel. Nobody does that — the
+   * package asserts "the carrier confirmed delivery" and the one control that
+   * would let the reader check it was unusable. `label` is the anchor text so
+   * the raw URL never has to be shown at all.
+   *
+   * Null on every row that has no link (rule 3 of `resolveTrackingLinkUrl`
+   * deliberately returns no URL rather than one that opens an empty search
+   * form). Renderers MUST fall back to plain text on null.
+   */
+  link: { url: string; label: string } | null;
 }
 
 // ── Run telemetry ────────────────────────────────────────────────────

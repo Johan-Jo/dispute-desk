@@ -43,6 +43,16 @@ export interface BuildContext {
   disputeReason: string | null;
   orderGid: string | null;
   shopDomain: string;
+  /**
+   * The merchant's public storefront host (`shops.primary_domain`), when it
+   * differs from `shopDomain`. Tracking-app lookups go through the Shopify
+   * app proxy, which is mounted on the CUSTOM domain — `meinmaison.de`, not
+   * `6a8848-dd.myshopify.com` — and answers 403 on the myshopify host.
+   *
+   * Null/absent simply disables those lookups (see `resolveCarrierShipments`);
+   * nothing else in the build depends on it.
+   */
+  storefrontDomain?: string | null;
   accessToken: string;
   correlationId?: string;
   /**

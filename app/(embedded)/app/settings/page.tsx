@@ -27,6 +27,8 @@ import {
   Banner,
 } from "@shopify/polaris";
 import { IntegrationsCard } from "@/components/settings/IntegrationsCard";
+import { PlanRecommendationCard } from "@/app/(embedded)/app/insights/initial-analysis/PlanRecommendationCard";
+import type { PlanRecommendation } from "@/lib/billing/recommendPlan";
 
 interface ShopInfo {
   shopDomain?: string;
@@ -147,6 +149,16 @@ export default function EmbeddedSettingsPage() {
   const tn = useTranslations("nav");
   const searchParams = useSearchParams();
   const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null);
+  /** Plan sizing suggestion. The backend has been computing and persisting
+   *  this for every shop (refreshed by /api/cron/plan-recommendations) while
+   *  no surface rendered it — both PlanRecommendationCard and the dashboard
+   *  banner were imported by nothing. Surfacing it here until it gets a
+   *  permanent home on the Risk Intelligence page. */
+  const [planRec, setPlanRec] = useState<{
+    recommendation: PlanRecommendation;
+    ordersAnalyzed: number;
+    chargebackCount90d: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [teamEmail, setTeamEmail] = useState("");
@@ -239,12 +251,34 @@ export default function EmbeddedSettingsPage() {
   const fetchInfo = useCallback(async () => {
     setLoading(true);
     try {
-      const [usageRes, prefsRes, autoRes, storeRes] = await Promise.all([
-        fetch("/api/billing/usage"),
-        fetch("/api/shop/preferences"),
-        fetch("/api/automation/settings"),
-        fetch("/api/automation/store"),
-      ]);
+      const [usageRes, prefsRes, autoRes, storeRes, planRecRes] =
+        await Promise.all([
+          fetch("/api/billing/usage"),
+          fetch("/api/shop/preferences"),
+          fetch("/api/automation/settings"),
+          fetch("/api/automation/store"),
+          fetch("/api/billing/plan-recommendation"),
+        ]);
+      // `show` folds in the dismissal rule server-side, so an dismissed
+      // recommendation simply never renders. A shop with no persisted row
+      // (never analysed) returns recommendation: null.
+      if (planRecRes.ok) {
+        const pr = (await planRecRes.json()) as {
+          recommendation: PlanRecommendation | null;
+          show?: boolean;
+          ordersAnalyzed?: number;
+          chargebackCount90d?: number;
+        };
+        setPlanRec(
+          pr.recommendation && pr.show
+            ? {
+                recommendation: pr.recommendation,
+                ordersAnalyzed: pr.ordersAnalyzed ?? 0,
+                chargebackCount90d: pr.chargebackCount90d ?? 0,
+              }
+            : null,
+        );
+      }
       if (storeRes.ok) {
         const cfg = (await storeRes.json()) as {
           mode?: string;
@@ -782,6 +816,19 @@ export default function EmbeddedSettingsPage() {
             </BlockStack>
           </Card>
         </Layout.Section>
+
+        {/* Plan recommendation — sits directly above Billing & Plan so the
+            suggestion and the current plan read as one decision. Renders only
+            when a recommendation exists and has not been dismissed. */}
+        {planRec ? (
+          <Layout.Section>
+            <PlanRecommendationCard
+              recommendation={planRec.recommendation}
+              ordersAnalyzed={planRec.ordersAnalyzed}
+              chargebackOrders90d={planRec.chargebackCount90d}
+            />
+          </Layout.Section>
+        ) : null}
 
         {/* Billing & Plan */}
         <Layout.Section>

@@ -43,6 +43,30 @@ const KNOWN_CARRIERS: Array<{
   { slug: "colissimo", companyRe: /colissimo|la poste/i, hostRe: /(^|\.)laposte\.fr$/i },
   { slug: "correos", companyRe: /correos/i, hostRe: /(^|\.)correos\.es$/i },
   { slug: "ctt", companyRe: /(^|\b)ctt(\b|$)/i, hostRe: /(^|\.)ctt\.pt$/i },
+  // ── Cross-border consolidators + regional carriers (2026-09-16) ──
+  // Identification only — none has an adapter, so these resolve to
+  // `unsupported_carrier` (demand-signal email) rather than disappearing
+  // into `unknown_carrier` (metrics only). Ordered by prod volume.
+  {
+    slug: "yunexpress",
+    companyRe: /yun\s*express|(^|\b)yunexpress(\b|$)/i,
+    hostRe: /(^|\.)(yuntrack|yunexpress)\.com$/i,
+  },
+  { slug: "sunyou", companyRe: /(^|\b)sun\s*you(\b|$)/i, hostRe: /(^|\.)sunyou\.[a-z.]{2,6}$/i },
+  { slug: "cne_express", companyRe: /(^|\b)cne(\s|\b)/i, hostRe: /(^|\.)cne\.com$/i },
+  // "4px" needs no word boundary before the digit — \b does not match between
+  // start-of-string and "4". Anchor on the literal instead.
+  { slug: "fourpx", companyRe: /(^|[^a-z0-9])4px(\b|$)/i, hostRe: /(^|\.)4px\.com$/i },
+  { slug: "yanwen", companyRe: /(^|\b)yanwen(\b|$)/i, hostRe: /(^|\.)yw56\.com\.cn$/i },
+  { slug: "cainiao", companyRe: /cainiao|(^|\b)aliexpress\s*standard/i, hostRe: /(^|\.)cainiao\.com$/i },
+  {
+    slug: "canada_post",
+    companyRe: /canada\s*post|postes\s*canada/i,
+    hostRe: /(^|\.)canadapost(-postescanada)?\.ca$/i,
+  },
+  { slug: "intelcom", companyRe: /intelcom|(^|\b)dragonfly(\b|$)/i, hostRe: /(^|\.)intelcom\.ca$/i },
+  { slug: "stallion_express", companyRe: /stallion\s*express/i, hostRe: /(^|\.)stallionexpress\.ca$/i },
+  { slug: "purolator", companyRe: /purolator/i, hostRe: /(^|\.)purolator\.com$/i },
 ];
 
 /** Carriers deliberately excluded from unsupported-carrier notifications

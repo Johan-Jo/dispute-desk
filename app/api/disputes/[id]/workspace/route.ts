@@ -39,6 +39,8 @@ import { creditAlreadyIssuedInput } from "@/lib/argument/caseStrength";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 import {
+  ASSESSMENT_POLICY_VERSION,
+  assessmentInputHashTerms,
   computeAssessmentInputHash,
   readPersistedGateFingerprint,
 } from "@/lib/evidence/model/assessmentSnapshot";
@@ -116,6 +118,20 @@ const FILE_EVIDENCE_REQUIRED_SCOPES = [
 ] as const;
 
 export const runtime = "nodejs";
+/**
+ * NEVER CACHED, and this is a correctness rule rather than a performance one.
+ *
+ * The response carries a per-merchant assessment whose whole contract is that
+ * it describes the evidence as it stands NOW — `needsRecalculation`, the
+ * strength band, the completeness score and whether the case may be filed. A
+ * cached copy is exactly the "stale number rendered as current" this layer
+ * exists to prevent, and a pack is rebuilt in ~80 seconds, so a response
+ * captured mid-build can describe a case that no longer exists.
+ *
+ * The client sends `cache: "no-store"` too; both halves are set deliberately
+ * rather than relying on either one alone.
+ */
+export const dynamic = "force-dynamic";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -803,6 +819,82 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           payloadSource: caseStrengthPayloadSource,
         })
       : null;
+
+  /* ── FRESHNESS MISMATCH DIAGNOSTICS ───────────────────────────────────
+   *
+   * A mismatch here withdraws the strength band, the completeness score AND
+   * the send action, and tells the merchant "the evidence on this case
+   * changed after it was last assessed". On 2026-09-01 that claim was made
+   * about a case whose snapshot re-derived byte-identically from `pack_json`
+   * — and because `evaluateFreshness` compares ONE composite hash, the row
+   * held nothing that could say which of model/gates/payloads had moved.
+   *
+   * So the mismatch now explains itself. Logged only WHEN it fires, so the
+   * healthy path costs nothing; the write-time terms come from
+   * `pack_json.case_assessment_hash_terms` when the pack carries them (packs
+   * built before that field simply report `null` and the reader's own terms
+   * still narrow it down on the next rebuild).
+   *
+   * Read-only. Nothing branches on this — `evaluateFreshness` remains the one
+   * freshness authority, and `buildWorkspaceAssessment` below is unchanged. */
+  const hashMismatch =
+    !!persistedSnapshot &&
+    !!currentAssessmentHash &&
+    persistedSnapshot.freshness?.inputHash !== currentAssessmentHash;
+  /* A snapshot the reader cannot VERIFY is treated as stale too, and that
+   * path was just as silent: no persisted gate fingerprint means no current
+   * hash, so the equality above never runs and the merchant still gets the
+   * banner. Same for a policy bump. Log all three, and say which one it was —
+   * otherwise the next report is again "the banner appeared" with no row to
+   * point at. */
+  const unverifiable = !!persistedSnapshot && !currentAssessmentHash;
+  const policySuperseded =
+    !!persistedSnapshot &&
+    persistedSnapshot.freshness?.policyVersion !== ASSESSMENT_POLICY_VERSION;
+  if (packRow && (hashMismatch || unverifiable || policySuperseded)) {
+    const writeTerms =
+      ((packRow?.pack_json as { case_assessment_hash_terms?: unknown } | null)
+        ?.case_assessment_hash_terms as Record<string, string> | undefined) ??
+      null;
+    const readTerms =
+      liveModel && persistedGates
+        ? assessmentInputHashTerms({
+            model: liveModel,
+            gates: persistedGates,
+            payloadSource: caseStrengthPayloadSource,
+          })
+        : null;
+    // Name the offending term outright rather than leaving it to be worked
+    // out from two digest triples at 2am.
+    const movedTerms =
+      writeTerms && readTerms
+        ? (["model", "gates", "payloads"] as const).filter(
+            (t) => writeTerms[t] !== readTerms[t],
+          )
+        : null;
+    console.warn("[workspace] assessment not renderable as current", {
+      // WHICH of the three ways a snapshot fails to be current. The merchant
+      // sees one banner for all of them; this is the only place they separate.
+      cause: hashMismatch
+        ? "input_hash_mismatch"
+        : policySuperseded
+          ? "policy_version_superseded"
+          : "gate_fingerprint_absent",
+      disputeId,
+      packId: packRow?.id ?? null,
+      packUpdatedAt: (packRow?.updated_at as string | null) ?? null,
+      packStatus: (packRow?.status as string | null) ?? null,
+      storedHash: persistedSnapshot.freshness?.inputHash ?? null,
+      currentHash: currentAssessmentHash,
+      storedPolicyVersion: persistedSnapshot.freshness?.policyVersion ?? null,
+      currentPolicyVersion: ASSESSMENT_POLICY_VERSION,
+      // `null` = pack predates the persisted terms, so the offender cannot be
+      // named yet. Not "no term moved" — the composite hash already disagreed.
+      movedTerms,
+      writeTerms,
+      readTerms,
+    });
+  }
 
   /*
    * No pack means nothing has been assessed yet — and `emptyWorkspaceAssessment`

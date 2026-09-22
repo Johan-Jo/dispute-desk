@@ -346,7 +346,20 @@
     "buildingMonitoringDesc": "O DisputeDesk está trabalhando",
     "underReviewCard": "Em análise",
     "underReviewCardDesc": "Resposta enviada",
-    "winRateDenominatorNote": "ganhas ÷ decididas (ganhas, perdidas, aceitas)"
+    "winRateDenominatorNote": "ganhas ÷ decididas (ganhas, perdidas, aceitas)",
+    "merchantMessage": {
+      "emailLabel": "E-mail",
+      "phoneLabel": "Telefone",
+      "cta": "Enviar",
+      "dismiss": "Fechar",
+      "subtitle": "Deixe um e-mail ou telefone e ligamos de volta dentro de um dia útil.",
+      "helper": "Preencha e-mail ou telefone — basta um.",
+      "error": "Não foi possível enviar. Tente novamente.",
+      "thanksTitle": "Obrigado — entraremos em contacto",
+      "thanksBody": "Obrigado! Entraremos em contacto dentro de um dia útil.",
+      "sending": "A enviar…",
+      "nameLabel": "Nome"
+    }
   },
   "disputes": {
     "title": "Disputas",
@@ -563,6 +576,7 @@
     "csvDueDate": "Data limite",
     "csvNormalizedStatus": "Status Normalizado",
     "csvSubmissionState": "Estado de Envio",
+    "csvDisputeDate": "Disputa iniciada em",
     "csvSubmittedAt": "Enviado Em",
     "csvClosedAt": "Encerrado Em",
     "csvOutcome": "Resultado Final",
@@ -938,6 +952,7 @@
         "notEnoughEvidenceBody": "O classificador não encontrou fatos aprovados elegíveis ao banco para este estorno. Faça upload de documentos de apoio adicionais ou aguarde a próxima sincronização para incluir evidências recém-coletadas.",
         "validationFailedFallback": "A validação encontrou alegações não comprovadas na narrativa gerada.",
         "rebuildFailedTitle": "A última regeneração não passou nas nossas verificações",
+        "rebuildFailedTitleFiled": "Uma versão mais recente não foi apresentada",
         "rebuildFailedBodyFiled": "O pacote de defesa v{bankVersion} está apresentado na Shopify e continua válido. Uma versão mais recente foi gerada, mas não passou nas nossas verificações de evidências, por isso não foi apresentada. Não é preciso fazer nada — regenere se quiser tentar novamente.",
         "rebuildFailedBodyUnfiled": "O pacote de defesa não passou nas nossas verificações de evidências, por isso nada foi apresentado para esta disputa. Regenere-o antes do prazo.",
         "newEvidenceAvailableBody": "Atualizações recentes (uploads, mudanças de status ou novos sinais coletados automaticamente) ainda não estão refletidas neste rascunho. Clique em Regenerar abaixo para construir uma nova versão que as inclua — a reconstrução leva de 2 a 3 minutos e roda em segundo plano.",
@@ -1305,8 +1320,8 @@
           "awaitingForward": "{strengthReason} O Shopify tem o pacote e o encaminhará à sua rede de cartões. O DisputeDesk pode confirmar que as provas foram salvas no Shopify, mas não pode verificar independentemente quando o encaminhamento ocorre.",
           "submittedToNetwork": "{strengthReason} A rede de cartões está analisando esta defesa. O resultado costuma ser publicado em 30–75 dias.",
           "submittedToNetworkWithDate": "Enviado à sua rede de cartões em {submittedDate}. O resultado costuma ser publicado em 30–75 dias.",
-          "closedWon": "Resultado: vencida{submittedDate, select, none {} other { (decidida em {submittedDate})}}.",
-          "closedLost": "Resultado: perdida{submittedDate, select, none {} other { (decidida em {submittedDate})}}.",
+          "closedWon": "Resultado: vencida{decisionDate, select, none {} other { (decidida em {decisionDate})}}.",
+          "closedLost": "Resultado: perdida{decisionDate, select, none {} other { (decidida em {decisionDate})}}.",
           "closedUnknown": "Resultado informado pelo Shopify: {outcome}."
         }
       },
@@ -1430,8 +1445,8 @@
         "insufficient": "Nenhuma evidência disponível."
       },
       "fatalLoss": {
-        "refund_issued": "Já foi emitido um reembolso para este pedido — o banco tratará isso como uma confissão de responsabilidade, portanto o caso não pode ser vencido como está.",
-        "inr_no_fulfillment": "O pedido nunca foi cumprido e o motivo da disputa é \"produto não recebido\" — não há base factual para defender a cobrança."
+        "refund_issued": "Já foi emitido um reembolso que cobre esta cobrança, por isso o banco leria uma defesa como admissão de que o valor é devido. Nada é necessário da sua parte — deixe este caso encerrar. Se o reembolso foi emitido ANTES de o cliente contestar, avise-nos: um crédito anterior à contestação é um dos argumentos mais fortes que existem e reconstruiremos a defesa com base nisso.",
+        "inr_no_fulfillment": "O cliente diz que o artigo nunca chegou e este pedido não tem qualquer envio registado — portanto não há factos para argumentar. Se foi enviado, adicione o número de rastreio e reconstruiremos a defesa automaticamente. Se nunca foi enviado, consulte o seu e-mail: os próximos passos dependem de isto ainda ser uma consulta ou já um estorno."
       },
       "creditAlreadyIssued": "Esta transação já foi reembolsada antes de a disputa ser aberta. A resposta mais forte é o próprio reembolso — o titular do cartão já foi reembolsado, portanto nada mais é devido.",
       "returnedToSender": {
@@ -1450,12 +1465,21 @@
       "notDefendedByUs": "Esta contestação foi decidida antes de a DisputeDesk ter enviado quaisquer provas.",
       "factor": {
         "avs_mismatch": "A morada de faturação do cartão não correspondia à morada da encomenda",
+        "cardholder_name_mismatch": "O nome registado no cartão era diferente do nome do comprador",
+        "prior_chargebacks": "A conta do cliente tinha um chargeback anterior",
+        "ip_country_mismatch": "A localização da encomenda e o país de entrega não correspondiam",
+        "ip_high_risk": "O pagamento foi feito a partir de uma rede ou localização de alto risco",
         "no_signature_on_fraud": "A entrega foi confirmada, mas ninguém assinou",
         "no_delivery_confirmation": "Não nos chegou qualquer confirmação de entrega da transportadora",
         "weak_identity_signals": "O único sinal de identidade que conseguimos confirmar foi o país do cliente",
         "signature_confirmed": "A entrega foi confirmada e assinada",
         "avs_match": "A morada de faturação do cartão correspondia à morada da encomenda",
         "delivery_confirmed": "A transportadora confirmou a entrega"
+      },
+      "learning": {
+        "title": "O que provavelmente enfraqueceu este caso",
+        "caveat": "O emissor não partilha o motivo exato da decisão. Estes são os sinais de risco mais fortes da avaliação completa, incluindo os que não foram enviados ao banco.",
+        "fraudRecommendation": "Recomendação: analise ou cancele manualmente futuras encomendas de alto risco quando a verificação do pagamento falhar ou os nomes do titular e do comprador forem diferentes, sobretudo se a conta já tiver um chargeback."
       }
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",
@@ -1845,7 +1869,7 @@
         "analysisDeferredBody": "Conversas foram associadas, mas a análise de evidências está pausada e será retomada em breve. Os tickets associados permanecem visíveis abaixo.",
         "reconnectRequiredTitle": "Reconectar o Gorgias",
         "reconnectRequiredBody": "Sua conexão com o Gorgias não está mais autorizada. Reconecte-a nas Configurações para retomar as evidências de comunicação.",
-        "takingLongerNote": "Isto está a demorar mais do que o esperado. Pode estar a aguardar atrás de outras tarefas — atualize para verificar se há novidades."
+        "takingLongerNote": "Isto está a demorar mais do que o habitual. É executado em segundo plano e será concluído automaticamente — atualize para verificar se há novidades."
       },
       "staleBanner": {
         "title": "Seu pacote de defesa está desatualizado",
@@ -1959,8 +1983,16 @@
       "notAssessed": {
         "title": "Ainda sem avaliação",
         "bodyAbsent": "O DisputeDesk ainda não avaliou este caso, por isso não há solidez nem grau de completude para mostrar. É avaliado automaticamente assim que o pacote de provas for criado — não precisa de fazer nada.",
-        "bodyStale": "As provas deste caso mudaram depois da última avaliação, por isso a solidez e a completude anteriores já não o descrevem. O DisputeDesk reavalia-o automaticamente — não precisa de fazer nada.",
+        "bodyStale": "Este caso foi avaliado segundo uma versão anterior da nossa pontuação, por isso a solidez e a completude anteriores já não se aplicam. Nada mudou nas suas provas. O DisputeDesk reavalia o caso automaticamente antes do prazo de resposta — não precisa de fazer nada.",
         "actionsHidden": "O envio não está disponível enquanto este caso não for avaliado."
+      },
+      "stale": {
+        "title": "Avaliado numa versão anterior",
+        "body": "Este caso foi avaliado numa versão anterior da nossa pontuação, pelo que a solidez e a integridade anteriores já não se aplicam. Nada mudou nas suas provas."
+      },
+      "unknown": {
+        "title": "Avaliação indisponível",
+        "body": "Não foi possível ler a avaliação deste caso neste momento. Nada mudou nas suas provas — tente novamente dentro de momentos."
       }
     },
     "deadlineOnly": {
@@ -1981,7 +2013,8 @@
       "reviewItem": {
         "generic": "Este item precisa da sua confirmação antes de poder ser utilizado."
       }
-    }
+    },
+    "multipleOnOrder": "{index} de {total} neste pedido"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banco não pode processar",
@@ -4866,6 +4899,7 @@
     "kpiFraudDisputeRate": "Taxa de disputas por fraude",
     "tooltipFraudDisputeRate": "Porcentagem de pedidos que se tornaram uma disputa por fraude do Shopify Payments (motivo = FRAUDULENT) neste período.",
     "kpiHighRiskFulfilled": "Alto risco atendidos",
+    "kpiHighRiskFulfilledNone": "sem pedidos de alto risco",
     "tooltipHighRiskFulfilled": "Dos pedidos classificados como ALTO risco, a porcentagem que ainda assim foi atendida. Um número alto pode indicar exposição operacional.",
     "kpiProtectCoverage": "Cobertura do Shopify Protect",
     "tooltipProtectCoverage": "Do valor dos pedidos elegíveis para a cobertura do Shopify Protect, a parcela marcada como PROTECTED.",
@@ -4953,6 +4987,7 @@
     "kpiConfirmedDeliveryContext": "{num} de {den} pedidos atendidos",
     "kpiSignedFor": "Assinada na entrega",
     "kpiSignedForContext": "{num} de {den} entregues",
+    "kpiSignedForUnavailable": "Indisponível para as suas transportadoras",
     "gauge90dLabel": "Taxa de chargebacks em 90 dias",
     "gaugeBandGood": "Bom < 0,4 %",
     "gaugeBandAtRisk": "Risco 0,4–0,6 %",
@@ -5020,7 +5055,11 @@
       "breach": "Limite ultrapassado"
     },
     "weeklyChargebackRateAria": "Taxa semanal de estornos, últimas 8 semanas",
-    "noData": "Sem dados"
+    "noData": "Sem dados",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "O programa da Visa não se aplica às suas disputas.",
+    "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O VAMP da Visa conta chargebacks de cartão, portanto não mede o resto do seu volume — não há veredicto VAMP a dar aqui.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "O programa da Mastercard não se aplica às suas disputas.",
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O ECM da Mastercard conta chargebacks de cartão; as restantes seguem as regras do fornecedor que as tratou."
   },
   "consent": {
     "ariaLabel": "Preferências de cookies e privacidade",
@@ -5361,7 +5400,8 @@
         "fptWins": "Vitórias FPT",
         "fptWinsHelper": "Disputas Mastercard 4837 / 4863 vencidas via First-Party Trust"
       },
-      "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade."
+      "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade.",
+      "notApplicable": "Sem volume de cartão neste período — este programa não mede as suas disputas."
     }
   },
   "playbook": {
@@ -5919,13 +5959,15 @@
       "recommended": "Comunicação recomendada",
       "requested": "Revisar comunicação",
       "blocking": "Aprovação necessária",
-      "technical_error": "Atenção técnica necessária"
+      "technical_error": "Atenção técnica necessária",
+      "deadline_missed": "Prazo de resposta encerrado"
     },
     "listStateSub": {
       "recommended": "A comunicação com o cliente pode fortalecer esta resposta",
       "requested": "Revise as mensagens de cliente sugeridas",
       "blocking": "O DisputeDesk está aguardando sua aprovação",
-      "technical_error": "Reconecte para restaurar o monitoramento"
+      "technical_error": "Reconecte para restaurar o monitoramento",
+      "deadline_missed": "O prazo terminou antes do envio de uma resposta"
     },
     "internalIssue": "O DisputeDesk detectou um problema técnico e está trabalhando para resolvê-lo. Nenhuma ação é necessária de sua parte no momento.",
     "deadlineLabel": "Prazo de resposta do Shopify",

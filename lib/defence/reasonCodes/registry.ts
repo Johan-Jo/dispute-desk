@@ -86,12 +86,23 @@ export function resolveReasonCodeModule(
 /**
  * Shopify dispute-reason enum → module key. Used as a fallback routing
  * key ONLY when there is no network reason code (BNPL/local methods like
- * Klarna/Affirm, which have no Visa/Mastercard code). Card disputes keep
- * routing on the network code. Reuses the existing per-reason modules so
- * a Klarna "item not received" gets the same delivery-proof guidance a
- * card 13.1 would, minus the card-network framing (added by the payment
- * overlay). Only the reasons we actually see for BNPL are mapped; the
- * rest fall through to generic_fallback.
+ * Klarna/Affirm and wallets like PayPal, which have no Visa/Mastercard
+ * code). Card disputes keep routing on the network code. Reuses the
+ * existing per-reason modules so a Klarna "item not received" gets the
+ * same delivery-proof guidance a card 13.1 would, minus the card-network
+ * framing (added by the payment overlay).
+ *
+ * This map carries far more traffic than "BNPL fallback" suggests. Measured
+ * on prod 2026-09-01, 518 of one merchant's 522 disputes carry no network
+ * reason code — they are PayPal-wallet disputes settling through Shopify
+ * Payments — so for that merchant this map, not the network code, is the
+ * routing table.
+ *
+ * Reasons deliberately NOT mapped, because generic_fallback is already
+ * their correct destination rather than a miss: GENERAL (no claim category
+ * to route on) and INCORRECT_ACCOUNT_DETAILS (Visa 12.x processing-error
+ * family, which has no dedicated module — see families/processing_error.ts).
+ * Adding either would be a no-op entry that reads like coverage.
  */
 const SHOPIFY_REASON_TO_MODULE: ReadonlyMap<string, ReasonCodeModuleKey> =
   new Map([
@@ -100,6 +111,16 @@ const SHOPIFY_REASON_TO_MODULE: ReadonlyMap<string, ReasonCodeModuleKey> =
     ["PRODUCT_UNACCEPTABLE", "product_unacceptable"],
     ["SUBSCRIPTION_CANCELLED", "canceled_recurring"],
     ["DUPLICATE", "duplicate_processing"],
+    // A wallet/BNPL "fraudulent" claim is an unauthorized-transaction claim,
+    // and `visa_10_4_fraud` is the module that argues one. It fell to
+    // generic_fallback until 2026-09-01. The module's card-only evidence does
+    // not leak: `payment_authentication` and `billing_match` have no members
+    // on a non-card rail, and the payment overlay hard-bans AVS/CVV/3DS
+    // vocabulary from the narrative. Its `criticalCategories` are exactly
+    // those two, so a non-card unauthorized case renders hedged rather than
+    // asserting an authorization it cannot evidence — which is the intended
+    // outcome, not a shortfall.
+    ["FRAUDULENT", "visa_10_4_fraud"],
   ]);
 
 /**

@@ -35,12 +35,18 @@
 import type { I18nToken } from "@/lib/i18n/token";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { readPaymentVerification } from "@/lib/argument/paymentVerification";
+import { detectCardholderNameMismatch, cardholderNameFromPayload } from "@/lib/argument/nameMismatch";
+import { disputeFreeHistoryState } from "@/lib/argument/canonicalEvidence";
 
 const DELIVERY_CONFIRMED = new Set(["delivered_confirmed", "signature_confirmed"]);
 
 export type OutcomeFactorCode =
   // loss side
   | "avs_mismatch"
+  | "cardholder_name_mismatch"
+  | "prior_chargebacks"
+  | "ip_country_mismatch"
+  | "ip_high_risk"
   | "no_signature_on_fraud"
   | "no_delivery_confirmation"
   | "weak_identity_signals"
@@ -115,6 +121,7 @@ export function deriveOutcomeFactors(input: {
   facts: unknown;
   reason: string | null;
   outcome: "won" | "lost";
+  customerName?: string | null;
 }): OutcomeFactor[] {
   const byKey = factsByFieldKey(input.facts);
   const family = resolveReasonFamily(input.reason);
@@ -146,6 +153,35 @@ export function deriveOutcomeFactors(input: {
     if (avsOutcome === "no_match") {
       factors.push({ code: "avs_mismatch", token: token("avs_mismatch"), confidence: "observed" });
     }
+    const cardholderName = avs ? cardholderNameFromPayload(avs) : null;
+    if (isFraud && detectCardholderNameMismatch(cardholderName, input.customerName ?? null)) {
+      factors.push({
+        code: "cardholder_name_mismatch",
+        token: token("cardholder_name_mismatch"),
+        confidence: "observed",
+      });
+    }
+    const account = byKey.get("customer_account_info");
+    if (isFraud && disputeFreeHistoryState(account) === "has_disputes") {
+      factors.push({
+        code: "prior_chargebacks",
+        token: token("prior_chargebacks"),
+        confidence: "observed",
+      });
+    }
+    const ip = byKey.get("ip_location_check");
+    const locationMatch = str(ip?.locationMatch);
+    const riskLevel = str(ip?.riskLevel);
+    if (isFraud && locationMatch === "different_country") {
+      factors.push({
+        code: "ip_country_mismatch",
+        token: token("ip_country_mismatch"),
+        confidence: "observed",
+      });
+    }
+    if (isFraud && riskLevel === "high") {
+      factors.push({ code: "ip_high_risk", token: token("ip_high_risk"), confidence: "observed" });
+    }
     // Only meaningful on a fraud claim: an unsigned delivery is unremarkable
     // on a not-received or product dispute, where delivery itself is the
     // question rather than who took possession.
@@ -168,7 +204,6 @@ export function deriveOutcomeFactors(input: {
         confidence: "observed",
       });
     }
-    const locationMatch = str(byKey.get("ip_location_check")?.locationMatch);
     if (isFraud && (locationMatch === null || locationMatch === "same_country")) {
       factors.push({
         code: "weak_identity_signals",
@@ -218,6 +253,7 @@ export function resolveOutcomeExplanation(input: {
   outcome: "won" | "lost";
   reason: string | null;
   pack: { submittedAt: string | null; facts: unknown } | null;
+  customerName?: string | null;
 }): OutcomeExplanation {
   if (!input.pack) return { kind: "not_defended_by_us" };
 
@@ -225,6 +261,7 @@ export function resolveOutcomeExplanation(input: {
     facts: input.pack.facts,
     reason: input.reason,
     outcome: input.outcome,
+    customerName: input.customerName,
   });
 
   if (factors.length === 0) {

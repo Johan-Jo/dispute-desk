@@ -18,7 +18,7 @@
  */
 
 import type { DisputePresentation } from "./types";
-import { effectiveReviewDecision } from "./reviewDecision";
+import { effectiveReviewDecision, isDeadlineMissedUnfiled } from "./reviewDecision";
 
 /** Operational-lifecycle chip label. */
 export function lifecycleLabelKey(p: Pick<DisputePresentation, "lifecycle">): string {
@@ -75,7 +75,37 @@ export function strengthLabelKey(
 export function listPrimaryState(
   p: Pick<DisputePresentation, "lifecycle" | "attention" | "blockingReason">,
   reviewStateInput?: "in_review" | "approved" | "conceded" | null,
+  /** Deadline + clock. When supplied and the window has closed on a
+   *  pre-save rung, the row says so instead of promising a submit that can
+   *  no longer happen. Optional: a caller that omits it keeps the previous
+   *  behaviour rather than having a missed window inferred for it. */
+  deadline?: { evidenceDueAt: string | null | undefined; now: Date },
 ): { labelKey: string; subKey: string } {
+  /* ── THE WINDOW CLOSED AND NOTHING WAS FILED ──────────────────────────
+   *
+   * Checked FIRST, above the review decision and the attention ladder,
+   * because every branch below describes something that is still going to
+   * happen. Once the deadline has passed on a pre-save rung, none of them is
+   * true any more: "Scheduled to submit" promises a cron run that will not
+   * come, and "Building evidence · No action required" tells the merchant to
+   * relax about the one case that had actually slipped.
+   *
+   * Both were live on 6a8848-dd on 2026-09-21 — `#90627` (approved, due 30
+   * Aug) and `#90055` (due 26 Aug) — three weeks after their windows shut.
+   *
+   * The copy states the observable fact and stops. It does NOT say the
+   * dispute is lost: only Shopify can say that, and this layer has not asked
+   * it. */
+  if (
+    deadline &&
+    isDeadlineMissedUnfiled(p.lifecycle, deadline.evidenceDueAt, deadline.now)
+  ) {
+    return {
+      labelKey: "presentation.listState.deadline_missed",
+      subKey: "presentation.listStateSub.deadline_missed",
+    };
+  }
+
   // A recorded merchant decision OVERRIDES the attention-derived status:
   // once the merchant has approved / held / conceded, the row must stop
   // saying "Approval required" and reflect the standing decision, even
@@ -86,7 +116,7 @@ export function listPrimaryState(
   // cleared when the deadline cron carries it out, so past the save it
   // would keep the row on "Scheduled to submit" for an already-filed
   // dispute — see effectiveReviewDecision.
-  const reviewState = effectiveReviewDecision(p.lifecycle, reviewStateInput);
+  const reviewState = effectiveReviewDecision(p.lifecycle, reviewStateInput, deadline);
   if (reviewState === "approved") {
     return {
       labelKey: "presentation.reviewDecision.approved",

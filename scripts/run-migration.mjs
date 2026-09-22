@@ -132,7 +132,22 @@ const client = new Client({
 });
 
 const migrationsDir = join(process.cwd(), "supabase", "migrations");
-const filter = process.argv[2] || null;
+/**
+ * The optional migration-name prefix, taken as the first NON-FLAG argument.
+ *
+ * This used to be `process.argv[2]` — literally the third argv slot. Once
+ * `--target=` became mandatory the documented invocation
+ * (`run-migration.mjs --target=prod 20260729`) put the flag in that slot, so
+ * the filter became the string "--target=prod", matched no file, and the
+ * script applied NOTHING while printing "Done." On 2026-08-31 that silently
+ * no-opped a three-migration prod release; the tables were only found missing
+ * because they were checked afterwards.
+ *
+ * Reading past flags makes both argument orders work, and the zero-match guard
+ * below makes a filter that matches nothing a hard failure rather than a
+ * success message.
+ */
+const filter = process.argv.slice(2).find((a) => !a.startsWith("--")) || null;
 
 async function run() {
   await client.connect();
@@ -151,6 +166,17 @@ async function run() {
 
   const { rows: applied } = await client.query("SELECT name FROM _migrations");
   const appliedSet = new Set(applied.map((r) => r.name));
+
+  // A filter naming nothing is a typo, not an empty release. Saying "Done."
+  // over zero matched files is how a no-op reads as a successful deploy.
+  if (filter && !files.some((f) => f.startsWith(filter))) {
+    console.error(
+      `\n[run-migration] No migration file starts with "${filter}".\n\n` +
+        `  Nothing was applied. Check the prefix against supabase/migrations/.\n`,
+    );
+    await client.end();
+    process.exit(1);
+  }
 
   for (const file of files) {
     if (filter && !file.startsWith(filter)) continue;

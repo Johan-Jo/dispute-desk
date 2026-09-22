@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
-import { getPlan, TRIAL_INCLUDED_PACKS, type PlanId } from "@/lib/billing/plans";
+import {
+  getPlan,
+  TRIAL_INCLUDED_PACKS,
+  type PlanId,
+} from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
 import { checkTrialEligibility } from "@/lib/billing/trialEligibility";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
@@ -16,6 +21,7 @@ export const runtime = "nodejs";
  * Updates the shop's plan, grants credits, and sets up entitlements.
  */
 export async function GET(req: NextRequest) {
+  const auditActor = await resolveAuditActor(req);
   const sp = req.nextUrl.searchParams;
   const shopId = sp.get("shop_id");
   const planId = sp.get("plan_id") as PlanId | null;
@@ -28,7 +34,8 @@ export async function GET(req: NextRequest) {
   const sb = getServiceClient();
   const plan = getPlan(planId);
 
-  const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const appUrl =
+    process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const host = sp.get("host") ?? "";
   const shop = sp.get("shop") ?? "";
 
@@ -66,7 +73,8 @@ export async function GET(req: NextRequest) {
   if (!chargeId) {
     await sb.from("audit_events").insert({
       shop_id: shopId,
-      actor_type: "merchant",
+      actor_type: auditActor.actorType,
+      actor_id: auditActor.actorId,
       event_type: "billing_declined",
       event_payload: { plan_id: planId },
     });
@@ -96,7 +104,10 @@ export async function GET(req: NextRequest) {
         shopify_gid: verification.shopifyChargeGid ?? null,
       },
     });
-    billingUrl.searchParams.set("verify_failed", verification.reason ?? "unknown");
+    billingUrl.searchParams.set(
+      "verify_failed",
+      verification.reason ?? "unknown",
+    );
     return NextResponse.redirect(billingUrl.toString());
   }
 
@@ -124,7 +135,11 @@ export async function GET(req: NextRequest) {
   const trialEndsAt = trialAllowed
     ? new Date(now.getTime() + plan.trialDays * 86400000).toISOString()
     : null;
-  const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
+  const cycleEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    now.getDate(),
+  ).toISOString();
 
   // subscription_state MUST be reset to active (or trialing) here.
   // Without this, a merchant who was previously expired/cancelled and
@@ -136,17 +151,20 @@ export async function GET(req: NextRequest) {
   // not match the new one anyway, but explicit is better here.
   const subscriptionState = trialAllowed ? "trialing" : "active";
 
-  await sb.from("plan_entitlements").upsert({
-    shop_id: shopId,
-    plan_key: planId,
-    subscription_state: subscriptionState,
-    trial_ends_at: trialEndsAt,
-    billing_cycle_started_at: now.toISOString(),
-    billing_cycle_ends_at: cycleEnd,
-    low_credits_banner_dismissed_cycle: null,
-    grace_banner_dismissed_cycle: null,
-    updated_at: now.toISOString(),
-  }, { onConflict: "shop_id" });
+  await sb.from("plan_entitlements").upsert(
+    {
+      shop_id: shopId,
+      plan_key: planId,
+      subscription_state: subscriptionState,
+      trial_ends_at: trialEndsAt,
+      billing_cycle_started_at: now.toISOString(),
+      billing_cycle_ends_at: cycleEnd,
+      low_credits_banner_dismissed_cycle: null,
+      grace_banner_dismissed_cycle: null,
+      updated_at: now.toISOString(),
+    },
+    { onConflict: "shop_id" },
+  );
 
   if (trialAllowed && trialEndsAt) {
     await grantCredits({

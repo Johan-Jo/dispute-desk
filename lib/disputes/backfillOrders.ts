@@ -44,6 +44,7 @@ import {
 import { persistOrders } from "@/lib/shopify/persistOrders";
 import { persistFulfillmentTrackings } from "@/lib/shopify/persistFulfillmentTrackings";
 import { upsertSignalRows } from "@/lib/fraudIntel/signalWriter";
+import { triggerOnboardingDigest } from "@/lib/email/triggerOnboardingDigest";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 import { scheduleBlockedBuildReplay } from "@/lib/billing/replayBlockedBuilds";
@@ -331,6 +332,21 @@ export async function backfillShopOrders(
         shopId,
         reference: `import_complete:${shopId}:${processed}`,
       });
+      // The onboarding analysis digest — the first email we send a merchant.
+      // It was built in May 2026 but never given a caller, so no merchant
+      // has ever received it. Fires here because this is the moment the
+      // analysis it describes actually exists.
+      //
+      // Awaited, not floated: this runs inside a job the worker will retry,
+      // and a floated promise could be cut off mid-send by the function
+      // returning. It never throws and claims idempotently, so a retry of
+      // this branch cannot double-send.
+      const digest = await triggerOnboardingDigest(shopId);
+      if (!digest.sent && digest.reason !== "already_sent") {
+        console.info(
+          `[backfill-orders] onboarding digest not sent for ${shopId}: ${digest.reason}`,
+        );
+      }
       return { status: "complete", ordersProcessed: processed };
     }
     cursor = page.endCursor;

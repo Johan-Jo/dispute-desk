@@ -148,6 +148,42 @@ export function buildSignalRow(input: SignalRowInput): {
 }
 
 /**
+ * Flush parse misses via `record_parse_misses`, which upserts on
+ * (shop_id, fact_text, parser_version) and ADDS to the existing count.
+ *
+ * The table stores one row per distinct phrasing, not one per sighting: its
+ * job is to reveal the set of fact strings the parser fails to match, and the
+ * parser deliberately matches only the six signals GraphQL does not expose,
+ * so most facts Shopify sends land here. Appending a row each time grew it to
+ * 6.5M rows for 23,890 distinct phrasings (1371 MB — the largest table in the
+ * database) and made the drift widget read an arbitrary 2000-row sliver.
+ *
+ * Via an RPC rather than a PostgREST upsert because `occurrences =
+ * occurrences + n` cannot be expressed there, and a read-modify-write would
+ * lose counts under concurrent order ingest.
+ *
+ * Best-effort, exactly as before: miss-tracking must never fail an ingest.
+ */
+async function flushParseMisses(
+  sb: ReturnType<typeof getServiceClient>,
+  missRows: ParseMissRow[],
+  context: string,
+): Promise<void> {
+  if (missRows.length === 0) return;
+  const { error } = await sb.rpc("record_parse_misses", { p_misses: missRows });
+  if (error) {
+    console.warn(`[fraudIntel] ${context} failed: ${error.message}`);
+  }
+}
+
+interface ParseMissRow {
+  shop_id: string;
+  fact_text: string;
+  fact_sentiment: string | null;
+  parser_version: number;
+}
+
+/**
  * Upsert one signal row + flush misses to fraud_intel_parse_misses.
  * Service-role only — both tables are RLS-locked.
  */
@@ -164,23 +200,16 @@ export async function upsertSignalRow(input: SignalRowInput): Promise<void> {
     );
   }
 
-  if (misses.length > 0) {
-    const rows = misses.map((m) => ({
+  await flushParseMisses(
+    sb,
+    misses.map((m) => ({
       shop_id: input.shopId,
       fact_text: m.text,
       fact_sentiment: m.sentiment,
       parser_version: PARSER_VERSION,
-    }));
-    const { error: missErr } = await sb
-      .from("fraud_intel_parse_misses")
-      .insert(rows);
-    if (missErr) {
-      // Don't fail the whole ingest — miss-tracking is best-effort.
-      console.warn(
-        `[fraudIntel] parse-misses insert failed: ${missErr.message}`,
-      );
-    }
-  }
+    })),
+    "parse-misses insert",
+  );
 }
 
 /**
@@ -214,12 +243,7 @@ export async function upsertSignalRows(
   // Build every row + collect misses. De-dup rows on the conflict key
   // (last wins) so a single upsert can't touch the same row twice.
   const rowByKey = new Map<string, BuiltSignalRow>();
-  const missRows: Array<{
-    shop_id: string;
-    fact_text: string;
-    fact_sentiment: string | null;
-    parser_version: number;
-  }> = [];
+  const missRows: ParseMissRow[] = [];
   for (const input of inputs) {
     const { row, misses } = buildSignalRow(input);
     rowByKey.set(`${row.shop_id}:${row.shopify_order_id}`, row);
@@ -243,17 +267,7 @@ export async function upsertSignalRows(
     );
   }
 
-  if (missRows.length > 0) {
-    const { error: missErr } = await sb
-      .from("fraud_intel_parse_misses")
-      .insert(missRows);
-    if (missErr) {
-      // Don't fail the whole ingest — miss-tracking is best-effort.
-      console.warn(
-        `[fraudIntel] parse-misses batch insert failed: ${missErr.message}`,
-      );
-    }
-  }
+  await flushParseMisses(sb, missRows, "parse-misses batch insert");
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

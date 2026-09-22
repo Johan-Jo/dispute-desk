@@ -73,7 +73,18 @@ export interface DigestData {
   periodLabel: string;
   /** 90-day chargeback rate, percent (e.g. 1.91). */
   chargebackRate90dPct: number | null;
-  chargebackOrders90d: number;
+  /** 90-day CHARGEBACK count (not orders). Feeds the ECM rule. */
+  chargebackCount90d: number;
+  /** Payment-rail context. VDMP/ECM count card chargebacks only, and two of
+   *  four prod shops have dispute books that are almost entirely non-card.
+   *  Optional so an un-updated caller keeps the previous behaviour rather
+   *  than silently losing a real breach warning. */
+  rail?: {
+    cardRatePct: number | null;
+    cardDisputes: number;
+    cardDisputeShare: number | null;
+    cardFramingApplies: boolean;
+  };
   current30d: DigestPeriodMetrics;
   prior30d: DigestPeriodMetrics;
   /** Real dispute activity for the period — opened, closed, open
@@ -236,7 +247,16 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
     "insights/initial-analysis",
   );
 
-  const cb = d.chargebackRate90dPct;
+  // Headline rate. When card programmes govern this merchant the headline
+  // must be the CARD-rail rate, because that is the number the checkpoints
+  // below quote and the thresholds judge. Showing the blended figure in the
+  // hero while a breach body cites the card figure puts two different
+  // percentages in one email — on blume-box that was 2.70% in the hero
+  // against 4.15% in the VAMP breach text.
+  const cb =
+    d.rail?.cardFramingApplies && d.rail.cardRatePct !== null
+      ? d.rail.cardRatePct
+      : d.chargebackRate90dPct;
   const cur = d.current30d;
   const prior = d.prior30d;
 
@@ -244,7 +264,11 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
   const checkpoints = evaluateCheckpoints(
     {
       chargebackRate90d: cb,
-      chargebackOrders90d: d.chargebackOrders90d,
+      chargebackCount90d: d.chargebackCount90d,
+      cardChargebackRate90d: d.rail?.cardRatePct,
+      cardChargebackCount90d: d.rail?.cardDisputes,
+      cardDisputeShare: d.rail?.cardDisputeShare,
+      cardFramingApplies: d.rail?.cardFramingApplies,
       fraudDisputeRatePct: cur.fraudDisputeRatePct,
       fulfilledHighRiskPct: cur.fulfilledHighRiskPct,
       threeDsAuthRatePct: cur.threeDsAuthRatePct,
@@ -256,9 +280,19 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
     3,
   );
 
-  // Headline severity drives the chargeback-rate accent color.
+  // Does card-network framing describe this merchant? Undefined means the
+  // caller predates rail awareness — keep the old behaviour rather than
+  // silently downgrading a real card breach.
+  const cardFraming = d.rail?.cardFramingApplies !== false;
+
+  // Headline severity drives the accent colour. The 1.5 / 0.9 bands are
+  // Visa and Mastercard thresholds, so they may only colour a rate those
+  // programmes actually govern. On a PayPal- or Klarna-dominant book the
+  // number is still worth showing — it is their real dispute rate — but
+  // painting it red against a card threshold asserts a breach that cannot
+  // happen on that rail.
   const headlineSeverity: Checkpoint["severity"] =
-    cb == null
+    cb == null || !cardFraming
       ? "info"
       : cb >= 1.5
         ? "breach"
@@ -274,8 +308,8 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
           ? "#10B981"
           : "#111827";
 
-  const subject = `Your ${d.periodLabel} chargeback exposure · DisputeDesk`;
-  const previewText = `${cur.ordersTotal.toLocaleString()} orders this month · 90-day chargeback rate ${pct(cb, 2)} · view your operational checkpoints`;
+  const subject = `Your ${d.periodLabel} ${cardFraming ? "chargeback" : "dispute"} exposure · DisputeDesk`;
+  const previewText = `${cur.ordersTotal.toLocaleString()} orders this month · 90-day ${cardFraming ? "chargeback" : "dispute"} rate ${pct(cb, 2)} · view your operational checkpoints`;
 
   // ── 30d snapshot rows ─────────────────────────────────────────
   const dHigh = delta(cur.highRiskPct, prior.highRiskPct, "pp", true);
@@ -316,12 +350,16 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 8px">${merchantDisplay}</div>
     <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.25;letter-spacing:-0.01em">Your ${d.periodLabel} chargeback exposure</h1>
     <p style="font-size:14px;color:#6B7280;margin:0 0 24px;line-height:1.6">
-      Across <strong style="color:#111827">${cur.ordersTotal.toLocaleString()}</strong> orders in the last 30 days. The headline below is your 90-day chargeback rate, compared against the published thresholds at Visa and Mastercard.
+      Across <strong style="color:#111827">${cur.ordersTotal.toLocaleString()}</strong> orders in the last 30 days. ${
+        cardFraming
+          ? "The headline below is your 90-day chargeback rate, compared against the published thresholds at Visa and Mastercard."
+          : "The headline below is your 90-day dispute rate. Most of your disputes are settled by the provider that handled the payment rather than by a card network, so the Visa and Mastercard programmes do not measure them."
+      }
     </p>
 
     ${heroNumber({
       number: pct(cb, 2),
-      label: "90-day chargeback rate",
+      label: cardFraming ? "90-day chargeback rate" : "90-day dispute rate",
       accentColor: headlineColor,
     })}
 
@@ -348,7 +386,9 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
     innerHtml: inner,
     previewText,
     footerText:
-      "Pulled from your historical Shopify orders and disputes. Thresholds verified against published Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11. You received this because monthly digests are enabled in your DisputeDesk notification settings.",
+      cardFraming
+        ? "Pulled from your historical Shopify orders and disputes. Thresholds verified against published Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11. You received this because monthly digests are enabled in your DisputeDesk notification settings."
+        : "Pulled from your historical Shopify orders and disputes. Card-network thresholds are shown for reference only — most of your disputes are not settled on a card network. You received this because monthly digests are enabled in your DisputeDesk notification settings.",
   });
 
   // ── Plain text fallback ───────────────────────────────────────
@@ -380,7 +420,7 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
 
 ${cur.ordersTotal.toLocaleString()} orders this month.
 
-90-day chargeback rate: ${pct(cb, 2)}
+90-day ${cardFraming ? "chargeback" : "dispute"} rate: ${pct(cb, 2)}
 
 Where you stand:
 ${checkpoints
@@ -405,7 +445,7 @@ Month over month (current · Δ vs prior 30d):
 Open Chargeback Exposure: ${dashboardUrl}
 
 ---
-Pulled from your historical Shopify orders and disputes. Thresholds verified against Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11.
+Pulled from your historical Shopify orders and disputes. ${cardFraming ? "Thresholds verified against Visa VAMP and Mastercard ECP rules. Last verified 2026-05-11." : "Card-network thresholds are shown for reference only - most of your disputes are not settled on a card network."}
 `;
 
   return { subject, html, text };
