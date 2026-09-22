@@ -522,3 +522,129 @@ describe("P3b-i — display contributions respect the plan (and ONLY display)", 
     ).not.toContain("ip_location_check");
   });
 });
+
+/* ── Replay against the REAL prod plan shape ─────────────────────── */
+
+/**
+ * The trigger pack's actual dispositions, exported from prod
+ * (pack 1ae01792-8f46-45d6-a3eb-61470ce6bbbe, 2026-09-22).
+ *
+ * Kept verbatim because the REAL record ids are Shopify GIDs
+ * (`delivery_proof#gid://shopify/Fulfillment/6721366556865`), not the tidy
+ * `field#0` of the hand-written fixtures. Prefix matching has to survive a
+ * `#` followed by a URL containing further slashes and digits — a fixture
+ * using `#0` everywhere would never exercise that.
+ */
+const PROD_INCLUDED = [
+  ["customer_communication", "customer_communication#0"],
+  ["delivery_proof", "delivery_proof#gid://shopify/Fulfillment/6721366556865"],
+  ["delivery_proof", "delivery_proof#gid://shopify/Fulfillment/6719323799745"],
+  ["no_return_initiated", "no_return_initiated#0"],
+  ["order_confirmation", "order_confirmation#0"],
+  ["shipping_policy", "shipping_policy#0"],
+  ["shipping_tracking", "shipping_tracking#gid://shopify/Fulfillment/6719323799745"],
+  ["shipping_tracking", "shipping_tracking#gid://shopify/Fulfillment/6721366556865"],
+] as const;
+
+const PROD_EXCLUDED = [
+  ["activity_log", "activity_log#0"],
+  ["avs_cvv_match", "avs_cvv_match#0"],
+  ["cancellation_policy", "cancellation_policy#0"],
+  ["customer_account_info", "customer_account_info#0"],
+  ["ip_location_check", "ip_location_check#0"],
+  ["refund_policy", "refund_policy#0"],
+] as const;
+
+describe("Layer 4 — replay against the real prod plan", () => {
+  const prodPlan: CaseArgumentPlanSnapshot = {
+    ...TRIGGER_PLAN,
+    included: PROD_INCLUDED.map(([fieldKey, recordId]) => ({
+      recordId,
+      fieldKey,
+      factCategory: fieldKey,
+    })),
+    excluded: PROD_EXCLUDED.map(([fieldKey, recordId]) => ({
+      recordId,
+      fieldKey,
+      factCategory: fieldKey,
+      reason: "not_argument_relevant" as const,
+      merchantReasonToken: "packs.argumentPlan.exclusion.notArgumentRelevant",
+    })),
+  };
+
+  const allFields = [
+    ...new Set([
+      ...PROD_INCLUDED.map(([f]) => f),
+      ...PROD_EXCLUDED.map(([f]) => f),
+    ]),
+  ];
+
+  it("no plan-excluded field is positive, and GID record ids resolve", () => {
+    const rows = deriveEvidenceLineItems({
+      checklist: allFields.map((f) => checklistItem(f)),
+      facts: [],
+      payloadByField: new Map<string, unknown>(
+        allFields.map((f) => [f, { fieldKey: f, bankEligible: true }]),
+      ),
+      contributions: {
+        strong: [],
+        moderate: allFields.map((f) => ({
+          // `signalId` is a constrained union; this replay cares only about
+          // the plan gate, so the field name stands in for it.
+          signalId: f,
+          category: "moderate",
+          labelToken: { key: `disputes.signalLabel.${f}` },
+          evidenceFieldKey: f,
+        })),
+      } as unknown as Parameters<
+        typeof deriveEvidenceLineItems
+      >[0]["contributions"],
+      packSavedToShopify: false,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map<string, "force_include" | "force_exclude">(),
+      reasonFamily: "product",
+      plan: prodPlan,
+    } as unknown as Parameters<typeof deriveEvidenceLineItems>[0]);
+
+    const excludedFieldNames = new Set<string>(PROD_EXCLUDED.map(([f]) => f));
+    const offenders = rows
+      .filter((r) => r.usedAsPositiveBankEvidence)
+      .map((r) => r.field)
+      .filter((f) => excludedFieldNames.has(f));
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("a GID-suffixed record is matched by its field, not missed", () => {
+    // Direct guard on the prefix rule: if `#gid://...` broke the match, the
+    // multi-record delivery fields would silently fall through to
+    // `unknown_record` and the test above would pass for the wrong reason.
+    const gidOnlyPlan: CaseArgumentPlanSnapshot = {
+      ...TRIGGER_PLAN,
+      included: [],
+      excluded: [
+        {
+          recordId: "delivery_proof#gid://shopify/Fulfillment/6721366556865",
+          fieldKey: "delivery_proof",
+          factCategory: "delivery_proof",
+          reason: "not_argument_relevant",
+          merchantReasonToken: "packs.argumentPlan.exclusion.notArgumentRelevant",
+        },
+      ],
+    };
+    const rows = deriveWith(
+      gidOnlyPlan,
+      [checklistItem("delivery_proof")],
+      [["delivery_proof", { fieldKey: "delivery_proof", proofType: "delivered_confirmed" }]],
+      ["delivery_proof"],
+    );
+    const row = rows.find((r) => r.field === "delivery_proof");
+    expect(row?.usedAsPositiveBankEvidence).toBe(false);
+    // And it carries the plan's reason, proving the match reached the
+    // exclusion record rather than defaulting.
+    expect(row?.reasonToken.key).toBe(
+      "packs.argumentPlan.exclusion.notArgumentRelevant",
+    );
+  });
+});
