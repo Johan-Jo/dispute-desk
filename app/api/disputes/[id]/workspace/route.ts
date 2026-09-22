@@ -1030,6 +1030,17 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         reasonFamily: resolveReasonFamily(row.reason),
         internalSignalsByField,
         overrideHistoryByField,
+        /* CP-B §1 — the plan is the authority on what may be asserted to an
+         * issuer. Without it this derivation re-answered that question from
+         * `checklist + payload` and contradicted the PDF on 171 of 172
+         * plan-bearing packs (docs/plans/plan-projection-drift.plan.md).
+         *
+         * `null` here is the legacy path and keeps the old behaviour. Note
+         * it is currently also what a flag-off read produces — a
+         * plan-bearing package whose plan was not loaded. Separating those
+         * two states is P1's read-state work (§D7a); until it lands, a
+         * flag-off read behaves as legacy, which is what shipped before. */
+        plan: canonicalPlan,
       })
     : [];
 

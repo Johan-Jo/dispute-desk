@@ -52,6 +52,8 @@ import { readPaymentVerification } from "./paymentVerification";
 import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
 import type { I18nToken } from "@/lib/i18n/token";
+import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
+import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan";
 import enMessages from "@/messages/en.json";
 
 /**
@@ -239,6 +241,71 @@ export interface DeriveEvidenceLineItemsInput {
    *  derivation just attaches the entry to the matching line item —
    *  no behavioural change, purely a display surface. */
   overrideHistoryByField?: Map<string, OverrideHistoryEntry>;
+  /**
+   * The argument plan this package was built against — the ONLY authority
+   * on whether a record may be asserted to an issuer (CP-B §1).
+   *
+   * `undefined` / `null` is the LEGACY path (`plan_json IS NULL` on the
+   * package row): pre-plan packages, whose behaviour must stay
+   * byte-identical. It is NOT "the reader skipped the query" — a
+   * plan-bearing package read without its plan is a different state and
+   * must not silently inherit legacy's affirmative claims. The workspace
+   * route distinguishes them; see docs/plans/plan-projection-drift.plan.md
+   * §D7a and P1's data contract.
+   *
+   * Consumed at RECORD level, never by `fieldKey`: the plan can include
+   * `delivery_proof#parcel-b` while excluding `delivery_proof#parcel-a`.
+   */
+  plan?: CaseArgumentPlanSnapshot | null;
+}
+
+/**
+ * A rendered row's disposition under the plan.
+ *
+ * `no_plan` is legacy (see `plan`), and is deliberately distinct from
+ * `unknown_record`: the first means "there is no authority to consult", the
+ * second means "there is an authority and it does not mention this record".
+ * Collapsing them is how a missing input becomes a confident claim.
+ */
+type PlanDisposition = "no_plan" | "included" | "excluded" | "unknown_record";
+
+/**
+ * Resolve a row's disposition from the plan's RECORD sets.
+ *
+ * ── WHY THE ROW IS MATCHED BY RECORD PREFIX ──
+ *
+ * Line items are keyed by `fieldKey` today; the plan decides per `recordId`
+ * (`<fieldKey>#<n>`). Until rows carry explicit record identity, a row is
+ * resolved from every plan record sharing its field, and a row naming ANY
+ * excluded record cannot claim positive bank evidence.
+ *
+ * That is the conservative direction on purpose. For a mixed field —
+ * `delivery_proof#parcel-a` excluded, `#parcel-b` included, which
+ * `deriveArgumentPlan`'s own suite pins as real — a single row cannot
+ * truthfully say "this is in the letter" when one of the records it stands
+ * for is not. Asserting the positive would be the very over-claim this
+ * projection exists to stop, so the row degrades to non-positive and keeps
+ * its exclusion reason. Splitting such a row into per-record rows is the
+ * correct end state and is U6, pending a maintainer decision.
+ */
+function planDispositionForField(
+  field: string,
+  included: ReadonlySet<string> | null,
+  excluded: ReadonlySet<string> | null,
+): PlanDisposition {
+  if (!included || !excluded) return "no_plan";
+  const prefix = `${field}#`;
+  const names = (set: ReadonlySet<string>): boolean => {
+    for (const id of set) {
+      if (id === field || id.startsWith(prefix)) return true;
+    }
+    return false;
+  };
+  // Excluded wins over included: a row standing for both cannot assert the
+  // positive (see above).
+  if (names(excluded)) return "excluded";
+  if (names(included)) return "included";
+  return "unknown_record";
 }
 
 /* ── Source inference ────────────────────────────────────────────── */
@@ -1449,6 +1516,11 @@ export function deriveEvidenceLineItems(
     contributions.moderate.map((c) => c.evidenceFieldKey),
   );
 
+  /* The plan's RECORD sets, built once. `null` when no plan was supplied —
+   * the legacy path, which must behave exactly as it did before. */
+  const planIncluded = input.plan ? includedRecordIds(input.plan) : null;
+  const planExcluded = input.plan ? excludedRecordIds(input.plan) : null;
+
   const out: EvidenceLineItem[] = [];
 
   for (const item of checklist) {
@@ -1516,7 +1588,30 @@ export function deriveEvidenceLineItems(
     const includedInDefencePackage =
       submissionMethod === "bank_argument" || submissionMethod === "context_only";
 
+    /* ── Plan projection (CP-B §1) ──────────────────────────────────
+     *
+     * With a plan present it is THE authority: a record it does not
+     * authorise may not carry an affirmative bank claim, whatever the
+     * legacy predicates (`bankEligible`, `naturalCategory`,
+     * `contributesStrongOrModerate`) say about it. Those predicates answer
+     * "is this good evidence"; only the plan answers "does it belong in
+     * THIS argument". They are different questions and the second one
+     * governs here.
+     *
+     * `unknown_record` is treated as unauthorised rather than as legacy:
+     * a plan that does not mention a record has not authorised it. The
+     * legacy path (`no_plan`) is the ONLY one that keeps the old answer.
+     */
+    const planDisposition = planDispositionForField(
+      item.field,
+      planIncluded,
+      planExcluded,
+    );
+    const planAuthorises =
+      planDisposition === "no_plan" || planDisposition === "included";
+
     const includedInBankArgument =
+      planAuthorises &&
       submissionMethod === "bank_argument" &&
       bankEligibleField &&
       !negativeOrAmbiguous;
