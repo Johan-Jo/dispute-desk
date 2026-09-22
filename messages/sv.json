@@ -2359,7 +2359,22 @@
     "readinessWarnings": "Redo att skickas in — {count} {count, plural, one {objekt med stor effekt} other {objekt med stor effekt}} skulle kunna stärka ditt ärende",
     "readinessReady": "Redo att skickas in",
     "readinessSubmitted": "Inskickad till Shopify {date}",
-    "sidebarWarnings": "{count} {count, plural, one {objekt med stor effekt} other {objekt med stor effekt}} saknas. Du kan ändå fortsätta."
+    "sidebarWarnings": "{count} {count, plural, one {objekt med stor effekt} other {objekt med stor effekt}} saknas. Du kan ändå fortsätta.",
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Behöver din bekräftelse innan det kan användas i försvaret.",
+        "unverified": "Inte verifierat och används därför inte i försvaret.",
+        "adverse": "Finns i akten. Att använda det skulle försvaga ditt ärende, så det utelämnas.",
+        "merchantOnly": "Endast för dina egna noteringar. Det ingår inte i försvaret mot banken.",
+        "notArgumentRelevant": "Finns i akten. Det stöder inte den här typen av krav, så brevet bygger inte på det."
+      },
+      "inclusion": {
+        "eligible": "Godtagbart för det här argumentet",
+        "includedInLetter": "Med i brevet",
+        "authorisedNotIncluded": "Godkänt, men inte med i det här dokumentet",
+        "cannotDetermine": "Går inte att fastställa för den här versionen"
+      }
+    }
   },
   "analytics": {
     "title": "Reporting",

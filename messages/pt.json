@@ -2359,7 +2359,22 @@
     "readinessWarnings": "Pronto para enviar — {count} {count, plural, one {item de alto impacto poderia fortalecer seu caso} other {itens de alto impacto poderiam fortalecer seu caso}}",
     "readinessReady": "Pronto para enviar",
     "readinessSubmitted": "Enviado ao Shopify em {date}",
-    "sidebarWarnings": "{count} {count, plural, one {item de alto impacto faltando} other {itens de alto impacto faltando}}. Você ainda pode prosseguir."
+    "sidebarWarnings": "{count} {count, plural, one {item de alto impacto faltando} other {itens de alto impacto faltando}}. Você ainda pode prosseguir.",
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Precisa da sua confirmação antes de poder ser usado na defesa.",
+        "unverified": "Não verificado, por isso não é usado na defesa.",
+        "adverse": "Guardado no processo. Usá-lo enfraqueceria o seu caso, por isso fica de fora.",
+        "merchantOnly": "Apenas para os seus registos. Não faz parte da defesa dirigida ao banco.",
+        "notArgumentRelevant": "Guardado no processo. Não sustenta este tipo de reclamação, por isso a carta não se apoia nele."
+      },
+      "inclusion": {
+        "eligible": "Elegível para esta argumentação",
+        "includedInLetter": "Incluído na carta",
+        "authorisedNotIncluded": "Autorizado, mas não incluído neste documento",
+        "cannotDetermine": "Não é possível determinar para esta versão"
+      }
+    }
   },
   "analytics": {
     "title": "Reporting",

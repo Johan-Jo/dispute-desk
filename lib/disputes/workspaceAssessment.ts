@@ -174,7 +174,19 @@ export function buildWorkspaceAssessment(
     warningCount: criticalGaps.length,
     submitOverrideGaps: criticalGaps.map((c) => ({ field: c.field, label: c.label })),
     // DISPLAY ONLY. Labels, not a band; see the header.
-    contributions: computeContributions({ checklist, payloadSource, reason }),
+    /* DISPLAY ONLY (see header). Plan-excluded records are filtered so the
+     * "What supports your case" rows cannot claim support the letter does
+     * not rest on. `strength` above still comes from the snapshot and is
+     * untouched by this — the persisted score's own relationship to plan
+     * exclusions is a separate, unshipped question (plan §P3b-ii). */
+    contributions: computeContributions({
+      checklist,
+      payloadSource,
+      reason,
+      planExcludedRecordIds: plan
+        ? new Set(plan.excluded.map((e) => e.recordId))
+        : undefined,
+    }),
     improvement: calculateImprovement(checklist, reason, payloadSource),
   };
 }

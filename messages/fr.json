@@ -2359,7 +2359,22 @@
     "readinessWarnings": "Prêt à soumettre — {count} {count, plural, one {élément à fort impact pourrait renforcer votre dossier} other {éléments à fort impact pourraient renforcer votre dossier}}",
     "readinessReady": "Prêt à soumettre",
     "readinessSubmitted": "Soumis à Shopify le {date}",
-    "sidebarWarnings": "{count} {count, plural, one {élément à fort impact manquant} other {éléments à fort impact manquants}}. Vous pouvez tout de même continuer."
+    "sidebarWarnings": "{count} {count, plural, one {élément à fort impact manquant} other {éléments à fort impact manquants}}. Vous pouvez tout de même continuer.",
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Nécessite votre confirmation avant de pouvoir servir à la défense.",
+        "unverified": "Non vérifié, donc non utilisé dans la défense.",
+        "adverse": "Conservé dans le dossier. L'utiliser affaiblirait votre dossier, il est donc écarté.",
+        "merchantOnly": "Pour vos archives uniquement. Cet élément ne fait pas partie de la défense adressée à la banque.",
+        "notArgumentRelevant": "Conservé dans le dossier. Cet élément n'étaye pas ce type de réclamation, la lettre ne s'appuie donc pas dessus."
+      },
+      "inclusion": {
+        "eligible": "Recevable pour cette argumentation",
+        "includedInLetter": "Inclus dans la lettre",
+        "authorisedNotIncluded": "Autorisé, mais non inclus dans ce document",
+        "cannotDetermine": "Impossible à déterminer pour cette version"
+      }
+    }
   },
   "analytics": {
     "title": "Reporting",

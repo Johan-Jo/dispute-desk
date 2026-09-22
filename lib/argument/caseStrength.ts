@@ -1073,6 +1073,26 @@ export interface ContributionInput {
    *  moderate. See the demotion comment above. `undefined`/`null` means
    *  the reason is genuinely unknown here — not that it was forgotten. */
   reason: string | null | undefined;
+  /**
+   * Record ids the argument plan EXCLUDED, so a display row cannot claim
+   * support the letter does not rest on.
+   *
+   * DISPLAY ONLY, and deliberately so. These rows are "What supports your
+   * case" labels; `buildWorkspaceAssessment` takes the actual band from
+   * `snapshot.strength` and never from here. Filtering them therefore
+   * cannot move a score — that is a property of which code this touches,
+   * not a prediction about scoring.
+   *
+   * The persisted score is a SEPARATE question and is NOT addressed here:
+   * measured 2026-09-22, 399 plan-excluded records are counted by
+   * `calculateCaseStrength` today because their evidence-model relevance is
+   * not `not_applicable`. Changing that is a scoring-policy change
+   * (plan §P3b-ii) requiring a policy-version bump and a fleet-wide
+   * rebuild. Do not quietly widen this parameter to do it.
+   *
+   * `undefined` = no plan (legacy), which keeps every row.
+   */
+  planExcludedRecordIds?: ReadonlySet<string>;
 }
 
 /**
@@ -1087,6 +1107,19 @@ export interface ContributionInput {
  * rendered a Strong prior-order-history pill on fraud disputes the
  * scorer had counted as moderate. Call this; never re-implement it.
  */
+/** True when the plan excluded any record belonging to this field. */
+function isPlanExcludedField(
+  field: string,
+  excluded: ReadonlySet<string> | undefined,
+): boolean {
+  if (!excluded || excluded.size === 0) return false;
+  const prefix = `${field}#`;
+  for (const id of excluded) {
+    if (id === field || id.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
 export function computeContributions(
   input: ContributionInput,
 ): CaseStrengthContributions {
@@ -1102,6 +1135,10 @@ export function computeContributions(
     if (item.status !== "available" && item.status !== "waived") continue;
     const spec = CANONICAL_EVIDENCE[item.field];
     if (!spec) continue;
+    // A record the plan excluded does not support the argument, so it must
+    // not appear under "What supports your case". Matched by record-id
+    // prefix because the plan decides per record, not per field.
+    if (isPlanExcludedField(item.field, input.planExcludedRecordIds)) continue;
     const category = categoryFor({ fieldKey: item.field, payload: payloadFor(payloadSource, item.field) });
     if (category !== "strong" && category !== "moderate") continue;
     const prev = bySignal.get(spec.signalId);
