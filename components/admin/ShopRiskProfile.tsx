@@ -116,6 +116,8 @@ interface ShopRiskProfileResponse {
     { won: number; lost: number; rate: number | null }
   >;
   winRate: number;
+  winRateAttributed: { won: number; lost: number; rate: number | null };
+  filedByBreakdown: { disputedesk: number; shopify: number; unknown: number };
   inquiryCount: number;
   chargebackCount: number;
   trend: Array<{ bucketStart: string; disputeCount: number; orderCount: number }>;
@@ -480,19 +482,42 @@ export function ShopRiskProfile({ shopId }: Props) {
           </div>
 
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
-            <div className="text-xs text-[#64748B] mb-2">Win rate</div>
-            <div className="text-xl font-bold text-[#065F46] mb-1">{data.winRate}%</div>
-            <div className="text-[11px] text-[#94A3B8]">
-              cb{" "}
-              {data.winRatePhase.chargeback.rate === null
-                ? "—"
-                : `${data.winRatePhase.chargeback.rate}%`}{" "}
-              · inq{" "}
-              {data.winRatePhase.inquiry.rate === null
-                ? "—"
-                : `${data.winRatePhase.inquiry.rate}%`}
+            <div
+              className="text-xs text-[#64748B] mb-2"
+              title="Disputes DisputeDesk filed evidence for. Excludes Shopify's own auto-filings, which land on the same status but are not this product's work."
+            >
+              Win rate (DisputeDesk)
             </div>
-            <div className="text-xs text-[#64748B] mt-0.5">{data.outcomeBreakdown.won} won</div>
+            <div className="text-xl font-bold text-[#065F46] mb-1">
+              {data.winRateAttributed.rate === null
+                ? "—"
+                : `${data.winRateAttributed.rate}%`}
+            </div>
+            <div className="text-xs text-[#64748B]">
+              {data.winRateAttributed.rate === null
+                ? "No disputes filed by DisputeDesk"
+                : `${data.winRateAttributed.won} won of ${data.winRateAttributed.won + data.winRateAttributed.lost} filed`}
+            </div>
+            <div className="mt-2 pt-2 border-t border-[#E2E8F0]">
+              <div
+                className="text-[11px] text-[#94A3B8]"
+                title="Every decided dispute in the window, whoever filed it. Includes Shopify's auto-filings."
+              >
+                All disputes: <span className="font-medium text-[#64748B]">{data.winRate}%</span>
+                {" · "}cb{" "}
+                {data.winRatePhase.chargeback.rate === null
+                  ? "—"
+                  : `${data.winRatePhase.chargeback.rate}%`}{" "}
+                · inq{" "}
+                {data.winRatePhase.inquiry.rate === null
+                  ? "—"
+                  : `${data.winRatePhase.inquiry.rate}%`}
+              </div>
+              <div className="text-[11px] text-[#94A3B8] mt-0.5">
+                Filed by us {data.filedByBreakdown.disputedesk} · Shopify{" "}
+                {data.filedByBreakdown.shopify} · unknown {data.filedByBreakdown.unknown}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -529,7 +554,7 @@ export function ShopRiskProfile({ shopId }: Props) {
                 icon={<CheckCircle className="w-5 h-5 text-[#065F46]" />}
                 iconBg="bg-[#D1FAE5]"
                 title="Won"
-                helper={`${data.winRate}% win rate`}
+                helper={`${data.winRate}% win rate (all disputes)`}
                 count={data.outcomeBreakdown.won}
                 countColor="text-[#065F46]"
                 suffix={data.outcomeBreakdown.won > 0 ? phaseSuffix(data.outcomePhase.won) : undefined}

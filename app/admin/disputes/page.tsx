@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
+import { resolveFiledBy, type FiledBy } from "@/lib/admin/filedBy";
 
 interface Dispute {
   id: string;
@@ -20,6 +21,8 @@ interface Dispute {
   currency_code: string | null;
   normalized_status: string | null;
   submission_state: string | null;
+  /** Written only by our own save job — the DisputeDesk-authored signal. */
+  evidence_saved_to_shopify_at: string | null;
   final_outcome: string | null;
   needs_attention: boolean;
   has_admin_override: boolean;
@@ -45,6 +48,31 @@ const STATUS_COLORS: Record<string, string> = {
   closed_other: "bg-gray-100 text-gray-800",
 };
 
+/**
+ * "Filed by" presentation. The status badge cannot answer this: Shopify
+ * auto-files its own scrape at the deadline and the merchant can submit by
+ * hand, and all three paths land on the same `submitted` / `submitted to bank`.
+ * See `lib/admin/filedBy.ts`.
+ */
+const FILED_BY_DISPLAY: Record<FiledBy, { label: string; className: string; title: string }> = {
+  disputedesk: {
+    label: "DisputeDesk",
+    className: "bg-blue-100 text-blue-800",
+    title: "DisputeDesk saved this evidence to Shopify.",
+  },
+  shopify: {
+    label: "Shopify",
+    className: "bg-slate-100 text-slate-700",
+    title:
+      "Shopify confirmed a submission with no DisputeDesk save. Either Shopify's own auto-file at the deadline or a manual submit in Shopify Admin — the platform does not say which.",
+  },
+  unknown: {
+    label: "Unknown",
+    className: "bg-amber-50 text-amber-700",
+    title: "No submission recorded by DisputeDesk or the platform.",
+  },
+};
+
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +86,9 @@ export default function AdminDisputesPage() {
       const params = new URLSearchParams({ page: String(page), per_page: "50" });
       if (filter === "needs_attention") params.set("needs_attention", "true");
       if (filter === "has_override") params.set("has_admin_override", "true");
+      if (filter.startsWith("filed_by:")) {
+        params.set("filed_by", filter.slice("filed_by:".length));
+      }
       const res = await fetch(`/api/admin/disputes?${params}`);
       const data = await res.json();
       setDisputes(data.disputes ?? []);
@@ -86,6 +117,8 @@ export default function AdminDisputesPage() {
           { key: "", label: "All" },
           { key: "needs_attention", label: "Needs Attention" },
           { key: "has_override", label: "Overridden" },
+          { key: "filed_by:disputedesk", label: "Filed by DisputeDesk" },
+          { key: "filed_by:shopify", label: "Filed by Shopify" },
         ].map((f) => (
           <button
             key={f.key}
@@ -116,6 +149,7 @@ export default function AdminDisputesPage() {
                   <th className="px-4 py-3 text-left font-semibold text-[#64748B]">Order</th>
                   <th className="px-4 py-3 text-left font-semibold text-[#64748B]">Reason</th>
                   <th className="px-4 py-3 text-left font-semibold text-[#64748B]">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-[#64748B]">Filed by</th>
                   <th className="px-4 py-3 text-left font-semibold text-[#64748B]">Outcome</th>
                   <th className="px-4 py-3 text-right font-semibold text-[#64748B]">Amount</th>
                   <th className="px-4 py-3 text-center font-semibold text-[#64748B]">Indicators</th>
@@ -137,6 +171,19 @@ export default function AdminDisputesPage() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[d.normalized_status ?? ""] ?? "bg-gray-100 text-gray-600"}`}>
                         {d.normalized_status?.replace(/_/g, " ") ?? d.phase ?? "—"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const fb = FILED_BY_DISPLAY[resolveFiledBy(d)];
+                        return (
+                          <span
+                            title={fb.title}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${fb.className}`}
+                          >
+                            {fb.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       {d.final_outcome ? (
