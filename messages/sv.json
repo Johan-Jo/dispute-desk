@@ -1281,7 +1281,10 @@
           "parcelStatusInTransit": "Under transport",
           "parcelStatusDelivered": "Levererat",
           "parcelStatusHandedToCarrier": "Överlämnat till transportören — leverans inte bekräftad",
-          "parcelStatusUnknown": "Okänd status"
+          "parcelStatusUnknown": "Okänd status",
+          "parcelsHeading": "Den här ordern skickades i {count} paket, med {carrierCount} olika transportörer:",
+          "parcelsHeadingSameCarrier": "Den här ordern skickades i {count} separata paket:",
+          "parcelLabel": "Paket {index} av {count}"
         }
       },
       "automation": {

@@ -241,15 +241,45 @@ export function EvidenceRow({
         return t("deliveryProof.parcelStatusUnknown");
     }
   };
-  // Split shipment: one block per parcel, each naming its CONTENTS, its
-  // own carrier + tracking link, and its own status. Replaces the single
-  // facts line entirely — a collapsed one-parcel summary of a two-parcel
-  // order is what hid the working link in the first place.
+  // Split shipment: one block PER PARCEL, under a heading that states the
+  // split outright. A merchant seeing two stacked tracking lines has to
+  // INFER that the order shipped separately; on an item-not-received
+  // dispute that inference is the whole point — "one parcel arrived, the
+  // other is still moving" is a different defence from "the order is late".
+  // So the count, and the fact that different carriers are involved, are
+  // stated rather than implied.
+  const distinctCarriers = new Set(
+    parcels.map((p) => (p.carrier ?? "").trim().toLowerCase()).filter(Boolean),
+  ).size;
   const parcelsLine =
     parcels.length > 1 ? (
-      <div style={{ display: "grid", gap: 6 }}>
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ color: "#202223", fontWeight: 600 }}>
+          {distinctCarriers > 1
+            ? t("deliveryProof.parcelsHeading", {
+                count: parcels.length,
+                carrierCount: distinctCarriers,
+              })
+            : t("deliveryProof.parcelsHeadingSameCarrier", {
+                count: parcels.length,
+              })}
+        </div>
         {parcels.map((parcel, i) => (
-          <div key={`${parcel.number ?? "parcel"}-${i}`}>
+          <div
+            key={`${parcel.number ?? "parcel"}-${i}`}
+            style={{
+              display: "grid",
+              gap: 2,
+              paddingLeft: 10,
+              borderLeft: "2px solid #E1E3E5",
+            }}
+          >
+            <div style={{ color: "#8C9196", fontSize: 12 }}>
+              {t("deliveryProof.parcelLabel", {
+                index: i + 1,
+                count: parcels.length,
+              })}
+            </div>
             {parcel.items.length > 0 ? (
               <div style={{ color: "#202223" }}>{parcel.items.join(", ")}</div>
             ) : null}

@@ -797,7 +797,10 @@
           "parcelStatusInTransit": "En transit",
           "parcelStatusDelivered": "Livré",
           "parcelStatusHandedToCarrier": "Remis au transporteur — livraison non confirmée",
-          "parcelStatusUnknown": "Statut inconnu"
+          "parcelStatusUnknown": "Statut inconnu",
+          "parcelsHeading": "Cette commande a été expédiée en {count} colis, avec {carrierCount} transporteurs différents :",
+          "parcelsHeadingSameCarrier": "Cette commande a été expédiée en {count} colis distincts :",
+          "parcelLabel": "Colis {index} sur {count}"
         }
       },
       "automation": {

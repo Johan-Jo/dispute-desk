@@ -1402,7 +1402,10 @@
           "parcelStatusInTransit": "In transit",
           "parcelStatusDelivered": "Delivered",
           "parcelStatusHandedToCarrier": "Handed to carrier — delivery not confirmed",
-          "parcelStatusUnknown": "Status unknown"
+          "parcelStatusUnknown": "Status unknown",
+          "parcelsHeading": "This order shipped in {count} parcels, with {carrierCount} different carriers:",
+          "parcelsHeadingSameCarrier": "This order shipped in {count} separate parcels:",
+          "parcelLabel": "Parcel {index} of {count}"
         }
       },
       "automation": {

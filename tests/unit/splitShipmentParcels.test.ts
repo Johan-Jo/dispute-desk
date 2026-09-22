@@ -167,6 +167,20 @@ describe("split shipment — every parcel is surfaced", () => {
     }
   });
 
+  it("exposes the carrier split the heading is built from", () => {
+    // The row states "shipped in 2 parcels, with 2 different carriers"
+    // rather than leaving the merchant to infer it from two stacked
+    // tracking lines. On an item-not-received dispute that distinction
+    // matters: "one parcel arrived, the other is still moving" is a
+    // different defence from "the order is late".
+    const parcels = deliveryRow(SPLIT_PAYLOAD).parcels!;
+    const distinctCarriers = new Set(
+      parcels.map((p) => (p.carrier ?? "").trim().toLowerCase()).filter(Boolean),
+    );
+    expect(distinctCarriers).toEqual(new Set(["gofo", "usps"]));
+    expect(parcels).toHaveLength(2);
+  });
+
   it("leaves a SINGLE-parcel order untouched", () => {
     // Regression guard: `parcels` stays empty so the existing scalar
     // rendering path is byte-identical for the common case.
