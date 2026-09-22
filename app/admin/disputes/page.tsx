@@ -23,6 +23,8 @@ interface Dispute {
   submission_state: string | null;
   /** Written only by our own save job — the DisputeDesk-authored signal. */
   evidence_saved_to_shopify_at: string | null;
+  /** Shopify's lifecycle status — decides whether the response window closed. */
+  status: string | null;
   final_outcome: string | null;
   needs_attention: boolean;
   has_admin_override: boolean;
@@ -64,12 +66,13 @@ const FILED_BY_DISPLAY: Record<FiledBy, { label: string; className: string; titl
     label: "Shopify",
     className: "bg-slate-100 text-slate-700",
     title:
-      "Shopify confirmed a submission with no DisputeDesk save. Either Shopify's own auto-file at the deadline or a manual submit in Shopify Admin — the platform does not say which.",
+      "Filed without a DisputeDesk save — Shopify's own auto-file at the deadline or a manual submit in Shopify Admin. The platform does not say which. On cases with no evidenceSentOn confirmation this is read from the dispute's lifecycle (it advanced past the response window), not from a filing record.",
   },
-  unknown: {
-    label: "Unknown",
+  pending: {
+    label: "Not filed yet",
     className: "bg-amber-50 text-amber-700",
-    title: "No submission recorded by DisputeDesk or the platform.",
+    title:
+      "The response window is still open and nothing has been filed. The expected state for a new dispute.",
   },
 };
 
