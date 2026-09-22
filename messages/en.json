@@ -2359,7 +2359,22 @@
     "readinessWarnings": "Ready to submit — {count} high-impact {count, plural, one {item} other {items}} could strengthen your case",
     "readinessReady": "Ready to submit",
     "readinessSubmitted": "Submitted to Shopify on {date}",
-    "sidebarWarnings": "{count} high-impact {count, plural, one {item} other {items}} missing. You may still proceed."
+    "sidebarWarnings": "{count} high-impact {count, plural, one {item} other {items}} missing. You may still proceed.",
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Needs your confirmation before it can be used in the defence.",
+        "unverified": "Not verified, so it is not used in the defence.",
+        "adverse": "Held on file. Using it would weaken your case, so it is left out.",
+        "merchantOnly": "For your records only. It is not part of the bank-facing defence.",
+        "notArgumentRelevant": "Held on file. It does not support this type of claim, so the letter does not rely on it."
+      },
+      "inclusion": {
+        "eligible": "Eligible for this argument",
+        "includedInLetter": "Included in the letter",
+        "authorisedNotIncluded": "Authorised, but not included in this document",
+        "cannotDetermine": "Cannot be determined for this version"
+      }
+    }
   },
   "analytics": {
     "title": "Analytics",

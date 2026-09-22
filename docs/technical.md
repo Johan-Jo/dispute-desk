@@ -2258,6 +2258,83 @@ Key columns:
 
 Unique index `(shop_id, shopify_dispute_id)` enables upsert on re-evaluation.
 
+### Plan projection — three authorities behind every merchant claim
+
+*(2026-09-22. Plan: [`docs/plans/plan-projection-drift.plan.md`](plans/plan-projection-drift.plan.md).)*
+
+The merchant tabs used to answer "is this evidence in the letter?" from
+`checklist + payload`, independently of the `CaseArgumentPlan` the PDF
+projects. On 171 of 172 plan-bearing prod packs the two disagreed: 111/111
+disputes whose plan excluded `ip_location_check` still displayed it as
+"Used as positive bank argument · Cited in the PDF as decisive proof",
+while the letter cited it nowhere.
+
+**Three claims, three sources. They are not interchangeable:**
+
+| Merchant-facing claim | Authority | Never from |
+|---|---|---|
+| Authorised for this argument | record in `plan.included` | field category / `bankEligible` |
+| Included in the letter | a **complete** document-provenance map for that package version | authorisation or eligibility |
+| Submitted to Shopify | that version's own submission record | the evidence pack's `saved_to_shopify_at` |
+
+A record can be generally bank-eligible **and** unauthorised here — that is
+the normal case, not a contradiction. `citation.eligibility` answers "may an
+issuer see this kind of fact at all"; the plan answers "does it belong in
+*this* argument". Nothing writes the plan's answer back into the evidence
+model.
+
+**Record level, never field level.** The plan decides per `recordId`: it can
+include `delivery_proof#parcel-b` while excluding `#parcel-a`, one
+`fieldKey`. `deriveEvidenceLineItems` therefore resolves by record-id prefix
+([`lib/argument/evidenceLineItem.ts`](../lib/argument/evidenceLineItem.ts)),
+and a row standing for both degrades to non-positive rather than
+over-claiming. Splitting such a row per record is open (plan §U6).
+
+**Document provenance** ([`lib/defence/package/documentProvenance.ts`](../lib/defence/package/documentProvenance.ts))
+is written by the producer at composition time over the blocks and facts that
+became the PDF, persisted on `defence_packages.document_provenance_json`, and
+only on the success path where a PDF exists. It walks the Evidence Basis as
+well as narrative citations — the table renders the whole composed fact list,
+so narrative-only provenance under-reports it — and *traces* deterministic
+fallback prose to the records that authorised it via
+`hasFulfillmentClaimAuthority`, rather than treating it as unbacked.
+
+**`complete` is an assertion, never an inference.** A missing, incomplete or
+unsupported-version map yields `cannot_determine`, never `not_included`: a
+reader cannot distinguish "this record reached no surface" from "the walk
+never ran". Packages generated before this column stay `NULL` and read as
+"cannot be determined" — their `facts_json` is a different source answering a
+different question and is not used to reconstruct provenance.
+
+**Legacy vs not-loaded.** `plan == null` in the line-item derivation is the
+legacy path (`plan_json IS NULL`) and keeps pre-plan behaviour byte-identical.
+Note `CANONICAL_PIPELINE=off` currently produces the same `null`; separating
+those two states is open (plan §D7a).
+
+**KNOWN GAP — the strength score does NOT respect the plan.** Measured
+2026-09-22: 399 plan-excluded records are counted by `calculateCaseStrength`
+today, because the score is computed in `buildPack.ts` (evidence-pack stage)
+and the plan is derived later in `buildDefencePackageJob` — the score cannot
+see it. 104 prod evidence packs have a score and no defence package at all,
+so for those no plan will ever exist.
+
+This is deliberate, not an oversight. Running the real scorer over all 97
+affected prod disputes with their own persisted gates moved **one** band
+(`moderate → weak`, a $25.41 dispute); the band thresholds absorb the rest.
+Closing it would mean moving fact classification and reason-module
+resolution earlier into pack build, or rescoring after the plan exists —
+a stage-boundary change, not a wire. Full reasoning and the reopen criteria
+are in the plan doc §P3b-ii.
+
+Consequence to be aware of: on a given dispute the **displayed** evidence is
+plan-accurate while the **strength number** may still include excluded
+records. The display is the honest one.
+
+Guards: `tests/unit/planProjectionAgreement.test.ts` (behavioural),
+`tests/unit/documentProvenance.test.ts` (map vs rendered document),
+`tests/unit/planAuthorityContainment.test.ts` (structural — supplementary
+only; the original drift named no guarded symbol at all).
+
 ## CE 3.0 Evidence Package + Submission Router (LSE-2)
 
 Generates Visa-CE-3.0-formatted PDF evidence packages from LSE-1 qualifying verdicts and routes them through the best channel available today: Shopify dispute API as best-effort (`uncategorized_text` summary + `uncategorized_file` PDF) plus a manual-acquirer-handoff workflow. Direct Verifi submission is LSE-6 (partnership-gated).
