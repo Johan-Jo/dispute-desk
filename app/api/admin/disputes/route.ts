@@ -40,6 +40,27 @@ export async function GET(req: NextRequest) {
   const hasOverride = sp.get("has_admin_override");
   if (hasOverride === "true") query = query.eq("has_admin_override", true);
 
+  // Who filed the evidence. Not a stored column — it is derived from
+  // `evidence_saved_to_shopify_at` (written only by our save job) and
+  // `submission_state`, mirroring `resolveFiledBy` in lib/admin/filedBy.ts.
+  // Filtering server-side rather than on the returned page keeps the counts
+  // and pagination honest; a client-side filter would silently drop rows from
+  // a 50-row page and report the unfiltered total.
+  const filedBy = sp.get("filed_by");
+  if (filedBy === "disputedesk") {
+    query = query.not("evidence_saved_to_shopify_at", "is", null);
+  } else if (filedBy === "shopify") {
+    query = query
+      .is("evidence_saved_to_shopify_at", null)
+      .in("submission_state", ["submitted_confirmed", "manual_submission_reported"]);
+  } else if (filedBy === "unknown") {
+    query = query
+      .is("evidence_saved_to_shopify_at", null)
+      .or(
+        "submission_state.is.null,submission_state.not.in.(submitted_confirmed,manual_submission_reported)",
+      );
+  }
+
   const phase = sp.get("phase");
   if (phase) query = query.eq("phase", phase);
 

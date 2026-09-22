@@ -31,6 +31,7 @@ import {
   classifyPaymentMethod,
   classifyReasonFamily,
 } from "./shopRiskClassify";
+import { isDisputeDeskFiled, resolveFiledBy } from "./filedBy";
 import { computeStoreRevenue } from "./storeRevenue";
 import {
   monthlyRevenueForPlan,
@@ -156,8 +157,34 @@ export interface ShopRiskProfile {
     { chargeback: number; inquiry: number }
   >;
   /** Win rate for the period: won / (won + lost), 0 when neither
-   *  is positive. */
+   *  is positive.
+   *
+   *  ATTRIBUTION WARNING: this counts every decided dispute in the
+   *  window regardless of who filed the evidence. Shopify auto-files
+   *  its own scrape at the deadline, so on a shop that never used the
+   *  pipeline this measures Shopify, not DisputeDesk. Measured on prod
+   *  2026-09-21, `6a8848-dd` had 537 decided disputes and ZERO
+   *  DisputeDesk saves. Use `winRateAttributed` to describe this
+   *  product's performance; keep this one for the merchant's overall
+   *  dispute experience. */
   winRate: number;
+  /** Outcome + win rate restricted to disputes DisputeDesk actually
+   *  filed (`evidence_saved_to_shopify_at` set — see
+   *  `lib/admin/filedBy.ts`). `rate` is null when we filed nothing
+   *  decided in the window, so the UI renders "—" rather than a 0%
+   *  that reads as "we lost everything". */
+  winRateAttributed: {
+    won: number;
+    lost: number;
+    rate: number | null;
+  };
+  /** How the window's disputes split by who filed them. Surfaces the
+   *  gap between what the shop experienced and what we handled. */
+  filedByBreakdown: {
+    disputedesk: number;
+    shopify: number;
+    unknown: number;
+  };
   /** Per-phase win rate. `rate` is null when that phase has no
    *  decided disputes. */
   winRatePhase: Record<
@@ -260,6 +287,8 @@ interface DisputeRow {
   normalized_status: string | null;
   initiated_at: string | null;
   order_gid: string | null;
+  submission_state: string | null;
+  evidence_saved_to_shopify_at: string | null;
 }
 
 export async function getShopRiskProfile(
@@ -356,7 +385,7 @@ export async function getShopRiskProfile(
   // ── Disputes for the current window + prior window ─
   const { data: dispRowsRaw } = await sb
     .from("disputes")
-    .select("id, amount, currency_code, reason, phase, final_outcome, normalized_status, initiated_at, order_gid")
+    .select("id, amount, currency_code, reason, phase, final_outcome, normalized_status, initiated_at, order_gid, submission_state, evidence_saved_to_shopify_at")
     .eq("shop_id", shopId)
     .gte("initiated_at", `${fromDate}T00:00:00Z`);
   const disputes = (dispRowsRaw ?? []) as DisputeRow[];
@@ -398,6 +427,10 @@ export async function getShopRiskProfile(
     lost: emptyPhaseSplit(),
     pending: emptyPhaseSplit(),
   };
+  // Outcomes restricted to disputes DisputeDesk filed, so the product's
+  // win rate isn't inflated (or deflated) by Shopify's own auto-filings.
+  const attributedOutcome = { won: 0, lost: 0 };
+  const filedByBreakdown = { disputedesk: 0, shopify: 0, unknown: 0 };
   let inquiryCount = 0;
   let chargebackCount = 0;
   let amountAtRisk = 0;
@@ -433,6 +466,11 @@ export async function getShopRiskProfile(
       outcome === "won" ? "won" : outcome === "lost" ? "lost" : "pending";
     outcomeBreakdown[outcomeKey] += 1;
     if (ph) outcomePhase[outcomeKey][ph] += 1;
+
+    filedByBreakdown[resolveFiledBy(d)] += 1;
+    if (isDisputeDeskFiled(d) && outcomeKey !== "pending") {
+      attributedOutcome[outcomeKey] += 1;
+    }
 
     if (d.phase === "inquiry") inquiryCount += 1;
     else if (d.phase === "chargeback") chargebackCount += 1;
@@ -550,6 +588,19 @@ export async function getShopRiskProfile(
   const winRate =
     winLossDenom > 0 ? Math.round((outcomeBreakdown.won / winLossDenom) * 100) : 0;
 
+  // Attributed win rate — DisputeDesk-filed disputes only. Null (not 0) when
+  // we filed nothing decided, so the UI can render "—": a 0% here would read
+  // as "we lost every case" when the truth is "we handled none of them".
+  const attributedDenom = attributedOutcome.won + attributedOutcome.lost;
+  const winRateAttributed = {
+    won: attributedOutcome.won,
+    lost: attributedOutcome.lost,
+    rate:
+      attributedDenom > 0
+        ? Math.round((attributedOutcome.won / attributedDenom) * 100)
+        : null,
+  };
+
   // Per-phase win rate — inquiries and chargebacks often resolve at
   // very different rates. `rate` is null when that phase has no
   // decided (won/lost) disputes, so the UI can render "—".
@@ -657,6 +708,8 @@ export async function getShopRiskProfile(
     outcomePhase,
     winRatePhase,
     winRate,
+    winRateAttributed,
+    filedByBreakdown,
     inquiryCount,
     chargebackCount,
     trend: trendBuckets,
