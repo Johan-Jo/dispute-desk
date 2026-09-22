@@ -32,6 +32,8 @@
 
 import { describe, it, expect } from "vitest";
 import { deriveEvidenceLineItems } from "@/lib/argument/evidenceLineItem";
+import { computeContributions, calculateCaseStrength } from "@/lib/argument/caseStrength";
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan/deriveArgumentPlan";
 import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
 import type { ChecklistItemV2 } from "@/lib/automation/completeness";
@@ -445,5 +447,78 @@ describe("P2 — the merchant is told the PLAN's reason", () => {
     const rows = deriveTriggerRows();
     const kept = rows.find((r) => r.field === "no_return_initiated");
     expect(kept?.reasonToken.key).not.toContain("argumentPlan.exclusion");
+  });
+});
+
+describe("P3b-i — display contributions respect the plan (and ONLY display)", () => {
+  const checklist = [
+    checklistItem("ip_location_check"),
+    checklistItem("no_return_initiated"),
+  ];
+  const payloads = {
+    kind: "byField" as const,
+    map: {
+      ip_location_check: { payload: IP_PAYLOAD as Record<string, unknown> },
+      no_return_initiated: {
+        payload: NO_RETURN_PAYLOAD as Record<string, unknown>,
+      },
+    },
+  };
+
+  it("a plan-excluded field produces no 'what supports your case' row", () => {
+    const withPlan = computeContributions({
+      checklist,
+      payloadSource: payloads,
+      reason: "PRODUCT_NOT_RECEIVED",
+      planExcludedRecordIds: new Set(["ip_location_check#0"]),
+    });
+    const fields = [...withPlan.strong, ...withPlan.moderate].map(
+      (c) => c.evidenceFieldKey,
+    );
+    expect(fields).not.toContain("ip_location_check");
+  });
+
+  it("without a plan every row is kept (legacy)", () => {
+    const legacy = computeContributions({
+      checklist,
+      payloadSource: payloads,
+      reason: "PRODUCT_NOT_RECEIVED",
+    });
+    const fields = [...legacy.strong, ...legacy.moderate].map(
+      (c) => c.evidenceFieldKey,
+    );
+    expect(fields).toContain("ip_location_check");
+  });
+
+  it("the SCORE is untouched by the same filter", () => {
+    /* The structural guarantee behind "display only": `calculateCaseStrength`
+     * takes no plan parameter at all, so the P3b-i filter cannot reach it.
+     *
+     * This is deliberately NOT a claim that plan exclusions are irrelevant to
+     * scoring — measured 2026-09-22, 399 plan-excluded records ARE scored
+     * today because their evidence-model relevance is not `not_applicable`.
+     * Changing that is P3b-ii and needs a policy-version bump plus a
+     * fleet-wide rebuild. This test pins that P3b-i did not sneak it in. */
+    const score = calculateCaseStrength(
+      checklist,
+      "PRODUCT_NOT_RECEIVED",
+      payloads,
+      NO_GATES,
+    );
+    // The IP field still counts toward the SCORE — it is available and its
+    // model relevance is not `not_applicable`. That is the 399-record
+    // finding, left deliberately unchanged by P3b-i.
+    expect(score.moderateCount).toBeGreaterThan(0);
+
+    // And the display rows, for the same inputs, no longer list it.
+    const shown = computeContributions({
+      checklist,
+      payloadSource: payloads,
+      reason: "PRODUCT_NOT_RECEIVED",
+      planExcludedRecordIds: new Set(["ip_location_check#0"]),
+    });
+    expect(
+      [...shown.strong, ...shown.moderate].map((c) => c.evidenceFieldKey),
+    ).not.toContain("ip_location_check");
   });
 });
