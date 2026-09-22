@@ -17,7 +17,7 @@ interface Row extends FiledByInput {
 function aggregate(rows: Row[]) {
   const outcomeBreakdown = { won: 0, lost: 0, pending: 0 };
   const attributedOutcome = { won: 0, lost: 0 };
-  const filedByBreakdown = { disputedesk: 0, shopify: 0, unknown: 0 };
+  const filedByBreakdown = { disputedesk: 0, shopify: 0, pending: 0 };
 
   for (const d of rows) {
     const outcome = String(d.final_outcome ?? "");
@@ -47,16 +47,19 @@ const shopifyWon: Row = {
   final_outcome: "won",
   submission_state: "submitted_confirmed",
   evidence_saved_to_shopify_at: null,
+  status: "won",
 };
 const ddWon: Row = {
   final_outcome: "won",
   submission_state: "submitted_confirmed",
   evidence_saved_to_shopify_at: "2026-08-15T21:30:31Z",
+  status: "won",
 };
 const ddLost: Row = {
   final_outcome: "lost",
   submission_state: "submitted_confirmed",
   evidence_saved_to_shopify_at: "2026-08-15T21:30:31Z",
+  status: "lost",
 };
 
 describe("shopRisk attribution split", () => {
@@ -73,7 +76,7 @@ describe("shopRisk attribution split", () => {
     expect(result.filedByBreakdown).toEqual({
       disputedesk: 0,
       shopify: 3,
-      unknown: 0,
+      pending: 0,
     });
   });
 
@@ -93,6 +96,7 @@ describe("shopRisk attribution split", () => {
       final_outcome: null,
       submission_state: "saved_to_shopify",
       evidence_saved_to_shopify_at: "2026-09-01T10:00:00Z",
+      status: "needs_response",
     };
     const result = aggregate([ddWon, pendingDd]);
 
@@ -101,16 +105,34 @@ describe("shopRisk attribution split", () => {
     expect(result.filedByBreakdown.disputedesk).toBe(2);
   });
 
-  it("counts a dispute with no submission signal as unknown", () => {
-    const orphan: Row = {
+  it("credits a decided dispute with no confirmation to Shopify, not limbo", () => {
+    // The regression this fix exists for: `lost` + no evidenceSentOn was
+    // labelled "unknown" and sat beside identical `lost` + Shopify rows.
+    const unconfirmed: Row = {
       final_outcome: "lost",
       submission_state: "not_saved",
       evidence_saved_to_shopify_at: null,
+      status: "lost",
     };
-    const result = aggregate([orphan]);
+    const result = aggregate([unconfirmed]);
 
-    expect(result.filedByBreakdown.unknown).toBe(1);
+    expect(result.filedByBreakdown.shopify).toBe(1);
+    expect(result.filedByBreakdown.pending).toBe(0);
+    // Still not ours, so the attributed rate reports nothing.
     expect(result.winRateAttributed.rate).toBeNull();
     expect(result.winRate).toBe(0);
+  });
+
+  it("counts an open dispute as not-yet-filed", () => {
+    const open: Row = {
+      final_outcome: null,
+      submission_state: "not_saved",
+      evidence_saved_to_shopify_at: null,
+      status: "needs_response",
+    };
+    const result = aggregate([open]);
+
+    expect(result.filedByBreakdown.pending).toBe(1);
+    expect(result.filedByBreakdown.shopify).toBe(0);
   });
 });

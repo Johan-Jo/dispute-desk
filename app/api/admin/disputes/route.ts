@@ -50,15 +50,22 @@ export async function GET(req: NextRequest) {
   if (filedBy === "disputedesk") {
     query = query.not("evidence_saved_to_shopify_at", "is", null);
   } else if (filedBy === "shopify") {
+    // Confirmed by the platform, OR the dispute advanced past the response
+    // window (Shopify omits `evidenceSentOn` on ~72% of what it files).
+    // `not.ilike` keeps the uppercase `NEEDS_RESPONSE` row out, matching the
+    // case-insensitive comparison in `resolveFiledBy`.
     query = query
       .is("evidence_saved_to_shopify_at", null)
-      .in("submission_state", ["submitted_confirmed", "manual_submission_reported"]);
-  } else if (filedBy === "unknown") {
+      .or(
+        "submission_state.in.(submitted_confirmed,manual_submission_reported),and(status.not.is.null,status.not.ilike.needs_response)",
+      );
+  } else if (filedBy === "pending") {
     query = query
       .is("evidence_saved_to_shopify_at", null)
       .or(
         "submission_state.is.null,submission_state.not.in.(submitted_confirmed,manual_submission_reported)",
-      );
+      )
+      .or("status.is.null,status.ilike.needs_response");
   }
 
   const phase = sp.get("phase");

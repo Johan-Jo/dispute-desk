@@ -117,7 +117,7 @@ interface ShopRiskProfileResponse {
   >;
   winRate: number;
   winRateAttributed: { won: number; lost: number; rate: number | null };
-  filedByBreakdown: { disputedesk: number; shopify: number; unknown: number };
+  filedByBreakdown: { disputedesk: number; shopify: number; pending: number };
   inquiryCount: number;
   chargebackCount: number;
   trend: Array<{ bucketStart: string; disputeCount: number; orderCount: number }>;
@@ -515,7 +515,8 @@ export function ShopRiskProfile({ shopId }: Props) {
               </div>
               <div className="text-[11px] text-[#94A3B8] mt-0.5">
                 Filed by us {data.filedByBreakdown.disputedesk} · Shopify{" "}
-                {data.filedByBreakdown.shopify} · unknown {data.filedByBreakdown.unknown}
+                {data.filedByBreakdown.shopify} · not filed yet{" "}
+                {data.filedByBreakdown.pending}
               </div>
             </div>
           </div>

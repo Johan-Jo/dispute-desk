@@ -183,7 +183,7 @@ export interface ShopRiskProfile {
   filedByBreakdown: {
     disputedesk: number;
     shopify: number;
-    unknown: number;
+    pending: number;
   };
   /** Per-phase win rate. `rate` is null when that phase has no
    *  decided disputes. */
@@ -289,6 +289,7 @@ interface DisputeRow {
   order_gid: string | null;
   submission_state: string | null;
   evidence_saved_to_shopify_at: string | null;
+  status: string | null;
 }
 
 export async function getShopRiskProfile(
@@ -385,7 +386,7 @@ export async function getShopRiskProfile(
   // ── Disputes for the current window + prior window ─
   const { data: dispRowsRaw } = await sb
     .from("disputes")
-    .select("id, amount, currency_code, reason, phase, final_outcome, normalized_status, initiated_at, order_gid, submission_state, evidence_saved_to_shopify_at")
+    .select("id, amount, currency_code, reason, phase, final_outcome, normalized_status, initiated_at, order_gid, submission_state, evidence_saved_to_shopify_at, status")
     .eq("shop_id", shopId)
     .gte("initiated_at", `${fromDate}T00:00:00Z`);
   const disputes = (dispRowsRaw ?? []) as DisputeRow[];
@@ -430,7 +431,7 @@ export async function getShopRiskProfile(
   // Outcomes restricted to disputes DisputeDesk filed, so the product's
   // win rate isn't inflated (or deflated) by Shopify's own auto-filings.
   const attributedOutcome = { won: 0, lost: 0 };
-  const filedByBreakdown = { disputedesk: 0, shopify: 0, unknown: 0 };
+  const filedByBreakdown = { disputedesk: 0, shopify: 0, pending: 0 };
   let inquiryCount = 0;
   let chargebackCount = 0;
   let amountAtRisk = 0;

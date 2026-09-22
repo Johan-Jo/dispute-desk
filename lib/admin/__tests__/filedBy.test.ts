@@ -43,6 +43,65 @@ describe("resolveFiledBy", () => {
     ).toBe("shopify");
   });
 
+  it.each(["under_review", "won", "lost", "accepted"])(
+    "attributes to Shopify when the dispute advanced to %s without a confirmation",
+    (status) => {
+      // 349 of 487 prod disputes that reached the issuer without a save of
+      // ours carry NO evidenceSentOn. Calling a decided case "unknown" put
+      // `won + Unknown` beside `won + Shopify` for identical lifecycles.
+      expect(
+        resolveFiledBy({
+          evidence_saved_to_shopify_at: null,
+          submission_state: "not_saved",
+          status,
+        }),
+      ).toBe("shopify");
+    },
+  );
+
+  it("treats an open response window as not-yet-filed", () => {
+    expect(
+      resolveFiledBy({
+        evidence_saved_to_shopify_at: null,
+        submission_state: "not_saved",
+        status: "needs_response",
+      }),
+    ).toBe("pending");
+  });
+
+  it("matches the status case-insensitively", () => {
+    // Prod holds one uppercase NEEDS_RESPONSE row. A case-sensitive check
+    // would read that still-open dispute as filed by Shopify.
+    expect(
+      resolveFiledBy({
+        evidence_saved_to_shopify_at: null,
+        submission_state: "not_saved",
+        status: "NEEDS_RESPONSE",
+      }),
+    ).toBe("pending");
+  });
+
+  it("stays pending when there is no status to read", () => {
+    // A missing status is not evidence the window closed.
+    expect(
+      resolveFiledBy({
+        evidence_saved_to_shopify_at: null,
+        submission_state: "not_saved",
+        status: null,
+      }),
+    ).toBe("pending");
+  });
+
+  it("keeps our save authoritative even after the dispute advances", () => {
+    expect(
+      resolveFiledBy({
+        evidence_saved_to_shopify_at: "2026-08-15T21:30:31Z",
+        submission_state: "not_saved",
+        status: "lost",
+      }),
+    ).toBe("disputedesk");
+  });
+
   it("attributes a merchant-reported manual submission to Shopify", () => {
     expect(
       resolveFiledBy({
@@ -52,18 +111,8 @@ describe("resolveFiledBy", () => {
     ).toBe("shopify");
   });
 
-  it("returns unknown when neither side recorded anything", () => {
-    // 16 such rows on 6a8848-dd: under_review at the issuer, not_saved here.
-    expect(
-      resolveFiledBy({
-        evidence_saved_to_shopify_at: null,
-        submission_state: "not_saved",
-      }),
-    ).toBe("unknown");
-  });
-
-  it("returns unknown for an untouched dispute", () => {
-    expect(resolveFiledBy({})).toBe("unknown");
+  it("returns pending for an untouched dispute", () => {
+    expect(resolveFiledBy({})).toBe("pending");
   });
 
   it("does not treat an in-flight save as filed by anyone yet", () => {
@@ -73,8 +122,9 @@ describe("resolveFiledBy", () => {
       resolveFiledBy({
         evidence_saved_to_shopify_at: null,
         submission_state: "saved_to_shopify",
+        status: "needs_response",
       }),
-    ).toBe("unknown");
+    ).toBe("pending");
   });
 });
 
