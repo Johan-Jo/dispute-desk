@@ -346,3 +346,143 @@ describe("routes by number format when the carrier string disagrees", () => {
     );
   });
 });
+
+/**
+ * Both cases below come from ONE live dispute — blume-box 4576ee51, order
+ * #360980 (PRODUCT_NOT_RECEIVED, $129) — whose two fulfillments each
+ * produced a broken link, for two unrelated reasons. Reported 2026-09-22.
+ */
+describe("blume-box 4576ee51 — two fulfillments, two different link failures", () => {
+  describe("GOFO: a good merchant URL rejected by an unrecognized param", () => {
+    // VERIFIED 2026-09-22 in a headed real-Chrome session: the deep link
+    // auto-resolves with NO typing and NO clicking, rendering the results
+    // table and full scan history. The earlier "empty page" reading was a
+    // cookie-consent wall intercepting the render, not a bad URL.
+    const NUMBER = "YT2640221437435982";
+    const MERCHANT_URL = `https://www.gofo.com/us/track?searchID=${NUMBER}`;
+
+    it("builds the canonical GOFO link from the company string", () => {
+      const r = resolveTrackingLinkUrl({
+        company: "GOFO",
+        number: NUMBER,
+        url: MERCHANT_URL,
+      });
+      expect(r.carrier).toBe("gofo");
+      expect(r.source).toBe("canonical");
+      expect(r.url).toBe(MERCHANT_URL);
+    });
+
+    it("identifies GOFO from the host when the company string is unhelpful", () => {
+      const r = resolveTrackingLinkUrl({
+        company: "Other",
+        number: NUMBER,
+        url: MERCHANT_URL,
+      });
+      expect(r.carrier).toBe("gofo");
+    });
+
+    it("accepts `searchID` as a shipment identifier", () => {
+      // The regression: `searchID` was absent from IDENTIFIER_PARAMS, so
+      // `urlReferencesShipment` judged a perfectly good deep link to be a
+      // bare search form and rule 3 dropped it — the row rendered with the
+      // number and no link at all.
+      expect(urlReferencesShipment(MERCHANT_URL)).toBe(true);
+    });
+
+    it("matches GOFO as a word inside a longer company string", () => {
+      // Word-boundary coverage. `company` is free text and prod carries
+      // decorated spellings; a pattern anchored only to the whole string
+      // would silently miss them and fall back to rule 2/3.
+      for (const company of ["GOFO Express", "US GOFO", "gofo logistics"]) {
+        expect(identifyTrackingLinkCarrier(company, null)).toBe("gofo");
+      }
+      // ...but not as a substring of an unrelated word.
+      expect(identifyTrackingLinkCarrier("GOFORWARD Freight", null)).not.toBe("gofo");
+    });
+
+    it("still drops a GOFO URL carrying no identifier", () => {
+      expect(urlReferencesShipment("https://www.gofo.com/us/track?searchID=")).toBe(false);
+      expect(urlReferencesShipment("https://www.gofo.com/us/track")).toBe(false);
+    });
+  });
+
+  describe("USPS: a carrier string that outvotes an impossible number", () => {
+    // Company "USPS", number `260914OET4` — 10 characters, shorter than any
+    // USPS format. Browser-checked 2026-09-22: tools.usps.com answers
+    // "Tracking Number: … Not Available … tracking number is invalid".
+    // 94 prod rows share the `260914` prefix: a shipping-app BATCH
+    // reference, not a parcel identifier.
+    const BAD = "260914OET4";
+    const MERCHANT_URL = `https://tools.usps.com/go/TrackConfirmAction_input?qtc_tLabels1=${BAD}`;
+
+    it("does NOT build a USPS link for a number that cannot be one", () => {
+      const r = resolveTrackingLinkUrl({
+        company: "USPS",
+        number: BAD,
+        url: MERCHANT_URL,
+      });
+      expect(r.url).toBeNull();
+      expect(r.source).toBe("none");
+    });
+
+    it("does not reinstate the dead link through the merchant-URL fallback", () => {
+      // `repairMerchantUrl` rewrites TrackConfirmAction* onto
+      // tools.usps.com/tracking/{n}. Without the rule-2 guard the number
+      // rejected by rule 1 would come back as the very same dead link.
+      const r = resolveTrackingLinkUrl({
+        company: "USPS",
+        number: BAD,
+        url: MERCHANT_URL,
+      });
+      expect(r.url ?? "").not.toContain("usps.com");
+    });
+
+    it("keeps building links for every USPS format that IS plausible", () => {
+      // The guard names known-bad shapes only. Anything unrecognized keeps
+      // its link — being unable to PROVE a number good is not grounds for
+      // withholding a merchant's evidence.
+      const bare22 = "9400111899223817428490";
+      expect(resolveTrackingLinkUrl({ company: "USPS", number: bare22 }).url).toBe(
+        `https://tools.usps.com/tracking/${bare22}`,
+      );
+
+      // 9,510 prod rows carry this 26-digit `92…` variant. All were written
+      // in a two-day July backfill and are outside carrier retention, so
+      // they cannot be browser-verified — they must NOT be assumed invalid.
+      const len26 = "92748927005044000047361095";
+      expect(resolveTrackingLinkUrl({ company: "USPS", number: len26 }).url).toBe(
+        `https://tools.usps.com/tracking/${len26}`,
+      );
+
+      // S10 international, the shortest legitimate USPS form at 13 chars.
+      const s10 = "LZ123456789US";
+      expect(resolveTrackingLinkUrl({ company: "USPS", number: s10 }).url).toBe(
+        `https://tools.usps.com/tracking/${s10}`,
+      );
+    });
+
+    it("leaves the rule-0 USPS-network override intact", () => {
+      // A `420…` IMpb under a DHL label must still reroute to USPS: the new
+      // guard tests the number's SHAPE, and an IMpb passes it.
+      const r = resolveTrackingLinkUrl({
+        company: "DHL",
+        number: "420774699261290416102420744039",
+        url: null,
+      });
+      expect(r.carrier).toBe("usps");
+      expect(r.url).toContain("tools.usps.com/tracking/");
+    });
+
+    it("does not affect non-USPS carriers with short references", () => {
+      // The shape test is scoped to USPS. A short reference under another
+      // carrier keeps whatever that carrier's template produces.
+      const r = resolveTrackingLinkUrl({
+        company: "GOFO",
+        number: "ABC123456",
+        url: null,
+      });
+      expect(r.carrier).toBe("gofo");
+      expect(r.url).toContain("gofo.com");
+    });
+  });
+});

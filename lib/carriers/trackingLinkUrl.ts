@@ -131,7 +131,8 @@ export type TrackingLinkCarrier =
   | "intelcom"
   | "evri"
   | "stallion"
-  | "fleet_optics";
+  | "fleet_optics"
+  | "gofo";
 
 /**
  * Canonical templates. `{id}` is replaced with the percent-encoded
@@ -202,6 +203,17 @@ const TEMPLATES: Record<TrackingLinkCarrier, (id: string) => string> = {
   evri: (id) => `https://www.evri.com/track/parcel/${id}/details`,
   stallion: (id) => `https://stallionexpress.ca/track/?tracking=${id}`,
   fleet_optics: (id) => `https://track.fleetopticsinc.com/?tracking_number=${id}`,
+  // GOFO — US last-mile injection carrier. VERIFIED 2026-09-22 in a headed
+  // real-Chrome session against blume-box parcel YT2640221437435982: the
+  // `?searchID={n}` deep link AUTO-RESOLVES with no typing and no clicking,
+  // rendering the results table and full scan history ("Departed GOFO
+  // Regional Hub, Vernon, CA 2026-09-20").
+  //
+  // The earlier empty renders were a COOKIE CONSENT WALL intercepting the
+  // page, not a bad URL — accepting cookies reveals the resolved parcel at
+  // the same URL. A reviewer clicking the link sees the consent banner and
+  // then the shipment, so this is a real deep link, not a search form.
+  gofo: (id) => `https://www.gofo.com/us/track?searchID=${id}`,
 };
 
 /**
@@ -257,6 +269,57 @@ const USPS_22_RE = /^9\d{21}$/;
  */
 const CANNOT_RESOLVE_USPS_NETWORK = new Set<TrackingLinkCarrier>(["dhl"]);
 
+/**
+ * Shapes that CANNOT be a USPS identifier, however the merchant labelled them.
+ *
+ * ── THE DEFECT THIS CLOSES ────────────────────────────────────────────
+ *
+ * Rule 0 above routes a USPS-shaped number away from a carrier that cannot
+ * resolve it. The INVERSE was unguarded: a carrier string of "USPS" with a
+ * number that is not a USPS identifier at all still produced a
+ * `tools.usps.com/tracking/{n}` link, and USPS answers every one of them
+ * with "Tracking Number: … Not Available".
+ *
+ * Reported by the maintainer against blume-box dispute 4576ee51, order
+ * #360980: company "USPS", number `260914OET4`. Browser-checked
+ * 2026-09-22 — USPS returns "not available … tracking number is invalid".
+ * Measured on prod the same day: 94 rows share the `260914` prefix, which
+ * is a shipping-app BATCH reference, not a parcel identifier.
+ *
+ * This matters more than a missing link. The module header's own rule 3
+ * prefers printing NO link over one that opens an empty page, because an
+ * issuer who clicks and sees nothing reads "this merchant has no delivery
+ * proof" — the opposite of what the row asserts.
+ *
+ * ── WHY AN EXCLUSION LIST AND NOT A VALIDATOR ─────────────────────────
+ *
+ * The tempting rule — "only build a USPS link for a number matching a known
+ * USPS format" — is WRONG and was rejected. USPS issues more formats than
+ * are pinned here, and 9,510 prod rows carry a 26-digit `92…` variant that
+ * is almost certainly a legitimate IMpb spelling. Every one of those is
+ * outside the ~120-day carrier retention window (all written in a two-day
+ * July backfill), so they CANNOT be browser-verified from here — and an
+ * unverifiable number must not be assumed invalid.
+ *
+ * So this list names only shapes that are affirmatively NOT USPS
+ * identifiers. Anything unrecognized keeps its link, exactly as today.
+ * Being unable to prove a number good is not grounds for withholding
+ * a merchant's evidence.
+ */
+const NOT_A_USPS_IDENTIFIER: RegExp[] = [
+  // Too short to be any USPS format. The shortest USPS identifier is the
+  // 13-character S10 international form (`XX000000000XX`); every domestic
+  // format is 20 digits or more. `260914OET4` (10 chars) lands here.
+  /^[A-Za-z0-9]{1,12}$/,
+];
+
+/** Could this number be a USPS identifier at all? Only an affirmative
+ *  match against a known-bad shape returns false — see the note above on
+ *  why this is not a positive-format validator. */
+function couldBeUspsIdentifier(number: string): boolean {
+  return !NOT_A_USPS_IDENTIFIER.some((re) => re.test(number));
+}
+
 function routeByNumberFormat(
   number: string,
 ): { carrier: TrackingLinkCarrier; id: string } | null {
@@ -296,6 +359,7 @@ const COMPANY_PATTERNS: Array<{ re: RegExp; carrier: TrackingLinkCarrier }> = [
   { re: /evri|hermes/i, carrier: "evri" },
   { re: /stallion/i, carrier: "stallion" },
   { re: /fleet\s*optics/i, carrier: "fleet_optics" },
+  { re: /(^|\b)gofo(\b|$)/i, carrier: "gofo" },
 ];
 
 /**
@@ -317,6 +381,7 @@ const HOST_PATTERNS: Array<{ re: RegExp; carrier: TrackingLinkCarrier }> = [
   { re: /(^|\.)evri\.com$/i, carrier: "evri" },
   { re: /(^|\.)stallionexpress\.ca$/i, carrier: "stallion" },
   { re: /(^|\.)(fleetopticsinc\.(ca|com))$/i, carrier: "fleet_optics" },
+  { re: /(^|\.)gofo\.com$/i, carrier: "gofo" },
 ];
 
 /**
@@ -340,6 +405,8 @@ const IDENTIFIER_PARAMS = new Set([
   "trknbr",
   "tracknumbers",
   "searchfor",
+  // GOFO. Verified 2026-09-22: `?searchID={n}` auto-resolves the parcel.
+  "searchid",
   "shipmentid",
   "pin",
   "pins",
@@ -515,17 +582,42 @@ export function resolveTrackingLinkUrl(input: TrackingLinkInput): TrackingLinkRe
     };
   }
 
+  // Rule 1 — canonical template for an identified carrier + usable number.
+  //
+  // The USPS guard is the INVERSE of rule 0: there, a USPS-shaped number
+  // overrides a carrier that cannot resolve it; here, a number that cannot
+  // be a USPS identifier must not produce a USPS link just because the
+  // merchant typed "USPS". Falling through to rule 2/3 yields the merchant
+  // URL or no link — both honest — instead of a USPS page reading
+  // "Tracking Number: … Not Available" in front of an issuer.
   if (carrier && isPlausibleIdentifier(number)) {
-    return {
-      url: TEMPLATES[carrier](encodeURIComponent(number)),
-      source: "canonical",
-      carrier,
-    };
+    const uspsShapeOk = carrier !== "usps" || couldBeUspsIdentifier(number);
+    if (uspsShapeOk) {
+      return {
+        url: TEMPLATES[carrier](encodeURIComponent(number)),
+        source: "canonical",
+        carrier,
+      };
+    }
   }
 
+  // Rule 2 — the merchant's URL, IF it references a shipment.
+  //
+  // Guarded by the same USPS shape test: `repairMerchantUrl` rewrites a
+  // `TrackConfirmAction*` URL onto `tools.usps.com/tracking/{n}`, so
+  // without this an unusable number would be dropped by rule 1 and then
+  // reinstated here as the very link rule 1 refused to build.
   const parsed = parseHttpUrl(input.url);
   if (parsed && urlReferencesShipment(input.url)) {
-    return { url: repairMerchantUrl(parsed), source: "merchant", carrier };
+    const repaired = repairMerchantUrl(parsed);
+    // `repairMerchantUrl` returns either a `URL.toString()` or a literal
+    // `tools.usps.com` string, so this parse cannot fail — reparse via the
+    // tolerant helper anyway rather than letting a future change throw
+    // inside a link builder whose whole contract is to degrade quietly.
+    const landsOnUsps = /(^|\.)usps\.com$/i.test(parseHttpUrl(repaired)?.hostname ?? "");
+    if (!landsOnUsps || couldBeUspsIdentifier(number)) {
+      return { url: repaired, source: "merchant", carrier };
+    }
   }
 
   return { url: null, source: "none", carrier };
