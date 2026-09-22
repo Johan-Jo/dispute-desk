@@ -455,6 +455,110 @@ describe("computeDisputeMetrics — counts and rates", () => {
   });
 });
 
+describe("computeDisputeMetrics — attributed win rate", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockChargebackRate.mockResolvedValue(NULL_CHARGEBACK as never);
+  });
+
+  const C = "2026-04-10T00:00:00Z";
+  const DD = "2026-04-01T00:00:00Z"; // our save timestamp
+
+  it("separates the product's win rate from Shopify's own filings", async () => {
+    // The prod shape this exists for: most decided disputes were filed by
+    // Shopify itself, so the unattributed rate describes the platform.
+    mockSupabase({
+      current: [
+        { id: "1", final_outcome: "won", closed_at: C, status: "won" },
+        { id: "2", final_outcome: "won", closed_at: C, status: "won" },
+        { id: "3", final_outcome: "won", closed_at: C, status: "won" },
+        {
+          id: "4",
+          final_outcome: "won",
+          closed_at: C,
+          status: "won",
+          evidence_saved_to_shopify_at: DD,
+        },
+        {
+          id: "5",
+          final_outcome: "lost",
+          closed_at: C,
+          status: "lost",
+          evidence_saved_to_shopify_at: DD,
+        },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    // Unattributed is unchanged: 4 of 5 decided.
+    expect(m.winRate).toBe(80);
+    // Attributed: we filed two, won one.
+    expect(m.winRateAttributed).toEqual({ won: 1, lost: 1, rate: 50 });
+    expect(m.filedBySplit.disputedesk).toBe(2);
+    expect(m.filedBySplit.shopify).toBe(3);
+  });
+
+  it("reports null, not 0%, when DisputeDesk filed nothing decided", async () => {
+    // 0% would read as "we lost every case" when we handled none.
+    mockSupabase({
+      current: [
+        { id: "1", final_outcome: "won", closed_at: C, status: "won" },
+        { id: "2", final_outcome: "lost", closed_at: C, status: "lost" },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.winRate).toBe(50);
+    expect(m.winRateAttributed.rate).toBeNull();
+    expect(m.winRateAttributed.won).toBe(0);
+  });
+
+  it("counts accepted as a loss on the attributed side too", async () => {
+    // Same denominator rule as winRate (plan §13.1): accepted = money
+    // conceded. The two rates must not use different definitions.
+    mockSupabase({
+      current: [
+        {
+          id: "1",
+          final_outcome: "won",
+          closed_at: C,
+          status: "won",
+          evidence_saved_to_shopify_at: DD,
+        },
+        {
+          id: "2",
+          final_outcome: "accepted",
+          closed_at: C,
+          status: "accepted",
+          evidence_saved_to_shopify_at: DD,
+        },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.winRateAttributed).toEqual({ won: 1, lost: 1, rate: 50 });
+    expect(m.winRate).toBe(50);
+  });
+
+  it("leaves every pre-existing field untouched (additive contract)", async () => {
+    // This module also feeds the merchant dashboard via
+    // /api/dashboard/stats, so the existing numbers must not move.
+    mockSupabase({
+      current: [
+        { id: "1", final_outcome: "won", closed_at: C, status: "won" },
+        { id: "2", final_outcome: "won", closed_at: C, status: "won" },
+        { id: "3", final_outcome: "won", closed_at: C, status: "won" },
+        { id: "4", final_outcome: "lost", closed_at: C, status: "lost" },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.winRate).toBe(75);
+    expect(m.disputesWon).toBe(3);
+    expect(m.disputesLost).toBe(1);
+  });
+});
+
 describe("computeDisputeMetrics — period-over-period", () => {
   beforeEach(() => {
     vi.clearAllMocks();

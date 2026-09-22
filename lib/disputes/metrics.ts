@@ -16,6 +16,7 @@ import {
 } from "./chargebackRate";
 import { isDormantInquiry } from "./dormantInquiry";
 import { ACTIVE_NORMALIZED_STATUSES } from "./presentation/isActive";
+import { isDisputeDeskFiled, resolveFiledBy } from "@/lib/admin/filedBy";
 
 export interface MetricsOptions {
   /** Shop ID for shop-scoped metrics. Omit for cross-shop (admin). */
@@ -99,7 +100,24 @@ export interface DisputeMetrics {
   otherCurrencyCounts: Record<string, number>;
 
   // Rates
+  /** Win rate over EVERY decided dispute in the window, whoever filed the
+   *  evidence. Includes Shopify's own auto-filings, so on a shop that never
+   *  used the pipeline this measures Shopify, not DisputeDesk. Unchanged and
+   *  still the right figure for the merchant's overall dispute experience. */
   winRate: number;
+  /** Win rate restricted to disputes DisputeDesk actually filed
+   *  (`evidence_saved_to_shopify_at` set — see `lib/admin/filedBy.ts`).
+   *
+   *  `rate` is null when we filed nothing decided in the window, so callers
+   *  render "—" rather than a 0% that reads as "we lost everything".
+   *  Same denominator rule as `winRate`: `accepted` counts as a loss.
+   *
+   *  ADDITIVE — `winRate` and every other field are untouched. This module
+   *  also feeds the merchant dashboard via /api/dashboard/stats, so changing
+   *  the existing figures is a separate, deliberate product decision. */
+  winRateAttributed: { won: number; lost: number; rate: number | null };
+  /** How the window's decided disputes split by who filed them. */
+  filedBySplit: { disputedesk: number; shopify: number; pending: number };
 
   // Timing (days, null if no data)
   avgTimeToSubmit: number | null;
@@ -214,7 +232,7 @@ export async function computeDisputeMetrics(
   //     in that window.
   let q = sb
     .from("disputes")
-    .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, closed_at, initiated_at, due_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
+    .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, evidence_saved_to_shopify_at, closed_at, initiated_at, due_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
 
   if (shopId) q = q.eq("shop_id", shopId);
 
@@ -334,6 +352,31 @@ export async function computeDisputeMetrics(
   const disputesLost = lost.length;
   const winLossDenom = disputesWon + disputesLost + accepted.length;
   const winRate = winLossDenom > 0 ? Math.round((disputesWon / winLossDenom) * 100) : 0;
+
+  // ── Attributed win rate — DisputeDesk-filed disputes only ────────────
+  // `winRate` above counts every decided dispute, including the ones
+  // Shopify auto-filed itself. Cross-shop on prod 2026-09-22 that is 39%
+  // over 1,093 decided disputes, while the 97 we actually filed run at
+  // 13%. Presenting the first as the product's performance is the
+  // attribution gap `lib/admin/filedBy.ts` exists to close.
+  // Same denominator rule as above: `accepted` counts as a loss.
+  const attributedWon = won.filter(isDisputeDeskFiled).length;
+  const attributedLost =
+    lost.filter(isDisputeDeskFiled).length +
+    accepted.filter(isDisputeDeskFiled).length;
+  const attributedDenom = attributedWon + attributedLost;
+  const winRateAttributed = {
+    won: attributedWon,
+    lost: attributedLost,
+    // Null, not 0 — "we filed none of these" is not "we lost them all".
+    rate:
+      attributedDenom > 0
+        ? Math.round((attributedWon / attributedDenom) * 100)
+        : null,
+  };
+
+  const filedBySplit = { disputedesk: 0, shopify: 0, pending: 0 };
+  for (const d of outcomeList) filedBySplit[resolveFiledBy(d)] += 1;
 
   // ── Financial outcomes (windowed by closed_at, primary currency) ──────
   const amountRecovered = outcomeList
@@ -525,6 +568,8 @@ export async function computeDisputeMetrics(
     currencyCode,
     otherCurrencyCounts,
     winRate,
+    winRateAttributed,
+    filedBySplit,
     avgTimeToSubmit: avgTimeToSubmit !== null ? Math.round(avgTimeToSubmit * 10) / 10 : null,
     avgTimeToClose: avgTimeToClose !== null ? Math.round(avgTimeToClose * 10) / 10 : null,
     statusBreakdown,
