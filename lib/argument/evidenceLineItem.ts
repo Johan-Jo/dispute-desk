@@ -297,6 +297,10 @@ type PlanDisposition = "no_plan" | "included" | "excluded" | "unknown_record";
  * its exclusion reason. Splitting such a row into per-record rows is the
  * correct end state and is U6, pending a maintainer decision.
  */
+/** Namespace of every argument-plan exclusion reason token. Used to detect a
+ *  plan-authored reason that later presentation passes must not overwrite. */
+const PLAN_EXCLUSION_TOKEN_PREFIX = "packs.argumentPlan.exclusion.";
+
 /**
  * The plan's merchant-facing reason for excluding this field's record, if it
  * excluded one.
@@ -1495,10 +1499,26 @@ function collapseDeliveryRows(
   // waived row — keeps its status-specific reason. See prod blume-box
   // dispute 5e63afa7 (draft pack 2026-07-21).
   const proofReasonToken = deliveryReasonToken(proof);
-  const useProofReason = (li: EvidenceLineItem): boolean =>
-    li.submissionMethod === "bank_argument" ||
-    li.submissionMethod === "context_only" ||
-    (li.submissionMethod === "not_included" && proof !== "label_created");
+  const useProofReason = (li: EvidenceLineItem): boolean => {
+    /* A PLAN exclusion reason outranks the proof narrative.
+     *
+     * The proof copy explains the parcel ("the carrier confirmed
+     * delivery"), which is true and, for an excluded row, beside the point:
+     * the plan ruled the record out of THIS argument, and that is what the
+     * merchant needs to read. Overwriting it would replace the actionable
+     * reason with a reassuring one and leave the row looking like it simply
+     * has good delivery evidence.
+     *
+     * Found by replaying the real prod plan — the row's positive flag was
+     * already correctly false, so only the reason was wrong, which no
+     * flag-level assertion would have caught. */
+    if (li.reasonToken.key.startsWith(PLAN_EXCLUSION_TOKEN_PREFIX)) return false;
+    return (
+      li.submissionMethod === "bank_argument" ||
+      li.submissionMethod === "context_only" ||
+      (li.submissionMethod === "not_included" && proof !== "label_created")
+    );
+  };
   // `returned_to_sender` deliberately satisfies the test above: the parcel
   // DID move, so the "has not shipped yet" copy is as wrong for a returned
   // shipment as it is for a delivered one.
