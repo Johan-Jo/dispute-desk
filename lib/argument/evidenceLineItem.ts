@@ -53,7 +53,15 @@ import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
 import type { I18nToken } from "@/lib/i18n/token";
 import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
-import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan";
+/* Imported from the MODULE, not the `plan/` barrel. The barrel re-exports
+ * `planInputHash`, which pulls `node:crypto` into every consumer — and this
+ * file reaches a client bundle through `lib/demo/fetchShim.ts`, so the
+ * barrel import broke `npm run build` with a node:crypto resolution error.
+ * `deriveArgumentPlan.ts` itself has no node-only dependency. */
+import {
+  excludedRecordIds,
+  includedRecordIds,
+} from "@/lib/argument/plan/deriveArgumentPlan";
 import enMessages from "@/messages/en.json";
 
 /**

@@ -32,7 +32,7 @@
 
 import { describe, it, expect } from "vitest";
 import { deriveEvidenceLineItems } from "@/lib/argument/evidenceLineItem";
-import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan";
+import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan/deriveArgumentPlan";
 import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
 import type { ChecklistItemV2 } from "@/lib/automation/completeness";
 import type { EvidenceFact } from "@/lib/defence/types";
