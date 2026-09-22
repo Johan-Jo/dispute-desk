@@ -828,6 +828,46 @@ enumeration from (1). **If the delta set is empty, P3b-ii is dropped and no
 scoring change is made.** P3b-i is unaffected either way — it never waited
 on this (D6).
 
+#### P3a RESULT (prod, 2026-09-22) — U4 is ANSWERED, and the delta is NOT empty
+
+Step 1 — plan-excluded records (`not_argument_relevant`) by evidence-model
+relevance, i.e. whether `checklistFromModel` skips them before scoring:
+
+| relevance | excluded records | disputes | scored today? |
+|---|---|---|---|
+| `not_applicable` | 520 | 111 | **no** — skipped (`assessment.ts:135`) |
+| `optional` | 345 | 60 | **YES** |
+| `recommended` | 54 | 37 | **YES** |
+
+Step 2 — of the scored ones, those actually `available` (so contributing):
+
+| field | relevance | available | disputes |
+|---|---|---|---|
+| `refund_policy` | optional | 115 | 60 |
+| `cancellation_policy` | optional | 115 | 60 |
+| `shipping_policy` | optional | 115 | 60 |
+| `customer_account_info` | recommended | 39 | 31 |
+| `shipping_tracking` | recommended | 7 | 6 |
+| `delivery_proof` | recommended | 7 | 6 |
+| `refund_record` | recommended | 1 | 1 |
+
+**Conclusion: 399 available records that the plan excluded from the argument
+are counted by the scorer today.** Any reasoning from "`not_applicable` is
+already skipped" would have concluded the opposite — the skip covers 520
+records and misses 399. This is why D4 refuses to predict and P3a
+enumerates.
+
+`delivery_proof` and `shipping_tracking` appear here, and they are
+`criticalCategories` for their modules — so the affected cases are not only
+the cosmetic ones.
+
+**Not shipped.** Removing these from the score is a scoring-policy change
+(P3b-ii): `ASSESSMENT_POLICY_VERSION` bump → every persisted snapshot stale
+→ fleet-wide rebuild → automation re-decides on new numbers, including
+`hold_for_deadline` / `park_for_review`. That needs explicit approval and a
+costed rebuild, and **U5 is still open** — the band-by-band and
+automation-decision diff has not been run.
+
 ### P3b — Display contributions (independent), and separately any policy question
 
 Two clearly separated pieces:
