@@ -791,6 +791,13 @@
           "moderate": "Moderada",
           "supporting": "De apoio",
           "none": "Nenhuma"
+        },
+        "deliveryProof": {
+          "parcelNoLink": "Esta referência de rastreio não pode ser consultada no site da transportadora — peça à sua app de envios o número de rastreio real do volume.",
+          "parcelStatusInTransit": "Em trânsito",
+          "parcelStatusDelivered": "Entregue",
+          "parcelStatusHandedToCarrier": "Entregue à transportadora — entrega não confirmada",
+          "parcelStatusUnknown": "Estado desconhecido"
         }
       },
       "automation": {

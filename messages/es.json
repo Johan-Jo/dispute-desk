@@ -791,6 +791,13 @@
           "moderate": "Moderada",
           "supporting": "De apoyo",
           "none": "Ninguna"
+        },
+        "deliveryProof": {
+          "parcelNoLink": "Esta referencia de seguimiento no se puede consultar en el sitio del transportista: pide a tu app de envíos el número de seguimiento real del paquete.",
+          "parcelStatusInTransit": "En tránsito",
+          "parcelStatusDelivered": "Entregado",
+          "parcelStatusHandedToCarrier": "Entregado al transportista: entrega no confirmada",
+          "parcelStatusUnknown": "Estado desconocido"
         }
       },
       "automation": {

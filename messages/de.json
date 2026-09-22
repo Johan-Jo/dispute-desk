@@ -911,6 +911,13 @@
           "moderate": "Mittel",
           "supporting": "Unterstützend",
           "none": "Keine"
+        },
+        "deliveryProof": {
+          "parcelNoLink": "Diese Sendungsreferenz lässt sich beim Transportunternehmen nicht abfragen — fragen Sie in Ihrer Versand-App nach der echten Sendungsnummer.",
+          "parcelStatusInTransit": "Unterwegs",
+          "parcelStatusDelivered": "Zugestellt",
+          "parcelStatusHandedToCarrier": "An Transportunternehmen übergeben — Zustellung nicht bestätigt",
+          "parcelStatusUnknown": "Status unbekannt"
         }
       },
       "automation": {

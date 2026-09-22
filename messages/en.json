@@ -1396,6 +1396,13 @@
           "moderate": "Moderate",
           "supporting": "Supporting",
           "none": "None"
+        },
+        "deliveryProof": {
+          "parcelNoLink": "This tracking reference can’t be looked up on the carrier’s site — ask your shipping app for the parcel’s real tracking number.",
+          "parcelStatusInTransit": "In transit",
+          "parcelStatusDelivered": "Delivered",
+          "parcelStatusHandedToCarrier": "Handed to carrier — delivery not confirmed",
+          "parcelStatusUnknown": "Status unknown"
         }
       },
       "automation": {

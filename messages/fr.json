@@ -791,6 +791,13 @@
           "moderate": "Modérée",
           "supporting": "De soutien",
           "none": "Aucune"
+        },
+        "deliveryProof": {
+          "parcelNoLink": "Cette référence de suivi est introuvable sur le site du transporteur — demandez à votre application d’expédition le vrai numéro de suivi du colis.",
+          "parcelStatusInTransit": "En transit",
+          "parcelStatusDelivered": "Livré",
+          "parcelStatusHandedToCarrier": "Remis au transporteur — livraison non confirmée",
+          "parcelStatusUnknown": "Statut inconnu"
         }
       },
       "automation": {
