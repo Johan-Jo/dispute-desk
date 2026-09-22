@@ -1239,7 +1239,9 @@ Measured on prod 2026-09-22 the three buckets partition the table exactly (137 +
 
 Consumers: the admin disputes list (**Filed by** column + `filed_by` filter, applied server-side in `app/api/admin/disputes/route.ts` so pagination and counts stay honest) and `getShopRiskProfile` (`winRateAttributed`, `filedByBreakdown`).
 
-**Still unattributed (deliberate, 2026-09-21):** `lib/disputes/metrics.ts` — the merchant-facing dashboard and analytics win rate — computes `won`/`lost` over `final_outcome` alone, with no attribution filter. Correcting it changes numbers merchants already see, so it was scoped out of the admin change rather than folded in silently. The admin overview KPI at `app/admin/page.tsx` reads that same module and inherits the gap.
+**`lib/disputes/metrics.ts` — additive, 2026-09-22.** That module computes `winRate` over `final_outcome` alone and **still does**: it also feeds the merchant's embedded dashboard via `/api/dashboard/stats`, so changing the existing figure is a separate product decision, not an admin cleanup. Instead it now *also* returns `winRateAttributed` (`{won, lost, rate}`, `rate` null when we filed nothing decided) and `filedBySplit`, computed with the **same denominator rule** as `winRate` — `accepted` counts as a loss (plan §13.1). Two rates using two definitions would be its own bug.
+
+The `/admin` overview renders both as separate tiles, **"Win Rate (all disputes)"** and **"Win Rate (DisputeDesk)"**, each with a muted hint line and a tooltip stating what it is computed over. Cross-shop on prod 2026-09-22 they read 39% and 13% — a threefold gap, which is why an unlabelled single tile was misleading rather than merely imprecise. Every pre-existing field is untouched; a test pins that additive contract.
 
 #### Daily-metrics rollup coverage
 

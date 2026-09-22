@@ -33,6 +33,8 @@ interface DisputeMetrics {
   amountRecovered: number;
   amountLost: number;
   winRate: number;
+  winRateAttributed: { won: number; lost: number; rate: number | null };
+  filedBySplit: { disputedesk: number; shopify: number; pending: number };
   avgTimeToSubmit: number | null;
   avgTimeToClose: number | null;
   statusBreakdown: Record<string, number>;
@@ -163,20 +165,45 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── 2. Platform KPIs ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard icon={Store} label="Active Shops" value={String(metrics.shops.active)} />
         <KpiCard icon={FileText} label="Disputes Processed" value={String(metrics.disputes)} />
         <KpiCard icon={Zap} label="Automation Success" value={`${metrics.automationSuccessRate}%`} tone={metrics.automationSuccessRate >= 80 ? "good" : "warn"} />
         <KpiCard icon={RefreshCw} label="Save-to-Shopify Rate" value={`${metrics.saveSuccessRate}%`} tone={metrics.saveSuccessRate >= 80 ? "good" : "warn"} />
-        <KpiCard icon={TrendingUp} label="Win Rate" value={`${dm.winRate}%`} tone={dm.winRate >= 50 ? "good" : "neutral"} />
+        <KpiCard
+          icon={TrendingUp}
+          label="Win Rate (all disputes)"
+          value={`${dm.winRate}%`}
+          tone={dm.winRate >= 50 ? "good" : "neutral"}
+          hint={`${dm.filedBySplit.shopify} filed by Shopify`}
+          title="Every dispute decided in the window, whoever filed the evidence — including Shopify's own auto-filings. The merchant's overall dispute experience, not a measure of DisputeDesk."
+        />
+        <KpiCard icon={Percent} label="Submission Uncertainty" value={`${metrics.uncertainRate}%`} tone={metrics.uncertainRate <= 5 ? "good" : "warn"} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard
+          icon={TrendingUp}
+          label="Win Rate (DisputeDesk)"
+          value={dm.winRateAttributed.rate === null ? "—" : `${dm.winRateAttributed.rate}%`}
+          tone={
+            dm.winRateAttributed.rate === null
+              ? "neutral"
+              : dm.winRateAttributed.rate >= 50
+                ? "good"
+                : "neutral"
+          }
+          hint={
+            dm.winRateAttributed.rate === null
+              ? "none filed by DisputeDesk"
+              : `${dm.winRateAttributed.won} won of ${dm.winRateAttributed.won + dm.winRateAttributed.lost} filed`
+          }
+          title="Restricted to disputes DisputeDesk filed evidence for. Shows an em dash, not 0%, when we filed none — that is 'we handled none of them', not 'we lost them all'."
+        />
         <KpiCard icon={DollarSign} label="Amount Recovered" value={formatCurrency(dm.amountRecovered, dm.currencyCode)} tone="good" />
         <KpiCard icon={Clock} label="Avg. Time to Submit" value={dm.avgTimeToSubmit != null ? `${dm.avgTimeToSubmit}d` : "—"} />
         <KpiCard icon={Clock} label="Avg. Time to Close" value={dm.avgTimeToClose != null ? `${dm.avgTimeToClose}d` : "—"} />
         <KpiCard icon={Percent} label="Manual Intervention" value={`${metrics.manualInterventionRate}%`} tone={metrics.manualInterventionRate <= 10 ? "good" : "warn"} />
-        <KpiCard icon={Percent} label="Submission Uncertainty" value={`${metrics.uncertainRate}%`} tone={metrics.uncertainRate <= 5 ? "good" : "warn"} />
       </div>
 
       {/* ── 3. Systemic Bottlenecks ────────────────────────────────────── */}
@@ -346,20 +373,25 @@ export default function AdminDashboard() {
 
 // ─── Sub-components ─────────────────────────────────────────────────────
 
-function KpiCard({ icon: Icon, label, value, tone }: {
+function KpiCard({ icon: Icon, label, value, tone, hint, title }: {
   icon: typeof Store;
   label: string;
   value: string;
   tone?: "good" | "warn" | "neutral";
+  /** Optional muted line under the value — used to disclose what a rate
+   *  is computed over, so two win-rate tiles can't be confused. */
+  hint?: string;
+  title?: string;
 }) {
   const valueColor = tone === "good" ? "text-[#15803D]" : tone === "warn" ? "text-[#D97706]" : "text-[#0F172A]";
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-lg p-4">
+    <div className="bg-white border border-[#E2E8F0] rounded-lg p-4" title={title}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-[#64748B] font-medium">{label}</p>
         <Icon className="w-4 h-4 text-[#94A3B8]" />
       </div>
       <p className={`text-xl font-bold ${valueColor}`}>{value}</p>
+      {hint && <p className="text-[11px] text-[#94A3B8] mt-0.5">{hint}</p>}
     </div>
   );
 }
