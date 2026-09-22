@@ -62,6 +62,7 @@ import {
   planHasSafeArgument,
   type PlanForCase,
 } from "@/lib/argument/plan";
+import { buildDocumentProvenance } from "@/lib/defence/package/documentProvenance";
 import {
   bankIncludedFacts,
   isBankIncludedManualEvidence,
@@ -1331,6 +1332,22 @@ export async function handleBuildDefencePackage(
       pdf_path: pdfPath,
       narrative_json: narrativeRes.narrative,
       facts_json: planFacts,
+      /* WHAT THE DOCUMENT ACTUALLY RENDERED, recorded only here.
+       *
+       * This is the success path — `pdfPath` exists, so a document was
+       * produced and there is something true to describe. The failure
+       * branches above deliberately write no map: a package that never
+       * rendered has no provenance, and an absent map reads as "cannot be
+       * determined" rather than as a false negative.
+       *
+       * Derived from `composedBlocks` + `planFacts`, i.e. the very content
+       * that became the PDF — not from the plan, which only AUTHORISES, and
+       * not from anything a reader could recompute. Without it "cited in the
+       * PDF" was being answered from eligibility (see the plan doc). */
+      document_provenance_json: buildDocumentProvenance({
+        blocks: composedBlocks,
+        composedFacts: planFacts,
+      }) as unknown as Record<string, unknown>,
       package_mode: classification.packageMode,
       llm_model: narrativeRes.modelUsed,
       prompt_family: narrativeRes.promptFamily,
