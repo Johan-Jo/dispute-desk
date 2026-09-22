@@ -62,6 +62,7 @@ import {
   excludedRecordIds,
   includedRecordIds,
 } from "@/lib/argument/plan/deriveArgumentPlan";
+import { exclusionReasonToken } from "@/lib/argument/plan/exclusionTokens";
 import enMessages from "@/messages/en.json";
 
 /**
@@ -296,6 +297,29 @@ type PlanDisposition = "no_plan" | "included" | "excluded" | "unknown_record";
  * its exclusion reason. Splitting such a row into per-record rows is the
  * correct end state and is U6, pending a maintainer decision.
  */
+/**
+ * The plan's merchant-facing reason for excluding this field's record, if it
+ * excluded one.
+ *
+ * Returns the token the PLAN carries (`merchantReasonToken`) rather than one
+ * derived here, so the sentence the merchant reads is the one the authority
+ * recorded. Null when there is no plan, no exclusion, or no token — callers
+ * then fall back to the legacy per-method reason.
+ */
+function planExclusionTokenForField(
+  field: string,
+  plan: CaseArgumentPlanSnapshot | null | undefined,
+): I18nToken | null {
+  if (!plan) return null;
+  const prefix = `${field}#`;
+  for (const ex of plan.excluded) {
+    if (ex.recordId !== field && !ex.recordId.startsWith(prefix)) continue;
+    if (ex.merchantReasonToken) return { key: ex.merchantReasonToken };
+    return { key: exclusionReasonToken(ex.reason) };
+  }
+  return null;
+}
+
 function planDispositionForField(
   field: string,
   included: ReadonlySet<string> | null,
@@ -1681,7 +1705,16 @@ export function deriveEvidenceLineItems(
       submissionMethod,
       isNegativeOrAmbiguous: negativeOrAmbiguous,
       ...(() => {
-        const token = reasonFor(item.field, submissionMethod, payload);
+        /* The plan's OWN reason wins when it excluded the record.
+         *
+         * `reasonFor` explains the legacy submission method ("the order has
+         * not shipped yet"), which is not why this row is out — the plan
+         * ruled it irrelevant to this claim type. Showing the generic reason
+         * would send the merchant off to fix data that would change nothing.
+         * D2: the merchant is owed the real reason, not silence and not a
+         * misleading one. */
+        const planToken = planExclusionTokenForField(item.field, input.plan);
+        const token = planToken ?? reasonFor(item.field, submissionMethod, payload);
         return { reason: resolveTokenEn(token), reasonToken: token };
       })(),
       canBeForceIncluded,

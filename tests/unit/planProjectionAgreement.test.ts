@@ -36,6 +36,12 @@ import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan/derive
 import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
 import type { ChecklistItemV2 } from "@/lib/automation/completeness";
 import type { EvidenceFact } from "@/lib/defence/types";
+import enCatalog from "@/messages/en.json";
+import deCatalog from "@/messages/de.json";
+import esCatalog from "@/messages/es.json";
+import frCatalog from "@/messages/fr.json";
+import ptCatalog from "@/messages/pt.json";
+import svCatalog from "@/messages/sv.json";
 
 /* ── The trigger case, as prod holds it ──────────────────────────── */
 
@@ -393,5 +399,51 @@ describe("P1 — record-level, not field-level", () => {
         expect(r.usedAsPositiveBankEvidence).toBe(false);
       }
     }
+  });
+});
+
+describe("P2 — the merchant is told the PLAN's reason", () => {
+  it("an excluded row carries the plan's reason token, not the legacy one", () => {
+    // `reasonFor` would explain the submission method ("no qualifying
+    // signal..."), which is not why this row is out. The plan ruled it
+    // irrelevant to an INR claim, and that is what the merchant must read —
+    // otherwise they go and fix data that would change nothing.
+    const rows = deriveTriggerRows();
+    const ip = rows.find((r) => r.field === "ip_location_check");
+
+    expect(ip?.reasonToken.key).toBe(
+      "packs.argumentPlan.exclusion.notArgumentRelevant",
+    );
+  });
+
+  it("that token resolves to real copy in every locale", () => {
+    // Guards the state this work found the repo in: EXCLUSION_REASON_TOKENS
+    // named five keys and no catalog contained any of them, so the row would
+    // have rendered the raw key path to the merchant.
+    const catalogs: Array<[string, Record<string, unknown>]> = [
+      ["en", enCatalog],
+      ["de", deCatalog],
+      ["es", esCatalog],
+      ["fr", frCatalog],
+      ["pt", ptCatalog],
+      ["sv", svCatalog],
+    ];
+    for (const [loc, cat] of catalogs) {
+      const copy = (
+        cat as {
+          packs?: { argumentPlan?: { exclusion?: Record<string, string> } };
+        }
+      ).packs?.argumentPlan?.exclusion?.notArgumentRelevant;
+      expect(typeof copy, `${loc} is missing the exclusion copy`).toBe("string");
+      expect((copy as string).length).toBeGreaterThan(10);
+    }
+  });
+
+  it("an INCLUDED row keeps its normal reason", () => {
+    // The override must be scoped to exclusions — it must not blanket every
+    // row with plan language.
+    const rows = deriveTriggerRows();
+    const kept = rows.find((r) => r.field === "no_return_initiated");
+    expect(kept?.reasonToken.key).not.toContain("argumentPlan.exclusion");
   });
 });

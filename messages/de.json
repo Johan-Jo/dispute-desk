@@ -2359,7 +2359,22 @@
     "readinessWarnings": "Bereit zur Einreichung — {count} wirkungsstarke {count, plural, one {Position} other {Positionen}} könnte Ihren Fall stärken",
     "readinessReady": "Bereit zur Einreichung",
     "readinessSubmitted": "In Shopify eingereicht am {date}",
-    "sidebarWarnings": "{count} wirkungsstarke {count, plural, one {Position} other {Positionen}} fehlt. Sie können trotzdem fortfahren."
+    "sidebarWarnings": "{count} wirkungsstarke {count, plural, one {Position} other {Positionen}} fehlt. Sie können trotzdem fortfahren.",
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Muss von Ihnen bestätigt werden, bevor es für die Verteidigung genutzt werden kann.",
+        "unverified": "Nicht verifiziert und wird daher nicht für die Verteidigung genutzt.",
+        "adverse": "Liegt uns vor. Eine Verwendung würde Ihren Fall schwächen, deshalb bleibt es unberücksichtigt.",
+        "merchantOnly": "Nur für Ihre Unterlagen. Es ist nicht Teil der bankseitigen Verteidigung.",
+        "notArgumentRelevant": "Liegt uns vor. Es stützt diese Art von Anspruch nicht, deshalb stützt sich das Schreiben nicht darauf."
+      },
+      "inclusion": {
+        "eligible": "Für diese Argumentation geeignet",
+        "includedInLetter": "Im Schreiben enthalten",
+        "authorisedNotIncluded": "Zugelassen, aber nicht in diesem Dokument enthalten",
+        "cannotDetermine": "Für diese Version nicht feststellbar"
+      }
+    }
   },
   "analytics": {
     "title": "Reporting",
