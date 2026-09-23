@@ -133,8 +133,15 @@ import type {
  *      item-not-received family bans statements of what a record lacks ("no
  *      delivery confirmation or signature event has been recorded", "the
  *      merchant does not assert otherwise").
+ *   8  (2026-09-23) — the v7 rebuild of #360980 failed on a TRUE sentence:
+ *      "The carrier's record shows this shipment in transit" after a sentence
+ *      naming GOFO. A shipment-scoped claim that refers back ("this shipment",
+ *      "it") is now read against the shipment named last in its paragraph.
+ *      The hand-over guard also catches "tendering it to" / "tendered each to
+ *      its respective carrier", which the same letter used for the USPS
+ *      parcel with no carrier record.
  */
-export const VALIDATOR_VERSION = 7;
+export const VALIDATOR_VERSION = 8;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -341,7 +348,21 @@ function nonParcelTrackingClaim(text: string, approvedFacts: readonly EvidenceFa
   return null;
 }
 
-/** The first offending sentence, or null when every scoped claim is supported. */
+/** "this shipment", "the same parcel", "it" — a sentence that refers back to
+ *  the shipment named before it rather than naming one itself. */
+const SHIPMENT_ANAPHORA =
+  /\b(?:this|that|the\s+same|said)\s+(?:shipment|parcel|package|consignment)\b|\bit\b/i;
+
+/**
+ * The first offending sentence, or null when every scoped claim is supported.
+ *
+ * A sentence that names no shipment but refers back to one ("The carrier's
+ * record shows this shipment in transit") is read against the shipment named
+ * most recently in the SAME paragraph (validator v8). blume-box #360980's
+ * two-parcel letter failed on exactly that true sentence, the one after
+ * "…via GOFO, tracking number YT2640221437435982". A bare "The order is in
+ * transit" still has no referent and is still refused.
+ */
 function shipmentScopedViolation(
   text: string,
   entry: GuardedBankPhrase,
@@ -350,19 +371,28 @@ function shipmentScopedViolation(
   const predicate = FACT_PREDICATES[entry.requires];
   if (!predicate) return null;
   const refs = shipmentRefsOf(approvedFacts);
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  for (const sentence of sentences) {
-    if (!entry.pattern.test(sentence)) continue;
-    if (!refs) {
-      if (!predicate.evaluate(approvedFacts)) return sentence.trim();
-      continue;
+  for (const paragraph of text.split(/\n\s*\n/)) {
+    let lastNamed: ShipmentRef[] = [];
+    for (const sentence of paragraph.split(/(?<=[.!?])\s+/)) {
+      const named = refs ? namedShipments(sentence, refs) : [];
+      const referent =
+        named.length > 0
+          ? named
+          : lastNamed.length > 0 && SHIPMENT_ANAPHORA.test(sentence)
+            ? lastNamed
+            : [];
+      if (named.length > 0) lastNamed = named;
+      if (!entry.pattern.test(sentence)) continue;
+      if (!refs) {
+        if (!predicate.evaluate(approvedFacts)) return sentence.trim();
+        continue;
+      }
+      const scope = referent.length > 0 ? referent : refs.length <= 1 ? refs : null;
+      const ok = scope
+        ? scope.every((r) => predicate.evaluate([r.fact]))
+        : refs.every((r) => predicate.evaluate([r.fact]));
+      if (!ok) return sentence.trim();
     }
-    const named = namedShipments(sentence, refs);
-    const scope = named.length > 0 ? named : refs.length <= 1 ? refs : null;
-    const ok = scope
-      ? scope.every((r) => predicate.evaluate([r.fact]))
-      : refs.every((r) => predicate.evaluate([r.fact]));
-    if (!ok) return sentence.trim();
   }
   return null;
 }

@@ -89,7 +89,7 @@ export const item_not_received: ReasonCodeFamily = {
   guardedBankPhrases: [
     { pattern: /\bin\s+transit\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\bin\s+(?:the\s+)?(?:carrier'?s?\s+)?(?:possession|custody)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
-    { pattern: /\b(?:handed|tendered)\s+(?:over\s+)?to\s+(?:the\s+)?(?:carrier|[A-Z][A-Za-z]+)\b/, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    { pattern: /\b(?:hand(?:ed|ing)|tender(?:ed|ing))\s+(?:over\s+)?(?:(?:it|them|each|both|each\s+item|the\s+(?:parcel|shipment|package|order|goods|items?))\s+)?(?:over\s+)?to\s+(?:the\s+|its\s+|their\s+)?(?:respective\s+)?(?:carriers?|[A-Z][A-Za-z]+)\b/, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\baccepted\s+by\s+the\s+carrier\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\bout\s+for\s+delivery\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
   ],
