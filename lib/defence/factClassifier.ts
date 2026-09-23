@@ -478,7 +478,12 @@ function shipmentsForLetter(payload: Record<string, unknown>): Array<Record<stri
             ? trackingLinkUrl({ company: carrier, number: reference, url: str(row?.url) })
             : null,
           items,
-          fulfilledAt: str(f.createdAt),
+          // The merchant's own "marked as shipped" date — not proof of
+          // dispatch. Carried only for a parcel with NO carrier record, where
+          // it is the whole account; beside a carrier record it adds nothing
+          // and can expose a late shipment (#360980, prompt v22).
+          fulfilledAt:
+            confirmed || proofType === "in_transit" ? null : str(f.createdAt),
           proofType,
           deliveredAt: confirmed ? str(f.deliveredAt) : null,
           ...(proofType === "in_transit" && str(f.carrierStatusObservedAt)
