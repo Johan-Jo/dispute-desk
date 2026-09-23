@@ -3153,6 +3153,16 @@ record holds. Four changes:
 - **`nonParcelTrackingClaim`** (validator): a non-parcel reference introduced as a "tracking
   number" is refused.
 
+**Validator 8 (2026-09-23).** #360980's first v7 rebuild covered both parcels but failed
+validation on a true sentence: *"The carrier's record shows this shipment in transit"*, right
+after a sentence naming GOFO. It named no shipment, and on a two-parcel order an unnamed
+transit claim is refused. `shipmentScopedViolation` now reads a sentence that refers back
+("this shipment", "the same parcel", "it") against the shipment named last in the SAME
+paragraph. It never carries across a paragraph break, and "The order is in transit" still
+has no referent. The hand-over guard also now catches "tendering it to USPS" and "tendered
+each to its respective carrier": the same letter used both for the USPS parcel, which has no
+carrier record.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).
