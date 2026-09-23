@@ -179,9 +179,12 @@ function renderValue(fact: EvidenceFact): string | null {
       if (proof === "delivered_confirmed") return withRef(at ? `Delivered ${at}` : "Delivered");
       if (proof === "delivered_unverified") return withRef("In transit / handed to carrier");
       if (proof === "in_transit") {
-        // Status only, dated as a RETRIEVAL — never as when the parcel moved
+        // Dated from the first in-carrier EVENT when one exists; otherwise the
+        // status only, dated as a RETRIEVAL — never as when the parcel moved
         // (non-receipt plan §5.2). Without this branch the row fell through to
         // "Confirmed", an overclaim printed to the issuer.
+        const rawSince = typeof v?.inTransitSince === "string" ? (v.inTransitSince as string) : null;
+        if (rawSince) return withRef(`In transit since ${formatChronologyTimestamp(rawSince)}`);
         const rawObserved =
           typeof v?.carrierStatusObservedAt === "string" ? (v.carrierStatusObservedAt as string) : null;
         const observed = rawObserved ? formatChronologyTimestamp(rawObserved) : null;
@@ -368,6 +371,79 @@ function renderLink(f: EvidenceFact): EvidenceBasisRow["link"] {
   return { url, label };
 }
 
+/**
+ * One row per parcel on a multi-shipment order (`value.shipments`, written by
+ * the classifier), each stating only what ITS OWN record shows — the same
+ * account the letter gives. blume-box #360980 printed the GOFO parcel twice
+ * (two per-parcel records sharing one fact) and the USPS parcel not at all.
+ *
+ * A parcel with no carrier record is a merchant fulfilment record: the date
+ * and the shipping reference, no link, no delivery or transit wording.
+ */
+function shipmentRows(fact: EvidenceFact): EvidenceBasisRow[] | null {
+  const v = fact.value as Record<string, unknown> | null;
+  const shipments = Array.isArray(v?.shipments) ? (v.shipments as Array<Record<string, unknown>>) : null;
+  if (!shipments || shipments.length < 2) return null;
+  const str = (x: unknown): string | null => (typeof x === "string" && x.trim() ? x.trim() : null);
+  const date = (x: unknown): string | null => (str(x) ? formatChronologyTimestamp(str(x) as string) : null);
+  return shipments.map((s) => {
+    const items = Array.isArray(s.items)
+      ? (s.items as Array<Record<string, unknown>>)
+          .map((it) => {
+            const title = str(it.title);
+            const qty = typeof it.quantity === "number" && it.quantity > 1 ? ` ×${it.quantity}` : "";
+            return title ? `${title}${qty}` : null;
+          })
+          .filter((t): t is string => t !== null)
+      : [];
+    const carrier = str(s.carrier);
+    const reference = str(s.reference);
+    const isTracking = s.referenceIsTrackingNumber === true;
+    const url = isTracking ? str(s.trackingUrl) : null;
+    const parts: string[] = [];
+    const fulfilled = date(s.fulfilledAt);
+    if (fulfilled) parts.push(`Fulfilled ${fulfilled}`);
+    const proof = str(s.proofType);
+    if (proof === "signature_confirmed") {
+      parts.push(date(s.deliveredAt) ? `Signature on delivery, ${date(s.deliveredAt)}` : "Signature on delivery");
+    } else if (proof === "delivered_confirmed") {
+      parts.push(date(s.deliveredAt) ? `Delivered ${date(s.deliveredAt)}` : "Delivered");
+    } else if (proof === "in_transit") {
+      parts.push(
+        date(s.inTransitSince)
+          ? `In transit since ${date(s.inTransitSince)}`
+          : date(s.carrierStatusObservedAt)
+            ? `In transit with the carrier (status as retrieved ${date(s.carrierStatusObservedAt)})`
+            : "In transit with the carrier",
+      );
+    }
+    if (!url) {
+      const ref = [carrier, reference ? (isTracking ? reference : `shipping reference ${reference}`) : null]
+        .filter(Boolean)
+        .join(" ");
+      if (ref) parts.push(ref);
+    }
+    return {
+      factId: fact.id,
+      category: fact.category,
+      label: items.length ? `Shipment — ${items.join(", ")}` : "Shipment",
+      value: capitalizeFirst(parts.join(" · ") || "Fulfilled"),
+      link: url ? { url, label: [carrier, reference].filter(Boolean).join(" ") } : null,
+    };
+  });
+}
+
+/** Identical rows print once — two records of one fact render the same line. */
+function dedupeRows(rows: EvidenceBasisRow[]): EvidenceBasisRow[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    const key = JSON.stringify([r.category === "shipping_tracking" ? "delivery_proof" : r.category, r.label, r.value, r.link?.url ?? null]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[] {
   // The ONE bank-inclusion predicate (`lib/defence/bankInclusion.ts`). The rule
   // used to be spelled inline here, in the classifier, in the workspace route
@@ -381,6 +457,13 @@ export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[
   });
   const rows: EvidenceBasisRow[] = [];
   for (const f of sorted) {
+    if (f.category === "delivery_proof" || f.category === "shipping_tracking") {
+      const perShipment = shipmentRows(f);
+      if (perShipment) {
+        rows.push(...perShipment);
+        continue;
+      }
+    }
     const value = renderValue(f);
     // A fact with nothing citable to say produces NO row — the row's own
     // label is an assertion, so an empty-but-present row is still a claim.
@@ -393,5 +476,5 @@ export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[
       link: renderLink(f),
     });
   }
-  return rows;
+  return dedupeRows(rows);
 }

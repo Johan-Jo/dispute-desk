@@ -314,6 +314,7 @@ interface CitedShipment {
   tracking: TrackingRow | null;
   deliveredAt: string | null;
   observedAt: string | null;
+  inTransitSince: string | null;
 }
 
 const PROOF_RANK_FOR_CITATION: Record<string, number> = {
@@ -409,6 +410,7 @@ function citedShipment(payload: Record<string, unknown>): CitedShipment | null {
         deliveredAt: typeof f.deliveredAt === "string" ? f.deliveredAt : null,
         observedAt:
           typeof f.carrierStatusObservedAt === "string" ? f.carrierStatusObservedAt : null,
+        inTransitSince: typeof f.inTransitSince === "string" ? f.inTransitSince : null,
       };
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
@@ -481,6 +483,9 @@ function shipmentsForLetter(payload: Record<string, unknown>): Array<Record<stri
           deliveredAt: confirmed ? str(f.deliveredAt) : null,
           ...(proofType === "in_transit" && str(f.carrierStatusObservedAt)
             ? { carrierStatusObservedAt: str(f.carrierStatusObservedAt) }
+            : {}),
+          ...(proofType === "in_transit" && str(f.inTransitSince)
+            ? { inTransitSince: str(f.inTransitSince) }
             : {}),
         },
       };
@@ -780,6 +785,12 @@ function extractValue(
         // 23 September, corroborating the delivery" (cay-collective #14784).
         ...(cited?.observedAt && cited.proofType === "in_transit"
           ? { carrierStatusObservedAt: cited.observedAt }
+          : {}),
+        // The dated event that first recorded the parcel in the carrier's
+        // hands. Unlike the retrieval time it IS a movement date, and it is
+        // what lets the letter say "in transit since 17 September".
+        ...(cited?.inTransitSince && cited.proofType === "in_transit"
+          ? { inTransitSince: cited.inTransitSince }
           : {}),
         ...(cited ? { shipmentIndex: shipmentIndexOf(p) } : {}),
         // Every shipment on the order, for the letter (see shipmentsForLetter).

@@ -536,6 +536,8 @@ export async function handleBuildDefencePackage(
       strategies,
       packageMode: classification.packageMode,
       caseStrength: "moderate",
+      disputeOpenedAt:
+        (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
       approvedFacts: planFacts,
       manualEvidence: classification.manual,
       internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
@@ -594,7 +596,10 @@ export async function handleBuildDefencePackage(
     ),
     // An in-transit shipment has no hand-over date: no sentence may place the
     // carrier's custody relative to the dispute (blume-box #360980).
-    carrierPossessionUndated: carrierPossessionUndated(classification.approved),
+    carrierPossessionUndated: carrierPossessionUndated(
+      classification.approved,
+      (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    ),
   };
   // Drop argument sections whose every supporting fact is withheld from the
   // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
@@ -686,6 +691,8 @@ export async function handleBuildDefencePackage(
         strategies,
         packageMode: classification.packageMode,
         caseStrength: "moderate",
+        disputeOpenedAt:
+          (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
         approvedFacts: planFacts,
         manualEvidence: classification.manual,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),

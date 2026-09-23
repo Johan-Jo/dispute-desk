@@ -326,6 +326,12 @@ function extractTrackingData(
     // key, excluded from evidence_hash (computeEvidenceHash), so an unchanged
     // re-read does not rotate the hash (plan §5.3).
     carrierStatusObservedAt: observedAt,
+    // The earliest dated in-carrier event (see `inTransitSinceOf`). Set only
+    // while the shipment is in transit — on a delivered parcel the delivery
+    // date is the evidence.
+    ...(resolveShipmentProofType(fulfillment, state) === "in_transit" && inTransitSinceOf(fulfillment)
+      ? { inTransitSince: inTransitSinceOf(fulfillment) }
+      : {}),
     createdAt: fulfillment.createdAt,
     deliveredAt: fulfillment.deliveredAt ?? nativeDeliveredAt ?? carrierDeliveredAt,
     estimatedDeliveryAt: fulfillment.estimatedDeliveryAt,
@@ -415,6 +421,34 @@ const IN_TRANSIT_DISPLAY_STATUSES = new Set([
   "OUT_FOR_DELIVERY",
   "ATTEMPTED_DELIVERY",
 ]);
+
+/** Shopify fulfillment EVENT statuses that record the parcel in the carrier's
+ *  hands (FulfillmentEventStatus). Label and ready-for-pickup states are not. */
+const IN_CARRIER_EVENT_STATUSES = new Set([
+  "CARRIER_PICKED_UP",
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "ATTEMPTED_DELIVERY",
+  "DELAYED",
+]);
+
+/**
+ * The earliest DATED event recording this parcel in the carrier's hands — the
+ * event's own `happenedAt`, never a retrieval time. Null when no such event
+ * exists (then the letter may cite the status only, dated as a retrieval).
+ *
+ * blume-box #360980's GOFO parcel: one Shopify event, IN_TRANSIT at
+ * 2026-09-17T03:48:42Z — two days before the dispute. The letter said "status
+ * as retrieved on 23 September" because only the read time was carried.
+ */
+export function inTransitSinceOf(fulfillment: Pick<OrderFulfillment, "events">): string | null {
+  let earliest: string | null = null;
+  for (const { node } of fulfillment.events?.edges ?? []) {
+    if (!node.happenedAt || !node.status || !IN_CARRIER_EVENT_STATUSES.has(node.status)) continue;
+    if (!earliest || node.happenedAt < earliest) earliest = node.happenedAt;
+  }
+  return earliest;
+}
 
 /** The carrier holds this parcel and it is moving: Shopify's own per-shipment
  *  status, or a successful carrier lookup with scans but no terminal event. */
