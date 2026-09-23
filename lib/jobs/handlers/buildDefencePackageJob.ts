@@ -22,6 +22,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
 import { loadInternalNarrativeConstraints } from "@/lib/integrations/gorgias/internalNarrativeConstraints";
+import { deliveryPostDatesDispute } from "@/lib/defence/internalConstraints";
 import {
   resolveReasonCodeModule,
   resolveReasonCodeModuleForContext,
@@ -165,7 +166,7 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("disputes")
-      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name")
+      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name, initiated_at")
       .eq("id", pkg.dispute_id)
       .single(),
     sb
@@ -580,9 +581,15 @@ export async function handleBuildDefencePackage(
   // lib/defence/internalConstraints.ts). Passed to every validator below and to
   // NOTHING else — not the narrative writer, the projection, the PDF or
   // facts_json. A customer reimbursement request refuses a sentence denying it.
-  const internalConstraints = await loadInternalNarrativeConstraints(
-    pkg.dispute_id as string,
-  );
+  const internalConstraints = {
+    ...(await loadInternalNarrativeConstraints(pkg.dispute_id as string)),
+    // Delivery after the dispute was opened: no sentence may relate the two
+    // (non-receipt plan §6.6 rule 2). Computed from the facts the letter cites.
+    deliveryPostDatesDispute: deliveryPostDatesDispute(
+      classification.approved,
+      (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    ),
+  };
   // Drop argument sections whose every supporting fact is withheld from the
   // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
   // disputes: 51 such sections across 27 cases. Blocking them would mean

@@ -3100,6 +3100,25 @@ remained once "no return" was denied.
 
 Tests: `nonReceiptInTransitShipment.test.ts`, `shipmentProofType.test.ts`.
 
+**Delivery after the dispute (validator 6, 2026-09-23).** The first rebuild of
+cay-collective #14784 under validator 5 said the delivery was recorded *"prior to the
+dispute being raised"*. That is false: the dispute was opened 13 Sep, and the parcel was
+collected 18 Sep. `InternalNarrativeConstraints.deliveryPostDatesDispute` (computed in
+`buildDefencePackageJob` from the cited `deliveredAt` values and `disputes.initiated_at`)
+makes the validator refuse any sentence relating delivery to the dispute's timing, in
+either direction. "Before" would be false; "after" hands the cardholder their argument.
+The retrieval date (`carrierStatusObservedAt`) now rides only on in-transit citations;
+on a delivered shipment it was written up as "observed and confirmed … corroborating the
+delivery".
+
+**In transit beats a bare SUCCESS (2026-09-23, PR #773).** Shopify sets
+`fulfillment.status = SUCCESS` on every created fulfillment. `resolveShipmentProofType`
+checked that bare flag before the in-transit display statuses, so blume-box #360980's GOFO
+parcel (`SUCCESS` + `displayStatus: IN_TRANSIT`) graded `delivered_unverified` on its first
+live rebuild, and the package skipped with `no_bank_eligible_facts`. The specific in-transit
+display status now wins; a bare `SUCCESS` with no transit or delivery status is still
+`delivered_unverified`. Both grade `supporting`, so strength is unchanged.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

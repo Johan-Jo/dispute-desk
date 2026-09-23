@@ -120,8 +120,14 @@ import type {
  *      new `internalConstraints` input refuses a refund-request denial when a
  *      stored customer message asked for one, in any family. Bumped so the
  *      scheduled drafts that argue from "no return" are rebuilt, not filed.
+ *   6  (2026-09-23) — `deliveryPostDatesDispute` constraint: when every cited
+ *      delivery is after the dispute was opened, any sentence relating the
+ *      delivery to the dispute's timing is refused. The first v5 rebuild of
+ *      cay-collective #14784 (opened 13 Sep, collected 18 Sep) said the
+ *      delivery was recorded "prior to the dispute being raised" — false, in
+ *      a letter scheduled to file on 1 October.
  */
-export const VALIDATOR_VERSION = 5;
+export const VALIDATOR_VERSION = 6;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -408,7 +414,7 @@ export function runPhraseAndGuardChecks(
     errors.push({
       section: sectionKey,
       rule: "forbidden_phrase",
-      message: `Refund-request denial "${v.evidenceText}" in ${sectionKey} contradicts a stored customer request`,
+      message: `"${v.evidenceText}" in ${sectionKey} violates an internal constraint (a stored customer refund request, or a delivery that post-dates the dispute)`,
       evidenceText: v.evidenceText,
       layer,
     });

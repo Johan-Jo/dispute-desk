@@ -31,6 +31,16 @@ describe("resolveShipmentProofType", () => {
     expect(resolveShipmentProofType(fulfillment({ displayStatus: "IN_TRANSIT", status: "OPEN" }), state())).toBe("in_transit");
   });
 
+  it("LIVE SHAPE: status SUCCESS + displayStatus IN_TRANSIT is in_transit, not unverified delivery", () => {
+    // blume-box #360980 GOFO, exactly as Shopify returned it on 2026-09-23.
+    // The bare SUCCESS flag used to win and graded it delivered_unverified.
+    expect(resolveShipmentProofType(fulfillment({ displayStatus: "IN_TRANSIT", status: "SUCCESS" }), state())).toBe("in_transit");
+  });
+
+  it("a bare SUCCESS with no transit or delivery status stays delivered_unverified (unchanged)", () => {
+    expect(resolveShipmentProofType(fulfillment({ displayStatus: "FULFILLED", status: "SUCCESS" }), state())).toBe("delivered_unverified");
+  });
+
   it("OUT_FOR_DELIVERY and ATTEMPTED_DELIVERY are carrier possession too", () => {
     for (const displayStatus of ["OUT_FOR_DELIVERY", "ATTEMPTED_DELIVERY"]) {
       expect(resolveShipmentProofType(fulfillment({ displayStatus, status: "OPEN" }), state())).toBe("in_transit");

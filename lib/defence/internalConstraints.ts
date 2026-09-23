@@ -26,11 +26,44 @@ export interface InternalNarrativeConstraints {
     messageIds: string[];
     firstSentAt: string | null;
   } | null;
+  /** Every cited delivery happened after the dispute was opened
+   *  (`deliveryPostDatesDispute`). Optional so older callers compile. */
+  deliveryPostDatesDispute?: boolean;
 }
 
 export const NO_INTERNAL_CONSTRAINTS: InternalNarrativeConstraints = {
   refundOrCompensationRequested: null,
+  deliveryPostDatesDispute: false,
 };
+
+/**
+ * True when every cited delivery date in the approved facts is AFTER the
+ * dispute was opened. Then any sentence relating delivery to the dispute's
+ * timing is refused (non-receipt plan §6.6 rule 2, Stance rules 2–3):
+ * "before the dispute" would be false, "after the dispute" hands the
+ * cardholder their argument. cay-collective #14784 (opened 13 Sep, collected
+ * 18 Sep) was written "recorded by the carrier prior to the dispute being
+ * raised" on 2026-09-23 — a false sentence in a letter scheduled to file.
+ */
+export function deliveryPostDatesDispute(
+  facts: readonly { category: string; value: Record<string, unknown> | null }[],
+  disputeOpenedAt: string | null | undefined,
+): boolean {
+  if (!disputeOpenedAt) return false;
+  const opened = Date.parse(disputeOpenedAt);
+  if (Number.isNaN(opened)) return false;
+  const dates = facts
+    .filter((f) => f.category === "delivery_proof" || f.category === "shipping_tracking")
+    .map((f) => (typeof f.value?.deliveredAt === "string" ? Date.parse(f.value.deliveredAt) : NaN))
+    .filter((d) => !Number.isNaN(d));
+  return dates.length > 0 && dates.every((d) => d > opened);
+}
+
+/** A sentence that places delivery relative to the dispute, in either direction. */
+export const DELIVERY_DISPUTE_TIMING_PATTERNS: readonly RegExp[] = [
+  /\b(?:prior\s+to|before|ahead\s+of|preced\w*|after|following|subsequent(?:ly)?\s+to|since)\b[^.;]{0,60}\b(?:dispute|claim|chargeback|inquiry|complaint)\b/i,
+  /\b(?:dispute|claim|chargeback|inquiry|complaint)\b[^.;]{0,60}\b(?:after|following|before|prior\s+to|preceded|subsequent)\b[^.;]{0,40}\b(?:deliver\w*|collect\w*|receiv\w*)/i,
+];
 
 /**
  * Sentences that deny a refund / reimbursement / compensation request. The
@@ -56,11 +89,19 @@ export function internalConstraintViolations(
   section: NarrativeSectionKey,
   constraints: InternalNarrativeConstraints | null | undefined,
 ): ConstraintViolation[] {
-  if (!text || !constraints?.refundOrCompensationRequested) return [];
+  if (!text || !constraints) return [];
   const out: ConstraintViolation[] = [];
-  for (const pattern of REFUND_REQUEST_DENIAL_PATTERNS) {
-    const match = text.match(pattern);
-    if (match) out.push({ section, evidenceText: match[0] });
+  if (constraints.refundOrCompensationRequested) {
+    for (const pattern of REFUND_REQUEST_DENIAL_PATTERNS) {
+      const match = text.match(pattern);
+      if (match) out.push({ section, evidenceText: match[0] });
+    }
+  }
+  if (constraints.deliveryPostDatesDispute) {
+    for (const pattern of DELIVERY_DISPUTE_TIMING_PATTERNS) {
+      const match = text.match(pattern);
+      if (match) out.push({ section, evidenceText: match[0] });
+    }
   }
   return out;
 }
