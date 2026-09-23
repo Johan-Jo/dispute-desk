@@ -23,6 +23,8 @@ import {
   type InternalNarrativeConstraints,
 } from "../internalConstraints";
 import type { EvidenceFact } from "../types";
+import { buildEvidenceBasisRows } from "../pdf/evidenceBasisRows";
+import { inTransitSinceOf } from "@/lib/packs/sources/fulfillmentSource";
 
 const hashOf = (approvedFacts: EvidenceFact[]) =>
   computeEvidenceHash({ approvedFacts, manualEvidence: [], reasonCode: "PRODUCT_NOT_RECEIVED" });
@@ -131,6 +133,69 @@ describe("every shipment reaches the delivery fact", () => {
     const shipments = deliveryFact(classify([returned, BUNDLE, third])).value.shipments as Shipment[];
     expect(shipments).toHaveLength(2);
     expect(shipments.some((s) => s.proofType === "returned_to_sender")).toBe(false);
+  });
+});
+
+describe("the dated in-transit event (validator v11, prompt v21)", () => {
+  // Shopify holds ONE event for the GOFO parcel: IN_TRANSIT, 17 Sep 03:48 UTC.
+  const DATED = { ...BUNDLE, inTransitSince: "2026-09-17T03:48:42Z" };
+
+  it("the collector takes the earliest in-carrier event, never a label or pickup-ready event", () => {
+    const ev = (status: string, happenedAt: string) => ({ node: { status, happenedAt, message: null } });
+    expect(
+      inTransitSinceOf({
+        events: { edges: [ev("LABEL_PURCHASED", "2026-09-15T19:00:00Z"), ev("IN_TRANSIT", "2026-09-18T00:00:00Z"), ev("IN_TRANSIT", "2026-09-17T03:48:42Z"), ev("READY_FOR_PICKUP", "2026-09-16T00:00:00Z")] },
+      } as never),
+    ).toBe("2026-09-17T03:48:42Z");
+    expect(inTransitSinceOf({ events: { edges: [ev("LABEL_PURCHASED", "2026-09-15T19:00:00Z")] } } as never)).toBeNull();
+    expect(inTransitSinceOf({} as never)).toBeNull();
+  });
+
+  it("the cited fact and the shipment entry carry it", () => {
+    const f = deliveryFact(classify([SUNSCREEN, DATED]));
+    expect(f.value.inTransitSince).toBe("2026-09-17T03:48:42Z");
+    const gofo = (f.value.shipments as Shipment[]).find((s) => s.carrier === "GOFO")!;
+    expect(gofo.inTransitSince).toBe("2026-09-17T03:48:42Z");
+  });
+
+  it("custody may be related to the dispute only when the event precedes it", () => {
+    const dated = classify([SUNSCREEN, DATED]).approved;
+    const undated = classify([SUNSCREEN, BUNDLE]).approved;
+    expect(carrierPossessionUndated(dated, "2026-09-19T00:15:40Z")).toBe(false);
+    expect(carrierPossessionUndated(dated, "2026-09-16T00:00:00Z")).toBe(true); // event after opening
+    expect(carrierPossessionUndated(dated, null)).toBe(true);
+    expect(carrierPossessionUndated(undated, "2026-09-19T00:15:40Z")).toBe(true);
+  });
+});
+
+describe("Evidence Basis: one row per parcel, never the same row twice", () => {
+  const DATED = { ...BUNDLE, inTransitSince: "2026-09-17T03:48:42Z" };
+
+  it("Case A: GOFO dated from its event with a link; USPS as a fulfilment record without one", () => {
+    // Prod shape: two per-parcel records of the SAME fact (delivery_proof twice).
+    const facts = classify([SUNSCREEN, DATED]).approved;
+    const dp = facts.filter((f) => f.category === "delivery_proof");
+    const doubled = [...facts, ...dp.map((f) => ({ ...f, id: f.id + "-2" }))];
+    const rows = buildEvidenceBasisRows(doubled).filter(
+      (r) => r.category === "delivery_proof" || r.category === "shipping_tracking",
+    );
+    expect(rows).toHaveLength(2);
+    const gofo = rows.find((r) => r.label.includes("Back to School"))!;
+    expect(gofo.value).toContain("In transit since Sep 17, 2026");
+    expect(gofo.value).not.toContain("retrieved");
+    expect(gofo.link?.url).toContain("YT2640221437435982");
+    const usps = rows.find((r) => r.label.includes("Sunscreen"))!;
+    expect(usps.value).toContain("USPS shipping reference 260914OET4");
+    expect(usps.value).not.toMatch(/transit|deliver/i);
+    expect(usps.link).toBeNull();
+  });
+
+  it("a single shipment still renders one row, dated from its event", () => {
+    const rows = buildEvidenceBasisRows(classify([DATED]).approved).filter(
+      (r) => r.category === "delivery_proof" || r.category === "shipping_tracking",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toContain("In transit since");
   });
 });
 

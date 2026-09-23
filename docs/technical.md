@@ -3178,6 +3178,29 @@ event) is now a shipment-scoped guard (family v5). Only the cited shipment is ba
 any multi-parcel order such a sentence is refused, and the overlay tells the model to mention a
 carrier record only in a sentence about the parcel that has one.
 
+### In transit since the event, and one Evidence Basis row per parcel (2026-09-23, validator 11, prompt 21)
+
+Two defects on blume-box #360980, both reported by the maintainer from the live page:
+
+- **"Status as retrieved on 23 September."** Only our read time was carried. Shopify holds a
+  dated event for the GOFO parcel, IN_TRANSIT at 2026-09-17 03:48 UTC, two days before the
+  dispute. `fulfillmentSource.inTransitSinceOf` takes the earliest in-carrier event
+  (`CARRIER_PICKED_UP`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `ATTEMPTED_DELIVERY`, `DELAYED`; never a
+  label or ready-for-pickup event) as `inTransitSince`, only while the shipment is in transit. It
+  rides on the cited fact and on each `shipments` entry. The narrative payload now also carries
+  `disputeOpenedAt`. The item-not-received overlay dates transit from the event ("in transit
+  since 17 September"), and may place a fulfilment, or a dated transit event, before the dispute
+  with both dates. `carrierPossessionUndated(facts, disputeOpenedAt)` fires only for an in-transit
+  parcel with no `inTransitSince`, or one dated after the dispute opened. GOFO's own later scans
+  (e.g. "Loaded on Vehicle, Carteret, NJ") are not in Shopify; they need a GOFO lookup (plan P4).
+- **The same row twice, and the USPS parcel missing.** The evidence model makes one record per
+  parcel, and every record maps to the same section-level fact (per-parcel grading is deferred in
+  `derive.ts`). So a two-parcel order carried two identical `delivery_proof` facts, the second
+  under the USPS fulfilment's id with GOFO's values. `buildEvidenceBasisRows` now expands a fact
+  carrying `shipments` into one row per parcel, labelled with its products and stating only its
+  own record. A parcel with no carrier record prints "Fulfilled <date> · USPS shipping reference
+  <ref>", with no link. Identical rows print once.
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The

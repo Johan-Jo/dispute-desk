@@ -163,7 +163,12 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // verbs it may never take.
 // v20 (2026-09-23) — whole-order sentences may not mention a carrier record
 // (#360980's v9 draft: "each with its own carrier record", one had none).
-const PROMPT_VERSION = 20;
+// v21 (2026-09-23) — the payload carries `disputeOpenedAt`, and an in-transit
+// shipment carries `inTransitSince` (its first dated in-carrier event). The
+// item-not-received overlay dates transit from that event instead of "status
+// as retrieved", and may place a fulfilment or a dated transit event before
+// the dispute. blume-box #360980: GOFO in transit since 17 Sep, opened 19 Sep.
+const PROMPT_VERSION = 21;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -743,6 +748,7 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
     reasonCode: input.reasonCode,
     packageMode: input.packageMode,
     caseStrength: input.caseStrength,
+    ...(input.disputeOpenedAt ? { disputeOpenedAt: input.disputeOpenedAt } : {}),
     // PR-C1 — structural claim authorization. Derived from the SAME approved
     // facts the validator re-derives from, so the model is shown exactly the
     // claim classes the case holds and nothing else. `address_delivery` is

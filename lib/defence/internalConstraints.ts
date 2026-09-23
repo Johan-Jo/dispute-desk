@@ -73,13 +73,25 @@ export function deliveryPostDatesDispute(
  */
 export function carrierPossessionUndated(
   facts: readonly { category: string; value: Record<string, unknown> | null }[],
+  disputeOpenedAt?: string | null,
 ): boolean {
+  const opened = disputeOpenedAt ? Date.parse(disputeOpenedAt) : NaN;
+  // An in-transit parcel is DATED against the dispute only when an event
+  // recorded it in the carrier's hands before the dispute was opened
+  // (`inTransitSince`, validator v11). Otherwise its custody may not be
+  // related to the dispute in either direction.
+  const undated = (v: Record<string, unknown>): boolean => {
+    if (v.proofType !== "in_transit") return false;
+    const since = typeof v.inTransitSince === "string" ? Date.parse(v.inTransitSince) : NaN;
+    return Number.isNaN(since) || Number.isNaN(opened) || since > opened;
+  };
   return facts.some((f) => {
     if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") return false;
-    if (f.value?.proofType === "in_transit") return true;
-    const shipments = Array.isArray(f.value?.shipments) ? (f.value.shipments as unknown[]) : [];
+    const v = f.value ?? {};
+    if (undated(v)) return true;
+    const shipments = Array.isArray(v.shipments) ? (v.shipments as unknown[]) : [];
     return shipments.some(
-      (s) => !!s && typeof s === "object" && (s as Record<string, unknown>).proofType === "in_transit",
+      (s) => !!s && typeof s === "object" && undated(s as Record<string, unknown>),
     );
   });
 }
