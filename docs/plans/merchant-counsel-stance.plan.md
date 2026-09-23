@@ -1,6 +1,6 @@
 # Merchant's counsel: defend every dispute, bury what helps the cardholder
 
-**Status:** PLAN ONLY (v1, 2026-09-23). Not started.
+**Status:** PLAN ONLY (v1, 2026-09-23). Not started. Decisions D-1 and D-2 taken (§9).
 **Directive (maintainer, 2026-09-23):** *"We are supposed to defend the position of the
 merchant no matter what, even if policies, as well as the situation, argue against us.
 We should use the argument we can and not provide those who work against us … with the
@@ -287,12 +287,14 @@ conceding. Coverage remains the only automatic reason not to file.
    (grep gate alongside the forbidden-copy CI step).
 10. The Concede control still works, and still prevents filing: the client's instruction.
 
-## 9. Decisions needed
+## 9. Decisions (maintainer, 2026-09-23)
 
-**D-1 · Minimal verified response on chargebacks.** On an inquiry, silence is a certain
-loss and §4.3 is clearly right. On a chargeback, Shopify files its own scrape if we don't
-(`[[project_shopify_files_anyway_reframes_guards]]`). File ours instead, always? The
-recommendation is yes: ours is at least as strong and never argues against the merchant.
+**D-1 · Always file our own response, on chargebacks too. Decided: yes.** On an inquiry,
+silence is a certain loss. On a chargeback, Shopify files its own scrape if we don't
+(). Ours replaces it in every case: it
+is at least as strong, and it never argues against the merchant. §4.3's minimal verified
+response is therefore the floor for **every** dispute, in every phase.
 
-**D-2 · Fatal-loss hero.** Keep `hard_to_win` as the private risk rating (recommended),
-or drop the rating for these cases entirely?
+**D-2 · Keep  as a private risk rating. Decided: yes.** The rating stays on
+the merchant's Overview as an honest read of the case. It never gates filing, never
+reaches the bank, and its copy never advises giving up (§3.4).
