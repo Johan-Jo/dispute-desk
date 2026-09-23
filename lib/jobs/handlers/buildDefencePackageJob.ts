@@ -37,6 +37,7 @@ import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { applyShipmentRecordSections } from "@/lib/defence/shipmentRecordSections";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
 import {
   validateNarrative,
@@ -604,6 +605,10 @@ export async function handleBuildDefencePackage(
   // disputes: 51 such sections across 27 cases. Blocking them would mean
   // status:"failed" and no PDF at all, so the letter loses the paragraph
   // instead of the merchant losing the filing.
+  // Multi-parcel item-not-received letters: the parcel sections come from the
+  // records, not the model (lib/defence/shipmentRecordSections.ts). No-op for
+  // every other letter.
+  narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts);
   const suppression = suppressUnsupportedSections({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -714,6 +719,7 @@ export async function handleBuildDefencePackage(
       // with its errors.
       // The retry output needs the same treatment; without this a retried
       // package keeps the unsupported section the first pass had removed.
+      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts);
       const retrySuppression = suppressUnsupportedSections({
         narrative: retryRes.narrative,
         approvedFacts: planFacts,
