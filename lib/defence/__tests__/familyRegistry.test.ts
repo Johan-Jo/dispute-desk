@@ -100,9 +100,9 @@ describe("reason-code family registry", () => {
     ]);
   });
 
-  it("v2.2 overlay state: unauthorized_fraud has a non-empty overlay; every other family is still empty", () => {
+  it("overlay state: unauthorized_fraud and item_not_received have a non-empty overlay; every other family is still empty", () => {
     for (const family of ALL_REASON_CODE_FAMILIES) {
-      if (family.key === "unauthorized_fraud") {
+      if (family.key === "unauthorized_fraud" || family.key === "item_not_received") {
         expect(family.overlayPromptBody.length).toBeGreaterThan(0);
       } else {
         expect(family.overlayPromptBody).toBe("");

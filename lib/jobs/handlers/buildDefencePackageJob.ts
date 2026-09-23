@@ -22,7 +22,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
 import { loadInternalNarrativeConstraints } from "@/lib/integrations/gorgias/internalNarrativeConstraints";
-import { deliveryPostDatesDispute } from "@/lib/defence/internalConstraints";
+import {
+  carrierPossessionUndated,
+  deliveryPostDatesDispute,
+} from "@/lib/defence/internalConstraints";
 import {
   resolveReasonCodeModule,
   resolveReasonCodeModuleForContext,
@@ -589,6 +592,9 @@ export async function handleBuildDefencePackage(
       classification.approved,
       (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
     ),
+    // An in-transit shipment has no hand-over date: no sentence may place the
+    // carrier's custody relative to the dispute (blume-box #360980).
+    carrierPossessionUndated: carrierPossessionUndated(classification.approved),
   };
   // Drop argument sections whose every supporting fact is withheld from the
   // Evidence Basis, BEFORE validating. Measured on the 50 decided prod

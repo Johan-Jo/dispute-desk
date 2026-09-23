@@ -25,6 +25,7 @@ import {
   deriveClaimCapabilities,
 } from "./claimCapabilities";
 import { FACT_PREDICATES } from "./factPredicates";
+import { isParcelIdentifier } from "@/lib/carriers/trackingLinkUrl";
 import {
   internalConstraintViolations,
   type InternalNarrativeConstraints,
@@ -126,8 +127,14 @@ import type {
  *      cay-collective #14784 (opened 13 Sep, collected 18 Sep) said the
  *      delivery was recorded "prior to the dispute being raised" — false, in
  *      a letter scheduled to file on 1 October.
+ *   7  (2026-09-23) — blume-box #360980's first letter. `carrierPossessionUndated`
+ *      refuses any sentence relating carrier custody or transit to the dispute
+ *      when a cited shipment is in transit (no hand-over date exists); the
+ *      item-not-received family bans statements of what a record lacks ("no
+ *      delivery confirmation or signature event has been recorded", "the
+ *      merchant does not assert otherwise").
  */
-export const VALIDATOR_VERSION = 6;
+export const VALIDATOR_VERSION = 7;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -307,6 +314,33 @@ function namedShipments(sentence: string, refs: readonly ShipmentRef[]): Shipmen
   });
 }
 
+/**
+ * A shipping reference that is not a parcel identifier (a shipping-app batch
+ * reference — blume-box #360980's USPS "260914OET4") presented as a tracking
+ * number. An issuer who tries it finds nothing; the letter calls it a shipping
+ * reference instead (validator v7).
+ */
+function nonParcelTrackingClaim(text: string, approvedFacts: readonly EvidenceFact[]): string | null {
+  const refs = shipmentRefsOf(approvedFacts) ?? [];
+  const nonParcel = refs.filter(
+    (r) => r.trackingNumber && !isParcelIdentifier(r.carrier, r.trackingNumber),
+  );
+  if (nonParcel.length === 0) return null;
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    for (const r of nonParcel) {
+      const at = sentence.indexOf(r.trackingNumber as string);
+      if (at < 0) continue;
+      const before = sentence.slice(Math.max(0, at - 40), at);
+      const after = sentence.slice(at, at + (r.trackingNumber as string).length + 25);
+      if (/\btracking\s+(?:number|no\.?|#|id|code)\b[^.;]{0,20}$/i.test(before) ||
+          /^\S+\s*\)?\s*(?:is|as)\s+(?:the|its)\s+tracking\s+number\b/i.test(after)) {
+        return sentence.trim();
+      }
+    }
+  }
+  return null;
+}
+
 /** The first offending sentence, or null when every scoped claim is supported. */
 function shipmentScopedViolation(
   text: string,
@@ -406,6 +440,17 @@ export function runPhraseAndGuardChecks(
       layer,
     });
   }
+  // 1b''. A shipping reference is never presented as a tracking number (v7).
+  const nonParcel = nonParcelTrackingClaim(text, approvedFacts);
+  if (nonParcel) {
+    errors.push({
+      section: sectionKey,
+      rule: "forbidden_phrase",
+      message: `"${nonParcel}" in ${sectionKey} presents a shipping reference as a tracking number`,
+      evidenceText: nonParcel,
+      layer,
+    });
+  }
   // 1b'. Internal constraints (v5). A sentence denying a refund /
   //      reimbursement request is refused when a stored customer message on an
   //      order-matched ticket asked for one. The message itself never reaches
@@ -414,7 +459,7 @@ export function runPhraseAndGuardChecks(
     errors.push({
       section: sectionKey,
       rule: "forbidden_phrase",
-      message: `"${v.evidenceText}" in ${sectionKey} violates an internal constraint (a stored customer refund request, or a delivery that post-dates the dispute)`,
+      message: `"${v.evidenceText}" in ${sectionKey} violates an internal constraint (a stored customer refund request, a delivery that post-dates the dispute, or undated carrier custody related to the dispute)`,
       evidenceText: v.evidenceText,
       layer,
     });
