@@ -291,10 +291,10 @@ conceding. Coverage remains the only automatic reason not to file.
 
 **D-1 · Always file our own response, on chargebacks too. Decided: yes.** On an inquiry,
 silence is a certain loss. On a chargeback, Shopify files its own scrape if we don't
-(). Ours replaces it in every case: it
+(`[[project_shopify_files_anyway_reframes_guards]]`). Ours replaces it in every case: it
 is at least as strong, and it never argues against the merchant. §4.3's minimal verified
 response is therefore the floor for **every** dispute, in every phase.
 
-**D-2 · Keep  as a private risk rating. Decided: yes.** The rating stays on
+**D-2 · Keep `hard_to_win` as a private risk rating. Decided: yes.** The rating stays on
 the merchant's Overview as an honest read of the case. It never gates filing, never
 reaches the bank, and its copy never advises giving up (§3.4).
