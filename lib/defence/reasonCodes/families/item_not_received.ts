@@ -53,7 +53,8 @@ export const item_not_received: ReasonCodeFamily = {
     "- referenceIsTrackingNumber false: call reference the shipping reference, never a tracking number, and give no link.",
     "- proofType delivered_confirmed or signature_confirmed: the carrier's record confirms delivery on deliveredAt.",
     "- proofType in_transit: the carrier's record shows the shipment in transit (status as retrieved on carrierStatusObservedAt).",
-    "- any other proofType: state only that the merchant fulfilled it on fulfilledAt. Make no statement about the carrier's handling, transit or delivery of that parcel.",
+    "- any other proofType: the carrier has NO record for this parcel. Write it in exactly this shape and nothing more: 'The merchant fulfilled <items> on <fulfilledAt> (<carrier> shipping reference <reference>).' For this parcel never use tendered, handed, accepted, dispatched, shipped, sent, collected, picked up, in transit, delivered, or left the merchant's possession, and never include it in a sentence that says what a carrier did or holds.",
+    "- A sentence covering the whole order ('both items', 'each item', 'the order') may only say the merchant fulfilled them. Carrier handling belongs only in a sentence about the parcel whose own entry records it.",
     "Never write a proofType value itself; use plain words.",
     "AFFIRMATIVE ONLY. Describe what the records show. Never describe what a record lacks (a scan, a signature, a confirmation, an event), and never describe the merchant's position by what it declines to claim.",
     "TIMING. An in-transit status has no hand-over date. Never relate the carrier's custody, the transit status, or entry into the carrier network to when the dispute was opened or filed.",
@@ -91,7 +92,10 @@ export const item_not_received: ReasonCodeFamily = {
     { pattern: /\bin\s+(?:the\s+)?(?:carrier'?s?\s+)?(?:possession|custody)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\b(?:hand(?:ed|ing)|tender(?:ed|ing))\s+(?:over\s+)?(?:(?:it|them|each|both|each\s+item|the\s+(?:parcel|shipment|package|order|goods|items?))\s+)?(?:over\s+)?to\s+(?:the\s+|its\s+|their\s+)?(?:respective\s+)?(?:carriers?|[A-Z][A-Za-z]+)\b/, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\baccepted\s+by\s+the\s+carrier\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    // v4: "both items left the merchant's possession" — custody transfer for
+    // every parcel, including one no carrier recorded (blume-box #360980).
+    { pattern: /\bleft\s+the\s+merchant'?s?\s+(?:possession|custody|premises|warehouse|control)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\bout\s+for\s+delivery\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
   ],
-  version: 3,
+  version: 4,
 };

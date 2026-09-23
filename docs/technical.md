@@ -3163,6 +3163,14 @@ has no referent. The hand-over guard also now catches "tendering it to USPS" and
 each to its respective carrier": the same letter used both for the USPS parcel, which has no
 carrier record.
 
+**Validator 9 / prompt 19 (2026-09-23).** The v8 rebuild wrote "tendered it to USPS" for the
+parcel with no carrier record twice, the second time after the retry. The item-not-received
+overlay now gives such a parcel one permitted sentence shape, "The merchant fulfilled <items>
+on <date> (<carrier> shipping reference <ref>)", and names the verbs it may never take. A
+whole-order sentence may only say the merchant fulfilled the items. "Left the merchant's
+possession" is now a shipment-scoped custody guard (family v4): *"both items left the
+merchant's possession"* had passed v8.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

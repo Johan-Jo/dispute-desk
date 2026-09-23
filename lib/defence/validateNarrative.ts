@@ -140,8 +140,12 @@ import type {
  *      The hand-over guard also catches "tendering it to" / "tendered each to
  *      its respective carrier", which the same letter used for the USPS
  *      parcel with no carrier record.
+ *   9  (2026-09-23) — "left the merchant's possession" is a shipment-scoped
+ *      custody claim (item_not_received v4): "both items left the merchant's
+ *      possession" passed v8 on a two-parcel order where one parcel has no
+ *      carrier record.
  */
-export const VALIDATOR_VERSION = 8;
+export const VALIDATOR_VERSION = 9;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,

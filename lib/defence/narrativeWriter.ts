@@ -157,7 +157,11 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // shipment's own record supports), and the item-not-received family overlay
 // tells it to account for all of them. blume-box #360980 had two products in
 // two parcels and its letter named one.
-const PROMPT_VERSION = 18;
+// v19 (2026-09-23) — the v18/v8 rebuild of #360980 wrote "tendered it to USPS"
+// for the parcel with no carrier record, twice, through the retry. The family
+// overlay now gives that parcel ONE permitted sentence shape and names the
+// verbs it may never take.
+const PROMPT_VERSION = 19;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
