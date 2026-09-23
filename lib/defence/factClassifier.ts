@@ -686,7 +686,13 @@ function extractValue(
         // `carrierStatusObservedAt` is dropped from evidence_hash
         // (computeEvidenceHash) and `shipmentIndex` from the LLM payload
         // (stripDeliveryHashInputs).
-        ...(cited?.observedAt ? { carrierStatusObservedAt: cited.observedAt } : {}),
+        // Only for an IN-TRANSIT citation, where it is the only date we hold.
+        // On a delivered shipment the carrier's own date is the evidence, and
+        // a retrieval date there was written up as "observed and confirmed on
+        // 23 September, corroborating the delivery" (cay-collective #14784).
+        ...(cited?.observedAt && cited.proofType === "in_transit"
+          ? { carrierStatusObservedAt: cited.observedAt }
+          : {}),
         ...(cited ? { shipmentIndex: shipmentIndexOf(p) } : {}),
         // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It
         // was the licence the LLM read for "delivered to the verified

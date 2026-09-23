@@ -3100,6 +3100,17 @@ remained once "no return" was denied.
 
 Tests: `nonReceiptInTransitShipment.test.ts`, `shipmentProofType.test.ts`.
 
+**Delivery after the dispute (validator 6, 2026-09-23).** The first rebuild of
+cay-collective #14784 under validator 5 said the delivery was recorded *"prior to the
+dispute being raised"*. That is false: the dispute was opened 13 Sep, and the parcel was
+collected 18 Sep. `InternalNarrativeConstraints.deliveryPostDatesDispute` (computed in
+`buildDefencePackageJob` from the cited `deliveredAt` values and `disputes.initiated_at`)
+makes the validator refuse any sentence relating delivery to the dispute's timing, in
+either direction. "Before" would be false; "after" hands the cardholder their argument.
+The retrieval date (`carrierStatusObservedAt`) now rides only on in-transit citations;
+on a delivered shipment it was written up as "observed and confirmed … corroborating the
+delivery".
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).
