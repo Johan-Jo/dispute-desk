@@ -441,17 +441,23 @@ export function resolveShipmentProofType(
   if (confirmedReceipt(f, s)) return "delivered_confirmed";
   // Weaker delivery signals → unverified: delivered/collected without a
   // corroborating timestamp, a pickup-point ARRIVAL (collection still
-  // pending), or a bare Shopify status flag.
+  // pending), or Shopify's own DELIVERED display status.
   if (
     s.current?.status === "Delivered" ||
     s.current?.status === "CollectedAtPickup" ||
     s.current?.status === "DeliveredToPickup" ||
-    f.status === "SUCCESS" ||
     f.displayStatus === "DELIVERED"
   ) {
     return "delivered_unverified";
   }
+  // Carrier possession is checked BEFORE the bare `status === "SUCCESS"` flag.
+  // SUCCESS only means the fulfillment was created — Shopify sets it on every
+  // shipped order — while `displayStatus: IN_TRANSIT` says specifically that
+  // the parcel is still moving. With the order reversed, blume-box #360980's
+  // GOFO parcel (status SUCCESS, displayStatus IN_TRANSIT) graded as
+  // "delivered, unverified" on the first live rebuild and nothing was citable.
   if (inCarrierPossession(f, s)) return "in_transit";
+  if (f.status === "SUCCESS") return "delivered_unverified";
   return "label_created";
 }
 

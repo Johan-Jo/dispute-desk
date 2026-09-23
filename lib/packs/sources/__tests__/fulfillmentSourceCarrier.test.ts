@@ -283,7 +283,10 @@ describe("safety: carrier failures never break the build or create negative evid
     const data = await sectionData(ctx({ fulfillments: [fulfillment()] }));
     expect(data).toBeTruthy();
     expect(data.fulfillments[0].carrierTracking).toBeNull(); // absence, not negativity
-    expect(data.proofType).toBe("delivered_unverified"); // from status SUCCESS only
+    // The fixture is SUCCESS + displayStatus IN_TRANSIT: a moving parcel, not an
+    // unverified delivery (corrected 2026-09-23, blume-box #360980). Still not
+    // negative evidence — the point of this test.
+    expect(data.proofType).toBe("in_transit");
     expect(sendAdminEmailMock).toHaveBeenCalledTimes(1);
     const email = sendAdminEmailMock.mock.calls[0][0] as { subject: string; text: string };
     expect(email.subject).toContain("network_error");
