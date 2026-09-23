@@ -169,22 +169,43 @@ business days, Mon–Fri.
 
 | case | merchant's published term | order → dispatch | order → delivery | dispute opened | reading |
 |---|---|---|---|---|---|
-| **B** cay #14784 | *"typically delivered within 5–7 business days after the order has been placed"* | **23 bd** | **25 bd** (window ended 25 Aug) | 20 bd: **after** the window, **before** dispatch | **Late delivery, and the merchant's own policy grants the remedy** (below) |
+| **B** cay #14784 | *"typically delivered within 5–7 business days after the order has been placed"* | **23 bd** | **25 bd** (window ended 25 Aug) | 20 bd: **after** the window, **before** dispatch | **Late delivery, against terms that offer a refund for late arrival** (below) |
 | **A** blume #360980 | *"Orders will ship within 1-3 business days"*: dispatch only, no delivery window | **17 bd** (max 3) | still in transit | 20 bd | Dispatch 14 bd late; no delivery promise to measure against |
 | blume #352543 | same | 0 bd | 2 bd | 56 bd | On time at every step |
 | 6a8848-dd #101259 (two dispute rows, one order) | *"innerhalb von 0-3 Tagen verschickt … Lieferzeit 7-15 Werktage"* | 1 bd | 9 bd | 12 bd, after delivery | Inside both windows |
 | 6a8848-dd #98250 | same | 5 bd (**over** 0–3 days) | 9 bd | 27 bd | Dispatch late, delivery inside the 7–15 bd window |
 
-**Case B changes verdict.** Cay Collective's published refund policy has been in force
-since 2026-07-06, and the order was placed 2026-08-16. It says, verbatim: *"You'll
-receive a full refund if your order never arrives, **arrives after the estimated delivery
-window**, arrives damaged, or isn't as described."* The order arrived 18 business days
-after that window closed. The cardholder disputed after the window had closed and before
-the order was dispatched. A letter that rests on "the carrier confirms it was collected"
-contradicts the merchant's own published terms, and an issuer can read those terms.
+**Case B changes verdict.** Both of Cay Collective's policies have been in force since
+2026-07-06, and the order was placed 2026-08-16. Read live from Shopify on 2026-09-23,
+verbatim:
+
+> **Refund policy**, under *"The seller wasn't able to help me"*: *"If the seller isn't
+> able to help you, your next step is to request help from Cay Collective by opening a
+> case by email. You'll receive a full refund if your order never arrives, **arrives after
+> the estimated delivery window**, arrives damaged, or isn't as described."*
+>
+> **Shipping policy:** *"Delivery times vary depending on the seller and the product, but
+> orders are typically delivered within 5–7 business days after the order has been placed
+> and payment has been received."* … *"we are not responsible for delays caused by third
+> parties, such as postal services and courier companies."*
+
+What this does and does not say:
+- The refund policy never defines "estimated delivery window". The only window
+  published anywhere is the shipping policy's *typical* 5–7 business days. **Linking the
+  two is our reading, not Cay's wording.**
+- The refund is **conditional**. It applies after the seller "isn't able to help", through
+  a case opened with Cay Collective. It is not an automatic entitlement on lateness.
+  Whether the buyer contacted the seller or opened a case is **not established**.
+- The third-party disclaimer does not cover this delay. The carrier took 2 days
+  (16 → 18 Sep). The 23 business days before dispatch were on the seller's side.
+
+The order arrived 18 business days after the only published window closed. The
+cardholder disputed after that window had closed and before the order was dispatched.
 Rev 1 treated Case B as a receipt case with a wording problem. It is a **late-delivery
-case**, and the merchant's own policy settles it in the cardholder's favour. See §11
-Q-1b; the recommendation there is now to **concede and withdraw the approval**.
+case**, and the merchant's published terms offer the cardholder a refund for late
+arrival. That is an argument against the merchant, not a concession the merchant has
+already made. A letter that rests on "the carrier confirms it was collected" argues
+against terms an issuer can read. See §11 Q-1b.
 
 **Case A gains one fact and loses none.** Blume promises a dispatch time, not a delivery
 date, so the premature-filing argument is unavailable: nothing was promised to arrive by
@@ -989,7 +1010,7 @@ when the version changes. From prod (Q17):
 
 | merchant | promises **dispatch** | promises **delivery** | firmness of wording | remedy for late delivery in policy |
 |---|---|---|---|---|
-| cay-collective | none stated | **5–7 business days** from order + payment | *"typically"*: an estimate | **full refund if it arrives after the estimated window** (works against the merchant) |
+| cay-collective | none stated | **5–7 business days** from order + payment | *"typically"*: an estimate | full refund for arrival "after the estimated delivery window" (window undefined in that policy), **via a Cay case once the seller can't help** (works against the merchant) |
 | blume-box | **1–3 business days** | none | *"will ship"*: a commitment | none (the refund policy is 233 characters) |
 | 6a8848-dd | **0–3 days** | **7–15 Werktage**, incl. processing | *"beträgt"*: stated as fact | not yet extracted |
 | surasvenne | **1–3 business days** processing | none found | *"usually"*: an estimate | not yet extracted |
@@ -1012,7 +1033,7 @@ the order date. Outputs, stored on the case and shown on the Overview:
 | `dispatch_vs_promise` | `on_time` · `late(n bd)` · `no_dispatch_promise` · `unknown` |
 | `delivery_vs_promise` | `on_time` · `late(n bd)` · `pending, window open` · `pending, window passed` · `no_delivery_promise` · `unknown` |
 | `dispute_timing` | `before_window_end` (premature) · `after_window, before_delivery` · `after_delivery` |
-| `policy_remedy_triggered` | `true` when the merchant's own policy grants the cardholder the remedy for what happened |
+| `policy_remedy_triggered` | `true` when the merchant's published terms offer the cardholder a remedy for what happened, conditional or not (conditions stored alongside) |
 
 #### 8.1.4 How to act on it
 
@@ -1324,10 +1345,13 @@ is the stake; the reusable fix is the return.
 `CollectedAtPickup` enum, and no mention that the inquiry preceded dispatch. Options:
 P0(c) + §6.6 in time, a manual edit of the approved letter, or withdraw the approval and
 re-approve a corrected one. **This is the nearer deadline and rev 1 called it safe.**
-**Updated by §0.4:** the order arrived 18 business days after cay's own published window,
-and cay's refund policy promises a full refund in exactly that case. Recommendation:
-**withdraw the approval and concede**, unless the merchant has a record showing the
-buyer agreed to the delay.
+**Updated by §0.4:** the order arrived 18 business days after the only delivery window
+cay publishes (a *typical* 5–7 business days). Cay's refund policy offers a full refund
+for arrival "after the estimated delivery window" through a Cay case, once the seller
+can't help. Recommendation: **lean towards conceding and withdrawing the approval**.
+First, check the merchant's messages for (a) the buyer contacting the seller or opening a
+Cay case, and (b) any agreement to the delay. (a) strengthens the case for conceding.
+(b) would support filing, with the lateness stated plainly.
 
 **Q-5 · Fulfillment-order read scopes (§8 pt 1, §8.1.1).** The only structured source of
 the checkout delivery promise returns `ACCESS_DENIED` today. Adding
