@@ -183,7 +183,11 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v24 (2026-09-23) — the overlay's forbidden-timing wording is narrowed to
 // fulfilments, hand-overs, in-transit parcels and unrecorded parcels; a
 // carrier-confirmed delivery may be placed before the dispute (#352543).
-const PROMPT_VERSION = 24;
+// v25 (2026-09-23) — multi-parcel item-not-received letters: the summary,
+// transaction overview, fulfilment, chronology and conclusion are written from
+// the records (lib/defence/shipmentRecordSections.ts), replacing the model's
+// text for those sections. Bumped so existing drafts regenerate.
+const PROMPT_VERSION = 25;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
