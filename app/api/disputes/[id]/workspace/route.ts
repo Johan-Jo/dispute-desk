@@ -1128,6 +1128,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const held = resolveHeldState({
     automationMode: presentation?.automationMode ?? appliedRule?.mode ?? null,
     caseStrength: caseStrength?.overall ?? null,
+    caseStrengthBeforeRev5: caseStrength?.overallBeforeRev5 ?? null,
     coverageState: coverageInput?.state ?? null,
     fatalLoss:
       ((packRow?.pack_json as { fatal_loss?: unknown } | null)?.fatal_loss as

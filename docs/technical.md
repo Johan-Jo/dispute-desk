@@ -3178,6 +3178,45 @@ event) is now a shipment-scoped guard (family v5). Only the cited shipment is ba
 any multi-parcel order such a sentence is refused, and the overlay tells the model to mention a
 carrier record only in a sentence about the parcel that has one.
 
+### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
+
+`docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The
+item-not-received rollup (`lib/argument/caseStrength.ts`, `family === "delivery"`) needed a
+STRONG delivery signal to reach even `moderate`. After PR-C1, the only strong route was a
+signature, and 0 of 287 non-receipt disputes since June carry one. So every
+carrier-confirmed delivery rated `weak` (blume-box #352543: delivered 6 July, disputed 19
+September). Now:
+
+| package holds | overall |
+|---|---|
+| strong delivery signal (signature / POD) with `deliveryCoverage === "complete"` | `strong` |
+| strong delivery on partial / unknown / none coverage, or `delivered_confirmed` (moderate) | `moderate` |
+| in transit, available for collection, label only | `weak` |
+
+Two strong signals still reach `strong`, as before. Fatal-loss and returned-to-sender still cap
+at `weak`, and the credit floor still lifts to `strong`.
+
+**`overallBeforeRev5`** (on `CaseStrengthResult`, delivery family only) is the previous rollup
+over the same grades, with the same gates applied. The automation ladder has a new rung
+(`deriveCaseAutomationDecision`, step 10): `overall === "strong"` with a defined
+`overallBeforeRev5` that is not `strong` → `hold_for_deadline` with reason
+`strength_upgraded_timing_held`. The rating shows; the filing date does not move until plan
+§11 Q-7. `resolveHeldState` maps it to `HeldReason = "strong_timing_held"`, and the pack
+loader, the workspace route and the new-dispute email pass the value through. **Follow-up:**
+the email's held copy ("held while we look for stronger evidence") is not yet tailored to this
+reason. No live case reaches it today.
+
+`SCORING_POLICY_VERSION` 3 → 4. No category moved, only the rollup, so the categorization
+snapshot is unchanged and only its version moved. Every v3 assessment snapshot is invalidated,
+and unsubmitted packs show "not yet assessed" until their next rebuild. A pack rebuild with
+unchanged evidence does not regenerate the defence letter (the enqueue's idempotent match).
+
+Copy (§6.2): `strengthReason.{moderate,weak}.moderateOnly` now agree in number with one or
+two signals ("Delivery confirmation supports…"), in all six locales. `decisiveHint.delivery`
+no longer recommends billing/IP signals, which are on the module's `avoid` list. It names what
+a merchant can actually add: a carrier delivery photo or signature, or a customer message
+acknowledging receipt.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

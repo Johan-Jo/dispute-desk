@@ -734,7 +734,7 @@
     },
     "decisiveHint": {
       "fraud": "leveransbekräftelse, signatur, eller enhets-/sessionskonsistens",
-      "delivery": "leveranssignatur eller matchande fakturerings-/IP-signaler",
+      "delivery": "ett leveransfoto eller en signatur från transportören, eller ett meddelande där kunden bekräftar mottagandet",
       "product": "produktinformation som annonserad och din chargebackpolicy",
       "refund": "dokumenterad chargeback eller kundkommunikation",
       "subscription": "avbokningspolicy och kommunikationstidslinje",

@@ -1369,7 +1369,7 @@
     },
     "decisiveHint": {
       "fraud": "confirmación de entrega, firma archivada o coherencia de dispositivo/sesión",
-      "delivery": "confirmación de firma del transportista o señales coincidentes de facturación/IP",
+      "delivery": "una foto de entrega o una firma del transportista, o un mensaje del cliente en el que confirme la recepción",
       "product": "la ficha del producto tal como se anunció y la divulgación de su política de reembolso",
       "refund": "procesamiento documentado del reembolso o comunicación del comerciante",
       "subscription": "la política de cancelación y la línea de tiempo de comunicación con el cliente",
@@ -1398,11 +1398,11 @@
         "fraudAvsOnly": "La autenticación del pago respalda este caso, pero pruebas decisivas adicionales como confirmación de entrega, coherencia de dispositivo/sesión o confirmación del cliente mejorarían el caso.",
         "strongAndModerate": "{strongLabel} y {moderateLabel} respaldan este caso; pruebas decisivas adicionales fortalecerían el caso.",
         "strongOnly": "{label} respalda este caso, con corroboración moderada; pruebas decisivas adicionales fortalecerían el caso.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { y {label2}}} respaldan este caso. Pruebas decisivas adicionales como {hint} lo fortalecerían aún más."
+        "moderateOnly": "{label1}{label2, select, empty { respalda} other { y {label2} respaldan}} este caso. Pruebas decisivas adicionales como {hint} lo fortalecerían aún más."
       },
       "weak": {
         "strongAlone": "{label} respalda este caso, pero pruebas decisivas adicionales (como {hint}) fortalecerían el caso.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { y {label2}}} ofrecen respaldo parcial. Una señal sólida como {hint} fortalecería significativamente el caso.",
+        "moderateOnly": "{label1}{label2, select, empty { ofrece} other { y {label2} ofrecen}} respaldo parcial. Una señal sólida como {hint} fortalecería significativamente el caso.",
         "supportingOnly": "El caso es débil porque el paquete de evidencia contiene principalmente documentación de apoyo, pero ninguna prueba decisiva de {family}. {decisive} fortalecería el caso.",
         "deliveryInTransit": "Ahora mismo es débil porque no ha llegado ninguna confirmación de entrega a Shopify: el seguimiento está activo, pero muchos transportistas nunca informan la entrega a Shopify. Si la página de seguimiento del transportista muestra el paquete como entregado, sube esa confirmación como prueba de entrega. {decisive} reforzaría el caso."
       },

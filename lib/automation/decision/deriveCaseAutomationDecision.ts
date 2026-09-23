@@ -306,6 +306,19 @@ function verdict(input: CaseAutomationDecisionInput): Verdict {
     return { action: "hold_for_deadline", reasonCodes: ["eligible"] };
   }
 
+  // 10. NEWLY STRONG HOLDS (temporary; non-receipt plan §6.1.4). The revised
+  //     item-not-received rollup lets one delivery signal carry a case to
+  //     strong, and strong auto-files. A case strong ONLY under the revision
+  //     keeps today's timing — the rating shows, the filing date does not
+  //     move — until §11 Q-7 decides otherwise with the affected set printed.
+  //     Defined by outcome, not route: `overallBeforeRev5` re-runs the previous
+  //     rollup on the previous grades, so no mix of signals can bypass it. A
+  //     case already strong before the revision auto-files as it did.
+  const before = assessment.strength.overallBeforeRev5;
+  if (!creditCovers && overall === "strong" && before !== undefined && before !== "strong") {
+    return { action: "hold_for_deadline", reasonCodes: ["strength_upgraded_timing_held"] };
+  }
+
   return { action: "auto_file", reasonCodes: ["eligible"] };
 }
 
