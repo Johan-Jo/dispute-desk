@@ -3218,6 +3218,29 @@ date from a harmful one:
 `carrierPossessionUndated` keeps its v11 semantics (the validator does not refuse a true dated
 ordering); the prompt simply no longer invites one.
 
+**Validator 13, prompt 23 (same day).** The v12 rebuild of #360980 failed. Two of its refusals were
+correct: *"both items left the merchant's possession and were tendered to their respective
+carriers prior to the filing of this dispute"*. Two were of TRUE sentences, and the validator
+now handles both:
+
+- `shipmentScopedViolation` reads each CLAUSE (split on `;` and `, and|but|while|whereas`)
+  against the parcel it names, so one sentence may give GOFO's transit and the sunscreen's
+  fulfilment.
+- "the shipment/parcel" now refers back to the parcel named last in the paragraph.
+
+The item-not-received family (v7) hard-bans "prior to / before / ahead of the (filing of this)
+dispute / chargeback / claim". The model holds no dispute date. A dated in-transit citation no
+longer carries `carrierStatusObservedAt`, and the overlay lists the forbidden wording
+(paraphrased, since a prompt may not quote its own banned phrase).
+
+**Validator 14, prompt 24 (same day).** v13's blanket "prior to the dispute" ban also refused
+*"delivered on 6 July … prior to the dispute being raised"* (#352543), which is true and decisive.
+Item-not-received v8 bans only custody, dispatch and transit words placed before the dispute. A
+carrier-confirmed delivery may be ordered against it, and `deliveryPostDatesDispute` checks the
+direction against the data. **Also:** `pack_json.case_strength` is a four-field summary built in
+`buildPack.ts`, and it did not carry `overallBeforeRev5`, so the P1a newly-strong hold was inert on
+every persisted pack. It is now persisted.
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The

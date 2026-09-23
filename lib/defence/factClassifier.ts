@@ -486,7 +486,7 @@ function shipmentsForLetter(payload: Record<string, unknown>): Array<Record<stri
             confirmed || proofType === "in_transit" ? null : str(f.createdAt),
           proofType,
           deliveredAt: confirmed ? str(f.deliveredAt) : null,
-          ...(proofType === "in_transit" && str(f.carrierStatusObservedAt)
+          ...(proofType === "in_transit" && str(f.carrierStatusObservedAt) && !str(f.inTransitSince)
             ? { carrierStatusObservedAt: str(f.carrierStatusObservedAt) }
             : {}),
           ...(proofType === "in_transit" && str(f.inTransitSince)
@@ -788,7 +788,10 @@ function extractValue(
         // On a delivered shipment the carrier's own date is the evidence, and
         // a retrieval date there was written up as "observed and confirmed on
         // 23 September, corroborating the delivery" (cay-collective #14784).
-        ...(cited?.observedAt && cited.proofType === "in_transit"
+        // Only when no dated event exists: beside `inTransitSince` a retrieval
+        // time adds nothing and was written up as "status was retrieved on 23
+        // September" next to the real date (#360980, prompt v23).
+        ...(cited?.observedAt && cited.proofType === "in_transit" && !cited.inTransitSince
           ? { carrierStatusObservedAt: cited.observedAt }
           : {}),
         // The dated event that first recorded the parcel in the carrier's

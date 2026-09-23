@@ -322,6 +322,46 @@ describe("validator v7 on Case A's first letter", () => {
     expect(check(text).length).toBeGreaterThan(0);
   });
 
+  describe("v13 on the v12 draft, with GOFO dated", () => {
+    const datedFacts = classify([SUNSCREEN, { ...BUNDLE, inTransitSince: "2026-09-17T03:48:42Z" }]).approved;
+    const chk = (text: string) =>
+      runPhraseAndGuardChecks({
+        text,
+        sectionKey: "fulfillmentArgument",
+        approvedFacts: datedFacts,
+        packageMode: "full",
+        layer: "narrative",
+        extraHardPhrases: item_not_received.prohibitedBankPhrases,
+        guardedPhrases: item_not_received.guardedBankPhrases,
+        internalConstraints: NO_INTERNAL_CONSTRAINTS,
+      }).filter((e) => e.rule === "forbidden_phrase");
+
+    it.each([
+      // Verbatim, refused by v12 although true.
+      "The Back to School Bundle (quantity 1) was tendered to GOFO (tracking YT2640221437435982; https://www.gofo.com/us/track?searchID=YT2640221437435982). The carrier's tracking record shows the shipment in transit since 17 September 2026.",
+      "GOFO's tracking record (YT2640221437435982) shows The Back to School Bundle in transit since 17 September 2026, and the Sunburst Mineral SPF 50 Sunscreen was fulfilled on 16 September 2026 under USPS shipping reference 260914OET4.",
+    ])("passes: %s", (text) => {
+      expect(chk(text)).toEqual([]);
+    });
+
+    it.each([
+      // Verbatim, correctly refused.
+      "The order records confirm that both items left the merchant's possession and were tendered to their respective carriers prior to the filing of this dispute.",
+      "The available records demonstrate that the merchant fulfilled both items in this order and tendered them to their respective carriers prior to the dispute.",
+      // Clause split must not launder a USPS claim.
+      "GOFO's record shows the bundle in transit, and the USPS parcel (260914OET4) is in transit too.",
+    ])("refuses: %s", (text) => {
+      expect(chk(text).length).toBeGreaterThan(0);
+    });
+
+    it("the dated citation carries no retrieval time", () => {
+      const f = deliveryFact(classify([SUNSCREEN, { ...BUNDLE, inTransitSince: "2026-09-17T03:48:42Z" }]));
+      expect(f.value).not.toHaveProperty("carrierStatusObservedAt");
+      const gofo = (f.value.shipments as Shipment[]).find((s) => s.carrier === "GOFO")!;
+      expect(gofo).not.toHaveProperty("carrierStatusObservedAt");
+    });
+  });
+
   it("v9: the permitted shape for a parcel with no carrier record passes", () => {
     expect(
       check("The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen on 16 September 2026 (USPS shipping reference 260914OET4)."),
@@ -334,9 +374,29 @@ describe("validator v7 on Case A's first letter", () => {
     ).toEqual([]);
   });
 
-  it("custody timing is allowed when the delivery is carrier-dated (constraint off)", () => {
+  it("v14: a carrier-confirmed delivery may be placed before the dispute (#352543, verbatim)", () => {
     expect(
-      check("PostNord delivered the parcel before the dispute was opened.", NO_INTERNAL_CONSTRAINTS),
+      check(
+        "The available evidence supports the conclusion that the shipment was delivered prior to the dispute being raised.",
+        NO_INTERNAL_CONSTRAINTS,
+      ),
     ).toEqual([]);
+  });
+
+  it("v14: …but not when the delivery post-dates the dispute (data-checked)", () => {
+    expect(
+      check("The shipment was delivered prior to the dispute being raised.", {
+        ...NO_INTERNAL_CONSTRAINTS,
+        deliveryPostDatesDispute: true,
+      }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it.each([
+    "The merchant tendered both parcels to the carriers prior to the filing of this dispute.",
+    "The goods left the merchant's possession before the chargeback.",
+    "The parcel was in transit before the dispute was opened.",
+  ])("v14: refuses custody placed before the dispute: %s", (text) => {
+    expect(check(text, NO_INTERNAL_CONSTRAINTS).length).toBeGreaterThan(0);
   });
 });

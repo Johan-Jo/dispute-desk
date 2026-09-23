@@ -176,7 +176,14 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // harmful one, the model gets no dispute date, a carrier-recorded parcel
 // carries no fulfilment date, and no record is related to the dispute or the
 // order date.
-const PROMPT_VERSION = 22;
+// v23 (2026-09-23) — an in-transit shipment with a dated event no longer
+// carries its retrieval time, and the item-not-received overlay names the
+// wording the v22 draft kept using ("prior to the filing of this dispute",
+// "left the merchant's possession", "tendered to their respective carriers").
+// v24 (2026-09-23) — the overlay's forbidden-timing wording is narrowed to
+// fulfilments, hand-overs, in-transit parcels and unrecorded parcels; a
+// carrier-confirmed delivery may be placed before the dispute (#352543).
+const PROMPT_VERSION = 24;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

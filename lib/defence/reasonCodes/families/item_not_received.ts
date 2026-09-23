@@ -60,6 +60,7 @@ export const item_not_received: ReasonCodeFamily = {
     "- any other proofType: the carrier has NO record for this parcel. Write it in exactly this shape and nothing more: 'The merchant fulfilled <items> on <fulfilledAt> (<carrier> shipping reference <reference>).' For this parcel never use tendered, handed, accepted, dispatched, shipped, sent, collected, picked up, in transit, delivered, or left the merchant's possession, and never include it in a sentence that says what a carrier did or holds.",
     "- A sentence covering the whole order ('both items', 'each item', 'the order') may only say the merchant fulfilled them. Carrier handling, and any mention of a carrier record, belongs only in a sentence about the parcel whose own entry records it.",
     "Never write a proofType value itself; use plain words.",
+    "FORBIDDEN WORDING, whatever the shipment: ordering the dispute, the chargeback or its filing against any date other than a carrier-confirmed delivery (so never against a fulfilment, a hand-over, a shipment in transit, or a parcel without a carrier record); 'left the merchant's possession'; 'tendered to their respective carriers'; 'handed to the carriers'; 'both items were shipped'. Say only what each parcel's own entry records.",
     "AFFIRMATIVE ONLY. Describe what the records show. Never describe what a record lacks (a scan, a signature, a confirmation, an event), and never describe the merchant's position by what it declines to claim.",
     "TIMING. Never relate a fulfilment, a transit status or any carrier event to when the dispute was opened or filed, or to when the order was placed, and never count the days between them. State each record's own date and nothing about the interval.",
   ].join("\n"),
@@ -86,6 +87,14 @@ export const item_not_received: ReasonCodeFamily = {
     /\bnot\s+yet\s+(?:been\s+)?delivered\b/i,
     /\bundelivered\b/i,
     /\bmerchant\s+(?:does|did)\s+not\s+(?:assert|claim|contend|allege|suggest)\b/i,
+    // 6. (v8) Custody or dispatch words placed before the dispute. v7 banned
+    //    every "prior to the dispute", which also refused a TRUE and decisive
+    //    sentence — "delivered on 6 July … prior to the dispute being raised"
+    //    (#352543). A carrier-confirmed delivery may be ordered against the
+    //    dispute; whether it is TRUE is checked against the data by
+    //    `deliveryPostDatesDispute`. Custody, dispatch and tendering words may
+    //    not: #360980 wrote "tendered … prior to the filing of this dispute".
+    /\b(?:tender\w*|hand(?:ed|ing)\s+(?:over\s+)?to|left\s+the\s+merchant|dispatch\w*|ship(?:ped|ping)|sent|in[\s-]transit|custody|possession|carrier\s+network)\b[^.;]{0,120}\b(?:prior\s+to|before|ahead\s+of)\s+(?:the\s+)?(?:filing\s+of\s+(?:this|the)\s+)?(?:dispute|chargeback|claim|complaint)\b/i,
     // 5. Fulfilment timing against the dispute or the order.
     /\bfulfil\w*\b[^.;]{0,80}\b(?:before|prior\s+to|ahead\s+of|after|following|within)\b[^.;]{0,40}\b(?:dispute|chargeback|claim|order(?:ed)?|purchase|transaction)\b/i,
     /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several)\s+(?:business\s+)?(?:days?|weeks?)\s+(?:after|before|following|prior\s+to)\s+(?:the\s+)?(?:order|purchase|transaction|dispute|chargeback|claim)\b/i,
@@ -108,5 +117,5 @@ export const item_not_received: ReasonCodeFamily = {
     { pattern: /\b(?:each|both|every|all)\b[^.;]{0,50}\bcarrier\s+(?:record|tracking|scan|event)s?\b|\bcarrier\s+(?:record|tracking)s?\s+(?:for|of|on)\s+(?:each|both|every|all)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\bout\s+for\s+delivery\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
   ],
-  version: 6,
+  version: 8,
 };
