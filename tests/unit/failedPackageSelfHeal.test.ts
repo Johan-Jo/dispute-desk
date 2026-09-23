@@ -286,7 +286,7 @@ describe("the versions are real, not placeholders", () => {
      *
      * 5 → 6 on 2026-09-23: the delivery-after-dispute timing constraint — a
      * false "prior to the dispute" sentence reached a scheduled letter. */
-    expect(VALIDATOR_VERSION).toBe(9);
+    expect(VALIDATOR_VERSION).toBe(10);
   });
 
   it("unblocks the row that proved the pin is not decorative", () => {

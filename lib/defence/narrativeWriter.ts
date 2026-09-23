@@ -161,7 +161,9 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // for the parcel with no carrier record, twice, through the retry. The family
 // overlay now gives that parcel ONE permitted sentence shape and names the
 // verbs it may never take.
-const PROMPT_VERSION = 19;
+// v20 (2026-09-23) — whole-order sentences may not mention a carrier record
+// (#360980's v9 draft: "each with its own carrier record", one had none).
+const PROMPT_VERSION = 20;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

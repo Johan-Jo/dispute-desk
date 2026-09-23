@@ -144,8 +144,11 @@ import type {
  *      custody claim (item_not_received v4): "both items left the merchant's
  *      possession" passed v8 on a two-parcel order where one parcel has no
  *      carrier record.
+ *  10  (2026-09-23) — a carrier record claimed for EVERY parcel ("each with
+ *      its own carrier record") is shipment-scoped (item_not_received v5);
+ *      #360980's validated v9 draft said it with one parcel unrecorded.
  */
-export const VALIDATOR_VERSION = 9;
+export const VALIDATOR_VERSION = 10;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,

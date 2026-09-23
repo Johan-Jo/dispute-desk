@@ -215,6 +215,37 @@ describe("validator v7 on Case A's first letter", () => {
     expect(check(text).length).toBeGreaterThan(0);
   });
 
+  it.each([
+    // Verbatim from the validated v9 draft, 2026-09-23.
+    "The merchant fulfilled these items across two separate shipments, each with its own carrier record.",
+    "Both parcels have carrier tracking.",
+    "The carrier records for each shipment confirm fulfilment.",
+  ])("v10: refuses a carrier record claimed for every parcel: %s", (text) => {
+    expect(check(text).length).toBeGreaterThan(0);
+  });
+
+  it("v10: a carrier record claimed for GOFO alone passes", () => {
+    expect(check("GOFO's carrier record shows the shipment in transit (tracking YT2640221437435982).")).toEqual([]);
+  });
+
+  // Only the CITED shipment is bank-citable (shipmentRefsOf), so on any
+  // multi-parcel order a whole-order carrier-record claim is refused; the
+  // letter names each parcel instead (overlay rule). Conservative by design.
+  it("v10: a whole-order carrier-record claim is refused on any multi-parcel order", () => {
+    const both = classify([{ ...SUNSCREEN, shipmentProofType: "in_transit", tracking: [{ number: "9400111899223456789012", carrier: "USPS", url: null }] }, BUNDLE]).approved;
+    const errs = runPhraseAndGuardChecks({
+      text: "The order left in two shipments, each with its own carrier record.",
+      sectionKey: "transactionOverviewArgument",
+      approvedFacts: both,
+      packageMode: "full",
+      layer: "narrative",
+      extraHardPhrases: item_not_received.prohibitedBankPhrases,
+      guardedPhrases: item_not_received.guardedBankPhrases,
+      internalConstraints: NO_INTERNAL_CONSTRAINTS,
+    }).filter((e) => e.rule === "forbidden_phrase");
+    expect(errs.length).toBeGreaterThan(0);
+  });
+
   it("v9: the permitted shape for a parcel with no carrier record passes", () => {
     expect(
       check("The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen on 16 September 2026 (USPS shipping reference 260914OET4)."),

@@ -3171,6 +3171,13 @@ whole-order sentence may only say the merchant fulfilled the items. "Left the me
 possession" is now a shipment-scoped custody guard (family v4): *"both items left the
 merchant's possession"* had passed v8.
 
+**Validator 10 / prompt 20 (2026-09-23).** The first validated letter for #360980 still said the
+parcels were sent *"each with its own carrier record"*, and the USPS parcel has none. A carrier
+record claimed for every parcel (each / both / every / all ... carrier record, tracking, scan or
+event) is now a shipment-scoped guard (family v5). Only the cited shipment is bank-citable, so on
+any multi-parcel order such a sentence is refused, and the overlay tells the model to mention a
+carrier record only in a sentence about the parcel that has one.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).
