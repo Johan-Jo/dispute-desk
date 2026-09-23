@@ -116,3 +116,43 @@ describe("refund-request denials", () => {
     expect(internalConstraintViolations("A refund has been processed on this charge.", "conclusion", REQUESTED)).toEqual([]);
   });
 });
+
+describe("delivery after the dispute: no sentence may relate the two (§6.6 rule 2)", () => {
+  const POST: InternalNarrativeConstraints = { refundOrCompensationRequested: null, deliveryPostDatesDispute: true };
+  const chk = (text: string, c: InternalNarrativeConstraints) =>
+    runPhraseAndGuardChecks({
+      text,
+      sectionKey: "chronologyArgument",
+      approvedFacts: [],
+      packageMode: "full",
+      layer: "narrative",
+      internalConstraints: c,
+    }).filter((e) => e.rule === "forbidden_phrase");
+
+  it.each([
+    // cay-collective #14784 v3, verbatim (opened 13 Sep, delivered 18 Sep).
+    "establishing that the delivery event had been recorded by the carrier prior to the dispute being raised.",
+    "The parcel was delivered before the claim was filed.",
+    "The shipment was collected after the dispute was opened.",
+    "Following the chargeback, the carrier recorded delivery.",
+  ])("refuses: %s", (text) => {
+    expect(chk(text, POST).length).toBeGreaterThan(0);
+  });
+
+  it("passes the carrier record without any dispute timing", () => {
+    expect(chk("PostNord SE recorded delivery of the shipment on 18 September 2026 at 16:23 UTC.", POST)).toEqual([]);
+  });
+
+  it("does not apply when delivery preceded the dispute (then it is true and helps)", () => {
+    expect(chk("The parcel was delivered before the claim was filed.", NO_INTERNAL_CONSTRAINTS)).toEqual([]);
+  });
+
+  it("deliveryPostDatesDispute compares every cited delivery date with the opening date", async () => {
+    const { deliveryPostDatesDispute } = await import("../internalConstraints");
+    const f = (d: string) => ({ category: "delivery_proof", value: { deliveredAt: d } });
+    expect(deliveryPostDatesDispute([f("2026-09-18T16:23:00Z")], "2026-09-13T12:43:49Z")).toBe(true);
+    expect(deliveryPostDatesDispute([f("2026-07-06T00:00:00Z")], "2026-09-19T00:15:40Z")).toBe(false);
+    expect(deliveryPostDatesDispute([], "2026-09-13T12:43:49Z")).toBe(false);
+    expect(deliveryPostDatesDispute([f("2026-09-18T16:23:00Z")], null)).toBe(false);
+  });
+});
