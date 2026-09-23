@@ -1,7 +1,19 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** PLAN ONLY (**v5, 2026-09-23**). Not started. **Contains two time-boxed live
+**Status:** PLAN ONLY (**v5.1, 2026-09-23**). Not started. **Contains two time-boxed live
 exposures — §0. Read that first.**
+
+> **Rev 5.1: three targeted corrections to §6.1.**
+> **(1)** Carrier-style text on a Shopify fulfillment event is **not** proof of carrier
+> origin. Condition 1 now requires corroborated provenance (our own carrier lookup, a
+> tracking-app feed with a carrier-origin contract, or a verified Shopify source
+> contract). Case B's `strong` rating is **conditional** on that. As prod holds it today,
+> Case B rates `moderate`. **(2)** `coverage = unknown` never qualifies, even with one
+> fulfillment. Its delivery evidence is kept and cited but does not lift the package.
+> **(3)** The timing safeguard covers **every** case the new rollup makes `strong`
+> (QFD, a lone signature, or any mix), defined by outcome against today's formula.
+> Re-measured: 0 open cases affected today. New decision Q-8: how to corroborate
+> provenance.
 
 > **Rev 5: final corrections** (re-verified against `develop` @ `0d383e16` and prod).
 > **(1)** A verified carrier-recorded final delivery, including completed collection,
@@ -9,7 +21,7 @@ exposures — §0. Read that first.**
 > final delivery*, §6.1.1). It can carry an INR package to `strong` (§6.1.3). Case B's
 > PostNord sequence is the regression fixture, with its association verified against
 > Shopify's own events (§6.1.2). The one automation consequence, `strong → auto_file`, is
-> measured (1 open case) and held behind a temporary ladder branch pending §11 Q-7 (§6.1.4).
+> measured and held behind a temporary ladder branch pending §11 Q-7 (§6.1.4; scope widened in 5.1).
 > **(2)** Shipment-state claims are validated against the shipment each sentence names,
 > not against all facts (§4.1(b), test 3e). **(3)** `computeEvidenceHash` sorted by
 > positional ids, so fulfilment order moved the hash. Fixed by stable emission order and
@@ -903,10 +915,14 @@ sees and the `strength_insufficient` reason code. The `weak → moderate` step n
 automation-policy change and no feature flag.
 
 **Rev 5: `strong` is different.** P1 now also lets a qualified final delivery carry an
-INR case to `strong` (§6.1.3), and `strong` does reach `auto_file` (`:309`). Measured: 1
-open auto-mode case would file earlier today (§6.1.4). So P1 ships a named, temporary
-ladder branch that keeps QFD-only `strong` cases on `hold_for_deadline`. That is not a
-policy change: it holds today's timing in place until §11 Q-7 decides it separately.
+INR case to `strong` (§6.1.3), and so does a lone `signature_confirmed`, which today
+rates only `moderate` overall. `strong` does reach `auto_file` (`:309`). So P1 ships a
+named, temporary ladder branch that keeps **every case this change makes `strong`** on
+`hold_for_deadline`. It is defined by outcome, whatever the route: new `overall` is
+`strong` while today's formula is not. Cases already `strong` keep today's behaviour.
+That is not a policy change: it holds today's timing in place until §11 Q-7 decides it
+separately. Measured: 0 open cases are affected today; 1 auto-mode case would be once
+provenance corroboration lands (§6.1.4).
 
 ### 4.3 P2 — communications classification
 
@@ -1111,10 +1127,10 @@ hold. Otherwise it keeps today's categories.
 
 | # | condition | how it is decided (existing code where it exists) |
 |---|---|---|
-| 1 | **Trustworthy carrier provenance** | the final-delivery event comes from the carrier, not the merchant. That means a carrier adapter (`tracking_source = carrier_api_*`), a tracking-app event feed, or a Shopify fulfillment event whose `message` carries the **carrier's own event text** (Case B: *"Försändelsen har levererats."*). A `shopify_native` `DELIVERED` with **no** carrier event text is excluded, because Shopify's "mark as delivered" is merchant-settable and our data cannot tell the two apart (344,165 `shopify_native` delivered rows with no adapter). Before implementation, a probe of one manually marked fulfillment must confirm that such events carry no carrier message. Until then this condition fails closed |
+| 1 | **Trustworthy carrier provenance** | the final-delivery event is **corroborated as carrier-originated**. Qualifying sources: (a) our own carrier lookup (`tracking_source = carrier_api_*`, a carrier adapter reading the carrier directly); (b) a tracking-app feed whose source contract states that its events come from the carrier; or (c) a Shopify fulfillment event whose origin is established by a **verified source contract**, i.e. documented Shopify behaviour showing which writer created the event. **Carrier-sounding text on a Shopify event is not proof of carrier origin.** Fulfillment events can be written by apps and integrations as well as by Shopify's carrier tracking, and any writer can put carrier-style text in `message`. A probe of one manually marked fulfillment could only show that one path leaves the field empty; it cannot show that every event with a message came from a carrier. So `message` text is at most a hint, never sufficient on its own. Until (c) is verified, `shopify_native` events qualify only with corroboration from (a) or (b) (344,165 `shopify_native` delivered rows exist with no adapter) |
 | 2 | **An event timestamp** | the carrier event's own `happenedAt` / `deliveredAt`, never a retrieval time (`carrierStatusObservedAt` never qualifies, §5.3) |
 | 3 | **Correct shipment and order association** | the event belongs to the fulfillment whose `instanceKey` the fact carries (§4.1(f)), on the disputed order, under a tracking identifier that passes `isParcelIdentifier` (§4.1(b)) |
-| 4 | **Coverage of the disputed goods** | `coverage = complete` from `resolveDeliveryCoverage` (`fulfillmentSource.ts:524-548`). `partial` never qualifies. `unknown` (line items unavailable) qualifies only on a single-fulfillment order |
+| 4 | **Verified coverage of the disputed goods** | `coverage = complete` from `resolveDeliveryCoverage` (`fulfillmentSource.ts:524-548`): delivered line-item quantity ≥ ordered quantity, computed from the order's line items. `partial` never qualifies. **`unknown` never qualifies either**, even on a single-fulfillment order, because one fulfillment can still carry only part of an order. With coverage `unknown`, the shipment's delivery evidence is kept at `delivered_confirmed` (moderate) and cited as that shipment's record, but it does **not** lift the package |
 | 5 | **No unresolved contradictory delivery record** | no other record of the same goods says `Returned`, `NOT_DELIVERED` or lost, or gives a later non-delivery status. No carrier correction reverses the delivery, and no second source reports a different outcome for the same shipment. Any of these fails the condition until a newer record resolves it (§6.1.3) |
 
 A QFD maps to a new `DeliveryProofType` member, **`delivered_final_verified`** →
@@ -1150,13 +1166,24 @@ item, quantity 1, fully covered.
 | `LABEL_PURCHASED` 2026-09-16 08:25:46 | — | — | `label_created` |
 | `IN_TRANSIT` 2026-09-16 08:34:05 | *"Försändelsen har lämnats av avsändaren."* | — | `in_transit` |
 | `READY_FOR_PICKUP` 2026-09-17 09:24:18 | *"Avisering skickad via APP. – Sista hämtningsdag: 2026-09-24"* | 17 Sep 06:23 *"…levererats till ett serviceställe"* / *"Paketet kan hämtas i ett paketskåp hos ombudet"* | **available for collection: not final delivery** |
-| `DELIVERED` 2026-09-18 16:23:00 | *"Försändelsen har levererats."* | 18 Sep 13:23 *"Försändelsen har levererats."* | **QFD → `delivered_final_verified`** |
+| `DELIVERED` 2026-09-18 16:23:00 | *"Försändelsen har levererats."* | 18 Sep 13:23 *"Försändelsen har levererats."* | **completed delivery.** QFD → `delivered_final_verified` **only once condition 1 is met** (below); until then `delivered_confirmed` |
 
 The screenshot times are the same events shifted three hours earlier, which fits a
 browser in UTC−3. The ICA service-point name persisting as the location on the
 18 September row does **not** mean the parcel is still waiting: the event text records
 completed delivery. The fixture pins both directions. The 17 September state alone must
-**not** reach QFD, and the 18 September event must. The screenshot itself is not case
+**not** reach QFD. The 18 September event must be recognised as **completed delivery**.
+
+**Case B's `strong` rating is conditional.** Conditions 2 to 5 are met: event timestamp,
+the single fulfillment on the disputed order, coverage `complete` (1 line item, quantity
+1, fully fulfilled), and no contradicting record. Condition 1 is **not yet** met. Its
+evidence is a `shopify_native` event whose PostNord text is a hint, not proof, and we
+have no PostNord adapter (DHL is the only one). So today Case B rates
+`delivered_confirmed` → package `moderate`. It becomes `delivered_final_verified` →
+package `strong` only once provenance is corroborated: a PostNord lookup, a
+tracking-app feed with a carrier-origin contract, or a verified Shopify source contract
+for this event. The letter is the same either way. It cites the carrier's recorded
+delivery, and nothing in it depends on the rating. The screenshot itself is not case
 evidence. The fixture and the letter use Shopify's stored events, which carry the
 provenance and the association. A screenshot would need its own source record before
 it could be cited.
@@ -1170,14 +1197,16 @@ Today the rollup (`caseStrength.ts:755-769`) rates one strong delivery signal on
 | package holds | overall |
 |---|---|
 | a QFD (or `signature_confirmed`) covering the disputed goods, with no conflict (below) | **`strong`**, on its own |
-| a carrier-sourced delivery that fails a QFD condition (`delivered_confirmed`) | **`moderate`**, on its own (rev 2's `hasConfirmedDelivery` rung, kept) |
+| a carrier-sourced delivery that fails a QFD condition (`delivered_confirmed`), **including coverage `unknown` or uncorroborated provenance** | **`moderate`**, on its own (rev 2's `hasConfirmedDelivery` rung, kept) |
 | only `in_transit`, availability for collection, or `label_created` | `weak` |
 
 **How conflicting evidence moves it:**
 - A contradictory delivery record on the disputed goods (QFD condition 5) removes the
   QFD. The shipment falls to `delivered_confirmed` at most, and the case to `moderate`
   at most, until a newer record resolves it.
-- Partial coverage: `moderate` at most, whatever the signal.
+- Partial **or unknown** coverage: `moderate` at most, whatever the signal, and that
+  applies to `signature_confirmed` too. A signature on a parcel carrying part of the
+  order does not answer the claim for the rest.
 - A returned-to-sender shipment for the disputed goods: the existing gate
   (`returnedToSender.ts`) governs, and a QFD on another parcel does not override it.
 - Lateness against the merchant's published window (§8.1) is **not** a contradiction.
@@ -1194,25 +1223,44 @@ for the deadline. **`strong` does not**: `deriveCaseAutomationDecision` returns
 `auto_file` for `strong` (`:309`). So this scoring revision **would** move filing dates
 for auto-mode cases, and it must not do that silently.
 
-Measured on prod on 2026-09-23 (Q19): open, unsaved non-receipt disputes with a
-receipt-grade delivery, one shipment, and no contradictory record.
+**Which cases the safeguard covers: every case this scoring change makes `strong`.**
+Rev 5 scoped it to QFD cases only, but §6.1.3 also upgrades a lone `signature_confirmed`
+signal from `moderate` overall (today's `hasStrongDelivery` rung,
+`caseStrength.ts:755-769`) to `strong`. So the rule is defined by **outcome, not route**.
+The rollup computes both ratings: `overall` (new) and `overallBeforeRev5` (today's formula,
+kept as a pure function next to it). The ladder gets one named, temporary branch, in the
+same style as the existing `creditCovers` branch (`:239-241`, `:305-306`):
 
-| dispute | shop | rule mode | today | if rated `strong` under the current ladder |
-|---|---|---|---|---|
-| #352543 | blume-box | **auto** | `hold_for_deadline`, due 3 Oct | **`auto_file`: files at its next decision point, before 3 Oct** |
-| #14784 | cay-collective | review | parked, scheduled (`approved`) | unchanged: review mode parks; files 1 Oct by scheduling |
-| #100806 | 6a8848-dd | review | conceded | unchanged: never filed |
-| #98250 | 6a8848-dd | review | parked | unchanged |
-| #101259 (two dispute rows) | 6a8848-dd | review | parked | unchanged |
+> *delivery family, `overall === "strong"` and `overallBeforeRev5 !== "strong"` →
+> `hold_for_deadline`, reason code `strength_upgraded_timing_held`.*
 
-**One case** changes timing today, and the effect grows with every auto-mode shop. So P1
-ships the scoring **together with** a named, temporary branch in the ladder, in the same
-style as the existing `creditCovers` branch (`:239-241`, `:305-306`): *a delivery-family
-case whose only route to `strong` is a QFD returns `hold_for_deadline`*. The merchant
-sees the `strong` rating, and filing timing does not change. The branch is removed only
-by §11 Q-7, a separate decision, taken with the then-current affected set printed
-(`[[feedback_irreversible_scope_confirm]]`). The existing `decisionLadder.test.ts:345`
-behaviour is kept, and a new test pins the temporary branch.
+That covers QFD-only cases, signature-only cases, and any mix the new rollup lifts. A
+case that was **already** `strong` under today's formula (two strong signals) keeps
+today's `auto_file`, unchanged. The merchant sees the `strong` rating in every case; only
+the filing date is held. The branch is removed only by §11 Q-7, a separate decision
+taken with the then-current affected set printed (`[[feedback_irreversible_scope_confirm]]`).
+The existing `decisionLadder.test.ts:345` behaviour (`moderate` holds) is kept, and new
+tests pin the branch for each route (§10 test 8e).
+
+**Measured on prod on 2026-09-23 (Q19)**, with the corrected conditions 1 and 4 applied.
+The population is open, unsaved non-receipt disputes with a receipt-grade delivery, one
+shipment, and no contradicting record.
+
+| dispute | shop | rule mode | provenance | reaches `strong` now? | timing if the safeguard were absent |
+|---|---|---|---|---|---|
+| #352543 | blume-box | **auto** | `shopify_native`, no adapter | **no**: condition 1 uncorroborated | unchanged today; would become `auto_file` once provenance is corroborated |
+| #14784 | cay-collective | review | `shopify_native`, no adapter | no (§6.1.2) | review mode parks; files 1 Oct by scheduling |
+| #100806 | 6a8848-dd | review | `shopify_native`, no adapter | no | conceded, never filed |
+| #98250 | 6a8848-dd | review | `shopify_native`, no adapter | no | parked |
+| #101259 (two dispute rows) | 6a8848-dd | review | `shopify_native`, no adapter | no | parked |
+
+Signature route: **0** of 287 non-receipt disputes since June carry a signature (D3),
+so no open case is upgraded through it.
+
+**Result: 0 open cases change rating or timing today.** The safeguard still ships with
+P1, because the count moves as soon as provenance corroboration lands (a PostNord lookup,
+a tracking-app contract, or a verified Shopify source contract). At that point #352543,
+the one auto-mode case, is the first that would file early without it.
 
 **The availability-is-not-collection invariant is kept.** `confirmedReceipt`
 (`fulfillmentSource.ts:247-256`) admits only `Delivered` / `CollectedAtPickup` with a
@@ -1892,23 +1940,34 @@ repo's verified failures, and each must be shown to fail before the fix.
    of `confirmedReceipt` promoting a pending pickup into a receipt claim. Its pair:
    `CollectedAtPickup` **without** a timestamp → supporting, still weak.
 8b. **PostNord regression fixture (§6.1.2), Case B's exact Shopify events.** Truncated
-   after `READY_FOR_PICKUP` 2026-09-17 09:24:18Z → **no** QFD, case `weak`. With
-   `DELIVERED` 2026-09-18 16:23:00Z (*"Försändelsen har levererats."*) → QFD,
-   `delivered_final_verified`, signal `strong`, case **`strong`**. The service-point name
-   persisting as the location does not block it. In both states the letter names no
-   collector and asserts no identity check.
-8c. **QFD conditions, one negative each.** No carrier event text on a `shopify_native`
-   `DELIVERED` (merchant-settable) → `delivered_confirmed`, `moderate`. No event
-   timestamp → not QFD. Tracking identifier fails `isParcelIdentifier` or belongs to
-   another fulfillment → not QFD. `coverage = partial` → `moderate` at most. A second
-   record on the same goods says `Returned` / `NOT_DELIVERED`, or a correction reverses
-   the delivery → QFD removed, `moderate` at most, until a newer record resolves it.
+   after `READY_FOR_PICKUP` 2026-09-17 09:24:18Z → no completed delivery, **no** QFD, case
+   `weak`. With `DELIVERED` 2026-09-18 16:23:00Z (*"Försändelsen har levererats."*) →
+   recognised as **completed delivery**. Two variants:
+   - **As prod holds it** (`shopify_native`, no corroborating source) →
+     `delivered_confirmed`, signal `moderate`, case **`moderate`**.
+   - **With corroborated provenance** (a PostNord lookup or tracking-app feed returning
+     the same event) → QFD, `delivered_final_verified`, signal `strong`, case
+     **`strong`**.
+
+   The service-point name persisting as the location blocks neither. In every state the
+   letter names no collector and asserts no identity check.
+8c. **QFD conditions, one negative each.** A `shopify_native` `DELIVERED` **with**
+   carrier-style `message` text but no corroborating source → not QFD
+   (`delivered_confirmed`, `moderate`): text is a hint, not provenance. No event timestamp
+   → not QFD. Tracking identifier fails `isParcelIdentifier` or belongs to another
+   fulfillment → not QFD. `coverage = partial` → `moderate` at most. **`coverage =
+   unknown` on a single-fulfillment order → not QFD, `moderate` at most**, and the same
+   for `signature_confirmed`; the shipment's delivery fact is still cited. A second record
+   on the same goods says `Returned` / `NOT_DELIVERED`, or a correction reverses the
+   delivery → QFD removed, `moderate` at most, until a newer record resolves it.
 8d. **Not contradictions.** Delivery later than the merchant's published window, or a
    customer message restating non-receipt → the QFD and `strong` stand.
-8e. **Filing timing is unchanged (§6.1.4).** An auto-mode INR case whose only route to
-   `strong` is a QFD → `hold_for_deadline` (the temporary named branch), not
-   `auto_file`. `decisionLadder.test.ts:345` (`moderate` holds) still passes. A case
-   reaching `strong` by any pre-existing route keeps today's `auto_file`.
+8e. **Filing timing is unchanged for every newly upgraded case (§6.1.4).** In auto mode,
+   one test per route, each → `hold_for_deadline` with `strength_upgraded_timing_held`,
+   not `auto_file`: (i) a lone QFD; (ii) a lone `signature_confirmed` (today `moderate`
+   overall); (iii) a QFD plus a moderate signal. Negative: a case that is `strong` under
+   today's formula (two strong signals) → still `auto_file`, unchanged.
+   `decisionLadder.test.ts:345` (`moderate` holds) still passes.
 9. `in_transit` alone → case **is** weak, and the in-transit explanation renders
    (not `weak.moderateOnly` over an unrelated fact).
 10. One moderate label → the strength sentence is grammatical.
@@ -2013,12 +2072,22 @@ means every merchant has to re-consent. Request them now, or rely on the publish
 policies alone (§8.1) until that check shows how often a structured promise would have
 changed the outcome?
 
-**Q-7 · Let QFD-only `strong` cases auto-file (§6.1.4).** P1 rates them `strong` but
-holds their filing date through a temporary ladder branch. Removing the branch means
-auto-mode INR cases with a qualified final delivery file at their next decision point
-instead of on the deadline. Measured 2026-09-23 (Q19): **1** open case would move
-(blume-box #352543, due 3 Oct); every review-mode case is unaffected. Remove the branch,
-keep it, or remove it per shop? To be decided with the then-current set printed.
+**Q-7 · Let newly upgraded `strong` cases auto-file (§6.1.4).** P1 rates them `strong`
+(through a QFD, a lone signature, or any mix the new rollup lifts) but holds their
+filing date through a temporary ladder branch. Removing the branch means those auto-mode
+INR cases file at their next decision point instead of on the deadline. Measured
+2026-09-23 (Q19): **0** open cases today, because every receipt-grade case is
+`shopify_native` without corroborated provenance and none carries a signature. **1**
+(blume-box #352543) would be affected once provenance corroboration lands. Review-mode
+cases are unaffected either way. Remove the branch, keep it, or remove it per shop? To
+be decided with the then-current set printed.
+
+**Q-8 · How to corroborate carrier provenance (§6.1.1 condition 1).** Options: (a) a
+PostNord adapter or lookup, like the existing DHL adapter; (b) the tracking-app feeds of
+`tracking-app-delivery-signals.plan.md`, once their source contract is verified; (c) a
+verified Shopify source contract for fulfillment events, i.e. documented proof of which
+writer created an event. Until one exists, no `shopify_native` delivery reaches
+`strong`. Which first?
 
 **Q-6 · Document-specific approval (§9.5).** Build the optional exact-document approval
 now (P1), or defer until a merchant asks to approve wording rather than schedule
