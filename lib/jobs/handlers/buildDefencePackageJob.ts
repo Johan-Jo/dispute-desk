@@ -21,6 +21,7 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
+import { loadInternalNarrativeConstraints } from "@/lib/integrations/gorgias/internalNarrativeConstraints";
 import {
   resolveReasonCodeModule,
   resolveReasonCodeModuleForContext,
@@ -575,6 +576,13 @@ export async function handleBuildDefencePackage(
     ...reasonCodeFamily.prohibitedBankPhrases,
     ...paymentProhibited,
   ];
+  // Validator-only constraints derived from stored messages (validator v5,
+  // lib/defence/internalConstraints.ts). Passed to every validator below and to
+  // NOTHING else — not the narrative writer, the projection, the PDF or
+  // facts_json. A customer reimbursement request refuses a sentence denying it.
+  const internalConstraints = await loadInternalNarrativeConstraints(
+    pkg.dispute_id as string,
+  );
   // Drop argument sections whose every supporting fact is withheld from the
   // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
   // disputes: 51 such sections across 27 cases. Blocking them would mean
@@ -594,6 +602,7 @@ export async function handleBuildDefencePackage(
     packageMode: classification.packageMode,
     internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
     extraHardPhrases: hardPhrases,
+    internalConstraints,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
   // Non-blocking findings are recorded whether or not the package passes.
@@ -705,6 +714,7 @@ export async function handleBuildDefencePackage(
         packageMode: classification.packageMode,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
         extraHardPhrases: hardPhrases,
+        internalConstraints,
         guardedPhrases: reasonCodeFamily.guardedBankPhrases,
       });
       // Reassign so the rest of the pipeline uses the better output.
@@ -937,6 +947,7 @@ export async function handleBuildDefencePackage(
             missingRecordIds: projection.missingRecordIds,
             packageMode: classification.packageMode,
             extraHardPhrases: hardPhrases,
+            internalConstraints,
             guardedPhrases: reasonCodeFamily.guardedBankPhrases,
           });
           documentFailureCodes = verdict.failureCodes;
@@ -961,6 +972,7 @@ export async function handleBuildDefencePackage(
           approvedFacts: planFacts,
           packageMode: classification.packageMode,
           extraHardPhrases: hardPhrases,
+          internalConstraints,
           guardedPhrases: reasonCodeFamily.guardedBankPhrases,
         });
 
@@ -990,6 +1002,7 @@ export async function handleBuildDefencePackage(
         missingRecordIds: darkProjection.missingRecordIds,
         packageMode: classification.packageMode,
         extraHardPhrases: hardPhrases,
+        internalConstraints,
         guardedPhrases: reasonCodeFamily.guardedBankPhrases,
       });
       darkDocumentPassed = darkVerdict.passed;

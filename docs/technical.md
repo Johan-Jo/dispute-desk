@@ -3006,6 +3006,100 @@ Collectors run **concurrently**, so none of them could consult another — and i
 2. **Admissibility** — `lib/defence/alwaysAdmissible.ts`'s `no_return_initiated` rule was `matches: () => true` on the rationale that the fact "has no adverse reading". It is now conditional: with a returned parcel the module's own admission test ("can citing this read AGAINST us under any claim type?") answers *yes*.
 3. **The narrative** — the `return_not_initiated` predicate and a new claim guard (below).
 
+### Non-receipt letters: no argument from "no return", no refund-request denials (2026-09-23)
+
+Plan: `docs/plans/non-receipt-delivery-evidence.plan.md` §4.1(a), (c), §6.3, §6.6. Two live
+item-not-received letters argued from the absence of a return: blume-box #360980 ("the absence
+of any return activity is inconsistent with a genuine non-receipt claim") and cay-collective
+#14784 ("no return … which is consistent with the goods having been received"). A cardholder who
+says nothing arrived has nothing to return, so the sentence concedes their premise.
+
+- **Admission is claim-family-aware.** `ALWAYS_ADMISSIBLE_RULES` entries carry an optional
+  `deniedForFamilies`. `no_return_initiated` is denied for `item_not_received`.
+  `alwaysAdmissibleCategories(facts, family)` takes the resolved family. Both callers
+  (`planForCase`, `narrativeWriter`) resolve it with the new non-throwing
+  `familyKeyForModule` (`lib/defence/reasonCodes/familyRegistry.ts`). A null family applies no
+  denial. The refund family keeps the fact.
+- **Validator layer (`VALIDATOR_VERSION` 5).** The `item_not_received` family's
+  `prohibitedBankPhrases` hard-ban, at every layer:
+  - any absence-of-return argument (paraphrase-tolerant);
+  - any denial that a refund, reimbursement or compensation was requested;
+  - collector and identity claims ("collected by the cardholder", "the cardholder has the
+    goods", "identity verified"). The permitted form is the carrier's record: *"PostNord records
+    the shipment as collected at the pickup point on {date}"*.
+
+  Raw carrier-status and proof-type enums (`CollectedAtPickup`, `delivered_confirmed`, …) are
+  banned in `FORBIDDEN_PHRASES` for every family. They also no longer reach the model:
+  `stripDeliveryHashInputs` (`narrativeWriter.ts`) drops the hash-only `deliveryStatuses` /
+  `returnedAt` from delivery facts in the LLM payload. The evidence hash still reads them.
+- **Internal refund-request constraint.** `lib/defence/internalConstraints.ts` defines
+  `InternalNarrativeConstraints` (ids + one date, never text).
+  `loadInternalNarrativeConstraints` (`lib/integrations/gorgias/internalNarrativeConstraints.ts`)
+  derives it once per build from **all** stored customer messages on order-matched tickets
+  (`confirmed_match`, or `proposed_match` at `high`), whatever their review state, by text
+  (six locales) or the `refund_history` category. `buildDefencePackageJob` passes it to every
+  validator (`validateNarrative`, its retry, `validatePackageDocument`,
+  `validateComposedDocument`) and to nothing else: never the narrative writer, projection,
+  PDF or `facts_json`. When set, a refund-request denial is refused in any family. Case A's
+  request is `review_status = proposed`, category `contradiction`, and is caught.
+- **`PLAN_POLICY_VERSION` stays 1, deliberately.** The admitted categories are already a plan-hash
+  input, so exactly the affected plans go stale via `input_hash_mismatch`. `caseSelectionContext`
+  compares a **single** policy version against the decision, assessment and plan snapshots, so a
+  plan-only bump would mark every package in every family `policy_version_superseded` and stop
+  the deadline cron. A future bump needs that comparison made per layer first.
+
+Tests: `nonReceiptValidatorRules.test.ts`, `alwaysAdmissible.test.ts`,
+`internalNarrativeConstraints.test.ts`, `stripDeliveryHashInputs.test.ts`.
+
+### Non-receipt letters: the in-transit shipment, one coherent shipment per fact (2026-09-23)
+
+Plan §4.1(b), (f), (g), §5.1–§5.3. blume-box #360980's GOFO parcel was in transit,
+but every non-delivery collapsed to `label_created` → `invalid`, so nothing citable
+remained once "no return" was denied.
+
+- **Sixth proof state `in_transit`** (`DeliveryProofType`, now defined ONCE in
+  `canonicalEvidence.ts`; the private copies in `evidenceLineItem.ts` and
+  `evidence/model/payloads.ts` re-export it). Categorised `supporting`, so it is never
+  scored. `fulfillmentSource.resolveShipmentProofType` assigns it per shipment from
+  Shopify's `displayStatus` (`IN_TRANSIT`, `OUT_FOR_DELIVERY`, `ATTEMPTED_DELIVERY`), or
+  from a carrier lookup with scans and no terminal event. A tracking number alone stays
+  `label_created`. Availability for collection stays `delivered_unverified`. The
+  section-level tier is the best shipment tier, as before.
+- **One coherent shipment per delivery fact.** `factClassifier.citedShipment` cites the
+  best-evidenced shipment by its own tier (a parcel identifier beats a batch reference;
+  ties go to the shipment key, never to array position). Carrier, number, status and
+  `deliveredAt` come from that shipment together. Previously the first tracking row was
+  paired with a section-wide tier. A hash-only `shipmentIndex` lists every shipment's
+  identity and tier for the validator; it is stripped from the LLM payload. Deliberate
+  deviation from the plan's one-fact-per-shipment wording: the renderers (Evidence
+  Basis pair-collapse, provenance, post-outcome analysis) assume one fact per field.
+  The association guarantee is met without touching them.
+- **The one supporting-but-citable case.** `isCitableShipmentContext`: an `in_transit`
+  cited shipment with a named carrier and a parcel identifier gets `bankEligible` /
+  `includeInBankNarrative`, with strength still `supporting`.
+  `isParcelIdentifier(carrier, number)` (`lib/carriers/trackingLinkUrl.ts`) combines
+  the generic check with the USPS shape list, so `260914OET4` (a batch reference) never
+  qualifies.
+- **Predicate and strategy.** `shipment_in_carrier_possession` (a bank-citable delivery
+  fact that is `in_transit`, `delivered_confirmed` or `signature_confirmed`) gates the
+  item-not-received family's new `guardedBankPhrases` ("in transit", "in the carrier's
+  possession", "handed to …", "out for delivery"). New strategy
+  `item_not_received_carrier_possession` (`none: delivery_confirmed`) tells the writer to
+  date the status only as a retrieval date. `PROMPT_VERSION` 17.
+- **Shipment-scoped guards.** `GuardedBankPhrase.shipmentScoped`: each matching sentence
+  is checked against the shipment it names (tracking number, or a carrier unique on the
+  order). Non-cited shipments are evaluated as non-citable stand-ins, so one GOFO transit
+  fact cannot license "the USPS shipment is in transit". An unnamed sentence on a
+  multi-shipment order must hold for every shipment.
+- **Hashing.** The collector writes `carrierStatusObservedAt` (when the build read the
+  status). `computeEvidenceHash` drops it via `EVIDENCE_HASH_DROP_KEYS` (its own policy;
+  the shared canonicaliser is untouched; the generic `observedAt` is taken by
+  `liabilityShift`). An unchanged re-read keeps the hash; a status change moves it.
+- **Evidence Basis** prints *"In transit with the carrier (status as retrieved …)"*.
+  Without that branch the row fell through to "Confirmed".
+
+Tests: `nonReceiptInTransitShipment.test.ts`, `shipmentProofType.test.ts`.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

@@ -152,6 +152,27 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
       hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
   },
 
+  shipment_in_carrier_possession: {
+    id: "shipment_in_carrier_possession",
+    description:
+      "bank-citable delivery_proof / shipping_tracking whose shipment the carrier accepted: proofType in_transit (isCitableShipmentContext: named carrier + parcel identifier), delivered_confirmed or signature_confirmed",
+    // Bank-citability is the gate, not just the proofType: the classifier
+    // grants it to an in-transit shipment only with a named carrier and a
+    // parcel identifier, so a printed label or a batch reference can never
+    // license a carrier-possession sentence. A carrier-confirmed delivery also
+    // satisfies it — that parcel was handed to, and moved with, the carrier.
+    evaluate: (facts) =>
+      facts.some((f) => {
+        if (!DELIVERY_CATEGORIES.includes(f.category) || f.bankEligible !== true) return false;
+        const proofType = (f.value as { proofType?: unknown } | null)?.proofType;
+        return (
+          proofType === "in_transit" ||
+          proofType === "delivered_confirmed" ||
+          proofType === "signature_confirmed"
+        );
+      }),
+  },
+
   signature_captured: {
     id: "signature_captured",
     description:

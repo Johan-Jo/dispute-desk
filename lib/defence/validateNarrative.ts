@@ -25,12 +25,16 @@ import {
   deriveClaimCapabilities,
 } from "./claimCapabilities";
 import { FACT_PREDICATES } from "./factPredicates";
+import {
+  internalConstraintViolations,
+  type InternalNarrativeConstraints,
+} from "./internalConstraints";
 import { isBankIncludedFact } from "./bankInclusion";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
-  FactPredicateId,
+  GuardedBankPhrase,
   NarrativeSectionKey,
   PackageMode,
   ReasonCodeGuidance,
@@ -108,8 +112,16 @@ import type {
  *      can appear negated ("no signature was captured", "never signed
  *      for"). Bumped so packages that failed on a negated non-claim
  *      regenerate.
+ *   5  (2026-09-23) — non-receipt letters (docs/plans/non-receipt-delivery-
+ *      evidence.plan.md §4.1(c), §6.3, §6.6). The item-not-received family
+ *      hard-bans arguments from the absence of a return, denials that a
+ *      refund was requested, and collector / identity claims; internal
+ *      carrier-status and proof-type enums are banned in every family; and a
+ *      new `internalConstraints` input refuses a refund-request denial when a
+ *      stored customer message asked for one, in any family. Bumped so the
+ *      scheduled drafts that argue from "no return" are rebuilt, not filed.
  */
-export const VALIDATOR_VERSION = 4;
+export const VALIDATOR_VERSION = 5;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -156,6 +168,13 @@ export const FORBIDDEN_PHRASES = [
   // still banned in ANY position by the bare pattern below.
   /\bfulfillment\s+status\s+of\s+(?:UNFULFILLED|FULFILLED|PARTIAL)\b/,
   /\bUNFULFILLED\b/,
+  // Internal carrier-status and proof-type enums. They are hash and routing
+  // inputs, never English: cay-collective #14784's letter told the issuer the
+  // carrier "recorded a CollectedAtPickup status event". Case-sensitive on
+  // purpose — the verbatim identifier is the leak; "collected at the pickup
+  // point" is the permitted prose (non-receipt plan §6.6, v5).
+  /\b(?:CollectedAtPickup|DeliveredToPickup|ReturnedToSender|NotDelivered|OutForDelivery|InTransit)\b/,
+  /\b(?:delivered_confirmed|delivered_unverified|signature_confirmed|label_created|returned_to_sender|in_transit|delivered_final_verified)\b/,
 ];
 
 export const NARROW_AGGRESSIVE_PHRASES = [
@@ -185,7 +204,10 @@ export interface ValidateNarrativeInput {
   /** Family-level hard-banned phrases. v2.2+. */
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (v5). Never shown
+   *  to the generator. See lib/defence/internalConstraints.ts. */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 /** Shared phrase + guard check for any single piece of prose. The layer
@@ -206,7 +228,103 @@ export interface RunPhraseAndGuardChecksInput {
    *  (`ReasonCodeFamily.guardedBankPhrases`). Each entry is rejected
    *  only when its `requires` predicate evaluates `false` against
    *  `approvedFacts`. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
+}
+
+/* ── Shipment-scoped guards (validator v5, non-receipt plan §4.1(b)) ───────
+ *
+ * A case-wide predicate lets ONE shipment license a claim about ANOTHER: a
+ * valid GOFO transit fact would pass "the USPS shipment is in transit" about a
+ * batch reference. So for a `shipmentScoped` guard each matching SENTENCE is
+ * checked against the shipment(s) it names — by tracking number, or by carrier
+ * name when that carrier is unique on the order.
+ *
+ * Shipment identities come from the delivery fact's `shipmentIndex` (written
+ * by the classifier, stripped from the LLM payload). The shipment the fact
+ * cites is evaluated as the real fact; every other shipment as a non-citable
+ * stand-in carrying only its own tier — so it can never satisfy a predicate
+ * that requires bank-citability. Facts without an index (older packs) fall
+ * back to the case-wide evaluation.
+ */
+interface ShipmentRef {
+  key: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  fact: EvidenceFact;
+}
+
+function shipmentRefsOf(facts: readonly EvidenceFact[]): ShipmentRef[] | null {
+  const refs = new Map<string, ShipmentRef>();
+  let sawIndex = false;
+  for (const f of facts) {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") continue;
+    const v = (f.value ?? {}) as Record<string, unknown>;
+    const index = Array.isArray(v.shipmentIndex) ? (v.shipmentIndex as Array<Record<string, unknown>>) : null;
+    if (!index) continue;
+    sawIndex = true;
+    for (const s of index) {
+      const key = typeof s.instanceKey === "string" ? s.instanceKey : null;
+      if (!key || refs.has(key)) continue;
+      const trackingNumber = typeof s.trackingNumber === "string" ? s.trackingNumber : null;
+      const carrier = typeof s.carrier === "string" ? s.carrier : null;
+      const isCited = trackingNumber !== null && trackingNumber === v.trackingNumber;
+      refs.set(key, {
+        key,
+        carrier,
+        trackingNumber,
+        fact: isCited
+          ? f
+          : {
+              ...f,
+              bankEligible: false,
+              includeInBankNarrative: false,
+              value: { fieldKey: v.fieldKey, proofType: s.proofType ?? null, carrier, trackingNumber },
+            },
+      });
+    }
+  }
+  return sawIndex ? [...refs.values()] : null;
+}
+
+function namedShipments(sentence: string, refs: readonly ShipmentRef[]): ShipmentRef[] {
+  const lower = sentence.toLowerCase();
+  const byNumber = refs.filter((r) => r.trackingNumber && sentence.includes(r.trackingNumber));
+  if (byNumber.length > 0) return byNumber;
+  return refs.filter((r) => {
+    if (!r.carrier) return false;
+    const c = r.carrier.toLowerCase();
+    // A carrier name identifies a shipment only when it is unique on the order.
+    const unique = refs.filter((o) => o.carrier?.toLowerCase() === c).length === 1;
+    return unique && lower.includes(c);
+  });
+}
+
+/** The first offending sentence, or null when every scoped claim is supported. */
+function shipmentScopedViolation(
+  text: string,
+  entry: GuardedBankPhrase,
+  approvedFacts: EvidenceFact[],
+): string | null {
+  const predicate = FACT_PREDICATES[entry.requires];
+  if (!predicate) return null;
+  const refs = shipmentRefsOf(approvedFacts);
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  for (const sentence of sentences) {
+    if (!entry.pattern.test(sentence)) continue;
+    if (!refs) {
+      if (!predicate.evaluate(approvedFacts)) return sentence.trim();
+      continue;
+    }
+    const named = namedShipments(sentence, refs);
+    const scope = named.length > 0 ? named : refs.length <= 1 ? refs : null;
+    const ok = scope
+      ? scope.every((r) => predicate.evaluate([r.fact]))
+      : refs.every((r) => predicate.evaluate([r.fact]));
+    if (!ok) return sentence.trim();
+  }
+  return null;
 }
 
 export function runPhraseAndGuardChecks(
@@ -220,6 +338,7 @@ export function runPhraseAndGuardChecks(
     layer,
     extraHardPhrases,
     guardedPhrases,
+    internalConstraints,
   } = input;
   const errors: ValidationError[] = [];
   if (!text || !text.trim()) return errors;
@@ -253,6 +372,21 @@ export function runPhraseAndGuardChecks(
   // 1b. Family-specific guarded list — rejected only when the gating
   //     predicate fails against approvedFacts (v2.2+).
   for (const entry of guardedPhrases ?? []) {
+    if (entry.shipmentScoped) {
+      // Per sentence, against the shipment the sentence names (v5, plan §4.1(b)).
+      const offending = shipmentScopedViolation(text, entry, approvedFacts);
+      if (offending) {
+        errors.push({
+          section: sectionKey,
+          rule: "forbidden_phrase",
+          message: `Shipment claim "${offending}" in ${sectionKey} is not supported by the shipment it names (requires ${entry.requires})`,
+          evidenceText: offending,
+          requiredFact: entry.requires,
+          layer,
+        });
+      }
+      continue;
+    }
     const match = text.match(entry.pattern);
     if (!match) continue;
     const predicate = FACT_PREDICATES[entry.requires];
@@ -263,6 +397,19 @@ export function runPhraseAndGuardChecks(
       message: `Unsupported channel assertion "${match[0]}" in ${sectionKey} (requires ${entry.requires})`,
       evidenceText: match[0],
       requiredFact: entry.requires,
+      layer,
+    });
+  }
+  // 1b'. Internal constraints (v5). A sentence denying a refund /
+  //      reimbursement request is refused when a stored customer message on an
+  //      order-matched ticket asked for one. The message itself never reaches
+  //      the generator — only this check knows it exists.
+  for (const v of internalConstraintViolations(text, sectionKey, internalConstraints)) {
+    errors.push({
+      section: sectionKey,
+      rule: "forbidden_phrase",
+      message: `Refund-request denial "${v.evidenceText}" in ${sectionKey} contradicts a stored customer request`,
+      evidenceText: v.evidenceText,
       layer,
     });
   }
@@ -387,6 +534,7 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
         layer: "narrative",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
   }
@@ -477,7 +625,9 @@ export interface ValidateComposedDocumentInput {
   /** Family-level hard-banned phrases. v2.2+. */
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 /** Run forbidden-phrase + claim-guard checks against every sub-text of
@@ -501,6 +651,7 @@ export function validateComposedDocument(
         layer: "thesis",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
     errors.push(
@@ -512,6 +663,7 @@ export function validateComposedDocument(
         layer: "llm",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
     errors.push(
@@ -523,6 +675,7 @@ export function validateComposedDocument(
         layer: "fallback",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
   }

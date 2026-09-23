@@ -16,6 +16,7 @@ import { describe, it, expect } from "vitest";
 import { alwaysAdmissibleCategories, ALWAYS_ADMISSIBLE_RULES } from "../alwaysAdmissible";
 import { buildLlmFactPayload } from "../narrativeWriter";
 import { resolveReasonCodeModule } from "../reasonCodes/registry";
+import { ALL_REASON_CODE_FAMILIES } from "../reasonCodes/familyRegistry";
 import type { EvidenceFact } from "../types";
 
 function fact(overrides: Partial<EvidenceFact> & { value: Record<string, unknown> }): EvidenceFact {
@@ -135,14 +136,41 @@ describe("the label can no longer suppress an admitted category", () => {
     expect(payload.reasonCodeGuidance.allowedFactCategories).toContain("payment_authentication");
   });
 
-  it("inr_product_not_received gains no_return_initiated", () => {
+  it("inr_product_not_received does NOT gain no_return_initiated (denied for the family)", () => {
+    /* Reversed 2026-09-23 (non-receipt plan §4.1(a)). A cardholder who says the
+     * goods never arrived has nothing to return, so "no return was initiated"
+     * reads as agreement that nothing arrived — blume-box #360980 and
+     * cay-collective #14784 both argued it. The rule now carries
+     * `deniedForFamilies: ["item_not_received"]`. */
     const payload = payloadFor("13.1", [
       fact({
         category: "no_return_initiated",
         value: { fieldKey: "no_return_initiated" },
       }),
     ]);
+    expect(payload.reasonCodeGuidance.allowedFactCategories).not.toContain("no_return_initiated");
+  });
+
+  it("credit_not_processed still admits no_return_initiated (the family where it earns its place)", () => {
+    const payload = payloadFor("13.6", [
+      fact({
+        category: "no_return_initiated",
+        value: { fieldKey: "no_return_initiated" },
+      }),
+    ]);
     expect(payload.reasonCodeGuidance.allowedFactCategories).toContain("no_return_initiated");
+  });
+
+  it("every rule's denial list names only real families, and a denied rule is skipped for exactly that family", () => {
+    const f = fact({ category: "no_return_initiated", value: { fieldKey: "no_return_initiated" } });
+    expect(alwaysAdmissibleCategories([f], "item_not_received")).toEqual([]);
+    expect(alwaysAdmissibleCategories([f], "credit_not_processed")).toEqual(["no_return_initiated"]);
+    // An unresolvable family applies no denial — unchanged behaviour for callers without one.
+    expect(alwaysAdmissibleCategories([f], null)).toEqual(["no_return_initiated"]);
+    const families = new Set(ALL_REASON_CODE_FAMILIES.map((fam) => fam.key));
+    for (const rule of ALWAYS_ADMISSIBLE_RULES) {
+      for (const denied of rule.deniedForFamilies ?? []) expect(families.has(denied)).toBe(true);
+    }
   });
 
   it("STOPS admitting no_return_initiated once the carrier returned the parcel", () => {

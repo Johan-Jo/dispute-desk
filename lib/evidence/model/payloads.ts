@@ -38,15 +38,11 @@ import type { EvidenceFieldKey } from "./domains";
 
 /* ── Shared value types ──────────────────────────────────────────────── */
 
-export type DeliveryProofType =
-  | "signature_confirmed"
-  | "delivered_confirmed"
-  | "delivered_unverified"
-  | "label_created"
-  /** The carrier brought the parcel back. Scores `invalid` like
-   *  `label_created`, but it is a different fact — see the note on the
-   *  union in `lib/argument/canonicalEvidence.ts`. */
-  | "returned_to_sender";
+/** Re-exported from the ONE definition in `lib/argument/canonicalEvidence.ts`
+ *  (members and their meaning are documented there). A private copy here had
+ *  to be edited by hand for every new state. */
+import type { DeliveryProofType } from "@/lib/argument/canonicalEvidence";
+export type { DeliveryProofType };
 
 export interface TrackingEntry {
   carrier: string | null;

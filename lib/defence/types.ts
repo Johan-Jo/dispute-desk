@@ -206,6 +206,20 @@ export type ReasonCodeFamilyKey =
   | "authorization_error"
   | "fallback";
 
+/** A bank phrase allowed only when a fact predicate holds. */
+export interface GuardedBankPhrase {
+  pattern: RegExp;
+  requires: FactPredicateId;
+  /**
+   * Evaluate the predicate against the shipment the SENTENCE names, not the
+   * whole case (non-receipt plan §4.1(b), rev 5). One valid GOFO transit fact
+   * must not license "the USPS shipment is in transit". A matching sentence
+   * that names no shipment passes only on a single-shipment order, or when
+   * every shipment satisfies the predicate.
+   */
+  shipmentScoped?: boolean;
+}
+
 export interface ReasonCodeFamily {
   key: ReasonCodeFamilyKey;
   displayName: string;
@@ -238,7 +252,7 @@ export interface ReasonCodeFamily {
    *  substitution when they aren't (e.g. "online transaction",
    *  "ecommerce transaction" gated by an on-record channel signal).
    *  v2.2+. */
-  guardedBankPhrases: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedBankPhrases: readonly GuardedBankPhrase[];
   version: number;
 }
 
@@ -399,6 +413,11 @@ export interface StrategySubmodule {
 
 export type FactPredicateId =
   | "delivery_confirmed"
+  /** The cited shipment is in the carrier's possession, with a named carrier
+   *  and a parcel identifier, and is bank-citable as shipment context
+   *  (non-receipt plan §4.1(b), §6.4). Licenses "in transit with {carrier}"
+   *  — never delivery or receipt. */
+  | "shipment_in_carrier_possession"
   | "signature_captured"
   | "digital_access_used"
   | "digital_access_granted"
