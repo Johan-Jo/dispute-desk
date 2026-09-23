@@ -3119,6 +3119,15 @@ live rebuild, and the package skipped with `no_bank_eligible_facts`. The specifi
 display status now wins; a bare `SUCCESS` with no transit or delivery status is still
 `delivered_unverified`. Both grade `supporting`, so strength is unchanged.
 
+**The cited shipment must be one an issuer may be shown (2026-09-23).** The second live
+rebuild of #360980 still skipped. Its USPS batch reference is a bare-`SUCCESS` fulfilment,
+so it resolves `delivered_unverified`, and `citedShipment` ranked by tier alone:
+`delivered_unverified` (3) beat GOFO's `in_transit` (2) and the delivery fact cited a
+shipment that is never bank-eligible. `citedShipment` now sorts bank-citable shipments
+first (`signature_confirmed`, `delivered_confirmed`, or `in_transit` with a named carrier
+and a parcel identifier), then by tier. A case with no citable shipment cites exactly what
+it did before.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

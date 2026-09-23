@@ -88,6 +88,28 @@ describe("(b) Case A: the in-transit shipment becomes bank-citable, and only it"
     expect(r.predicateEvaluations.delivery_confirmed).toBe(false);
   });
 
+  it("live shape: the batch reference is a SUCCESS fulfilment (delivered_unverified) and still loses to GOFO", () => {
+    // Prod, 2026-09-23: the USPS row resolves delivered_unverified, which
+    // outranks in_transit by tier. Citability must win, or G1 skips the case.
+    const uspsSuccess = { ...USPS_BATCH, shipmentProofType: "delivered_unverified" };
+    for (const order of [[uspsSuccess, GOFO], [GOFO, uspsSuccess]]) {
+      const r = classify([shippingSection(order, "delivered_unverified")]);
+      const f = deliveryFact(r);
+      expect(f.value.carrier).toBe("GOFO");
+      expect(f.value.proofType).toBe("in_transit");
+      expect(f.bankEligible).toBe(true);
+      expect(r.eligible).toBe(true);
+    }
+  });
+
+  it("delivered_unverified is still cited when nothing citable exists (and stays non-citable)", () => {
+    const uspsSuccess = { ...USPS_BATCH, shipmentProofType: "delivered_unverified" };
+    const labelOnly = { ...GOFO, shipmentProofType: "label_created", displayStatus: "FULFILLED" };
+    const f = deliveryFact(classify([shippingSection([labelOnly, uspsSuccess], "delivered_unverified")]));
+    expect(f.value.proofType).toBe("delivered_unverified");
+    expect(f.bankEligible).toBe(false);
+  });
+
   it("selects the carrier-possession strategy, not the delivery stack", () => {
     const r = classify([shippingSection([USPS_BATCH, GOFO])]);
     const keys = rankStrategies({
