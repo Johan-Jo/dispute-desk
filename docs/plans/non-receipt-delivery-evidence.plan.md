@@ -1,6 +1,6 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** PLAN ONLY (**v5.1, 2026-09-23**). Not started. **Contains two time-boxed live
+**Status:** PLAN ONLY (**v5.2, 2026-09-23**; cleared for implementation). Not started. **Contains two time-boxed live
 exposures — §0. Read that first.**
 
 > **Rev 5.1: three targeted corrections to §6.1.**
@@ -12,8 +12,9 @@ exposures — §0. Read that first.**
 > fulfillment. Its delivery evidence is kept and cited but does not lift the package.
 > **(3)** The timing safeguard covers **every** case the new rollup makes `strong`
 > (QFD, a lone signature, or any mix), defined by outcome against today's formula.
-> Re-measured: 0 open cases affected today. New decision Q-8: how to corroborate
-> provenance.
+> Re-measured: no current case reaches strong under the corroborated-provenance rule,
+> so filing timing stays unchanged. Ratings still change through the weak → moderate
+> correction. Q-8 becomes an implementation investigation.
 
 > **Rev 5: final corrections** (re-verified against `develop` @ `0d383e16` and prod).
 > **(1)** A verified carrier-recorded final delivery, including completed collection,
@@ -921,8 +922,9 @@ named, temporary ladder branch that keeps **every case this change makes `strong
 `hold_for_deadline`. It is defined by outcome, whatever the route: new `overall` is
 `strong` while today's formula is not. Cases already `strong` keep today's behaviour.
 That is not a policy change: it holds today's timing in place until §11 Q-7 decides it
-separately. Measured: 0 open cases are affected today; 1 auto-mode case would be once
-provenance corroboration lands (§6.1.4).
+separately. Measured: no current case reaches strong under the corroborated-provenance
+rule, so filing timing is unchanged; 1 auto-mode case would reach it once provenance
+is corroborated (§6.1.4). Ratings still change through the weak → moderate step above.
 
 ### 4.3 P2 — communications classification
 
@@ -1183,10 +1185,17 @@ have no PostNord adapter (DHL is the only one). So today Case B rates
 package `strong` only once provenance is corroborated: a PostNord lookup, a
 tracking-app feed with a carrier-origin contract, or a verified Shopify source contract
 for this event. The letter is the same either way. It cites the carrier's recorded
-delivery, and nothing in it depends on the rating. The screenshot itself is not case
-evidence. The fixture and the letter use Shopify's stored events, which carry the
-provenance and the association. A screenshot would need its own source record before
-it could be cited.
+delivery, and nothing in it depends on the rating.
+
+To be explicit: the `moderate` rating is a **source-verification limitation**, not a
+finding about the parcel. The plan recognises the 18 September event as completed
+delivery. The parcel is **not** treated as still waiting at the service point. What is
+missing is only our own record corroborating that the event came from the carrier (§11
+Q-8).
+
+The screenshot itself is not case evidence. The fixture and the letter use Shopify's
+stored events, which carry the association. A screenshot would need its own source
+record before it could be cited.
 
 #### 6.1.3 The **package**: when a QFD carries an INR case to `strong`
 
@@ -1227,9 +1236,19 @@ for auto-mode cases, and it must not do that silently.
 Rev 5 scoped it to QFD cases only, but §6.1.3 also upgrades a lone `signature_confirmed`
 signal from `moderate` overall (today's `hasStrongDelivery` rung,
 `caseStrength.ts:755-769`) to `strong`. So the rule is defined by **outcome, not route**.
-The rollup computes both ratings: `overall` (new) and `overallBeforeRev5` (today's formula,
-kept as a pure function next to it). The ladder gets one named, temporary branch, in the
-same style as the existing `creditCovers` branch (`:239-241`, `:305-306`):
+The rollup computes both ratings: `overall` (new) and `overallBeforeRev5`.
+
+**`overallBeforeRev5` uses today's signal grades as well as today's rollup.** Running the
+old rollup over the *new* grades would be wrong: a newly `strong` QFD plus any other
+strong signal would give `strongCount >= 2`, look "previously strong", and bypass the
+safeguard. So it is computed in two steps, both pure and both kept next to the new code:
+1. Re-grade every delivery signal with today's mapping. `delivered_final_verified` →
+   `delivered_confirmed` → `moderate`; `signature_confirmed` stays `strong`; every other
+   category is unchanged.
+2. Run today's family rollup over those re-graded signals.
+
+The ladder gets one named, temporary branch, in the same style as the existing
+`creditCovers` branch (`:239-241`, `:305-306`):
 
 > *delivery family, `overall === "strong"` and `overallBeforeRev5 !== "strong"` →
 > `hold_for_deadline`, reason code `strength_upgraded_timing_held`.*
@@ -1257,7 +1276,10 @@ shipment, and no contradicting record.
 Signature route: **0** of 287 non-receipt disputes since June carry a signature (D3),
 so no open case is upgraded through it.
 
-**Result: 0 open cases change rating or timing today.** The safeguard still ships with
+**Result: no current case reaches `strong` under the corroborated-provenance rule, and
+filing timing is unchanged.** Ratings **do** change: the weak → moderate correction
+(§4.2) moves receipt-grade cases, and it changes no timing because `moderate` holds for
+the deadline. The safeguard still ships with
 P1, because the count moves as soon as provenance corroboration lands (a PostNord lookup,
 a tracking-app contract, or a verified Shopify source contract). At that point #352543,
 the one auto-mode case, is the first that would file early without it.
@@ -1965,8 +1987,13 @@ repo's verified failures, and each must be shown to fail before the fix.
 8e. **Filing timing is unchanged for every newly upgraded case (§6.1.4).** In auto mode,
    one test per route, each → `hold_for_deadline` with `strength_upgraded_timing_held`,
    not `auto_file`: (i) a lone QFD; (ii) a lone `signature_confirmed` (today `moderate`
-   overall); (iii) a QFD plus a moderate signal. Negative: a case that is `strong` under
-   today's formula (two strong signals) → still `auto_file`, unchanged.
+   overall); (iii) a QFD plus a moderate signal; **(iv) a QFD plus another `strong`
+   signal**. For (iv), `overallBeforeRev5` re-grades the QFD to `moderate` and gets
+   today's rollup = `moderate` (one strong + one moderate), so the case is held. A
+   before-score that reused the new grades would see two strong signals and wrongly let
+   it auto-file. Negative: a case that is `strong` under today's grades **and** today's
+   rollup (two independently strong signals, e.g. `signature_confirmed` plus a strong
+   customer acknowledgement) → still `auto_file`, unchanged.
    `decisionLadder.test.ts:345` (`moderate` holds) still passes.
 9. `in_transit` alone → case **is** weak, and the in-transit explanation renders
    (not `weak.moderateOnly` over an unrelated fact).
@@ -2076,18 +2103,28 @@ changed the outcome?
 (through a QFD, a lone signature, or any mix the new rollup lifts) but holds their
 filing date through a temporary ladder branch. Removing the branch means those auto-mode
 INR cases file at their next decision point instead of on the deadline. Measured
-2026-09-23 (Q19): **0** open cases today, because every receipt-grade case is
+2026-09-23 (Q19): no current case reaches `strong`, because every receipt-grade case is
 `shopify_native` without corroborated provenance and none carries a signature. **1**
 (blume-box #352543) would be affected once provenance corroboration lands. Review-mode
 cases are unaffected either way. Remove the branch, keep it, or remove it per shop? To
 be decided with the then-current set printed.
 
-**Q-8 · How to corroborate carrier provenance (§6.1.1 condition 1).** Options: (a) a
-PostNord adapter or lookup, like the existing DHL adapter; (b) the tracking-app feeds of
-`tracking-app-delivery-signals.plan.md`, once their source contract is verified; (c) a
-verified Shopify source contract for fulfillment events, i.e. documented proof of which
-writer created an event. Until one exists, no `shopify_native` delivery reaches
-`strong`. Which first?
+**Q-8 · Corroborating carrier provenance (§6.1.1 condition 1). Decided (maintainer,
+2026-09-23): an implementation investigation, not a new integration.** In order:
+1. **Check what we already hold.** Establish whether existing Shopify or integration
+   data proves origin for these events: the documented Shopify fulfillment-event source
+   contract, the app or integration that wrote them, and any tracking-app record
+   already stored for the shipment. If it does, condition 1 is met from that source,
+   and the rule is recorded with its evidence.
+2. **Otherwise, a verified lookup for the specific shipment.** Record a verified
+   PostNord tracking lookup against `00573132901924649740`: the carrier's own public
+   tracking for that identifier, with retrieval time, the event text and time matching
+   Shopify's `DELIVERED` 2026-09-18 16:23Z, and the stored request/response as the
+   provenance record on the shipment. That corroborates **this** case.
+3. A full PostNord carrier integration is **not** required to corroborate one case. It
+   stays a separate, later option for making the corroboration systematic.
+
+Until step 1 or 2 produces a record, Case B rates `moderate` (§6.1.2).
 
 **Q-6 · Document-specific approval (§9.5).** Build the optional exact-document approval
 now (P1), or defer until a merchant asks to approve wording rather than schedule
