@@ -3218,6 +3218,21 @@ date from a harmful one:
 `carrierPossessionUndated` keeps its v11 semantics (the validator does not refuse a true dated
 ordering); the prompt simply no longer invites one.
 
+**Validator 13, prompt 23 (same day).** The v12 rebuild of #360980 failed. Two of its refusals were
+correct: *"both items left the merchant's possession and were tendered to their respective
+carriers prior to the filing of this dispute"*. Two were of TRUE sentences, and the validator
+now handles both:
+
+- `shipmentScopedViolation` reads each CLAUSE (split on `;` and `, and|but|while|whereas`)
+  against the parcel it names, so one sentence may give GOFO's transit and the sunscreen's
+  fulfilment.
+- "the shipment/parcel" now refers back to the parcel named last in the paragraph.
+
+The item-not-received family (v7) hard-bans "prior to / before / ahead of the (filing of this)
+dispute / chargeback / claim". The model holds no dispute date. A dated in-transit citation no
+longer carries `carrierStatusObservedAt`, and the overlay lists the forbidden wording
+(paraphrased, since a prompt may not quote its own banned phrase).
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The
