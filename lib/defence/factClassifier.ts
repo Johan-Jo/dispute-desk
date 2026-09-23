@@ -359,12 +359,32 @@ function shipmentKey(f: Record<string, unknown>, index: number): string {
   return typeof n === "string" && n ? n : `#${index}`;
 }
 
+/** A shipment whose own record an issuer may be shown: a carrier-confirmed
+ *  tier, or a named-carrier parcel in transit (§4.1(b)). `delivered_unverified`
+ *  is NOT — it is a Shopify fulfilment status with no carrier event behind it. */
+function isBankCitableShipment(c: {
+  proofType: string;
+  tracking: TrackingRow | null;
+  parcel: boolean;
+}): boolean {
+  if (c.proofType === "signature_confirmed" || c.proofType === "delivered_confirmed") return true;
+  const carrier = typeof c.tracking?.carrier === "string" ? c.tracking.carrier.trim() : "";
+  return c.proofType === "in_transit" && c.parcel && carrier.length > 0;
+}
+
 /**
- * The ONE shipment a delivery fact cites (non-receipt plan §4.1(f)): the
- * best-evidenced by its OWN tier, preferring a parcel identifier over a batch
- * reference at equal tier, ties broken by shipment key — never by array
- * position, so reversing `fulfillments[]` cites the same parcel. Null when
- * the payload carries no per-shipment tiers (older packs, manual uploads).
+ * The ONE shipment a delivery fact cites (non-receipt plan §4.1(f)): a
+ * bank-citable shipment first, then the best-evidenced by its OWN tier,
+ * preferring a parcel identifier over a batch reference at equal tier, ties
+ * broken by shipment key — never by array position, so reversing
+ * `fulfillments[]` cites the same parcel. Null when the payload carries no
+ * per-shipment tiers (older packs, manual uploads).
+ *
+ * Citability outranks tier because `delivered_unverified` (3) outranks
+ * `in_transit` (2): blume-box #360980's USPS batch reference is a SUCCESS
+ * fulfilment, so it resolves `delivered_unverified`, won the sort, and left
+ * the case with nothing an issuer could be shown while the real GOFO parcel
+ * was in transit.
  */
 function citedShipment(payload: Record<string, unknown>): CitedShipment | null {
   const fulfillments = Array.isArray(payload.fulfillments)
@@ -395,6 +415,7 @@ function citedShipment(payload: Record<string, unknown>): CitedShipment | null {
   if (candidates.length === 0) return null;
   candidates.sort(
     (a, b) =>
+      Number(isBankCitableShipment(b)) - Number(isBankCitableShipment(a)) ||
       (PROOF_RANK_FOR_CITATION[b.proofType] ?? -1) - (PROOF_RANK_FOR_CITATION[a.proofType] ?? -1) ||
       Number(b.parcel) - Number(a.parcel) ||
       a.instanceKey.localeCompare(b.instanceKey),
