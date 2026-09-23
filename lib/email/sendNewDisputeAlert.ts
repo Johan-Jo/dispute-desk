@@ -1053,7 +1053,7 @@ export async function claimAndSendDeferredNewDisputeAlert(
         ? await sb.from("evidence_items").select("payload").eq("pack_id", packRow.id)
         : { data: null };
       const packJson = (packRow?.pack_json ?? null) as {
-        case_strength?: { overall?: string };
+        case_strength?: { overall?: string; overallBeforeRev5?: string };
         coverage?: { state?: string };
         fatal_loss?: { triggered?: boolean };
         returned_to_sender?: { triggered?: boolean };
@@ -1064,6 +1064,7 @@ export async function claimAndSendDeferredNewDisputeAlert(
         // pipeline, which is exactly the condition `resolveHeldState` needs.
         automationMode: "auto",
         caseStrength: packJson?.case_strength?.overall ?? null,
+        caseStrengthBeforeRev5: packJson?.case_strength?.overallBeforeRev5 ?? null,
         coverageState: packJson?.coverage?.state ?? null,
         fatalLoss: packJson?.fatal_loss ?? null,
         returnedToSender: packJson?.returned_to_sender ?? null,

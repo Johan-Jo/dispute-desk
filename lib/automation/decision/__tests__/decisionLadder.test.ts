@@ -342,6 +342,41 @@ describe("the ladder", () => {
     expect(d.reasonCodes).toEqual(["review_required_present"]);
   });
 
+  describe("newly strong under the non-receipt rollup holds (plan §6.1.4)", () => {
+    const a = CONTRACT_FIXTURES[0].assessment;
+    const at = (overall: "strong" | "moderate", before?: "strong" | "moderate" | "weak") =>
+      deriveCaseAutomationDecision(
+        input({
+          assessment: {
+            ...a,
+            strength: {
+              ...a.strength,
+              overall,
+              ...(before !== undefined ? { overallBeforeRev5: before } : {}),
+            },
+          },
+        }),
+      );
+
+    it.each(["moderate", "weak"] as const)("strong now, %s before → held, rating kept", (before) => {
+      const d = at("strong", before);
+      expect(d.action).toBe("hold_for_deadline");
+      expect(d.reasonCodes).toEqual(["strength_upgraded_timing_held"]);
+    });
+
+    it("strong before as well → auto-files as it did", () => {
+      expect(at("strong", "strong").action).toBe("auto_file");
+    });
+
+    it("no overallBeforeRev5 (other families, older packs) → unchanged", () => {
+      expect(at("strong").action).toBe("auto_file");
+    });
+
+    it("moderate now → the moderate rung answers, not this one", () => {
+      expect(at("moderate", "weak").reasonCodes).toEqual(["eligible"]);
+    });
+  });
+
   it("moderate holds for the deadline rather than filing early", () => {
     const a = CONTRACT_FIXTURES[0].assessment;
     const d = deriveCaseAutomationDecision(

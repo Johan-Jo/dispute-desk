@@ -111,8 +111,9 @@ const EXPECTED: Record<string, string> = {
   "delivery: null payload": "invalid",
 };
 
-/** The version the snapshot above describes. */
-const SNAPSHOT_POLICY_VERSION = 3;
+/** The version the snapshot above describes. v4 moved the item-not-received
+ *  ROLLUP (caseStrength.ts), not a category — the snapshot is unchanged. */
+const SNAPSHOT_POLICY_VERSION = 4;
 
 describe("categorization is pinned to the scoring policy version", () => {
   it("every pinned case still categorizes as the snapshot says", () => {

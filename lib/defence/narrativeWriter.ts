@@ -163,7 +163,20 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // verbs it may never take.
 // v20 (2026-09-23) — whole-order sentences may not mention a carrier record
 // (#360980's v9 draft: "each with its own carrier record", one had none).
-const PROMPT_VERSION = 20;
+// v21 (2026-09-23) — the payload carries `disputeOpenedAt`, and an in-transit
+// shipment carries `inTransitSince` (its first dated in-carrier event). The
+// item-not-received overlay dates transit from that event instead of "status
+// as retrieved", and may place a fulfilment or a dated transit event before
+// the dispute. blume-box #360980: GOFO in transit since 17 Sep, opened 19 Sep.
+// v22 (2026-09-23) — v21's timing licence is withdrawn. A fulfilment date is
+// the merchant's own record, not proof of dispatch, and set against the
+// purchase date it can expose a late shipment (#360980: ordered 22 Aug,
+// fulfilled 15/16 Sep against a 1–3 business-day promise). Until the
+// delivery-commitment resolver (plan P3) can tell a helpful date from a
+// harmful one, the model gets no dispute date, a carrier-recorded parcel
+// carries no fulfilment date, and no record is related to the dispute or the
+// order date.
+const PROMPT_VERSION = 22;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

@@ -31,6 +31,9 @@
  *      signature, "not yet delivered", "the merchant does not assert
  *      otherwise". Each is true and each hands the cardholder their argument
  *      (blume-box #360980, 2026-09-23). The letter says what the records show.
+ *   5. (v6) Fulfilment timing: a fulfilment related to the dispute or to the
+ *      order date. A fulfilment is the merchant's own record, and its gap
+ *      from the purchase can expose a late shipment (#360980).
  *
  * `overlayPromptBody` (v3): every shipment on the order is accounted for, each
  * only by what its own record shows (blume-box #360980 had two products in two
@@ -48,16 +51,17 @@ export const item_not_received: ReasonCodeFamily = {
   fallbackModuleKey: "inr_product_not_received",
   overlayPromptBody: [
     "ITEM NOT RECEIVED — how the shipments are described:",
-    "MULTIPLE SHIPMENTS. When a delivery fact carries `shipments`, the order left in more than one parcel. Account for EVERY entry: in fulfillmentArgument describe each one, and in executiveSummary state that the order was fulfilled in that many shipments. For each entry give the products it contained (items), the carrier, and the date the merchant fulfilled it (fulfilledAt), e.g. 'the merchant fulfilled The Back to School Bundle on 15 September 2026'. Then state only what THAT entry supports:",
+    "MULTIPLE SHIPMENTS. When a delivery fact carries `shipments`, the order left in more than one parcel. Account for EVERY entry: in fulfillmentArgument describe each one, and in executiveSummary state that the order was fulfilled in that many shipments. For each entry give the products it contained (items) and the carrier, then state only what THAT entry supports:",
     "- referenceIsTrackingNumber true: cite reference as the tracking number, with trackingUrl when present.",
     "- referenceIsTrackingNumber false: call reference the shipping reference, never a tracking number, and give no link.",
     "- proofType delivered_confirmed or signature_confirmed: the carrier's record confirms delivery on deliveredAt.",
-    "- proofType in_transit: the carrier's record shows the shipment in transit (status as retrieved on carrierStatusObservedAt).",
+    "- proofType in_transit with inTransitSince: the carrier's tracking record shows the shipment in transit since inTransitSince.",
+    "- proofType in_transit without inTransitSince: the carrier's record shows the shipment in transit (status as retrieved on carrierStatusObservedAt).",
     "- any other proofType: the carrier has NO record for this parcel. Write it in exactly this shape and nothing more: 'The merchant fulfilled <items> on <fulfilledAt> (<carrier> shipping reference <reference>).' For this parcel never use tendered, handed, accepted, dispatched, shipped, sent, collected, picked up, in transit, delivered, or left the merchant's possession, and never include it in a sentence that says what a carrier did or holds.",
     "- A sentence covering the whole order ('both items', 'each item', 'the order') may only say the merchant fulfilled them. Carrier handling, and any mention of a carrier record, belongs only in a sentence about the parcel whose own entry records it.",
     "Never write a proofType value itself; use plain words.",
     "AFFIRMATIVE ONLY. Describe what the records show. Never describe what a record lacks (a scan, a signature, a confirmation, an event), and never describe the merchant's position by what it declines to claim.",
-    "TIMING. An in-transit status has no hand-over date. Never relate the carrier's custody, the transit status, or entry into the carrier network to when the dispute was opened or filed.",
+    "TIMING. Never relate a fulfilment, a transit status or any carrier event to when the dispute was opened or filed, or to when the order was placed, and never count the days between them. State each record's own date and nothing about the interval.",
   ].join("\n"),
   familyAvoid: [],
   prohibitedBankPhrases: [
@@ -82,6 +86,9 @@ export const item_not_received: ReasonCodeFamily = {
     /\bnot\s+yet\s+(?:been\s+)?delivered\b/i,
     /\bundelivered\b/i,
     /\bmerchant\s+(?:does|did)\s+not\s+(?:assert|claim|contend|allege|suggest)\b/i,
+    // 5. Fulfilment timing against the dispute or the order.
+    /\bfulfil\w*\b[^.;]{0,80}\b(?:before|prior\s+to|ahead\s+of|after|following|within)\b[^.;]{0,40}\b(?:dispute|chargeback|claim|order(?:ed)?|purchase|transaction)\b/i,
+    /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several)\s+(?:business\s+)?(?:days?|weeks?)\s+(?:after|before|following|prior\s+to)\s+(?:the\s+)?(?:order|purchase|transaction|dispute|chargeback|claim)\b/i,
   ],
   // Carrier-possession claims, each checked against the shipment the sentence
   // names (plan §4.1(b)). `shipment_in_carrier_possession` holds only for a
@@ -101,5 +108,5 @@ export const item_not_received: ReasonCodeFamily = {
     { pattern: /\b(?:each|both|every|all)\b[^.;]{0,50}\bcarrier\s+(?:record|tracking|scan|event)s?\b|\bcarrier\s+(?:record|tracking)s?\s+(?:for|of|on)\s+(?:each|both|every|all)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\bout\s+for\s+delivery\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
   ],
-  version: 5,
+  version: 6,
 };

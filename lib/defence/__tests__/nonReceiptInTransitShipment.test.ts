@@ -243,6 +243,11 @@ describe("Evidence Basis prints the in-transit status honestly", () => {
     expect(text).toContain("In transit with the carrier");
     expect(text).toContain("status as retrieved");
     expect(text).not.toContain("Confirmed");
-    expect(text).not.toContain("260914OET4");
+    // Both parcels are listed (2026-09-23): the batch reference as a shipping
+    // reference, never as a tracking number, never linked, never in transit.
+    const usps = rows.find((r) => r.value.includes("260914OET4"))!;
+    expect(usps.value).toContain("shipping reference 260914OET4");
+    expect(usps.value).not.toMatch(/transit|deliver/i);
+    expect(usps.link).toBeNull();
   });
 });

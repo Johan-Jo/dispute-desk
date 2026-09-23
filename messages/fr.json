@@ -1369,7 +1369,7 @@
     },
     "decisiveHint": {
       "fraud": "confirmation de livraison, signature au dossier ou cohérence appareil/session",
-      "delivery": "confirmation de signature du transporteur ou signaux de facturation/IP concordants",
+      "delivery": "une photo de livraison ou une signature fournie par le transporteur, ou un message du client confirmant la réception",
       "product": "la fiche produit telle qu'annoncée et la divulgation de votre politique de remboursement",
       "refund": "traitement de remboursement documenté ou communication du commerçant",
       "subscription": "la politique d'annulation et le calendrier de communication avec le client",
@@ -1398,11 +1398,11 @@
         "fraudAvsOnly": "L'authentification du paiement appuie ce dossier, mais des preuves décisives supplémentaires comme une confirmation de livraison, une cohérence appareil/session ou une confirmation client amélioreraient le dossier.",
         "strongAndModerate": "{strongLabel} et {moderateLabel} appuient ce dossier ; des preuves décisives supplémentaires le renforceraient.",
         "strongOnly": "{label} appuie ce dossier, avec une corroboration modérée ; des preuves décisives supplémentaires le renforceraient.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { et {label2}}} appuient ce dossier. Des preuves décisives supplémentaires telles que {hint} le renforceraient davantage."
+        "moderateOnly": "{label1}{label2, select, empty { appuie} other { et {label2} appuient}} ce dossier. Des preuves décisives supplémentaires telles que {hint} le renforceraient davantage."
       },
       "weak": {
         "strongAlone": "{label} appuie ce dossier, mais des preuves décisives supplémentaires (comme {hint}) le renforceraient.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { et {label2}}} apportent un appui partiel. Un signal solide tel que {hint} renforcerait considérablement le dossier.",
+        "moderateOnly": "{label1}{label2, select, empty { apporte} other { et {label2} apportent}} un appui partiel. Un signal solide tel que {hint} renforcerait considérablement le dossier.",
         "supportingOnly": "Le dossier est faible car le paquet de preuves contient principalement de la documentation complémentaire, mais aucune preuve décisive de {family}. {decisive} renforcerait le dossier.",
         "deliveryInTransit": "Faible pour l’instant car aucune confirmation de livraison n’est parvenue à Shopify — le suivi est actif, mais de nombreux transporteurs ne signalent jamais la livraison à Shopify. Si la page de suivi du transporteur indique le colis comme livré, téléversez cette confirmation comme preuve de livraison. {decisive} renforcerait le dossier."
       },

@@ -147,8 +147,16 @@ import type {
  *  10  (2026-09-23) — a carrier record claimed for EVERY parcel ("each with
  *      its own carrier record") is shipment-scoped (item_not_received v5);
  *      #360980's validated v9 draft said it with one parcel unrecorded.
+ *  11  (2026-09-23) — `carrierPossessionUndated` no longer fires for an
+ *      in-transit parcel whose first dated in-carrier event
+ *      (`inTransitSince`) precedes the dispute: that ordering is recorded,
+ *      true, and the merchant's best timing fact.
+ *  12  (2026-09-23) — item_not_received v6 bans relating a fulfilment to the
+ *      dispute or the order date, and counting days between them: a
+ *      fulfilment is the merchant's own record, and on #360980 the interval
+ *      (ordered 22 Aug, fulfilled 15 Sep) exposes a late shipment.
  */
-export const VALIDATOR_VERSION = 10;
+export const VALIDATOR_VERSION = 12;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,

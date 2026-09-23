@@ -728,7 +728,7 @@
     },
     "decisiveHint": {
       "fraud": "delivery confirmation, signature on file, or device-session consistency",
-      "delivery": "carrier signature confirmation or matching billing/IP signals",
+      "delivery": "a delivery photo or signature from the carrier, or a message from the customer acknowledging receipt",
       "product": "the product listing as advertised and your refund policy disclosure",
       "refund": "documented refund processing or merchant communication",
       "subscription": "the cancellation policy and customer communication timeline",
@@ -757,11 +757,11 @@
         "fraudAvsOnly": "Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case.",
         "strongAndModerate": "{strongLabel} and {moderateLabel} support this defense; additional decisive evidence would strengthen the case.",
         "strongOnly": "{label} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} support this defense. Additional decisive evidence such as {hint} would strengthen it further."
+        "moderateOnly": "{label1}{label2, select, empty { supports} other { and {label2} support}} this defense. Additional decisive evidence such as {hint} would strengthen it further."
       },
       "weak": {
         "strongAlone": "{label} supports this defense, but additional decisive evidence (such as {hint}) would strengthen the case.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} provide partial support. A strong signal such as {hint} would significantly strengthen the case.",
+        "moderateOnly": "{label1}{label2, select, empty { provides} other { and {label2} provide}} partial support. A strong signal such as {hint} would significantly strengthen the case.",
         "supportingOnly": "This is weak because the defence package contains mostly supporting documentation, but no decisive {family} evidence. {decisive} would strengthen the case.",
         "deliveryInTransit": "This is weak right now because no delivery confirmation has reached Shopify — the tracking is active, but many carriers never report delivery back to Shopify. If the carrier's tracking page shows the parcel as delivered, upload that confirmation as delivery proof. {decisive} would strengthen the case."
       },

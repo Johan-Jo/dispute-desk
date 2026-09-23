@@ -3178,6 +3178,85 @@ event) is now a shipment-scoped guard (family v5). Only the cited shipment is ba
 any multi-parcel order such a sentence is refused, and the overlay tells the model to mention a
 carrier record only in a sentence about the parcel that has one.
 
+### In transit since the event, and one Evidence Basis row per parcel (2026-09-23, validator 11, prompt 21)
+
+Two defects on blume-box #360980, both reported by the maintainer from the live page:
+
+- **"Status as retrieved on 23 September."** Only our read time was carried. Shopify holds a
+  dated event for the GOFO parcel, IN_TRANSIT at 2026-09-17 03:48 UTC, two days before the
+  dispute. `fulfillmentSource.inTransitSinceOf` takes the earliest in-carrier event
+  (`CARRIER_PICKED_UP`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `ATTEMPTED_DELIVERY`, `DELAYED`; never a
+  label or ready-for-pickup event) as `inTransitSince`, only while the shipment is in transit. It
+  rides on the cited fact and on each `shipments` entry. The narrative payload now also carries
+  `disputeOpenedAt`. The item-not-received overlay dates transit from the event ("in transit
+  since 17 September"), and may place a fulfilment, or a dated transit event, before the dispute
+  with both dates. `carrierPossessionUndated(facts, disputeOpenedAt)` fires only for an in-transit
+  parcel with no `inTransitSince`, or one dated after the dispute opened. GOFO's own later scans
+  (e.g. "Loaded on Vehicle, Carteret, NJ") are not in Shopify; they need a GOFO lookup (plan P4).
+- **The same row twice, and the USPS parcel missing.** The evidence model makes one record per
+  parcel, and every record maps to the same section-level fact (per-parcel grading is deferred in
+  `derive.ts`). So a two-parcel order carried two identical `delivery_proof` facts, the second
+  under the USPS fulfilment's id with GOFO's values. `buildEvidenceBasisRows` now expands a fact
+  carrying `shipments` into one row per parcel, labelled with its products and stating only its
+  own record. A parcel with no carrier record prints "Fulfilled <date> · USPS shipping reference
+  <ref>", with no link. Identical rows print once.
+
+**Timing licence withdrawn (validator 12, prompt 22, same day).** Prompt 21 let the letter place a
+fulfilment, or a dated transit event, "before the dispute". A fulfilment is the merchant's own
+"marked as shipped" record, not proof of dispatch, and set against the purchase date it can
+expose a late shipment. #360980 was ordered 22 Aug and fulfilled 15/16 Sep, against blume-box's
+1–3 business-day promise. Until the delivery-commitment resolver (plan P3) can tell a helpful
+date from a harmful one:
+
+- the payload carries no `disputeOpenedAt`;
+- a `shipments` entry carries `fulfilledAt` only for a parcel with NO carrier record, where it
+  is the whole account;
+- Evidence Basis prints no fulfilment date beside a carrier record;
+- the item-not-received family (v6) hard-bans relating a fulfilment to the dispute or the order
+  date, and counting days between them.
+
+`carrierPossessionUndated` keeps its v11 semantics (the validator does not refuse a true dated
+ordering); the prompt simply no longer invites one.
+
+### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
+
+`docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The
+item-not-received rollup (`lib/argument/caseStrength.ts`, `family === "delivery"`) needed a
+STRONG delivery signal to reach even `moderate`. After PR-C1, the only strong route was a
+signature, and 0 of 287 non-receipt disputes since June carry one. So every
+carrier-confirmed delivery rated `weak` (blume-box #352543: delivered 6 July, disputed 19
+September). Now:
+
+| package holds | overall |
+|---|---|
+| strong delivery signal (signature / POD) with `deliveryCoverage === "complete"` | `strong` |
+| strong delivery on partial / unknown / none coverage, or `delivered_confirmed` (moderate) | `moderate` |
+| in transit, available for collection, label only | `weak` |
+
+Two strong signals still reach `strong`, as before. Fatal-loss and returned-to-sender still cap
+at `weak`, and the credit floor still lifts to `strong`.
+
+**`overallBeforeRev5`** (on `CaseStrengthResult`, delivery family only) is the previous rollup
+over the same grades, with the same gates applied. The automation ladder has a new rung
+(`deriveCaseAutomationDecision`, step 10): `overall === "strong"` with a defined
+`overallBeforeRev5` that is not `strong` → `hold_for_deadline` with reason
+`strength_upgraded_timing_held`. The rating shows; the filing date does not move until plan
+§11 Q-7. `resolveHeldState` maps it to `HeldReason = "strong_timing_held"`, and the pack
+loader, the workspace route and the new-dispute email pass the value through. **Follow-up:**
+the email's held copy ("held while we look for stronger evidence") is not yet tailored to this
+reason. No live case reaches it today.
+
+`SCORING_POLICY_VERSION` 3 → 4. No category moved, only the rollup, so the categorization
+snapshot is unchanged and only its version moved. Every v3 assessment snapshot is invalidated,
+and unsubmitted packs show "not yet assessed" until their next rebuild. A pack rebuild with
+unchanged evidence does not regenerate the defence letter (the enqueue's idempotent match).
+
+Copy (§6.2): `strengthReason.{moderate,weak}.moderateOnly` now agree in number with one or
+two signals ("Delivery confirmation supports…"), in all six locales. `decisiveHint.delivery`
+no longer recommends billing/IP signals, which are on the module's `avoid` list. It names what
+a merchant can actually add: a carrier delivery photo or signature, or a customer message
+acknowledging receipt.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

@@ -36,6 +36,7 @@
  * of the decision's outcomes MEANS to a merchant on Auto-pilot, read at two
  * different reason codes (contract revision 2 — weak no longer blocks):
  *   hold_for_deadline + strength_insufficient  → weak_strength
+ *   hold_for_deadline + strength_upgraded_timing_held → strong_timing_held
  *   hold_for_deadline, any other reason        → moderate_strength
  * Everything else — coverage, fatal-loss, review mode, a hard block — has its
  * own copy elsewhere and is deliberately NOT held.
@@ -69,11 +70,16 @@ import {
 export interface HeldGuardInput extends AutomationGateFacts, RawGateFacts {
   /** `pack_json.case_strength.overall`. */
   caseStrength: string | null | undefined;
+  /** `pack_json.case_strength.overallBeforeRev5` — item-not-received packs
+   *  scored after non-receipt plan rev 5 only (§6.1.4). */
+  caseStrengthBeforeRev5?: string | null;
 }
 
-/** Why the case is held. Both end in the same place (saved on the due date);
- *  they differ in what we can honestly promise about improving it. */
-export type HeldReason = "moderate_strength" | "weak_strength";
+/** Why the case is held. All end in the same place (saved on the due date);
+ *  they differ in what we can honestly promise about improving it.
+ *  `strong_timing_held`: strong under the revised non-receipt rollup, held
+ *  only to keep today's filing date (plan §6.1.4) — nothing to improve. */
+export type HeldReason = "moderate_strength" | "weak_strength" | "strong_timing_held";
 
 /** The one merchant contribution a held case can actually take. */
 export type HeldOffer = "cardholder_acknowledgement";
@@ -238,7 +244,15 @@ const HELD_STATE_COMPUTED_AT = "1970-01-01T00:00:00.000Z";
 function heldAssessment(
   caseStrength: string | null | undefined,
   gateDecision: GateDecision,
+  caseStrengthBeforeRev5?: string | null,
 ): CaseAssessmentSnapshot {
+  const before =
+    caseStrengthBeforeRev5 === "strong" ||
+    caseStrengthBeforeRev5 === "moderate" ||
+    caseStrengthBeforeRev5 === "weak" ||
+    caseStrengthBeforeRev5 === "insufficient"
+      ? caseStrengthBeforeRev5
+      : undefined;
   const overall =
     caseStrength === "strong" ||
     caseStrength === "moderate" ||
@@ -253,6 +267,7 @@ function heldAssessment(
     assessmentVersion: 1,
     strength: {
       overall,
+      ...(before !== undefined ? { overallBeforeRev5: before } : {}),
       score: 0,
       coveragePercent: 0,
       strongCount: 0,
@@ -334,6 +349,7 @@ export function resolveHeldState(input: HeldStateInput): HeldState {
         fatalLoss: input.fatalLoss,
         returnedToSender: input.returnedToSender,
       }),
+      input.caseStrengthBeforeRev5,
     ),
     assessmentFreshness: { fresh: true },
     policy: {
@@ -369,7 +385,9 @@ export function resolveHeldState(input: HeldStateInput): HeldState {
   if (decision.action === "hold_for_deadline") {
     reason = decision.reasonCodes.includes("strength_insufficient")
       ? "weak_strength"
-      : "moderate_strength";
+      : decision.reasonCodes.includes("strength_upgraded_timing_held")
+        ? "strong_timing_held"
+        : "moderate_strength";
   }
   if (!reason) return none;
 
