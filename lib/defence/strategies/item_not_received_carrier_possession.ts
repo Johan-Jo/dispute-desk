@@ -26,7 +26,7 @@ export const item_not_received_carrier_possession: StrategySubmodule = {
     "The cited shipment has been handed to the carrier and the carrier's record shows it in transit. Build the fulfillmentArgument and executiveSummary on that record: name the carrier and the trackingNumber exactly as they appear in the approved fact value, and state that the carrier's record shows the shipment in transit.",
     "Date the status only as a RETRIEVAL date, using carrierStatusObservedAt: 'the carrier's record shows the shipment in transit (status as retrieved on <date>)'. Never present that date, or any other, as when the parcel moved, was scanned or will arrive.",
     "Never claim or imply delivery, receipt, arrival at an address, or who holds the parcel. No progress verbs ('is moving', 'progressing', 'on its way to the cardholder').",
-    "Refer only to the cited shipment. Do not mention any other tracking reference on the order.",
+    "When the fact carries `shipments`, describe every shipment as the family rules say, each only by its own entry; a transit statement belongs only to the entry whose proofType is in_transit.",
   ].join("\n"),
-  version: 1,
+  version: 2,
 };

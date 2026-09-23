@@ -424,6 +424,73 @@ function citedShipment(payload: Record<string, unknown>): CitedShipment | null {
   return best;
 }
 
+/**
+ * Every shipment on a multi-shipment order, as the letter may describe it
+ * (blume-box #360980: two products in two parcels, and the letter named one).
+ * An issuer reads a letter about one parcel as an account of half the order.
+ *
+ * Each entry carries only what ITS OWN record supports:
+ *   - the products in it and the date the merchant fulfilled it;
+ *   - `reference` with `referenceIsTrackingNumber` — a batch or shipping-app
+ *     reference is never presented as a tracking number, and gets no link;
+ *   - `deliveredAt` only on a carrier-confirmed tier;
+ *   - `carrierStatusObservedAt` only in transit (hash-exempt at every depth).
+ * A returned parcel is left out: the letter never volunteers it.
+ * Sorted by shipment key, so array order never changes the value or the hash.
+ * Null for a single shipment — the fact itself already describes it.
+ */
+function shipmentsForLetter(payload: Record<string, unknown>): Array<Record<string, unknown>> | null {
+  const fulfillments = Array.isArray(payload.fulfillments)
+    ? (payload.fulfillments as unknown[]).filter(
+        (f): f is Record<string, unknown> => !!f && typeof f === "object",
+      )
+    : [];
+  if (fulfillments.length <= 1) return null;
+  const str = (v: unknown): string | null =>
+    typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+  const out = fulfillments
+    .map((f, i) => {
+      const proofType = str(f.shipmentProofType);
+      if (!proofType || proofType === "returned_to_sender") return null;
+      const row = bestTrackingRow(f);
+      const carrier = str(row?.carrier);
+      const reference = str(row?.number);
+      const isTracking = reference !== null && isParcelIdentifier(carrier, reference);
+      const confirmed = proofType === "delivered_confirmed" || proofType === "signature_confirmed";
+      const items = Array.isArray(f.items)
+        ? (f.items as unknown[])
+            .filter((it): it is Record<string, unknown> => !!it && typeof it === "object")
+            .map((it) => ({
+              title: str(it.title),
+              quantity: typeof it.quantity === "number" ? it.quantity : null,
+            }))
+            .filter((it) => it.title !== null)
+        : [];
+      return {
+        key: shipmentKey(f, i),
+        entry: {
+          carrier,
+          reference,
+          referenceIsTrackingNumber: isTracking,
+          trackingUrl: isTracking
+            ? trackingLinkUrl({ company: carrier, number: reference, url: str(row?.url) })
+            : null,
+          items,
+          fulfilledAt: str(f.createdAt),
+          proofType,
+          deliveredAt: confirmed ? str(f.deliveredAt) : null,
+          ...(proofType === "in_transit" && str(f.carrierStatusObservedAt)
+            ? { carrierStatusObservedAt: str(f.carrierStatusObservedAt) }
+            : {}),
+        },
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((x) => x.entry);
+  return out.length > 1 ? out : null;
+}
+
 /** Every shipment's identity and own tier, sorted by key — the shipment-scoped
  *  validator checks a sentence naming a shipment against THAT shipment. */
 function shipmentIndexOf(payload: Record<string, unknown>): Array<{
@@ -715,6 +782,8 @@ function extractValue(
           ? { carrierStatusObservedAt: cited.observedAt }
           : {}),
         ...(cited ? { shipmentIndex: shipmentIndexOf(p) } : {}),
+        // Every shipment on the order, for the letter (see shipmentsForLetter).
+        ...(cited && shipmentsForLetter(p) ? { shipments: shipmentsForLetter(p) } : {}),
         // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It
         // was the licence the LLM read for "delivered to the verified
         // address", and its input was a billing-vs-shipping city comparison.
