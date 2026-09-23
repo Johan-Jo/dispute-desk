@@ -3128,6 +3128,31 @@ first (`signature_confirmed`, `delivered_confirmed`, or `in_transit` with a name
 and a parcel identifier), then by tier. A case with no citable shipment cites exactly what
 it did before.
 
+**Every shipment in the letter; what a record lacks is never said (2026-09-23, validator 7,
+prompt 18).** The first letter #360980 ever produced named one of its two parcels, said *"No
+delivery confirmation or signature event has been recorded … and the merchant does not assert
+otherwise"*, and placed GOFO's custody *"prior to the filing of this dispute"*, a date no
+record holds. Four changes:
+
+- **`shipments` on the delivery fact** (multi-shipment orders only; `shipmentsForLetter` in
+  `factClassifier.ts`). One entry per parcel, sorted by shipment key: products, carrier, the
+  merchant's fulfilment date, and `reference` plus `referenceIsTrackingNumber`. A
+  batch/shipping-app reference is never a tracking number and gets no link. `deliveredAt` is
+  set only on a carrier-confirmed tier and `carrierStatusObservedAt` only in transit
+  (hash-exempt at every depth). A returned parcel is left out. The item-not-received family
+  now has an `overlayPromptBody` telling the model to account for every entry, each only by
+  its own record. The carrier-possession strategy no longer says "refer only to the cited
+  shipment".
+- **What a record lacks** is hard-banned for item-not-received: "no delivery …
+  confirmation/scan/event", "not yet delivered", "undelivered", "the merchant does not
+  assert". Three module/strategy prompts that used the phrase "no delivery confirmation" as
+  an instruction were reworded.
+- **`carrierPossessionUndated`** (internal constraint, any family): when a cited shipment is in
+  transit, a sentence that uses carrier-custody vocabulary AND a dispute-timing phrase is
+  refused. The merchant's fulfilment date may still be stated.
+- **`nonParcelTrackingClaim`** (validator): a non-parcel reference introduced as a "tracking
+  number" is refused.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

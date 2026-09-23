@@ -152,7 +152,12 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // shipment and carry `carrierStatusObservedAt`; the hash-only
 // `deliveryStatuses` / `returnedAt` / `shipmentIndex` no longer reach the
 // model (they printed "CollectedAtPickup" into cay-collective #14784's letter).
-const PROMPT_VERSION = 17;
+// v18 (2026-09-23) — every shipment on a multi-shipment order reaches the
+// model as `shipments` (products, carrier, fulfilment date, and only what each
+// shipment's own record supports), and the item-not-received family overlay
+// tells it to account for all of them. blume-box #360980 had two products in
+// two parcels and its letter named one.
+const PROMPT_VERSION = 18;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

@@ -29,11 +29,15 @@ export interface InternalNarrativeConstraints {
   /** Every cited delivery happened after the dispute was opened
    *  (`deliveryPostDatesDispute`). Optional so older callers compile. */
   deliveryPostDatesDispute?: boolean;
+  /** A cited shipment is in transit: we hold its status, not when the carrier
+   *  took it (`carrierPossessionUndated`). Optional so older callers compile. */
+  carrierPossessionUndated?: boolean;
 }
 
 export const NO_INTERNAL_CONSTRAINTS: InternalNarrativeConstraints = {
   refundOrCompensationRequested: null,
   deliveryPostDatesDispute: false,
+  carrierPossessionUndated: false,
 };
 
 /**
@@ -57,6 +61,46 @@ export function deliveryPostDatesDispute(
     .map((f) => (typeof f.value?.deliveredAt === "string" ? Date.parse(f.value.deliveredAt) : NaN))
     .filter((d) => !Number.isNaN(d));
   return dates.length > 0 && dates.every((d) => d > opened);
+}
+
+/**
+ * True when any cited shipment is in transit. An in-transit status is read at
+ * a retrieval time and carries no hand-over date, so no sentence may place the
+ * carrier's custody relative to the dispute. blume-box #360980 (fulfilled 15
+ * Sep, opened 19 Sep, status read 23 Sep) was written "entered the carrier
+ * network prior to the filing of this dispute" and "in-transit status … at the
+ * time this dispute was filed" — neither is established by any record.
+ */
+export function carrierPossessionUndated(
+  facts: readonly { category: string; value: Record<string, unknown> | null }[],
+): boolean {
+  return facts.some((f) => {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") return false;
+    if (f.value?.proofType === "in_transit") return true;
+    const shipments = Array.isArray(f.value?.shipments) ? (f.value.shipments as unknown[]) : [];
+    return shipments.some(
+      (s) => !!s && typeof s === "object" && (s as Record<string, unknown>).proofType === "in_transit",
+    );
+  });
+}
+
+/** Carrier-custody vocabulary: a sentence using it AND a dispute-timing phrase
+ *  relates custody to the dispute. */
+const CARRIER_CUSTODY_TERMS =
+  /\b(?:carrier|in[\s-]transit|network|custody|possession|tendered|handed|accepted|picked\s+up)\b/i;
+const DISPUTE_TIMING_TERMS: readonly RegExp[] = [
+  /\b(?:prior\s+to|before|ahead\s+of|preced\w*|at\s+the\s+time|by\s+the\s+time|when|after|following|since)\b[^.;]{0,60}\b(?:dispute|claim|chargeback|inquiry|complaint)\b/i,
+  /\b(?:dispute|claim|chargeback|inquiry|complaint)\b[^.;]{0,20}\b(?:was|were|being|is)\s+(?:filed|opened|raised|initiated|lodged)\b/i,
+];
+
+/** Sentences relating carrier custody or transit to the dispute's timing. */
+export function custodyTimingSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .filter(
+      (s) => CARRIER_CUSTODY_TERMS.test(s) && DISPUTE_TIMING_TERMS.some((p) => p.test(s)),
+    )
+    .map((s) => s.trim());
 }
 
 /** A sentence that places delivery relative to the dispute, in either direction. */
@@ -95,6 +139,11 @@ export function internalConstraintViolations(
     for (const pattern of REFUND_REQUEST_DENIAL_PATTERNS) {
       const match = text.match(pattern);
       if (match) out.push({ section, evidenceText: match[0] });
+    }
+  }
+  if (constraints.carrierPossessionUndated) {
+    for (const sentence of custodyTimingSentences(text)) {
+      out.push({ section, evidenceText: sentence });
     }
   }
   if (constraints.deliveryPostDatesDispute) {
