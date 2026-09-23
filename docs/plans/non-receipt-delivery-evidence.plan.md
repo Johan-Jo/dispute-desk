@@ -1,7 +1,23 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** PLAN ONLY (**v4, 2026-09-23**). Not started. **Contains two time-boxed live
+**Status:** PLAN ONLY (**v5, 2026-09-23**). Not started. **Contains two time-boxed live
 exposures — §0. Read that first.**
+
+> **Rev 5: final corrections** (re-verified against `develop` @ `0d383e16` and prod).
+> **(1)** A verified carrier-recorded final delivery, including completed collection,
+> can be `strong` without a signature, under five explicit conditions (a *qualified
+> final delivery*, §6.1.1). It can carry an INR package to `strong` (§6.1.3). Case B's
+> PostNord sequence is the regression fixture, with its association verified against
+> Shopify's own events (§6.1.2). The one automation consequence, `strong → auto_file`, is
+> measured (1 open case) and held behind a temporary ladder branch pending §11 Q-7 (§6.1.4).
+> **(2)** Shipment-state claims are validated against the shipment each sentence names,
+> not against all facts (§4.1(b), test 3e). **(3)** `computeEvidenceHash` sorted by
+> positional ids, so fulfilment order moved the hash. Fixed by stable emission order and
+> a record-key hash sort (§4.1(f), test 6b). **(4)** The minimal verified response
+> contract is reproduced here, with desired vs shipped behaviour, owner, prerequisites
+> and release order (§9.9). **(5)** The operator scheduling write is split into confirmed
+> evidence and inference. The 12 → 11 relationship is explained, and any reconstruction
+> is a labelled `review_state_reconstructed` row, never a synthetic approval (§9.5).
 
 > **Rev 4: code-verified corrections** (review against `develop` @ `0d383e16`, unchanged
 > since; every finding re-checked in code before editing).
@@ -56,7 +72,7 @@ structurally unavailable on a claim that the goods never arrived.
 (`aokhplydttxtebvbeuzc`) on **2026-09-22**, and §0 re-verified **2026-09-23 01:27
 UTC**, via `npm run db:query:prod`. Code references are against `origin/develop` @
 `0d383e16`.
-**Evidence SQL:** `scripts/sql/non-receipt-delivery-evidence.sql` (Q1–Q18). Q15 is the
+**Evidence SQL:** `scripts/sql/non-receipt-delivery-evidence.sql` (Q1–Q19). Q15 is the
 re-check to run before acting on any deadline claim here; Q16 finds every other dispute
 in Case B's position.
 **Source contract:** the supplied *"DisputeDesk: non-receipt disputes while goods
@@ -201,14 +217,16 @@ Case B carries that flag.
 **How it got the flag. Rev 2 was wrong about this.** It was not a merchant click.
 `review_state` has exactly one application writer, `POST /api/disputes/:id/review`
 (`app/api/disputes/[id]/review/route.ts`), which records `review_approved` with the actor
-and `{from, to}` for every call. Case B has no such event. It was set, together with 10
-other disputes across **two shops**, at the identical timestamp
-`2026-09-21 21:40:57.580902 UTC` by a single operator `UPDATE`:
-`scripts/sql/_schedule_approve.sql` (local, untracked, saved at 21:40:52 UTC). The
-script's own header says it "mirrors" the route. It bypasses the route, so it also
-bypasses the audit write. Fleet-wide, 17 disputes are `approved` and only 6 have a
-`review_approved` event. The other 11 are this one statement. The logging mechanism
-works; this write never went through it (§9.5).
+and `{from, to}` for every call. Case B has no such event. §9.5 separates what is
+confirmed from what is inferred. In short: Case B's row carries the identical
+`updated_at` (`2026-09-21 21:40:57.580902 UTC`) as 10 other disputes across **two
+shops**. That can only come from one statement, not from per-dispute, per-shop route
+calls. The local, untracked `scripts/sql/_schedule_approve.sql` names exactly those
+11 disputes plus a twelfth, and it was saved five seconds earlier. The script bypasses
+the route, so it bypasses the audit write. Fleet-wide, 17 disputes are `approved`: 6 via
+the route, with events, and 11 from this statement. The twelfth disputed row has since
+left `approved` through the route (§9.5). The logging mechanism works; this write never
+went through it.
 
 So Case B **will file on 2026-10-01 08:00 UTC**, two days before Case A, and its
 scheduled letter contains (Q6, verbatim):
@@ -452,10 +470,15 @@ delivered. The consequence is not cosmetic: `weak` is the rung that returns
 them shows the merchant a "weak case" banner over a carrier delivery confirmation.
 
 This is what the reported Case B observation — *"verified collection should count as
-strong evidence"* — is actually detecting. The fix is not to call a pickup
-collection `strong`; it is to stop requiring a signature nobody supplies.
+strong evidence"* — is actually detecting, and **rev 5 accepts it (maintainer
+direction, 2026-09-23)**. A verified, carrier-recorded final delivery, including a
+completed collection, is eligible for a `strong` delivery signal **without a
+signature**, under explicit qualifying conditions. What stays forbidden is what the
+record does not show: who collected, an identity check, or a verified address.
 
-**Fix:** the rollup's own rung, plus the stale comment. §6.1.
+**Fix:** a qualified-final-delivery signal, a rollup that can carry an INR package to
+`strong` on it, the stale comment, and an automation guard so that the scoring change
+cannot quietly move filing dates. §6.1.
 
 ### D4 · The improvement hint asks for evidence this claim type forbids
 
@@ -680,6 +703,30 @@ predicate evaluates true only over a fact that passed `isCitableShipmentContext`
 `runPhraseAndGuardChecks` already applies guarded phrases at every layer (thesis, LLM,
 fallback), so a label-only case cannot acquire the sentence by any path.
 
+*Shipment claims are checked against their own shipment (rev 5).* A case-wide guard is
+not enough. `runPhraseAndGuardChecks` evaluates each guard's predicate over **all**
+approved facts (`predicate.evaluate(approvedFacts)`, `validateNarrative.ts`, guarded-phrase
+loop), so one valid GOFO transit fact would license a transit sentence about the USPS
+batch reference. Shipment-state phrases (in transit, delivered, collected, out for
+delivery, handed to the carrier) are therefore checked **per sentence, against the
+shipment the sentence names**:
+1. A new `shipmentScoped: true` flag on those guarded entries. For a scoped entry, the
+   validator splits the prose into sentences, and in each sentence that matches the
+   pattern it resolves which shipment is meant: any tracking number of a shipment fact
+   (exact match), or the carrier name of a shipment fact (`value.carrier`,
+   case-insensitive).
+2. The predicate is evaluated over **only the facts with that `instanceKey`**
+   (§4.1(f)). A sentence naming USPS is checked against the USPS fact alone.
+3. A matching sentence that names **no** shipment passes only when the case has exactly
+   one shipment, or when **every** shipment satisfies the predicate. Otherwise it is
+   refused as ambiguous. A sentence naming two shipments must satisfy the predicate for
+   each of them.
+4. The same resolution applies to delivery phrases guarded by the QFD / delivery
+   predicates (§6.1), so a delivered parcel's record can never be attached to its sibling.
+
+Non-shipment guarded phrases (card terms, channel assertions) keep today's case-wide
+evaluation, unchanged.
+
 *Acceptance, end to end* (§10 test 3b). Fixture: Case A's inputs with
 `no_return_initiated` excluded by (a), and the GOFO shipment `IN_TRANSIT`. It must pass
 G1 (`buildDefencePackageJob.ts:362`), G3 (`:467`) and G4 (`:488-495`), then
@@ -687,7 +734,7 @@ G1 (`buildDefencePackageJob.ts:362`), G3 (`:467`) and G4 (`:488-495`), then
 selector's eligibility, and end as a fileable draft that cites the carrier, the tracking
 number and the in-transit status. Its pair: the same fixture with the shipment at
 `label_created` must produce no carrier-possession sentence anywhere. It then falls to
-the minimal verified response (`merchant-counsel-stance.plan.md` §4.3), never to a
+the minimal verified response (§9.9; until PR #767 phase C ships, today's skip), never to a
 fabricated transit claim.
 
 **(c) Two new validator rules.** `lib/defence/validateNarrative.ts` must reject, on
@@ -785,8 +832,20 @@ inventing one:
    back to the `fieldKey` join only for facts that carry no `instanceKey` (every
    non-shipment field, unchanged).
 3. `deliveryStatusesOf` stays on each fact, so `evidence_hash` still moves on any
-   shipment's status change. The existing sort keeps the hash independent of
-   `fulfillments[]` order.
+   shipment's status change. **Order independence is not free, and rev 4 was wrong to
+   say it was.** `deliveryStatusesOf` sorts statuses *within* one fact, but
+   `computeEvidenceHash` orders facts by `fact.id` (`.sort((a, b) =>
+   a.id.localeCompare(b.id))`), and `fact.id` is positional (`f${factIndex++}`). Reverse
+   `fulfillments[]` and the per-shipment facts get swapped ids, the projected list
+   reorders, and the hash moves with nothing having changed. Two changes close it:
+   - **Stable emission order.** `classifyFacts` emits a field's per-shipment facts
+     sorted by `instanceKey`, so the positional ids come out the same whatever the
+     array order. Positional ids stay, because narrative citations reference them.
+   - **Stable hash order.** `computeEvidenceHash` sorts by a record key, not by `id`:
+     `${value.fieldKey}#${value.instanceKey ?? ""}`, with the canonical JSON of the
+     projected fact as the tie-break. The projection already excludes `id`, so the hash
+     then depends on content alone. Sorting all facts this way is a one-time hash
+     rotation, folded into the rotation §5.3 already plans for.
 4. Which shipment is **cited** is decided per fact by (b)'s conjuncts, never by position.
    A batch reference is never the cited parcel, wherever it sits in the array.
 
@@ -840,8 +899,14 @@ and only `strong` reaches `auto_file` (`:309`). The single exception is the sepa
 defined credit-covered branch (`creditCovers`, `:239-241`). `decisionLadder.test.ts:345`
 pins it: *"moderate holds for the deadline rather than filing early"*. The 13 cases file
 on their deadlines exactly as they do today. What changes is the strength the merchant
-sees and the `strength_insufficient` reason code. No automation-policy change and no
-feature flag belong in P1.
+sees and the `strength_insufficient` reason code. The `weak → moderate` step needs no
+automation-policy change and no feature flag.
+
+**Rev 5: `strong` is different.** P1 now also lets a qualified final delivery carry an
+INR case to `strong` (§6.1.3), and `strong` does reach `auto_file` (`:309`). Measured: 1
+open auto-mode case would file earlier today (§6.1.4). So P1 ships a named, temporary
+ladder branch that keeps QFD-only `strong` cases on `hold_for_deadline`. That is not a
+policy change: it holds today's timing in place until §11 Q-7 decides it separately.
 
 ### 4.3 P2 — communications classification
 
@@ -1030,50 +1095,131 @@ dated shipment narrative (contract §9, test 2).
 
 ## 6. Argument selection, strength and copy
 
-### 6.1 The delivery-family rollup (D3)
+### 6.1 Delivery strength: the signal, the package, and the filing date (D3)
 
-```ts
-// today
-else if (hasStrongDelivery) overall = "moderate";
-// proposed
-else if (hasConfirmedDelivery) overall = "moderate";
-```
+**Rev 5 reverses the rule from revs 1–4** that an unsigned delivery or collection is
+always `moderate`. The maintainer's direction (2026-09-23), after reviewing PostNord's
+own tracking for Case B: *verified carrier-confirmed final delivery, including completed
+collection, should be eligible for strong delivery evidence without requiring a
+signature.* Three decisions are specified separately, because they are different
+decisions.
 
-where `hasConfirmedDelivery` is a `delivery` signal at **`moderate` or better** —
-i.e. `delivered_confirmed` or `signature_confirmed`. A carrier delivery confirmation
-tied to this order then carries the case to `moderate` on its own, which is what the
-rung was written to do before PR-C1 removed its only trigger. `signature_confirmed`
-plus any second signal still reaches `strong`. An `in_transit` fact is `supporting`
-and cannot participate — §5.1.
+#### 6.1.1 The delivery **signal**: when an unsigned delivery is `strong`
 
-**The stale comment is part of the fix.** It currently tells the next reader that
-`delivered_confirmed → strong requires deliveredToVerifiedAddress`, a key that no
-longer exists. A comment that describes a retired mechanism is how this survived
-seven weeks.
+A shipment yields a **qualified final delivery** (QFD) when **all five** conditions
+hold. Otherwise it keeps today's categories.
 
-Not proposed, and deliberately: no new `strong` for pickup collection. The contract's
-§3 and §7.10 both keep *delivered status*, *destination match*, *signature/photo* and
-*customer acknowledgement* as **distinct** facts, and we hold only the first.
+| # | condition | how it is decided (existing code where it exists) |
+|---|---|---|
+| 1 | **Trustworthy carrier provenance** | the final-delivery event comes from the carrier, not the merchant. That means a carrier adapter (`tracking_source = carrier_api_*`), a tracking-app event feed, or a Shopify fulfillment event whose `message` carries the **carrier's own event text** (Case B: *"Försändelsen har levererats."*). A `shopify_native` `DELIVERED` with **no** carrier event text is excluded, because Shopify's "mark as delivered" is merchant-settable and our data cannot tell the two apart (344,165 `shopify_native` delivered rows with no adapter). Before implementation, a probe of one manually marked fulfillment must confirm that such events carry no carrier message. Until then this condition fails closed |
+| 2 | **An event timestamp** | the carrier event's own `happenedAt` / `deliveredAt`, never a retrieval time (`carrierStatusObservedAt` never qualifies, §5.3) |
+| 3 | **Correct shipment and order association** | the event belongs to the fulfillment whose `instanceKey` the fact carries (§4.1(f)), on the disputed order, under a tracking identifier that passes `isParcelIdentifier` (§4.1(b)) |
+| 4 | **Coverage of the disputed goods** | `coverage = complete` from `resolveDeliveryCoverage` (`fulfillmentSource.ts:524-548`). `partial` never qualifies. `unknown` (line items unavailable) qualifies only on a single-fulfillment order |
+| 5 | **No unresolved contradictory delivery record** | no other record of the same goods says `Returned`, `NOT_DELIVERED` or lost, or gives a later non-delivery status. No carrier correction reverses the delivery, and no second source reports a different outcome for the same shipment. Any of these fails the condition until a newer record resolves it (§6.1.3) |
 
-**And pickup availability is not collection — this is the invariant, not a side
-effect.** `DeliveredToPickup` means the parcel reached a pickup point and is waiting;
-nobody has taken it. It must stay below `hasConfirmedDelivery` forever:
+A QFD maps to a new `DeliveryProofType` member, **`delivered_final_verified`** →
+`strong`, alongside the existing `signature_confirmed` → `strong`. The distinctions
+are kept and stated as an invariant:
 
-| state | `confirmedReceipt`? | proofType | category | reaches moderate? |
+| carrier state | proofType | signal |
+|---|---|---|
+| label created, no carrier acceptance | `label_created` | invalid |
+| accepted / in transit / out for delivery | `in_transit` | supporting (citable per §4.1(b)) |
+| **available for collection** (`DeliveredToPickup`, Shopify `READY_FOR_PICKUP`) | `delivered_unverified` | supporting, **never** receipt |
+| delivered or collected, carrier-sourced, but a QFD condition fails | `delivered_confirmed` | moderate |
+| **delivered or collected, all five QFD conditions hold** | **`delivered_final_verified`** | **strong** |
+| signature / POD artifact | `signature_confirmed` | strong |
+
+**What a QFD licenses, and what it does not.** It licenses the carrier's record:
+*"PostNord records the shipment as delivered on 18 September"*, or *"…as collected at
+the pickup point on 18 September"*. It does **not** license a statement of who
+received it, an identity check, or a verified address. `collectedByCustomer`,
+`deliveredToVerifiedAddress` and any ID claim stay retired (`fulfillmentSource.ts`,
+PR-C1) unless independent support exists (§6.3). "Strong" is an internal assessment of
+the evidence, not a promise of the outcome.
+
+#### 6.1.2 The regression fixture: Case B's PostNord sequence
+
+The association was verified on 2026-09-23 against Shopify's own fulfillment record for
+#14784 (`f0036694-fe57-41a0-9cf0-1e9dc94c0232`): one fulfillment
+(`gid://shopify/Fulfillment/7553450410250`), PostNord SE `00573132901924649740`, one line
+item, quantity 1, fully covered.
+
+| Shopify event (UTC) | carrier text on the event | screenshot (shown in UTC−3) | expected state |
+|---|---|---|---|
+| `LABEL_PURCHASED` 2026-09-16 08:25:46 | — | — | `label_created` |
+| `IN_TRANSIT` 2026-09-16 08:34:05 | *"Försändelsen har lämnats av avsändaren."* | — | `in_transit` |
+| `READY_FOR_PICKUP` 2026-09-17 09:24:18 | *"Avisering skickad via APP. – Sista hämtningsdag: 2026-09-24"* | 17 Sep 06:23 *"…levererats till ett serviceställe"* / *"Paketet kan hämtas i ett paketskåp hos ombudet"* | **available for collection: not final delivery** |
+| `DELIVERED` 2026-09-18 16:23:00 | *"Försändelsen har levererats."* | 18 Sep 13:23 *"Försändelsen har levererats."* | **QFD → `delivered_final_verified`** |
+
+The screenshot times are the same events shifted three hours earlier, which fits a
+browser in UTC−3. The ICA service-point name persisting as the location on the
+18 September row does **not** mean the parcel is still waiting: the event text records
+completed delivery. The fixture pins both directions. The 17 September state alone must
+**not** reach QFD, and the 18 September event must. The screenshot itself is not case
+evidence. The fixture and the letter use Shopify's stored events, which carry the
+provenance and the association. A screenshot would need its own source record before
+it could be cited.
+
+#### 6.1.3 The **package**: when a QFD carries an INR case to `strong`
+
+Today the rollup (`caseStrength.ts:755-769`) rates one strong delivery signal only
+`moderate` overall (`else if (hasStrongDelivery) overall = "moderate"`) and needs
+`strongCount >= 2` for `strong`. For the item-not-received family it becomes:
+
+| package holds | overall |
+|---|---|
+| a QFD (or `signature_confirmed`) covering the disputed goods, with no conflict (below) | **`strong`**, on its own |
+| a carrier-sourced delivery that fails a QFD condition (`delivered_confirmed`) | **`moderate`**, on its own (rev 2's `hasConfirmedDelivery` rung, kept) |
+| only `in_transit`, availability for collection, or `label_created` | `weak` |
+
+**How conflicting evidence moves it:**
+- A contradictory delivery record on the disputed goods (QFD condition 5) removes the
+  QFD. The shipment falls to `delivered_confirmed` at most, and the case to `moderate`
+  at most, until a newer record resolves it.
+- Partial coverage: `moderate` at most, whatever the signal.
+- A returned-to-sender shipment for the disputed goods: the existing gate
+  (`returnedToSender.ts`) governs, and a QFD on another parcel does not override it.
+- Lateness against the merchant's published window (§8.1) is **not** a contradiction.
+  It changes what the letter cites, never the delivery signal.
+- A customer message restating non-receipt is **not** a contradiction (D7). A customer
+  message **acknowledging** receipt adds a signal and never subtracts one.
+
+The stale `deliveredToVerifiedAddress` comment is rewritten to describe this rule.
+
+#### 6.1.4 The **filing date**: the one real automation consequence, held back on purpose
+
+The `weak → moderate` step changes nothing about timing (§4.2), because `moderate` holds
+for the deadline. **`strong` does not**: `deriveCaseAutomationDecision` returns
+`auto_file` for `strong` (`:309`). So this scoring revision **would** move filing dates
+for auto-mode cases, and it must not do that silently.
+
+Measured on prod on 2026-09-23 (Q19): open, unsaved non-receipt disputes with a
+receipt-grade delivery, one shipment, and no contradictory record.
+
+| dispute | shop | rule mode | today | if rated `strong` under the current ladder |
 |---|---|---|---|---|
-| `Delivered` + timestamp | yes | `delivered_confirmed` | moderate | **yes** |
-| `CollectedAtPickup` + timestamp | yes | `delivered_confirmed` | moderate | **yes** |
-| `DeliveredToPickup` | **no** | `delivered_unverified` | supporting | **no** |
-| `Delivered` / `CollectedAtPickup`, no timestamp | no | `delivered_unverified` | supporting | no |
-| in transit | n/a | `in_transit` | supporting | no |
+| #352543 | blume-box | **auto** | `hold_for_deadline`, due 3 Oct | **`auto_file`: files at its next decision point, before 3 Oct** |
+| #14784 | cay-collective | review | parked, scheduled (`approved`) | unchanged: review mode parks; files 1 Oct by scheduling |
+| #100806 | 6a8848-dd | review | conceded | unchanged: never filed |
+| #98250 | 6a8848-dd | review | parked | unchanged |
+| #101259 (two dispute rows) | 6a8848-dd | review | parked | unchanged |
 
-`confirmedReceipt` (`fulfillmentSource.ts:247-256`) already draws this line, and the
-merchant-facing copy already distinguishes it
-(`titleAwaitingCollection` — *"At pickup point — awaiting customer collection"*). §10
-test 8a pins it so that widening `confirmedReceipt` for some later reason cannot
-silently promote a pending pickup into a receipt claim. Note this is *also* the honest
-reading of the reported Case B question: a collected parcel is moderate evidence, an
-*available* parcel is not evidence of receipt at all.
+**One case** changes timing today, and the effect grows with every auto-mode shop. So P1
+ships the scoring **together with** a named, temporary branch in the ladder, in the same
+style as the existing `creditCovers` branch (`:239-241`, `:305-306`): *a delivery-family
+case whose only route to `strong` is a QFD returns `hold_for_deadline`*. The merchant
+sees the `strong` rating, and filing timing does not change. The branch is removed only
+by §11 Q-7, a separate decision, taken with the then-current affected set printed
+(`[[feedback_irreversible_scope_confirm]]`). The existing `decisionLadder.test.ts:345`
+behaviour is kept, and a new test pins the temporary branch.
+
+**The availability-is-not-collection invariant is kept.** `confirmedReceipt`
+(`fulfillmentSource.ts:247-256`) admits only `Delivered` / `CollectedAtPickup` with a
+timestamp. `DeliveredToPickup` / `READY_FOR_PICKUP` never reaches `delivered_confirmed`,
+let alone a QFD, and §10 tests 8a and 8b pin both. Rev 2's P1 count of **13**
+(12 `Delivered` + 1 `CollectedAtPickup`, any status) remains the scoring blast radius.
+Q19's **6** are the subset still open and unsaved, where timing could matter.
 
 ### 6.2 Hints and strength copy (D4, D5)
 
@@ -1469,19 +1615,47 @@ approval of wording. It is audited: every call logs `review_approved` (or
 `review_held` / `review_conceded` / `review_cleared`) with `actorType`, `actorId` and
 `{action, from, to}` (`:120-137`).
 
-**Why Case B has no audit event.** Its flag was not written by that route. It was
-written by an operator `UPDATE` (`scripts/sql/_schedule_approve.sql`, §0.2) that set 12
-disputes across two shops at one timestamp and bypassed `logAuditEvent`. So the absence
-is specific to that write. It is not a gap in the logging mechanism. Two fixes, both
-small:
-1. **Backfill** one `review_approved` row per affected dispute (11 still `approved`; one
-   later conceded), `actor_type = 'script'` per the 2026-09-15 actor vocabulary
-   (`docs/plans/audit-actor-attribution.plan.md`), payload `{action:"approve", from,
-   to:"approved", source:"scripts/sql/_schedule_approve.sql", backfilled:true}` and the
-   original `2026-09-21 21:40:57 UTC` as the effective time inside the payload. That
-   records who did it; it does not change what it authorises. Prod's
-   `audit_events_actor_type_check` already admits `script` (verified 2026-09-23:
-   `merchant | admin | script | system`), so nothing blocks it.
+**Why Case B has no audit event: confirmed evidence, then inference.**
+
+*Confirmed* (read from prod and the working tree, 2026-09-23):
+1. Eleven disputes across two shops have `review_state = 'approved'` and the identical
+   `updated_at` `2026-09-21 21:40:57.580902+00`, Case B among them. Route calls are
+   per dispute and per shop, each in its own transaction, so they cannot share a
+   microsecond. This was one statement.
+2. None of those 11 has any `review_approved` event.
+3. `scripts/sql/_schedule_approve.sql` (local, untracked) is an `UPDATE` that sets
+   `review_state = 'approved'`, `needs_attention = false`, `review_due_at = null` and
+   `updated_at = now()` for **12** named ids: those 11 plus `e533d123` (#100806). Its
+   file time is 21:40:52 UTC.
+4. #100806's own route events: `review_cleared` at 2026-09-22 09:10:34 logged
+   **`from: "approved"`**, then `review_conceded` 10 s later. So it was `approved` before
+   that, with no `review_approved` event either. That accounts for 12 → 11: the
+   statement changed 12 rows, and one of them has since left `approved` through the
+   route, which overwrote its `updated_at`.
+
+*Inferred, not proven:* that this file is the statement that ran (strongly supported by
+the identical id set and the 5 s gap, but nothing records execution); how it was run.
+
+*Unknown:* who ran or instructed it; each row's `review_state` **before** 21:40:57 (no
+record exists); whether each merchant asked for it. **Nothing suggests a merchant
+clicked approve for any of the 12.**
+
+So the absence is specific to that write, not a gap in the logging mechanism. Two fixes,
+**specified here and not executed by this plan-only revision** (no production audit
+writes):
+1. **Reconstructed-history rows, never a synthetic approval.** One row per affected
+   dispute (all **12**, including #100806, whose later route events should be read
+   against it). It uses a distinct `event_type`, `review_state_reconstructed`, not
+   `review_approved`, so no reader, report or UI can mistake it for a click. Fields:
+   `actor_type = 'script'` (the write came from outside every application path, which
+   is confirmed by elimination) and `actor_id = NULL`. The payload is
+   `{reconstructed: true, recorded_at: <now>, effective_at: "2026-09-21T21:40:57.580902Z",
+   from: "unknown", to: "approved", actor: "unknown", merchant_action: false,
+   probable_source: "scripts/sql/_schedule_approve.sql", evidence: [the four confirmed
+   points above], inference: "file matches the id set; execution unrecorded"}`. The
+   `EventType` union gains the new type. Prod's `audit_events_actor_type_check` already
+   admits `script` (verified 2026-09-23). The rows are written only when the maintainer
+   chooses to run the reconstruction, as its own reviewed step.
 2. **Ops scheduling goes through the route** (or a script that calls `logAuditEvent`
    with `actor_type = 'script'`), never a bare `UPDATE`. `_schedule_approve.sql` is
    retired in favour of that path.
@@ -1572,7 +1746,7 @@ that makes no such claim.** So eligibility is decided per **claim**, not per fai
 | build failed; a prior artifact exists and **agrees** with current known facts by `evidence_hash` | **yes** | that artifact, unchanged |
 | build failed; a prior artifact **disagrees** with a known fact (delivery, return, cancellation, correction) | **that artifact: never** | the minimal verified response instead (below). A known contradiction blocks the artifact even as a fallback — the contract's §7.6 rule, and rev 1 already stated it at §9.6 |
 | build failed; no prior artifact agrees | **no prior artifact** | the deterministic factual fallback of §9.6, built from the current verified snapshot — not a resurrected old one |
-| the source is `unavailable` **and** the case has no verified facts at all | **yes, minimally** | the minimal verified response (`merchant-counsel-stance.plan.md` §4.3). Rev 2 ended this row at `no_bank_eligible_facts`; decision D-1 (2026-09-23) makes the minimal verified response the floor for every dispute, so silence is no longer an outcome |
+| the source is `unavailable` **and** the case has no verified facts at all | **yes, minimally** | the minimal verified response (§9.9). Rev 2 ended this row at `no_bank_eligible_facts`; decision D-1 (2026-09-23) makes the minimal verified response the floor for every dispute, so silence is no longer an outcome |
 
 "Not eligible" in this table refuses **an artifact**, never the filing. Under D-1 every
 row ends in something filed. What varies is which artifact, and the rules below decide
@@ -1591,6 +1765,55 @@ Three rules follow, and they are the acceptance criteria for tests 18-19:
 3. **A blocked filing is loud.** An explicit blocker with its reason, surfaced to the
    merchant with time remaining (§9.4's ≥24 h readiness checkpoint) — never a silent
    skip, and never a silent substitution.
+
+### 9.9 The minimal verified response — the contract this plan consumes
+
+§4.1(b), §9.8 and test 19 depend on a "minimal verified response". Rev 4 pointed at
+`merchant-counsel-stance.plan.md` §4.3, which lives on PR #767 (branch
+`docs/merchant-counsel-stance`, **open, not merged**) and not on this PR's branch. So the
+contract is reproduced here, where it can be reviewed with the plan that depends on it.
+
+**Desired policy vs shipped behaviour. They differ today, and this plan must not blur
+them.**
+
+| | today, in code | desired (decision D-1, 2026-09-23) |
+|---|---|---|
+| no bank-included fact (gate G1) | `markSkipped(no_bank_eligible_facts)`: **no document** (`buildDefencePackageJob.ts:362`, `:1484`) | a minimal verified response is built and filed |
+| plan has no safe argument (G3) or no bank-included plan fact (G4) | skipped, no document (`:467`, `:494`) | same: minimal response |
+| fatal-loss (G2) | skipped (`:459`), auto mode blocks | minimal response; fatal-loss becomes a merchant-only risk signal (PR #767 §3.1) |
+| chargeback we don't answer | Shopify files its own scrape (`[[project_shopify_files_anyway_reframes_guards]]`) | ours replaces it (D-1) |
+| inquiry we don't answer | lost by default (PR #767 §2.1: 5 + 6 non-receipt inquiries lost unanswered) | ours is filed |
+
+**The contract (what a minimal verified response is):**
+1. Deterministic. No LLM. It is built by the existing fallback composition path (the
+   deterministic fallback of §9.6), not by a new renderer.
+2. It contains only facts that are true, sourced and bank-citable **for this case**:
+   the order record, the helpful authorisation facts, and any dispatch / carrier facts
+   that pass §4.1(b) and §6.1. Each fact carries its own as-of date.
+3. It never contains a claim whose source was unread or failed (§9.8), a prior artifact
+   that disagrees with a known fact, or anything the harmful-material filter excludes
+   (§4.1(e)).
+4. It passes the same validators as any package (`validateNarrative`,
+   `validatePackageDocument`, the shipment-scoped guards of §4.1(b)).
+5. It is recorded as `package_kind = minimal_verified`, so outcomes can be measured
+   separately and the merchant is told a minimal response was filed.
+
+**Owner, prerequisites and release order.**
+- **Owner:** PR #767's phase C (`merchant-counsel-stance.plan.md` §6). No engineer is
+  assigned yet; like this plan's own header, the owner field reads *unassigned* until
+  the maintainer assigns one.
+- **Prerequisites:** PR #767 merged to `develop`; §4.1(b)'s citability exception and
+  §4.1(f)'s per-shipment facts (so the minimal response can cite a shipment correctly);
+  §9.8's eligibility rules.
+- **Release order:** (1) this plan's P0 ships **without** relying on the minimal
+  response; (2) PR #767 phase C ships the minimal response; (3) only then do tests 3c
+  and 19's "file the minimal response" expectations become **release gates**. Until step
+  (2), those tests assert today's behaviour (a skip, recorded loudly to the merchant) and
+  are marked as pending the new contract.
+- **Consequence for the live cases:** Cases A and B do **not** depend on it. Case A's P0
+  path is the citable in-transit fact (§4.1(b)), and Case B has a carrier-recorded
+  delivery.
+
 
 ---
 
@@ -1622,6 +1845,12 @@ repo's verified failures, and each must be shown to fail before the fix.
    `shipment_in_carrier_possession`).
 3d. A `supporting` fact of any other field → still not bank-eligible. The exception is
    not general.
+3e. **Shipment-scoped guard, negative (§4.1(b), rev 5).** GOFO `YT2640221437435982` is
+   `IN_TRANSIT` and citable; USPS `260914OET4` is label-only or a batch reference. A
+   narrative sentence *"USPS shipment 260914OET4 is in transit"* → **refused**, although
+   another shipment satisfies `shipment_in_carrier_possession`. The same sentence naming
+   GOFO → passes. A transit sentence naming no shipment, on this two-shipment order →
+   refused as ambiguous.
 4. **Internal refund-request constraint (§4.1(c)).** A stored **customer** message
    requesting reimbursement, `review_status = proposed`, category `contradiction`, on a
    `confirmed_match` ticket → any sentence denying a refund request is refused at the
@@ -1637,7 +1866,10 @@ repo's verified failures, and each must be shown to fail before the fix.
    GOFO `YT2640221437435982` IN_TRANSIT] → two facts, and the cited shipment is GOFO,
    with its own number and status.
 6b. The same two **reversed** → the same cited shipment, the same facts per
-   `instanceKey`, the same `evidence_hash`.
+   `instanceKey`, the **same positional fact ids** (stable emission order), and the
+   **same `evidence_hash`** (record-key sort in `computeEvidenceHash`, §4.1(f) item 3).
+   The test fails on today's code, which sorts by positional `fact.id`, and must be shown
+   failing first.
 6c. One parcel `Delivered` (with `deliveredAt`) + one `IN_TRANSIT` → two facts, each with
    its own dates. No sentence attributes the delivery to the in-transit parcel or the
    reverse, and order-level delivery language appears only when `coverage = complete`.
@@ -1653,12 +1885,30 @@ repo's verified failures, and each must be shown to fail before the fix.
    (`enqueue.ts:275-314`).
 
 **P1**
-8. `delivered_confirmed` with no signature, no other signal → case is **not** `weak`.
-8a. **`DeliveredToPickup` alone → case IS still `weak`** (§6.1). Pickup availability is
-   not collection, and this test is the guard against a future widening of
-   `confirmedReceipt` promoting a pending pickup into a receipt claim. Its pair:
-   `CollectedAtPickup` **with** a timestamp → moderate; `CollectedAtPickup` **without**
-   one → supporting, still weak.
+8. `delivered_confirmed` (a carrier-sourced delivery failing some QFD condition), no
+   signature, no other signal → case is `moderate`, **not** `weak`.
+8a. **`DeliveredToPickup` / `READY_FOR_PICKUP` alone → case IS still `weak`** (§6.1).
+   Pickup availability is not collection, and this test guards against a future widening
+   of `confirmedReceipt` promoting a pending pickup into a receipt claim. Its pair:
+   `CollectedAtPickup` **without** a timestamp → supporting, still weak.
+8b. **PostNord regression fixture (§6.1.2), Case B's exact Shopify events.** Truncated
+   after `READY_FOR_PICKUP` 2026-09-17 09:24:18Z → **no** QFD, case `weak`. With
+   `DELIVERED` 2026-09-18 16:23:00Z (*"Försändelsen har levererats."*) → QFD,
+   `delivered_final_verified`, signal `strong`, case **`strong`**. The service-point name
+   persisting as the location does not block it. In both states the letter names no
+   collector and asserts no identity check.
+8c. **QFD conditions, one negative each.** No carrier event text on a `shopify_native`
+   `DELIVERED` (merchant-settable) → `delivered_confirmed`, `moderate`. No event
+   timestamp → not QFD. Tracking identifier fails `isParcelIdentifier` or belongs to
+   another fulfillment → not QFD. `coverage = partial` → `moderate` at most. A second
+   record on the same goods says `Returned` / `NOT_DELIVERED`, or a correction reverses
+   the delivery → QFD removed, `moderate` at most, until a newer record resolves it.
+8d. **Not contradictions.** Delivery later than the merchant's published window, or a
+   customer message restating non-receipt → the QFD and `strong` stand.
+8e. **Filing timing is unchanged (§6.1.4).** An auto-mode INR case whose only route to
+   `strong` is a QFD → `hold_for_deadline` (the temporary named branch), not
+   `auto_file`. `decisionLadder.test.ts:345` (`moderate` holds) still passes. A case
+   reaching `strong` by any pre-existing route keeps today's `auto_file`.
 9. `in_transit` alone → case **is** weak, and the in-transit explanation renders
    (not `weak.moderateOnly` over an unrelated fact).
 10. One moderate label → the strength sentence is grammatical.
@@ -1694,7 +1944,7 @@ repo's verified failures, and each must be shown to fail before the fix.
     disagrees with a known fact. A rebuild failure must not make a stale package
     eligible.** Paired negative: prior artifact claims delivery, a correction has since
     reversed it, build fails → the stale artifact is **refused**, the minimal verified
-    response (`merchant-counsel-stance.plan.md` §4.3, decision D-1) is filed in its
+    response (§9.9, decision D-1) is filed in its
     place, and the merchant sees an explicit blocker note.
 20. **Only a `document_approval` is invalidated (§9.5, if Q-6 builds it).** Three
     independent triggers, one test each: package version moves; `plan_input_hash` or
@@ -1706,6 +1956,10 @@ repo's verified failures, and each must be shown to fail before the fix.
     current valid package.
 20b. Every write of `review_state` produces exactly one `review_*` audit row with the
     actor and `{from, to}`, including script-driven scheduling (`actor_type = 'script'`).
+20c. **Reconstructed history is labelled as such (§9.5).** A `review_state_reconstructed`
+    row carries `reconstructed: true`, `merchant_action: false`, `from: "unknown"`,
+    `actor: "unknown"` and `actor_id = NULL`, and is never counted, rendered or reported
+    as a `review_approved` click (merchant timeline, admin views, post-outcome analysis).
 
 **Release criteria** (contract §9, adapted per §12.4 item 6): every factual claim true and traceable to a source; no fact that helps the cardholder in any bank artifact (the §8.1 harmful-material filter, both layers);
 no no-return INR rebuttals anywhere in the book (Q12 = 0); no customer complaint
@@ -1758,6 +2012,13 @@ the checkout delivery promise returns `ACCESS_DENIED` today. Adding
 means every merchant has to re-consent. Request them now, or rely on the published
 policies alone (§8.1) until that check shows how often a structured promise would have
 changed the outcome?
+
+**Q-7 · Let QFD-only `strong` cases auto-file (§6.1.4).** P1 rates them `strong` but
+holds their filing date through a temporary ladder branch. Removing the branch means
+auto-mode INR cases with a qualified final delivery file at their next decision point
+instead of on the deadline. Measured 2026-09-23 (Q19): **1** open case would move
+(blume-box #352543, due 3 Oct); every review-mode case is unaffected. Remove the branch,
+keep it, or remove it per shop? To be decided with the then-current set printed.
 
 **Q-6 · Document-specific approval (§9.5).** Build the optional exact-document approval
 now (P1), or defer until a merchant asks to approve wording rather than schedule

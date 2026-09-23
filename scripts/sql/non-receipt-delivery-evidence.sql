@@ -217,3 +217,35 @@ select s.shop_domain, d.id, d.order_name, d.status, d.review_state, d.submission
  where d.reason = 'PRODUCT_NOT_RECEIVED' and d.closed_at is null
    and d.status in ('needs_response', 'under_review')
  order by d.due_at nulls last;
+
+-- Q19 — plan §6.1.4: open, unsaved non-receipt disputes with a receipt-grade delivery,
+-- their shipment count, any contradictory tracking record, and the rule mode in force.
+-- An auto-mode row here would move from hold_for_deadline to auto_file if rated strong.
+with open_inr as (
+  select d.id, s.shop_domain, d.order_name, d.phase, d.review_state, d.due_at,
+         d.order_gid, d.shop_id, o.delivery_status, o.delivered_at_tracking
+    from disputes d
+    join shops s on s.id = d.shop_id
+    left join shopify_orders o on o.shop_id = d.shop_id and o.shopify_order_id = d.order_gid
+   where d.reason = 'PRODUCT_NOT_RECEIVED' and d.status = 'needs_response'
+     and d.evidence_saved_to_shopify_at is null),
+mode as (
+  select distinct on (dispute_id) dispute_id,
+         event_payload->'resulting_action'->>'mode' as mode
+    from audit_events where event_type = 'rule_applied'
+   order by dispute_id, created_at desc),
+trk as (
+  select shop_id, shopify_order_id, count(*) as n_ship,
+         count(*) filter (where shipment_status in ('Returned','ReturnedToSender','NotDelivered')
+                             or fulfillment_status = 'NOT_DELIVERED') as n_contra
+    from shopify_fulfillment_trackings group by 1, 2)
+select o.shop_domain, o.order_name, o.phase, o.delivery_status,
+       o.delivered_at_tracking::date as delivered, coalesce(m.mode, '?') as mode,
+       o.review_state, o.due_at::date as due,
+       coalesce(t.n_ship, 0) as ships, coalesce(t.n_contra, 0) as contra
+  from open_inr o
+  left join mode m on m.dispute_id = o.id
+  left join trk t on t.shop_id = o.shop_id and t.shopify_order_id = o.order_gid
+ where o.delivery_status in ('Delivered', 'CollectedAtPickup')
+   and o.delivered_at_tracking is not null
+ order by o.due_at;
