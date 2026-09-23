@@ -207,6 +207,20 @@ describe("validator v7 on Case A's first letter", () => {
     expect(check(text).length).toBeGreaterThan(0);
   });
 
+  it.each([
+    // Verbatim from the v8 rebuild, 2026-09-23.
+    "The carrier records corroborate that both items left the merchant's possession following the transaction.",
+    "Second, the merchant fulfilled the Sunburst Mineral SPF 50 Sunscreen on 16 September 2026; this item was tendered to USPS under shipping reference 260914OET4.",
+  ])("v9: refuses: %s", (text) => {
+    expect(check(text).length).toBeGreaterThan(0);
+  });
+
+  it("v9: the permitted shape for a parcel with no carrier record passes", () => {
+    expect(
+      check("The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen on 16 September 2026 (USPS shipping reference 260914OET4)."),
+    ).toEqual([]);
+  });
+
   it("v8: hand-over to GOFO, whose record shows it in transit, passes", () => {
     expect(
       check("The merchant fulfilled The Back to School Bundle on 15 September 2026, tendering it to GOFO (tracking YT2640221437435982)."),
