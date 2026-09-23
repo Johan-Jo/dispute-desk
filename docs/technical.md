@@ -3233,6 +3233,14 @@ dispute / chargeback / claim". The model holds no dispute date. A dated in-trans
 longer carries `carrierStatusObservedAt`, and the overlay lists the forbidden wording
 (paraphrased, since a prompt may not quote its own banned phrase).
 
+**Validator 14, prompt 24 (same day).** v13's blanket "prior to the dispute" ban also refused
+*"delivered on 6 July … prior to the dispute being raised"* (#352543), which is true and decisive.
+Item-not-received v8 bans only custody, dispatch and transit words placed before the dispute. A
+carrier-confirmed delivery may be ordered against it, and `deliveryPostDatesDispute` checks the
+direction against the data. **Also:** `pack_json.case_strength` is a four-field summary built in
+`buildPack.ts`, and it did not carry `overallBeforeRev5`, so the P1a newly-strong hold was inert on
+every persisted pack. It is now persisted.
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The

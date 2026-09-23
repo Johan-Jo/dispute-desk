@@ -180,7 +180,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // carries its retrieval time, and the item-not-received overlay names the
 // wording the v22 draft kept using ("prior to the filing of this dispute",
 // "left the merchant's possession", "tendered to their respective carriers").
-const PROMPT_VERSION = 23;
+// v24 (2026-09-23) — the overlay's forbidden-timing wording is narrowed to
+// fulfilments, hand-overs, in-transit parcels and unrecorded parcels; a
+// carrier-confirmed delivery may be placed before the dispute (#352543).
+const PROMPT_VERSION = 24;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

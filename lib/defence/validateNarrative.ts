@@ -162,8 +162,14 @@ import type {
  *      against the parcel it names). item_not_received v7 hard-bans "prior to
  *      the dispute / filing / chargeback", which the model kept writing with
  *      no dispute date to support it.
+ *  14  (2026-09-23) — v13's ban was too broad: it refused "delivered on 6
+ *      July … prior to the dispute being raised" (#352543), true and the
+ *      strongest sentence in the letter. Narrowed (item_not_received v8) to
+ *      custody / dispatch / transit words placed before the dispute; a
+ *      carrier-confirmed delivery's ordering is checked against the data by
+ *      `deliveryPostDatesDispute`.
  */
-export const VALIDATOR_VERSION = 13;
+export const VALIDATOR_VERSION = 14;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
