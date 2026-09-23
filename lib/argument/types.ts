@@ -94,6 +94,12 @@ export interface EvidenceData {
 
 export interface CaseStrengthResult {
   overall: CaseStrengthLevel;
+  /** Item-not-received family only: `overall` under the delivery rollup as
+   *  it stood before non-receipt plan rev 5, same gates applied. The
+   *  automation ladder holds for the deadline any case this revision newly
+   *  made strong (`strength_upgraded_timing_held`, plan §6.1.4). Absent for
+   *  every other family and on packs scored before the revision. */
+  overallBeforeRev5?: CaseStrengthLevel;
   /** Weighted sum: strongCount * 3 + moderateCount * 2.
    *  Plan v3 §P2.1 weights. Replaces the legacy 0-100 ratio
    *  semantically; the ratio is preserved as `coveragePercent`. */

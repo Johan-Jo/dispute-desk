@@ -81,8 +81,18 @@ import type { RelevanceLevel } from "./vocabulary";
  * describes. Changing any category without bumping fails CI with a diff of
  * what moved. The test is the enforcement; this paragraph is only its
  * explanation.
+ *
+ * ── v4 (2026-09-23): the item-not-received rollup (non-receipt plan §6.1.3) ─
+ *
+ * No category moved; the ROLLUP did. A carrier-confirmed delivery
+ * (`delivered_confirmed`, moderate) now carries an INR case to `moderate` on
+ * its own, and a strong delivery signal covering all the disputed goods to
+ * `strong`. Same inputs, different `overall` — a policy change by this
+ * constant's own definition, so every v3 snapshot is invalidated and an
+ * unsubmitted pack shows "not yet assessed" until its next rebuild. The
+ * categorization snapshot is unchanged; only its version moved.
  */
-export const SCORING_POLICY_VERSION = 3;
+export const SCORING_POLICY_VERSION = 4;
 
 export interface CaseAssessment {
   assessmentVersion: number;

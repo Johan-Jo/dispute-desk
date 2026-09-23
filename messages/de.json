@@ -1369,7 +1369,7 @@
     },
     "decisiveHint": {
       "fraud": "Lieferbestätigung, Unterschrift bei Empfang oder Geräte-/Sitzungskonsistenz",
-      "delivery": "Empfangsbestätigung des Versanddienstleisters oder übereinstimmende Rechnungs-/IP-Signale",
+      "delivery": "ein Zustellfoto oder eine Unterschrift vom Versanddienstleister oder eine Nachricht, in der der Kunde den Erhalt bestätigt",
       "product": "die Produktbeschreibung wie beworben und Ihre Rückerstattungsrichtlinie",
       "refund": "dokumentierte Rückerstattungsbearbeitung oder Händlerkommunikation",
       "subscription": "die Stornierungsrichtlinie und der Zeitplan der Kundenkommunikation",
@@ -1398,11 +1398,11 @@
         "fraudAvsOnly": "Die Zahlungsauthentifizierung stützt diesen Fall, aber zusätzliche entscheidende Beweise wie Lieferbestätigung, Geräte-/Sitzungskonsistenz oder Kundenbestätigung würden den Fall verbessern.",
         "strongAndModerate": "{strongLabel} und {moderateLabel} stützen diesen Fall; zusätzliche entscheidende Beweise würden den Fall stärken.",
         "strongOnly": "{label} stützt diesen Fall mit moderater Bestätigung; zusätzliche entscheidende Beweise würden den Fall stärken.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} stützen diesen Fall. Zusätzliche entscheidende Beweise wie {hint} würden ihn weiter stärken."
+        "moderateOnly": "{label1}{label2, select, empty { stützt} other { und {label2} stützen}} diesen Fall. Zusätzliche entscheidende Beweise wie {hint} würden ihn weiter stärken."
       },
       "weak": {
         "strongAlone": "{label} stützt diesen Fall, aber zusätzliche entscheidende Beweise (wie {hint}) würden den Fall stärken.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} bieten teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
+        "moderateOnly": "{label1}{label2, select, empty { bietet} other { und {label2} bieten}} teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
         "supportingOnly": "Der Fall ist schwach, weil das Beweispaket hauptsächlich unterstützende Dokumentation enthält, aber keine entscheidenden Beweise für {family}. {decisive} würde den Fall stärken.",
         "deliveryInTransit": "Derzeit schwach, weil keine Zustellbestätigung bei Shopify eingegangen ist – die Sendungsverfolgung ist aktiv, aber viele Zusteller melden die Zustellung nicht an Shopify zurück. Zeigt die Tracking-Seite des Zustellers das Paket als zugestellt, laden Sie diese Bestätigung als Zustellnachweis hoch. {decisive} würde den Fall stärken."
       },
