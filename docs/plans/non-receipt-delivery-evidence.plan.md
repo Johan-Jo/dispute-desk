@@ -1,7 +1,17 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** PLAN ONLY (**v2, 2026-09-23**). Not started. **Contains two time-boxed live
+**Status:** PLAN ONLY (**v3, 2026-09-23**). Not started. **Contains two time-boxed live
 exposures — §0. Read that first.**
+
+> **Rev 3: we are the merchant's counsel.** The maintainer corrected the plan's posture:
+> DisputeDesk defends the merchant in every case, uses every argument that helps, and
+> never volunteers what helps the cardholder. Rev 2 recommended conceding Case B because
+> Cay Collective's own refund policy offers a refund for late arrival, and it asked
+> letters to state dispatch delays and filing dates. All of that is reversed. The new
+> **Stance** section governs the whole plan. §8.1's delivery-date check now sorts
+> material into cite and bury, and never recommends giving up. Case B files on its
+> carrier-confirmed collection, with two harmful sentences removed and Cay's policies kept
+> out. The one line kept: every sentence is true. Omission, not misstatement.
 
 > **Rev 2** answers the maintainer's review of rev 1. Five corrections, all accepted,
 > all of which made the plan smaller or more precise rather than larger:
@@ -56,6 +66,39 @@ by guessing.
 
 ---
 
+## Stance: we are the merchant's counsel (maintainer directive, 2026-09-23; governs every section below)
+
+DisputeDesk defends the merchant. The plan is built the way a good lawyer builds a brief:
+
+1. **Always defend.** No path in this plan recommends conceding, withdrawing an approval,
+   or declining to file because the facts or the merchant's own policies lean the other
+   way. The system always files the strongest defence available. The only outcome worse
+   than a weak defence is a silent forfeit (§0.3).
+2. **Use every argument that helps; volunteer nothing that hurts.** Material that helps
+   the cardholder never enters the bank-facing artifact: not the facts, the narrative,
+   the PDF, nor any appendix. That covers a delivery window the shipment missed, a
+   dispatch delay, a refund-for-lateness clause, a dispute opened before dispatch, and
+   a customer message that restates the complaint. The check in §8.1 exists to **sort
+   material into helpful and harmful**, never to tell the merchant to give up.
+3. **Every sentence we write is true.** Omission is the tool; misstatement is not. We
+   never say "delivered on time", "shipped promptly" or "no refund was requested" unless
+   it is so. This is advocacy, not modesty: the issuer holds the carrier record and the
+   cardholder's statement, and one provably false sentence loses the whole response.
+4. **Never argue against ourselves.** A sentence that concedes the cardholder's premise
+   is removed even when it is true. "No return was initiated" on a claim that nothing
+   arrived is one of these (D2): it tells the bank the parcel never came.
+5. **The merchant sees what we withheld.** A merchant-only note in the UI, in the same
+   pattern as the fatal-loss message, which is never sent to the bank, lists what was
+   left out and why. The client knows the weak spots; the other side does not.
+
+This extends two standing rules: `[[feedback_bank_optimized_rebuttal]]` (never expose
+weaknesses) and `[[feedback_bank_non_disclosure_two_layers]]` (payload redaction plus a
+prompt rule). Where the source contract asks for disclosure that helps the cardholder
+(dispatch delays "stated without excusing", both dates required), this stance wins; the
+conflict is recorded in §12.4.
+
+---
+
 ## 0. Live exposure — a letter that argues the wrong thing files itself on 3 October
 
 `4576ee51-53ec-4ed2-8c66-65b04bb31d72` · blume-box · order **#360980** · **USD 129**
@@ -88,16 +131,13 @@ It will be filed. Not by a merchant clicking submit — by us:
 | when | `defence-package-deadline-submit`, **2026-10-03 08:00 UTC** (rolling 24 h window reaches a 23:00 deadline) | `vercel.json`, `lib/cron/deadlineWindow.ts` |
 | and then | `submitEvidence: true` — the save *is* the filing | `lib/shopify/composeShopifyMutationPayload.ts:40` |
 
-**Decision needed from the maintainer before 2026-10-03 (see §11, Q-1).** The
-options, none of which requires any of the engineering below:
-
-1. **Concede / do not file.** Nothing is lost that the letter would have won.
-2. **Suppress the fact and rebuild.** With `no_return_initiated` gone the plan holds
-   no primary argument, `noSafeArgument` becomes non-null, and the selector refuses —
-   a silent forfeit unless (3) lands first.
-3. **Ship P0 (§4.1) and rebuild**, so the letter states the verified shipment history
-   instead. This is the outcome the contract asks for and the only one that files
-   something true.
+**Action before 2026-10-03 (see §11, Q-1): ship P0 (§4.1) and rebuild**, so the letter
+argues from what helps: the order was dispatched, handed to GOFO under tracking
+`YT2640221437435982`, and is in the carrier's possession. Suppressing
+`no_return_initiated` on its own is not an option. With nothing to replace it the plan
+holds no primary argument, `noSafeArgument` becomes non-null, and the selector refuses:
+a silent forfeit (§0.3). Removing the self-defeating fact and adding the helpful one must
+land together.
 
 ### 0.1 Fresh live re-check — 2026-09-23 01:27 UTC
 
@@ -136,13 +176,15 @@ approved letter contains (Q6, verbatim):
 
 That is D2 again — the absence of a return recruited as corroboration of receipt on a
 non-receipt claim — this time inside a letter a merchant has already approved. Plus
-the raw enum *"recorded a `CollectedAtPickup` status event"* (§6.6) and no mention
-anywhere that the inquiry was opened on 13 September, **three days before dispatch**
-(§6.4 row 2).
+the raw enum *"recorded a `CollectedAtPickup` status event"* (§6.6), printed to the
+bank as if it were English.
 
-Case B is the better letter of the two and it is still not one we should file as
-written. It needs P0(c)'s validator and §6.6's chronology rule, or a manual edit
-before 1 October.
+Case B's **core is right and it files**: PostNord confirms that the parcel was
+**collected at the pickup point on 18 September**, and that is the strongest fact any
+non-receipt response can carry. Two sentences hurt it, and both come out before
+1 October: the no-return-implies-receipt clause (P0c) and the raw enum (§6.6). Nothing
+is added. In particular the letter does **not** mention that the dispute was opened
+before dispatch; that fact helps only the cardholder (Stance §2).
 
 ### 0.3 What rev 1's option 2 would actually do — now observed, not predicted
 
@@ -161,23 +203,23 @@ Q15 re-run **after** the 02:32 UTC re-ingest: nothing moved. Case A's
 `approved`, `not_saved`, due 1 October. Both §0 exposures stand.
 
 Then the question rev 1 never asked: **what did the merchant promise, and did the
-shipment keep it?** Below is every open non-receipt case still awaiting a response,
-measured against the shipping policy **in force on the order date**. The sources are
-Q17, Q18 and a live `Shop.shopPolicies.updatedAt` check: every stored shipping policy is
-still the published version, and each one predates every one of these orders. Days are
-business days, Mon–Fri.
+shipment keep it?** Asked as an advocate: **which dates and terms help the merchant, and
+which must stay out of the letter?** Below is every open non-receipt case still awaiting
+a response, measured against the shipping policy **in force on the order date**. The
+sources are Q17, Q18 and a live `Shop.shopPolicies.updatedAt` check: every stored
+shipping policy is still the published version, and each one predates every one of these
+orders. Days are business days, Mon–Fri.
 
-| case | merchant's published term | order → dispatch | order → delivery | dispute opened | reading |
-|---|---|---|---|---|---|
-| **B** cay #14784 | *"typically delivered within 5–7 business days after the order has been placed"* | **23 bd** | **25 bd** (window ended 25 Aug) | 20 bd: **after** the window, **before** dispatch | **Late delivery, against terms that offer a refund for late arrival** (below) |
-| **A** blume #360980 | *"Orders will ship within 1-3 business days"*: dispatch only, no delivery window | **17 bd** (max 3) | still in transit | 20 bd | Dispatch 14 bd late; no delivery promise to measure against |
-| blume #352543 | same | 0 bd | 2 bd | 56 bd | On time at every step |
-| 6a8848-dd #101259 (two dispute rows, one order) | *"innerhalb von 0-3 Tagen verschickt … Lieferzeit 7-15 Werktage"* | 1 bd | 9 bd | 12 bd, after delivery | Inside both windows |
-| 6a8848-dd #98250 | same | 5 bd (**over** 0–3 days) | 9 bd | 27 bd | Dispatch late, delivery inside the 7–15 bd window |
+| case | merchant's published term | order → dispatch | order → delivery | dispute opened | **use** | **keep out of the letter** |
+|---|---|---|---|---|---|---|
+| **B** cay #14784 | *"typically … 5–7 business days"* | 23 bd | 25 bd | 20 bd, before dispatch | carrier-confirmed **collection** on 18 Sep, tracking, carrier | the delivery window, the order→dispatch interval, the dispute-before-dispatch date, the refund policy |
+| **A** blume #360980 | *"Orders will ship within 1-3 business days"* (dispatch only) | 17 bd | in transit | 20 bd | dispatch, carrier, tracking, carrier possession | the dispatch promise and the delay against it |
+| blume #352543 | same | 0 bd | 2 bd | 56 bd | **everything**: shipped the same day and delivered in 2 bd, 8 weeks before the dispute. The on-time dates are an argument; cite the policy | nothing |
+| 6a8848-dd #101259 (two dispute rows, one order) | *"innerhalb von 0-3 Tagen verschickt … Lieferzeit 7-15 Werktage"* | 1 bd | 9 bd | 12 bd, after delivery | delivery within the published window; cite the policy | nothing |
+| 6a8848-dd #98250 | same | 5 bd (over 0–3 days) | 9 bd | 27 bd | delivery **within the 7–15 bd window**; cite that clause | the 0–3-day dispatch clause and the 5-day dispatch |
 
-**Case B changes verdict.** Both of Cay Collective's policies have been in force since
-2026-07-06, and the order was placed 2026-08-16. Read live from Shopify on 2026-09-23,
-verbatim:
+**Case B: the policies we must keep out.** Read live from Shopify on 2026-09-23, both in
+force since 2026-07-06 (the order was placed 2026-08-16):
 
 > **Refund policy**, under *"The seller wasn't able to help me"*: *"If the seller isn't
 > able to help you, your next step is to request help from Cay Collective by opening a
@@ -186,31 +228,30 @@ verbatim:
 >
 > **Shipping policy:** *"Delivery times vary depending on the seller and the product, but
 > orders are typically delivered within 5–7 business days after the order has been placed
-> and payment has been received."* … *"we are not responsible for delays caused by third
-> parties, such as postal services and courier companies."*
+> and payment has been received."*
 
-What this does and does not say:
-- The refund policy never defines "estimated delivery window". The only window
-  published anywhere is the shipping policy's *typical* 5–7 business days. **Linking the
-  two is our reading, not Cay's wording.**
-- The refund is **conditional**. It applies after the seller "isn't able to help", through
-  a case opened with Cay Collective. It is not an automatic entitlement on lateness.
-  Whether the buyer contacted the seller or opened a case is **not established**.
-- The third-party disclaimer does not cover this delay. The carrier took 2 days
-  (16 → 18 Sep). The 23 business days before dispatch were on the seller's side.
+The parcel arrived well after the only window Cay publishes, and Cay's refund terms offer
+a refund for late arrival through a Cay case. That is the cardholder's best argument, so
+it is **ours to withhold**. Neither policy enters Case B's facts, narrative or PDF. Today
+it doesn't: the package holds no policy fact and `policyArgument` is empty (verified on
+v2). The job is to make that **structural**, so that a rebuild, a completeness hint
+("add your shipping policy") or a merchant upload cannot put the clause in front of the
+bank. That is P0(e).
 
-The order arrived 18 business days after the only published window closed. The
-cardholder disputed after that window had closed and before the order was dispatched.
-Rev 1 treated Case B as a receipt case with a wording problem. It is a **late-delivery
-case**, and the merchant's published terms offer the cardholder a refund for late
-arrival. That is an argument against the merchant, not a concession the merchant has
-already made. A letter that rests on "the carrier confirms it was collected" argues
-against terms an issuer can read. See §11 Q-1b.
+Case B's defence is the collection itself: the goods were collected by the cardholder at
+the PostNord pickup point on 18 September. That is true, verifiable from tracking, and
+directly answers "not received". It is stated as the present fact it is. Nothing claims
+that the parcel arrived on time or before the dispute.
 
-**Case A gains one fact and loses none.** Blume promises a dispatch time, not a delivery
-date, so the premature-filing argument is unavailable: nothing was promised to arrive by
-a given date. The letter must not contradict the 14-business-day late dispatch, and
-§6.6's chronology rule already forbids smoothing it over.
+**Case A:** blume promises dispatch, not delivery, and the dispatch promise was missed.
+So the policy is left out and the letter argues possession: dispatched, handed to GOFO,
+tracking, in transit. It gives no dates relative to the order.
+
+**The same check produces arguments as well as exclusions.** For blume #352543 and
+6a8848-dd #101259 the published window is a **weapon**: the goods arrived inside what the
+merchant promised, long before the dispute. Rev 1 never cited policy windows on
+non-receipt cases in either direction. §8.1 makes it cite them when they help and bury
+them when they don't.
 
 This check was done by hand, for five cases. §8.1 turns it into the procedure every
 merchant gets.
@@ -586,16 +627,22 @@ a return. Implement it as a claim gate on the existing `return_not_initiated` pr
 "no refund was owed" licence unconditionally and must stop doing so. Do **not** solve
 it by removing the fact from the refund family — that is where it earns its place.
 
-**(e) The adverse-policy check (§8.1.4, row 4).** Before composing a receipt rebuttal,
-compare the case's dates with the merchant's published delivery window and refund
-policy, using the versions in force on the order date. If the parcel arrived after the
-window and the merchant's own policy grants a refund for exactly that, no receipt
-rebuttal is written. The case parks with a recommendation to concede. Only this row of
-§8.1 ships in P0; the full profile and its confirmation flow follow in P3.
+**(e) The harmful-material filter (§8.1.4).** A policy fact, a policy excerpt or a
+date interval enters the bank artifact only if the §8.1 check classes it as **helpful**
+for this case. On a non-receipt case where delivery or dispatch missed the published
+window, the shipping policy, the refund policy's lateness clause and every
+order→dispatch/delivery interval are excluded. They are kept out of `facts_json`, the
+narrative prompt, the PDF and any appendix. The exclusion is enforced **twice**, per
+`[[feedback_bank_non_disclosure_two_layers]]`: the fact is dropped before composition,
+and the validator refuses any sentence that cites the window or the interval. Excluded
+material is listed in a merchant-only note (Stance §5). The completeness engine must not
+then prompt the merchant to "add your shipping policy" on that case; that hint would
+invite them to put the clause back. In P0 this ships as a guard. The full profile and its
+confirmation flow follow in P3.
 
-Then, for Case A specifically: rebuild, read the letter, and only then decide §11 Q-1.
-For Case B, whose deadline is **two days earlier** (§0.2), P0(c) plus §6.6's chronology
-rule are what its approved letter needs — or a manual edit before 1 October.
+Then rebuild both cases and read the letters before their deadlines. Case B's is
+**two days earlier** (§0.2): P0(c) plus §6.6's enum rule are what its approved letter
+needs, or a manual edit that removes exactly those two sentences before 1 October.
 
 ### 4.2 P1 — the strength rollup and the copy around it
 
@@ -755,10 +802,11 @@ wording into P0's acceptance.
 **P0 fixture** — inputs are what prod actually holds for Case A: order + dispatch date,
 carrier `GOFO`, tracking `YT2640221437435982`, `fulfillment_status = IN_TRANSIT`, a
 retrieval timestamp, and the Sep 5–6 thread. The letter must (i) state dispatch and the
-in-transit status with the **retrieval** date labelled as such, (ii) state the dispatch
-delay without excusing it, (iii) make no receipt claim, (iv) make no no-return claim,
-(v) leave the cardholder's reimbursement request uncontradicted, and (vi) **contain no
-movement date**.
+in-transit status with the **retrieval** date labelled as such, (ii) **not mention the
+dispatch delay, the dispatch promise, or the Sep 5–6 thread** (Stance §2; the thread
+restates the complaint), (iii) make no receipt claim, (iv) make no no-return claim,
+(v) make no statement about refund requests either way, and (vi) **contain no movement
+date**.
 
 **P4 fixture** — the contract's §7.9 specimen in full, once an event source exists: the
 seven supplied GOFO events in, the latest event stated with its own date, and the
@@ -855,7 +903,7 @@ by `lib/defence/strategies/registry.ts`. The contract's nine rows map onto it as
 | contract §4 row | today | after |
 |---|---|---|
 | delivered before dispute, matching goods | `item_not_received_delivery_proof_stack` | unchanged |
-| **delivered after dispute, before submission** | **same strategy — the chronology is invisible** | new predicate `delivery_after_dispute_filing`; §6.6 requires both dates |
+| **delivered after dispute, before submission** | same strategy | new predicate `delivery_after_dispute_filing`: argue that **the cardholder now has the goods**. Cite the delivery/collection date; do not cite the filing date |
 | in transit, commitment still ahead | not expressible | needs P3 (§8) |
 | filed before the commitment, still undelivered after it | not expressible | needs P3 |
 | in transit, commitment expired | not expressible | needs P3 |
@@ -864,10 +912,12 @@ by `lib/defence/strategies/registry.ts`. The contract's nine rows map onto it as
 | lost / returned / partial | `returned_to_sender` gate exists | unchanged |
 | material evidence unavailable | `noSafeArgument` exists | unchanged |
 
-Case B is row 2 and today renders as row 1: its chronology paragraph lists dispatch
-and collection and **never states the 13 September filing date** (Q6), so the letter
-cannot be read as the subsequent-delivery argument it actually is. Per the contract,
-later delivery must never be presented as disproving the original complaint.
+Case B is row 2, and its chronology already does the right thing: it lists dispatch and
+collection and **does not state the 13 September filing date** (Q6). Keep it that way.
+The argument for row 2 is that the cardholder has the goods, established by the carrier.
+The letter never claims that delivery happened before the dispute (that would be false,
+Stance §3). It never volunteers that it happened after (that would be harmful, Stance
+§2). The issuer knows the filing date; we do not remind them.
 
 ### 6.5 One plan, extended (contract §6)
 
@@ -888,9 +938,15 @@ because prompt-only rules are not enforcement:
 
 1. On the `item_not_received` family, a **no-return** argument is refused (P0c).
 2. Where a delivery or collection event **post-dates the dispute filing**, the letter
-   must carry both dates or be refused. A rebuilt letter that merely appends
-   "delivered" to a stale transit narrative fails this (contract §7.9, final
-   paragraph).
+   must not state or imply that delivery preceded the dispute (false), and it does not
+   cite the filing date (harmful). A rebuilt letter that merely appends "delivered" to a
+   stale transit narrative fails this. The delivery must be the lead argument, not an
+   afterthought to a transit story (contract §7.9, final paragraph, adapted per §12.4
+   item 6).
+3. **Timing claims only when they help, and only when true.** "Delivered within the
+   merchant's published delivery window" is cited when §8.1 says so. No sentence
+   characterises timing otherwise ("promptly", "without delay", "as expected"), and a
+   missed window or dispatch interval is never stated (P0e).
 
 Also: `CollectedAtPickup` is an internal enum and Case B's letter prints it to the
 bank verbatim — *"recorded a CollectedAtPickup status event"* (Q6). The existing
@@ -927,6 +983,15 @@ Three changes:
    the contract §5 — it **blocks** any assertion that no refund was requested, whether
    or not the message is approved for inclusion. This is the pair to P0(c): the
    analyzer records the request, the validator refuses the contradicting sentence.
+
+4. **Messages that help the cardholder never enter the bank artifact.** A message that
+   restates the complaint, complains of delay, or asks for compensation is classified
+   (so the validator knows it exists and refuses any sentence that contradicts it), and
+   **excluded** from the letter and the PDF. Only messages that help the merchant are
+   quoted: an acknowledgement of receipt, an agreement to wait, an admission that
+   undercuts the claim. This matches Stance §2 and the existing Gorgias rule that
+   refund/cancellation history is hard-blocked from bank packs
+   (`[[project_gorgias_bank_category_exclusion]]`).
 
 Re-running the analyzer on Case A must move that message off `contradiction`. Its
 `review_status = proposed` means no approved content changes and no letter is
@@ -1026,29 +1091,35 @@ inform the merchant UI, but it may not put a date into the bank letter.
 
 Runs at pack build, and again at the deadline refresh (§9.3). Inputs: the order date,
 dispatch, first scan, delivery, the dispute's `initiated_at`, and the profile in force on
-the order date. Outputs, stored on the case and shown on the Overview:
+the order date. Outputs are stored on the case. They are **internal**: they steer
+argument selection and the harmful-material filter, and they are shown to the merchant
+only in the merchant-only note, never to the bank.
 
 | output | values |
 |---|---|
 | `dispatch_vs_promise` | `on_time` · `late(n bd)` · `no_dispatch_promise` · `unknown` |
 | `delivery_vs_promise` | `on_time` · `late(n bd)` · `pending, window open` · `pending, window passed` · `no_delivery_promise` · `unknown` |
 | `dispute_timing` | `before_window_end` (premature) · `after_window, before_delivery` · `after_delivery` |
-| `policy_remedy_triggered` | `true` when the merchant's published terms offer the cardholder a remedy for what happened, conditional or not (conditions stored alongside) |
+| `harmful_terms` | the policy clauses that would help the cardholder on these dates (e.g. cay's refund-for-late-arrival clause), each with its conditions |
 
-#### 8.1.4 How to act on it
+#### 8.1.4 How to act on it: every row files
 
-| check result | the letter | automation |
+The check never decides *whether* to defend. It decides **what to cite and what to
+bury**.
+
+| check result | cite | keep out |
 |---|---|---|
-| delivered on time, dispute after delivery | receipt argument, **with** the on-time dates as a supporting fact | normal |
-| dispute opened **before** the delivery window ended | the premature-filing argument becomes available (contract §3.1), **but only** with a confirmed profile whose wording is a `commitment` | normal |
-| delivered **late**, and the policy gives no remedy for lateness | receipt argument, **with the lateness stated plainly** (§6.6). Never smoothed over | review, not auto |
-| delivered late **and `policy_remedy_triggered`** | **no receipt rebuttal.** The merchant's own published terms grant the claim | **recommend conceding.** Never auto-file; the merchant decides |
-| still in transit, window passed | in-transit narrative (§5), with the lateness stated | review |
-| no promise of either kind, or profile `unknown` | as today: shipment narrative only, no timing claim either way | unchanged |
+| delivered on time, dispute after delivery | delivery **and** the published window it met; the policy is evidence | nothing |
+| dispute opened **before** the delivery window ended | **premature filing**: the cardholder disputed before the merchant's own delivery window had closed (contract §3.1). Needs a confirmed profile; estimate wording ("typically") is cited as the merchant's *stated expectation*, never as a guarantee | nothing |
+| delivered late | the delivery or collection itself, as a present fact, with tracking and carrier | the window, the policy, every order→delivery interval, the dispute date relative to delivery |
+| delivered late **and** `harmful_terms` present | same as above | same as above, **plus** the refund or remedy clause. It is also excluded structurally from any future rebuild of this case |
+| in transit, window open | carrier possession, **and** that the window has not closed | nothing |
+| in transit, window passed | carrier possession | the window and every interval |
+| dispatch late, delivery within window | the delivery-window clause only | the dispatch clause and the dispatch interval |
+| no promise of either kind, or profile `unknown` | shipment narrative, no timing claim | nothing to exclude |
 
-The row where the policy grants the remedy would have caught Case B. It is also the only
-row that changes what we *recommend*, not just what we write, so it ships first, in P0
-(§4.1).
+Automation is unchanged by this check. A late case is not demoted to review because it
+was late; it files on the normal path with the harmful material removed.
 
 #### 8.1.5 Onboarding and drift
 
@@ -1065,13 +1136,20 @@ row that changes what we *recommend*, not just what we write, so it ships first,
 
 #### 8.1.6 Tests
 
-- **21.** Case B's exact dates + cay's profile → `delivery_vs_promise = late(18 bd)`,
-  `policy_remedy_triggered = true`, the recommendation is to concede, and there is no
-  receipt rebuttal.
+- **21.** Case B's exact dates + cay's profile → the letter **files** and cites the
+  18 September collection, tracking and carrier. It contains no delivery window, no
+  policy text, no order→dispatch or order→delivery interval, and no dispute-filing date.
+  The merchant-only note lists the withheld clause.
+- **21a.** Same case, and the merchant uploads the shipping policy manually → the policy
+  still does not reach the bank artifact, and the note says why.
+- **21b.** blume #352543's dates → the letter **cites** the 1–3-day dispatch promise and
+  the same-day dispatch (helpful material is used, not just harmful material dropped).
 - **22.** A policy whose live `updatedAt` is **after** the order date → the profile is
   not admissible for that order → `unknown`, and the letter makes no timing claim.
-- **23.** Estimate wording (*"typically"*, *"usually"*) → the premature-filing argument is
-  refused; lateness is still reported.
+- **23.** Estimate wording (*"typically"*, *"usually"*) on a premature dispute → cited as
+  the merchant's stated expectation, never as a guarantee or commitment.
+- **23a.** Validator: a sentence citing a window the shipment missed is refused, even if
+  the model writes it unprompted.
 - **24.** `estimatedDeliveryAt` present, no policy window → never treated as the promise.
 - **25.** Days counted two ways on one order: 6a8848-dd's *"0-3 Tagen"* (calendar days)
   and *"7-15 Werktage"* (business days) are each computed on their own basis.
@@ -1308,9 +1386,9 @@ repo's verified failures, and each must be shown to fail before the fix.
     one date. "Ships next week" does not enable a premature-filing claim.
 
 **P4**
-17. Delivery event post-dating the filing → both dates in the letter, no claim the
-    original complaint was false. **Case B is the live fixture** (filed 13 Sep,
-    dispatched 16 Sep, collected 18 Sep).
+17. Delivery event post-dating the filing → the delivery leads the letter; the filing
+    date is **not** cited; nothing states or implies that delivery preceded the dispute.
+    **Case B is the live fixture** (filed 13 Sep, dispatched 16 Sep, collected 18 Sep).
 18. Carrier read fails near the cutoff → last verified evidence with its as-of date;
     no implication that a fresh check succeeded; no fabricated absence. **Rev 2: per
     §9.8, the artifact is eligible only if it makes no claim depending on the unread
@@ -1325,7 +1403,7 @@ repo's verified failures, and each must be shown to fail before the fix.
     or `plan_policy_version` moves with the evidence untouched; `evidence_hash` moves.**
     Negative: a content-identical rebuild invalidates nothing.
 
-**Release criteria** (contract §9, kept): every factual claim traceable to a source;
+**Release criteria** (contract §9, adapted per §12.4 item 6): every factual claim true and traceable to a source; no fact that helps the cardholder in any bank artifact (the §8.1 harmful-material filter, both layers);
 no no-return INR rebuttals anywhere in the book (Q12 = 0); no customer complaint
 mislabelled as a contradiction by the tested inference; correct output with no
 support inbox connected; and **no win-rate promise before submitted outcomes mature**.
@@ -1334,24 +1412,20 @@ support inbox connected; and **no win-rate promise before submitted outcomes mat
 
 ## 11. Decisions needed
 
-**Q-1 · Case A, before 2026-10-03 (blocking, §0).** Concede, suppress-and-forfeit, or
-ship P0 and file a factual shipment response? Recommendation: **ship P0(a)+(b)+(c) and
-rebuild**, then read the regenerated letter before deciding whether to file. USD 129
-is the stake; the reusable fix is the return.
+**Q-1 · Case A, before 2026-10-03 (blocking, §0).** Ship P0(a)+(b)+(c)+(e) and
+rebuild, then read the regenerated letter before 3 October: carrier possession, no
+no-return argument, no dispatch-delay material. Decision needed only on timing: does P0
+land on `master` before 3 October, or does Case A get a one-off rebuild on a hot-fixed
+build? USD 129 is the stake; the reusable fix is the return.
 
-**Q-1b · Case B, before 2026-10-01 — two days earlier (blocking, §0.2).** Approved, and
-`review_state = approved` puts it back in the deadline cron's selection, so it files on
-1 October as written: with the no-return-implies-receipt sentence, the raw
-`CollectedAtPickup` enum, and no mention that the inquiry preceded dispatch. Options:
-P0(c) + §6.6 in time, a manual edit of the approved letter, or withdraw the approval and
-re-approve a corrected one. **This is the nearer deadline and rev 1 called it safe.**
-**Updated by §0.4:** the order arrived 18 business days after the only delivery window
-cay publishes (a *typical* 5–7 business days). Cay's refund policy offers a full refund
-for arrival "after the estimated delivery window" through a Cay case, once the seller
-can't help. Recommendation: **lean towards conceding and withdrawing the approval**.
-First, check the merchant's messages for (a) the buyer contacting the seller or opening a
-Cay case, and (b) any agreement to the delay. (a) strengthens the case for conceding.
-(b) would support filing, with the lateness stated plainly.
+**Q-1b · Case B, before 2026-10-01 (blocking, §0.2).** It files on 1 October regardless,
+and it should: carrier-confirmed collection is its defence. What must change before then
+is two sentences: remove the no-return-implies-receipt clause, and turn
+`CollectedAtPickup` into English ("collected by the recipient at the PostNord pickup
+point"). Nothing is added. Cay's delivery window and refund clause stay out (§0.4); they
+are already absent and P0(e) keeps them out. **Decision:** make that edit by hand to the
+approved letter now, or wait for P0(c) to rebuild it? Waiting risks the deadline;
+editing by hand is two deletions and one rewording.
 
 **Q-5 · Fulfillment-order read scopes (§8 pt 1, §8.1.1).** The only structured source of
 the checkout delivery promise returns `ACCESS_DENIED` today. Adding
@@ -1436,3 +1510,11 @@ against prod on 2026-09-22, and every code reference from `origin/develop` @
    lift a non-receipt case above `weak`, 0 of 287 shipments carrying the signature
    that is the only alternative. It is the largest measured defect in this area and it
    has nothing to do with parcels in transit.
+6. **Disclosure that helps the cardholder is overridden by the Stance.** The contract
+   asks for a dispatch delay to be "stated without excusing it" (§7.9 specimen), for
+   both the filing date and the delivery date to appear whenever delivery post-dates
+   the dispute (§7.8), and for the letter never to present later delivery as answering
+   the complaint. The maintainer's directive of 2026-09-23 is that we are the merchant's
+   counsel. Harmful facts are omitted, never stated. Later delivery is argued as the
+   present fact it is: the cardholder has the goods. The contract's one rule that
+   survives intact is **no false statement**, which the Stance keeps as rule 3.
