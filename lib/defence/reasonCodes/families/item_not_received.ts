@@ -54,7 +54,7 @@ export const item_not_received: ReasonCodeFamily = {
     "- proofType delivered_confirmed or signature_confirmed: the carrier's record confirms delivery on deliveredAt.",
     "- proofType in_transit: the carrier's record shows the shipment in transit (status as retrieved on carrierStatusObservedAt).",
     "- any other proofType: the carrier has NO record for this parcel. Write it in exactly this shape and nothing more: 'The merchant fulfilled <items> on <fulfilledAt> (<carrier> shipping reference <reference>).' For this parcel never use tendered, handed, accepted, dispatched, shipped, sent, collected, picked up, in transit, delivered, or left the merchant's possession, and never include it in a sentence that says what a carrier did or holds.",
-    "- A sentence covering the whole order ('both items', 'each item', 'the order') may only say the merchant fulfilled them. Carrier handling belongs only in a sentence about the parcel whose own entry records it.",
+    "- A sentence covering the whole order ('both items', 'each item', 'the order') may only say the merchant fulfilled them. Carrier handling, and any mention of a carrier record, belongs only in a sentence about the parcel whose own entry records it.",
     "Never write a proofType value itself; use plain words.",
     "AFFIRMATIVE ONLY. Describe what the records show. Never describe what a record lacks (a scan, a signature, a confirmation, an event), and never describe the merchant's position by what it declines to claim.",
     "TIMING. An in-transit status has no hand-over date. Never relate the carrier's custody, the transit status, or entry into the carrier network to when the dispute was opened or filed.",
@@ -95,7 +95,11 @@ export const item_not_received: ReasonCodeFamily = {
     // v4: "both items left the merchant's possession" — custody transfer for
     // every parcel, including one no carrier recorded (blume-box #360980).
     { pattern: /\bleft\s+the\s+merchant'?s?\s+(?:possession|custody|premises|warehouse|control)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    // v5: "two separate shipments, each with its own carrier record" — a
+    // carrier record claimed for every parcel, one of which has none
+    // (blume-box #360980, v9 draft).
+    { pattern: /\b(?:each|both|every|all)\b[^.;]{0,50}\bcarrier\s+(?:record|tracking|scan|event)s?\b|\bcarrier\s+(?:record|tracking)s?\s+(?:for|of|on)\s+(?:each|both|every|all)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
     { pattern: /\bout\s+for\s+delivery\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
   ],
-  version: 4,
+  version: 5,
 };
