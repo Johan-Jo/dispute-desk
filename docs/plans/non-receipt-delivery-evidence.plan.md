@@ -1,7 +1,25 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** PLAN ONLY (v1, 2026-09-22). Not started. **Contains one time-boxed live
-exposure — §0. Read that first.**
+**Status:** PLAN ONLY (**v2, 2026-09-23**). Not started. **Contains two time-boxed live
+exposures — §0. Read that first.**
+
+> **Rev 2** answers the maintainer's review of rev 1. Five corrections, all accepted,
+> all of which made the plan smaller or more precise rather than larger:
+> **(1)** pickup *availability* is not collection — rev 1's rollout count wrongly
+> included `DeliveredToPickup`; the real figure is **13**, and the distinction is now
+> an invariant with its own test (§6.1, §4.2). **(2)** an in-transit status supplies no
+> movement timestamp — rev 1's permitted wording assumed event history it had just
+> finished proving we lack; §5.2 now has two wordings, one per phase.
+> **(3)** the fallback rules contradicted each other — §9.2 blocked auto-filing on an
+> unavailable source while tests 18-19 allowed a fallback; §9.8 is the eligibility
+> rule that resolves it, and a known-stale package never becomes eligible by a
+> rebuild failing. **(4)** approval must pin the **argument**, not only the evidence
+> hash (§9.5). **(5)** "no return" needs qualifying in refund disputes too — rev 1's
+> test 2 preserved it unconditionally (§4.1d).
+> Also added: §2.1, the shared-mechanism boundary with the not-as-described work,
+> which stays a **separate plan**. And §0 carries a fresh live re-check, which
+> **found a second exposure rev 1 missed**; a later re-check (§0.4) found correction 5
+> already live in two approved refund letters.
 **Deliverable:** make a non-receipt response say what the shipping record actually
 shows. Three things have to change together: the evidence model must hold an
 **in-transit** state instead of collapsing it into "no evidence"; a
@@ -9,9 +27,12 @@ carrier-confirmed delivery must be able to carry an INR case without a signature
 nobody's carrier ever supplies; and the "no return was initiated" argument must be
 structurally unavailable on a claim that the goods never arrived.
 **Deployment:** prod = `master`. Every figure below was read from prod
-(`aokhplydttxtebvbeuzc`) on **2026-09-22** via `npm run db:query:prod`. Code
-references are against `origin/develop` @ `0d383e16`.
-**Evidence SQL:** `scripts/sql/non-receipt-delivery-evidence.sql` (Q1–Q14).
+(`aokhplydttxtebvbeuzc`) on **2026-09-22**, and §0 re-verified **2026-09-23 01:27
+UTC**, via `npm run db:query:prod`. Code references are against `origin/develop` @
+`0d383e16`.
+**Evidence SQL:** `scripts/sql/non-receipt-delivery-evidence.sql` (Q1–Q16). Q15 is the
+re-check to run before acting on any deadline claim here; Q16 finds every other dispute
+in Case B's position.
 **Source contract:** the supplied *"DisputeDesk: non-receipt disputes while goods
 are in transit"*, revision 2, 22 September 2026. Its section numbers are preserved
 in the mapping table at §3 so nothing in it is silently dropped. Where this audit
@@ -77,12 +98,82 @@ options, none of which requires any of the engineering below:
    instead. This is the outcome the contract asks for and the only one that files
    something true.
 
-A second live case, cay-collective `f0036694` / **#14784** / SEK 649, deadline
-**2026-10-01 23:00 UTC**, is *not* in this danger — its letter is delivery-led and
-accurate on the carrier record. Its problems are different: it is rated **weak over a
-carrier-confirmed collection** (D3), it is the subsequent-delivery position rendered
-as if it were a plain receipt argument (§6.4), and the copy around it claims an
-identity check we do not hold (D6) while offering fraud-family advice (D5).
+### 0.1 Fresh live re-check — 2026-09-23 01:27 UTC
+
+Rev 1's figures were read on 2026-09-22 and the maintainer rightly asked whether the
+exposure still stands. Re-queried against prod:
+
+| | Case A `4576ee51` #360980 | Case B `f0036694` #14784 |
+|---|---|---|
+| status | `needs_response` | `needs_response` |
+| `submission_state` | `not_saved` | `not_saved` |
+| `submitted_at` / `evidence_saved_to_shopify_at` | null / null | null / null |
+| `delivery_status` | still **null** | `CollectedAtPickup` |
+| order last re-ingested | 2026-09-22 02:32 UTC | 2026-09-22 02:32 UTC |
+| deadline | **2026-10-03 23:00 UTC** | **2026-10-01 23:00 UTC** |
+| verdict | **unresolved — the §0 exposure stands** | **a second exposure, below** |
+
+### 0.2 The second exposure rev 1 missed — Case B files first, on 1 October
+
+Rev 1 said Case B was "not in this danger". That was wrong, and the mechanism is the
+one place rev 1 did not look.
+
+Case B is `normalized_status = needs_review` under a **review-mode** rule
+(`rule_applied` → `{mode: "review"}`, rule `e5819147`, `amount_range.min = 1` — every
+cay-collective dispute). `needs_review` is a hard exclusion from the deadline submit
+cron. **But `review_state = 'approved'` is an explicit exception** added 2026-07-29
+(`app/api/cron/defence-package-deadline-submit/route.ts:144-170`): the merchant
+pressing "Submit on the deadline" re-admits the dispute to the cron's selection
+(`review_state.eq.approved` in the `.or(...)` filter). Case B carries that flag.
+
+So Case B **will file on 2026-10-01 08:00 UTC**, two days before Case A, and its
+approved letter contains (Q6, verbatim):
+
+> *"The merchant notes that no return of the goods has been initiated and the carrier
+> has not recorded any return transit event, **which is consistent with the goods
+> having been received**."*
+
+That is D2 again — the absence of a return recruited as corroboration of receipt on a
+non-receipt claim — this time inside a letter a merchant has already approved. Plus
+the raw enum *"recorded a `CollectedAtPickup` status event"* (§6.6) and no mention
+anywhere that the inquiry was opened on 13 September, **three days before dispatch**
+(§6.4 row 2).
+
+Case B is the better letter of the two and it is still not one we should file as
+written. It needs P0(c)'s validator and §6.6's chronology rule, or a manual edit
+before 1 October.
+
+### 0.3 What rev 1's option 2 would actually do — now observed, not predicted
+
+Rev 1 guessed that suppressing `no_return_initiated` would leave Case A with no safe
+argument. Case B's own **v1** proves it: built 2026-09-13 12:44 UTC, before dispatch,
+with no delivery and no no-return fact, it ended as
+`defence_package_skipped` / **`failureCode: no_bank_eligible_facts`** (Q9). The system
+already behaves honestly there — it declines to write a letter rather than argue from
+nothing. Which is exactly why P0(b) must land with P0(a): remove the bad fact without
+adding the true one and the outcome is a silent forfeit, observed.
+
+### 0.4 Re-check 2026-09-23 ~09:55 UTC — and correction 5 is already live
+
+Q15 re-run **after** the 02:32 UTC re-ingest: nothing moved. Case A's
+`delivery_status` is still null, `submission_state = not_saved`; Case B is still
+`approved`, `not_saved`, due 1 October. Both §0 exposures stand.
+
+Q16 (approved, unsaved, deadline ahead, **excluding** rows already submitted) found
+the §4.1(d) defect in two more approved letters — **cay-collective, credit not
+processed, one fact each: `no_return_initiated`, and no refund-policy fact in the
+package**:
+
+| dispute | order | amount | deadline | letter (verbatim, v2) |
+|---|---|---|---|---|
+| `cd0caead` | #14481 | SEK 332 | **2026-10-02 23:00 UTC** | *"…no refund obligation arose, and accordingly the claim that a refund remains outstanding is not supported"* |
+| `bf8e7526` | #15673 | SEK 1 397 | 2026-10-08 23:00 UTC | *"…in the absence of a return, no refund obligation arose and no refund was issued"* |
+
+That is §4.1(d) table row 2 exactly: the fact alone, no applicable return-conditional
+terms in evidence, and the letter argues from it that **no refund was owed**. Both are
+`review_state = approved`, so both re-enter the deadline cron like Case B. They are not
+non-receipt cases and they are in this plan only because correction 5 is; the fix is
+§4.1(d)'s claim gate on `return_not_initiated`, which ships with P0. Decision: §11 Q-1c.
 
 ---
 
@@ -339,6 +430,36 @@ it.
 
 ---
 
+## 2.1 Boundary with the not-as-described work — two plans, shared mechanisms
+
+**Decision (maintainer, 2026-09-23): the two stay separate plans.** What they share is
+machinery, not argument. The not-as-described work keeps its own home
+(`docs/plans/product-not-as-described-scoring.plan.md`,
+`[[project_product_not_as_described_scoring]]`); this plan is the one that hardens the
+mechanisms below, and the NAD plan consumes them rather than re-deriving them.
+
+| Shared mechanism | Non-receipt defence (here) | Not-as-described defence (there) |
+|---|---|---|
+| **Evidence relevance** | delivery or transit history | product specifications, conformity and remedies |
+| **Return evidence** | **excluded** as a rebuttal to non-receipt (D2, §4.1a) | used **conditionally**, with source limitations — a return is a *precondition* to filing 13.3 post-Oct-2024, so the fact means something there that it cannot mean here |
+| **Evidence provenance** | carrier events and observation dates (§5.2, §9.2) | listing snapshots and capture dates |
+| **Canonical argument plan** | determines permitted **shipment** claims (§6.5) | determines permitted **product** claims — same `CaseArgumentPlan`, different claim vocabulary |
+| **PDF / UI consistency** | owned by `plan-projection-drift.plan.md` | **reuse that fix**, do not implement a second projection |
+| **Material updates** | new delivery events (§5.3, §9.2) | new product evidence or completed remedies |
+
+Two consequences worth stating, because they are where the plans could collide:
+
+1. **§4.1(a)'s `deniedForFamilies` field is the shared surface.** It must be a
+   per-family deny-list from the start, not an `item_not_received` special case, or the
+   NAD work will need a second mechanism for the same question. §4.1(d) is the first
+   proof that the field alone is not enough.
+2. **The claim vocabulary in `CaseArgumentPlan` (§6.5) must be extensible, not
+   shipment-shaped.** `EvidenceFactCategory` has no conformity vocabulary today
+   (`[[project_paypal_defence_plan_review]]` found the same gap from another
+   direction). Do not name the new plan fields after shipping.
+
+---
+
 ## 3. Contract coverage map
 
 Every section of the supplied revision-2 contract, and where it lands. **"Exists"
@@ -403,17 +524,54 @@ Rule (c) is the one that must not be skipped even if (a) is judged risky, becaus
 is the layer that catches the next re-entry of the same reasoning through a different
 door. Prod counter for (a)+(c): **Q12 must fall to 0 and stay there.**
 
+**(d) "No return" stays conditional where it IS admitted.** Rev 1's test 2 preserved
+the fact unconditionally on `credit_not_processed`, and that is too generous. *No
+recorded return does not establish that no refund was owed* — the merchant may have
+agreed to refund without requiring one, or a return may be irrelevant to the agreed
+remedy. So the fact remains **admitted** on the refund family and what it **licenses**
+narrows:
+
+| what the case holds | what may be claimed |
+|---|---|
+| `no_return_initiated` + return-conditional refund terms applicable to this order | the refund obligation had not arisen — the existing `credit_not_processed_no_return` argument, unchanged |
+| `no_return_initiated` alone, no applicable return-conditional terms | **order context only.** State the return status; do not argue from it that no refund was owed |
+| `no_return_initiated` + evidence of an agreed refund (message, credit, policy exception) | the fact is **adverse-adjacent** and the "no refund owed" claim is refused outright |
+
+This is the same shape as the returned-to-sender carve-out already in
+`ALWAYS_ADMISSIBLE_RULES`, and the same shape as
+`docs/plans/returned-parcel-per-payment-method.plan.md`'s central finding — that the
+argument turns on whether a **pre-disclosed** policy exists, not on the bare absence of
+a return. Implement it as a claim gate on the existing `return_not_initiated` predicate
+(`lib/defence/factPredicates.ts:319-331`), whose description today asserts the
+"no refund was owed" licence unconditionally and must stop doing so. Do **not** solve
+it by removing the fact from the refund family — that is where it earns its place.
+
 Then, for Case A specifically: rebuild, read the letter, and only then decide §11 Q-1.
+For Case B, whose deadline is **two days earlier** (§0.2), P0(c) plus §6.6's chronology
+rule are what its approved letter needs — or a manual edit before 1 October.
 
 ### 4.2 P1 — the strength rollup and the copy around it
 
 §6.1–§6.3. D3, D4, D5, D6. No schema change; one measured regeneration set.
-**Blast radius must be measured before merge** — Q11 puts **14** open non-receipt
-disputes on a positive delivery state (12 `Delivered`, 1 `CollectedAtPickup`, 1
-`DeliveredToPickup`), and a case moving `weak → moderate` changes the automation
-decision from `hold_for_deadline` to `auto_file`, i.e. it starts filing earlier. That
-is the intended behaviour and it is still a behaviour change that needs the
-maintainer's eyes (§11 Q-2).
+
+**Blast radius, corrected in rev 2.** Rev 1 said 14 open disputes would re-rate by
+including `DeliveredToPickup`. That was wrong: **a parcel awaiting collection is not a
+collected parcel**, and it must never qualify as confirmed receipt. The real figure is
+**13** — 12 `Delivered` + 1 `CollectedAtPickup`. The one `DeliveredToPickup` case stays
+`weak`, correctly.
+
+The code already keeps that line and the fix must not blur it: `confirmedReceipt`
+(`lib/packs/sources/fulfillmentSource.ts:247-256`) admits **`Delivered` or
+`CollectedAtPickup` with a timestamp** and nothing else, so `DeliveredToPickup` falls to
+tier 1 → `delivered_unverified` → `supporting`, below the `hasConfirmedDelivery`
+threshold of §6.1. That is an **invariant with a test** (§10 test 8a), not an incidental
+property of the current tier list — a future widening of `confirmedReceipt` would
+silently promote pending pickups into receipt claims.
+
+A case moving `weak → moderate` changes the automation decision from
+`hold_for_deadline` to `auto_file`, i.e. it starts filing **earlier**. That is the
+intended behaviour and it is still a behaviour change that needs the maintainer's eyes
+(§11 Q-2).
 
 ### 4.3 P2 — communications classification
 
@@ -478,21 +636,44 @@ distinction.
 Case A is therefore expressible today, from Shopify's own per-shipment
 `fulfillment_status` — no new integration. That is what makes P0 shippable this week.
 
-### 5.2 What the fact may and may not say
+### 5.2 What the fact may and may not say — and it differs by phase
 
-The value written for an `in_transit` fact carries, per shipment: carrier (as named,
-never normalised away), tracking id, the **event timestamp** of the last known
-movement, the event's own text where the source supplies it, the source id, and the
-retrieval timestamp — the contract's §3 provenance set. Kept deliberately absent:
-any destination assertion, any ETA presented as a commitment, and any derived
-"progressing" verb.
+**Rev 2 correction.** Rev 1 permitted *"the carrier has recorded movement up to {event
+timestamp}"*. That claim requires carrier **events**, and §2 D8(3) had just established
+there is no event history and no event table. A status is not a movement, and the
+moment DisputeDesk read a status is not the moment a parcel moved. Two wordings,
+therefore, one per phase — and P0 gets the narrower one.
 
-Permitted claim class: *the carrier holds the shipment and has recorded movement up
-to {event timestamp}*. Prohibited, and enforced by the validator: delivery, receipt,
-arrival at the cardholder's address, inference of the address from a facility
-location, premature filing, and any present-tense "is moving today" built from a
-stale scan. The contract's §7.8 sentence rule is adopted verbatim: *"The latest
-available event is dated 22 September…"*, never *"the parcel is progressing today"*.
+**P0 — status only.** The value carries, per shipment: carrier as named (never
+normalised away), tracking id, the **source-reported status** (`IN_TRANSIT` /
+`OUT_FOR_DELIVERY`), the source id, and the **retrieval timestamp**. There is no
+movement date because we hold none.
+
+> Permitted: *the merchant's carrier record shows this shipment in transit with
+> {carrier} under tracking {id}; that status was retrieved on {retrieval date}.*
+>
+> **Refused, explicitly including rev 1's own wording:** "has recorded movement up to
+> {date}", any date presented as when the parcel last moved, any progress verb, and
+> any implication that the retrieval date is an event date.
+
+**P4 — events, once a source supplies them.** With the event table of §9.2 the last
+**event timestamp** becomes a real field and the fuller claim unlocks — *"the latest
+carrier event for this shipment is dated {event date}"* — with the contract's §7.8
+sentence rule adopted verbatim: *"The latest available event is dated 22 September…"*,
+never *"the parcel is progressing today"*. The two dates are then carried separately and
+must never be printed as one (the contract's §7.3 distinction between "we fetched", "the
+source updated" and "the parcel moved").
+
+Kept deliberately absent in **both** phases, and enforced by the validator: delivery,
+receipt, arrival at the cardholder's address, inference of the address from a facility
+location, premature filing, any ETA presented as a commitment, and any present-tense
+"is moving today".
+
+One consequence to accept rather than engineer around: under P0 the specimen letter of
+§5.4 cannot reproduce the contract's §7.9 hub-by-hub chronology, because those seven
+GOFO events are not in our database (§12.3). It can state dispatch, the carrier, the
+tracking id, the in-transit status and when we read it. That is less than the contract
+drafted — and it is all that is true today.
 
 ### 5.3 The hash must move when a scan moves
 
@@ -521,13 +702,23 @@ Two gaps remain:
 
 ### 5.4 Acceptance fixture
 
-The contract's §7.9 specimen becomes a deterministic fixture: the supplied GOFO
-history plus the Sep 5–6 thread in, and a letter out that (i) states the latest event
-with its date, (ii) states the dispatch delay without excusing it, (iii) makes no
-receipt claim, (iv) makes no no-return claim, (v) keeps the cardholder's
-reimbursement request from being contradicted. Its counterpart is the same order with
-the support thread removed — the letter must still be a dated shipment narrative
-(contract §9, test 2).
+Two fixtures, matching §5.2's two phases, because a single one would smuggle P4's
+wording into P0's acceptance.
+
+**P0 fixture** — inputs are what prod actually holds for Case A: order + dispatch date,
+carrier `GOFO`, tracking `YT2640221437435982`, `fulfillment_status = IN_TRANSIT`, a
+retrieval timestamp, and the Sep 5–6 thread. The letter must (i) state dispatch and the
+in-transit status with the **retrieval** date labelled as such, (ii) state the dispatch
+delay without excusing it, (iii) make no receipt claim, (iv) make no no-return claim,
+(v) leave the cardholder's reimbursement request uncontradicted, and (vi) **contain no
+movement date**.
+
+**P4 fixture** — the contract's §7.9 specimen in full, once an event source exists: the
+seven supplied GOFO events in, the latest event stated with its own date, and the
+retrieval date carried separately.
+
+Each has a counterpart with the support thread removed — the letter must still be a
+dated shipment narrative (contract §9, test 2).
 
 ---
 
@@ -557,6 +748,26 @@ seven weeks.
 Not proposed, and deliberately: no new `strong` for pickup collection. The contract's
 §3 and §7.10 both keep *delivered status*, *destination match*, *signature/photo* and
 *customer acknowledgement* as **distinct** facts, and we hold only the first.
+
+**And pickup availability is not collection — this is the invariant, not a side
+effect.** `DeliveredToPickup` means the parcel reached a pickup point and is waiting;
+nobody has taken it. It must stay below `hasConfirmedDelivery` forever:
+
+| state | `confirmedReceipt`? | proofType | category | reaches moderate? |
+|---|---|---|---|---|
+| `Delivered` + timestamp | yes | `delivered_confirmed` | moderate | **yes** |
+| `CollectedAtPickup` + timestamp | yes | `delivered_confirmed` | moderate | **yes** |
+| `DeliveredToPickup` | **no** | `delivered_unverified` | supporting | **no** |
+| `Delivered` / `CollectedAtPickup`, no timestamp | no | `delivered_unverified` | supporting | no |
+| in transit | n/a | `in_transit` | supporting | no |
+
+`confirmedReceipt` (`fulfillmentSource.ts:247-256`) already draws this line, and the
+merchant-facing copy already distinguishes it
+(`titleAwaitingCollection` — *"At pickup point — awaiting customer collection"*). §10
+test 8a pins it so that widening `confirmedReceipt` for some later reason cannot
+silently promote a pending pickup into a receipt claim. Note this is *also* the honest
+reading of the reported Case B question: a collected parcel is moderate evidence, an
+*available* parcel is not evidence of receipt at all.
 
 ### 6.2 Hints and strength copy (D4, D5)
 
@@ -752,7 +963,8 @@ Consume it; do not re-specify it.
 2. **A source.** ParcelPanel, per `tracking-app-delivery-signals.plan.md` phases 2-4.
    Without it, Case A's GOFO parcel yields nothing beyond Shopify's own
    `fulfillment_status`, and a failure must be an explicit `unavailable` that blocks
-   auto-filing — that plan's §8 rule, adopted unchanged.
+   auto-filing **of any claim that depends on it** — that plan's §8 rule, scoped per
+   claim by §9.8 rather than per failure.
 3. **A trigger that is not a status change.** `refresh-open-disputes`' comparison
    moves from `delivery_status` to the evidence fingerprint of §5.3, so a new scan at
    an unchanged state enqueues a rebuild. Time-only triggers (a commitment expiring, a
@@ -790,18 +1002,40 @@ either way.
 - The "six hours if no margin exists" figure is kept **as a starting configuration,
   explicitly not a safety claim**, exactly as the contract states it.
 
-### 9.5 Approval scope — one live hazard
+### 9.5 Approval scope — one live hazard, and the evidence hash is not enough
 
-Case B is `normalized_status = needs_review` **and** `review_state = approved`, and
-its package v2 was generated at 2026-09-21 21:34 UTC, after a `parked_for_review`
-event at 21:34:54 (Q1, Q9). Whether the merchant's approval predates that
-regeneration is **not determinable from the columns we store** — there is no
-`review_approved_at`. The contract's §7.6 rule ("if approval covered exact wording, a
-material rewrite requires renewed approval") is therefore currently unenforceable.
+Case B is `normalized_status = needs_review` **and** `review_state = approved` — the
+flag that re-admits it to the deadline cron (§0.2). Its package v2's narrative was
+generated 2026-09-21 21:37:20 UTC and the dispute row's `updated_at` is 21:40:57 UTC,
+so on this occasion the approval most likely **followed** the rebuild by about three
+minutes. "Most likely" is as far as the data goes: `updated_at` is not an approval
+timestamp, and there is no `review_approved_at`. The contract's §7.6 rule — *"if
+approval covered exact wording, a material rewrite requires renewed approval"* — is
+currently unenforceable either way.
 
-Add the approval's timestamp and the `evidence_hash` it covered, and invalidate the
-approval when the hash moves materially. This is a **small schema change with a large
-honesty payoff**, and it is the one §9 item worth pulling forward into P1.
+**Rev 2 correction: an evidence hash is the wrong anchor on its own.** Wording and
+strategy can change materially with the evidence untouched — a different strategy
+submodule wins, a prompt version ships, the plan's permitted-claim set narrows, a
+validator rule removes a sentence. `evidence_hash` moves for none of those. Approval
+must therefore pin **all three** identities:
+
+| pinned | column | what it catches |
+|---|---|---|
+| the artifact the merchant read | `defence_packages.id` **+ `version`** | a regenerated package, byte-different, same evidence |
+| the argument they approved | `plan_input_hash` **+ `plan_policy_version`** | a re-selected strategy, a narrowed claim set, a policy bump |
+| the facts underneath | `evidence_hash` | new or corrected evidence |
+
+plus `review_approved_at` and the approving actor. Approval is invalidated when **any**
+of the three moves, and the merchant is asked again rather than having their earlier
+click carried onto prose they never saw. Where the change is immaterial — a
+content-identical rebuild, §9.3 — nothing moves and nothing is asked.
+
+Two notes on scope. The contract's §7.6 also says a merchant who authorised *automatic
+refresh and submission* keeps that authority; that standing scope is not what this
+narrows — a review-mode approval of a specific letter is. And rev 1 called this "a small
+schema change": with three identities plus an actor and a timestamp it is still small,
+and it is still the one §9 item worth pulling into P1, because Case B is a live instance
+of an approval whose coverage nobody can currently reconstruct.
 
 ### 9.6 Final-day matrix
 
@@ -834,6 +1068,42 @@ the response is current, **and neither can `last_rebuild_at`, because nothing wr
 it** (§9.3). Fix the observability in the same phase as the check, or the check's own
 failures will be as invisible as the staleness it looks for.
 
+### 9.8 Fallback eligibility — resolving the contradiction rev 1 shipped
+
+**Rev 2 correction.** Rev 1 said two incompatible things: §9.2(2) that an `unavailable`
+carrier read must **block** auto-filing, and tests 18-19 that older verified evidence or
+a deterministic fallback **may** be filed after a refresh or build failure. Left as it
+was, the generous reading wins in implementation, and a stale package becomes eligible
+precisely because the rebuild that would have corrected it failed. That is the worst
+possible ordering.
+
+The resolution is that "blocked" and "fallback" were never about the same object.
+**A source failure blocks claims that depend on that source. It does not block a letter
+that makes no such claim.** So eligibility is decided per **claim**, not per failure:
+
+| situation | eligible to file? | what may be in it |
+|---|---|---|
+| refresh failed; the selected artifact makes **no** claim depending on the unread source | **yes** | its independently verified facts, each with its own as-of date. No implication that a fresh check succeeded (test 18) |
+| refresh failed; the artifact **does** claim what the unread source would have to support (e.g. delivery) | **no** | rebuild, or fall back to a narrower artifact that drops the claim |
+| build failed; a prior artifact exists and **agrees** with current known facts by `evidence_hash` | **yes** | that artifact, unchanged |
+| build failed; a prior artifact **disagrees** with a known fact (delivery, return, cancellation, correction) | **never** | nothing. A known contradiction blocks the artifact even as a fallback — the contract's §7.6 rule, and rev 1 already stated it at §9.6 |
+| build failed; no prior artifact agrees | **no** | the deterministic factual fallback of §9.6, built from the current verified snapshot — not a resurrected old one |
+| the source is `unavailable` **and** the case has no verified facts at all | **no** | `no_bank_eligible_facts`, as Case B's v1 already does (§0.3) |
+
+Three rules follow, and they are the acceptance criteria for tests 18-19:
+
+1. **A rebuild failure is never a licence.** Eligibility is judged against current known
+   facts, never against "we tried". Failure narrows what may be claimed; it never widens
+   it.
+2. **Staleness is decided by artifact agreement, not by age.** `evidence_hash` is the
+   test (the mechanism `tracking-app-delivery-signals.plan.md` §8.1.1 already owns) —
+   which is exactly why §5.3(1) matters: an unadapted shipment contributes nothing to
+   that hash today, so "agrees" is currently unfalsifiable for the very parcels this
+   plan is about. **§5.3(1) is a prerequisite for §9.8, not a nice-to-have.**
+3. **A blocked filing is loud.** An explicit blocker with its reason, surfaced to the
+   merchant with time remaining (§9.4's ≥24 h readiness checkpoint) — never a silent
+   skip, and never a silent substitution.
+
 ---
 
 ## 10. Tests
@@ -844,19 +1114,32 @@ repo's verified failures, and each must be shown to fail before the fix.
 **P0**
 1. `no_return_initiated` is the only candidate fact on an `item_not_received` case →
    it is not admitted, and the letter does not argue from the absence of a return.
-2. Same fact set on `credit_not_processed` → still admitted (no regression to the
-   refund family, which is where the rule earns its place).
-3. Case A's exact fact set → the letter cites the carrier chain and makes no receipt
-   claim (contract §7.9 fixture).
+2. Same fact set on `credit_not_processed` → **still admitted**, and (rev 2, §4.1d)
+   **three sub-cases**: with applicable return-conditional terms the "no refund was
+   owed" claim is licensed; with no such terms the fact is order context and that claim
+   is refused; with evidence of an agreed refund the claim is refused outright.
+3. Case A's exact fact set → the letter states dispatch, carrier, tracking and the
+   in-transit status with a **retrieval** date, and **no movement date** (§5.4, P0
+   fixture). Under the P4 fixture, with events present, the latest event date appears
+   and the retrieval date is carried separately.
+3a. Rev 1's own refused wording — *"has recorded movement up to {date}"* — is rejected
+   by the validator on a P0 fact set (§5.2).
 4. A stored customer message requesting reimbursement → any "no refund was requested"
    sentence is refused by the validator, whether or not the message is approved.
 5. The same order with **no** support thread → still a dated shipment narrative.
 6. Label created, no carrier event → `label_created`; carrier `IN_TRANSIT` →
    `in_transit`; delivered → `delivered_confirmed`. **Three distinct claims.**
-7. A new scan with the state unchanged → `evidence_hash` moves (§5.3).
+7. A new scan with the state unchanged → `evidence_hash` moves (§5.3). Prerequisite
+   case: an **unadapted** shipment whose Shopify `fulfillment_status` changes → the hash
+   moves (§5.3(1)); today it does not.
 
 **P1**
 8. `delivered_confirmed` with no signature, no other signal → case is **not** `weak`.
+8a. **`DeliveredToPickup` alone → case IS still `weak`** (§6.1). Pickup availability is
+   not collection, and this test is the guard against a future widening of
+   `confirmedReceipt` promoting a pending pickup into a receipt claim. Its pair:
+   `CollectedAtPickup` **with** a timestamp → moderate; `CollectedAtPickup` **without**
+   one → supporting, still weak.
 9. `in_transit` alone → case **is** weak, and the in-transit explanation renders
    (not `weak.moderateOnly` over an unrelated fact).
 10. One moderate label → the strength sentence is grammatical.
@@ -877,12 +1160,21 @@ repo's verified failures, and each must be shown to fail before the fix.
 
 **P4**
 17. Delivery event post-dating the filing → both dates in the letter, no claim the
-    original complaint was false.
+    original complaint was false. **Case B is the live fixture** (filed 13 Sep,
+    dispatched 16 Sep, collected 18 Sep).
 18. Carrier read fails near the cutoff → last verified evidence with its as-of date;
-    no implication that a fresh check succeeded; no fabricated absence.
+    no implication that a fresh check succeeded; no fabricated absence. **Rev 2: per
+    §9.8, the artifact is eligible only if it makes no claim depending on the unread
+    source** — an artifact asserting delivery behind a failed delivery read is refused.
 19. Forced final refresh runs with no status change; a failed final build files the
-    verified fallback within the deadline.
+    verified fallback within the deadline — **and, §9.8, never a prior artifact that
+    disagrees with a known fact. A rebuild failure must not make a stale package
+    eligible.** Paired negative: prior artifact claims delivery, a correction has since
+    reversed it, build fails → nothing is filed; an explicit blocker is raised.
 20. A material rebuild after approval → approval is invalidated, not carried (§9.5).
+    **Three independent triggers, one test each: package version moves; `plan_input_hash`
+    or `plan_policy_version` moves with the evidence untouched; `evidence_hash` moves.**
+    Negative: a content-identical rebuild invalidates nothing.
 
 **Release criteria** (contract §9, kept): every factual claim traceable to a source;
 no no-return INR rebuttals anywhere in the book (Q12 = 0); no customer complaint
@@ -898,10 +1190,25 @@ ship P0 and file a factual shipment response? Recommendation: **ship P0(a)+(b)+(
 rebuild**, then read the regenerated letter before deciding whether to file. USD 129
 is the stake; the reusable fix is the return.
 
+**Q-1b · Case B, before 2026-10-01 — two days earlier (blocking, §0.2).** Approved, and
+`review_state = approved` puts it back in the deadline cron's selection, so it files on
+1 October as written: with the no-return-implies-receipt sentence, the raw
+`CollectedAtPickup` enum, and no mention that the inquiry preceded dispatch. Options:
+P0(c) + §6.6 in time, a manual edit of the approved letter, or withdraw the approval and
+re-approve a corrected one. **This is the nearer deadline and rev 1 called it safe.**
+
+**Q-1c · cay-collective #14481 (2 Oct) and #15673 (8 Oct) (§0.4).** Approved
+credit-not-processed letters that argue "no return, so no refund was owed" from the bare
+fact. Does cay-collective have a published return-conditional refund policy that applies
+to these orders? If **yes**, the argument is licensed and the fix is to cite the policy
+in the letter. If **no**, it is §4.1(d) row 2: P0(d) in time, or withdraw the approval.
+
 **Q-2 · P1 changes filing behaviour.** Making `delivered_confirmed` carry a case to
-`moderate` moves the **14** open non-receipt disputes that hold a positive delivery
-state (Q11) out of `hold_for_deadline` and into `auto_file` — they will file
-**earlier**, not differently. Approve, or gate behind a flag for one cohort first?
+`moderate` moves the **13** open non-receipt disputes that hold a *receipt-grade*
+delivery state — 12 `Delivered` + 1 `CollectedAtPickup`, and explicitly **not** the one
+`DeliveredToPickup` (§4.2, §6.1) — out of `hold_for_deadline` and into `auto_file`. They
+will file **earlier**, not differently. Approve, or gate behind a flag for one cohort
+first?
 
 **Q-3 · Case A's two shipment legs.** `GOFO YT2640221437435982` (IN_TRANSIT) and
 `USPS 260914OET4` (FULFILLED) sit on one order, and PR #758 established the second is
@@ -947,7 +1254,13 @@ against prod on 2026-09-22, and every code reference from `origin/develop` @
   same shape of trap). Q13 narrows it to fulfilled-with-tracking; that is the real
   P0 population and it has not been counted yet.
 - **Which code path rebuilt either package.** §9.3.
-- **Whether Case B's merchant approval predates its regeneration.** §9.5.
+- **Whether Case B's merchant approval predates its regeneration.** The timestamps
+  suggest approval followed the rebuild by ~3 minutes, but `disputes.updated_at` is not
+  an approval timestamp and no audit row records the approval. §9.5.
+- **Any of §0's figures after 2026-09-23 01:27 UTC.** That is when they were last
+  re-verified (§0.1). The 02:30 UTC nightly re-ingest runs between then and any later
+  reading, so re-run Q15 before acting on a deadline claim rather than trusting this
+  document's dates.
 - **Any win-rate effect.** Nothing here is evidence that a transit narrative wins
   more cases. It is evidence that the current letter argues something indefensible.
 

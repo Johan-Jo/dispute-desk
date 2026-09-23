@@ -153,3 +153,37 @@ select coalesce(carrier_normalized, '(unidentified)') as carrier,
        count(*) filter (where last_carrier_lookup_at is not null) as ever_looked_up
   from shopify_fulfillment_trackings
  group by 1 order by tracking_rows desc limit 20;
+
+-- Q15 — the re-check. Run this BEFORE acting on any deadline claim in the plan;
+-- its §0 figures were last verified 2026-09-23 01:27 UTC and the nightly
+-- re-ingest runs at 02:30 UTC.
+select d.id, s.shop_domain, d.order_name, d.status, d.normalized_status,
+       d.review_state, d.submission_state, d.submitted_at,
+       d.evidence_saved_to_shopify_at, d.final_outcome, d.due_at, d.closed_at,
+       o.delivery_status, o.delivered_at_tracking, o.updated_at as order_updated
+  from disputes d
+  join shops s on s.id = d.shop_id
+  left join shopify_orders o on o.shopify_order_id = d.order_gid
+ where d.id in ('4576ee51-53ec-4ed2-8c66-65b04bb31d72',
+                'f0036694-fe57-41a0-9cf0-1e9dc94c0232');
+
+-- Q16 — every dispute in Case B's position: parked for review, merchant already
+-- approved, nothing saved, deadline ahead. `review_state = 'approved'` re-admits
+-- these to the deadline submit cron (route.ts:144-170), so each one WILL file as
+-- written. Read the letter before the deadline, not after.
+select d.id, s.shop_domain, d.order_name, d.reason, d.amount, d.currency_code,
+       d.due_at, d.normalized_status, d.review_state,
+       dp.version, dp.status as package_status,
+       jsonb_array_length(dp.facts_json) as n_facts,
+       (select string_agg(distinct f->'value'->>'fieldKey', ', ')
+          from jsonb_array_elements(dp.facts_json) f) as fact_keys
+  from disputes d
+  join shops s on s.id = d.shop_id
+  left join defence_packages dp
+         on dp.dispute_id = d.id and dp.status in ('draft','final')
+ where d.review_state = 'approved'
+   and d.evidence_saved_to_shopify_at is null
+   and d.submitted_at is null
+   and d.normalized_status not in ('submitted', 'submitted_to_bank')
+   and d.due_at > now()
+ order by d.due_at;
