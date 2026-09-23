@@ -374,11 +374,29 @@ describe("validator v7 on Case A's first letter", () => {
     ).toEqual([]);
   });
 
-  it("v13: item-not-received refuses any record placed before the dispute, constraint or not", () => {
-    // The model has no dispute date (prompt v22), so the ordering is never its
-    // to assert; the issuer compares the carrier date with the dispute itself.
+  it("v14: a carrier-confirmed delivery may be placed before the dispute (#352543, verbatim)", () => {
     expect(
-      check("PostNord delivered the parcel before the dispute was opened.", NO_INTERNAL_CONSTRAINTS).length,
+      check(
+        "The available evidence supports the conclusion that the shipment was delivered prior to the dispute being raised.",
+        NO_INTERNAL_CONSTRAINTS,
+      ),
+    ).toEqual([]);
+  });
+
+  it("v14: …but not when the delivery post-dates the dispute (data-checked)", () => {
+    expect(
+      check("The shipment was delivered prior to the dispute being raised.", {
+        ...NO_INTERNAL_CONSTRAINTS,
+        deliveryPostDatesDispute: true,
+      }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it.each([
+    "The merchant tendered both parcels to the carriers prior to the filing of this dispute.",
+    "The goods left the merchant's possession before the chargeback.",
+    "The parcel was in transit before the dispute was opened.",
+  ])("v14: refuses custody placed before the dispute: %s", (text) => {
+    expect(check(text, NO_INTERNAL_CONSTRAINTS).length).toBeGreaterThan(0);
   });
 });

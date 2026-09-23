@@ -942,11 +942,19 @@ export async function buildPack(
   const caseStrengthForGate = caseAssessmentSnapshot.strength;
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
+    /** Item-not-received only. The automation ladder reads it from HERE
+     *  (`loadCaseAutomationDecision`, `resolveHeldState`) to hold a case the
+     *  revised rollup newly made strong (non-receipt plan §6.1.4). Omitting it
+     *  left that hold inert on every persisted pack. */
+    overallBeforeRev5?: CaseStrengthLevel;
     strongCount: number;
     moderateCount: number;
     supportingCount: number;
   } = {
     overall: caseStrengthForGate.overall,
+    ...(caseStrengthForGate.overallBeforeRev5 !== undefined
+      ? { overallBeforeRev5: caseStrengthForGate.overallBeforeRev5 }
+      : {}),
     strongCount: caseStrengthForGate.strongCount,
     moderateCount: caseStrengthForGate.moderateCount,
     supportingCount: caseStrengthForGate.supportingCount,
