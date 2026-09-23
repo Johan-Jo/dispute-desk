@@ -41,6 +41,7 @@ import {
   resolveDeliveryReceipt,
 } from "./deliveryPresentation";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import type { DeliveryProofType as CanonicalDeliveryProofType } from "./canonicalEvidence";
 import type { EvidenceFact } from "@/lib/defence/types";
 import {
   INTERNAL_ONLY_FIELDS,
@@ -1304,12 +1305,10 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
 
 const DELIVERY_FIELDS = new Set(["shipping_tracking", "delivery_proof"]);
 
-type DeliveryProofType =
-  | "signature_confirmed"
-  | "delivered_confirmed"
-  | "delivered_unverified"
-  | "label_created"
-  | "returned_to_sender";
+/** The ONE definition lives in canonicalEvidence.ts. This file used to keep a
+ *  private copy, and a new member (`in_transit`, 2026-09-23) then had to be
+ *  added in three places or silently mis-ranked. */
+type DeliveryProofType = CanonicalDeliveryProofType;
 
 /** Rank decides which of two delivery rows survives the collapse.
  *  `returned_to_sender` outranks `label_created` — both are `invalid`,
@@ -1319,9 +1318,11 @@ type DeliveryProofType =
  *  below every positive tier: a genuine delivery on a second parcel
  *  still wins the row. */
 const PROOF_RANK: Record<DeliveryProofType, number> = {
-  signature_confirmed: 4,
-  delivered_confirmed: 3,
-  delivered_unverified: 2,
+  signature_confirmed: 5,
+  delivered_confirmed: 4,
+  delivered_unverified: 3,
+  // Carrier possession outranks a return or a bare label, never a delivery.
+  in_transit: 2,
   returned_to_sender: 1,
   label_created: 0,
 };
@@ -1332,6 +1333,7 @@ function readProofType(payload: Record<string, unknown> | null): DeliveryProofTy
     p === "signature_confirmed" ||
     p === "delivered_confirmed" ||
     p === "delivered_unverified" ||
+    p === "in_transit" ||
     p === "label_created" ||
     p === "returned_to_sender"
   ) {

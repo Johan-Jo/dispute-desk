@@ -178,6 +178,17 @@ function renderValue(fact: EvidenceFact): string | null {
       }
       if (proof === "delivered_confirmed") return withRef(at ? `Delivered ${at}` : "Delivered");
       if (proof === "delivered_unverified") return withRef("In transit / handed to carrier");
+      if (proof === "in_transit") {
+        // Status only, dated as a RETRIEVAL — never as when the parcel moved
+        // (non-receipt plan §5.2). Without this branch the row fell through to
+        // "Confirmed", an overclaim printed to the issuer.
+        const rawObserved =
+          typeof v?.carrierStatusObservedAt === "string" ? (v.carrierStatusObservedAt as string) : null;
+        const observed = rawObserved ? formatChronologyTimestamp(rawObserved) : null;
+        return withRef(
+          observed ? `In transit with the carrier (status as retrieved ${observed})` : "In transit with the carrier",
+        );
+      }
       return withRef("Confirmed");
     }
     case "customer_communication":

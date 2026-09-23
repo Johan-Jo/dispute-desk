@@ -56,6 +56,16 @@ export const item_not_received: ReasonCodeFamily = {
     /\b(?:cardholder|customer|buyer|purchaser)\s+(?:personally\s+)?(?:collected|picked\s+up|signed\s+for|signed)\b/i,
     /\b(?:identity|identification|ID)\s+(?:was\s+|were\s+)?(?:verified|checked|confirmed|required)\b/i,
   ],
-  guardedBankPhrases: [],
+  // Carrier-possession claims, each checked against the shipment the sentence
+  // names (plan §4.1(b)). `shipment_in_carrier_possession` holds only for a
+  // bank-citable in-transit shipment with a named carrier and a parcel
+  // identifier, so a printed label or a batch reference never licenses one.
+  guardedBankPhrases: [
+    { pattern: /\bin\s+transit\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    { pattern: /\bin\s+(?:the\s+)?(?:carrier'?s?\s+)?(?:possession|custody)\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    { pattern: /\b(?:handed|tendered)\s+(?:over\s+)?to\s+(?:the\s+)?(?:carrier|[A-Z][A-Za-z]+)\b/, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    { pattern: /\baccepted\s+by\s+the\s+carrier\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+    { pattern: /\bout\s+for\s+delivery\b/i, requires: "shipment_in_carrier_possession", shipmentScoped: true },
+  ],
   version: 2,
 };

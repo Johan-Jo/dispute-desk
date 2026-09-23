@@ -3051,6 +3051,55 @@ says nothing arrived has nothing to return, so the sentence concedes their premi
 Tests: `nonReceiptValidatorRules.test.ts`, `alwaysAdmissible.test.ts`,
 `internalNarrativeConstraints.test.ts`, `stripDeliveryHashInputs.test.ts`.
 
+### Non-receipt letters: the in-transit shipment, one coherent shipment per fact (2026-09-23)
+
+Plan §4.1(b), (f), (g), §5.1–§5.3. blume-box #360980's GOFO parcel was in transit,
+but every non-delivery collapsed to `label_created` → `invalid`, so nothing citable
+remained once "no return" was denied.
+
+- **Sixth proof state `in_transit`** (`DeliveryProofType`, now defined ONCE in
+  `canonicalEvidence.ts`; the private copies in `evidenceLineItem.ts` and
+  `evidence/model/payloads.ts` re-export it). Categorised `supporting`, so it is never
+  scored. `fulfillmentSource.resolveShipmentProofType` assigns it per shipment from
+  Shopify's `displayStatus` (`IN_TRANSIT`, `OUT_FOR_DELIVERY`, `ATTEMPTED_DELIVERY`), or
+  from a carrier lookup with scans and no terminal event. A tracking number alone stays
+  `label_created`. Availability for collection stays `delivered_unverified`. The
+  section-level tier is the best shipment tier, as before.
+- **One coherent shipment per delivery fact.** `factClassifier.citedShipment` cites the
+  best-evidenced shipment by its own tier (a parcel identifier beats a batch reference;
+  ties go to the shipment key, never to array position). Carrier, number, status and
+  `deliveredAt` come from that shipment together. Previously the first tracking row was
+  paired with a section-wide tier. A hash-only `shipmentIndex` lists every shipment's
+  identity and tier for the validator; it is stripped from the LLM payload. Deliberate
+  deviation from the plan's one-fact-per-shipment wording: the renderers (Evidence
+  Basis pair-collapse, provenance, post-outcome analysis) assume one fact per field.
+  The association guarantee is met without touching them.
+- **The one supporting-but-citable case.** `isCitableShipmentContext`: an `in_transit`
+  cited shipment with a named carrier and a parcel identifier gets `bankEligible` /
+  `includeInBankNarrative`, with strength still `supporting`.
+  `isParcelIdentifier(carrier, number)` (`lib/carriers/trackingLinkUrl.ts`) combines
+  the generic check with the USPS shape list, so `260914OET4` (a batch reference) never
+  qualifies.
+- **Predicate and strategy.** `shipment_in_carrier_possession` (a bank-citable delivery
+  fact that is `in_transit`, `delivered_confirmed` or `signature_confirmed`) gates the
+  item-not-received family's new `guardedBankPhrases` ("in transit", "in the carrier's
+  possession", "handed to …", "out for delivery"). New strategy
+  `item_not_received_carrier_possession` (`none: delivery_confirmed`) tells the writer to
+  date the status only as a retrieval date. `PROMPT_VERSION` 17.
+- **Shipment-scoped guards.** `GuardedBankPhrase.shipmentScoped`: each matching sentence
+  is checked against the shipment it names (tracking number, or a carrier unique on the
+  order). Non-cited shipments are evaluated as non-citable stand-ins, so one GOFO transit
+  fact cannot license "the USPS shipment is in transit". An unnamed sentence on a
+  multi-shipment order must hold for every shipment.
+- **Hashing.** The collector writes `carrierStatusObservedAt` (when the build read the
+  status). `computeEvidenceHash` drops it via `EVIDENCE_HASH_DROP_KEYS` (its own policy;
+  the shared canonicaliser is untouched; the generic `observedAt` is taken by
+  `liabilityShift`). An unchanged re-read keeps the hash; a status change moves it.
+- **Evidence Basis** prints *"In transit with the carrier (status as retrieved …)"*.
+  Without that branch the row fell through to "Confirmed".
+
+Tests: `nonReceiptInTransitShipment.test.ts`, `shipmentProofType.test.ts`.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).

@@ -145,7 +145,14 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // failed v6 is unretryable at prompt 15 (same prompt, same validator, same
 // evidence), and this constant is the one that moved. Legacy payloads still
 // carry `f${n}` — the legacy route does not consult the plan, by contract.
-const PROMPT_VERSION = 16;
+// v17 (2026-09-23) — non-receipt letters (docs/plans/non-receipt-delivery-
+// evidence.plan.md §4.1(b), §5.2, §6.6). A new item-not-received strategy,
+// `item_not_received_carrier_possession`, states a shipment in the carrier's
+// possession with a RETRIEVAL date only; delivery facts cite one coherent
+// shipment and carry `carrierStatusObservedAt`; the hash-only
+// `deliveryStatuses` / `returnedAt` / `shipmentIndex` no longer reach the
+// model (they printed "CollectedAtPickup" into cay-collective #14784's letter).
+const PROMPT_VERSION = 17;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -642,8 +649,13 @@ export async function generateNarrative(
  * these fields directly" — but they still reached the model, which printed
  * the raw enum to the issuer ("recorded a CollectedAtPickup status event",
  * cay-collective #14784). Dropped here; the hash still sees them.
+ *
+ * `shipmentIndex` (every shipment's identity and own tier) is dropped too: it
+ * exists for the shipment-scoped validator, and handing the model the OTHER
+ * parcels — a batch reference, a label-only leg — invites exactly the
+ * misattribution that validator refuses (plan §4.1(b), (f)).
  */
-const DELIVERY_HASH_ONLY_KEYS = ["deliveryStatuses", "returnedAt"] as const;
+const DELIVERY_HASH_ONLY_KEYS = ["deliveryStatuses", "returnedAt", "shipmentIndex"] as const;
 
 export function stripDeliveryHashInputs<T>(value: T): T {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;

@@ -259,6 +259,7 @@ function extractTrackingData(
   fulfillment: OrderFulfillment,
   order: OrderDetailNode,
   state: FulfillmentDeliveryState,
+  observedAt: string,
 ) {
   const tracking = readTrackingForFulfillment(fulfillment, order);
   const native = nativeDelivery(fulfillment);
@@ -317,6 +318,14 @@ function extractTrackingData(
     fulfillmentId: fulfillment.id,
     status: fulfillment.status,
     displayStatus: fulfillment.displayStatus,
+    // THIS shipment's own proof tier (non-receipt plan §4.1(f)). The
+    // classifier cites one shipment coherently from these, instead of
+    // pairing the first tracking number with the section-wide tier.
+    shipmentProofType: resolveShipmentProofType(fulfillment, state),
+    // When this build READ the status — never when the parcel moved. Reserved
+    // key, excluded from evidence_hash (computeEvidenceHash), so an unchanged
+    // re-read does not rotate the hash (plan §5.3).
+    carrierStatusObservedAt: observedAt,
     createdAt: fulfillment.createdAt,
     deliveredAt: fulfillment.deliveredAt ?? nativeDeliveredAt ?? carrierDeliveredAt,
     estimatedDeliveryAt: fulfillment.estimatedDeliveryAt,
@@ -398,53 +407,83 @@ function extractTrackingData(
  *  display, checklist and narrative surface downstream switches on this
  *  string, so naming the state honestly here is what lets them all stop
  *  lying at once. */
+/** Shopify fulfillment display statuses that mean the carrier holds the
+ *  parcel (non-receipt plan §5.1). A tracking number alone is NOT here —
+ *  that is a printed label, and stays `label_created`. */
+const IN_TRANSIT_DISPLAY_STATUSES = new Set([
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "ATTEMPTED_DELIVERY",
+]);
+
+/** The carrier holds this parcel and it is moving: Shopify's own per-shipment
+ *  status, or a successful carrier lookup with scans but no terminal event. */
+function inCarrierPossession(
+  f: OrderFulfillment,
+  s: FulfillmentDeliveryState,
+): boolean {
+  if (f.displayStatus && IN_TRANSIT_DISPLAY_STATUSES.has(f.displayStatus)) return true;
+  const shipment = s.carrier?.shipment;
+  return !!shipment && shipment.deliveryStatus === null && shipment.events.length > 0;
+}
+
+/** Per-shipment proof type — the same tiers the section has always used,
+ *  evaluated for ONE fulfillment so its carrier, number, status and dates
+ *  stay attached to each other (non-receipt plan §4.1(f)). */
+export function resolveShipmentProofType(
+  f: OrderFulfillment,
+  s: FulfillmentDeliveryState,
+): DeliveryProofType {
+  if (s.signedBy) return "signature_confirmed";
+  // A reconciled return is the opposite of delivery evidence.
+  if (s.current?.status === "Returned") return "returned_to_sender";
+  // Confirmed receipt: doorstep delivery or completed collection, with a timestamp.
+  if (confirmedReceipt(f, s)) return "delivered_confirmed";
+  // Weaker delivery signals → unverified: delivered/collected without a
+  // corroborating timestamp, a pickup-point ARRIVAL (collection still
+  // pending), or a bare Shopify status flag.
+  if (
+    s.current?.status === "Delivered" ||
+    s.current?.status === "CollectedAtPickup" ||
+    s.current?.status === "DeliveredToPickup" ||
+    f.status === "SUCCESS" ||
+    f.displayStatus === "DELIVERED"
+  ) {
+    return "delivered_unverified";
+  }
+  if (inCarrierPossession(f, s)) return "in_transit";
+  return "label_created";
+}
+
+/** Rank for choosing the best shipment. Positive tiers only above 1. */
+export const SHIPMENT_PROOF_RANK: Record<DeliveryProofType, number> = {
+  signature_confirmed: 5,
+  delivered_confirmed: 4,
+  delivered_unverified: 3,
+  in_transit: 2,
+  returned_to_sender: 1,
+  label_created: 0,
+};
+
 function resolveProofType(
   fulfillments: OrderFulfillment[],
   states: DeliveryStates,
 ): DeliveryProofType {
-  let bestTier: 0 | 1 | 2 | 3 = 0;
+  let best: DeliveryProofType = "label_created";
   let sawReturned = false;
   for (const f of fulfillments) {
-    const s = stateOf(states, f);
-    if (s.signedBy) {
-      bestTier = Math.max(bestTier, 3) as 0 | 1 | 2 | 3;
-      continue;
-    }
-    // A reconciled return is the opposite of delivery evidence — never
-    // let this shipment raise the tier. Remember it, though.
-    if (s.current?.status === "Returned") {
+    const tier = resolveShipmentProofType(f, stateOf(states, f));
+    if (tier === "returned_to_sender") {
+      // Never raises the tier — remembered for the no-positive-tier answer.
       sawReturned = true;
       continue;
     }
-    // Confirmed receipt: doorstep delivery OR ID-verified collection at a
-    // pickup point, with a timestamp.
-    if (confirmedReceipt(f, s)) {
-      bestTier = Math.max(bestTier, 2) as 0 | 1 | 2 | 3;
-      continue;
-    }
-    // Weaker delivery signals → unverified tier: delivered/collected
-    // without a corroborating timestamp, a pickup-point ARRIVAL (customer
-    // collection still pending), or a bare Shopify status flag.
-    if (
-      s.current?.status === "Delivered" ||
-      s.current?.status === "CollectedAtPickup" ||
-      s.current?.status === "DeliveredToPickup" ||
-      f.status === "SUCCESS" ||
-      f.displayStatus === "DELIVERED"
-    ) {
-      bestTier = Math.max(bestTier, 1) as 0 | 1 | 2 | 3;
-    }
+    if (SHIPMENT_PROOF_RANK[tier] > SHIPMENT_PROOF_RANK[best]) best = tier;
   }
-  switch (bestTier) {
-    case 3: return "signature_confirmed";
-    case 2: return "delivered_confirmed";
-    case 1: return "delivered_unverified";
-    case 0:
-    default:
-      // Nothing on this order reached a positive tier. If a shipment came
-      // back, say so; a bare label is a different (and here, false) fact.
-      return sawReturned ? "returned_to_sender" : "label_created";
-  }
+  if (best !== "label_created") return best;
+  // Nothing on this order reached a positive tier. If a shipment came back,
+  // say so; a bare label is a different (and here, false) fact.
+  return sawReturned ? "returned_to_sender" : "label_created";
 }
 
 /** The best (earliest confirmed) delivery timestamp across all
@@ -568,6 +607,7 @@ export async function collectFulfillmentEvidence(
   if (!order?.fulfillments?.length) return [];
 
   const states = await resolveDeliveryStates(ctx, order);
+  const observedAt = new Date().toISOString();
   const proofType = resolveProofType(order.fulfillments, states);
   const coverage = resolveDeliveryCoverage(order, states);
 
@@ -625,7 +665,7 @@ export async function collectFulfillmentEvidence(
         // §5.7 — any shipment whose sources disagreed (admin provenance).
         sourceConflict: order.fulfillments.some((f) => stateOf(states, f).conflict),
         fulfillments: order.fulfillments.map((f) =>
-          extractTrackingData(f, order, stateOf(states, f)),
+          extractTrackingData(f, order, stateOf(states, f), observedAt),
         ),
       },
     },
