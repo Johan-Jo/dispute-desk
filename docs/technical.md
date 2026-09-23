@@ -3241,6 +3241,18 @@ direction against the data. **Also:** `pack_json.case_strength` is a four-field 
 `buildPack.ts`, and it did not carry `overallBeforeRev5`, so the P1a newly-strong hold was inert on
 every persisted pack. It is now persisted.
 
+**Multi-parcel letters are written from the records (prompt 25).** After eight rebuilds of #360980,
+each fixing one invented sentence only for the next draft to find another, the parcel-describing
+sections of a multi-parcel item-not-received letter are no longer the model's. When a delivery fact
+carries `shipments`, `applyShipmentRecordSections` (`lib/defence/shipmentRecordSections.ts`,
+called in `buildDefencePackageJob` on the first and the retry narrative, before suppression and
+validation) replaces `executiveSummary`, `transactionOverviewArgument`, `fulfillmentArgument`,
+`chronologyArgument` and `conclusion`. Each parcel is stated only from its own entry: products,
+carrier, tracking number with its link or a shipping reference without one, the carrier's delivery
+or in-transit date, or the merchant's fulfilment for a parcel with no carrier record. The chronology
+lists dated records oldest first. The model's other sections (policy, communication, …) are kept, and
+the whole letter still passes the validator. Single-parcel letters are unchanged.
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The
