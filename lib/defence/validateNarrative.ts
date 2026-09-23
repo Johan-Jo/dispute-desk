@@ -155,8 +155,15 @@ import type {
  *      dispute or the order date, and counting days between them: a
  *      fulfilment is the merchant's own record, and on #360980 the interval
  *      (ordered 22 Aug, fulfilled 15 Sep) exposes a late shipment.
+ *  13  (2026-09-23) — the v12 rebuild of #360980 refused two TRUE sentences:
+ *      "…shows the shipment in transit since 17 September" after a sentence
+ *      naming GOFO ("the shipment" now refers back), and one sentence giving
+ *      GOFO's transit and the sunscreen's fulfilment (each clause is now read
+ *      against the parcel it names). item_not_received v7 hard-bans "prior to
+ *      the dispute / filing / chargeback", which the model kept writing with
+ *      no dispute date to support it.
  */
-export const VALIDATOR_VERSION = 12;
+export const VALIDATOR_VERSION = 13;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -366,7 +373,11 @@ function nonParcelTrackingClaim(text: string, approvedFacts: readonly EvidenceFa
 /** "this shipment", "the same parcel", "it" — a sentence that refers back to
  *  the shipment named before it rather than naming one itself. */
 const SHIPMENT_ANAPHORA =
-  /\b(?:this|that|the\s+same|said)\s+(?:shipment|parcel|package|consignment)\b|\bit\b/i;
+  /\b(?:this|that|the\s+same|said|the)\s+(?:shipment|parcel|package|consignment)\b|\bit\b/i;
+
+/** Clause boundaries inside one sentence: "X shows A in transit, and Y was
+ *  fulfilled" makes two claims about two parcels (validator v13). */
+const CLAUSE_BREAK = /;\s*|,\s+(?:and|but|while|whereas)\s+/i;
 
 /**
  * The first offending sentence, or null when every scoped claim is supported.
@@ -389,24 +400,28 @@ function shipmentScopedViolation(
   for (const paragraph of text.split(/\n\s*\n/)) {
     let lastNamed: ShipmentRef[] = [];
     for (const sentence of paragraph.split(/(?<=[.!?])\s+/)) {
-      const named = refs ? namedShipments(sentence, refs) : [];
-      const referent =
-        named.length > 0
-          ? named
-          : lastNamed.length > 0 && SHIPMENT_ANAPHORA.test(sentence)
-            ? lastNamed
-            : [];
-      if (named.length > 0) lastNamed = named;
-      if (!entry.pattern.test(sentence)) continue;
-      if (!refs) {
-        if (!predicate.evaluate(approvedFacts)) return sentence.trim();
-        continue;
+      // Each clause is read against the shipment IT names (v13): a sentence
+      // giving one parcel's transit and another's fulfilment is two claims.
+      for (const clause of sentence.split(CLAUSE_BREAK)) {
+        const named = refs ? namedShipments(clause, refs) : [];
+        const referent =
+          named.length > 0
+            ? named
+            : lastNamed.length > 0 && SHIPMENT_ANAPHORA.test(clause)
+              ? lastNamed
+              : [];
+        if (named.length > 0) lastNamed = named;
+        if (!entry.pattern.test(clause)) continue;
+        if (!refs) {
+          if (!predicate.evaluate(approvedFacts)) return sentence.trim();
+          continue;
+        }
+        const scope = referent.length > 0 ? referent : refs.length <= 1 ? refs : null;
+        const ok = scope
+          ? scope.every((r) => predicate.evaluate([r.fact]))
+          : refs.every((r) => predicate.evaluate([r.fact]));
+        if (!ok) return sentence.trim();
       }
-      const scope = referent.length > 0 ? referent : refs.length <= 1 ? refs : null;
-      const ok = scope
-        ? scope.every((r) => predicate.evaluate([r.fact]))
-        : refs.every((r) => predicate.evaluate([r.fact]));
-      if (!ok) return sentence.trim();
     }
   }
   return null;
