@@ -106,7 +106,8 @@ describe("every shipment reaches the delivery fact", () => {
     expect(gofo.trackingUrl).toContain("YT2640221437435982");
     expect(gofo.proofType).toBe("in_transit");
     expect(gofo.carrierStatusObservedAt).toBe("2026-09-23T16:44:50.439Z");
-    expect(gofo.fulfilledAt).toBe("2026-09-15T19:25:25Z");
+    // A carrier-recorded parcel carries no fulfilment date (prompt v22).
+    expect(gofo.fulfilledAt).toBeNull();
   });
 
   it("array order changes neither the list nor the hash", () => {
@@ -182,6 +183,7 @@ describe("Evidence Basis: one row per parcel, never the same row twice", () => {
     expect(rows).toHaveLength(2);
     const gofo = rows.find((r) => r.label.includes("Back to School"))!;
     expect(gofo.value).toContain("In transit since Sep 17, 2026");
+    expect(gofo.value).not.toContain("Fulfilled");
     expect(gofo.value).not.toContain("retrieved");
     expect(gofo.link?.url).toContain("YT2640221437435982");
     const usps = rows.find((r) => r.label.includes("Sunscreen"))!;
@@ -309,6 +311,15 @@ describe("validator v7 on Case A's first letter", () => {
       internalConstraints: NO_INTERNAL_CONSTRAINTS,
     }).filter((e) => e.rule === "forbidden_phrase");
     expect(errs.length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    "The merchant fulfilled The Back to School Bundle on 15 September 2026, four days before the dispute was opened.",
+    "The order was fulfilled prior to the chargeback.",
+    "The sunscreen was fulfilled 25 days after the order.",
+    "The bundle shipped 24 days after the purchase.",
+  ])("v12: refuses fulfilment timing: %s", (text) => {
+    expect(check(text).length).toBeGreaterThan(0);
   });
 
   it("v9: the permitted shape for a parcel with no carrier record passes", () => {

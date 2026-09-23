@@ -341,10 +341,6 @@ export interface NarrativeInput {
   strategies?: StrategySubmodule[];
   packageMode: PackageMode;
   caseStrength: CaseStrengthLevel;
-  /** When the dispute was opened (`disputes.initiated_at`). Lets the letter
-   *  place the merchant's own dated records — a fulfilment, a dated carrier
-   *  event — before the dispute. Never used to date a retrieval. */
-  disputeOpenedAt?: string | null;
   approvedFacts: EvidenceFact[];
   manualEvidence: ManualEvidenceRecord[];
   /** Sent as forbidden references so the LLM knows what *not* to mention

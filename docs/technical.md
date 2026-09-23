@@ -3201,6 +3201,23 @@ Two defects on blume-box #360980, both reported by the maintainer from the live 
   own record. A parcel with no carrier record prints "Fulfilled <date> · USPS shipping reference
   <ref>", with no link. Identical rows print once.
 
+**Timing licence withdrawn (validator 12, prompt 22, same day).** Prompt 21 let the letter place a
+fulfilment, or a dated transit event, "before the dispute". A fulfilment is the merchant's own
+"marked as shipped" record, not proof of dispatch, and set against the purchase date it can
+expose a late shipment. #360980 was ordered 22 Aug and fulfilled 15/16 Sep, against blume-box's
+1–3 business-day promise. Until the delivery-commitment resolver (plan P3) can tell a helpful
+date from a harmful one:
+
+- the payload carries no `disputeOpenedAt`;
+- a `shipments` entry carries `fulfilledAt` only for a parcel with NO carrier record, where it
+  is the whole account;
+- Evidence Basis prints no fulfilment date beside a carrier record;
+- the item-not-received family (v6) hard-bans relating a fulfilment to the dispute or the order
+  date, and counting days between them.
+
+`carrierPossessionUndated` keeps its v11 semantics (the validator does not refuse a true dated
+ordering); the prompt simply no longer invites one.
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The

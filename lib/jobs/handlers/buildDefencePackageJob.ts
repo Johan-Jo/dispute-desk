@@ -536,8 +536,6 @@ export async function handleBuildDefencePackage(
       strategies,
       packageMode: classification.packageMode,
       caseStrength: "moderate",
-      disputeOpenedAt:
-        (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
       approvedFacts: planFacts,
       manualEvidence: classification.manual,
       internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
@@ -691,8 +689,6 @@ export async function handleBuildDefencePackage(
         strategies,
         packageMode: classification.packageMode,
         caseStrength: "moderate",
-        disputeOpenedAt:
-          (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
         approvedFacts: planFacts,
         manualEvidence: classification.manual,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
