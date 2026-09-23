@@ -68,6 +68,11 @@ by guessing.
 
 ## Stance: we are the merchant's counsel (maintainer directive, 2026-09-23; governs every section below)
 
+**This stance governs every dispute type, not only non-receipt.** Its product-wide
+home, with the fatal-loss and returned-to-sender revisit, is
+`docs/plans/merchant-counsel-stance.plan.md` and CLAUDE.md. The copy below is how it
+applies here.
+
 DisputeDesk defends the merchant. The plan is built the way a good lawyer builds a brief:
 
 1. **Always defend.** No path in this plan recommends conceding, withdrawing an approval,
@@ -1423,9 +1428,12 @@ and it should: carrier-confirmed collection is its defence. What must change bef
 is two sentences: remove the no-return-implies-receipt clause, and turn
 `CollectedAtPickup` into English ("collected by the recipient at the PostNord pickup
 point"). Nothing is added. Cay's delivery window and refund clause stay out (§0.4); they
-are already absent and P0(e) keeps them out. **Decision:** make that edit by hand to the
-approved letter now, or wait for P0(c) to rebuild it? Waiting risks the deadline;
-editing by hand is two deletions and one rewording.
+are already absent and P0(e) keeps them out. **Decided (maintainer, 2026-09-23): no
+manual edit.** The fix comes from P0 only. That makes a hard schedule: **P0(c) and the
+§6.6 enum rule must be on `master` and Case B rebuilt before 2026-10-01 08:00 UTC**, when
+the deadline cron files it. If P0 misses that, Case B files as written today. Its core
+(carrier-confirmed collection) is still the right defence, and the two harmful sentences
+go with it.
 
 **Q-5 · Fulfillment-order read scopes (§8 pt 1, §8.1.1).** The only structured source of
 the checkout delivery promise returns `ACCESS_DENIED` today. Adding
