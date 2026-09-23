@@ -276,8 +276,14 @@ describe("the versions are real, not placeholders", () => {
      * 3 → 4 on 2026-08-18: claim guards learned to read negation — "no refund
      * was issued" stopped counting as a refund claim (cay-collective #13195),
      * and the packages that failed on a negated non-claim must become
-     * retryable. */
-    expect(VALIDATOR_VERSION).toBe(4);
+     * retryable.
+     *
+     * 4 → 5 on 2026-09-23: non-receipt letters — the item-not-received family
+     * bans arguments from the absence of a return, refund-request denials and
+     * collector/identity claims; raw carrier enums are banned everywhere; and
+     * the internal refund-request constraint (docs/plans/non-receipt-delivery-
+     * evidence.plan.md §4.1(c)). Drafts built under 4 must regenerate. */
+    expect(VALIDATOR_VERSION).toBe(5);
   });
 
   it("unblocks the row that proved the pin is not decorative", () => {
