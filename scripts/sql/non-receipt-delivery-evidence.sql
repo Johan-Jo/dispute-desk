@@ -167,7 +167,7 @@ select d.id, s.shop_domain, d.order_name, d.status, d.normalized_status,
  where d.id in ('4576ee51-53ec-4ed2-8c66-65b04bb31d72',
                 'f0036694-fe57-41a0-9cf0-1e9dc94c0232');
 
--- Q16 — every dispute in Case B's position: parked for review, merchant already
+-- Q16 — every NON-RECEIPT dispute in Case B's position: parked for review, merchant already
 -- approved, nothing saved, deadline ahead. `review_state = 'approved'` re-admits
 -- these to the deadline submit cron (route.ts:144-170), so each one WILL file as
 -- written. Read the letter before the deadline, not after.
@@ -182,8 +182,38 @@ select d.id, s.shop_domain, d.order_name, d.reason, d.amount, d.currency_code,
   left join defence_packages dp
          on dp.dispute_id = d.id and dp.status in ('draft','final')
  where d.review_state = 'approved'
+   and d.reason = 'PRODUCT_NOT_RECEIVED'
    and d.evidence_saved_to_shopify_at is null
    and d.submitted_at is null
    and d.normalized_status not in ('submitted', 'submitted_to_bank')
    and d.due_at > now()
  order by d.due_at;
+
+-- Q17 — every installed merchant's newest shipping policy and the delivery / dispatch
+-- windows it states (plan §8.1.2). Confirm the version was in force on an order's date
+-- with a live Shop.shopPolicies.updatedAt read before admitting it for that order.
+with shipping as (
+  select ps.shop_id, ps.policy_updated_at, ps.captured_at, ps.extracted_text,
+         row_number() over (partition by ps.shop_id order by ps.captured_at desc) rn,
+         count(*) over (partition by ps.shop_id) versions
+    from policy_snapshots ps
+   where ps.policy_type = 'shipping')
+select s.shop_domain, sh.versions, sh.policy_updated_at, sh.captured_at,
+       (select string_agg(m[1], ' | ') from regexp_matches(sh.extracted_text,
+          '([^.\n]{0,60}\d+\s*(?:[-–]|to|bis|till|à|a)?\s*\d*\s*(?:business |working |werk|arbets|vardag)?\s*(?:days?|dagar|tage|werktage|jours|días|dias|dage|virkedager)[^.\n]{0,40})','gi') m) as window_phrases
+  from shops s
+  left join shipping sh on sh.shop_id = s.id and sh.rn = 1
+ where s.uninstalled_at is null
+ order by s.shop_domain;
+
+-- Q18 — every open non-receipt dispute with the dates the §8.1.3 check needs.
+select s.shop_domain, d.id, d.order_name, d.status, d.review_state, d.submission_state,
+       o.created_at_shopify::date as ordered, d.initiated_at::date as opened, d.due_at,
+       o.fulfilled_at::date as fulfilled, o.delivery_status,
+       o.delivered_at_tracking::date as delivered
+  from disputes d
+  join shops s on s.id = d.shop_id
+  left join shopify_orders o on o.shop_id = d.shop_id and o.shopify_order_id = d.order_gid
+ where d.reason = 'PRODUCT_NOT_RECEIVED' and d.closed_at is null
+   and d.status in ('needs_response', 'under_review')
+ order by d.due_at nulls last;

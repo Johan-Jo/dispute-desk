@@ -18,8 +18,9 @@ exposures — §0. Read that first.**
 > test 2 preserved it unconditionally (§4.1d).
 > Also added: §2.1, the shared-mechanism boundary with the not-as-described work,
 > which stays a **separate plan**. And §0 carries a fresh live re-check, which
-> **found a second exposure rev 1 missed**; a later re-check (§0.4) found correction 5
-> already live in two approved refund letters.
+> **found a second exposure rev 1 missed**. §0.4 checks every open case's dates against
+> the merchant's own published delivery terms, and §8.1 makes that check a procedure for
+> every merchant.
 **Deliverable:** make a non-receipt response say what the shipping record actually
 shows. Three things have to change together: the evidence model must hold an
 **in-transit** state instead of collapsing it into "no evidence"; a
@@ -30,7 +31,7 @@ structurally unavailable on a claim that the goods never arrived.
 (`aokhplydttxtebvbeuzc`) on **2026-09-22**, and §0 re-verified **2026-09-23 01:27
 UTC**, via `npm run db:query:prod`. Code references are against `origin/develop` @
 `0d383e16`.
-**Evidence SQL:** `scripts/sql/non-receipt-delivery-evidence.sql` (Q1–Q16). Q15 is the
+**Evidence SQL:** `scripts/sql/non-receipt-delivery-evidence.sql` (Q1–Q18). Q15 is the
 re-check to run before acting on any deadline claim here; Q16 finds every other dispute
 in Case B's position.
 **Source contract:** the supplied *"DisputeDesk: non-receipt disputes while goods
@@ -153,27 +154,45 @@ already behaves honestly there — it declines to write a letter rather than arg
 nothing. Which is exactly why P0(b) must land with P0(a): remove the bad fact without
 adding the true one and the outcome is a silent forfeit, observed.
 
-### 0.4 Re-check 2026-09-23 ~09:55 UTC — and correction 5 is already live
+### 0.4 Re-check 2026-09-23 ~09:55 UTC, and each case's dates against the merchant's terms
 
 Q15 re-run **after** the 02:32 UTC re-ingest: nothing moved. Case A's
 `delivery_status` is still null, `submission_state = not_saved`; Case B is still
 `approved`, `not_saved`, due 1 October. Both §0 exposures stand.
 
-Q16 (approved, unsaved, deadline ahead, **excluding** rows already submitted) found
-the §4.1(d) defect in two more approved letters — **cay-collective, credit not
-processed, one fact each: `no_return_initiated`, and no refund-policy fact in the
-package**:
+Then the question rev 1 never asked: **what did the merchant promise, and did the
+shipment keep it?** Below is every open non-receipt case still awaiting a response,
+measured against the shipping policy **in force on the order date**. The sources are
+Q17, Q18 and a live `Shop.shopPolicies.updatedAt` check: every stored shipping policy is
+still the published version, and each one predates every one of these orders. Days are
+business days, Mon–Fri.
 
-| dispute | order | amount | deadline | letter (verbatim, v2) |
-|---|---|---|---|---|
-| `cd0caead` | #14481 | SEK 332 | **2026-10-02 23:00 UTC** | *"…no refund obligation arose, and accordingly the claim that a refund remains outstanding is not supported"* |
-| `bf8e7526` | #15673 | SEK 1 397 | 2026-10-08 23:00 UTC | *"…in the absence of a return, no refund obligation arose and no refund was issued"* |
+| case | merchant's published term | order → dispatch | order → delivery | dispute opened | reading |
+|---|---|---|---|---|---|
+| **B** cay #14784 | *"typically delivered within 5–7 business days after the order has been placed"* | **23 bd** | **25 bd** (window ended 25 Aug) | 20 bd: **after** the window, **before** dispatch | **Late delivery, and the merchant's own policy grants the remedy** (below) |
+| **A** blume #360980 | *"Orders will ship within 1-3 business days"*: dispatch only, no delivery window | **17 bd** (max 3) | still in transit | 20 bd | Dispatch 14 bd late; no delivery promise to measure against |
+| blume #352543 | same | 0 bd | 2 bd | 56 bd | On time at every step |
+| 6a8848-dd #101259 (two dispute rows, one order) | *"innerhalb von 0-3 Tagen verschickt … Lieferzeit 7-15 Werktage"* | 1 bd | 9 bd | 12 bd, after delivery | Inside both windows |
+| 6a8848-dd #98250 | same | 5 bd (**over** 0–3 days) | 9 bd | 27 bd | Dispatch late, delivery inside the 7–15 bd window |
 
-That is §4.1(d) table row 2 exactly: the fact alone, no applicable return-conditional
-terms in evidence, and the letter argues from it that **no refund was owed**. Both are
-`review_state = approved`, so both re-enter the deadline cron like Case B. They are not
-non-receipt cases and they are in this plan only because correction 5 is; the fix is
-§4.1(d)'s claim gate on `return_not_initiated`, which ships with P0. Decision: §11 Q-1c.
+**Case B changes verdict.** Cay Collective's published refund policy has been in force
+since 2026-07-06, and the order was placed 2026-08-16. It says, verbatim: *"You'll
+receive a full refund if your order never arrives, **arrives after the estimated delivery
+window**, arrives damaged, or isn't as described."* The order arrived 18 business days
+after that window closed. The cardholder disputed after the window had closed and before
+the order was dispatched. A letter that rests on "the carrier confirms it was collected"
+contradicts the merchant's own published terms, and an issuer can read those terms.
+Rev 1 treated Case B as a receipt case with a wording problem. It is a **late-delivery
+case**, and the merchant's own policy settles it in the cardholder's favour. See §11
+Q-1b; the recommendation there is now to **concede and withdraw the approval**.
+
+**Case A gains one fact and loses none.** Blume promises a dispatch time, not a delivery
+date, so the premature-filing argument is unavailable: nothing was promised to arrive by
+a given date. The letter must not contradict the 14-business-day late dispatch, and
+§6.6's chronology rule already forbids smoothing it over.
+
+This check was done by hand, for five cases. §8.1 turns it into the procedure every
+merchant gets.
 
 ---
 
@@ -546,6 +565,13 @@ a return. Implement it as a claim gate on the existing `return_not_initiated` pr
 "no refund was owed" licence unconditionally and must stop doing so. Do **not** solve
 it by removing the fact from the refund family — that is where it earns its place.
 
+**(e) The adverse-policy check (§8.1.4, row 4).** Before composing a receipt rebuttal,
+compare the case's dates with the merchant's published delivery window and refund
+policy, using the versions in force on the order date. If the parcel arrived after the
+window and the merchant's own policy grants a refund for exactly that, no receipt
+rebuttal is written. The case parks with a recommendation to concede. Only this row of
+§8.1 ships in P0; the full profile and its confirmation flow follow in P3.
+
 Then, for Case A specifically: rebuild, read the letter, and only then decide §11 Q-1.
 For Case B, whose deadline is **two days earlier** (§0.2), P0(c) plus §6.6's chronology
 rule are what its approved letter needs — or a manual edit before 1 October.
@@ -908,24 +934,126 @@ model, its relative-date rules and its nine-value result vocabulary
 (`known_original_window` … `read_failed`) adopted as specified. Three points where
 this repo's reality bears on it:
 
-1. **Query cost and scope.** `FulfillmentOrder.deliveryMethod` requires a fulfillment-
-   order query the ingest path does not make today, and `read_orders` is already
-   granted. No scope expansion is proposed; whether the pinned API version populates
-   these fields for these stores is an **empirical question to answer against a live
-   merchant order before any code** (contract §3.1: "promising structured candidates,
-   not proof that this store populates them").
+1. **Scope. Rev 2 correction: rev 1 was wrong here, and the question has now been
+   answered live.** Rev 1 assumed `read_orders` covered `FulfillmentOrder.deliveryMethod`.
+   The live probe (`scripts/shopify/probe-delivery-promise.mjs`, 2026-09-23, 12 orders
+   across all three merchants with non-receipt disputes) got **`ACCESS_DENIED` for the
+   `fulfillmentOrders` field on every store.** Reading the structured checkout promise
+   (`minDeliveryDateTime` / `maxDeliveryDateTime` / `brandedPromise`) needs the
+   fulfillment-order read scopes: `read_merchant_managed_fulfillment_orders`, plus
+   `read_third_party_fulfillment_orders` for orders routed to a 3PL. That is a **scope
+   expansion**. It means a TOML change, a re-consent from every merchant, and a change
+   to the App Store listing. Whether these stores populate those fields at all stays an
+   open question until the scope is granted on one store. See §11 Q-5.
 2. **Provenance is the hard part, not retrieval.** A value fetched today is not
    evidence of what was promised at checkout. The resolver stores first-observation
    and subsequent versions with `observed_at` distinct from `promised_at`, and a
    first observation after the purchase is recorded as exactly that.
-3. **Legacy orders stay `not_found`** and the transit workflow continues. No
-   backfill from today's storefront policy — ever.
+3. **Legacy orders stay `not_found` for the structured promise**, and the transit
+   workflow continues. There is no backfill from **today's** storefront policy, ever.
+   That rule does not rule out the **policy version that was in force on the order
+   date**. §8.1 admits that version, but only when its provenance is proven: the live
+   `updatedAt` must precede the order.
 
 **Case A's resolver result, from the supplied evidence: `not_found`.** The 6 September
 merchant message is a dispatch estimate ("ready to ship the following week"); the GOFO
 events are physical history. Neither is an agreed arrival date. The merchant-facing
 line is *"Original expected delivery: unknown"*, beside a separate carrier ETA if one
 exists.
+
+### 8.1 Delivery-date verification for every merchant
+
+**Why this is its own section.** §0.4 shows that the answer to *"was this parcel late?"*
+changes the verdict on a live case (Case B). The resolver above starts from the
+structured checkout promise, and that is a source we cannot read today (§8 point 1).
+Every merchant needs the same check, built from what we can read now. It must run before
+the letter is written, not after.
+
+#### 8.1.1 What we can read today (probed live 2026-09-23, all four installed merchants)
+
+| source | what it proves | readable today? | provenance |
+|---|---|---|---|
+| `FulfillmentOrder.deliveryMethod.{min,max}DeliveryDateTime` | the promise shown at checkout, per order | **no: `ACCESS_DENIED`** (§8 pt 1) | the strongest source available, once the scope is granted |
+| **Published shipping policy**: `Shop.shopPolicies` → `policy_snapshots` | the merchant's standing dispatch and delivery terms | **yes, all 4 merchants** | admissible for an order **only if** the live `updatedAt` ≤ the order date. Otherwise we cannot prove which text the buyer saw |
+| **Published refund policy** | the merchant's **remedy for late delivery**, if any | yes | same rule. It can work **against** the merchant (Case B) |
+| `ShippingLine.title` | the shipping option the buyer chose | yes | on all 4 merchants it carries **no** window ("Standard", "Postnord 0-3 kg", "Versicherter Expressversand"). A title with a window ("2–4 days") would be admissible; none exist today |
+| `Fulfillment.createdAt` / `inTransitAt` | actual dispatch / first carrier scan | yes | physical history |
+| `Fulfillment.deliveredAt` + `shipment_status` | actual delivery or collection | yes (matches our `delivered_at_tracking`) | physical history |
+| `Fulfillment.estimatedDeliveryAt` | a **post-dispatch forecast** | yes, sometimes | **never** a promise (contract §3.1) |
+| messages between merchant and buyer | an ad-hoc promise or delay notice | where a channel is connected | dated message. A dispatch estimate is not an arrival promise (§8, Case A) |
+
+#### 8.1.2 Each merchant's delivery-terms profile
+
+Extracted once per policy version, stored against `policy_snapshots.id`, and re-derived
+when the version changes. From prod (Q17):
+
+| merchant | promises **dispatch** | promises **delivery** | firmness of wording | remedy for late delivery in policy |
+|---|---|---|---|---|
+| cay-collective | none stated | **5–7 business days** from order + payment | *"typically"*: an estimate | **full refund if it arrives after the estimated window** (works against the merchant) |
+| blume-box | **1–3 business days** | none | *"will ship"*: a commitment | none (the refund policy is 233 characters) |
+| 6a8848-dd | **0–3 days** | **7–15 Werktage**, incl. processing | *"beträgt"*: stated as fact | not yet extracted |
+| surasvenne | **1–3 business days** processing | none found | *"usually"*: an estimate | not yet extracted |
+
+A profile has five fields: dispatch window, delivery window, how days are counted
+(business or calendar), firmness of wording (`commitment` or `estimate`), and the remedy
+for late delivery. Extraction is deterministic first; the regex in Q17 finds every window
+above. An LLM pass fills in only how days are counted and how firm the wording is. **The
+merchant confirms its output once per policy version.** An unconfirmed profile may
+inform the merchant UI, but it may not put a date into the bank letter.
+
+#### 8.1.3 The per-case check
+
+Runs at pack build, and again at the deadline refresh (§9.3). Inputs: the order date,
+dispatch, first scan, delivery, the dispute's `initiated_at`, and the profile in force on
+the order date. Outputs, stored on the case and shown on the Overview:
+
+| output | values |
+|---|---|
+| `dispatch_vs_promise` | `on_time` · `late(n bd)` · `no_dispatch_promise` · `unknown` |
+| `delivery_vs_promise` | `on_time` · `late(n bd)` · `pending, window open` · `pending, window passed` · `no_delivery_promise` · `unknown` |
+| `dispute_timing` | `before_window_end` (premature) · `after_window, before_delivery` · `after_delivery` |
+| `policy_remedy_triggered` | `true` when the merchant's own policy grants the cardholder the remedy for what happened |
+
+#### 8.1.4 How to act on it
+
+| check result | the letter | automation |
+|---|---|---|
+| delivered on time, dispute after delivery | receipt argument, **with** the on-time dates as a supporting fact | normal |
+| dispute opened **before** the delivery window ended | the premature-filing argument becomes available (contract §3.1), **but only** with a confirmed profile whose wording is a `commitment` | normal |
+| delivered **late**, and the policy gives no remedy for lateness | receipt argument, **with the lateness stated plainly** (§6.6). Never smoothed over | review, not auto |
+| delivered late **and `policy_remedy_triggered`** | **no receipt rebuttal.** The merchant's own published terms grant the claim | **recommend conceding.** Never auto-file; the merchant decides |
+| still in transit, window passed | in-transit narrative (§5), with the lateness stated | review |
+| no promise of either kind, or profile `unknown` | as today: shipment narrative only, no timing claim either way | unchanged |
+
+The row where the policy grants the remedy would have caught Case B. It is also the only
+row that changes what we *recommend*, not just what we write, so it ships first, in P0
+(§4.1).
+
+#### 8.1.5 Onboarding and drift
+
+- **At install, and whenever a merchant changes a policy:** re-snapshot the policies (the
+  ingest already exists in `lib/policies/ingestShopifyPolicies.ts`), re-extract the
+  profile, and ask the merchant to confirm it. A merchant with no shipping policy gets an
+  explicit "no delivery promise on record", never a default window.
+- **Weekly drift check:** compare the live `shopPolicies.updatedAt` with the newest
+  snapshot (`scripts/sql/_stale_policy_fleet.sql` is the starting point). If a policy
+  changed and we have no snapshot of the new version, we cannot prove the terms for
+  orders placed since, so those orders fall to `unknown`.
+- **If Q-5's scope is granted:** the structured checkout promise takes precedence over
+  the policy for that order, and the policy is the fallback for orders without one.
+
+#### 8.1.6 Tests
+
+- **21.** Case B's exact dates + cay's profile → `delivery_vs_promise = late(18 bd)`,
+  `policy_remedy_triggered = true`, the recommendation is to concede, and there is no
+  receipt rebuttal.
+- **22.** A policy whose live `updatedAt` is **after** the order date → the profile is
+  not admissible for that order → `unknown`, and the letter makes no timing claim.
+- **23.** Estimate wording (*"typically"*, *"usually"*) → the premature-filing argument is
+  refused; lateness is still reported.
+- **24.** `estimatedDeliveryAt` present, no policy window → never treated as the promise.
+- **25.** Days counted two ways on one order: 6a8848-dd's *"0-3 Tagen"* (calendar days)
+  and *"7-15 Werktage"* (business days) are each computed on their own basis.
 
 ---
 
@@ -1196,12 +1324,17 @@ is the stake; the reusable fix is the return.
 `CollectedAtPickup` enum, and no mention that the inquiry preceded dispatch. Options:
 P0(c) + §6.6 in time, a manual edit of the approved letter, or withdraw the approval and
 re-approve a corrected one. **This is the nearer deadline and rev 1 called it safe.**
+**Updated by §0.4:** the order arrived 18 business days after cay's own published window,
+and cay's refund policy promises a full refund in exactly that case. Recommendation:
+**withdraw the approval and concede**, unless the merchant has a record showing the
+buyer agreed to the delay.
 
-**Q-1c · cay-collective #14481 (2 Oct) and #15673 (8 Oct) (§0.4).** Approved
-credit-not-processed letters that argue "no return, so no refund was owed" from the bare
-fact. Does cay-collective have a published return-conditional refund policy that applies
-to these orders? If **yes**, the argument is licensed and the fix is to cite the policy
-in the letter. If **no**, it is §4.1(d) row 2: P0(d) in time, or withdraw the approval.
+**Q-5 · Fulfillment-order read scopes (§8 pt 1, §8.1.1).** The only structured source of
+the checkout delivery promise returns `ACCESS_DENIED` today. Adding
+`read_merchant_managed_fulfillment_orders` (plus `read_third_party_fulfillment_orders`)
+means every merchant has to re-consent. Request them now, or rely on the published
+policies alone (§8.1) until that check shows how often a structured promise would have
+changed the outcome?
 
 **Q-2 · P1 changes filing behaviour.** Making `delivered_confirmed` carry a case to
 `moderate` moves the **13** open non-receipt disputes that hold a *receipt-grade*
