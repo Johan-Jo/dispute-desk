@@ -179,6 +179,40 @@ describe("validator v7 on Case A's first letter", () => {
     expect(check(text)).toEqual([]);
   });
 
+  it("v8: a sentence referring back to the shipment named before it is read against THAT shipment", () => {
+    // Verbatim from the v7 rebuild, 2026-09-23 — failed validation, true.
+    const para =
+      "Shipment 1 — The Back to School Bundle (quantity 1): The merchant fulfilled this item on 15 September 2026 via GOFO, tracking number YT2640221437435982 (https://www.gofo.com/us/track?searchID=YT2640221437435982). The carrier's record shows this shipment in transit, with that status as retrieved on 23 September 2026.";
+    expect(check(para)).toEqual([]);
+  });
+
+  it("v8: the referent does not cross a paragraph, and a bare claim still has none", () => {
+    const text =
+      "The merchant fulfilled this item on 15 September 2026 via GOFO, tracking number YT2640221437435982.\n\nThe carrier's record shows this shipment in transit.";
+    expect(check(text).length).toBeGreaterThan(0);
+    expect(check("The order is in transit.").length).toBeGreaterThan(0);
+  });
+
+  it("v8: referring back to the USPS reference cannot borrow GOFO's status", () => {
+    const text =
+      "The merchant fulfilled the sunscreen on 16 September 2026 via USPS, shipping reference 260914OET4. The carrier's record shows this shipment in transit.";
+    expect(check(text).length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    // Verbatim from the v7 rebuild: USPS custody with no carrier record.
+    "The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen on 16 September 2026, tendering it to USPS (shipping reference 260914OET4).",
+    "The merchant fulfilled each item and tendered each to its respective carrier.",
+  ])("v8: refuses hand-over to a carrier with no record: %s", (text) => {
+    expect(check(text).length).toBeGreaterThan(0);
+  });
+
+  it("v8: hand-over to GOFO, whose record shows it in transit, passes", () => {
+    expect(
+      check("The merchant fulfilled The Back to School Bundle on 15 September 2026, tendering it to GOFO (tracking YT2640221437435982)."),
+    ).toEqual([]);
+  });
+
   it("custody timing is allowed when the delivery is carrier-dated (constraint off)", () => {
     expect(
       check("PostNord delivered the parcel before the dispute was opened.", NO_INTERNAL_CONSTRAINTS),
