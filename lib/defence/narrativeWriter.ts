@@ -23,6 +23,7 @@
  */
 
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
+import { familyKeyForModule } from "./reasonCodes/familyRegistry";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
 import {
@@ -633,6 +634,26 @@ export async function generateNarrative(
  *  PDF Evidence Basis rows, this LLM payload) agrees by construction.
  *  Test `narrativeWriter.bankInclusionInvariant.test.ts` locks in that
  *  every fact in the payload satisfies the classifier's contract. */
+/**
+ * Delivery facts carry `deliveryStatuses` and `returnedAt` so `evidence_hash`
+ * moves on any shipment's status change (lib/defence/factClassifier.ts,
+ * `deliveryStatusesOf`). They are hash inputs and the classifier says so —
+ * "the narrative cites proofType, the carrier and the tracking number, never
+ * these fields directly" — but they still reached the model, which printed
+ * the raw enum to the issuer ("recorded a CollectedAtPickup status event",
+ * cay-collective #14784). Dropped here; the hash still sees them.
+ */
+const DELIVERY_HASH_ONLY_KEYS = ["deliveryStatuses", "returnedAt"] as const;
+
+export function stripDeliveryHashInputs<T>(value: T): T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const v = value as Record<string, unknown>;
+  if (v.fieldKey !== "delivery_proof" && v.fieldKey !== "shipping_tracking") return value;
+  const out: Record<string, unknown> = { ...v };
+  for (const key of DELIVERY_HASH_ONLY_KEYS) delete out[key];
+  return out as T;
+}
+
 export function buildLlmFactPayload(input: NarrativeInput): Record<string, unknown> {
   // Filter: never expose submission-risk facts unless includeInBankNarrative
   // override. Delegated to `lib/defence/bankInclusion.ts`, which owns the rule
@@ -666,10 +687,12 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       // used to survive here even though the codes and the summary were
       // withheld, and the model wrote an address-verification assertion from
       // the bare boolean. See `projectPaymentVerificationValueForBank`.
-      value: projectPaymentVerificationValueForBank(
-        projectScreeningValueForBank(f.value),
-        f.bankEligible === true,
-        f.category,
+      value: stripDeliveryHashInputs(
+        projectPaymentVerificationValueForBank(
+          projectScreeningValueForBank(f.value),
+          f.bankEligible === true,
+          f.category,
+        ),
       ),
     }))
     .filter((f) => f.value !== null);
@@ -678,7 +701,10 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
   // the reason code, because the reason code comes from the BANK's label and
   // the label is demonstrably unreliable (see lib/defence/alwaysAdmissible.ts
   // for the admission test, the members, and what is deliberately excluded).
-  const admitted = alwaysAdmissibleCategories(input.approvedFacts);
+  const admitted = alwaysAdmissibleCategories(
+    input.approvedFacts,
+    familyKeyForModule(input.reasonCodeModule.key),
+  );
   const allowedFactCategories = admitted.length
     ? [
         ...input.reasonCodeModule.allowedFactCategories,

@@ -25,6 +25,10 @@ import {
   deriveClaimCapabilities,
 } from "./claimCapabilities";
 import { FACT_PREDICATES } from "./factPredicates";
+import {
+  internalConstraintViolations,
+  type InternalNarrativeConstraints,
+} from "./internalConstraints";
 import { isBankIncludedFact } from "./bankInclusion";
 import type {
   ComposedDocumentBlock,
@@ -108,8 +112,16 @@ import type {
  *      can appear negated ("no signature was captured", "never signed
  *      for"). Bumped so packages that failed on a negated non-claim
  *      regenerate.
+ *   5  (2026-09-23) — non-receipt letters (docs/plans/non-receipt-delivery-
+ *      evidence.plan.md §4.1(c), §6.3, §6.6). The item-not-received family
+ *      hard-bans arguments from the absence of a return, denials that a
+ *      refund was requested, and collector / identity claims; internal
+ *      carrier-status and proof-type enums are banned in every family; and a
+ *      new `internalConstraints` input refuses a refund-request denial when a
+ *      stored customer message asked for one, in any family. Bumped so the
+ *      scheduled drafts that argue from "no return" are rebuilt, not filed.
  */
-export const VALIDATOR_VERSION = 4;
+export const VALIDATOR_VERSION = 5;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -156,6 +168,13 @@ export const FORBIDDEN_PHRASES = [
   // still banned in ANY position by the bare pattern below.
   /\bfulfillment\s+status\s+of\s+(?:UNFULFILLED|FULFILLED|PARTIAL)\b/,
   /\bUNFULFILLED\b/,
+  // Internal carrier-status and proof-type enums. They are hash and routing
+  // inputs, never English: cay-collective #14784's letter told the issuer the
+  // carrier "recorded a CollectedAtPickup status event". Case-sensitive on
+  // purpose — the verbatim identifier is the leak; "collected at the pickup
+  // point" is the permitted prose (non-receipt plan §6.6, v5).
+  /\b(?:CollectedAtPickup|DeliveredToPickup|ReturnedToSender|NotDelivered|OutForDelivery|InTransit)\b/,
+  /\b(?:delivered_confirmed|delivered_unverified|signature_confirmed|label_created|returned_to_sender|in_transit|delivered_final_verified)\b/,
 ];
 
 export const NARROW_AGGRESSIVE_PHRASES = [
@@ -186,6 +205,9 @@ export interface ValidateNarrativeInput {
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
   guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  /** Validator-only knowledge derived from stored messages (v5). Never shown
+   *  to the generator. See lib/defence/internalConstraints.ts. */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 /** Shared phrase + guard check for any single piece of prose. The layer
@@ -207,6 +229,8 @@ export interface RunPhraseAndGuardChecksInput {
    *  only when its `requires` predicate evaluates `false` against
    *  `approvedFacts`. v2.2+. */
   guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  /** Validator-only knowledge derived from stored messages (v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 export function runPhraseAndGuardChecks(
@@ -220,6 +244,7 @@ export function runPhraseAndGuardChecks(
     layer,
     extraHardPhrases,
     guardedPhrases,
+    internalConstraints,
   } = input;
   const errors: ValidationError[] = [];
   if (!text || !text.trim()) return errors;
@@ -263,6 +288,19 @@ export function runPhraseAndGuardChecks(
       message: `Unsupported channel assertion "${match[0]}" in ${sectionKey} (requires ${entry.requires})`,
       evidenceText: match[0],
       requiredFact: entry.requires,
+      layer,
+    });
+  }
+  // 1b'. Internal constraints (v5). A sentence denying a refund /
+  //      reimbursement request is refused when a stored customer message on an
+  //      order-matched ticket asked for one. The message itself never reaches
+  //      the generator — only this check knows it exists.
+  for (const v of internalConstraintViolations(text, sectionKey, internalConstraints)) {
+    errors.push({
+      section: sectionKey,
+      rule: "forbidden_phrase",
+      message: `Refund-request denial "${v.evidenceText}" in ${sectionKey} contradicts a stored customer request`,
+      evidenceText: v.evidenceText,
       layer,
     });
   }
@@ -387,6 +425,7 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
         layer: "narrative",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
   }
@@ -478,6 +517,8 @@ export interface ValidateComposedDocumentInput {
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
   guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  /** Validator-only knowledge derived from stored messages (v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 /** Run forbidden-phrase + claim-guard checks against every sub-text of
@@ -501,6 +542,7 @@ export function validateComposedDocument(
         layer: "thesis",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
     errors.push(
@@ -512,6 +554,7 @@ export function validateComposedDocument(
         layer: "llm",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
     errors.push(
@@ -523,6 +566,7 @@ export function validateComposedDocument(
         layer: "fallback",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
   }

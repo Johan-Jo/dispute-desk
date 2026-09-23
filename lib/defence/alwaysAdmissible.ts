@@ -38,15 +38,28 @@
  */
 
 import { hasReturnedToSenderShipment } from "./factPredicates";
-import type { EvidenceFact, EvidenceFactCategory } from "./types";
+import type {
+  EvidenceFact,
+  EvidenceFactCategory,
+  ReasonCodeFamilyKey,
+} from "./types";
 
 interface AdmissionRule {
   /** Fact this rule recognises, by `value.fieldKey`. */
   fieldKey: string;
   /** Category to admit when the rule matches. */
   category: EvidenceFactCategory;
-  /** Why it cannot read against us under any claim type. */
+  /** Why it cannot read against us under the claim types it is admitted for. */
   rationale: string;
+  /**
+   * Claim families where this fact DOES read against us, so the rule never
+   * admits it there. The admission test above is worded per claim type but
+   * was implemented per key; this field is where the per-claim answer lives,
+   * so the question is asked for every member rather than rediscovered one
+   * live defect at a time (docs/plans/non-receipt-delivery-evidence.plan.md
+   * §4.1(a)). Absent = admitted under every family.
+   */
+  deniedForFamilies?: readonly ReasonCodeFamilyKey[];
   /** `fact` is the candidate; `facts` is the WHOLE set, because
    *  admissibility can turn on something the candidate does not know
    *  about itself. `no_return_initiated` is the case that forced this
@@ -90,7 +103,12 @@ export const ALWAYS_ADMISSIBLE_RULES: readonly AdmissionRule[] = [
       "reading — it invites the argument 'no refund was owed because the " +
       "customer never sent it back' about goods sitting in the merchant's " +
       "own warehouse. That is the admission test in this module's header " +
-      "answering 'yes', so the rule must stop matching.",
+      "answering 'yes', so the rule must stop matching. " +
+      "DENIED on item-not-received since 2026-09-23 (blume-box #360980, " +
+      "cay-collective #14784): a cardholder who says the goods never arrived " +
+      "has nothing to return, so 'no return was initiated' reads as agreement " +
+      "that nothing arrived. Two live letters argued from it.",
+    deniedForFamilies: ["item_not_received"],
     matches: (_fact, facts) => !hasReturnedToSenderShipment([...facts]),
   },
 ] as const;
@@ -99,15 +117,21 @@ export const ALWAYS_ADMISSIBLE_RULES: readonly AdmissionRule[] = [
  * Categories that must be admitted for this fact set regardless of what the
  * reason-code module allows. Returns only categories actually triggered, so a
  * dispute with no qualifying facts is unaffected.
+ *
+ * `family` is the resolved claim family. A rule denied for it is skipped. A
+ * null family (unknown module) applies no denial, so behaviour is unchanged
+ * for callers that cannot resolve one.
  */
 export function alwaysAdmissibleCategories(
   facts: readonly EvidenceFact[],
+  family: ReasonCodeFamilyKey | null = null,
 ): EvidenceFactCategory[] {
   const out = new Set<EvidenceFactCategory>();
   for (const fact of facts) {
     const fieldKey = (fact.value as { fieldKey?: unknown } | null)?.fieldKey;
     for (const rule of ALWAYS_ADMISSIBLE_RULES) {
       if (fieldKey !== rule.fieldKey) continue;
+      if (family && rule.deniedForFamilies?.includes(family)) continue;
       if (!rule.matches(fact, facts)) continue;
       out.add(rule.category);
     }
