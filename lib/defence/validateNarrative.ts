@@ -34,7 +34,7 @@ import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
-  FactPredicateId,
+  GuardedBankPhrase,
   NarrativeSectionKey,
   PackageMode,
   ReasonCodeGuidance,
@@ -204,7 +204,7 @@ export interface ValidateNarrativeInput {
   /** Family-level hard-banned phrases. v2.2+. */
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
   /** Validator-only knowledge derived from stored messages (v5). Never shown
    *  to the generator. See lib/defence/internalConstraints.ts. */
   internalConstraints?: InternalNarrativeConstraints | null;
@@ -228,9 +228,103 @@ export interface RunPhraseAndGuardChecksInput {
    *  (`ReasonCodeFamily.guardedBankPhrases`). Each entry is rejected
    *  only when its `requires` predicate evaluates `false` against
    *  `approvedFacts`. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
   /** Validator-only knowledge derived from stored messages (v5). */
   internalConstraints?: InternalNarrativeConstraints | null;
+}
+
+/* ── Shipment-scoped guards (validator v5, non-receipt plan §4.1(b)) ───────
+ *
+ * A case-wide predicate lets ONE shipment license a claim about ANOTHER: a
+ * valid GOFO transit fact would pass "the USPS shipment is in transit" about a
+ * batch reference. So for a `shipmentScoped` guard each matching SENTENCE is
+ * checked against the shipment(s) it names — by tracking number, or by carrier
+ * name when that carrier is unique on the order.
+ *
+ * Shipment identities come from the delivery fact's `shipmentIndex` (written
+ * by the classifier, stripped from the LLM payload). The shipment the fact
+ * cites is evaluated as the real fact; every other shipment as a non-citable
+ * stand-in carrying only its own tier — so it can never satisfy a predicate
+ * that requires bank-citability. Facts without an index (older packs) fall
+ * back to the case-wide evaluation.
+ */
+interface ShipmentRef {
+  key: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  fact: EvidenceFact;
+}
+
+function shipmentRefsOf(facts: readonly EvidenceFact[]): ShipmentRef[] | null {
+  const refs = new Map<string, ShipmentRef>();
+  let sawIndex = false;
+  for (const f of facts) {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") continue;
+    const v = (f.value ?? {}) as Record<string, unknown>;
+    const index = Array.isArray(v.shipmentIndex) ? (v.shipmentIndex as Array<Record<string, unknown>>) : null;
+    if (!index) continue;
+    sawIndex = true;
+    for (const s of index) {
+      const key = typeof s.instanceKey === "string" ? s.instanceKey : null;
+      if (!key || refs.has(key)) continue;
+      const trackingNumber = typeof s.trackingNumber === "string" ? s.trackingNumber : null;
+      const carrier = typeof s.carrier === "string" ? s.carrier : null;
+      const isCited = trackingNumber !== null && trackingNumber === v.trackingNumber;
+      refs.set(key, {
+        key,
+        carrier,
+        trackingNumber,
+        fact: isCited
+          ? f
+          : {
+              ...f,
+              bankEligible: false,
+              includeInBankNarrative: false,
+              value: { fieldKey: v.fieldKey, proofType: s.proofType ?? null, carrier, trackingNumber },
+            },
+      });
+    }
+  }
+  return sawIndex ? [...refs.values()] : null;
+}
+
+function namedShipments(sentence: string, refs: readonly ShipmentRef[]): ShipmentRef[] {
+  const lower = sentence.toLowerCase();
+  const byNumber = refs.filter((r) => r.trackingNumber && sentence.includes(r.trackingNumber));
+  if (byNumber.length > 0) return byNumber;
+  return refs.filter((r) => {
+    if (!r.carrier) return false;
+    const c = r.carrier.toLowerCase();
+    // A carrier name identifies a shipment only when it is unique on the order.
+    const unique = refs.filter((o) => o.carrier?.toLowerCase() === c).length === 1;
+    return unique && lower.includes(c);
+  });
+}
+
+/** The first offending sentence, or null when every scoped claim is supported. */
+function shipmentScopedViolation(
+  text: string,
+  entry: GuardedBankPhrase,
+  approvedFacts: EvidenceFact[],
+): string | null {
+  const predicate = FACT_PREDICATES[entry.requires];
+  if (!predicate) return null;
+  const refs = shipmentRefsOf(approvedFacts);
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  for (const sentence of sentences) {
+    if (!entry.pattern.test(sentence)) continue;
+    if (!refs) {
+      if (!predicate.evaluate(approvedFacts)) return sentence.trim();
+      continue;
+    }
+    const named = namedShipments(sentence, refs);
+    const scope = named.length > 0 ? named : refs.length <= 1 ? refs : null;
+    const ok = scope
+      ? scope.every((r) => predicate.evaluate([r.fact]))
+      : refs.every((r) => predicate.evaluate([r.fact]));
+    if (!ok) return sentence.trim();
+  }
+  return null;
 }
 
 export function runPhraseAndGuardChecks(
@@ -278,6 +372,21 @@ export function runPhraseAndGuardChecks(
   // 1b. Family-specific guarded list — rejected only when the gating
   //     predicate fails against approvedFacts (v2.2+).
   for (const entry of guardedPhrases ?? []) {
+    if (entry.shipmentScoped) {
+      // Per sentence, against the shipment the sentence names (v5, plan §4.1(b)).
+      const offending = shipmentScopedViolation(text, entry, approvedFacts);
+      if (offending) {
+        errors.push({
+          section: sectionKey,
+          rule: "forbidden_phrase",
+          message: `Shipment claim "${offending}" in ${sectionKey} is not supported by the shipment it names (requires ${entry.requires})`,
+          evidenceText: offending,
+          requiredFact: entry.requires,
+          layer,
+        });
+      }
+      continue;
+    }
     const match = text.match(entry.pattern);
     if (!match) continue;
     const predicate = FACT_PREDICATES[entry.requires];
@@ -516,7 +625,7 @@ export interface ValidateComposedDocumentInput {
   /** Family-level hard-banned phrases. v2.2+. */
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
   /** Validator-only knowledge derived from stored messages (v5). */
   internalConstraints?: InternalNarrativeConstraints | null;
 }

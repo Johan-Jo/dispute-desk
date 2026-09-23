@@ -34,6 +34,7 @@ import { unauthorized_fraud_narrow_fallback } from "./unauthorized_fraud_narrow_
 import { item_not_received_delivery_proof_stack } from "./item_not_received_delivery_proof_stack";
 import { item_not_received_digital_access_record } from "./item_not_received_digital_access_record";
 import { item_not_received_narrow_fallback } from "./item_not_received_narrow_fallback";
+import { item_not_received_carrier_possession } from "./item_not_received_carrier_possession";
 
 import { product_not_as_described_listing_as_purchased } from "./product_not_as_described_listing_as_purchased";
 import { product_not_as_described_resolution_attempt } from "./product_not_as_described_resolution_attempt";
@@ -72,6 +73,7 @@ export const STRATEGIES_BY_FAMILY: Record<ReasonCodeFamilyKey, StrategySubmodule
     credit_already_issued,
     item_not_received_delivery_proof_stack,
     item_not_received_digital_access_record,
+    item_not_received_carrier_possession,
     item_not_received_narrow_fallback,
   ],
   product_not_as_described: [

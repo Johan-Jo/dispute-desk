@@ -29,7 +29,7 @@ import type { InternalNarrativeConstraints } from "../internalConstraints";
 import type {
   ComposedDocumentBlock,
   EvidenceFact,
-  FactPredicateId,
+  GuardedBankPhrase,
   PackageMode,
 } from "../types";
 import type { OrphanedClaim } from "./projectFromPlan";
@@ -71,7 +71,7 @@ export interface ValidatePackageDocumentInput {
   missingRecordIds: readonly string[];
   packageMode: PackageMode;
   extraHardPhrases?: readonly RegExp[];
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
   /** Validator-only knowledge derived from stored messages (validator v5). */
   internalConstraints?: InternalNarrativeConstraints | null;
 }

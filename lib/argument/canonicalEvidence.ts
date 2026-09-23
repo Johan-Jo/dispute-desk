@@ -438,6 +438,14 @@ export type DeliveryProofType =
   | "signature_confirmed"
   | "delivered_confirmed"
   | "delivered_unverified"
+  /** The carrier holds the parcel and it is moving (Shopify fulfillment
+   *  `IN_TRANSIT` / `OUT_FOR_DELIVERY`, or a carrier/tracking-app transit
+   *  state) — added 2026-09-23 (non-receipt plan §5.1). Before it, every
+   *  non-delivery collapsed to `label_created`, so six hub scans scored
+   *  exactly like a printed label. SUPPORTING: never scored as delivery.
+   *  Citable as shipment context only via `isCitableShipmentContext`
+   *  (lib/defence/factClassifier.ts). */
+  | "in_transit"
   | "label_created"
   | "returned_to_sender";
 
@@ -509,6 +517,9 @@ export function categorizeEvidenceField(
         // `signature_confirmed` above — that path is untouched.
         return "moderate";
       case "delivered_unverified":
+        return "supporting";
+      case "in_transit":
+        // Carrier possession is not receipt: supporting, never strength.
         return "supporting";
       case "returned_to_sender":
         // The carrier brought the parcel BACK. Never delivery evidence —
