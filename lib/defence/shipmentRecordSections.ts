@@ -119,18 +119,42 @@ function chronology(shipments: Shipment[]): string {
         rows.push({ at: t, text: `${day(iso)}: ${text.charAt(0).toUpperCase()}${text.slice(1)}` });
       }
     };
+    // Dates and events only — identifiers and links appear once, in the
+    // fulfilment section.
     if (s.proofType === "signature_confirmed" || s.proofType === "delivered_confirmed") {
-      push(s.deliveredAt, `${carrier} records delivery of ${items} (${identity(s)}).`);
+      push(s.deliveredAt, `${carrier} records delivery of ${items}.`);
     } else if (s.proofType === "in_transit") {
-      push(s.inTransitSince, `${carrier}'s tracking record shows ${items} in transit (${identity(s)}).`);
+      push(s.inTransitSince, `${carrier}'s tracking record shows ${items} in transit.`);
     } else {
-      push(s.fulfilledAt, `the merchant fulfilled ${items} (${identity(s)}).`);
+      push(s.fulfilledAt, `the merchant fulfilled ${items}${str(s.carrier) ? ` (${str(s.carrier)})` : ""}.`);
     }
   }
   return rows
     .sort((a, b) => a.at - b.at)
     .map((r) => r.text)
     .join(" ");
+}
+
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+function count(n: number): string {
+  return NUMBER_WORDS[n] ?? String(n);
+}
+
+/** One clause per parcel for the summary: what its record shows, no
+ *  identifiers or links (the fulfilment section carries those, once). */
+function summaryClause(s: Shipment): string {
+  const items = itemsOf(s);
+  const carrier = str(s.carrier) ?? "the carrier";
+  if (s.proofType === "signature_confirmed" || s.proofType === "delivered_confirmed") {
+    const when = day(s.deliveredAt);
+    return `${items}, which ${carrier}'s record shows delivered${when ? ` on ${when}` : ""}`;
+  }
+  if (s.proofType === "in_transit") {
+    const since = day(s.inTransitSince);
+    return `${items}, which ${carrier}'s tracking record shows in transit${since ? ` since ${since}` : ""}`;
+  }
+  const fulfilled = day(s.fulfilledAt);
+  return `${items}, fulfilled by the merchant${fulfilled ? ` on ${fulfilled}` : ""}`;
 }
 
 function section(text: string, usedFactIds: string[]): NarrativeSection {
@@ -169,35 +193,46 @@ export function applyShipmentRecordSections(
   const { shipments, factIds } = basis;
   const n = shipments.length;
   const accounts = shipments.map(parcelAccount);
-  const recorded = shipments.filter(hasCarrierRecord);
-  const links = recorded.some((s) => s.referenceIsTrackingNumber === true && str(s.trackingUrl));
+  const clauses = shipments.map(summaryClause);
+  const listed =
+    clauses.length === 2
+      ? `${clauses[0]}; and ${clauses[1]}`
+      : `${clauses.slice(0, -1).join("; ")}; and ${clauses[clauses.length - 1]}`;
+  const recorded = shipments.filter(hasCarrierRecord).map((s) => str(s.carrier)).filter(Boolean);
 
-  const allItems = shipments.map(itemsOf).join("; ");
+  /* Each section says something the others do not — the composed document
+   * already opens every section with a fixed thesis line (thesisTemplates.ts),
+   * and the first version of this module repeated the parcels in four
+   * sections and the reversal request twice (maintainer, 2026-09-23):
+   *   - summary: one sentence per parcel, no identifiers;
+   *   - fulfilment: the one full account, with tracking numbers and links;
+   *   - chronology: dates and events only;
+   *   - conclusion: what the request rests on — the thesis line asks for
+   *     reversal, so the body does not ask again;
+   *   - transaction overview: omitted — it would only repeat the summary,
+   *     under a thesis written for card-fraud cases. */
+  const omitted = narrative.omittedSections.filter((o) => o.sectionKey !== "transactionOverviewArgument");
   return {
     ...narrative,
-    executiveSummary: section(
-      [
-        `The merchant contests this item-not-received claim. The order was fulfilled in ${n} shipments.`,
-        ...accounts,
-        // Not "each carrier record": a parcel with no carrier record has none.
-        links ? "The tracking link given opens the carrier's own record." : null,
-      ]
-        .filter(Boolean)
-        .join(" "),
-      factIds,
-    ),
-    transactionOverviewArgument: section(
-      `The order was fulfilled in ${n} shipments: ${allItems}.`,
-      factIds,
-    ),
+    executiveSummary: section(`The order was fulfilled in ${count(n)} shipments: ${listed}.`, factIds),
+    transactionOverviewArgument: section("", []),
     fulfillmentArgument: section(
-      [`The order was fulfilled in ${n} shipments.`, ...accounts].join("\n\n"),
+      [`The order was fulfilled in ${count(n)} shipments.`, ...accounts].join("\n\n"),
       factIds,
     ),
     chronologyArgument: section(chronology(shipments), factIds),
     conclusion: section(
-      "On the basis of the shipment records set out above, the merchant respectfully requests that the chargeback be reversed.",
+      recorded.length > 0
+        ? `The request rests on ${recorded.length === 1 ? `${recorded[0]}'s tracking record` : "the carriers' tracking records"} and the merchant's fulfilment records set out above.`
+        : "The request rests on the merchant's fulfilment records set out above.",
       factIds,
     ),
+    omittedSections: [
+      ...omitted,
+      {
+        sectionKey: "transactionOverviewArgument",
+        reason: "Multi-parcel order: the shipments are set out in the summary and fulfilment sections.",
+      },
+    ],
   };
 }
