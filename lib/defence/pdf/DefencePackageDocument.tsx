@@ -2,7 +2,9 @@
  * Defence Package PDF document — bank-facing representment.
  *
  * Structure (deterministic, in order):
- *   1. Cover page — title, dispute id, key fields
+ *   1. Header — title, dispute id, order, reason code, amount (page 1; the
+ *      separate cover page was removed 2026-09-23: a mostly empty first page
+ *      pushed the argument to page 3)
  *   2. Case Details table — dark-header, full case metadata
  *   3. Composed argumentative sections (Executive Summary, Transaction
  *      Overview, Chronology of Events, Order Line Items, Payment
@@ -32,6 +34,7 @@ import {
 } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
 import { buildLineItems, type LineItem } from "../render/lineItems";
+import { formatMoneyDisplay, reasonCodeForNetwork } from "../render/formatting";
 import type {
   ComposedDocumentBlock,
   EvidenceFact,
@@ -146,6 +149,26 @@ function findBlock(
   return blocks.find((b) => b.sectionKey === sectionKey) ?? null;
 }
 
+/** Body prose as separate paragraphs (split on blank lines). A paragraph that
+ *  fits on a page is never split across a page break — the GOFO sentence of
+ *  #360980 started at the foot of page 3 and finished on page 4. */
+function Paragraphs({ text, last = false }: { text: string; last?: boolean }) {
+  const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <>
+      {parts.map((p, i) => (
+        <Text
+          key={i}
+          style={last && i === parts.length - 1 ? styles.paragraphLast : styles.paragraph}
+          wrap={p.length > 900}
+        >
+          {p}
+        </Text>
+      ))}
+    </>
+  );
+}
+
 /* ── Section block (presentational) ─────────────────────────────────
  * Renders H1 + (thesis blockquote if non-empty) + body (llmText or
  * fallbackText). Caller decides whether to wrap in a special
@@ -161,8 +184,8 @@ function SectionBlock({
   if (!body) return null;
   const thesis = block.thesisText.trim();
   return (
-    <View minPresenceAhead={80}>
-      <View wrap={false}>
+    <View>
+      <View wrap={false} minPresenceAhead={48}>
         <Text style={styles.h1}>{block.heading}</Text>
         {thesis ? (
           <View style={styles.thesisBox}>
@@ -170,29 +193,31 @@ function SectionBlock({
           </View>
         ) : null}
       </View>
-      <Text style={styles.paragraph}>{body}</Text>
+      <Paragraphs text={body} />
     </View>
   );
 }
 
-/* ── Cover page ───────────────────────────────────────────────────── */
+/* ── Header (top of page 1) ───────────────────────────────────────── */
 
-function Cover({ meta }: { meta: DefencePackageMeta }) {
+function Header({ meta }: { meta: DefencePackageMeta }) {
+  const reason = reasonCodeForNetwork(meta.reasonCodeDisplay, meta.cardNetwork) ?? meta.reasonCode;
+  const line = [
+    `Dispute ${disputeIdShort(meta.disputeGid)}`,
+    meta.orderName ? `Order ${meta.orderName}` : null,
+    [reason, meta.claimType].filter(Boolean).join(" — ") || null,
+    formatMoneyDisplay(meta.amountDisplay),
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
   return (
-    <Page size="A4" style={styles.coverPage}>
-      <Text style={styles.coverEyebrow}>Chargeback Representment</Text>
-      <Text style={styles.coverTitle}>Complete Defence Package</Text>
-      <Text style={styles.coverDisputeId}>Dispute {disputeIdShort(meta.disputeGid)}</Text>
-      <Text style={styles.coverSubtitle}>
-        Prepared for {meta.merchantName ?? meta.shopName}
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>Chargeback Response</Text>
+      <Text style={styles.headerLine}>{line}</Text>
+      <Text style={styles.headerMeta}>
+        Submitted on behalf of {meta.merchantName ?? meta.shopName} · {fmtIsoDate(meta.generatedAt)}
       </Text>
-      <Text style={styles.coverSubtitle}>
-        {[meta.reasonCodeDisplay, meta.claimType].filter(Boolean).join(" — ") || meta.reasonCode || "—"} • {meta.amountDisplay ?? "—"} • v{meta.version}
-      </Text>
-      <Text style={styles.coverSubtitle}>
-        Generated {fmtIsoDate(meta.generatedAt)}
-      </Text>
-    </Page>
+    </View>
   );
 }
 
@@ -223,12 +248,12 @@ function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
     familyKey: meta.reasonCodeFamilyKey ?? null,
   });
   return (
-    <View minPresenceAhead={120}>
-      <Text style={styles.h1}>Case Details</Text>
-      <View style={styles.table}>
+    <View>
+      <Text style={styles.h1} minPresenceAhead={48}>Case Details</Text>
+      <View style={styles.table} wrap={rows.length > 16}>
         <View style={styles.tableHeader} wrap={false}>
-          <Text style={styles.tableHeaderCell}>Field</Text>
-          <Text style={styles.tableHeaderCell}>Detail</Text>
+          <Text style={styles.tableHeaderCellLabel}>Field</Text>
+          <Text style={styles.tableHeaderCellValue}>Detail</Text>
         </View>
         {rows.map(([k, v], i) => (
           <View
@@ -276,8 +301,8 @@ function ChronologyBullets({ events }: { events: ChronologyEvent[] }) {
 function LineItemsTable({ items }: { items: LineItem[] }) {
   if (items.length === 0) return null;
   return (
-    <View minPresenceAhead={100}>
-      <Text style={styles.h1}>Order Line Items</Text>
+    <View>
+      <Text style={styles.h1} minPresenceAhead={48}>Order Line Items</Text>
       <View style={styles.table}>
         <View style={styles.tableHeader} wrap={false}>
           <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Description</Text>
@@ -306,8 +331,8 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
   const rows = buildEvidenceBasisRows(approvedFacts);
   if (rows.length === 0) return null;
   return (
-    <View minPresenceAhead={120}>
-      <Text style={styles.h1}>Evidence Basis</Text>
+    <View wrap={rows.length > 8}>
+      <Text style={styles.h1} minPresenceAhead={48}>Evidence Basis</Text>
       {/* No caption: the heading + Signal/Detail table is self-
           explanatory. The prior "Approved bank-facing facts used to
           ground this package" caption leaked our internal terminology
@@ -316,10 +341,10 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
           reviewer's curiosity in directions that work against us. Per
           the bank-non-disclosure rule, never expose internal
           structures or scoring concepts on the submission. */}
-      <View style={styles.table}>
+      <View style={styles.table} wrap={rows.length > 8}>
         <View style={styles.tableHeader} wrap={false}>
-          <Text style={styles.tableHeaderCell}>Signal</Text>
-          <Text style={styles.tableHeaderCell}>Detail</Text>
+          <Text style={styles.tableHeaderCellLabel}>Signal</Text>
+          <Text style={styles.tableHeaderCellValue}>Detail</Text>
         </View>
         {rows.map((r, i) => (
           <View
@@ -374,8 +399,8 @@ function SupportingEvidenceIndex({
     : manualEvidence.filter((m) => m.includeInPackage);
   if (included.length === 0) return null;
   return (
-    <View minPresenceAhead={100}>
-      <Text style={styles.h1}>Supporting Evidence Index</Text>
+    <View>
+      <Text style={styles.h1} minPresenceAhead={48}>Supporting Evidence Index</Text>
       <View style={styles.table}>
         <View style={styles.tableHeader} wrap={false}>
           <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Document</Text>
@@ -412,18 +437,22 @@ function SupportingEvidenceIndex({
 
 /* ── Footer ──────────────────────────────────────────────────────── */
 
+/* The footer used to read "Defence Package v13 • full • prompt v26" —
+ * internal build metadata on a bank document — and was never drawn: a
+ * `fixed` element placed after the flowing content did not render. It is now
+ * the first child of the page, and carries only what a reviewer needs. */
 function PageFooter({ meta }: { meta: DefencePackageMeta }) {
+  // Static text only. In this renderer build a `render` prop (the documented
+  // way to print "Page N of M") stops the whole fixed element from drawing —
+  // measured with the local harness, 2026-09-23 — which is why the old
+  // footer never appeared. The dispute and order reference is what a reviewer
+  // needs on a loose page.
+  const left = [`Dispute ${disputeIdShort(meta.disputeGid)}`, meta.orderName ? `Order ${meta.orderName}` : null]
+    .filter(Boolean)
+    .join("  ·  ");
   return (
     <View style={styles.footer} fixed>
-      <Text style={styles.footerLeft}>
-        Defence Package v{meta.version} • {meta.packageMode} • prompt v{meta.promptVersion}
-      </Text>
-      <Text
-        style={styles.footerRight}
-        render={({ pageNumber, totalPages }) =>
-          `Page ${pageNumber} of ${totalPages}`
-        }
-      />
+      <Text style={styles.footerText}>{left}</Text>
     </View>
   );
 }
@@ -436,15 +465,15 @@ function ConclusionBlock({ block }: { block: ComposedDocumentBlock | null }) {
   if (!body) return null;
   const thesis = block.thesisText.trim();
   return (
-    <View minPresenceAhead={100}>
-      <Text style={styles.h1}>{block.heading}</Text>
+    <View>
+      <Text style={styles.h1} minPresenceAhead={48}>{block.heading}</Text>
       {thesis ? (
         <View style={styles.thesisBox}>
           <Text style={styles.thesisText}>{thesis}</Text>
         </View>
       ) : null}
-      <View style={styles.conclusionBox}>
-        <Text style={styles.paragraphLast}>{body}</Text>
+      <View style={styles.conclusionBox} wrap={false}>
+        <Paragraphs text={body} last />
       </View>
     </View>
   );
@@ -469,9 +498,9 @@ export function DefencePackageDocument({
       subject="Chargeback Representment — Complete Defence Package"
       creator="DisputeDesk Grounded Defence Package Builder"
     >
-      <Cover meta={meta} />
-
       <Page size="A4" style={styles.page}>
+        <PageFooter meta={meta} />
+        <Header meta={meta} />
         <CaseDetailsTable meta={meta} />
 
         <SectionBlock block={findBlock(composedBlocks, "executiveSummary")} />
@@ -481,8 +510,8 @@ export function DefencePackageDocument({
             bullets come from meta — they aren't argumentative prose
             and don't pass through composedBlocks. */}
         {chronology.length > 0 || (chronologyBlock && (chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim())) ? (
-          <View minPresenceAhead={100}>
-            <View wrap={false}>
+          <View>
+            <View wrap={false} minPresenceAhead={48}>
               <Text style={styles.h1}>Chronology of Events</Text>
               {chronologyBlock && chronologyBlock.thesisText.trim() ? (
                 <View style={styles.thesisBox}>
@@ -493,9 +522,7 @@ export function DefencePackageDocument({
               ) : null}
             </View>
             {chronologyBlock && (chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim()) ? (
-              <Text style={styles.paragraph}>
-                {chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim()}
-              </Text>
+              <Paragraphs text={chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim()} />
             ) : null}
             <ChronologyBullets events={chronology} />
           </View>
@@ -518,8 +545,6 @@ export function DefencePackageDocument({
         />
 
         <ConclusionBlock block={findBlock(composedBlocks, "conclusion")} />
-
-        <PageFooter meta={meta} />
       </Page>
     </Document>
   );

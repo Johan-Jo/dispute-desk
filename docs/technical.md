@@ -3263,6 +3263,33 @@ reversal request twice. Now each section adds something the others don't:
 - the conclusion states what the request rests on, since the thesis already asks for reversal;
 - the transaction overview is omitted.
 
+### Defence PDF layout (2026-09-23, prompt 27)
+
+Reviewed on blume-box #360980's filed PDF: four pages for one page of argument, a mostly empty
+cover, justified text stretched on URL lines, an Evidence Basis label running into its value,
+two chronologies, filler thesis boxes, "USD 40.0", "Visa 13.1 / Mastercard 4855" on a Visa
+card, and a footer that never drew and would have printed internal build metadata. Now:
+
+- **No cover page.** A header on page 1 gives the dispute, order, network reason code and amount.
+- **Footer** (`fixed`, first child of the page): "Dispute … · Order …" only. In this react-pdf
+  build a `render` prop ("Page N of M") stops the whole fixed element from drawing, which was
+  measured with a local render harness, so there are no page numbers.
+- **Text and page breaks:** left-aligned body text, and paragraphs split on blank lines and kept
+  whole across page breaks. Headings keep with what follows (`minPresenceAhead` on the heading,
+  not the whole section, which forced early page breaks). Short tables stay whole.
+- **Tables:** compact rows (line height on the cells, not the row), and header cells aligned with
+  their columns.
+- `lib/defence/render/formatting.ts`: `formatMoneyDisplay` ("USD 129" → "USD 129.00") and
+  `reasonCodeForNetwork` (only the card's own network), used by the shared Case Details and
+  line-item builders, so the PDF and the HTML view agree.
+- `renderThesis` suppresses a thesis that states no fact of the case, except the conclusion's
+  request line.
+- **Multi-parcel letters, one timeline:** no chronology paragraph. `withShipmentEvents`
+  (`chronology.ts`) adds each dated carrier event to the bullets and names the product on
+  Shopify's "marked 1 item as fulfilled" lines, matched by the fulfilment's own time
+  (`shipments[].fulfillmentEventAt`, which is stripped from the model payload). Transit is worded
+  "first shows … in transit on <date>".
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The

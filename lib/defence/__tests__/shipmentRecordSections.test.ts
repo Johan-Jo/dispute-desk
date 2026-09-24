@@ -101,22 +101,46 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
     expect(out.fulfillmentArgument.text).toBe(
       [
         "The order was fulfilled in two shipments.",
-        "The Back to School Bundle: GOFO tracking number YT2640221437435982 (https://www.gofo.com/us/track?searchID=YT2640221437435982). GOFO's tracking record shows the shipment in transit since 17 September 2026.",
+        "The Back to School Bundle: GOFO tracking number YT2640221437435982 (https://www.gofo.com/us/track?searchID=YT2640221437435982). GOFO's tracking record first shows the shipment in transit on 17 September 2026.",
         "Sunburst Mineral SPF 50 Sunscreen: fulfilled by the merchant on 16 September 2026 (USPS shipping reference 260914OET4).",
       ].join("\n\n"),
     );
   });
 
-  it("the chronology is the records' own order, oldest first", () => {
-    expect(out.chronologyArgument.text).toBe(
-      "16 September 2026: The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen (USPS). " +
-        "17 September 2026: GOFO's tracking record shows The Back to School Bundle in transit.",
+  it("one timeline: no chronology paragraph; the parcel events join the dated bullets", async () => {
+    expect(out.chronologyArgument.text).toBe("");
+    expect(out.omittedSections.map((o) => o.sectionKey)).toContain("chronologyArgument");
+    const { buildChronologyEvents } = await import("../chronology");
+    const events = buildChronologyEvents(
+      {
+        timelineEvents: [
+          { at: "2026-08-22T16:16:00Z", text: "$129.00 USD was captured using a Visa ending in 9720 via Shop Pay." },
+          { at: "2026-09-15T19:25:25Z", text: "Stallion marked 1 item as fulfilled from Canada." },
+          { at: "2026-09-16T18:53:06Z", text: "Easy Fulfillment: Bulk Fulfill marked 1 item as fulfilled from Canada." },
+        ],
+      },
+      facts,
     );
+    expect(events.map((e) => e.text)).toEqual([
+      "$129.00 USD was captured using a Visa ending in 9720 via Shop Pay.",
+      "Stallion marked 1 item as fulfilled from Canada (The Back to School Bundle).",
+      "Easy Fulfillment: Bulk Fulfill marked 1 item as fulfilled from Canada (Sunburst Mineral SPF 50 Sunscreen).",
+      "GOFO's tracking record shows The Back to School Bundle in transit (tracking YT2640221437435982).",
+    ]);
+  });
+
+  it("the timeline-only fulfilment time never reaches the model", async () => {
+    const { stripDeliveryHashInputs } = await import("../narrativeWriter");
+    const f = facts.find((x) => x.category === "delivery_proof")!;
+    const stripped = stripDeliveryHashInputs(f.value) as Record<string, unknown>;
+    for (const s of stripped.shipments as Array<Record<string, unknown>>) {
+      expect(s).not.toHaveProperty("fulfillmentEventAt");
+    }
   });
 
   it("each section says something new: the parcels in full once, the request never twice", () => {
     expect(out.executiveSummary.text).toBe(
-      "The order was fulfilled in two shipments: The Back to School Bundle, which GOFO's tracking record shows in transit since 17 September 2026; and Sunburst Mineral SPF 50 Sunscreen, fulfilled by the merchant on 16 September 2026.",
+      "The order was fulfilled in two shipments: The Back to School Bundle, which GOFO's tracking record first shows in transit on 17 September 2026; and Sunburst Mineral SPF 50 Sunscreen, fulfilled by the merchant on 16 September 2026.",
     );
     expect(out.transactionOverviewArgument.text).toBe("");
     expect(out.omittedSections.map((o) => o.sectionKey)).toContain("transactionOverviewArgument");
@@ -137,6 +161,7 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
       /holds no|no carrier|no delivery/i,
       /left the merchant/i,
       /retrieved/i,
+      /in transit since/i,
       /prior to|before the/i,
       /tracking number 260914OET4/i,
       /15 September/, // GOFO's fulfilment date: carrier-recorded parcels carry none

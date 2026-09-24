@@ -484,6 +484,10 @@ function shipmentsForLetter(payload: Record<string, unknown>): Array<Record<stri
           // and can expose a late shipment (#360980, prompt v22).
           fulfilledAt:
             confirmed || proofType === "in_transit" ? null : str(f.createdAt),
+          // Timeline-only: matches Shopify's "marked 1 item as fulfilled" event
+          // to its product. Stripped from the model payload
+          // (`stripDeliveryHashInputs`).
+          fulfillmentEventAt: str(f.createdAt),
           proofType,
           deliveredAt: confirmed ? str(f.deliveredAt) : null,
           ...(proofType === "in_transit" && str(f.carrierStatusObservedAt) && !str(f.inTransitSince)

@@ -30,6 +30,7 @@
  */
 
 import type { ReasonCodeFamilyKey } from "../types";
+import { formatMoneyDisplay, reasonCodeForNetwork } from "./formatting";
 
 /**
  * Inputs the row builder reads. Each renderer's meta is a superset
@@ -120,8 +121,8 @@ export function buildCaseDetailsRows(
     ["Merchant name", dash(input.merchantName)],
     ["Card network", dash(input.cardNetwork)],
     ["Transaction date", dash(input.transactionDateDisplay)],
-    ["Disputed amount", dash(input.amountDisplay)],
-    ["Reason code", dash(input.reasonCodeDisplay)],
+    ["Disputed amount", dash(formatMoneyDisplay(input.amountDisplay))],
+    ["Reason code", dash(reasonCodeForNetwork(input.reasonCodeDisplay, input.cardNetwork))],
     ["Claim type", dash(input.claimType)],
     ["Order ID", dash(input.orderName)],
     ["Cardholder name", dash(input.cardholderName)],

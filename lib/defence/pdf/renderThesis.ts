@@ -105,6 +105,21 @@ export function renderThesis(input: RenderThesisInput): string {
   const template = pickTemplate(input);
   if (!template) return "";
 
+  // A thesis that states no fact of THIS case is filler ("The timeline of
+  // events records the relevant moments…", "The submitted records respond to
+  // the item-not-received claim") and is not rendered. Reviewers of
+  // blume-box #360980's PDF (2026-09-23) read those boxes as padding. The
+  // conclusion's request line is the one exception: it is the request itself.
+  if (input.sectionKey !== "conclusion") {
+    const statesAFact =
+      template.requiredTokens.length > 0 ||
+      template.optionalTokens.some((name) => {
+        const v = resolveToken(name, input.approvedFacts);
+        return v !== null && v !== "";
+      });
+    if (!statesAFact) return "";
+  }
+
   // Required-token gate: if any required token is unresolvable, the
   // ENTIRE template returns "". This is the structural guarantee that
   // a thesis cannot claim a fact that doesn't exist.
