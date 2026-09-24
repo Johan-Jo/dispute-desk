@@ -151,6 +151,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
                 cardNetwork: data.dispute.cardNetwork ?? null,
                 cardLast4: data.dispute.cardLast4 ?? null,
                 transactionDate: data.dispute.transactionDate ?? null,
+                openedAt: data.dispute.openedAt ?? null,
                 paymentGateway: data.dispute.paymentGateway ?? null,
                 financialStatus: data.dispute.financialStatus ?? null,
                 fulfillmentStatus: data.dispute.fulfillmentStatus ?? null,

@@ -82,10 +82,17 @@ export interface ChronologyContext {
  * information). Applied to the rich Shopify timeline text verbatim.
  */
 export function normalizeChronologyText(text: string): string {
-  // "kr628.00 SEK" → "628.00 SEK"; "kr 605,22 SEK" → "605,22 SEK".
-  return text.replace(
-    /\bkr\s?(\d[\d.,\s]*\s+[A-Z]{3})\b/g,
-    "$1",
+  return (
+    text
+      // "kr628.00 SEK" → "628.00 SEK"; "kr 605,22 SEK" → "605,22 SEK".
+      .replace(/\bkr\s?(\d[\d.,\s]*\s+[A-Z]{3})\b/g, "$1")
+      // Shopify's chargeback line adds its own fee to the disputed amount
+      // ("totaling $120.75 CAD + $15.00 USD"). The fee is not the
+      // customer's money and does not match the disputed amount (#352543).
+      .replace(/(opened a chargeback totaling .+?)\s+\+\s+.+?\.$/i, "$1.")
+      // Packs built before 2026-09-24 carry the old wording, which claimed
+      // the recipient; the record says delivered, not who took it.
+      .replace(/^Carrier confirmed delivery of the shipment to the recipient\.$/i, "Carrier recorded the shipment as delivered.")
   );
 }
 
@@ -173,6 +180,7 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
     category: "carrier_delivery",
     patterns: [
       /carrier confirmed delivery/i,
+      /carrier recorded the shipment as delivered/i,
       /carrier delivered the shipment to a pickup point/i,
       /collected the shipment at the pickup point/i,
       /carrier reported the shipment returned to sender/i,
@@ -400,7 +408,7 @@ function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): C
     .filter((c) => / records delivery of /.test(c.text))
     .map((c) => Date.parse(c.at));
   const deduped = annotated.filter((e) => {
-    if (!/carrier confirmed delivery/i.test(e.text)) return true;
+    if (!/carrier confirmed delivery|carrier recorded the shipment as delivered/i.test(e.text)) return true;
     const at = Date.parse(e.at);
     return !namedDeliveries.some((t) => !Number.isNaN(at) && Math.abs(t - at) <= 120_000);
   });

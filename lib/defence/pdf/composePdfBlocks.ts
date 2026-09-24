@@ -14,19 +14,18 @@
 
 import { renderThesis } from "./renderThesis";
 import { isSectionDeniedForModule } from "../sectionVisibility";
-import { SECTION_ORDER, SECTION_TITLES } from "../render/sections";
+import { SECTION_ORDER, sectionTitleFor } from "../render/sections";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
   PackageMode,
   ReasonCodeFamilyKey,
+  ThesisContext,
 } from "../types";
 
-// SECTION_HEADINGS lives in `lib/defence/render/sections.ts` as
-// SECTION_TITLES — both renderers share the same map. Local alias for
-// readability inside this file.
-const SECTION_HEADINGS = SECTION_TITLES;
+// Headings come from `sectionTitleFor` (lib/defence/render/sections.ts),
+// shared with the HTML view.
 
 /** Hard-coded deterministic fallback prose. Currently only
  *  fulfillmentArgument has one — Phase 5 may add others on a per-
@@ -47,6 +46,8 @@ export interface ComposePdfBlocksInput {
    *  module are dropped from the output regardless of LLM emission. */
   moduleKey: string | null;
   fulfillmentStatus: string | null;
+  /** Order name + dispute-opened date for thesis lines that state them. */
+  caseContext?: ThesisContext;
   /**
    * F6 — CANONICAL CLAIM AUTHORITY for the deterministic fulfilment fallback.
    *
@@ -122,11 +123,12 @@ export function composePdfBlocks(
       familyKey: input.familyKey,
       packageMode: input.packageMode,
       approvedFacts: input.approvedFacts,
+      caseContext: input.caseContext,
     });
 
     blocks.push({
       sectionKey,
-      heading: SECTION_HEADINGS[sectionKey],
+      heading: sectionTitleFor(sectionKey, input.approvedFacts),
       thesisText,
       llmText: hasLlm ? llmText : "",
       fallbackText,

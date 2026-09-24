@@ -60,8 +60,10 @@ import type { ThesisTemplate } from "../types";
  *      built before this constant existed carries NULL and is therefore
  *      treated as changed, giving the 27 cases killed by `representment`
  *      exactly one rebuild under the corrected template.
+ *   2  (2026-09-24) item-not-received opening line states the carrier record
+ *      and the dispute date; its fulfilment-section repeat removed.
  */
-export const COMPOSITION_VERSION = 1;
+export const COMPOSITION_VERSION = 2;
 
 export const THESIS_TEMPLATES: ThesisTemplate[] = [
   // ── executiveSummary ─────────────────────────────────────────────
@@ -107,9 +109,14 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
        * Reworded rather than teaching the detector the verb sense: two
        * strings we control versus widening `ADDRESS_TERMS`, which is the
        * higher-risk edit and would earn its own false-negative guards. */
-      "The submitted records respond to the item-not-received claim[[: {{deliveryClause}}]][[. {{digitalAccessClause}}]].",
+      /* 2026-09-24: leads with the record itself — carrier, tracking,
+       * delivery date and, when delivery came first, the dispute date. The
+       * old opener ("The submitted records respond to the item-not-received
+       * claim") did no work (review of #352543). No "address" verb and no
+       * relation word between the two dates: they are stated, not argued. */
+      "[[{{deliveryRecordClause}}]][[; {{disputeOpenedClause}}]][[. {{digitalAccessClause}}]].",
     requiredTokens: [],
-    optionalTokens: ["deliveryClause", "digitalAccessClause"],
+    optionalTokens: ["deliveryRecordClause", "disputeOpenedClause", "digitalAccessClause"],
   },
   {
     key: "executiveSummary:credit_not_processed:any",
@@ -143,6 +150,15 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
   },
 
   // ── transactionOverviewArgument ──────────────────────────────────
+  {
+    key: "transactionOverviewArgument:item_not_received:any",
+    sectionKey: "transactionOverviewArgument",
+    familyKey: "item_not_received",
+    packageMode: "any",
+    template: "The transaction is set out in the case details.",
+    requiredTokens: [],
+    optionalTokens: [],
+  },
   {
     key: "transactionOverviewArgument:any:any",
     sectionKey: "transactionOverviewArgument",
@@ -189,16 +205,9 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
   },
 
   // ── fulfillmentArgument ──────────────────────────────────────────
-  {
-    key: "fulfillmentArgument:item_not_received:any",
-    sectionKey: "fulfillmentArgument",
-    familyKey: "item_not_received",
-    packageMode: "any",
-    template:
-      "{{deliveryClause}}.",
-    requiredTokens: ["deliveryClause"],
-    optionalTokens: [],
-  },
+  // No item-not-received thesis here since 2026-09-24: it repeated the
+  // executive summary's opening line word for word (#352543). The generic
+  // template below states no fact, so it is not rendered.
   {
     key: "fulfillmentArgument:any:any",
     sectionKey: "fulfillmentArgument",

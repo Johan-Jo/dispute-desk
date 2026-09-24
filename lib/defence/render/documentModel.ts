@@ -56,6 +56,56 @@ export function shipmentsOf(facts: readonly EvidenceFact[]): Shipment[] {
   return [];
 }
 
+/**
+ * Single-parcel letters: the one carrier record as a card, like each parcel
+ * of a multi-parcel order (review of #352543, 2026-09-24: "show the delivery
+ * record, not just descriptions of it"). Carrier, tracking number, when the
+ * merchant shipped it and what the carrier recorded — each only from the
+ * record. Null for multi-parcel orders and for any record without a carrier
+ * status and a tracking number.
+ *
+ * The card is labelled with the ORDER, never with product names: one
+ * tracking number does not prove which products were in the parcel.
+ */
+export function singleShipmentOf(
+  facts: readonly EvidenceFact[],
+  events: readonly ChronologyEvent[],
+  orderName: string | null,
+): Shipment | null {
+  if (shipmentsOf(facts).length > 0) return null;
+  const f = facts.find((x) => x.category === "delivery_proof" || x.category === "shipping_tracking");
+  if (!f) return null;
+  const v = (f.value ?? {}) as Record<string, unknown>;
+  const proof = str(v.proofType);
+  if (proof !== "delivered_confirmed" && proof !== "signature_confirmed" && proof !== "in_transit") return null;
+  const carrier = str(v.carrier);
+  const tracking = str(v.trackingNumber);
+  if (!carrier || !tracking) return null;
+  // The merchant's shipping time: Shopify's one "marked N items as
+  // fulfilled" line. With more than one, which belongs to this parcel is
+  // unknown, so none is shown.
+  const shipped = events.filter((e) => /marked \d+ items? as fulfilled/i.test(e.text));
+  return {
+    carrier,
+    reference: tracking,
+    referenceIsTrackingNumber: true,
+    trackingUrl: str(v.trackingUrl),
+    proofType: proof,
+    deliveredAt: str(v.deliveredAt),
+    inTransitSince: str(v.inTransitSince),
+    fulfillmentEventAt: shipped.length === 1 ? shipped[0].at : null,
+    items: [{ title: orderName ? `Order ${orderName}` : "Order shipment", quantity: 1 }],
+  };
+}
+
+/** The fact ids a single-parcel card already shows, so the Evidence Basis
+ *  does not state the same record again. */
+export function deliveryFactIds(facts: readonly EvidenceFact[]): Set<string> {
+  return new Set(
+    facts.filter((f) => f.category === "delivery_proof" || f.category === "shipping_tracking").map((f) => f.id),
+  );
+}
+
 export function productsOf(s: Shipment): string {
   const names = (Array.isArray(s.items) ? (s.items as Array<Record<string, unknown>>) : [])
     .map((it) => {
@@ -137,13 +187,14 @@ export function shipmentCards(
   });
 }
 
-/** Line-item total, only when every price is one currency amount. */
+/** Line-item total, only when every price is one currency amount. Adjustment
+ *  rows (shipping, tax, discount) count toward the amount, not the quantity. */
 export function lineItemsTotal(items: readonly LineItem[]): { quantity: number; amount: string } | null {
   const parsed = items.map((it) => it.price.match(/^([A-Z]{3})\s+(-?\d+(?:\.\d+)?)$/));
   const currency = parsed[0]?.[1];
   if (!currency || !parsed.every((m) => m && m[1] === currency)) return null;
   return {
-    quantity: items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0),
+    quantity: items.reduce((sum, it) => sum + (it.kind === "adjustment" ? 0 : Number(it.quantity) || 0), 0),
     amount: `${currency} ${parsed.reduce((sum, m) => sum + Number(m![2]), 0).toFixed(2)}`,
   };
 }
@@ -158,7 +209,7 @@ export function describeChronologyEvent(
   shipments: readonly Shipment[],
 ): { title: string; marker: ChronologyMarker } {
   if (/tracking record shows .* in transit/i.test(e.text)) return { title: "In transit with carrier", marker: "green" };
-  if (/records delivery of|carrier confirmed delivery|collected the shipment|delivered the shipment to a pickup point/i.test(e.text)) {
+  if (/records delivery of|carrier confirmed delivery|recorded the shipment as delivered|collected the shipment|delivered the shipment to a pickup point/i.test(e.text)) {
     return { title: "Delivered by carrier", marker: "green" };
   }
   switch (classifyChronologyEvent(e.text)) {
