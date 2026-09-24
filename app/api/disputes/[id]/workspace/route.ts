@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
@@ -160,7 +161,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // ── 1. Load dispute with shop_domain ──────────────────────────────
   const { data: row, error: disputeErr } = await sb
     .from("disputes")
-    .select("*, shops(shop_domain)")
+    .select("*, shops(shop_domain, primary_domain)")
     .eq("id", disputeId)
     .eq("shop_id", shopId)
     .single();
@@ -172,6 +173,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const shop = Array.isArray(row.shops) ? row.shops[0] : row.shops;
   const shopDomain =
     (shop as { shop_domain?: string } | null)?.shop_domain ?? null;
+  // The merchant's real storefront domain for the defence document ("blume.com"),
+  // falling back to the alias only when none is on record. `shopDomain` stays
+  // the myshopify alias: it builds Shopify Admin links.
+  const merchantDomain = shopDomain
+    ? displayShopDomain({
+        shop_domain: shopDomain,
+        primary_domain: (shop as { primary_domain?: string | null } | null)?.primary_domain ?? null,
+      })
+    : null;
 
   // ── 2. Load latest evidence pack ──────────────────────────────────
   const { data: packRow } = await sb
@@ -402,6 +412,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     customerName: row.customer_display_name ?? null,
     shopId: row.shop_id,
     shopDomain,
+    merchantDomain,
     disputeGid: row.dispute_gid,
     disputeEvidenceGid: row.dispute_evidence_gid ?? null,
     dueAt: row.due_at ?? null,

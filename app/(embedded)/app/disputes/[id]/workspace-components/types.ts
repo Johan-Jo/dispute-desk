@@ -85,6 +85,9 @@ export interface WorkspaceDispute {
   customerName: string;
   shopId?: string;
   shopDomain: string;
+  /** The merchant's real storefront domain for the defence document
+   *  ("blume.com"); the myshopify alias only when none is on record. */
+  merchantDomain?: string | null;
   disputeGid: string;
   disputeEvidenceGid: string;
   dueAt: string | null;

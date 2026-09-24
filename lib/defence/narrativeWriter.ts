@@ -200,7 +200,9 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v29 (2026-09-24) — document wording: "shipped" for the merchant's own
 // record, "delivered" only from a carrier's (record-built sections, cards,
 // timeline titles). Bumped so drafts regenerate.
-const PROMPT_VERSION = 29;
+// v30 (2026-09-24) — the document names the merchant by its storefront
+// domain ("blume.com"), not the myshopify alias. Bumped so drafts re-render.
+const PROMPT_VERSION = 30;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

@@ -3263,6 +3263,14 @@ reversal request twice. Now each section adds something the others don't:
 - the conclusion states what the request rests on, since the thesis already asks for reversal;
 - the transaction overview is omitted.
 
+### The letter names the merchant by its storefront domain (2026-09-24, prompt 30)
+
+The defence document (PDF and in-app preview) names the merchant by `displayShopDomain`
+(`shops.primary_domain` without `www.`, e.g. "blume.com"). It falls back to the myshopify alias only when
+no primary domain is on record. This covers "Submitted on behalf of" and the Case Details "Merchant
+name" row. The job reads `primary_domain` with the shop, and the workspace API returns it as
+`dispute.merchantDomain`. `dispute.shopDomain` stays the alias, because it builds Shopify Admin links.
+
 ### Document wording: "shipped", and "delivered" only from a carrier (2026-09-24, prompt 29)
 
 "Fulfilled" is Shopify's term and can mean anything from "label printed" to "handed to the carrier",
