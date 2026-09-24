@@ -21,7 +21,7 @@ export interface OrderContext {
   cardNetwork: string | null;
   cardLast4: string | null;
   paymentGateway: string | null;
-  lineItems: Array<{ description: string; quantity: number; price: string }>;
+  lineItems: Array<{ description: string; quantity: number; price: string; kind?: "item" | "adjustment" }>;
   timelineEvents: Array<{ at: string; text: string }>;
   priorOrderCount: number | null;
   isRepeatCustomer: boolean | null;
@@ -100,6 +100,52 @@ function stripHtml(raw: string): string {
 }
 
 /**
+ * The rows that take the products to the amount the card was charged:
+ * shipping, tax and discounts, in the customer's currency. So the table's
+ * Total equals the order total instead of the product subtotal (#352543:
+ * "Total USD 102.36" under a CAD 120.75 dispute).
+ *
+ * The named rows are used only when they add up exactly; otherwise one net
+ * row carries the difference, so the Total is always the order's own total.
+ * Nothing is added when the currencies differ or the totals are missing.
+ */
+export function reconcileToOrderTotal(
+  items: ReadonlyArray<{ price: string }>,
+  presentment: unknown,
+): Array<{ description: string; quantity: number; price: string; kind: "adjustment" }> {
+  if (!presentment || typeof presentment !== "object" || items.length === 0) return [];
+  const p = presentment as Record<string, unknown>;
+  const currency = typeof p.currency === "string" ? p.currency : null;
+  const num = (v: unknown) => (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : 0);
+  const total = typeof p.total === "string" && Number.isFinite(Number(p.total)) ? Number(p.total) : null;
+  if (!currency || total === null) return [];
+  let sum = 0;
+  for (const it of items) {
+    const m = it.price.match(/^([A-Z]{3})\s+(-?\d+(?:\.\d+)?)$/);
+    if (!m || m[1] !== currency) return [];
+    sum += Number(m[2]);
+  }
+  const cents = (n: number) => Math.round(n * 100);
+  const row = (description: string, amount: number) => ({
+    description,
+    quantity: 0,
+    price: `${currency} ${amount.toFixed(2)}`,
+    kind: "adjustment" as const,
+  });
+  const shipping = num(p.shipping);
+  const tax = num(p.tax);
+  const discounts = num(p.discounts);
+  const named = [
+    ...(discounts > 0 ? [row("Discount", -discounts)] : []),
+    ...(shipping > 0 ? [row("Shipping", shipping)] : []),
+    ...(tax > 0 ? [row("Tax", tax)] : []),
+  ];
+  if (cents(sum - discounts + shipping + tax) === cents(total)) return named;
+  const diff = total - sum;
+  return cents(diff) === 0 ? [] : [row("Shipping, tax and adjustments", diff)];
+}
+
+/**
  * Map a pack `lineItems[i]` entry (collector shape) to the PDF row
  * shape `{ description, quantity, price }`. Returns null when the
  * entry lacks the fields the table needs.
@@ -110,8 +156,16 @@ function mapLineItem(raw: unknown): { description: string; quantity: number; pri
   const title = typeof o.title === "string" ? o.title : typeof o.description === "string" ? o.description : null;
   const variant = typeof o.variant === "string" ? o.variant : null;
   const quantity = typeof o.quantity === "number" ? o.quantity : null;
-  const totalRaw = typeof o.total === "string" ? o.total : typeof o.price === "string" ? o.price : null;
-  const currency = typeof o.currency === "string" ? o.currency : null;
+  // The customer's currency first: it is what the card was charged in and
+  // what the dispute is denominated in (#352543 printed USD beside a CAD
+  // dispute). The shop's currency only for packs built before it was kept.
+  const presentment = typeof o.presentmentTotal === "string" && typeof o.presentmentCurrency === "string";
+  const totalRaw = presentment
+    ? (o.presentmentTotal as string)
+    : typeof o.total === "string" ? o.total : typeof o.price === "string" ? o.price : null;
+  const currency = presentment
+    ? (o.presentmentCurrency as string)
+    : typeof o.currency === "string" ? o.currency : null;
   if (!title || quantity == null || !totalRaw) return null;
   const description = variant ? `${title} — ${variant}` : title;
   const price = currency ? `${currency} ${totalRaw}` : totalRaw;
@@ -153,6 +207,8 @@ export function deriveOrderContext(sections: PackSectionLike[] | null | undefine
         ctx.lineItems = rawItems
           .map(mapLineItem)
           .filter((it): it is { description: string; quantity: number; price: string } => it !== null);
+        const totals = data.totals as Record<string, unknown> | undefined;
+        ctx.lineItems.push(...reconcileToOrderTotal(ctx.lineItems, totals?.presentment));
       }
       continue;
     }

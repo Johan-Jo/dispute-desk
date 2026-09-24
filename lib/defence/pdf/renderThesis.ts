@@ -16,6 +16,7 @@ import type {
   NarrativeSectionKey,
   PackageMode,
   ReasonCodeFamilyKey,
+  ThesisContext,
   ThesisTemplate,
   ThesisTokenName,
 } from "../types";
@@ -25,6 +26,8 @@ export interface RenderThesisInput {
   familyKey: ReasonCodeFamilyKey;
   packageMode: PackageMode;
   approvedFacts: EvidenceFact[];
+  /** Order name + dispute-opened date, for tokens that state them. */
+  caseContext?: ThesisContext;
 }
 
 /** Match the most specific template available for the given context.
@@ -56,21 +59,22 @@ function pickTemplate(input: RenderThesisInput): ThesisTemplate | null {
 function resolveToken(
   name: ThesisTokenName,
   facts: EvidenceFact[],
+  ctx?: ThesisContext,
 ): string | null {
   const token = THESIS_TOKENS[name];
   if (!token) return null;
-  return token.extract(facts);
+  return token.extract(facts, ctx);
 }
 
 /** Strip optional `[[ … ]]` clauses whose tokens didn't all resolve.
  *  Non-nested grammar — `[[` / `]]` markers don't compose. */
-function stripOptionalClauses(template: string, facts: EvidenceFact[]): string {
+function stripOptionalClauses(template: string, facts: EvidenceFact[], ctx?: ThesisContext): string {
   return template.replace(/\[\[([^\]]*?)\]\]/g, (_, clause: string) => {
     const tokenMatches = Array.from(clause.matchAll(/\{\{(\w+)\}\}/g));
     if (tokenMatches.length === 0) return clause; // no tokens — keep as-is
     for (const m of tokenMatches) {
       const tokenName = m[1] as ThesisTokenName;
-      const value = resolveToken(tokenName, facts);
+      const value = resolveToken(tokenName, facts, ctx);
       if (value === null || value === "") return ""; // drop the whole clause
     }
     return clause;
@@ -80,9 +84,9 @@ function stripOptionalClauses(template: string, facts: EvidenceFact[]): string {
 /** Substitute every remaining `{{tokenName}}` with its resolved value.
  *  At this point all tokens must resolve (the required-token gate has
  *  already short-circuited otherwise). */
-function substituteTokens(text: string, facts: EvidenceFact[]): string {
+function substituteTokens(text: string, facts: EvidenceFact[], ctx?: ThesisContext): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => {
-    const value = resolveToken(name as ThesisTokenName, facts);
+    const value = resolveToken(name as ThesisTokenName, facts, ctx);
     return value ?? "";
   });
 }
@@ -98,6 +102,10 @@ function cleanup(text: string): string {
     .replace(/,\s*,/g, ",")
     // Trailing connectives left over after clause stripping
     .replace(/[,;]\s*\./g, ".")
+    // A leading clause that did not resolve leaves its separator behind
+    // ("[[{{a}}]][[. {{b}}]]" with only b) — drop it and capitalise.
+    .replace(/^[\s.;,]+/, "")
+    .replace(/^[a-z]/, (c) => c.toUpperCase())
     .trim();
 }
 
@@ -114,7 +122,7 @@ export function renderThesis(input: RenderThesisInput): string {
     const statesAFact =
       template.requiredTokens.length > 0 ||
       template.optionalTokens.some((name) => {
-        const v = resolveToken(name, input.approvedFacts);
+        const v = resolveToken(name, input.approvedFacts, input.caseContext);
         return v !== null && v !== "";
       });
     if (!statesAFact) return "";
@@ -124,15 +132,15 @@ export function renderThesis(input: RenderThesisInput): string {
   // ENTIRE template returns "". This is the structural guarantee that
   // a thesis cannot claim a fact that doesn't exist.
   for (const name of template.requiredTokens) {
-    const value = resolveToken(name, input.approvedFacts);
+    const value = resolveToken(name, input.approvedFacts, input.caseContext);
     if (value === null || value === "") return "";
   }
 
   // Optional clauses — drop the ones whose tokens didn't resolve.
-  const stripped = stripOptionalClauses(template.template, input.approvedFacts);
+  const stripped = stripOptionalClauses(template.template, input.approvedFacts, input.caseContext);
 
   // Substitute the remaining tokens.
-  const substituted = substituteTokens(stripped, input.approvedFacts);
+  const substituted = substituteTokens(stripped, input.approvedFacts, input.caseContext);
 
   return cleanup(substituted);
 }

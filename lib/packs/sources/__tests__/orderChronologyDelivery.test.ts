@@ -80,7 +80,7 @@ describe("orderSource — delivery milestones in the chronology timeline", () =>
         ],
       }),
     );
-    const delivered = events.find((e) => /confirmed delivery/i.test(e.message));
+    const delivered = events.find((e) => /recorded the shipment as delivered/i.test(e.message));
     expect(delivered).toBeTruthy();
     expect(delivered!.createdAt).toBe("2026-07-06T18:16:00Z");
     // In-transit scans are NOT surfaced (noise).
@@ -113,7 +113,7 @@ describe("orderSource — delivery milestones in the chronology timeline", () =>
       }),
     );
     expect(events.filter((e) => /returned to sender/i.test(e.message)).length).toBe(1);
-    expect(events.filter((e) => /confirmed delivery/i.test(e.message)).length).toBe(1);
+    expect(events.filter((e) => /recorded the shipment as delivered/i.test(e.message)).length).toBe(1);
   });
 
   it("merges delivery with existing Order.events", async () => {
@@ -132,6 +132,6 @@ describe("orderSource — delivery milestones in the chronology timeline", () =>
       }),
     );
     expect(events.some((e) => /Order placed/i.test(e.message))).toBe(true);
-    expect(events.some((e) => /confirmed delivery/i.test(e.message))).toBe(true);
+    expect(events.some((e) => /recorded the shipment as delivered/i.test(e.message))).toBe(true);
   });
 });

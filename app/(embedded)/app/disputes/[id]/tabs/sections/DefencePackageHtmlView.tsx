@@ -31,6 +31,7 @@ import { buildChronologyEvents, type ChronologyEvent } from "@/lib/defence/chron
 import {
   SECTION_ORDER,
   SECTION_TITLES,
+  sectionTitleFor,
 } from "@/lib/defence/render/sections";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
@@ -49,8 +50,10 @@ import {
   emphasisSegments,
   lineItemsTotal,
   productsOf,
+  deliveryFactIds,
   shipmentCards,
   shipmentsOf,
+  singleShipmentOf,
   statusPillTone,
   type PillTone,
   type ShipmentCard,
@@ -84,6 +87,7 @@ function thesisFor(
   moduleKey: string | null | undefined,
   mode: PackageMode,
   facts: EvidenceFact[],
+  caseContext?: { orderName?: string | null; disputeOpenedAt?: string | null },
 ): string | null {
   const familyKey = moduleKey
     ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
@@ -94,6 +98,7 @@ function thesisFor(
     familyKey,
     packageMode: mode,
     approvedFacts: facts,
+    caseContext,
   });
   return out || null;
 }
@@ -143,6 +148,9 @@ export interface DisputeContextLike {
   cardholderName?: string | null;
   customerEmail?: string | null;
   transactionDate?: string | null;
+  /** When the dispute was opened — the opening line states it when the
+   *  carrier-recorded delivery came first. */
+  openedAt?: string | null;
   merchantName?: string | null;
   shopName?: string | null;
   /** Full event timeline from the pack's access_log section. Threaded
@@ -467,13 +475,18 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     : null;
   const reasonModule = moduleKey ? ALL_REASON_CODE_MODULES.find((m) => m.key === moduleKey) ?? null : null;
 
-  const evidenceBasis = buildEvidenceBasisRows(facts);
   const chrono = chronologyEvents(dispute, facts);
   const lineItems: LineItem[] = buildLineItems(facts);
   const total = lineItemsTotal(lineItems);
   const shipments = shipmentsOf(facts);
   const multiParcel = shipments.length > 1;
+  // Same as the PDF: a single parcel's carrier record is a card, and the
+  // Evidence Basis leaves out what the card shows.
+  const single = multiParcel ? null : singleShipmentOf(facts, chrono, dispute?.orderName ?? null);
+  const shownOnCard = single ? deliveryFactIds(facts) : new Set<string>();
+  const evidenceBasis = buildEvidenceBasisRows(facts).filter((r) => !shownOnCard.has(r.factId));
   const productNames = [...lineItems.map((it) => it.description), ...shipments.map(productsOf)];
+  const caseContext = { orderName: dispute?.orderName ?? null, disputeOpenedAt: dispute?.openedAt ?? null };
 
   const fulfillmentFallbackVisible =
     omitted.has("fulfillmentArgument") &&
@@ -534,9 +547,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const prose = (key: NarrativeSectionKey) => {
     const body = visible(key);
     if (!body) return null;
-    const thesis = thesisFor(key, moduleKey, mode, facts);
+    const thesis = thesisFor(key, moduleKey, mode, facts, caseContext);
     return (
-      <Section key={key} number={num()} title={SECTION_TITLES[key]}>
+      <Section key={key} number={num()} title={sectionTitleFor(key, facts)}>
         {thesis ? <p style={css.thesis}>{thesis}</p> : null}
         <Prose text={body} emphasise={productNames} />
       </Section>
@@ -544,7 +557,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   };
 
   const conclusionBody = visible("conclusion");
-  const conclusionThesis = conclusionBody ? thesisFor("conclusion", moduleKey, mode, facts) : null;
+  const conclusionThesis = conclusionBody ? thesisFor("conclusion", moduleKey, mode, facts, caseContext) : null;
   const chronologyBody = visible("chronologyArgument");
 
   return (
@@ -608,10 +621,23 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
               ))}
             </div>
           </Section>
+        ) : single ? (
+          <Section number={num()} title={sectionTitleFor("fulfillmentArgument", facts)}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+              {shipmentCards([single], chrono).map((card) => (
+                <ShipmentCardView key={card.index} card={card} />
+              ))}
+            </div>
+            {visible("fulfillmentArgument") ? (
+              <div style={{ marginTop: 16 }}>
+                <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />
+              </div>
+            ) : null}
+          </Section>
         ) : visible("fulfillmentArgument") ? (
           prose("fulfillmentArgument")
         ) : fulfillmentFallbackVisible ? (
-          <Section number={num()} title={SECTION_TITLES.fulfillmentArgument}>
+          <Section number={num()} title={sectionTitleFor("fulfillmentArgument", facts)}>
             <p style={css.paragraph}>
               The merchant&apos;s order record marks the order as shipped. No separate delivery,
               access-use, or service-completion claim is made in this section unless supported by
@@ -658,7 +684,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
               head={["Description", "Qty", "Price"]}
               widths={["70%", "10%", "20%"]}
               align={["left", "right", "right"]}
-              rows={lineItems.map((it) => [it.description, String(it.quantity), it.price])}
+              rows={lineItems.map((it) => [it.description, it.kind === "adjustment" ? "" : String(it.quantity), it.price])}
             />
             {total ? (
               <div

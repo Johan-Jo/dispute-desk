@@ -34,12 +34,14 @@ import { formatMoneyDisplay, reasonCodeForNetwork } from "../render/formatting";
 // shared with the in-app preview, so the two cannot drift.
 import {
   dateParts,
+  deliveryFactIds,
   describeChronologyEvent,
   emphasisSegments,
   lineItemsTotal,
   productsOf,
   shipmentCards,
   shipmentsOf,
+  singleShipmentOf,
   statusPillTone,
   type PillTone,
   type ShipmentCard as ShipmentCardModel,
@@ -92,7 +94,7 @@ export interface DefencePackageMeta {
   timelineEvents?: Array<{ at: string; text: string }>;
   /** Line items extracted from `pack_json.sections[type=order].data.lineItems`
    *  by `deriveOrderContext`. */
-  lineItemsFromContext?: Array<{ description: string; quantity: number; price: string }>;
+  lineItemsFromContext?: Array<{ description: string; quantity: number; price: string; kind?: "item" | "adjustment" }>;
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -451,7 +453,7 @@ function LineItemsTable({ items }: { items: LineItem[] }) {
       {items.map((it, i) => (
         <View key={i} style={i % 2 === 0 ? styles.trZebra : styles.tr} wrap={false}>
           <Text style={[styles.td, { flex: 1 }]}>{it.description}</Text>
-          <Text style={[styles.td, { width: 50, textAlign: "right" }]}>{it.quantity}</Text>
+          <Text style={[styles.td, { width: 50, textAlign: "right" }]}>{it.kind === "adjustment" ? "" : it.quantity}</Text>
           <Text style={[styles.td, { width: 100, textAlign: "right" }]}>{it.price}</Text>
         </View>
       ))}
@@ -579,7 +581,11 @@ export function DefencePackageDocument({
   const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
   const shipments = shipmentsOf(approvedFacts);
   const multiParcel = shipments.length > 1;
-  const evidenceRows = buildEvidenceBasisRows(approvedFacts);
+  // Single parcel: the carrier record as a card; the Evidence Basis then
+  // leaves out the rows the card already shows.
+  const single = multiParcel ? null : singleShipmentOf(approvedFacts, chronology, meta.orderName);
+  const shownOnCard = single ? deliveryFactIds(approvedFacts) : new Set<string>();
+  const evidenceRows = buildEvidenceBasisRows(approvedFacts).filter((r) => !shownOnCard.has(r.factId));
   const included = issuerSafe
     ? manualEvidence.filter(isBankIncludedManualEvidence)
     : manualEvidence.filter((m) => m.includeInPackage);
@@ -633,6 +639,21 @@ export function DefencePackageDocument({
           {multiParcel ? (
             <Section number={num()} title="Shipping, Delivery & Evidence">
               <ShipmentCards cards={shipmentCards(shipments, chronology)} />
+            </Section>
+          ) : single ? (
+            <Section
+              number={num()}
+              title={findBlock(composedBlocks, "fulfillmentArgument")?.heading ?? "Shipping & Delivery"}
+            >
+              <ShipmentCards cards={shipmentCards([single], chronology)} />
+              {blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
+                <View style={{ marginTop: 14 }}>
+                  <Prose
+                    text={blockBody(findBlock(composedBlocks, "fulfillmentArgument")) as string}
+                    emphasise={productNames}
+                  />
+                </View>
+              ) : null}
             </Section>
           ) : (
             prose("fulfillmentArgument")

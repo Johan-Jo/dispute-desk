@@ -21,6 +21,9 @@ export interface LineItem {
   description: string;
   quantity: number;
   price: string;
+  /** Shipping / tax / discount rows below the products: no quantity, and
+   *  not counted in the Total's quantity. */
+  kind?: "item" | "adjustment";
 }
 
 /**

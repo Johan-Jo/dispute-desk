@@ -206,7 +206,11 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // (named line kept, generic Shopify line at the same moment dropped).
 // v32 (2026-09-24) — thesis lines print dates ("24 September 2026"), not the
 // stored ISO timestamp. Bumped so drafts re-render.
-const PROMPT_VERSION = 32;
+// v33 (2026-09-24) — item-not-received letter tightened after review of
+// #352543: opening line states the carrier record and dispute date, no
+// transaction overview or chronology paragraph, no independence or
+// cardholder-initiated claims (family v9).
+const PROMPT_VERSION = 33;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

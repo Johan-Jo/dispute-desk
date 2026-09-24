@@ -32,11 +32,14 @@ export const ORDER_DETAIL_QUERY = `
         # gap without the GraphQL read.
         clientIp
         customAttributes { key value }
-        totalPriceSet { shopMoney { amount currencyCode } }
-        subtotalPriceSet { shopMoney { amount currencyCode } }
-        totalShippingPriceSet { shopMoney { amount currencyCode } }
-        totalTaxSet { shopMoney { amount currencyCode } }
-        totalDiscountsSet { shopMoney { amount currencyCode } }
+        # presentmentMoney = the currency the CUSTOMER paid in, which is the
+        # currency of the dispute (blume-box sells in USD, #352543 was paid
+        # in CAD). The defence document's line items use it.
+        totalPriceSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
+        subtotalPriceSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
+        totalShippingPriceSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
+        totalTaxSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
+        totalDiscountsSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
         totalRefundedSet { shopMoney { amount currencyCode } }
         # Order-level return status enum (Admin 2026-01): NO_RETURN |
         # RETURN_REQUESTED | IN_PROGRESS | RETURNED | INSPECTION_COMPLETE |
@@ -71,7 +74,7 @@ export const ORDER_DETAIL_QUERY = `
               title
               variantTitle
               quantity
-              originalTotalSet { shopMoney { amount currencyCode } }
+              originalTotalSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
               sku
             }
           }
@@ -229,6 +232,8 @@ export const ORDER_DETAIL_QUERY = `
 
 interface MoneySet {
   shopMoney: { amount: string; currencyCode: string };
+  /** The customer's currency. Requested on the order totals and line items. */
+  presentmentMoney?: { amount: string; currencyCode: string } | null;
 }
 
 export interface OrderLineItem {
