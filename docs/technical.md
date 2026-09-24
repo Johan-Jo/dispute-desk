@@ -3263,6 +3263,32 @@ reversal request twice. Now each section adds something the others don't:
 - the conclusion states what the request rests on, since the thesis already asks for reversal;
 - the transaction overview is omitted.
 
+### In-app preview drawn to the same design (2026-09-24)
+
+`DefencePackageHtmlView` (the defence preview on the dispute page) now renders the "Chargeback Response
+v2" document too. It shows the case header, fact cards, Case Details with status pills, numbered
+sections, shipment cards, line items with a total, the vertical chronology and the conclusion panel.
+Previously it ran the parcel paragraphs together in one block. The derived content (shipment cards,
+timeline titles and markers, totals, product-name emphasis, status-pill tones) lives in
+`lib/defence/render/documentModel.ts`, and the palette in `lib/defence/render/documentTheme.ts`. Both
+the PDF and the preview use them, so the two cannot drift. The preview shows the document as filed,
+so its copy is the document's English.
+
+### "View PDF" — signed new-tab links (2026-09-24)
+
+"View PDF" opened `/api/defence-packages/:id/preview?shop_id=…` in a new top-level tab, and middleware
+answered 401 `SESSION_REQUIRED`. The embedded session cookies are `sameSite=none; partitioned`, so they
+live only in Shopify Admin's iframe partition. A new tab carries none, and `shop_id` is not
+authentication. Now:
+
+- The session-authenticated workspace API attaches `preview_url` to each package row that has a
+  PDF. It carries `t = exp.hmac` (`lib/security/previewLink.ts`: HMAC-SHA256 over package id, shop
+  id and expiry with `SHOPIFY_API_SECRET`; valid for 1 hour).
+- Middleware lets `/api/defence-packages/:id/preview` through only when `t` is present.
+- The route verifies the token against the package and shop it serves, and returns 401
+  `PREVIEW_LINK_INVALID` otherwise.
+- Without `t`, the old session path is unchanged.
+
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
 `lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude
