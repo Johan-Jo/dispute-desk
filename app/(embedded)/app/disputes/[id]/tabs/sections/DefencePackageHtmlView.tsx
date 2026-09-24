@@ -41,7 +41,7 @@ import {
   type LineItem,
 } from "@/lib/defence/render/lineItems";
 import type { ReasonCodeModuleKey } from "@/lib/defence/types";
-import { formatMoneyDisplay, reasonCodeForNetwork } from "@/lib/defence/render/formatting";
+import { formatMoneyDisplay, humanizeEnum, reasonCodeForNetwork } from "@/lib/defence/render/formatting";
 import { DOCUMENT_COLORS } from "@/lib/defence/render/documentTheme";
 import {
   dateParts,
@@ -480,8 +480,15 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     typeof dispute?.fulfillmentStatus === "string" &&
     dispute.fulfillmentStatus.toUpperCase() === "FULFILLED";
 
+  // The PDF's label: the module's network code narrowed to the card used
+  // ("Visa 13.1"). Without a card network (BNPL) or a module, the Shopify
+  // reason in words — never the raw enum ("PRODUCT_NOT_RECEIVED").
   const reason =
-    reasonCodeForNetwork(dispute?.reasonCodeDisplay ?? null, dispute?.cardNetwork ?? null) ?? dispute?.reason ?? null;
+    (dispute?.reasonCodeDisplay
+      ? reasonCodeForNetwork(dispute.reasonCodeDisplay, dispute?.cardNetwork ?? null)
+      : dispute?.cardNetwork && reasonModule
+        ? reasonCodeForNetwork(reasonModule.displayName, dispute.cardNetwork)
+        : null) ?? humanizeEnum(dispute?.reason);
   const amount = formatMoneyDisplay(fmtAmount(dispute?.amount, dispute?.currencyCode));
   const merchant = dispute?.merchantName ?? dispute?.shopName ?? t("defaultMerchant");
 
@@ -494,7 +501,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     cardNetwork: dispute?.cardNetwork ?? null,
     transactionDateDisplay: fmtIso(dispute?.transactionDate),
     amountDisplay: amount,
-    reasonCodeDisplay: dispute?.reasonCodeDisplay ?? dispute?.reason ?? null,
+    reasonCodeDisplay: reason,
     claimType: reasonModule?.claimType ?? null,
     orderName: dispute?.orderName ?? null,
     cardholderName: dispute?.cardholderName ?? null,

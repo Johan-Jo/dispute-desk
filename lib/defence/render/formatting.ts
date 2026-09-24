@@ -16,6 +16,16 @@ export function formatMoneyDisplay(value: string | null | undefined): string | n
 }
 
 /**
+ * "PRODUCT_NOT_RECEIVED" → "Product not received". For a Shopify enum that
+ * reaches a document with no better label; never prints underscores.
+ */
+export function humanizeEnum(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const words = value.trim().replace(/_+/g, " ").toLowerCase();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
+}
+
+/**
  * The reason-code label for the card that was actually used.
  *
  * Reason-code modules carry both networks' codes ("Visa 13.1 / Mastercard
