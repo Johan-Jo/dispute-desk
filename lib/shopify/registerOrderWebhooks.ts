@@ -1,5 +1,6 @@
 /**
- * Register orders/* webhooks (orders/create, orders/updated) for a shop
+ * Register orders/* webhooks (orders/create, orders/updated) and the
+ * fulfillment webhooks (fulfillment_events/create, fulfillments/update) for a shop
  * via Shopify GraphQL Admin API (PR-A).
  *
  * Mirrors `registerDisputeWebhooks` — same retry/error semantics, same
@@ -61,6 +62,12 @@ export async function registerOrderWebhooks(params: {
   const topics: { topic: string; path: string }[] = [
     { topic: "ORDERS_CREATE", path: "/api/webhooks/orders-create" },
     { topic: "ORDERS_UPDATED", path: "/api/webhooks/orders-updated" },
+    // Carrier updates on a disputed order rebuild the case in minutes
+    // (lib/webhooks/handleFulfillmentWebhook.ts). Both topics: carrier
+    // events arrive as fulfillment events, Shopify's own shipment-status
+    // changes as fulfillment updates.
+    { topic: "FULFILLMENT_EVENTS_CREATE", path: "/api/webhooks/fulfillment-events-create" },
+    { topic: "FULFILLMENTS_UPDATE", path: "/api/webhooks/fulfillments-update" },
   ];
 
   const created: string[] = [];
