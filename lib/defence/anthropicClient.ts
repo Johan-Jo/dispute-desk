@@ -18,6 +18,55 @@ export interface ClaudeSystemBlock {
   cache_control?: { type: "ephemeral" };
 }
 
+/**
+ * The Messages API rejects a request carrying more than four `cache_control`
+ * blocks — 400 `invalid_request_error`, "A maximum of 4 blocks with
+ * cache_control may be provided."
+ *
+ * This is enforced HERE, at the one door every Claude call goes through,
+ * rather than at each call site. On 2026-09-24 a Klarna item-not-received
+ * build in prod sent five (base + family overlay + payment overlay + reason
+ * module + strategy bundle) and failed deterministically on every retry;
+ * `narrativeWriter`'s own layout comment documented four and had never
+ * counted the payment overlay, which is only emitted for non-card disputes.
+ * A per-call-site fix would have left the next optional block free to
+ * reintroduce the same 400.
+ */
+export const MAX_CACHE_CONTROL_BLOCKS = 4;
+
+/**
+ * Drop surplus cache breakpoints, keeping the request valid.
+ *
+ * A breakpoint caches the prefix up to and including its block, so the
+ * markers are not equally valuable: the FIRST covers the prefix every call
+ * shares, and the LAST covers an exact repeat of the whole system payload.
+ * When the cap is exceeded we therefore keep the first and the final
+ * `MAX - 1`, dropping from the middle.
+ *
+ * Content is never dropped — only markers. Every block is still sent.
+ * A payload already within the cap is returned untouched, so the common
+ * (card) path keeps the exact caching behaviour it has today.
+ */
+export function capCacheControlBlocks(
+  system: ClaudeSystemBlock[],
+): ClaudeSystemBlock[] {
+  const marked: number[] = [];
+  for (let i = 0; i < system.length; i++) {
+    if (system[i].cache_control) marked.push(i);
+  }
+  if (marked.length <= MAX_CACHE_CONTROL_BLOCKS) return system;
+
+  const keep = new Set<number>([
+    marked[0],
+    ...marked.slice(-(MAX_CACHE_CONTROL_BLOCKS - 1)),
+  ]);
+  return system.map((block, i) => {
+    if (!block.cache_control || keep.has(i)) return block;
+    const { cache_control: _dropped, ...rest } = block;
+    return rest;
+  });
+}
+
 export interface ClaudeMessage {
   role: "user" | "assistant";
   content: string;
@@ -59,7 +108,10 @@ export async function callClaudeMessages(
   const supportsTemperature = !/^claude-opus-4/.test(input.model);
   const body: Record<string, unknown> = {
     model: input.model,
-    system: input.system,
+    // Never send more breakpoints than the API accepts — see
+    // `capCacheControlBlocks`. Applied on the way out so no caller can
+    // reintroduce the 400 by adding another optional block.
+    system: capCacheControlBlocks(input.system),
     messages: input.messages,
     max_tokens: input.maxTokens ?? 4096,
   };

@@ -36,7 +36,32 @@ export const styles = StyleSheet.create({
     lineHeight: 1.55,
   },
 
-  // ─── Cover ───────────────────────────────────────────────────────────
+  // ─── Header (page 1) ─────────────────────────────────────────────────
+  header: {
+    borderBottomWidth: 2,
+    borderBottomColor: NAVY_ACCENT,
+    paddingBottom: 10,
+    marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: "Helvetica-Bold",
+    color: NAVY,
+    lineHeight: 1.2,
+    marginBottom: 6,
+  },
+  headerLine: {
+    fontSize: 10.5,
+    color: NAVY_ACCENT,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 3,
+  },
+  headerMeta: {
+    fontSize: 9,
+    color: MUTED_TEXT,
+  },
+
+  // ─── Cover (unused since 2026-09-23; kept for the HTML view's parity notes) ─
   coverPage: {
     padding: 64,
     paddingTop: 96,
@@ -136,17 +161,19 @@ export const styles = StyleSheet.create({
   },
 
   // ─── Body prose ──────────────────────────────────────────────────────
+  // Left-aligned, never justified: justification stretched the spaces on any
+  // line holding an unbreakable URL ("The   Back   to   School   Bundle:").
   paragraph: {
     fontSize: 10.5,
     color: SLATE_TEXT,
     marginBottom: 8,
-    textAlign: "justify",
+    textAlign: "left",
   },
   paragraphLast: {
     fontSize: 10.5,
     color: SLATE_TEXT,
     marginBottom: 4,
-    textAlign: "justify",
+    textAlign: "left",
   },
   mutedNote: {
     fontSize: 8.5,
@@ -188,8 +215,23 @@ export const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: "row",
     backgroundColor: NAVY,
-    paddingVertical: 7,
+    paddingVertical: 5,
     paddingHorizontal: 10,
+  },
+  /** Header cells aligned with the label / value columns below them. */
+  tableHeaderCellLabel: {
+    flex: 1.15,
+    fontSize: 9.5,
+    color: "#FFFFFF",
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 0.3,
+  },
+  tableHeaderCellValue: {
+    flex: 1.6,
+    fontSize: 9.5,
+    color: "#FFFFFF",
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 0.3,
   },
   tableHeaderCell: {
     flex: 1,
@@ -206,16 +248,18 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textAlign: "right",
   },
+  // Compact rows (2026-09-23): at paddingVertical 6 plus the page's 1.55
+  // line height, a 13-row Case Details table filled a page on its own.
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 6,
+    paddingVertical: 3.5,
     paddingHorizontal: 10,
     borderBottomWidth: 0.5,
     borderBottomColor: HAIRLINE,
   },
   tableRowStripe: {
     flexDirection: "row",
-    paddingVertical: 6,
+    paddingVertical: 3.5,
     paddingHorizontal: 10,
     borderBottomWidth: 0.5,
     borderBottomColor: HAIRLINE,
@@ -225,7 +269,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontSize: 9.5,
     color: SLATE_TEXT,
-    lineHeight: 1.45,
+    lineHeight: 1.3,
   },
   tableCellRight: {
     flex: 1,
@@ -234,13 +278,18 @@ export const styles = StyleSheet.create({
     textAlign: "right",
   },
   tableCellLabel: {
-    flex: 1,
+    flex: 1.15,
+    lineHeight: 1.3,
     fontSize: 9.5,
     color: MUTED_TEXT,
     fontFamily: "Helvetica-Bold",
+    // A long label ("Shipment — The Back to School Bundle") ran straight into
+    // the value column with no gap.
+    paddingRight: 12,
   },
   tableCellValue: {
     flex: 1.6,
+    lineHeight: 1.3,
     fontSize: 9.5,
     color: SLATE_TEXT,
   },
@@ -270,8 +319,7 @@ export const styles = StyleSheet.create({
     borderTopColor: HAIRLINE,
     paddingTop: 8,
   },
-  footerLeft: { fontSize: 8, color: "#9CA3AF" },
-  footerRight: { fontSize: 8, color: "#9CA3AF" },
+  footerText: { fontSize: 8, color: "#6B7280" },
 
   // ─── Conclusion call-out ─────────────────────────────────────────────
   conclusionBox: {

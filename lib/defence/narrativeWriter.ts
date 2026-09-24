@@ -191,7 +191,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // the thesis lines: summary one sentence per parcel, identifiers only in the
 // fulfilment section, chronology dates only, conclusion states the basis (the
 // thesis already asks for reversal), transaction overview omitted.
-const PROMPT_VERSION = 26;
+// v27 (2026-09-23) — multi-parcel letters: no chronology paragraph (the parcel
+// events join the timeline bullets); transit worded "first shows … in transit
+// on <date>". Bumped so drafts regenerate with the new PDF layout.
+const PROMPT_VERSION = 27;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -521,11 +524,20 @@ export async function generateNarrative(
   // System payload layout (cached, ephemeral):
   //   [0] BASE_SYSTEM_PROMPT                  (always)
   //   [1] family overlay   — Phase 1+         (only when non-empty)
-  //   [2] module promptBody                   (always)
-  //   [3] strategy bundle  — Phase 3+         (only when non-empty)
+  //   [2] payment overlay  — BNPL/Klarna      (only for non-card disputes)
+  //   [3] module promptBody                   (always)
+  //   [4] strategy bundle  — Phase 3+         (only when non-empty)
   // The optional blocks are only emitted when they have content so the
   // prompt-cache prefix stays stable while overlays/strategies fill in
   // over time.
+  //
+  // FIVE possible blocks, and the API accepts at most FOUR `cache_control`
+  // breakpoints. This comment listed four and omitted the payment overlay,
+  // which is how a Klarna INR build — the one case that populates all five —
+  // reached prod and failed with a hard 400 on 2026-09-24. The cap is now
+  // enforced centrally by `capCacheControlBlocks` in `anthropicClient`, so
+  // adding a sixth block here cannot break the request; keep this list
+  // accurate anyway, because it is the map someone reads before adding one.
   const system: ClaudeSystemBlock[] = [
     {
       type: "text",
@@ -702,6 +714,13 @@ export function stripDeliveryHashInputs<T>(value: T): T {
   if (v.fieldKey !== "delivery_proof" && v.fieldKey !== "shipping_tracking") return value;
   const out: Record<string, unknown> = { ...v };
   for (const key of DELIVERY_HASH_ONLY_KEYS) delete out[key];
+  // Timeline-only per-parcel field: never a date the model may cite.
+  if (Array.isArray(out.shipments)) {
+    out.shipments = (out.shipments as Array<Record<string, unknown>>).map((s) => {
+      const { fulfillmentEventAt: _timelineOnly, ...rest } = s;
+      return rest;
+    });
+  }
   return out as T;
 }
 

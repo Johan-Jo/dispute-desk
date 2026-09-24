@@ -21,7 +21,8 @@
  *   - a tracking number only when `referenceIsTrackingNumber`, with its link;
  *     otherwise a "shipping reference", no link;
  *   - delivery only from `deliveredAt` on a carrier-confirmed tier;
- *   - transit dated from `inTransitSince`, else as a retrieval;
+ *   - transit dated from `inTransitSince` ("first shows … in transit on"),
+ *     else as a retrieval;
  *   - a parcel with no carrier record: the merchant's fulfilment, nothing more;
  *   - no date is related to the dispute or the order, and nothing is said about
  *     what a record lacks.
@@ -97,7 +98,7 @@ function parcelAccount(s: Shipment): string {
     const since = day(s.inTransitSince);
     const retrieved = day(s.carrierStatusObservedAt);
     const status = since
-      ? `shows the shipment in transit since ${since}`
+      ? `first shows the shipment in transit on ${since}`
       : retrieved
         ? `shows the shipment in transit (status as retrieved on ${retrieved})`
         : "shows the shipment in transit";
@@ -151,7 +152,9 @@ function summaryClause(s: Shipment): string {
   }
   if (s.proofType === "in_transit") {
     const since = day(s.inTransitSince);
-    return `${items}, which ${carrier}'s tracking record shows in transit${since ? ` since ${since}` : ""}`;
+    return since
+      ? `${items}, which ${carrier}'s tracking record first shows in transit on ${since}`
+      : `${items}, which ${carrier}'s tracking record shows in transit`;
   }
   const fulfilled = day(s.fulfilledAt);
   return `${items}, fulfilled by the merchant${fulfilled ? ` on ${fulfilled}` : ""}`;
@@ -211,7 +214,9 @@ export function applyShipmentRecordSections(
    *     reversal, so the body does not ask again;
    *   - transaction overview: omitted — it would only repeat the summary,
    *     under a thesis written for card-fraud cases. */
-  const omitted = narrative.omittedSections.filter((o) => o.sectionKey !== "transactionOverviewArgument");
+  const omitted = narrative.omittedSections.filter(
+    (o) => o.sectionKey !== "transactionOverviewArgument" && o.sectionKey !== "chronologyArgument",
+  );
   return {
     ...narrative,
     executiveSummary: section(`The order was fulfilled in ${count(n)} shipments: ${listed}.`, factIds),
@@ -220,7 +225,11 @@ export function applyShipmentRecordSections(
       [`The order was fulfilled in ${count(n)} shipments.`, ...accounts].join("\n\n"),
       factIds,
     ),
-    chronologyArgument: section(chronology(shipments), factIds),
+    // One timeline, not two: the dated parcel events join the order-event
+    // bullets (lib/defence/chronology.ts, `withShipmentEvents`), which the
+    // renderer already prints under this heading. A paragraph here repeated
+    // them in a second, differently-ordered list (#360980, 2026-09-23).
+    chronologyArgument: section("", []),
     conclusion: section(
       recorded.length > 0
         ? `The request rests on ${recorded.length === 1 ? `${recorded[0]}'s tracking record` : "the carriers' tracking records"} and the merchant's fulfilment records set out above.`
@@ -232,6 +241,10 @@ export function applyShipmentRecordSections(
       {
         sectionKey: "transactionOverviewArgument",
         reason: "Multi-parcel order: the shipments are set out in the summary and fulfilment sections.",
+      },
+      {
+        sectionKey: "chronologyArgument",
+        reason: "Multi-parcel order: the dated parcel events are listed in the timeline.",
       },
     ],
   };

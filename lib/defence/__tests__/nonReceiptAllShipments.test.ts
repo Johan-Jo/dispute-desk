@@ -182,7 +182,7 @@ describe("Evidence Basis: one row per parcel, never the same row twice", () => {
     );
     expect(rows).toHaveLength(2);
     const gofo = rows.find((r) => r.label.includes("Back to School"))!;
-    expect(gofo.value).toContain("In transit since Sep 17, 2026");
+    expect(gofo.value).toContain("In transit (first carrier event Sep 17, 2026");
     expect(gofo.value).not.toContain("Fulfilled");
     expect(gofo.value).not.toContain("retrieved");
     expect(gofo.link?.url).toContain("YT2640221437435982");
@@ -197,7 +197,7 @@ describe("Evidence Basis: one row per parcel, never the same row twice", () => {
       (r) => r.category === "delivery_proof" || r.category === "shipping_tracking",
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0].value).toContain("In transit since");
+    expect(rows[0].value).toContain("first carrier event");
   });
 });
 
