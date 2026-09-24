@@ -26,14 +26,24 @@ import { Document, Font, Link, Page, Text, View } from "@react-pdf/renderer";
 import { COLORS, styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
-import {
-  buildChronologyEvents,
-  classifyChronologyEvent,
-  type ChronologyEvent,
-} from "../chronology";
+import { buildChronologyEvents, type ChronologyEvent } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
 import { buildLineItems, type LineItem } from "../render/lineItems";
 import { formatMoneyDisplay, reasonCodeForNetwork } from "../render/formatting";
+// The derived content (shipment cards, timeline titles, totals, emphasis) is
+// shared with the in-app preview, so the two cannot drift.
+import {
+  dateParts,
+  describeChronologyEvent,
+  emphasisSegments,
+  lineItemsTotal,
+  productsOf,
+  shipmentCards,
+  shipmentsOf,
+  statusPillTone,
+  type PillTone,
+  type ShipmentCard as ShipmentCardModel,
+} from "../render/documentModel";
 import type {
   ComposedDocumentBlock,
   EvidenceFact,
@@ -154,31 +164,11 @@ Font.registerHyphenationCallback((word) => [word]);
 
 /* ── Small formatters ─────────────────────────────────────────────── */
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** ["Sep 15, 2026", "19:25 UTC"] */
-function dateParts(iso: string | null | undefined): [string, string] | null {
-  if (!iso) return null;
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return null;
-  const d = new Date(t);
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return [`${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`, `${hh}:${mm} UTC`];
-}
-
-function dateTime(iso: string | null | undefined): string | null {
-  const p = dateParts(iso);
-  return p ? `${p[0]}, ${p[1]}` : null;
-}
-
 function blockBody(block: ComposedDocumentBlock | null): string {
   return block ? block.llmText.trim() || block.fallbackText.trim() : "";
 }
 
 /* ── Pills ────────────────────────────────────────────────────────── */
-
-type PillTone = "green" | "blue" | "grey";
 
 function Pill({ tone, label }: { tone: PillTone; label: string }) {
   const c =
@@ -194,8 +184,6 @@ function Pill({ tone, label }: { tone: PillTone; label: string }) {
   );
 }
 
-/** Case Details status values render as pills; settled states are green. */
-const GREEN_STATUSES = new Set(["PAID", "FULFILLED"]);
 
 /* ── Running header / footer ──────────────────────────────────────── */
 
@@ -289,26 +277,20 @@ function Section({
 /** Prose with the order's product names set in bold (the design's executive
  *  summary). Paragraphs split on blank lines and stay whole across pages. */
 function Prose({ text, emphasise = [] }: { text: string; emphasise?: string[] }) {
-  const names = [...new Set(emphasise.filter((n) => n.length >= 4))].sort((a, b) => b.length - a.length);
-  const pattern = names.length
-    ? new RegExp(`(${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g")
-    : null;
   const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
     <>
       {parts.map((p, i) => (
         <Text key={i} style={styles.paragraph} wrap={p.length > 900}>
-          {pattern
-            ? p.split(pattern).map((seg, j) =>
-                names.includes(seg) ? (
-                  <Text key={j} style={styles.strong}>
-                    {seg}
-                  </Text>
-                ) : (
-                  seg
-                ),
-              )
-            : p}
+          {emphasisSegments(p, emphasise).map((seg, j) =>
+            seg.strong ? (
+              <Text key={j} style={styles.strong}>
+                {seg.text}
+              </Text>
+            ) : (
+              seg.text
+            ),
+          )}
         </Text>
       ))}
     </>
@@ -389,7 +371,7 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
             <Text style={[styles.tdLabel, { width: "38%" }]}>{k}</Text>
             <View style={{ flex: 1 }}>
               {pill ? (
-                <Pill tone={GREEN_STATUSES.has(v.toUpperCase()) ? "green" : "grey"} label={v} />
+                <Pill tone={statusPillTone(v)} label={v} />
               ) : (
                 <Text style={styles.td}>{v}</Text>
               )}
@@ -403,111 +385,35 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
 
 /* ── Shipment cards (multi-parcel letters) ─────────────────────────── */
 
-type Shipment = Record<string, unknown>;
-
-function str(v: unknown): string | null {
-  return typeof v === "string" && v.trim() ? v.trim() : null;
-}
-
-function shipmentsOf(facts: EvidenceFact[]): Shipment[] {
-  for (const f of facts) {
-    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") continue;
-    const s = (f.value as Record<string, unknown> | null)?.shipments;
-    if (Array.isArray(s) && s.length > 1) {
-      // Numbered in the order the merchant fulfilled them.
-      return [...(s as Shipment[])].sort((a, b) =>
-        (str(a.fulfillmentEventAt) ?? "").localeCompare(str(b.fulfillmentEventAt) ?? ""),
-      );
-    }
-  }
-  return [];
-}
-
-function productsOf(s: Shipment): string {
-  const names = (Array.isArray(s.items) ? (s.items as Array<Record<string, unknown>>) : [])
-    .map((it) => {
-      const title = str(it.title);
-      if (!title) return null;
-      return typeof it.quantity === "number" && it.quantity > 1 ? `${it.quantity} × ${title}` : title;
-    })
-    .filter((t): t is string => t !== null);
-  return names.length ? names.join(", ") : "Shipment";
-}
-
-/** Which app marked the parcel fulfilled — Shopify's own timeline line
- *  ("Easy Fulfillment: Bulk Fulfill marked 1 item as fulfilled …"), matched by
- *  the fulfilment's timestamp. */
-function fulfilledVia(s: Shipment, events: ChronologyEvent[]): string | null {
-  const at = Date.parse(str(s.fulfillmentEventAt) ?? "");
-  if (Number.isNaN(at)) return null;
-  for (const e of events) {
-    const m = e.text.match(/^(.+?) marked \d+ items? as fulfilled/i);
-    if (m && Math.abs(Date.parse(e.at) - at) <= 120_000) return m[1].trim();
-  }
-  return null;
-}
-
-function ShipmentCard({ index, s, events }: { index: number; s: Shipment; events: ChronologyEvent[] }) {
-  const carrier = str(s.carrier) ?? "—";
-  const ref = str(s.reference);
-  const isTracking = s.referenceIsTrackingNumber === true;
-  const url = isTracking ? str(s.trackingUrl) : null;
-  const proof = str(s.proofType);
-  const fulfilled = dateTime(str(s.fulfillmentEventAt) ?? str(s.fulfilledAt));
-
-  const status: { tone: PillTone; label: string } =
-    proof === "in_transit"
-      ? { tone: "blue", label: "In transit" }
-      : proof === "delivered_confirmed" || proof === "signature_confirmed"
-        ? { tone: "green", label: "Delivered" }
-        : { tone: "green", label: "Fulfilled" };
-
-  const fields: Array<[string, React.ReactNode]> = [
-    [
-      isTracking ? "Carrier · tracking" : "Carrier · shipping reference",
-      ref ? (
-        <>
-          {carrier} ·{" "}
-          {url ? (
-            <Link src={url} style={styles.link}>
-              {ref}
-            </Link>
-          ) : (
-            ref
-          )}
-        </>
-      ) : (
-        carrier
-      ),
-    ],
-  ];
-  if (fulfilled) fields.push(["Fulfilled", fulfilled]);
-  if (proof === "in_transit" && dateTime(str(s.inTransitSince))) {
-    fields.push(["First carrier event", `${dateTime(str(s.inTransitSince))} — in transit`]);
-  } else if ((proof === "delivered_confirmed" || proof === "signature_confirmed") && dateTime(str(s.deliveredAt))) {
-    fields.push([
-      "Carrier delivery",
-      `${dateTime(str(s.deliveredAt))} — delivered${proof === "signature_confirmed" ? ", signed" : ""}`,
-    ]);
-  } else {
-    const via = fulfilledVia(s, events);
-    if (via) fields.push(["Fulfilled via", via]);
-  }
-
+function ShipmentCard({ card }: { card: ShipmentCardModel }) {
   return (
     <View style={styles.shipCard} wrap={false}>
       <View style={styles.shipHead}>
         <View style={styles.shipHeadRow}>
-          <Text style={styles.shipLabel}>Shipment {index}</Text>
-          <Pill tone={status.tone} label={status.label} />
+          <Text style={styles.shipLabel}>Shipment {card.index}</Text>
+          <Pill tone={card.status.tone} label={card.status.label} />
         </View>
-        <Text style={styles.shipProduct}>{productsOf(s)}</Text>
+        <Text style={styles.shipProduct}>{card.product}</Text>
       </View>
       <View style={styles.shipBody}>
-        {fields.map(([label, value], i) => (
-          <View key={label} style={i === fields.length - 1 ? styles.shipFieldLast : styles.shipField}>
-            <Text style={styles.shipFieldLabel}>{label}</Text>
-            <Text style={styles.shipFieldValue}>{value}</Text>
+        {card.fields.map((f, i) => (
+          <View key={f.label} style={i === card.fields.length - 1 ? styles.shipFieldLast : styles.shipField}>
+            <Text style={styles.shipFieldLabel}>{f.label}</Text>
+            <Text style={styles.shipFieldValue}>
+              {f.value}
+              {f.reference ? (
+                <>
+                  {" · "}
+                  {f.reference.url ? (
+                    <Link src={f.reference.url} style={styles.link}>
+                      {f.reference.text}
+                    </Link>
+                  ) : (
+                    f.reference.text
+                  )}
+                </>
+              ) : null}
+            </Text>
           </View>
         ))}
       </View>
@@ -515,16 +421,16 @@ function ShipmentCard({ index, s, events }: { index: number; s: Shipment; events
   );
 }
 
-function ShipmentCards({ shipments, events }: { shipments: Shipment[]; events: ChronologyEvent[] }) {
-  const rows: Shipment[][] = [];
-  for (let i = 0; i < shipments.length; i += 2) rows.push(shipments.slice(i, i + 2));
+function ShipmentCards({ cards }: { cards: ShipmentCardModel[] }) {
+  const rows: ShipmentCardModel[][] = [];
+  for (let i = 0; i < cards.length; i += 2) rows.push(cards.slice(i, i + 2));
   return (
     <View>
       {rows.map((pair, r) => (
         <View key={r} style={styles.shipRow} wrap={false}>
-          <ShipmentCard index={r * 2 + 1} s={pair[0]} events={events} />
+          <ShipmentCard card={pair[0]} />
           <View style={styles.shipGap} />
-          {pair[1] ? <ShipmentCard index={r * 2 + 2} s={pair[1]} events={events} /> : <View style={{ flex: 1 }} />}
+          {pair[1] ? <ShipmentCard card={pair[1]} /> : <View style={{ flex: 1 }} />}
         </View>
       ))}
     </View>
@@ -534,14 +440,7 @@ function ShipmentCards({ shipments, events }: { shipments: Shipment[]; events: C
 /* ── Tables ───────────────────────────────────────────────────────── */
 
 function LineItemsTable({ items }: { items: LineItem[] }) {
-  // Total only when every price is one currency amount ("USD 40.00").
-  const parsed = items.map((it) => it.price.match(/^([A-Z]{3})\s+(-?\d+(?:\.\d+)?)$/));
-  const currency = parsed[0]?.[1];
-  const total =
-    currency && parsed.every((m) => m && m[1] === currency)
-      ? `${currency} ${parsed.reduce((sum, m) => sum + Number(m![2]), 0).toFixed(2)}`
-      : null;
-  const qty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  const total = lineItemsTotal(items);
   return (
     <View>
       <View style={styles.thRow}>
@@ -559,8 +458,8 @@ function LineItemsTable({ items }: { items: LineItem[] }) {
       {total ? (
         <View style={styles.totalRow} wrap={false}>
           <Text style={[styles.totalText, { flex: 1 }]}>Total</Text>
-          <Text style={[styles.totalText, { width: 50, textAlign: "right" }]}>{qty}</Text>
-          <Text style={[styles.totalText, { width: 100, textAlign: "right" }]}>{total}</Text>
+          <Text style={[styles.totalText, { width: 50, textAlign: "right" }]}>{total.quantity}</Text>
+          <Text style={[styles.totalText, { width: 100, textAlign: "right" }]}>{total.amount}</Text>
         </View>
       ) : null}
     </View>
@@ -637,47 +536,12 @@ function SupportingEvidenceTable({
  * Each gets a short title and a marker: filled for money and fulfilment,
  * hollow for customer notifications, green for the carrier's own record. */
 
-type Marker = "filled" | "hollow" | "green";
-
-function describeEvent(e: ChronologyEvent, shipments: Shipment[]): { title: string; marker: Marker } {
-  if (/tracking record shows .* in transit/i.test(e.text)) return { title: "In transit with carrier", marker: "green" };
-  if (/records delivery of|carrier confirmed delivery|collected the shipment|delivered the shipment to a pickup point/i.test(e.text)) {
-    return { title: "Delivered by carrier", marker: "green" };
-  }
-  const category = classifyChronologyEvent(e.text);
-  switch (category) {
-    case "payment":
-      return { title: /authori[sz]ed/i.test(e.text) ? "Payment authorized" : "Payment captured", marker: "filled" };
-    case "order_placed":
-      return { title: "Order placed", marker: "filled" };
-    case "fulfillment_shipment": {
-      const at = Date.parse(e.at);
-      const i = shipments.findIndex(
-        (s) => Math.abs(Date.parse(str(s.fulfillmentEventAt) ?? "") - at) <= 120_000,
-      );
-      return { title: i >= 0 ? `Shipment ${i + 1} fulfilled` : "Order fulfilled", marker: "filled" };
-    }
-    case "shipping_confirmation":
-      return { title: "Shipping confirmation sent", marker: "hollow" };
-    case "delivery_notification":
-      return { title: "Delivery notification sent", marker: "hollow" };
-    case "carrier_delivery":
-      return /returned/i.test(e.text)
-        ? { title: "Returned by carrier", marker: "filled" }
-        : { title: "Delivered by carrier", marker: "green" };
-    case "chargeback":
-      return { title: "Chargeback opened", marker: "filled" };
-    default:
-      return { title: "Event", marker: "filled" };
-  }
-}
-
-function Chronology({ events, shipments }: { events: ChronologyEvent[]; shipments: Shipment[] }) {
+function Chronology({ events, shipments }: { events: ChronologyEvent[]; shipments: ReturnType<typeof shipmentsOf> }) {
   return (
     <View>
       {events.map((e, i) => {
         const parts = dateParts(e.at);
-        const { title, marker } = describeEvent(e, shipments);
+        const { title, marker } = describeChronologyEvent(e, shipments);
         const last = i === events.length - 1;
         return (
           <View key={`${e.at}-${i}`} style={styles.chronoRow} wrap={false}>
@@ -768,7 +632,7 @@ export function DefencePackageDocument({
 
           {multiParcel ? (
             <Section number={num()} title="Fulfillment, Delivery & Evidence">
-              <ShipmentCards shipments={shipments} events={chronology} />
+              <ShipmentCards cards={shipmentCards(shipments, chronology)} />
             </Section>
           ) : (
             prose("fulfillmentArgument")
