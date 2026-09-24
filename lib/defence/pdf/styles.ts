@@ -1,333 +1,483 @@
 /**
  * Styles for the Defence Package PDF — bank-facing representment.
  *
- * Visual language: navy primary, slate text, formal serif-ish sans (Helvetica),
- * generous vertical rhythm, dark-header tables with striped rows, italic
- * section-thesis blockquotes with a navy left border.
+ * Transcribed from the Claude Design file "Chargeback Response v2"
+ * (2026-09-24, supplied by the maintainer as a rendered PDF). US Letter,
+ * Inter, one burgundy accent:
+ *
+ *   - page 1: burgundy top bar, eyebrow + generated timestamp, dispute title,
+ *     subtitle, "Submitted on behalf of", three pink fact cards, Case Details
+ *     (burgundy heading + rule, zebra rows, status pills);
+ *   - pages 2+: running header, numbered sections (burgundy badge + title +
+ *     rule), shipment cards, line items with a total row, a vertical
+ *     chronology, a pink conclusion panel;
+ *   - footer on every page: case reference left, "n / N" right.
+ *
+ * Measurements are the design's pixels scaled to points (page width 950px →
+ * 612pt, ×0.644).
  */
 
 import { StyleSheet } from "@react-pdf/renderer";
 
-// Neutral palette with a single burgundy accent. Iteration history:
-//   v1 (1b631ef) — navy + bright-blue (#1F2D3D / #0F1B2D / #1D4ED8).
-//   v2 (this file, earlier) — pure greys + black; rejected as too dull.
-//   v3 (now) — same neutral base, but one warm accent (burgundy #7A1F2B)
-//   used sparingly on the thesis left border, bullet dots, and the cover
-//   dispute ID. Burgundy reads as "classic legal document" rather than
-//   "SaaS dashboard"; it does not return us to the rejected blue family.
-//   Variable names kept for minimal blast radius; values are greys + one
-//   accent.
-const NAVY = "#1F1F1F";        // near-black — table header bg, h1 color
-const NAVY_DEEP = "#0F0F0F";   // pure ink — thesisText body, bulletTimestamp
-const NAVY_ACCENT = "#7A1F2B"; // burgundy accent — thesis left border, bullet dot, dispute id
-const SLATE_TEXT = "#0F0F0F";  // body text — pure ink
-const MUTED_TEXT = "#6B7280";  // captions, labels, footer
-const HAIRLINE = "#E5E5E5";    // borders, dividers
-const STRIPE_BG = "#F5F5F5";   // zebra row bg
+export const COLORS = {
+  accent: "#8B1D41",
+  accentSoft: "#F9EEF2",
+  accentLine: "#F0D3DD",
+  ink: "#111827",
+  body: "#1F2937",
+  muted: "#6B7280",
+  hairline: "#E5E7EB",
+  zebra: "#F5F7FA",
+  greenBg: "#DCFCE7",
+  greenBorder: "#BBF7D0",
+  greenText: "#166534",
+  greenDot: "#22C55E",
+  blueBg: "#E0F2FE",
+  blueBorder: "#BAE6FD",
+  blueText: "#075985",
+  greyBg: "#F3F4F6",
+  greyBorder: "#E5E7EB",
+  greyText: "#374151",
+} as const;
+
+const C = COLORS;
+const MX = 45;
 
 export const styles = StyleSheet.create({
   page: {
-    padding: 56,
-    paddingTop: 64,
+    paddingHorizontal: MX,
+    paddingTop: 72,
     paddingBottom: 64,
-    fontFamily: "Helvetica",
-    fontSize: 10.5,
-    color: SLATE_TEXT,
-    lineHeight: 1.55,
-  },
-
-  // ─── Header (page 1) ─────────────────────────────────────────────────
-  header: {
-    borderBottomWidth: 2,
-    borderBottomColor: NAVY_ACCENT,
-    paddingBottom: 10,
-    marginBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: "Helvetica-Bold",
-    color: NAVY,
-    lineHeight: 1.2,
-    marginBottom: 6,
-  },
-  headerLine: {
-    fontSize: 10.5,
-    color: NAVY_ACCENT,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 3,
-  },
-  headerMeta: {
-    fontSize: 9,
-    color: MUTED_TEXT,
-  },
-
-  // ─── Cover (unused since 2026-09-23; kept for the HTML view's parity notes) ─
-  coverPage: {
-    padding: 64,
-    paddingTop: 96,
-    fontFamily: "Helvetica",
-    color: SLATE_TEXT,
-  },
-  coverEyebrow: {
-    fontSize: 9,
-    color: MUTED_TEXT,
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  coverTitle: {
-    fontSize: 28,
-    fontFamily: "Helvetica-Bold",
-    color: NAVY,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  coverDisputeId: {
-    fontSize: 14,
-    color: NAVY_ACCENT,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  coverSubtitle: {
-    fontSize: 11,
-    color: MUTED_TEXT,
-    marginBottom: 36,
-    textAlign: "center",
-  },
-  coverDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
-    marginBottom: 24,
-  },
-  coverFieldList: {
-    paddingHorizontal: 16,
-  },
-  coverFieldRow: {
-    flexDirection: "row",
-    paddingVertical: 6,
-    borderBottomWidth: 0.5,
-    borderBottomColor: HAIRLINE,
-  },
-  coverFieldLabel: {
-    width: 150,
+    fontFamily: "Inter",
     fontSize: 10,
-    color: MUTED_TEXT,
-    fontFamily: "Helvetica-Bold",
+    color: C.body,
+    lineHeight: 1.45,
   },
-  coverFieldValue: {
-    flex: 1,
-    fontSize: 10.5,
-    color: SLATE_TEXT,
-  },
-
-  // ─── Section headings ────────────────────────────────────────────────
-  h1: {
-    fontSize: 15,
-    fontFamily: "Helvetica-Bold",
-    color: NAVY,
-    marginTop: 22,
-    marginBottom: 10,
-    paddingBottom: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
-  },
-  h2: {
-    fontSize: 11.5,
-    fontFamily: "Helvetica-Bold",
-    color: SLATE_TEXT,
-    marginTop: 12,
-    marginBottom: 6,
-  },
-
-  // ─── Section thesis (deterministic blockquote at the top of each
-  //     section). Italic, navy left border, neutral background, no
-  //     LLM-authored content — drawn from a fixed per-section template
-  //     keyed by reasonCodeModule + packageMode. ─────────────────────
-  thesisBox: {
-    backgroundColor: "#F2F2F2",
-    borderLeftWidth: 3,
-    borderLeftColor: NAVY_ACCENT,
-    padding: 12,
-    paddingLeft: 14,
-    marginBottom: 12,
-  },
-  thesisText: {
+  firstPage: {
+    paddingHorizontal: MX,
+    paddingTop: 72,
+    paddingBottom: 64,
+    fontFamily: "Inter",
     fontSize: 10,
-    color: NAVY_DEEP,
-    fontStyle: "italic",
-    lineHeight: 1.55,
+    color: C.body,
+    lineHeight: 1.45,
   },
 
-  // ─── Body prose ──────────────────────────────────────────────────────
-  // Left-aligned, never justified: justification stretched the spaces on any
-  // line holding an unbreakable URL ("The   Back   to   School   Bundle:").
-  paragraph: {
-    fontSize: 10.5,
-    color: SLATE_TEXT,
-    marginBottom: 8,
-    textAlign: "left",
-  },
-  paragraphLast: {
-    fontSize: 10.5,
-    color: SLATE_TEXT,
-    marginBottom: 4,
-    textAlign: "left",
-  },
-  mutedNote: {
-    fontSize: 8.5,
-    color: "#9CA3AF",
-    fontStyle: "italic",
-    marginTop: 6,
-    marginBottom: 4,
-  },
-
-  // ─── Bullet list ─────────────────────────────────────────────────────
-  bulletRow: {
-    flexDirection: "row",
-    marginBottom: 4,
-    paddingLeft: 8,
-  },
-  bulletDot: {
-    width: 10,
-    fontSize: 10,
-    color: NAVY_ACCENT,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 10,
-    color: SLATE_TEXT,
-    lineHeight: 1.5,
-  },
-  bulletTimestamp: {
-    fontFamily: "Helvetica-Bold",
-    color: NAVY_DEEP,
-  },
-
-  // ─── Tables ──────────────────────────────────────────────────────────
-  table: {
-    width: "100%",
-    marginBottom: 12,
-    borderWidth: 0.5,
-    borderColor: HAIRLINE,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: NAVY,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
-  /** Header cells aligned with the label / value columns below them. */
-  tableHeaderCellLabel: {
-    flex: 1.15,
-    fontSize: 9.5,
-    color: "#FFFFFF",
-    fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.3,
-  },
-  tableHeaderCellValue: {
-    flex: 1.6,
-    fontSize: 9.5,
-    color: "#FFFFFF",
-    fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.3,
-  },
-  tableHeaderCell: {
-    flex: 1,
-    fontSize: 9.5,
-    color: "#FFFFFF",
-    fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.3,
-  },
-  tableHeaderCellRight: {
-    flex: 1,
-    fontSize: 9.5,
-    color: "#FFFFFF",
-    fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.3,
-    textAlign: "right",
-  },
-  // Compact rows (2026-09-23): at paddingVertical 6 plus the page's 1.55
-  // line height, a 13-row Case Details table filled a page on its own.
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 3.5,
-    paddingHorizontal: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: HAIRLINE,
-  },
-  tableRowStripe: {
-    flexDirection: "row",
-    paddingVertical: 3.5,
-    paddingHorizontal: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: HAIRLINE,
-    backgroundColor: STRIPE_BG,
-  },
-  tableCell: {
-    flex: 1,
-    fontSize: 9.5,
-    color: SLATE_TEXT,
-    lineHeight: 1.3,
-  },
-  tableCellRight: {
-    flex: 1,
-    fontSize: 9.5,
-    color: SLATE_TEXT,
-    textAlign: "right",
-  },
-  tableCellLabel: {
-    flex: 1.15,
-    lineHeight: 1.3,
-    fontSize: 9.5,
-    color: MUTED_TEXT,
-    fontFamily: "Helvetica-Bold",
-    // A long label ("Shipment — The Back to School Bundle") ran straight into
-    // the value column with no gap.
-    paddingRight: 12,
-  },
-  tableCellValue: {
-    flex: 1.6,
-    lineHeight: 1.3,
-    fontSize: 9.5,
-    color: SLATE_TEXT,
-  },
-  /**
-   * The clickable tracking link inside an Evidence Basis value cell.
-   * Underlined and coloured so a reviewer can SEE it is clickable — an
-   * un-styled link in a PDF is indistinguishable from the text around it,
-   * and a control nobody notices is a control nobody uses.
-   */
-  tableCellLink: {
-    fontSize: 9.5,
-    color: NAVY_ACCENT,
-    textDecoration: "underline",
-  },
-
-  // ─── Footer (fixed) ──────────────────────────────────────────────────
-  footer: {
+  // ─── Page 1 ──────────────────────────────────────────────────────────
+  topBar: {
     position: "absolute",
-    bottom: 28,
-    left: 56,
-    right: 56,
-    fontSize: 8,
-    color: "#9CA3AF",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: C.accent,
+  },
+  metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    borderTopWidth: 0.5,
-    borderTopColor: HAIRLINE,
-    paddingTop: 8,
+    alignItems: "center",
+    marginBottom: 18,
   },
-  footerText: { fontSize: 8, color: "#6B7280" },
+  eyebrow: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: C.accent,
+    letterSpacing: 1.3,
+    textTransform: "uppercase",
+  },
+  metaRight: {
+    fontSize: 8.5,
+    color: C.muted,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: 700,
+    color: C.ink,
+    lineHeight: 1.1,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 8,
+  },
+  onBehalf: {
+    fontSize: 10,
+    color: C.muted,
+    marginTop: 14,
+  },
+  onBehalfName: {
+    fontWeight: 600,
+    color: C.accent,
+  },
+  cards: {
+    flexDirection: "row",
+    marginTop: 22,
+    marginBottom: 26,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: C.accentSoft,
+    borderRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
+  },
+  cardGap: {
+    width: 9,
+  },
+  cardLabel: {
+    fontSize: 7.5,
+    fontWeight: 600,
+    color: C.accent,
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  cardValue: {
+    fontSize: 15.5,
+    fontWeight: 700,
+    color: C.ink,
+    lineHeight: 1.2,
+  },
 
-  // ─── Conclusion call-out ─────────────────────────────────────────────
-  conclusionBox: {
-    backgroundColor: "#F5F5F5",
-    borderWidth: 0.5,
-    borderColor: HAIRLINE,
-    padding: 12,
+  // ─── Headings ────────────────────────────────────────────────────────
+  plainHeading: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: C.accent,
+    paddingBottom: 8,
+    borderBottomWidth: 1.5,
+    borderBottomColor: C.accent,
+    marginBottom: 10,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 8,
+    borderBottomWidth: 1.5,
+    borderBottomColor: C.accent,
+    marginBottom: 12,
+  },
+  badge: {
+    backgroundColor: C.accent,
+    borderRadius: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    marginRight: 8,
+  },
+  badgeText: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#FFFFFF",
+    lineHeight: 1.2,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: C.accent,
+    lineHeight: 1.2,
+  },
+  section: {
+    marginBottom: 24,
+  },
+
+  // ─── Running header / footer ─────────────────────────────────────────
+  runningHeaderSlot: {
+    position: "absolute",
+    top: 28,
+    left: MX,
+    right: MX,
+  },
+  runningHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 8,
+    borderBottomWidth: 0.75,
+    borderBottomColor: C.hairline,
+  },
+  runningLeft: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: C.accent,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  runningRight: {
+    fontSize: 8,
+    color: C.muted,
+  },
+  // Positioned from the TOP (Letter = 792pt). A render-prop element anchored
+  // with `bottom` did not draw in this document; the running header, anchored
+  // with `top`, did (local harness, 2026-09-24).
+  footerSlot: {
+    position: "absolute",
+    top: 744,
+    left: MX,
+    right: MX,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 8,
+    borderTopWidth: 0.75,
+    borderTopColor: C.hairline,
+  },
+  footerLeft: {
+    fontSize: 8,
+    color: C.muted,
+  },
+  footerRight: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: C.accent,
+  },
+
+  // ─── Prose ───────────────────────────────────────────────────────────
+  paragraph: {
+    fontSize: 11,
+    color: C.body,
+    lineHeight: 1.55,
+    marginBottom: 7,
+  },
+  strong: {
+    fontWeight: 700,
+    color: C.ink,
+  },
+  thesis: {
+    borderLeftWidth: 2,
+    borderLeftColor: C.accent,
+    paddingLeft: 10,
+    marginBottom: 10,
+  },
+  thesisText: {
+    fontSize: 10.5,
+    color: C.ink,
+    fontWeight: 500,
+    lineHeight: 1.5,
+  },
+
+  // ─── Tables (Case Details, line items, evidence basis) ───────────────
+  thRow: {
+    flexDirection: "row",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  th: {
+    fontSize: 7.5,
+    fontWeight: 600,
+    color: C.muted,
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
+  },
+  tr: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 6.5,
+    borderRadius: 4,
+  },
+  trZebra: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 6.5,
+    borderRadius: 4,
+    backgroundColor: C.zebra,
+  },
+  tdLabel: {
+    fontSize: 9.5,
+    color: C.muted,
+    lineHeight: 1.35,
+  },
+  td: {
+    fontSize: 9.5,
+    color: C.ink,
+    lineHeight: 1.35,
+  },
+  totalRow: {
+    flexDirection: "row",
+    paddingHorizontal: 9,
+    paddingTop: 9,
     marginTop: 4,
+    borderTopWidth: 1.2,
+    borderTopColor: C.ink,
+  },
+  totalText: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: C.accent,
+  },
+  link: {
+    color: C.accent,
+    textDecoration: "none",
+  },
+
+  // ─── Pills ───────────────────────────────────────────────────────────
+  pill: {
+    borderRadius: 4,
+    borderWidth: 0.75,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    alignSelf: "flex-start",
+  },
+  pillText: {
+    fontSize: 8.5,
+    fontWeight: 500,
+    lineHeight: 1.2,
+  },
+
+  // ─── Shipment cards ──────────────────────────────────────────────────
+  shipRow: {
+    flexDirection: "row",
+    marginBottom: 9,
+  },
+  shipGap: {
+    width: 11,
+  },
+  shipCard: {
+    flex: 1,
+    borderWidth: 0.75,
+    borderColor: C.hairline,
+    borderRadius: 7,
+  },
+  shipHead: {
+    backgroundColor: C.accentSoft,
+    borderTopLeftRadius: 7,
+    borderTopRightRadius: 7,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  shipHeadRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
+  },
+  shipLabel: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: C.accent,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  shipProduct: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: C.ink,
+    lineHeight: 1.3,
+  },
+  shipBody: {
+    paddingHorizontal: 13,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  shipField: {
+    paddingVertical: 6,
+    borderBottomWidth: 0.75,
+    borderBottomColor: C.hairline,
+  },
+  shipFieldLast: {
+    paddingVertical: 6,
+  },
+  shipFieldLabel: {
+    fontSize: 8.5,
+    color: C.muted,
+    marginBottom: 2,
+  },
+  shipFieldValue: {
+    fontSize: 9.5,
+    color: C.ink,
+    fontWeight: 500,
+  },
+
+  // ─── Chronology ──────────────────────────────────────────────────────
+  chronoRow: {
+    flexDirection: "row",
+  },
+  chronoDateCol: {
+    width: 116,
+    paddingBottom: 14,
+  },
+  chronoDate: {
+    fontSize: 9.5,
+    fontWeight: 600,
+    color: C.ink,
+    lineHeight: 1.3,
+  },
+  chronoTime: {
+    fontSize: 8.5,
+    color: C.muted,
+    lineHeight: 1.3,
+  },
+  chronoRail: {
+    width: 26,
+    alignItems: "center",
+  },
+  chronoLine: {
+    position: "absolute",
+    top: 8,
+    bottom: 0,
+    left: 12.25,
+    width: 1.5,
+    backgroundColor: C.accentLine,
+  },
+  dotFilled: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: C.accent,
+    marginTop: 3,
+  },
+  dotHollow: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 1.5,
+    borderColor: C.accent,
+    backgroundColor: "#FFFFFF",
+    marginTop: 3,
+  },
+  dotGreen: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: C.greenDot,
+    marginTop: 3,
+  },
+  chronoBody: {
+    flex: 1,
+    paddingBottom: 14,
+  },
+  chronoTitle: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: C.ink,
+    lineHeight: 1.3,
+    marginBottom: 1,
+  },
+  chronoText: {
+    fontSize: 9.5,
+    color: C.muted,
+    lineHeight: 1.4,
+  },
+
+  // ─── Conclusion ──────────────────────────────────────────────────────
+  conclusion: {
+    backgroundColor: C.accentSoft,
+    borderRadius: 7,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+  },
+  conclusionRequest: {
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: C.accent,
+    lineHeight: 1.4,
+    marginBottom: 8,
+  },
+  conclusionBody: {
+    fontSize: 10,
+    color: C.ink,
+    lineHeight: 1.5,
   },
 });

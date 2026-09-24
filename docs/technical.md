@@ -3263,6 +3263,30 @@ reversal request twice. Now each section adds something the others don't:
 - the conclusion states what the request rests on, since the thesis already asks for reversal;
 - the transaction overview is omitted.
 
+### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
+
+`lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude
+Design file "Chargeback Response v2". It is **US Letter**, set in **Inter** (`scripts/pdf-worker/fonts/`,
+SIL OFL, registered by the worker before rendering), with one burgundy accent.
+
+- **Page 1, the case:** a top bar, the eyebrow and generated timestamp, "Dispute …" as the
+  title, a subtitle, "Submitted on behalf of", three fact cards (amount, reason code, claim type),
+  and Case Details (zebra rows, PAID/FULFILLED pills).
+- **Pages 2 and on:** numbered sections (burgundy badge, title and rule).
+  - **Multi-parcel orders:** shipment cards show the carrier with a tracking number or shipping
+    reference, the fulfilment time, and the first carrier event or the fulfilling app. They
+    replace both the fulfilment prose and Evidence Basis.
+  - **Order Line Items** ends with a total row.
+  - **Chronology** is a vertical timeline with titled events and markers: filled for money and
+    fulfilment, hollow for notifications, green for the carrier's record.
+  - **Conclusion** is a panel.
+- **Headers and footers:** a running header on pages 2 and on, and "Dispute · Order … n / N" on
+  every page.
+- **Renderer quirks,** measured with a local render harness:
+  - A fixed element anchored with `bottom` and a render prop did not draw, so both the header
+    and the footer are fixed Views anchored from the **top**, with a View render prop.
+  - Automatic hyphenation is off.
+
 ### Defence PDF layout (2026-09-23, prompt 27)
 
 Reviewed on blume-box #360980's filed PDF: four pages for one page of argument, a mostly empty
