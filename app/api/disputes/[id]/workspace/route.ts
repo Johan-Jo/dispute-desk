@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
+import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
@@ -709,6 +710,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ]);
     defencePackageLatest = (latestRes.data as Record<string, unknown> | null) ?? null;
     defencePackageBankFacing = (bankFacingRes.data as Record<string, unknown> | null) ?? null;
+    // A signed link per PDF: "View PDF" opens in a new tab with no session
+    // (lib/security/previewLink.ts).
+    for (const r of [defencePackageLatest, defencePackageBankFacing]) {
+      if (r?.pdf_path && typeof r.id === "string") {
+        r.preview_url = previewPath(r.id, row.shop_id as string, signPreviewToken(r.id, row.shop_id as string));
+      }
+    }
   }
   // Reuse the latest row's facts_json for the line-item derivation
   // below. When absent (no defence package built yet), facts is empty —

@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { verifyPreviewToken } from "@/lib/security/previewLink";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,22 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const shopId = extractShopId(req);
+  // A new-tab open carries no session (see lib/security/previewLink.ts). A
+  // signed token authorises exactly this package for exactly this shop.
+  const token = req.nextUrl.searchParams.get("t");
+  const queryShopId = req.nextUrl.searchParams.get("shop_id");
+  let shopId: string | null;
+  if (token) {
+    if (!queryShopId || !verifyPreviewToken(token, id, queryShopId)) {
+      return NextResponse.json(
+        { error: "This link has expired. Re-open the PDF from the dispute page.", code: "PREVIEW_LINK_INVALID" },
+        { status: 401 },
+      );
+    }
+    shopId = queryShopId;
+  } else {
+    shopId = extractShopId(req);
+  }
   if (!shopId || shopId === "demo") {
     return NextResponse.json(
       { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },

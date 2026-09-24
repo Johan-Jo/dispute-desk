@@ -53,6 +53,8 @@ type Status =
   | "skipped";
 
 export interface DefencePackageRow {
+  /** Signed new-tab preview link from the workspace API. */
+  preview_url?: string | null;
   id: string;
   version: number;
   status: Status;
@@ -509,10 +511,13 @@ export function CompleteDefencePackageCard({
   // context — and a link navigation bypasses the demo fetch shim, which
   // only wraps window.fetch. The demo fixture stores a static sample
   // PDF path under /public, so link to it directly.
+  // `preview_url` carries a signed token from the workspace API: the new tab
+  // has no session cookie (lib/security/previewLink.ts). The bare path is the
+  // fallback for a row served without one.
   const previewHref = displayRow?.pdf_path
     ? dispute?.shopId === "demo"
       ? displayRow.pdf_path
-      : `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
+      : (displayRow.preview_url ?? `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`)
     : null;
 
   /** True when the merchant clicked Regenerate AND no newer-version
