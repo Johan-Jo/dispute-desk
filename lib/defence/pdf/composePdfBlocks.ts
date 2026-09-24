@@ -33,7 +33,7 @@ const SECTION_HEADINGS = SECTION_TITLES;
  *  family basis. Every fallback string MUST pass the composed
  *  validator just like any other prose. */
 const FULFILLMENT_FALLBACK_TEXT =
-  "The merchant's order record marks the order as fulfilled. " +
+  "The merchant's order record marks the order as shipped. " +
   "No separate delivery, access-use, or service-completion claim is " +
   "made in this section unless supported by approved evidence.";
 

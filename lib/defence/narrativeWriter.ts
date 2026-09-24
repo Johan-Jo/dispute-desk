@@ -197,7 +197,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v28 (2026-09-24) — no prompt change: the defence PDF was rebuilt to the
 // "Chargeback Response v2" design, and packages only re-render on a version
 // move. Bumped so drafts regenerate with the new document.
-const PROMPT_VERSION = 28;
+// v29 (2026-09-24) — document wording: "shipped" for the merchant's own
+// record, "delivered" only from a carrier's (record-built sections, cards,
+// timeline titles). Bumped so drafts regenerate.
+const PROMPT_VERSION = 29;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

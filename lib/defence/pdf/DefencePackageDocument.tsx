@@ -631,7 +631,7 @@ export function DefencePackageDocument({
           {prose("paymentAuthenticationArgument")}
 
           {multiParcel ? (
-            <Section number={num()} title="Fulfillment, Delivery & Evidence">
+            <Section number={num()} title="Shipping, Delivery & Evidence">
               <ShipmentCards cards={shipmentCards(shipments, chronology)} />
             </Section>
           ) : (

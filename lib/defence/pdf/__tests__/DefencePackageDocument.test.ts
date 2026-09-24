@@ -272,7 +272,7 @@ describe("DefencePackageDocument", () => {
       (b) => b.sectionKey === "fulfillmentArgument",
     );
     expect(fulfillmentBlock).toBeDefined();
-    expect(fulfillmentBlock?.fallbackText).toContain("fulfilled");
+    expect(fulfillmentBlock?.fallbackText).toContain("shipped");
     const result = await renderDefencePdf(data);
     expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
   }, 30000);

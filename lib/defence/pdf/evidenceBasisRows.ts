@@ -402,7 +402,7 @@ function shipmentRows(fact: EvidenceFact): EvidenceBasisRow[] | null {
     const url = isTracking ? str(s.trackingUrl) : null;
     const parts: string[] = [];
     const fulfilled = date(s.fulfilledAt);
-    if (fulfilled) parts.push(`Fulfilled ${fulfilled}`);
+    if (fulfilled) parts.push(`Shipped by merchant ${fulfilled}`);
     const proof = str(s.proofType);
     if (proof === "signature_confirmed") {
       parts.push(date(s.deliveredAt) ? `Signature on delivery, ${date(s.deliveredAt)}` : "Signature on delivery");
@@ -427,7 +427,7 @@ function shipmentRows(fact: EvidenceFact): EvidenceBasisRow[] | null {
       factId: fact.id,
       category: fact.category,
       label: items.length ? `Shipment — ${items.join(", ")}` : "Shipment",
-      value: capitalizeFirst(parts.join(" · ") || "Fulfilled"),
+      value: capitalizeFirst(parts.join(" · ") || "Shipped"),
       link: url ? { url, label: [carrier, reference].filter(Boolean).join(" ") } : null,
     };
   });
