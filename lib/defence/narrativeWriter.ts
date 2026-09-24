@@ -524,11 +524,20 @@ export async function generateNarrative(
   // System payload layout (cached, ephemeral):
   //   [0] BASE_SYSTEM_PROMPT                  (always)
   //   [1] family overlay   — Phase 1+         (only when non-empty)
-  //   [2] module promptBody                   (always)
-  //   [3] strategy bundle  — Phase 3+         (only when non-empty)
+  //   [2] payment overlay  — BNPL/Klarna      (only for non-card disputes)
+  //   [3] module promptBody                   (always)
+  //   [4] strategy bundle  — Phase 3+         (only when non-empty)
   // The optional blocks are only emitted when they have content so the
   // prompt-cache prefix stays stable while overlays/strategies fill in
   // over time.
+  //
+  // FIVE possible blocks, and the API accepts at most FOUR `cache_control`
+  // breakpoints. This comment listed four and omitted the payment overlay,
+  // which is how a Klarna INR build — the one case that populates all five —
+  // reached prod and failed with a hard 400 on 2026-09-24. The cap is now
+  // enforced centrally by `capCacheControlBlocks` in `anthropicClient`, so
+  // adding a sixth block here cannot break the request; keep this list
+  // accurate anyway, because it is the map someone reads before adding one.
   const system: ClaudeSystemBlock[] = [
     {
       type: "text",
