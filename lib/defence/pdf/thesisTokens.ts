@@ -18,8 +18,24 @@ import {
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
 import { FACT_PREDICATES } from "../factPredicates";
+
+const LETTER_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** "24 September 2026" (UTC) — the bank reads a date, never the raw ISO
+ *  timestamp the fact stores ("on 2026-09-24T19:43:25Z", #360980). */
+export function letterDate(iso: unknown): string | null {
+  if (typeof iso !== "string") return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  return `${d.getUTCDate()} ${LETTER_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
 import type {
   EvidenceFact,
+  ThesisContext,
   ThesisToken,
   ThesisTokenName,
 } from "../types";
@@ -43,14 +59,94 @@ function gated(
     : null;
   return {
     ...spec,
-    extract: (facts) => {
+    extract: (facts, ctx) => {
       if (guard && !guard.evaluate(facts)) return null;
-      return spec.extract(facts);
+      return spec.extract(facts, ctx);
     },
   };
 }
 
+const DELIVERED_TIERS = new Set(["delivered_confirmed", "signature_confirmed", "signature"]);
+
+/**
+ * The carrier-recorded delivery a letter can open with: carrier, tracking
+ * number (only when the reference IS one), delivery time, signature. On a
+ * multi-parcel order it is the delivered PARCEL, never the order — "a
+ * shipment", so the sentence stays true while another parcel is in transit.
+ */
+function carrierDelivery(facts: EvidenceFact[]): {
+  carrier: string | null;
+  tracking: string | null;
+  deliveredAt: string | null;
+  signed: boolean;
+  oneOfSeveral: boolean;
+} | null {
+  const d = findFact(facts, "delivery_proof") ?? findFact(facts, "shipping_tracking");
+  if (!d) return null;
+  const v = (d.value ?? {}) as Record<string, unknown>;
+  const str = (x: unknown) => (typeof x === "string" && x.trim() ? x.trim() : null);
+  const shipments = Array.isArray(v.shipments) ? (v.shipments as Array<Record<string, unknown>>) : [];
+  if (shipments.length > 1) {
+    const s = shipments.find((p) => DELIVERED_TIERS.has(String(p.proofType)) && str(p.deliveredAt));
+    if (!s) return null;
+    return {
+      carrier: str(s.carrier),
+      tracking: s.referenceIsTrackingNumber === true ? str(s.reference) : null,
+      deliveredAt: str(s.deliveredAt),
+      signed: String(s.proofType).startsWith("signature"),
+      oneOfSeveral: true,
+    };
+  }
+  if (!DELIVERED_TIERS.has(String(v.proofType))) return null;
+  return {
+    carrier: str(v.carrier),
+    tracking: str(v.trackingNumber),
+    deliveredAt: str(v.deliveredAt),
+    signed: String(v.proofType).startsWith("signature"),
+    oneOfSeveral: false,
+  };
+}
+
 export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
+  /* The item-not-received opening line (2026-09-24, reviewer of #352543:
+   * "lead directly with the carrier-confirmed delivery and the later dispute
+   * date"). States the record, attributed to the carrier once. */
+  deliveryRecordClause: gated({
+    name: "deliveryRecordClause",
+    description: "The carrier's delivery record: \"Stallion Express recorded the shipment for order #352543 (tracking 260702441A) as delivered on 6 July 2026\". Null without a carrier-confirmed delivery.",
+    predicateId: "delivery_confirmed",
+    extract: (facts, ctx?: ThesisContext) => {
+      const r = carrierDelivery(facts);
+      if (!r) return null;
+      const order = ctx?.orderName ? ` for order ${ctx.orderName}` : "";
+      const tracking = r.tracking ? ` (tracking ${r.tracking})` : "";
+      const date = letterDate(r.deliveredAt);
+      return (
+        `${r.carrier ?? "The carrier"} recorded ${r.oneOfSeveral ? "a" : "the"} shipment${order}${tracking} as delivered` +
+        `${r.signed ? ", with a signature," : ""}${date ? ` on ${date}` : ""}`
+      );
+    },
+  }),
+
+  /* The dispute date — stated ONLY when the delivery came first. A delivery
+   * after the dispute opened is still delivery, but setting the two dates
+   * side by side would point the reader at the gap (merchant's counsel). */
+  disputeOpenedClause: gated({
+    name: "disputeOpenedClause",
+    description: "\"the dispute was opened on 19 September 2026\" — only when the carrier-recorded delivery predates it.",
+    predicateId: "delivery_confirmed",
+    extract: (facts, ctx?: ThesisContext) => {
+      const opened = ctx?.disputeOpenedAt ?? null;
+      const r = carrierDelivery(facts);
+      if (!opened || !r?.deliveredAt) return null;
+      const o = Date.parse(opened);
+      const del = Date.parse(r.deliveredAt);
+      if (Number.isNaN(o) || Number.isNaN(del) || del >= o) return null;
+      const date = letterDate(opened);
+      return date ? `the dispute was opened on ${date}` : null;
+    },
+  }),
+
   paymentAuthMethod: gated({
     name: "paymentAuthMethod",
     description: "Describes the authentication method present on the transaction (3-D Secure, AVS+CVV match, AVS-only, CVV-only). Null when no auth fact qualifies.",
@@ -111,30 +207,6 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
     },
   }),
 
-  deliveryClause: gated({
-    name: "deliveryClause",
-    description: "A natural-language clause about confirmed delivery (proofType=delivered_confirmed/signature_confirmed). Null otherwise.",
-    predicateId: "delivery_confirmed",
-    extract: (facts) => {
-      const d =
-        findFact(facts, "delivery_proof") ??
-        findFact(facts, "shipping_tracking");
-      if (!d) return null;
-      const proofType = d.value?.proofType;
-      const deliveredAt = typeof d.value?.deliveredAt === "string" ? d.value.deliveredAt : null;
-      const carrier = typeof d.value?.carrier === "string" ? d.value.carrier : null;
-      if (proofType === "signature_confirmed" || proofType === "signature") {
-        return carrier
-          ? `delivery was confirmed via carrier signature${deliveredAt ? ` on ${deliveredAt}` : ""} (${carrier})`
-          : `delivery was confirmed via carrier signature${deliveredAt ? ` on ${deliveredAt}` : ""}`;
-      }
-      // carrier-confirmed delivery without a captured signature
-      return carrier
-        ? `delivery was confirmed by the carrier${deliveredAt ? ` on ${deliveredAt}` : ""} (${carrier})`
-        : `delivery was confirmed by the carrier${deliveredAt ? ` on ${deliveredAt}` : ""}`;
-    },
-  }),
-
   digitalAccessClause: gated({
     name: "digitalAccessClause",
     description: "A natural-language clause about confirmed digital access use. Null otherwise.",
@@ -144,7 +216,7 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
         findFact(facts, "digital_access_log") ??
         findFact(facts, "service_access");
       if (!d) return null;
-      const at = typeof d.value?.lastAccessAt === "string" ? d.value.lastAccessAt : null;
+      const at = letterDate(d.value?.lastAccessAt);
       return at
         ? `the customer's access to the service is logged through ${at}`
         : "the customer's access to the service is logged";

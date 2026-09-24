@@ -71,7 +71,10 @@ function fulfillmentChronologyEvents(
     out.push({ message: "Recipient collected the shipment at the pickup point (identification required at collection).", createdAt: latest.collected_at_pickup });
   }
   if (latest.delivered) {
-    out.push({ message: "Carrier confirmed delivery of the shipment to the recipient.", createdAt: latest.delivered });
+    // "to the recipient" claimed more than the record holds: a delivery
+    // status says the parcel was delivered, not who took it (review of
+    // #352543, 2026-09-24).
+    out.push({ message: "Carrier recorded the shipment as delivered.", createdAt: latest.delivered });
   }
   return out;
 }
@@ -98,6 +101,8 @@ export async function collectOrderEvidence(
     quantity: e.node.quantity,
     total: e.node.originalTotalSet.shopMoney.amount,
     currency: e.node.originalTotalSet.shopMoney.currencyCode,
+    presentmentTotal: e.node.originalTotalSet.presentmentMoney?.amount ?? null,
+    presentmentCurrency: e.node.originalTotalSet.presentmentMoney?.currencyCode ?? null,
     sku: e.node.sku,
   }));
 
@@ -143,6 +148,18 @@ export async function collectOrderEvidence(
           total: order.totalPriceSet.shopMoney.amount,
           refunded: order.totalRefundedSet.shopMoney.amount,
           currency: order.totalPriceSet.shopMoney.currencyCode,
+          // The same totals in the customer's currency — what the card was
+          // charged, and so what the dispute is denominated in.
+          presentment: order.totalPriceSet.presentmentMoney
+            ? {
+                subtotal: order.subtotalPriceSet.presentmentMoney?.amount ?? null,
+                shipping: order.totalShippingPriceSet.presentmentMoney?.amount ?? null,
+                tax: order.totalTaxSet.presentmentMoney?.amount ?? null,
+                discounts: order.totalDiscountsSet.presentmentMoney?.amount ?? null,
+                total: order.totalPriceSet.presentmentMoney.amount,
+                currency: order.totalPriceSet.presentmentMoney.currencyCode,
+              }
+            : null,
         },
         billingAddress: billingRedacted,
         shippingAddress: shippingRedacted,

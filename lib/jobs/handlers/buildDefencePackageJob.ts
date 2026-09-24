@@ -38,6 +38,7 @@ import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategor
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import { applyShipmentRecordSections } from "@/lib/defence/shipmentRecordSections";
+import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
 import {
   validateNarrative,
@@ -610,6 +611,7 @@ export async function handleBuildDefencePackage(
   // records, not the model (lib/defence/shipmentRecordSections.ts). No-op for
   // every other letter.
   narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts);
+  narrativeRes.narrative = omitDeniedSections(narrativeRes.narrative, reasonCodeModule.key);
   const suppression = suppressUnsupportedSections({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -721,6 +723,7 @@ export async function handleBuildDefencePackage(
       // The retry output needs the same treatment; without this a retried
       // package keeps the unsupported section the first pass had removed.
       retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts);
+      retryRes.narrative = omitDeniedSections(retryRes.narrative, reasonCodeModule.key);
       const retrySuppression = suppressUnsupportedSections({
         narrative: retryRes.narrative,
         approvedFacts: planFacts,
@@ -934,6 +937,12 @@ export async function handleBuildDefencePackage(
     }
   }
 
+  // The opening line states the order and, when delivery came first, the
+  // dispute date (lib/defence/pdf/thesisTokens.ts).
+  const thesisContext = {
+    orderName: orderContext.orderName ?? null,
+    disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+  };
   if (activePlan) {
     projection = projectPackageFromPlan({
       plan: activePlan.plan,
@@ -946,6 +955,7 @@ export async function handleBuildDefencePackage(
       familyKey: reasonCodeFamily.key,
       moduleKey: reasonCodeModule.key,
       fulfillmentStatus: orderContext.fulfillmentStatus,
+      caseContext: thesisContext,
     });
   }
 
@@ -958,6 +968,7 @@ export async function handleBuildDefencePackage(
       familyKey: reasonCodeFamily.key,
       moduleKey: reasonCodeModule.key,
       fulfillmentStatus: orderContext.fulfillmentStatus,
+      caseContext: thesisContext,
     });
 
   /* F2's second half — DETERMINISTIC document validation, run after

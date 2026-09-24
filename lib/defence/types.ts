@@ -611,6 +611,14 @@ export interface GuardFailure {
 
 export type ThesisTokenName = string;
 
+/** Case identifiers a thesis may state beside the facts: the order the
+ *  dispute is about and when the dispute was opened. Never evidence —
+ *  a token still needs its fact to resolve. */
+export interface ThesisContext {
+  orderName?: string | null;
+  disputeOpenedAt?: string | null;
+}
+
 export interface ThesisToken {
   name: ThesisTokenName;
   description: string;
@@ -619,7 +627,7 @@ export interface ThesisToken {
   predicateId: FactPredicateId | null;
   /** Pure function over approvedFacts. Internal-only facts are never
    *  passed in — extractors physically cannot see them. */
-  extract: (facts: EvidenceFact[]) => string | null;
+  extract: (facts: EvidenceFact[], ctx?: ThesisContext) => string | null;
 }
 
 export interface ThesisTemplate {

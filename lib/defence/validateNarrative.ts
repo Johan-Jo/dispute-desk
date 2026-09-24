@@ -168,8 +168,11 @@ import type {
  *      custody / dispatch / transit words placed before the dispute; a
  *      carrier-confirmed delivery's ordering is checked against the data by
  *      `deliveryPostDatesDispute`.
+ * v15 (2026-09-24) — item_not_received v9: records of one carrier event may
+ *      not be called independent or corroborating, and the letter may not
+ *      characterise who initiated the transaction (#352543).
  */
-export const VALIDATOR_VERSION = 14;
+export const VALIDATOR_VERSION = 15;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,

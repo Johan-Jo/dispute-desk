@@ -106,10 +106,13 @@ describe("renderThesis", () => {
         familyKey: "item_not_received",
         packageMode: "full",
         approvedFacts: [
-          fact({ category: "delivery_proof", value: { proofType: "delivered" } }),
+          fact({
+            category: "delivery_proof",
+            value: { proofType: "delivered_confirmed", carrier: "Stallion Express", trackingNumber: "260702441A", deliveredAt: "2026-07-06T19:53:02Z" },
+          }),
         ],
       });
-      expect(text).toContain("item-not-received");
+      expect(text).toContain("recorded the shipment");
     });
 
     it("falls back to (any, any) for an unmatched family", () => {

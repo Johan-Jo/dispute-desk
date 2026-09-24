@@ -188,6 +188,8 @@ export interface ProjectPackageInput {
   familyKey: ReasonCodeFamilyKey;
   moduleKey: string | null;
   fulfillmentStatus: string | null;
+  /** Order name + dispute-opened date for thesis lines that state them. */
+  caseContext?: import("../types").ThesisContext;
   /**
    * The plan's included facts AFTER the bank-inclusion filter, when the caller
    * applies one.
@@ -244,6 +246,7 @@ export function projectPackageFromPlan(input: ProjectPackageInput): PackageProje
     familyKey: input.familyKey,
     moduleKey: input.moduleKey,
     fulfillmentStatus: input.fulfillmentStatus,
+    caseContext: input.caseContext,
     // F6. The deterministic fulfilment paragraph is authorised by the
     // ARGUMENT, never by the raw `fulfillmentStatus` scalar. Derived from the
     // same facts the document is composed from, so the validator can
