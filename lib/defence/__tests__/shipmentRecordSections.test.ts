@@ -100,7 +100,7 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
   it("Case A: each parcel only by its own record", () => {
     expect(out.fulfillmentArgument.text).toBe(
       [
-        "The order was fulfilled in 2 shipments.",
+        "The order was fulfilled in two shipments.",
         "The Back to School Bundle: GOFO tracking number YT2640221437435982 (https://www.gofo.com/us/track?searchID=YT2640221437435982). GOFO's tracking record shows the shipment in transit since 17 September 2026.",
         "Sunburst Mineral SPF 50 Sunscreen: fulfilled by the merchant on 16 September 2026 (USPS shipping reference 260914OET4).",
       ].join("\n\n"),
@@ -109,9 +109,25 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
 
   it("the chronology is the records' own order, oldest first", () => {
     expect(out.chronologyArgument.text).toBe(
-      "16 September 2026: The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen (USPS shipping reference 260914OET4). " +
-        "17 September 2026: GOFO's tracking record shows The Back to School Bundle in transit (GOFO tracking number YT2640221437435982 (https://www.gofo.com/us/track?searchID=YT2640221437435982)).",
+      "16 September 2026: The merchant fulfilled Sunburst Mineral SPF 50 Sunscreen (USPS). " +
+        "17 September 2026: GOFO's tracking record shows The Back to School Bundle in transit.",
     );
+  });
+
+  it("each section says something new: the parcels in full once, the request never twice", () => {
+    expect(out.executiveSummary.text).toBe(
+      "The order was fulfilled in two shipments: The Back to School Bundle, which GOFO's tracking record shows in transit since 17 September 2026; and Sunburst Mineral SPF 50 Sunscreen, fulfilled by the merchant on 16 September 2026.",
+    );
+    expect(out.transactionOverviewArgument.text).toBe("");
+    expect(out.omittedSections.map((o) => o.sectionKey)).toContain("transactionOverviewArgument");
+    expect(out.conclusion.text).toBe(
+      "The request rests on GOFO's tracking record and the merchant's fulfilment records set out above.",
+    );
+    expect(out.conclusion.text).not.toMatch(/request(s|ed)? (that|reversal)|reversed/i);
+    // Identifiers and links appear in the fulfilment section only.
+    for (const k of ["executiveSummary", "chronologyArgument", "conclusion"] as const) {
+      expect(out[k].text, k).not.toMatch(/YT2640221437435982|260914OET4|https?:/);
+    }
   });
 
   it("no invented sentence survives, and nothing the stance forbids appears", () => {

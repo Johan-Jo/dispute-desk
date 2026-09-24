@@ -3253,6 +3253,16 @@ or in-transit date, or the merchant's fulfilment for a parcel with no carrier re
 lists dated records oldest first. The model's other sections (policy, communication, …) are kept, and
 the whole letter still passes the validator. Single-parcel letters are unchanged.
 
+**Prompt 26:** no repetition. Every composed section already opens with a fixed thesis line
+(`thesisTemplates.ts`), and the first version repeated the parcels in four sections and the
+reversal request twice. Now each section adds something the others don't:
+
+- the summary gives one sentence per parcel, with no identifiers;
+- the fulfilment section gives the one full account, with tracking numbers and links;
+- the chronology gives dates and events only;
+- the conclusion states what the request rests on, since the thesis already asks for reversal;
+- the transaction overview is omitted.
+
 ### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
 
 `docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The
