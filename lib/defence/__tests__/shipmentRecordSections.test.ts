@@ -100,9 +100,9 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
   it("Case A: each parcel only by its own record", () => {
     expect(out.fulfillmentArgument.text).toBe(
       [
-        "The order was fulfilled in two shipments.",
+        "The order was sent in two parcels.",
         "The Back to School Bundle: GOFO tracking number YT2640221437435982 (https://www.gofo.com/us/track?searchID=YT2640221437435982). GOFO's tracking record first shows the shipment in transit on 17 September 2026.",
-        "Sunburst Mineral SPF 50 Sunscreen: fulfilled by the merchant on 16 September 2026 (USPS shipping reference 260914OET4).",
+        "Sunburst Mineral SPF 50 Sunscreen: shipped by the merchant on 16 September 2026 (USPS shipping reference 260914OET4).",
       ].join("\n\n"),
     );
   });
@@ -140,12 +140,12 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
 
   it("each section says something new: the parcels in full once, the request never twice", () => {
     expect(out.executiveSummary.text).toBe(
-      "The order was fulfilled in two shipments: The Back to School Bundle, which GOFO's tracking record first shows in transit on 17 September 2026; and Sunburst Mineral SPF 50 Sunscreen, fulfilled by the merchant on 16 September 2026.",
+      "The order was sent in two parcels: The Back to School Bundle, which GOFO's tracking record first shows in transit on 17 September 2026; and Sunburst Mineral SPF 50 Sunscreen, shipped by the merchant on 16 September 2026.",
     );
     expect(out.transactionOverviewArgument.text).toBe("");
     expect(out.omittedSections.map((o) => o.sectionKey)).toContain("transactionOverviewArgument");
     expect(out.conclusion.text).toBe(
-      "The request rests on GOFO's tracking record and the merchant's fulfilment records set out above.",
+      "The request rests on GOFO's tracking record and the merchant's shipping records set out above.",
     );
     expect(out.conclusion.text).not.toMatch(/request(s|ed)? (that|reversal)|reversed/i);
     // Identifiers and links appear in the fulfilment section only.
@@ -165,6 +165,7 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
       /prior to|before the/i,
       /tracking number 260914OET4/i,
       /15 September/, // GOFO's fulfilment date: carrier-recorded parcels carry none
+      /fulfil/i, // "shipped", or "delivered" from a carrier record — never Shopify's "fulfilled"
     ]) {
       expect(all, String(bad)).not.toMatch(bad);
     }

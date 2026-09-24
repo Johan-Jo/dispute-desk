@@ -3263,6 +3263,24 @@ reversal request twice. Now each section adds something the others don't:
 - the conclusion states what the request rests on, since the thesis already asks for reversal;
 - the transaction overview is omitted.
 
+### Document wording: "shipped", and "delivered" only from a carrier (2026-09-24, prompt 29)
+
+"Fulfilled" is Shopify's term and can mean anything from "label printed" to "handed to the carrier",
+so a bank reader can't tell which. The document (PDF and in-app preview) now says **shipped** for the
+merchant's own record, and **delivered** only when a carrier recorded the delivery:
+
+| Where | Wording |
+|---|---|
+| Status pill | Delivered · In transit · Shipped |
+| Card rows | "Shipped by merchant", "Marked shipped by" |
+| Timeline titles | "Shipment N shipped" |
+| Record-built prose | "The order was sent in two parcels", "shipped by the merchant on …", "the merchant's shipping records" |
+| Section titles | "Shipping, Delivery & Evidence" / "Shipping, Delivery & Access" |
+| Fulfilment fallback | "…marks the order as shipped" |
+
+Shopify's own timeline lines ("… marked 1 item as fulfilled") are quoted as recorded. The Case
+Details field "Fulfillment status" is Shopify's record field and is unchanged.
+
 ### In-app preview drawn to the same design (2026-09-24)
 
 `DefencePackageHtmlView` (the defence preview on the dispute page) now renders the "Chargeback Response

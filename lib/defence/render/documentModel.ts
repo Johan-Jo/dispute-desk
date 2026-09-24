@@ -6,6 +6,11 @@
  *
  * Bank-document copy (English), not merchant UI copy: the preview shows the
  * document as filed.
+ *
+ * WORDING (2026-09-24, maintainer). "Fulfilled" is Shopify's term and can mean
+ * anything from "label printed" to "handed over"; a bank reader cannot tell
+ * which. The document says "shipped" for the merchant's own record and
+ * "delivered" ONLY when a carrier recorded the delivery.
  */
 
 import type { EvidenceFact } from "../types";
@@ -108,7 +113,7 @@ export function shipmentCards(
       },
     ];
     const fulfilled = dateTime(str(s.fulfillmentEventAt) ?? str(s.fulfilledAt));
-    if (fulfilled) fields.push({ label: "Fulfilled", value: fulfilled });
+    if (fulfilled) fields.push({ label: "Shipped by merchant", value: fulfilled });
     const since = dateTime(str(s.inTransitSince));
     const delivered = dateTime(str(s.deliveredAt));
     if (proof === "in_transit" && since) {
@@ -120,14 +125,14 @@ export function shipmentCards(
       });
     } else {
       const via = fulfilledVia(s, events);
-      if (via) fields.push({ label: "Fulfilled via", value: via });
+      if (via) fields.push({ label: "Marked shipped by", value: via });
     }
     const status: ShipmentCard["status"] =
       proof === "in_transit"
         ? { tone: "blue", label: "In transit" }
         : proof === "delivered_confirmed" || proof === "signature_confirmed"
           ? { tone: "green", label: "Delivered" }
-          : { tone: "green", label: "Fulfilled" };
+          : { tone: "green", label: "Shipped" };
     return { index: i + 1, product: productsOf(s), status, fields };
   });
 }
@@ -164,7 +169,7 @@ export function describeChronologyEvent(
     case "fulfillment_shipment": {
       const at = Date.parse(e.at);
       const i = shipments.findIndex((s) => Math.abs(Date.parse(str(s.fulfillmentEventAt) ?? "") - at) <= 120_000);
-      return { title: i >= 0 ? `Shipment ${i + 1} fulfilled` : "Order fulfilled", marker: "filled" };
+      return { title: i >= 0 ? `Shipment ${i + 1} shipped` : "Order shipped", marker: "filled" };
     }
     case "shipping_confirmation":
       return { title: "Shipping confirmation sent", marker: "hollow" };

@@ -117,7 +117,7 @@ describe("composePdfBlocks", () => {
     });
     const fulfilment = blocks.find((b) => b.sectionKey === "fulfillmentArgument")!;
     expect(fulfilment).toBeDefined();
-    expect(fulfilment.fallbackText).toContain("fulfilled");
+    expect(fulfilment.fallbackText).toContain("shipped");
     expect(fulfilment.llmText).toBe("");
   });
 

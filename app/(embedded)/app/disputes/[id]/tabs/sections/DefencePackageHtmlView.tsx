@@ -601,7 +601,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
         {prose("paymentAuthenticationArgument")}
 
         {multiParcel ? (
-          <Section number={num()} title="Fulfillment, Delivery & Evidence">
+          <Section number={num()} title="Shipping, Delivery & Evidence">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
               {shipmentCards(shipments, chrono).map((card) => (
                 <ShipmentCardView key={card.index} card={card} />
@@ -613,7 +613,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
         ) : fulfillmentFallbackVisible ? (
           <Section number={num()} title={SECTION_TITLES.fulfillmentArgument}>
             <p style={css.paragraph}>
-              The merchant&apos;s order record marks the order as fulfilled. No separate delivery,
+              The merchant&apos;s order record marks the order as shipped. No separate delivery,
               access-use, or service-completion claim is made in this section unless supported by
               approved evidence.
             </p>
