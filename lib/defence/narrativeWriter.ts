@@ -187,7 +187,11 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // transaction overview, fulfilment, chronology and conclusion are written from
 // the records (lib/defence/shipmentRecordSections.ts), replacing the model's
 // text for those sections. Bumped so existing drafts regenerate.
-const PROMPT_VERSION = 25;
+// v26 (2026-09-23) — the record-built sections no longer repeat each other or
+// the thesis lines: summary one sentence per parcel, identifiers only in the
+// fulfilment section, chronology dates only, conclusion states the basis (the
+// thesis already asks for reversal), transaction overview omitted.
+const PROMPT_VERSION = 26;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
