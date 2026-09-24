@@ -23,7 +23,9 @@
  *   - delivery only from `deliveredAt` on a carrier-confirmed tier;
  *   - transit dated from `inTransitSince` ("first shows … in transit on"),
  *     else as a retrieval;
- *   - a parcel with no carrier record: the merchant's fulfilment, nothing more;
+ *   - a parcel with no carrier record: "shipped by the merchant", nothing
+ *     more — "delivered" only ever from a carrier's record (maintainer,
+ *     2026-09-24: "fulfilled" is Shopify's term and means too many things);
  *   - no date is related to the dispute or the order, and nothing is said about
  *     what a record lacks.
  */
@@ -105,7 +107,7 @@ function parcelAccount(s: Shipment): string {
     return `${items}: ${id}. ${carrier}'s tracking record ${status}.`;
   }
   const fulfilled = day(s.fulfilledAt);
-  return `${items}: fulfilled by the merchant${fulfilled ? ` on ${fulfilled}` : ""} (${id}).`;
+  return `${items}: shipped by the merchant${fulfilled ? ` on ${fulfilled}` : ""} (${id}).`;
 }
 
 /** Dated records only, oldest first — a true order, never an inferred one. */
@@ -127,7 +129,7 @@ function chronology(shipments: Shipment[]): string {
     } else if (s.proofType === "in_transit") {
       push(s.inTransitSince, `${carrier}'s tracking record shows ${items} in transit.`);
     } else {
-      push(s.fulfilledAt, `the merchant fulfilled ${items}${str(s.carrier) ? ` (${str(s.carrier)})` : ""}.`);
+      push(s.fulfilledAt, `the merchant shipped ${items}${str(s.carrier) ? ` (${str(s.carrier)})` : ""}.`);
     }
   }
   return rows
@@ -157,7 +159,7 @@ function summaryClause(s: Shipment): string {
       : `${items}, which ${carrier}'s tracking record shows in transit`;
   }
   const fulfilled = day(s.fulfilledAt);
-  return `${items}, fulfilled by the merchant${fulfilled ? ` on ${fulfilled}` : ""}`;
+  return `${items}, shipped by the merchant${fulfilled ? ` on ${fulfilled}` : ""}`;
 }
 
 function section(text: string, usedFactIds: string[]): NarrativeSection {
@@ -219,10 +221,10 @@ export function applyShipmentRecordSections(
   );
   return {
     ...narrative,
-    executiveSummary: section(`The order was fulfilled in ${count(n)} shipments: ${listed}.`, factIds),
+    executiveSummary: section(`The order was sent in ${count(n)} parcels: ${listed}.`, factIds),
     transactionOverviewArgument: section("", []),
     fulfillmentArgument: section(
-      [`The order was fulfilled in ${count(n)} shipments.`, ...accounts].join("\n\n"),
+      [`The order was sent in ${count(n)} parcels.`, ...accounts].join("\n\n"),
       factIds,
     ),
     // One timeline, not two: the dated parcel events join the order-event
@@ -232,8 +234,8 @@ export function applyShipmentRecordSections(
     chronologyArgument: section("", []),
     conclusion: section(
       recorded.length > 0
-        ? `The request rests on ${recorded.length === 1 ? `${recorded[0]}'s tracking record` : "the carriers' tracking records"} and the merchant's fulfilment records set out above.`
-        : "The request rests on the merchant's fulfilment records set out above.",
+        ? `The request rests on ${recorded.length === 1 ? `${recorded[0]}'s tracking record` : "the carriers' tracking records"} and the merchant's shipping records set out above.`
+        : "The request rests on the merchant's shipping records set out above.",
       factIds,
     ),
     omittedSections: [

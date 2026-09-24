@@ -43,7 +43,7 @@ export const SECTION_TITLES: Record<NarrativeSectionKey, string> = {
   transactionOverviewArgument: "Transaction Overview",
   chronologyArgument: "Chronology of Events",
   paymentAuthenticationArgument: "Payment Authentication",
-  fulfillmentArgument: "Fulfillment, Delivery & Access",
+  fulfillmentArgument: "Shipping, Delivery & Access",
   communicationArgument: "Customer Communication",
   policyArgument: "Policy Disclosure",
   manualEvidenceArgument: "Supplementary Merchant Evidence",
