@@ -194,7 +194,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v27 (2026-09-23) — multi-parcel letters: no chronology paragraph (the parcel
 // events join the timeline bullets); transit worded "first shows … in transit
 // on <date>". Bumped so drafts regenerate with the new PDF layout.
-const PROMPT_VERSION = 27;
+// v28 (2026-09-24) — no prompt change: the defence PDF was rebuilt to the
+// "Chargeback Response v2" design, and packages only re-render on a version
+// move. Bumped so drafts regenerate with the new document.
+const PROMPT_VERSION = 28;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
