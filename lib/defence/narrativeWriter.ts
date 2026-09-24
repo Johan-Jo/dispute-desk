@@ -891,9 +891,42 @@ function applySectionSuppression(
   return out;
 }
 
+/**
+ * The JSON object in the model's reply. The model is told to answer with
+ * JSON only, but sometimes writes an analysis first ("I need to carefully
+ * analyze the approved facts…") and the JSON after it — blume-box #360980
+ * failed twice that way on 2026-09-24, with complete, untruncated replies.
+ * Accept, in order: the whole reply; a fenced block; the span from the first
+ * "{" to the last "}". Only the parse is lenient — every section still goes
+ * through the same shape checks and validators.
+ */
+export function extractJsonObject(raw: string): Record<string, unknown> | null {
+  const attempt = (text: string): Record<string, unknown> | null => {
+    try {
+      const v = JSON.parse(text);
+      return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+  const trimmed = raw.trim();
+  const whole = attempt(trimmed);
+  if (whole) return whole;
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) {
+    const v = attempt(fenced[1].trim());
+    if (v) return v;
+  }
+  const first = trimmed.indexOf("{");
+  const last = trimmed.lastIndexOf("}");
+  if (first >= 0 && last > first) return attempt(trimmed.slice(first, last + 1));
+  return null;
+}
+
 function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
   try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const parsed = extractJsonObject(raw);
+    if (!parsed) return null;
     const sectionKeys = [
       "executiveSummary",
       "transactionOverviewArgument",
