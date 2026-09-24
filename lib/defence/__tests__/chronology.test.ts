@@ -150,3 +150,45 @@ describe("classifyChronologyEvent — the bank-facing allow-list", () => {
     ]);
   });
 });
+
+describe("buildChronologyEvents — multi-parcel delivery is stated once", () => {
+  const facts = [
+    {
+      id: "f-delivery",
+      category: "delivery_proof",
+      value: {
+        shipments: [
+          {
+            carrier: "GOFO",
+            reference: "YT2640221437435982",
+            referenceIsTrackingNumber: true,
+            proofType: "delivered_confirmed",
+            deliveredAt: "2026-09-24T19:43:00Z",
+            items: [{ title: "The Back to School Bundle", quantity: 1 }],
+          },
+          { carrier: "USPS", reference: "260914OET4", proofType: "fulfilled", items: [{ title: "Pencil Case", quantity: 1 }] },
+        ],
+      },
+    },
+  ] as never;
+
+  it("drops the generic carrier-delivery line at the same moment as the parcel's named delivery (#360980)", () => {
+    const events = buildChronologyEvents({
+      timelineEvents: [
+        { at: "2026-09-24T19:43:00Z", text: "Carrier confirmed delivery of the shipment to the recipient." },
+      ],
+    }, facts);
+    expect(events.map((e) => e.text)).toEqual([
+      "GOFO records delivery of The Back to School Bundle (tracking YT2640221437435982).",
+    ]);
+  });
+
+  it("keeps a generic delivery line that no named delivery covers", () => {
+    const events = buildChronologyEvents({
+      timelineEvents: [
+        { at: "2026-09-20T10:00:00Z", text: "Carrier confirmed delivery of the shipment to the recipient." },
+      ],
+    }, facts);
+    expect(events).toHaveLength(2);
+  });
+});
