@@ -55,7 +55,7 @@ export const item_not_received: ReasonCodeFamily = {
     "- referenceIsTrackingNumber true: cite reference as the tracking number, with trackingUrl when present.",
     "- referenceIsTrackingNumber false: call reference the shipping reference, never a tracking number, and give no link.",
     "- proofType delivered_confirmed or signature_confirmed: the carrier's record confirms delivery on deliveredAt.",
-    "- proofType in_transit with inTransitSince: the carrier's tracking record shows the shipment in transit since inTransitSince.",
+    "- proofType in_transit with inTransitSince: the carrier's tracking record first shows the shipment in transit on inTransitSince.",
     "- proofType in_transit without inTransitSince: the carrier's record shows the shipment in transit (status as retrieved on carrierStatusObservedAt).",
     "- any other proofType: the carrier has NO record for this parcel. Write it in exactly this shape and nothing more: 'The merchant fulfilled <items> on <fulfilledAt> (<carrier> shipping reference <reference>).' For this parcel never use tendered, handed, accepted, dispatched, shipped, sent, collected, picked up, in transit, delivered, or left the merchant's possession, and never include it in a sentence that says what a carrier did or holds.",
     "- A sentence covering the whole order ('both items', 'each item', 'the order') may only say the merchant fulfilled them. Carrier handling, and any mention of a carrier record, belongs only in a sentence about the parcel whose own entry records it.",

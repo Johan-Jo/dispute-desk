@@ -191,7 +191,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // the thesis lines: summary one sentence per parcel, identifiers only in the
 // fulfilment section, chronology dates only, conclusion states the basis (the
 // thesis already asks for reversal), transaction overview omitted.
-const PROMPT_VERSION = 26;
+// v27 (2026-09-23) — multi-parcel letters: no chronology paragraph (the parcel
+// events join the timeline bullets); transit worded "first shows … in transit
+// on <date>". Bumped so drafts regenerate with the new PDF layout.
+const PROMPT_VERSION = 27;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -702,6 +705,13 @@ export function stripDeliveryHashInputs<T>(value: T): T {
   if (v.fieldKey !== "delivery_proof" && v.fieldKey !== "shipping_tracking") return value;
   const out: Record<string, unknown> = { ...v };
   for (const key of DELIVERY_HASH_ONLY_KEYS) delete out[key];
+  // Timeline-only per-parcel field: never a date the model may cite.
+  if (Array.isArray(out.shipments)) {
+    out.shipments = (out.shipments as Array<Record<string, unknown>>).map((s) => {
+      const { fulfillmentEventAt: _timelineOnly, ...rest } = s;
+      return rest;
+    });
+  }
   return out as T;
 }
 

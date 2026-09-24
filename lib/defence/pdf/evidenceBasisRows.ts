@@ -184,7 +184,7 @@ function renderValue(fact: EvidenceFact): string | null {
         // (non-receipt plan §5.2). Without this branch the row fell through to
         // "Confirmed", an overclaim printed to the issuer.
         const rawSince = typeof v?.inTransitSince === "string" ? (v.inTransitSince as string) : null;
-        if (rawSince) return withRef(`In transit since ${formatChronologyTimestamp(rawSince)}`);
+        if (rawSince) return withRef(`In transit (first carrier event ${formatChronologyTimestamp(rawSince)})`);
         const rawObserved =
           typeof v?.carrierStatusObservedAt === "string" ? (v.carrierStatusObservedAt as string) : null;
         const observed = rawObserved ? formatChronologyTimestamp(rawObserved) : null;
@@ -411,7 +411,7 @@ function shipmentRows(fact: EvidenceFact): EvidenceBasisRow[] | null {
     } else if (proof === "in_transit") {
       parts.push(
         date(s.inTransitSince)
-          ? `In transit since ${date(s.inTransitSince)}`
+          ? `In transit (first carrier event ${date(s.inTransitSince)})`
           : date(s.carrierStatusObservedAt)
             ? `In transit with the carrier (status as retrieved ${date(s.carrierStatusObservedAt)})`
             : "In transit with the carrier",

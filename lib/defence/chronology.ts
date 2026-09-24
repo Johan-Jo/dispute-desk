@@ -292,7 +292,7 @@ export function buildChronologyEvents(
         `[chronology] dropped ${droppedUnknown.length} non-evidentiary timeline line(s); shapes: ${shapes.slice(0, 10).join(" | ")}`,
       );
     }
-    return kept;
+    return withShipmentEvents(kept, facts);
   }
 
   // Path 2: synthetic fallback. Only fires when the pack lacks captured events.
@@ -327,5 +327,68 @@ export function buildChronologyEvents(
       }
     }
   }
-  return events.sort((a, b) => a.at.localeCompare(b.at));
+  return withShipmentEvents(events.sort((a, b) => a.at.localeCompare(b.at)), facts);
+}
+
+/**
+ * Multi-parcel orders: ONE timeline (#360980, 2026-09-23 — the letter printed
+ * a chronology paragraph and, below it, a second bullet list).
+ *
+ *   - Each dated carrier event from the delivery fact's `shipments` joins the
+ *     bullets, naming its product: "GOFO's tracking record shows The Back to
+ *     School Bundle in transit (tracking …)" at the event's own time.
+ *   - Shopify's "marked 1 item as fulfilled" lines name their product, matched
+ *     by the fulfilment's own timestamp (within two minutes).
+ *
+ * No-op when no delivery fact carries `shipments`.
+ */
+function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): ChronologyEvent[] {
+  const fact = facts.find((f) => {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") return false;
+    const s = (f.value as Record<string, unknown> | null)?.shipments;
+    return Array.isArray(s) && s.length > 1;
+  });
+  if (!fact) return events;
+  const shipments = (fact.value as Record<string, unknown>).shipments as Array<Record<string, unknown>>;
+  const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const itemsOf = (s: Record<string, unknown>): string | null => {
+    const names = (Array.isArray(s.items) ? (s.items as Array<Record<string, unknown>>) : [])
+      .map((it) => str(it.title))
+      .filter((t): t is string => t !== null);
+    return names.length ? names.join(", ") : null;
+  };
+
+  const annotated = events.map((e) => {
+    if (!/marked \d+ items? as fulfilled/i.test(e.text)) return e;
+    const at = Date.parse(e.at);
+    const match = shipments.find((s) => {
+      const t = Date.parse(str(s.fulfillmentEventAt) ?? "");
+      return !Number.isNaN(t) && !Number.isNaN(at) && Math.abs(t - at) <= 120_000;
+    });
+    const items = match ? itemsOf(match) : null;
+    return items ? { ...e, text: e.text.replace(/\.?\s*$/, ` (${items}).`) } : e;
+  });
+
+  const carrierEvents: ChronologyEvent[] = [];
+  for (const s of shipments) {
+    const items = itemsOf(s) ?? "the shipment";
+    const carrier = str(s.carrier) ?? "The carrier";
+    const ref = s.referenceIsTrackingNumber === true ? str(s.reference) : null;
+    const tracking = ref ? ` (tracking ${ref})` : "";
+    if (s.proofType === "in_transit" && str(s.inTransitSince)) {
+      carrierEvents.push({
+        at: str(s.inTransitSince) as string,
+        text: `${carrier}'s tracking record shows ${items} in transit${tracking}.`,
+      });
+    } else if (
+      (s.proofType === "delivered_confirmed" || s.proofType === "signature_confirmed") &&
+      str(s.deliveredAt)
+    ) {
+      carrierEvents.push({
+        at: str(s.deliveredAt) as string,
+        text: `${carrier} records delivery of ${items}${tracking}.`,
+      });
+    }
+  }
+  return [...annotated, ...carrierEvents].sort((a, b) => a.at.localeCompare(b.at));
 }

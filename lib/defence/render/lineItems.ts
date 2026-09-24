@@ -15,6 +15,7 @@
  */
 
 import type { EvidenceFact } from "../types";
+import { formatMoneyDisplay } from "./formatting";
 
 export interface LineItem {
   description: string;
@@ -37,6 +38,17 @@ export interface LineItem {
  * renderer is expected to skip the section entirely in that case.
  */
 export function buildLineItems(
+  facts: EvidenceFact[],
+  contextLineItems?: LineItem[] | null,
+): LineItem[] {
+  // "USD 40.0" → "USD 40.00" on every row, whichever source it came from.
+  return buildLineItemsRaw(facts, contextLineItems).map((it) => ({
+    ...it,
+    price: formatMoneyDisplay(it.price) ?? it.price,
+  }));
+}
+
+function buildLineItemsRaw(
   facts: EvidenceFact[],
   contextLineItems?: LineItem[] | null,
 ): LineItem[] {

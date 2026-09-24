@@ -158,16 +158,20 @@ describe("renderThesis", () => {
     });
 
     it("uses (any, any) when no family-specific template exists for the section", () => {
-      // transactionOverviewArgument only has (any, any). With no
-      // approved facts, paymentAuthMethod is null — but it's optional
-      // there, so the template still renders the required text.
+      // transactionOverviewArgument only has (any, any). With no approved
+      // facts its only token (paymentAuthMethod) is null, so the thesis
+      // states no fact of this case and is suppressed as filler
+      // (2026-09-23). The conclusion's request line is the one exception.
       const text = renderThesis({
         sectionKey: "transactionOverviewArgument",
         familyKey: "unauthorized_fraud",
         packageMode: "full",
         approvedFacts: [],
       });
-      expect(text).toContain("internally consistent with cardholder-initiated activity");
+      expect(text).toBe("");
+      expect(
+        renderThesis({ sectionKey: "conclusion", familyKey: "unauthorized_fraud", packageMode: "full", approvedFacts: [] }),
+      ).toContain("respectfully requests reversal");
     });
   });
 });
