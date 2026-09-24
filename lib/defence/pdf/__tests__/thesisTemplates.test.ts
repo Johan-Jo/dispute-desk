@@ -69,3 +69,12 @@ describe("THESIS_TEMPLATES invariants", () => {
     }
   });
 });
+
+describe("letterDate — thesis lines print a date, not an ISO timestamp", () => {
+  it("formats the stored timestamp as a UTC date (#360980)", async () => {
+    const { letterDate } = await import("../thesisTokens");
+    expect(letterDate("2026-09-24T19:43:25Z")).toBe("24 September 2026");
+    expect(letterDate("not a date")).toBeNull();
+    expect(letterDate(null)).toBeNull();
+  });
+});
