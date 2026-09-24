@@ -53,6 +53,7 @@ import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
 import { finalizeDedupeKey } from "@/lib/defence/finalizeRpc";
@@ -175,7 +176,7 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("shops")
-      .select("id, shop_domain")
+      .select("id, shop_domain, primary_domain")
       .eq("id", pkg.shop_id)
       .single(),
   ]);
@@ -820,8 +821,15 @@ export async function handleBuildDefencePackage(
     })),
   );
 
-  const merchantDisplayName =
-    merchantNameFromDomain(shop?.shop_domain ?? null) ?? "Merchant";
+  // The merchant is named by its real storefront domain ("blume.com"), never
+  // the myshopify alias (maintainer, 2026-09-24). `displayShopDomain` falls
+  // back to the alias only for a shop with no primary domain on record.
+  const merchantDisplayName = shop?.shop_domain
+    ? displayShopDomain({
+        shop_domain: shop.shop_domain as string,
+        primary_domain: (shop as { primary_domain?: string | null }).primary_domain ?? null,
+      })
+    : (merchantNameFromDomain(null) ?? "Merchant");
 
   // Phase 1.5 — composed-document validation. Every byte of
   // argumentative prose that the renderer will write into the PDF

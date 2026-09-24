@@ -2865,6 +2865,8 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 
 **Getting late delivery TO an open dispute:** nothing re-fetched an existing dispute's order once its pack was built, so a carrier delivery that lands weeks after the dispute opened never reached the case. The nightly cron [app/api/cron/refresh-open-disputes/route.ts](../app/api/cron/refresh-open-disputes/route.ts) (02:30 UTC) re-ingests each open dispute's order via `normalizeOrderIngest` and enqueues a `build_pack` when the order's `delivery_status` changed (esp. → `Delivered`). The rebuild then flows through the strength rule + improvement notification above automatically. Bounded (`MAX_PER_RUN`, oldest-refreshed first) and gated by `cronEnvGate`.
 
+**Real-time path: fulfillment webhooks (2026-09-24).** The nightly cron made a carrier update wait up to a day, and — comparing only the order's best-of `delivery_status` — never fired when one parcel of a multi-parcel order moved while another was already further along. `registerOrderWebhooks` now also subscribes **`fulfillment_events/create`** (carrier events) and **`fulfillments/update`** (Shopify's shipment-status changes), both handled by [lib/webhooks/handleFulfillmentWebhook.ts](../lib/webhooks/handleFulfillmentWebhook.ts) → [lib/disputes/rebuildOnCarrierUpdate.ts](../lib/disputes/rebuildOnCarrierUpdate.ts). The handler looks up open disputes with a pack on the payload's `order_id` **before writing anything** — these topics fire for every shipment in the shop, so an undisputed order costs one read and leaves no `webhook_events` row. For a disputed order it claims the delivery (Layer A dedup), re-ingests the order, and queues a `build_pack` (priority 90, audit trigger `webhook_fulfillment_events_create` / `webhook_fulfillments_update`) unless one is already queued for that pack. It rebuilds on every event, not only on a status change: the event is the change, and an unchanged rebuild does not regenerate the letter (defence-package input hash). Existing shops get the subscriptions from the hourly `session-health` cron, whose `REQUIRED_ORDER_TOPICS` now includes both. The webhook only fires for updates Shopify itself receives from the carrier or the shipping app; the nightly cron stays as the safety net. Regression: `lib/webhooks/__tests__/handleFulfillmentWebhook.test.ts`.
+
 The improvement stamp runs **last** in `buildPackJob` (after `evaluateAndMaybeAutoSave`), so `last_rebuild_at` is the final write to the pack — otherwise a later auto-save pack update bumps `updated_at` past `last_rebuild_at` and the EvidenceTab staleness gate suppresses the banner.
 
 #### Delivery milestones in the Chronology of Events
@@ -3262,6 +3264,14 @@ reversal request twice. Now each section adds something the others don't:
 - the chronology gives dates and events only;
 - the conclusion states what the request rests on, since the thesis already asks for reversal;
 - the transaction overview is omitted.
+
+### The letter names the merchant by its storefront domain (2026-09-24, prompt 30)
+
+The defence document (PDF and in-app preview) names the merchant by `displayShopDomain`
+(`shops.primary_domain` without `www.`, e.g. "blume.com"). It falls back to the myshopify alias only when
+no primary domain is on record. This covers "Submitted on behalf of" and the Case Details "Merchant
+name" row. The job reads `primary_domain` with the shop, and the workspace API returns it as
+`dispute.merchantDomain`. `dispute.shopDomain` stays the alias, because it builds Shopify Admin links.
 
 ### Document wording: "shipped", and "delivered" only from a carrier (2026-09-24, prompt 29)
 
