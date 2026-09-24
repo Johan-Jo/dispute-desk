@@ -202,7 +202,9 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // timeline titles). Bumped so drafts regenerate.
 // v30 (2026-09-24) — the document names the merchant by its storefront
 // domain ("blume.com"), not the myshopify alias. Bumped so drafts re-render.
-const PROMPT_VERSION = 30;
+// v31 (2026-09-24) — a multi-parcel timeline states a parcel delivery once
+// (named line kept, generic Shopify line at the same moment dropped).
+const PROMPT_VERSION = 31;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

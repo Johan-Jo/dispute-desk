@@ -339,6 +339,8 @@ export function buildChronologyEvents(
  *     School Bundle in transit (tracking …)" at the event's own time.
  *   - Shopify's "marked 1 item as fulfilled" lines name their product, matched
  *     by the fulfilment's own timestamp (within two minutes).
+ *   - A generic carrier-delivery line at the same moment as a parcel's named
+ *     delivery is dropped: the named one says it with the product.
  *
  * No-op when no delivery fact carries `shipments`.
  */
@@ -390,5 +392,17 @@ function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): C
       });
     }
   }
-  return [...annotated, ...carrierEvents].sort((a, b) => a.at.localeCompare(b.at));
+  // The order's own generic delivery line ("Carrier confirmed delivery of the
+  // shipment to the recipient.") at the same moment as a parcel's named
+  // delivery says the same thing twice (#360980, 2026-09-24) — keep the one
+  // that names the parcel.
+  const namedDeliveries = carrierEvents
+    .filter((c) => / records delivery of /.test(c.text))
+    .map((c) => Date.parse(c.at));
+  const deduped = annotated.filter((e) => {
+    if (!/carrier confirmed delivery/i.test(e.text)) return true;
+    const at = Date.parse(e.at);
+    return !namedDeliveries.some((t) => !Number.isNaN(at) && Math.abs(t - at) <= 120_000);
+  });
+  return [...deduped, ...carrierEvents].sort((a, b) => a.at.localeCompare(b.at));
 }
