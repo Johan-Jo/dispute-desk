@@ -18,6 +18,21 @@ import {
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
 import { FACT_PREDICATES } from "../factPredicates";
+
+const LETTER_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** "24 September 2026" (UTC) — the bank reads a date, never the raw ISO
+ *  timestamp the fact stores ("on 2026-09-24T19:43:25Z", #360980). */
+export function letterDate(iso: unknown): string | null {
+  if (typeof iso !== "string") return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  return `${d.getUTCDate()} ${LETTER_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
 import type {
   EvidenceFact,
   ThesisToken,
@@ -121,7 +136,7 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
         findFact(facts, "shipping_tracking");
       if (!d) return null;
       const proofType = d.value?.proofType;
-      const deliveredAt = typeof d.value?.deliveredAt === "string" ? d.value.deliveredAt : null;
+      const deliveredAt = letterDate(d.value?.deliveredAt);
       const carrier = typeof d.value?.carrier === "string" ? d.value.carrier : null;
       if (proofType === "signature_confirmed" || proofType === "signature") {
         return carrier
@@ -144,7 +159,7 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
         findFact(facts, "digital_access_log") ??
         findFact(facts, "service_access");
       if (!d) return null;
-      const at = typeof d.value?.lastAccessAt === "string" ? d.value.lastAccessAt : null;
+      const at = letterDate(d.value?.lastAccessAt);
       return at
         ? `the customer's access to the service is logged through ${at}`
         : "the customer's access to the service is logged";
