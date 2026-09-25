@@ -113,16 +113,16 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
    * date"). States the record, attributed to the carrier once. */
   deliveryRecordClause: gated({
     name: "deliveryRecordClause",
-    description: "The carrier's delivery record: \"Stallion Express recorded the shipment for order #352543 (tracking 260702441A) as delivered on 6 July 2026\". Null without a carrier-confirmed delivery.",
+    description: "The carrier's delivery record: \"Stallion Express recorded the shipment for order #352543 as delivered on 6 July 2026\". Null without a carrier-confirmed delivery.",
     predicateId: "delivery_confirmed",
     extract: (facts, ctx?: ThesisContext) => {
       const r = carrierDelivery(facts);
       if (!r) return null;
+      // No tracking number: the shipment card prints it (one place only).
       const order = ctx?.orderName ? ` for order ${ctx.orderName}` : "";
-      const tracking = r.tracking ? ` (tracking ${r.tracking})` : "";
       const date = letterDate(r.deliveredAt);
       return (
-        `${r.carrier ?? "The carrier"} recorded ${r.oneOfSeveral ? "a" : "the"} shipment${order}${tracking} as delivered` +
+        `${r.carrier ?? "The carrier"} recorded ${r.oneOfSeveral ? "a" : "the"} shipment${order} as delivered` +
         `${r.signed ? ", with a signature," : ""}${date ? ` on ${date}` : ""}`
       );
     },

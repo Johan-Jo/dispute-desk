@@ -387,7 +387,7 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
 
 /* ── Shipment cards (multi-parcel letters) ─────────────────────────── */
 
-function ShipmentCard({ card }: { card: ShipmentCardModel }) {
+function ShipmentCard({ card, wide = false }: { card: ShipmentCardModel; wide?: boolean }) {
   return (
     <View style={styles.shipCard} wrap={false}>
       <View style={styles.shipHead}>
@@ -397,9 +397,20 @@ function ShipmentCard({ card }: { card: ShipmentCardModel }) {
         </View>
         <Text style={styles.shipProduct}>{card.product}</Text>
       </View>
-      <View style={styles.shipBody}>
+      <View style={wide ? styles.shipBodyWide : styles.shipBody}>
         {card.fields.map((f, i) => (
-          <View key={f.label} style={i === card.fields.length - 1 ? styles.shipFieldLast : styles.shipField}>
+          <View
+            key={f.label}
+            style={
+              wide
+                ? i === card.fields.length - 1
+                  ? styles.shipFieldWideLast
+                  : styles.shipFieldWide
+                : i === card.fields.length - 1
+                  ? styles.shipFieldLast
+                  : styles.shipField
+            }
+          >
             <Text style={styles.shipFieldLabel}>{f.label}</Text>
             <Text style={styles.shipFieldValue}>
               {f.value}
@@ -645,7 +656,11 @@ export function DefencePackageDocument({
               number={num()}
               title={findBlock(composedBlocks, "fulfillmentArgument")?.heading ?? "Shipping & Delivery"}
             >
-              <ShipmentCards cards={shipmentCards([single], chronology)} />
+              {/* One parcel: a full-width card with its fields side by side —
+                  half a row of empty page otherwise (review of #352543). */}
+              <View style={styles.shipRow} wrap={false}>
+                <ShipmentCard card={shipmentCards([single], chronology)[0]} wide />
+              </View>
               {blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
                 <View style={{ marginTop: 14 }}>
                   <Prose
@@ -694,13 +709,15 @@ export function DefencePackageDocument({
             </Section>
           ) : null}
 
-          {conclusion && conclusionBody ? (
+          {conclusion && (conclusionBody || conclusion.thesisText.trim()) ? (
             <Section number={num()} title={conclusion.heading} keepTogether>
               <View style={styles.conclusion}>
                 {conclusion.thesisText.trim() ? (
-                  <Text style={styles.conclusionRequest}>{conclusion.thesisText.trim()}</Text>
+                  <Text style={[styles.conclusionRequest, conclusionBody ? {} : { marginBottom: 0 }]}>
+                    {conclusion.thesisText.trim()}
+                  </Text>
                 ) : null}
-                <Text style={styles.conclusionBody}>{conclusionBody}</Text>
+                {conclusionBody ? <Text style={styles.conclusionBody}>{conclusionBody}</Text> : null}
               </View>
             </Section>
           ) : null}

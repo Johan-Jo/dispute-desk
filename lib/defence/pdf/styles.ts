@@ -353,6 +353,22 @@ export const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 8,
   },
+  // Single parcel: fields in one row, hairline between them.
+  shipBodyWide: {
+    flexDirection: "row",
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+  shipFieldWide: {
+    flex: 1,
+    paddingRight: 10,
+    marginRight: 10,
+    borderRightWidth: 0.75,
+    borderRightColor: C.hairline,
+  },
+  shipFieldWideLast: {
+    flex: 1,
+  },
   shipField: {
     paddingVertical: 6,
     borderBottomWidth: 0.75,
