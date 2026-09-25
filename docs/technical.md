@@ -3389,10 +3389,26 @@ authentication. Now:
   `PREVIEW_LINK_INVALID` otherwise.
 - Without `t`, the old session path is unchanged.
 
-### Defence counsel v2 — address claims (2026-09-25, not wired into the job yet)
+### Defence counsel v2 — item-not-received letters (2026-09-25, wired into the job)
 
-`lib/defence/counsel/` (branch `feat/defence-counsel-v2`; plans in `docs/plans/defence-counsel/`)
-writes item-not-received letters from a code-built claim ledger. Address rule:
+`lib/defence/counsel/` (plans in `docs/plans/defence-counsel/`) writes item-not-received letters from a
+code-built claim ledger.
+
+- **In the job.** `buildDefencePackageJob` calls `runCounsel` (`counsel/run.ts`) before the template writer for
+  `inr_product_not_received` card disputes. It reads the customer's other orders live (Admin API, `makeAuthedRequest`),
+  builds the ledger, and runs strategist → 3 writer drafts → checks + fact-check (≤2 surgical corrections) → judge
+  on `DEFENCE_COUNSEL_MODEL` (default `claude-sonnet-4-6`). A null result (no single carrier-confirmed delivery,
+  no passing draft, any error) falls through to the template writer unchanged. The counsel letter then passes the
+  same `validateNarrative` / projection / composed-document checks; on a validation failure the existing retry
+  regenerates with the template writer. `applyShipmentRecordSections` is skipped for counsel letters.
+  One `defence_package_runs` row per counsel run (summed tokens, `strategy_keys = [counsel_v2]`), so the
+  per-shop daily cap counts it; `prompt_family = counsel_v2`, `prompt_version = COUNSEL_PROMPT_VERSION`.
+  Kill switch: `DEFENCE_COUNSEL_V2=off`. Merchant name: `shops.shop_name`, else the storefront domain.
+- **Exhibits and timeline.** `narrative.addressExhibit`, `laterOrderExhibit` and `timelineAdditions` are stored
+  in `narrative_json`; the job passes them to the PDF `meta` (timeline rows merged into `timelineEvents`) and the
+  HTML view merges `timelineAdditions` into its chronology.
+
+Address rule:
 
 - **Data.** The order source keeps `billingAddressFull` / `shippingAddressFull` (street, unit, city,
   province, postal code, country); `customers/redact` scrubs both (`scrubCustomerData.ts`, `ADDRESS_KEYS`).
@@ -3403,10 +3419,10 @@ writes item-not-received letters from a code-built claim ledger. Address rule:
 - **Exhibit.** The claim carries both addresses. `toNarrative` sets `narrative.addressExhibit`; the PDF
   (`meta.addressExhibit`) and the HTML view print an "Order addresses" card under the shipment card
   (`documentModel.ts` `addressCard`). An address claim is never made without the addresses shown.
-- **Never** a delivery-location claim: `address_delivery` (`claimCapabilities.ts`) stays ungranted.
-  `checks.ts` `isAllowedAddressSentence` lets through only "shipping address is the same as the billing
-  address" (and the AVS sentence), never with delivered/reached/received, and only when the ledger
-  holds the claim; everything else still hits the address-delivery detector.
+- **The match is stated on the card, never in prose.** The card's title reads "The shipping address entered at
+  checkout is identical to the billing address." The prose never mentions addresses: the production
+  address-delivery detector reads any "shipping address" sentence as a delivery claim, and loosening it would let
+  the template writer assert a match it cannot see. `address_delivery` (`claimCapabilities.ts`) stays ungranted.
 - **Later order.** The `later_order` claim carries the order as `narrative.laterOrderExhibit`; the PDF
   (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card under the Order Line Items table
   (`documentModel.ts` `laterOrderCard`). Its delivery date is shown only when the order arrived within the
@@ -3416,9 +3432,6 @@ writes item-not-received letters from a code-built claim ledger. Address rule:
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
   "not supported by the record"; the fixed request line with the amount follows.
-- **Wiring note.** When counsel v2 is wired into `buildDefencePackageJob`, pass
-  `narrative.addressExhibit` / `laterOrderExhibit` to `meta`, and apply the same allowed-sentence exemption
-  before the job's `validateNarrative` call.
 
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
