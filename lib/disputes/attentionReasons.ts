@@ -88,6 +88,20 @@ export const BILLING_ATTENTION_REASONS: ReadonlySet<DisputeAttentionReason> =
     DISPUTE_ATTENTION_REASONS.PAYMENT_FAILED,
   ]);
 
+/** Reasons written by the pipeline's PRE-BUILD gates (auto-build switch +
+ *  credit/billing). Each describes a gate the dispute failed on an earlier
+ *  pass; once a later pass gets past BOTH gates, every one of them is stale
+ *  and the pipeline clears it. `auto_build_off` was missing from the clear
+ *  (only billing reasons were), so a dispute blocked while auto-build was off
+ *  kept saying "Automation paused" after it was turned on and the pack built
+ *  (6a8848-dd, 2026-09-25). Superset of BILLING_ATTENTION_REASONS by
+ *  construction — never a merchant task (gorgias review, approval, errors). */
+export const PIPELINE_GATE_ATTENTION_REASONS: ReadonlySet<DisputeAttentionReason> =
+  new Set<DisputeAttentionReason>([
+    DISPUTE_ATTENTION_REASONS.AUTO_BUILD_OFF,
+    ...BILLING_ATTENTION_REASONS,
+  ]);
+
 export function isBillingAttentionReason(
   reason: string | null | undefined,
 ): reason is DisputeAttentionReason {

@@ -209,6 +209,7 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
     // circuits so we don't need the full build path mocked. The point: no
     // feature-block audit/event was written.
     const capture: SbCapture = { auditInserts: [], disputeUpdates: [] };
+    const selfHealInCalls: Array<[string, unknown[]]> = [];
     const sb = {
       from: vi.fn((table: string) => {
         if (table === "disputes") {
@@ -231,7 +232,10 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
               // chain AND the self-heal `.update().eq().in()` chain.
               return {
                 eq: vi.fn().mockReturnValue({
-                  in: vi.fn().mockResolvedValue({ data: null, error: null }),
+                  in: vi.fn().mockImplementation(async (col: string, vals: unknown[]) => {
+                    selfHealInCalls.push([col, vals]);
+                    return { data: null, error: null };
+                  }),
                   then: (resolve: (v: unknown) => void) =>
                     resolve({ data: null, error: null }),
                 }),
@@ -293,6 +297,15 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
           (u as { attention_reason?: unknown }).attention_reason === null,
       ),
     ).toBe(true);
+    // Both gates passed, so a stale `auto_build_off` (set on a pass while
+    // auto-build was off) is cleared too — not only billing reasons.
+    // 6a8848-dd 2026-09-25: rebuilt dispute kept saying "Automation paused".
+    expect(selfHealInCalls).toHaveLength(1);
+    const [col, vals] = selfHealInCalls[0];
+    expect(col).toBe("attention_reason");
+    expect(vals).toEqual(
+      expect.arrayContaining(["auto_build_off", "quota_exceeded", "feature_blocked"]),
+    );
   });
 
   it("terminal dispute (won/closed) → skipped_terminal with NO side effects", async () => {

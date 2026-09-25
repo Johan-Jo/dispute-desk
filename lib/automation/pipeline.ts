@@ -49,7 +49,7 @@ import {
 } from "@/lib/automation/rebuildOutcome";
 import {
   DISPUTE_ATTENTION_REASONS,
-  BILLING_ATTENTION_REASONS,
+  PIPELINE_GATE_ATTENTION_REASONS,
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
@@ -155,16 +155,17 @@ async function recordBlockedAutoBuild(args: {
 }
 
 /**
- * Self-heal a stale billing-block attention flag. Called after the quota
- * gate PASSES (the shop has credits again). If the dispute still carries a
- * billing-shaped `attention_reason` (quota_exceeded / feature_blocked /
- * subscription_expired / payment_failed), it's out of date — the block
- * that set it no longer holds — so clear it. Scoped to billing reasons
- * ONLY via the WHERE clause, so a genuine merchant task (gorgias review,
- * approval gate, technical error) is never touched. Idempotent + cheap:
- * the update matches nothing when there's no stale billing flag.
+ * Self-heal a stale gate-block attention flag. Called after BOTH pre-build
+ * gates PASS (auto-build is on, and the shop has credits). If the dispute
+ * still carries a gate-shaped `attention_reason` (auto_build_off, or a
+ * billing reason: quota_exceeded / feature_blocked / subscription_expired /
+ * payment_failed), it's out of date — the block that set it no longer
+ * holds — so clear it. Scoped to PIPELINE_GATE_ATTENTION_REASONS via the
+ * WHERE clause, so a genuine merchant task (gorgias review, approval gate,
+ * technical error) is never touched. Idempotent + cheap: the update matches
+ * nothing when there's no stale gate flag.
  */
-async function clearStaleBillingAttention(disputeId: string): Promise<void> {
+async function clearStaleGateAttention(disputeId: string): Promise<void> {
   const sb = getServiceClient();
   const { error } = await sb
     .from("disputes")
@@ -177,12 +178,12 @@ async function clearStaleBillingAttention(disputeId: string): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq("id", disputeId)
-    .in("attention_reason", Array.from(BILLING_ATTENTION_REASONS));
+    .in("attention_reason", Array.from(PIPELINE_GATE_ATTENTION_REASONS));
   if (error) {
     // Non-fatal: a failed self-heal just leaves the stale flag for the
     // next pipeline pass; never block the build on it.
     console.warn(
-      `[pipeline] clearStaleBillingAttention failed for ${disputeId}: ${error.message}`,
+      `[pipeline] clearStaleGateAttention failed for ${disputeId}: ${error.message}`,
     );
   }
 }
@@ -434,14 +435,15 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     return { action: "quota_exceeded" };
   }
 
-  // Self-heal a STALE billing block: the shop now HAS credits (we passed
-  // the quota gate), so any lingering `quota_exceeded` (or other billing)
+  // Self-heal a STALE gate block: auto-build is on AND the shop has credits
+  // (we passed both gates), so any lingering `auto_build_off` / billing
   // attention flag on this dispute is out of date and must be cleared —
   // otherwise a dispute stays "Billing action required" forever after the
   // merchant tops up (blume-box prod, 2026-07-27: 65 disputes stuck on a
-  // pre-top-up quota flag). Only touches billing-shaped reasons; never a
-  // real merchant task (gorgias/approval/etc.).
-  await clearStaleBillingAttention(dispute.id);
+  // pre-top-up quota flag), or "Automation paused" after auto-build is
+  // turned on (6a8848-dd, 2026-09-25). Only touches gate-shaped reasons;
+  // never a real merchant task (gorgias/approval/etc.).
+  await clearStaleGateAttention(dispute.id);
 
   // NOTE: auto-build is NOT tier-gated. Every plan — including Free — can
   // auto-build; the credit ledger is the only gate. Free ships with 5

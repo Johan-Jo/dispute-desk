@@ -5717,9 +5717,16 @@ candidate, **bypassing the burnt effect claim** rather than trying to un-burn it
   non-archived pack. A dispute past its deadline cannot be helped by a pack, and the tight scope
   is what keeps the sweep from re-running over resolved history.
 - **The sweep decides nothing itself.** `runAutomationPipeline` already guards terminal status,
-  auto-build-off, existing packs and quota, and clears stale billing attention on the way
+  auto-build-off, existing packs and quota, and clears stale gate attention on the way
   through; the sweep only selects candidates and re-invokes it. A dispute the pipeline declines
   keeps its attention flag — clearing it would hide a real blocker.
+- **Stale gate attention is cleared once BOTH pre-build gates pass.** `clearStaleGateAttention`
+  (`lib/automation/pipeline.ts`) runs after the auto-build switch and the quota check and clears
+  any `attention_reason` in `PIPELINE_GATE_ATTENTION_REASONS` (`auto_build_off` + the billing
+  reasons). Before 2026-09-25 it cleared billing reasons only, so a dispute first blocked while
+  auto-build was off kept its "Automation paused" banner after auto-build was turned on and the
+  pack built (6a8848-dd #93670). Merchant tasks (Gorgias review, approval, errors) are never in
+  the set.
 - **Capped** at `REPLAY_CANDIDATE_CAP = 200` per sweep, ordered by soonest deadline, and the
   handler logs when the cap is hit rather than silently truncating.
 - **Deferred while the order backfill runs.** Pack evidence is computed *from* `shopify_orders` —
