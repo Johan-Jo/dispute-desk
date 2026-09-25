@@ -38,6 +38,9 @@ import {
   describeChronologyEvent,
   emphasisSegments,
   lineItemsTotal,
+  orderPlacedLine,
+  addressCard,
+  laterOrderCard,
   productsOf,
   shipmentCards,
   shipmentsOf,
@@ -47,6 +50,8 @@ import {
   type ShipmentCard as ShipmentCardModel,
 } from "../render/documentModel";
 import type {
+  AddressExhibit,
+  LaterOrderExhibit,
   ComposedDocumentBlock,
   EvidenceFact,
   ManualEvidenceRecord,
@@ -95,6 +100,11 @@ export interface DefencePackageMeta {
   /** Line items extracted from `pack_json.sections[type=order].data.lineItems`
    *  by `deriveOrderContext`. */
   lineItemsFromContext?: Array<{ description: string; quantity: number; price: string; kind?: "item" | "adjustment" }>;
+  /** Counsel v2: shipping and billing addresses, printed only when the letter
+   *  claims they are identical (DefenceNarrativeOutput.addressExhibit). */
+  addressExhibit?: AddressExhibit | null;
+  /** Counsel v2: the customer's later order (DefenceNarrativeOutput.laterOrderExhibit). */
+  laterOrderExhibit?: LaterOrderExhibit | null;
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -392,7 +402,7 @@ function ShipmentCard({ card, wide = false }: { card: ShipmentCardModel; wide?: 
     <View style={styles.shipCard} wrap={false}>
       <View style={styles.shipHead}>
         <View style={styles.shipHeadRow}>
-          <Text style={styles.shipLabel}>Shipment {card.index}</Text>
+          <Text style={styles.shipLabel}>{card.eyebrow ?? `Shipment ${card.index}`}</Text>
           <Pill tone={card.status.tone} label={card.status.label} />
         </View>
         <Text style={styles.shipProduct}>{card.product}</Text>
@@ -588,8 +598,11 @@ export function DefencePackageDocument({
 }) {
   const { meta, composedBlocks, approvedFacts, manualEvidence } = data;
   const issuerSafe = data.issuerSafeSupportingIndex === true;
-  const chronology = buildChronologyEvents(meta, approvedFacts);
   const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
+  const chronology = buildChronologyEvents(
+    { ...meta, orderTotalDisplay: lineItemsTotal(lineItems)?.amount ?? null },
+    approvedFacts,
+  );
   const shipments = shipmentsOf(approvedFacts);
   const multiParcel = shipments.length > 1;
   // Single parcel: the carrier record as a card; the Evidence Basis then
@@ -666,6 +679,11 @@ export function DefencePackageDocument({
               <View style={styles.shipRow} wrap={false}>
                 <ShipmentCard card={shipmentCards([single], chronology)[0]} wide />
               </View>
+              {addressCard(meta.addressExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 12 }]} wrap={false}>
+                  <ShipmentCard card={addressCard(meta.addressExhibit)!} wide />
+                </View>
+              ) : null}
               {blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
                 <View style={{ marginTop: 14 }}>
                   <Prose
@@ -698,10 +716,22 @@ export function DefencePackageDocument({
 
           {lineItems.length > 0 ? (
             <Section number={num()} title="Order Line Items" keepTogether={lineItems.length <= 10}>
+              {orderPlacedLine(meta.orderName, meta.transactionDate) ? (
+                <Text style={{ fontSize: 9.5, color: COLORS.muted, marginBottom: 8 }}>
+                  {orderPlacedLine(meta.orderName, meta.transactionDate)}
+                </Text>
+              ) : null}
               <LineItemsTable items={lineItems} />
               {lineItemsArgument ? (
                 <View style={{ marginTop: 14 }}>
                   <Prose text={lineItemsArgument} emphasise={productNames} />
+                </View>
+              ) : null}
+              {/* The same customer's later order, under the disputed order's
+                  items (maintainer, 2026-09-25: it fits this page). */}
+              {laterOrderCard(meta.laterOrderExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 22 }]} wrap={false}>
+                  <ShipmentCard card={laterOrderCard(meta.laterOrderExhibit)!} wide />
                 </View>
               ) : null}
             </Section>
@@ -714,7 +744,11 @@ export function DefencePackageDocument({
               thesis={chronologyBlock?.thesisText.trim() || undefined}
               keepTogether={chronology.length <= 12}
             >
-              {chronologyBody ? <Prose text={chronologyBody} /> : null}
+              {chronologyBody ? (
+                <View style={{ marginBottom: 18 }}>
+                  <Prose text={chronologyBody} />
+                </View>
+              ) : null}
               {chronology.length > 0 ? <Chronology events={chronology} shipments={shipments} /> : null}
             </Section>
           ) : null}

@@ -370,7 +370,7 @@ describe("Invariant 6 — shared chronology builder behaves correctly on both pa
       [],
     );
     expect(events.map((e) => e.text)).toEqual([
-      "Jane Doe placed this order on Online Store.",
+      "Jane Doe placed order #1078 on Online Store.",
       "$10.00 USD was captured using a Visa ending in 0259.",
       // Old packs carry the old wording; it is normalised (2026-09-24).
       "Carrier recorded the shipment as delivered.",

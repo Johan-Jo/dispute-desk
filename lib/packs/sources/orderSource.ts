@@ -122,6 +122,24 @@ export async function collectOrderEvidence(
   // is involved. Address verification belongs to `avs_cvv_match`, which reads
   // the issuer's own response (PR-C2 + PR-C3). The key is retired at every
   // derivation boundary — `lib/evidence/model/retiredKeys.ts`.
+  // Full addresses, kept for the defence package (maintainer, 2026-09-25):
+  // an address claim ("shipped to the billing address", "the carrier's
+  // delivery location matches") is only made with the addresses shown as an
+  // exhibit, so they must be stored. Scrubbed by customers/redact
+  // (lib/webhooks/scrubCustomerData.ts, ADDRESS_KEYS).
+  const fullAddress = (a: typeof order.billingAddress | null | undefined) =>
+    a
+      ? {
+          address1: a.address1 ?? null,
+          address2: a.address2 ?? null,
+          city: a.city ?? null,
+          province: a.province ?? null,
+          provinceCode: a.provinceCode ?? null,
+          zip: (a as { zip?: string | null }).zip ?? null,
+          country: a.country ?? null,
+          countryCode: a.countryCode ?? null,
+        }
+      : null;
   const billingRedacted = redactAddress(order.billingAddress);
   const shippingRedacted = redactAddress(order.shippingAddress);
 
@@ -168,6 +186,8 @@ export async function collectOrderEvidence(
         },
         billingAddress: billingRedacted,
         shippingAddress: shippingRedacted,
+        billingAddressFull: fullAddress(order.billingAddress),
+        shippingAddressFull: fullAddress(order.shippingAddress),
         customerTenure: order.customer
           ? {
               totalOrders: order.customer.numberOfOrders,
