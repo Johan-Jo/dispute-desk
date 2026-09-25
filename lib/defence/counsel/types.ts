@@ -6,7 +6,7 @@
  * (model, N candidates) → checks (code) → judge (model) → composed PDF.
  */
 
-import type { AddressExhibit, EvidenceFact } from "../types";
+import type { AddressExhibit, EvidenceFact, LaterOrderExhibit } from "../types";
 
 export type ClaimWeight = "core" | "strong" | "supporting";
 
@@ -28,6 +28,8 @@ export interface LedgerClaim {
   timelineEvent?: { at: string; text: string };
   /** The addresses this claim rests on, printed as an exhibit. */
   addressExhibit?: AddressExhibit;
+  /** The later order this claim rests on, printed as an exhibit. */
+  laterOrderExhibit?: LaterOrderExhibit;
 }
 
 /** One of the cardholder's orders on the merchant's store (Admin API read). */

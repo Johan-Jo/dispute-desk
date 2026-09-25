@@ -113,7 +113,6 @@ export async function writeCounselLetter(args: {
   const normalize = (d: CounselDraft): CounselDraft => ({
     ...d,
     evidenceSections: (d.evidenceSections ?? []).filter((s) => allowed.has(s.key)),
-    conclusion: { paragraphs: [], claimIds: [] },
   });
 
   const allIssues = async (d: CounselDraft): Promise<string[]> => {

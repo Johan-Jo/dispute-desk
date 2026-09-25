@@ -61,7 +61,7 @@ CLARITY (maintainer's rule: "We cannot phrase things so that it's not clear from
 - Plain English. No metaphors, idioms or legal flourishes: not "closes the claim at the threshold", "without a coherent foundation", "nothing to stand on", "stands between", "its record is what it is", "cannot survive". Say literally what the evidence shows and what follows from it.
 - Every sentence must be understood on the FIRST read by a busy analyst. If a sentence could be misread, rewrite it.
 - EVERY SENTENCE ADDS SOMETHING NEW (maintainer, repeatedly). Never restate a point in other words, even inside one section: "all items were in one shipment", "there was no second shipment" and "the delivery covers the entire order" are ONE point, said once. Never add a phrase that repeats what the same sentence already says ("on 2 July — the same day").
-- THE EXECUTIVE SUMMARY IS A SUMMARY OF THE WHOLE DEFENCE (maintainer). It states the cardholder's claim, gives the facts that answer it in the order that argues best, then ONE plain sentence that ties those facts back to the claim (e.g. "The record does not support the claim that the order never arrived."), and ends with the request to reverse the chargeback. An analyst who reads only the summary has the complete case.
+- THE EXECUTIVE SUMMARY IS A SUMMARY OF THE WHOLE DEFENCE (maintainer). It states the cardholder's claim, gives the facts that answer it in the order that argues best, then ONE plain sentence that ties those facts back to the claim and names them (e.g. "The non-receipt claim is not supported by the carrier's delivery record or by the customer's later purchase."), and ends with the request to reverse the chargeback. An analyst who reads only the summary has the complete case.
 - Never pad. Make as many points as the ledger genuinely supports — one strong point is fine. Never invent a second point to reach a number, and never repeat a point in other words.
 
 NEVER (truth): these are absolute
@@ -82,10 +82,10 @@ COPY RULES (the page already shows these)
 const EXAMPLE = `REGISTER EXAMPLE: a DIFFERENT, invented case. Copy the shape, never the words.
 Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one parcel. The carrier recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with a card ending in the same four digits. The dispute (non-receipt) was opened on 21 April.
 
-summary: "The cardholder says the order never arrived. The carrier recorded it delivered on 9 March, with everything they paid for in one parcel. Twenty-four days later the same customer ordered again, on a card ending in the same four digits, and nineteen days after that disputed the first order. The record does not support the claim that it never arrived. The merchant requests that the chargeback be reversed."
-shipping: "The delivery on the card above is the carrier's own scan, published on its public tracking page. The issuer can open it with the link below and see the delivery for itself."
+summary: "The cardholder says the order never arrived. The carrier recorded delivery of the complete order on 9 March. Twenty-four days later the same customer ordered again, on a card ending in the same four digits, and nineteen days after that disputed the first order. The non-receipt claim is not supported by the carrier's delivery record or by the customer's later purchase. The merchant requests that the chargeback be reversed."
+shipping: "The delivery on the card above is the carrier's own scan, published on its public tracking page; the issuer can open it with the link below. Both items listed under Order Line Items were in this single tracked shipment. There was no partial or second shipment."
 chronology: "The order shipped the morning after it was placed, and a delivery notification went to the email address on the order the day the carrier recorded delivery."
-conclusion: (empty)
+conclusion: "The carrier recorded delivery of the entire order. After that delivery, the same customer bought again with the same payment method. The non-receipt claim is not supported by the record."
 Note what the chronology does NOT do: it does not repeat the later order, the dispute date or any interval the summary already gave. The timeline shows them.`;
 
 function ledgerBlock(ledger: readonly LedgerClaim[]): string {
@@ -146,19 +146,19 @@ OUTPUT: JSON only.
 {
   "summary": { "paragraphs": ["…"], "claimIds": ["…"] },
   "evidenceSections": [ { "key": "${playbook.sections.map((s) => s.key).join("|")}", "paragraphs": ["…"], "claimIds": ["…"] } ],
-  "conclusion": { "paragraphs": [], "claimIds": [] }
+  "conclusion": { "paragraphs": ["…"], "claimIds": ["…"] }
 }
 - evidenceSections are printed in the order you give. Omit a section rather than fill it.
 - The executive summary already states the whole defence. An evidence section adds ONLY what its exhibit shows that the summary did not say (e.g. that the delivery record is the carrier's own, publicly checkable). It never restates a fact from the summary. If there is nothing new to add, give it "paragraphs": [] — the exhibit (card, table, timeline) still prints.
 - SPECIFICS PLACEMENT: each date, interval and count appears ONCE in the whole letter, where the case plan's specificsPlacement puts it. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier is NAMED only in the headline and in the shipping section; everywhere else write "the carrier". The payment match ("a card ending in the same four digits") appears only in the headline and the chronology; elsewhere say the customer "bought again".
 - claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section.
-- The conclusion is followed by a fixed request line naming the amount. Do not write a request.
+- The conclusion is followed by a fixed request line naming the amount. Do not write a request in the conclusion.
 - There is NO headline. The executive summary is the only summary: it opens with the punchline sentence.
 - The SUMMARY must carry every [core] claim in the ledger (briefly), because the sections below no longer repeat them. Never state a conclusion ("in full") without the fact that proves it.
 - SUMMARY: the complete defence, short and with punch: the claim against the record, the facts that decide it, one sentence tying them to the claim, the request to reverse. Aim for 60–70 words; NEVER more than 80. Short sentences. Cut every word that does not win the case.
-- CONCLUSION: always empty ("paragraphs": []). The executive summary already makes the case; the fixed request line closes the letter.
-- The SHIPPING section does not restate the delivery date: the card above it shows it.
-- Length: summary at most 80 words; each evidence section 30–80 words; conclusion up to 25 words.`;
+- CONCLUSION: a short closing argument (banks expect one). Restate the two strongest facts in plain words WITHOUT any date, number or interval ("The carrier recorded delivery of the entire order. After that delivery, the same customer bought again with the same payment method."), then one sentence: "The non-receipt claim is not supported by the record." At most 45 words. No request (the fixed request line follows). This deliberate restatement is the ONLY repetition allowed in the letter.
+- The SHIPPING section does not restate the delivery date: the card above it shows it. When the ledger has whole_order_in_shipment, the SHIPPING section MUST state outright that all the items listed under Order Line Items (give the count) were in this single tracked shipment, and that there was no partial or second shipment. Reviewers miss it otherwise. The count appears only here; the summary says "the complete order".
+- Length: summary at most 80 words; each evidence section 30–80 words; conclusion up to 45 words.`;
   const user = `CASE CONTEXT (already printed on the page — do not repeat it)\n${context}\n\nCLAIM LEDGER\n${ledgerBlock(ledger)}\n\nYOUR CASE PLAN (follow it; improve the wording, not the facts)\n${JSON.stringify(plan, null, 2)}`;
   return { system, user };
 }
@@ -181,7 +181,7 @@ Flag a sentence when:
 - it says where a parcel was delivered, or that anyone personally received it;
 - it restates a point already made earlier in the letter or in the same section, in the same or other words (e.g. "one shipment" then "no second shipment" then "the entire order"), or a phrase repeats what its own sentence already says ("on 2 July — the same day").
 
-Do NOT flag style, tone or reasonable argument drawn from ledger facts. DO flag repetition as described above; name the earlier sentence it repeats. A phrase that relates two DIFFERENT events ("a delivery notification went out that same day" after the delivery) is not repetition; do not flag it.
+Do NOT flag style, tone or reasonable argument drawn from ledger facts. DO flag repetition as described above; name the earlier sentence it repeats. The CONCLUSION deliberately restates the strongest facts as a closing argument: do not flag the conclusion as repetition (still flag it for wrong facts). A phrase that relates two DIFFERENT events ("a delivery notification went out that same day" after the delivery) is not repetition; do not flag it.
 
 CLAIM LEDGER
 ${ledger.map((c) => `- ${c.id}: ${c.statement}${Object.keys(c.specifics).length ? ` (values: ${JSON.stringify(c.specifics)})` : ""}`).join("\n")}

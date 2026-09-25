@@ -181,11 +181,24 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     );
   }
   if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
-  if (conclusionText.trim()) issues.push("conclusion: must be empty — the summary makes the case; the request line closes the letter");
+  // The conclusion is a closing argument (Grok review, maintainer
+  // 2026-09-25): the two strongest facts restated WITHOUT dates or numbers,
+  // then "not supported by the record". The fixed request line follows it.
+  if (!conclusionText.trim()) issues.push("conclusion: required — restate the two strongest facts (no dates or numbers), then say the claim is not supported by the record");
+  if (specificsIn(conclusionText).length) issues.push(`conclusion: no dates or numbers (found ${specificsIn(conclusionText).join(", ")}); refer to the events`);
+  if (words(conclusionText) > 45) issues.push(`conclusion: at most 45 words (has ${words(conclusionText)})`);
+  if (/\brevers/i.test(conclusionText)) issues.push("conclusion: no request — the fixed request line follows it");
+  // Shipping spells out the whole order in one shipment (Grok review).
+  const shippingText = P.find((p) => p.where === "shipping")?.text ?? "";
+  const whole = ctx.ledger.find((c) => c.id === "whole_order_in_shipment");
+  const countWord = whole?.specifics.itemCountWord ?? "";
+  if (whole && !(shippingText.toLowerCase().includes(countWord) && /\bshipment\b/i.test(shippingText))) {
+    issues.push(`shipping: must state outright that all ${whole.specifics.itemCountWord} items were in this single tracked shipment, with no partial or second shipment`);
+  }
   void sentences;
   // Distinctive phrases, like specifics, appear at most twice in the letter.
   for (const phrase of ["same four digits", "same apple pay wallet", "public tracking page", "not a merchant document", "not the merchant's"]) {
-    const n = all.toLowerCase().split(phrase).length - 1;
+    const n = P.filter((p) => p.where !== "conclusion").map((p) => p.text).join("\n").toLowerCase().split(phrase).length - 1;
     if (n > 2) issues.push(`copy: "${phrase}" is used ${n} times; at most twice`);
   }
   // Each date and number ONCE in the letter (maintainer: "each fact stated
@@ -286,6 +299,8 @@ export function toNarrative(
   // not the prose mentions it: the exhibit is the evidence.
   const addresses = ledger.find((c) => c.addressExhibit)?.addressExhibit;
   if (addresses) narrative.addressExhibit = addresses;
+  const later = ledger.find((c) => c.laterOrderExhibit)?.laterOrderExhibit;
+  if (later) narrative.laterOrderExhibit = later;
   for (const k of [
     "transactionOverviewArgument", "chronologyArgument", "paymentAuthenticationArgument", "fulfillmentArgument", "conclusion",
     "communicationArgument", "policyArgument", "manualEvidenceArgument",
