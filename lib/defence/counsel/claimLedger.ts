@@ -297,6 +297,12 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     if (later.carrier && later.carrier === carrier) specifics.laterOrderCarrier = "the same carrier";
     add({
       id: "later_order",
+      timelineEvent: {
+        at: later.createdAt,
+        text:
+          `The same customer placed order ${later.name}` +
+          `${later.cardLast4 ? `, paid with a card ending in ${later.cardLast4}${later.wallet ? ` via ${walletName(later.wallet)}` : ""}` : ""}.`,
+      },
       statement:
         `After the carrier recorded delivery of the disputed order, the same customer account placed a further order (${later.name}) on ${specifics.laterOrderOn}` +
         `${specifics.daysBeforeDispute ? `, ${specifics.daysBeforeDisputeWord} days before opening this dispute` : ""}` +
