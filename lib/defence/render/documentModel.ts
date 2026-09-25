@@ -199,6 +199,23 @@ export function lineItemsTotal(items: readonly LineItem[]): { quantity: number; 
   };
 }
 
+/** "Order #352543 · placed 2 July 2026, 05:33 UTC" — the order's date on
+ *  the line-items exhibit (maintainer, 2026-09-25). */
+export function orderPlacedLine(orderName: string | null | undefined, iso: string | null | undefined): string | null {
+  const t = iso ? Date.parse(iso) : NaN;
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const when = Number.isNaN(t)
+    ? null
+    : (() => {
+        const d = new Date(t);
+        const hh = String(d.getUTCHours()).padStart(2, "0");
+        const mm = String(d.getUTCMinutes()).padStart(2, "0");
+        return `placed ${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
+      })();
+  const parts = [orderName ? `Order ${orderName}` : null, when].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 export type ChronologyMarker = "filled" | "hollow" | "green";
 
 /** A short title and a marker for each timeline event: filled for money and

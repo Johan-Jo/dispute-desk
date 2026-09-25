@@ -38,6 +38,7 @@ import {
   describeChronologyEvent,
   emphasisSegments,
   lineItemsTotal,
+  orderPlacedLine,
   productsOf,
   shipmentCards,
   shipmentsOf,
@@ -588,8 +589,11 @@ export function DefencePackageDocument({
 }) {
   const { meta, composedBlocks, approvedFacts, manualEvidence } = data;
   const issuerSafe = data.issuerSafeSupportingIndex === true;
-  const chronology = buildChronologyEvents(meta, approvedFacts);
   const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
+  const chronology = buildChronologyEvents(
+    { ...meta, orderTotalDisplay: lineItemsTotal(lineItems)?.amount ?? null },
+    approvedFacts,
+  );
   const shipments = shipmentsOf(approvedFacts);
   const multiParcel = shipments.length > 1;
   // Single parcel: the carrier record as a card; the Evidence Basis then
@@ -698,6 +702,11 @@ export function DefencePackageDocument({
 
           {lineItems.length > 0 ? (
             <Section number={num()} title="Order Line Items" keepTogether={lineItems.length <= 10}>
+              {orderPlacedLine(meta.orderName, meta.transactionDate) ? (
+                <Text style={{ fontSize: 9.5, color: COLORS.muted, marginBottom: 8 }}>
+                  {orderPlacedLine(meta.orderName, meta.transactionDate)}
+                </Text>
+              ) : null}
               <LineItemsTable items={lineItems} />
               {lineItemsArgument ? (
                 <View style={{ marginTop: 14 }}>
@@ -714,7 +723,11 @@ export function DefencePackageDocument({
               thesis={chronologyBlock?.thesisText.trim() || undefined}
               keepTogether={chronology.length <= 12}
             >
-              {chronologyBody ? <Prose text={chronologyBody} /> : null}
+              {chronologyBody ? (
+                <View style={{ marginBottom: 18 }}>
+                  <Prose text={chronologyBody} />
+                </View>
+              ) : null}
               {chronology.length > 0 ? <Chronology events={chronology} shipments={shipments} /> : null}
             </Section>
           ) : null}

@@ -42,16 +42,10 @@ export const ITEM_NOT_RECEIVED: Playbook = {
       includeWhen: ["carrier_delivered"],
     },
     {
-      key: "lineItems",
-      exhibit: "the order line-items table with its total",
-      mustProve: "that everything the cardholder paid for was in that one delivered shipment, so no part of the claim is left",
-      includeWhen: ["whole_order_in_shipment"],
-    },
-    {
       key: "chronology",
       exhibit: "the dated timeline of order events (order, payment, shipping, delivery notice, chargeback)",
       mustProve:
-        "the story in time: prompt shipping, the carrier's delivery, the delivery notice that day, and what the customer did next (a further order) before claiming non-receipt",
+        "only what the executive summary did not already say about the sequence (e.g. prompt shipping, the delivery notice sent the day of delivery). The timeline itself shows the later order and the chargeback; do not restate them",
       includeWhen: ["dispute_after_delivery", "later_order", "delivery_notice_same_day", "shipped_promptly"],
     },
   ],

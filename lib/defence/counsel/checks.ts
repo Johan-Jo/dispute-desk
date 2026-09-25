@@ -146,8 +146,8 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   if (words(headlineText) > 30) issues.push(`headline: at most 30 words (has ${words(headlineText)})`);
   if (words(summaryText) > 70) issues.push(`summary: at most 70 words (has ${words(summaryText)}); shorter, straight to the point`);
   if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
-  if (sentences(conclusionText).length > 1) issues.push(`conclusion: at most ONE sentence (has ${sentences(conclusionText).length})`);
-  if (words(conclusionText) > 25) issues.push(`conclusion: at most 25 words (has ${words(conclusionText)})`);
+  if (conclusionText.trim()) issues.push("conclusion: must be empty — the summary makes the case; the request line closes the letter");
+  void sentences;
   // Distinctive phrases, like specifics, appear at most twice in the letter.
   for (const phrase of ["same four digits", "same apple pay wallet", "public tracking page", "not a merchant document", "not the merchant's"]) {
     const n = all.toLowerCase().split(phrase).length - 1;
@@ -232,7 +232,7 @@ export function toNarrative(
     warnings: [],
   };
   for (const k of [
-    "transactionOverviewArgument", "chronologyArgument", "paymentAuthenticationArgument", "fulfillmentArgument",
+    "transactionOverviewArgument", "chronologyArgument", "paymentAuthenticationArgument", "fulfillmentArgument", "conclusion",
     "communicationArgument", "policyArgument", "manualEvidenceArgument",
   ] as const) {
     if (!narrative[k].text) narrative.omittedSections.push({ sectionKey: k, reason: "Not part of this letter's argument." });

@@ -39,6 +39,8 @@ export interface CustomerOrderSummary {
   carrier: string | null;
   cardLast4: string | null;
   wallet: string | null;
+  /** "CAD 109.67" — the order's total in the customer's currency. */
+  total?: string | null;
 }
 
 export interface LedgerInput {

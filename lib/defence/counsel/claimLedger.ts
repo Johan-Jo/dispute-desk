@@ -301,7 +301,7 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
       timelineEvent: {
         at: later.createdAt,
         text:
-          `The same customer placed order ${later.name}` +
+          `The same customer placed order ${later.name}${later.total ? ` for ${later.total}` : ""}` +
           `${later.cardLast4 ? `, paid with a card ending in ${later.cardLast4}${later.wallet ? ` via ${walletName(later.wallet)}` : ""}` : ""}.`,
       },
       statement:
