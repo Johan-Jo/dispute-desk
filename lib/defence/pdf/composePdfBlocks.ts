@@ -140,13 +140,18 @@ export function composePdfBlocks(
     // prose. Template returns "" when its required tokens don't
     // resolve — the renderer drops the blockquote entirely in that
     // case.
-    const thesisText = renderThesis({
-      sectionKey,
-      familyKey: input.familyKey,
-      packageMode: input.packageMode,
-      approvedFacts: input.approvedFacts,
-      caseContext: input.caseContext,
-    });
+    // Counsel v2: the checked, model-written punchline replaces the
+    // templated headline above the summary.
+    const headline = sectionKey === "executiveSummary" ? input.narrative.headline?.trim() : "";
+    const thesisText = headline
+      ? headline
+      : renderThesis({
+          sectionKey,
+          familyKey: input.familyKey,
+          packageMode: input.packageMode,
+          approvedFacts: input.approvedFacts,
+          caseContext: input.caseContext,
+        });
 
     blocks.push({
       sectionKey,

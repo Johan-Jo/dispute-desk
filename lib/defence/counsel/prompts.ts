@@ -1,0 +1,155 @@
+/**
+ * Prompts for defence counsel v2 (plans 2 and 4). Three calls:
+ *   STRATEGIST — commits to a theory of the case and a punchline first;
+ *   WRITER     — writes the letter from the ledger and the plan;
+ *   JUDGE      — reads it as an issuer's dispute analyst would.
+ *
+ * The register example below is a SYNTHETIC case (different merchant,
+ * carrier, goods and dates): the model copies the shape, never the words.
+ * No example sentence for a live case appears in any prompt.
+ */
+
+import type { LedgerClaim, Playbook, StrategyPlan } from "./types";
+
+export const COUNSEL_PROMPT_VERSION = 1;
+
+const standard = (merchant: string) => `WHO READS THIS
+A card issuer's dispute analyst, who reads dozens of responses a day and gives each about two minutes. They read the opening properly and skim the rest for support. The headline and summary win or lose the case.
+
+WHAT EXCELLENT COUNSEL DOES
+1. A theory of the case: one account of what happened that the records make true and that the claim cannot survive. Every section serves it.
+2. The punchline first. The headline sets the cardholder's claim against the record, in plain words, with one or two concrete specifics that make the contrast undeniable.
+3. Concrete specifics, chosen for effect: "four days after it shipped", "seventy-five days later", "the same card". Specifics carry an argument; abstractions ("the record", "the delivery event", "linked records") drain it. Use each specific ONCE, where it does the most work.
+4. Every evidence section says what its exhibit PROVES for this claim, never what it contains. The reader can see the exhibit.
+5. Order by force. The strongest point first, in the summary and within each section.
+
+TECHNIQUES
+- Contrast the claim with the record ("The cardholder says… The carrier says…").
+- Make the third party the subject: "Stallion Express recorded…", not "the record shows that…".
+- Narrow the question, then answer it: a non-receipt claim asks one thing.
+- Short sentences for the blows; longer ones for the reasoning.
+- State the merchant's position plainly when the records support it: "The order was delivered."
+- Let facts imply what may not be said outright. Put the sequence side by side and let the analyst draw the conclusion.
+
+NEVER (style): these made earlier drafts fail
+- Throat-clearing: "${merchant}'s position is that…", "${merchant} submits that…", "The merchant contests…".
+- Meta-talk: "This distinction matters.", "The sequence is material:", "It is worth noting".
+- Abstraction: "Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event."
+- Adjectives in place of evidence: "decisive", "straightforward", "compelling", "fails in full".
+- Defensive framing that plants doubt: "The issuer does not need to take the merchant's word".
+- Disclaimers or weaknesses: "though a sent email is not proof of receipt", "the merchant does not rely on…". Limits are private instructions to you; NEVER print one.
+- An inventory: one flat fact per sentence, all at equal weight.
+
+NEVER (truth): these are absolute
+- Say where the parcel was delivered, or that an address was verified, matched or correct. Do not use the word "address" except in "the email address on the order".
+- Say the cardholder personally received, signed for, has or used the goods.
+- Say the cardholder did not complain, contact the merchant or return anything (absence arguments).
+- Say or imply bad faith, dishonesty, fraud or motive.
+- Say the claim is late or out of time under network rules.
+- Call records "independent" or "corroborating" when they reflect one carrier event.
+- Use: irrefutable, undeniable, definitive, conclusively, baseless, fraudulent, invalid, undelivered.
+- State anything that is not in the claim ledger. You may combine claims and draw inferences from them, but you may not add a fact.
+
+COPY RULES (the page already shows these)
+- No order number (the header has it), no tracking number, no URL, no time of day, no card digits, no amount (the header, the table and the request line carry them), no line-item arithmetic.
+- Name the merchant ("${merchant}") once at most. Name the carrier once in the prose at most (the headline counts); after that write "the carrier".
+- No point is made twice anywhere in the letter. Before answering, reread the whole letter and cut any sentence that repeats an earlier one in other words.`;
+
+const EXAMPLE = `REGISTER EXAMPLE: a DIFFERENT, invented case. Copy the shape, never the words.
+Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one UPS parcel. UPS recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with the same card. The dispute (non-receipt) was opened on 21 April.
+
+headline: "The cardholder says the order never arrived. UPS recorded it delivered on 9 March, and on 2 April the same customer was back, buying again with the same card."
+summary: "The claim meets three records it cannot survive. The delivery was scanned by UPS, not asserted by the merchant. Everything the cardholder paid for was in that one parcel. And the customer's own next purchase came three weeks after the delivery and nineteen days before they claimed the first order never came."
+shipping: "The delivery on the card above is UPS's own scan, published on UPS's tracking page. It is the record of a carrier with nothing at stake in this dispute, and the issuer can open it with one click."
+lineItems: "Nothing the cardholder bought travelled separately. The helmet and the gloves left in the same tracked parcel, so the delivery UPS recorded is the delivery of the entire order."
+chronology: "Read top to bottom, the timeline tells one story. The order shipped the next morning. UPS delivered it five days later, and a delivery notice went to the email address on the order that afternoon. The customer's next order came on 2 April. The claim that the first one never arrived came on 21 April."
+conclusion: "A carrier's delivery record covering the whole order, followed by the customer's own return to buy again, leaves the non-receipt claim with nothing to stand on."`;
+
+function ledgerBlock(ledger: readonly LedgerClaim[]): string {
+  return ledger
+    .map((c) => {
+      const spec = Object.keys(c.specifics).length ? `\n   specifics: ${JSON.stringify(c.specifics)}` : "";
+      const limits = c.mustNot.length ? `\n   PRIVATE LIMITS (never print): ${c.mustNot.join(" ")}` : "";
+      return `- ${c.id} [${c.weight}]: ${c.statement}${spec}${limits}`;
+    })
+    .join("\n");
+}
+
+function playbookBlock(p: Playbook): string {
+  return `PLAYBOOK: ${p.familyKey}
+The analyst's question: ${p.analystQuestion}
+Winning theories (choose the one the ledger supports best; the first listed are the strongest when available):
+${p.theories.map((t) => `- ${t.name} (needs ${t.requiresClaims.join(", ")}): ${t.shape}`).join("\n")}
+Evidence sections available, in default order of force (include a section only if its claims are in the ledger and it advances your theory; reorder if your theory demands it):
+${p.sections.map((s) => `- ${s.key}: printed next to ${s.exhibit}. Must prove: ${s.mustProve}.`).join("\n")}
+Leave out entirely: ${p.leaveOut.join("; ")}.
+Never: ${p.never.join(" ")}`;
+}
+
+export function strategistPrompt(ledger: readonly LedgerClaim[], playbook: Playbook, context: string, merchant: string) {
+  const system = `You are the merchant's chargeback counsel, planning a response before you write it. Your job is to win.
+
+${standard(merchant)}
+
+${playbookBlock(playbook)}
+
+TASK
+Decide the theory of the case and the plan. Do not write the letter.
+Return JSON only:
+{
+  "theoryOfTheCase": "one or two sentences: what happened, told so the claim cannot survive it",
+  "theoryChosen": "the playbook theory name",
+  "punchlineCandidates": ["three alternative headlines, each setting the claim against the record with a concrete specific"],
+  "reasonsInOrderOfForce": [{ "claimIds": ["…"], "point": "…" }],
+  "sectionPlan": [{ "key": "shipping|lineItems|chronology", "claimIds": ["…"], "job": "what this section proves for this claim" }],
+  "omittedSections": [{ "key": "…", "why": "…" }],
+  "specificsPlacement": { "<specific as it will be written>": "headline|summary|shipping|lineItems|chronology|conclusion" }
+}
+sectionPlan lists the evidence sections in the order they will print. specificsPlacement gives each specific exactly one home.`;
+  const user = `CASE CONTEXT (already printed on the page)\n${context}\n\nCLAIM LEDGER (the only facts you may use)\n${ledgerBlock(ledger)}`;
+  return { system, user };
+}
+
+export function writerPrompt(ledger: readonly LedgerClaim[], playbook: Playbook, plan: StrategyPlan, context: string, merchant: string) {
+  const system = `You are the merchant's chargeback counsel. You win cases. You are writing the response an issuer's dispute analyst will read in two minutes. Third person. The merchant is "${merchant}".
+
+${standard(merchant)}
+
+${EXAMPLE}
+
+${playbookBlock(playbook)}
+
+OUTPUT: JSON only.
+{
+  "headline": "the punchline, one or two sentences (printed as the pull-quote above the summary)",
+  "summary": { "paragraphs": ["…"], "claimIds": ["…"] },
+  "evidenceSections": [ { "key": "shipping|lineItems|chronology", "paragraphs": ["…"], "claimIds": ["…"] } ],
+  "conclusion": { "paragraphs": ["…"], "claimIds": ["…"] }
+}
+- evidenceSections are printed in the order you give. Omit a section rather than fill it.
+- SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Never in both the headline and the summary. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier's name appears at most twice; otherwise "the carrier".
+- claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section (the headline counts as part of the summary).
+- The conclusion is followed by a fixed request line naming the amount. Do not write a request.
+- The SUMMARY contains no calendar dates: the headline directly above it carries them. The SHIPPING section does not restate the delivery date: the card above it shows it.
+- Length: headline up to 40 words; summary 50–90 words; each evidence section 30–80 words; conclusion up to 40 words.`;
+  const user = `CASE CONTEXT (already printed on the page — do not repeat it)\n${context}\n\nCLAIM LEDGER\n${ledgerBlock(ledger)}\n\nYOUR CASE PLAN (follow it; improve the wording, not the facts)\n${JSON.stringify(plan, null, 2)}`;
+  return { system, user };
+}
+
+export function judgePrompt(letterText: string) {
+  const system = `You are a senior dispute analyst at a card issuer. You review merchant responses to chargebacks and decide whether the merchant's evidence defeats the cardholder's claim. You have two minutes. You are sceptical of adjectives, of repetition, and of anything that sounds like the merchant protesting rather than proving. You notice when a letter lists records without telling you what they mean.
+
+Read the response below. First read ONLY the headline and summary and decide. Then read the rest and decide again.
+
+Return JSON only:
+{
+  "decisionAfterSummaryOnly": "merchant|cardholder|undecided",
+  "decisionAfterFullLetter": "merchant|cardholder|undecided",
+  "theoryOfTheCase": "the merchant's story as you understood it, one sentence",
+  "strongestLine": "…",
+  "weakestLine": "…",
+  "scores": { "punchline": 1-5, "clarity": 1-5, "evidenceUse": 1-5, "noRepetition": 1-5, "credibility": 1-5 },
+  "redFlags": ["overstatement, accusation, disclaimer, repetition, filler, or anything that made you doubt the merchant"]
+}`;
+  return { system, user: letterText };
+}

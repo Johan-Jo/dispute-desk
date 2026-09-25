@@ -487,6 +487,10 @@ export interface DefenceNarrativeOutput {
   policyArgument: NarrativeSection;
   manualEvidenceArgument: NarrativeSection;
   conclusion: NarrativeSection;
+  /** Counsel v2 (docs/plans/defence-counsel): the punchline, written by the
+   *  model and checked by code, printed in the pull-quote above the summary
+   *  instead of the templated headline. Absent on every other letter. */
+  headline?: string;
   omittedSections: OmittedSection[];
   /** Free-text warnings from the model — informational; validation may
    *  promote them to errors. */
