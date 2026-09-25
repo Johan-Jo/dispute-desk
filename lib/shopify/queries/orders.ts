@@ -71,6 +71,7 @@ export const ORDER_DETAIL_QUERY = `
         lineItems(first: 50) {
           edges {
             node {
+              id
               title
               variantTitle
               quantity
@@ -95,7 +96,7 @@ export const ORDER_DETAIL_QUERY = `
           fulfillmentLineItems(first: 50) {
             edges {
               node {
-                lineItem { title }
+                lineItem { id title }
                 quantity
               }
             }
@@ -237,6 +238,8 @@ interface MoneySet {
 }
 
 export interface OrderLineItem {
+  /** The line item GID — maps a fulfilment's items to the order's. */
+  id?: string | null;
   title: string;
   variantTitle: string | null;
   quantity: number;
@@ -260,7 +263,7 @@ export interface OrderFulfillment {
   fulfillmentLineItems: {
     edges: Array<{
       node: {
-        lineItem: { title: string };
+        lineItem: { id?: string | null; title: string };
         quantity: number;
       };
     }>;

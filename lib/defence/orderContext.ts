@@ -193,6 +193,7 @@ export function deriveOrderContext(sections: PackSectionLike[] | null | undefine
 
     if (section.type === "order") {
       ctx.orderName ??= pickString(data, "orderName");
+      ctx.customerEmail ??= pickString(data, "email");
       ctx.transactionDate ??= pickString(data, "createdAt");
       ctx.financialStatus ??= pickString(data, "financialStatus");
       ctx.fulfillmentStatus ??= pickString(data, "fulfillmentStatus");

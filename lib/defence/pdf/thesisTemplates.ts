@@ -62,8 +62,9 @@ import type { ThesisTemplate } from "../types";
  *      exactly one rebuild under the corrected template.
  *   2  (2026-09-24) item-not-received opening line states the carrier record
  *      and the dispute date; its fulfilment-section repeat removed.
+ *   3  (2026-09-25) item-not-received request line names the disputed amount.
  */
-export const COMPOSITION_VERSION = 2;
+export const COMPOSITION_VERSION = 3;
 
 export const THESIS_TEMPLATES: ThesisTemplate[] = [
   // ── executiveSummary ─────────────────────────────────────────────
@@ -256,6 +257,17 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
   },
 
   // ── conclusion ───────────────────────────────────────────────────
+  // Item not received: the request names the amount, and follows the
+  // reasoning in the conclusion body (review of #352543, 2026-09-25).
+  {
+    key: "conclusion:item_not_received:full",
+    sectionKey: "conclusion",
+    familyKey: "item_not_received",
+    packageMode: "full",
+    template: "The merchant respectfully requests reversal of the[[ {{disputedAmount}}]] chargeback.",
+    requiredTokens: [],
+    optionalTokens: ["disputedAmount"],
+  },
   {
     key: "conclusion:any:full",
     sectionKey: "conclusion",

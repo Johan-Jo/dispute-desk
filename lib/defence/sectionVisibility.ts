@@ -58,6 +58,21 @@ const SECTION_DENY_BY_FAMILY: Partial<Record<ReasonCodeFamilyKey, NarrativeSecti
   item_not_received: ["transactionOverviewArgument", "chronologyArgument"],
 };
 
+/**
+ * Whether a section prints. A deny-listed section prints only when it was
+ * written from the records (`source: "record"`) — the deny list hides model
+ * restatement and stale rows, not the record-built paragraphs under Order
+ * Line Items and the timeline (review of #352543, 2026-09-25).
+ */
+export function isSectionShown(
+  narrative: DefenceNarrativeOutput,
+  sectionKey: NarrativeSectionKey,
+  moduleKey: string | null | undefined,
+): boolean {
+  if (narrative[sectionKey]?.source === "record") return true;
+  return !isSectionDeniedForModule(sectionKey, moduleKey);
+}
+
 export function sectionsDeniedForFamily(familyKey: ReasonCodeFamilyKey | null | undefined): NarrativeSectionKey[] {
   return familyKey ? SECTION_DENY_BY_FAMILY[familyKey] ?? [] : [];
 }

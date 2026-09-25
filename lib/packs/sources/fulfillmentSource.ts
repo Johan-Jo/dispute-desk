@@ -343,6 +343,10 @@ function extractTrackingData(
         carrier: t.company,
       })),
     items: fulfillment.fulfillmentLineItems.edges.map((e) => ({
+      // Maps each shipped item to the order's line item (by GID), so a
+      // letter can say the shipment holds every purchased item only when
+      // it does (lib/defence/fulfilmentCoverage.ts).
+      lineItemId: e.node.lineItem.id ?? null,
       title: e.node.lineItem.title,
       quantity: e.node.quantity,
     })),

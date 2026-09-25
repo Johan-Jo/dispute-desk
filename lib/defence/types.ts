@@ -307,6 +307,11 @@ export type NarrativeSectionKey =
 export interface NarrativeSection {
   text: string;
   usedFactIds: string[];
+  /** "record" when the text was written from the records
+   *  (lib/defence/shipmentRecordSections.ts), not by the model. A section
+   *  deny-listed for the family still renders when record-built: the deny
+   *  list exists to hide MODEL restatement (sectionVisibility.ts). */
+  source?: "record";
 }
 
 export interface OmittedSection {
@@ -617,6 +622,8 @@ export type ThesisTokenName = string;
 export interface ThesisContext {
   orderName?: string | null;
   disputeOpenedAt?: string | null;
+  /** "CAD 120.75" — the disputed amount, for the request line. */
+  disputedAmount?: string | null;
 }
 
 export interface ThesisToken {
@@ -675,6 +682,9 @@ export interface ComposedDocumentBlock {
   llmText: string;
   fallbackText: string;
   usedFactIds: string[];
+  /** Written from the records (NarrativeSection.source === "record"). A
+   *  record-built transaction overview prints under Order Line Items. */
+  recordBuilt?: boolean;
 }
 
 // ── Evidence Basis row ───────────────────────────────────────────────

@@ -37,7 +37,7 @@ import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
-import { applyShipmentRecordSections } from "@/lib/defence/shipmentRecordSections";
+import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
 import {
@@ -634,9 +634,20 @@ export async function handleBuildDefencePackage(
     orderName: orderContext.orderName ?? null,
     disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
     timelineEvents: orderContext.timelineEvents,
+    lineItems: orderContext.lineItems,
+    // numeric columns can arrive as strings
+    disputeAmount: Number.isFinite(Number((dispute as { amount?: unknown } | null)?.amount ?? NaN))
+      ? Number((dispute as { amount?: unknown }).amount)
+      : null,
+    disputeCurrency: (dispute as { currency_code?: string | null } | null)?.currency_code ?? null,
+    customerEmail: orderContext.customerEmail ?? null,
+    packSections: sectionsRaw.map((s) => ({ type: s.type, data: s.data ?? {} })),
   };
-  narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
+  // Deny-list the MODEL's restating sections first; the record sections may
+  // then write their own (source "record") under Order Line Items and the
+  // timeline (lib/defence/sectionVisibility.ts `isSectionShown`).
   narrativeRes.narrative = omitDeniedSections(narrativeRes.narrative, reasonCodeModule.key);
+  narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
   const suppression = suppressUnsupportedSections({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -747,8 +758,8 @@ export async function handleBuildDefencePackage(
       // with its errors.
       // The retry output needs the same treatment; without this a retried
       // package keeps the unsupported section the first pass had removed.
-      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts, recordContext);
       retryRes.narrative = omitDeniedSections(retryRes.narrative, reasonCodeModule.key);
+      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts, recordContext);
       const retrySuppression = suppressUnsupportedSections({
         narrative: retryRes.narrative,
         approvedFacts: planFacts,
@@ -952,6 +963,7 @@ export async function handleBuildDefencePackage(
   const thesisContext = {
     orderName: orderContext.orderName ?? null,
     disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    disputedAmount: disputedAmountDisplay(recordContext.disputeAmount, recordContext.disputeCurrency),
   };
   if (activePlan) {
     projection = projectPackageFromPlan({
