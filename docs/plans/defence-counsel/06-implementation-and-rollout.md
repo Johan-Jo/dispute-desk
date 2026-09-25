@@ -24,7 +24,7 @@
 3. **WP3: Counsel standard in prompts (Plans 2 and 4).** Strategist and writer prompts, the INR playbook, and synthetic register examples.
 4. **WP4: Checks (Plan 4 §6).** Grounding, copy rule, anti-pattern lint, corrective retry, template fallback.
 5. **WP5: Eval harness (Plan 5).** Fixtures, judge, report. Iterate WP3 until the Plan 5 §4 acceptance criteria are met.
-6. **WP6: Pipeline wiring behind a flag.** `DEFENCE_COUNSEL_V2_FAMILIES`. Headline from the model (needs the maintainer's approval, see Plan 4 §5). Merchant name from `shop_name`. Bump `PROMPT_VERSION`, `COMPOSITION_VERSION` and `VALIDATOR_VERSION` as their pinned tests require.
+6. **WP6: Pipeline wiring behind a flag.** Includes **per-claim section order** in the PDF (`DefencePackageDocument.tsx`) and the in-app view (`DefencePackageHtmlView.tsx`): print the evidence sections in the order the writer returns, numbered in sequence. The visual design is unchanged. **Approved by the maintainer on 2026-09-25** (in chat: "yes please", after the reorder was proposed). All of it behind the flag `DEFENCE_COUNSEL_V2_FAMILIES`. Headline from the model (needs the maintainer's approval, see Plan 4 §5). Merchant name from `shop_name`. Bump `PROMPT_VERSION`, `COMPOSITION_VERSION` and `VALIDATOR_VERSION` as their pinned tests require.
 7. **WP7: Rollout.**
    - Staging first.
    - Canary on 2–3 live INR cases: read each letter, and get the maintainer's approval of the text.

@@ -24,7 +24,7 @@ Why split the strategist from the writer: every rejected draft failed at the *st
 
 ## 2. [1] Strategist call
 
-**Input:** the ledger (claims with weights, specifics and private limits), the reason code and the cardholder's claim type, the reason-code playbook (§4), and the section jobs (Plan 2 §2.4).
+**Input:** the ledger (claims with weights, specifics and private limits), the reason code and the cardholder's claim type, the reason-code playbook (§4: the analyst's question, theories, allowed evidence sections in default order), and the frame (Plan 2 §2.4).
 
 **Output (JSON):**
 ```json
@@ -32,13 +32,14 @@ Why split the strategist from the writer: every rejected draft failed at the *st
   "theoryOfTheCase": "one or two sentences: what happened, told so the claim cannot survive it",
   "punchlineCandidates": ["3 alternative opening sentences, each contrasting the claim with the record and carrying a concrete specific"],
   "reasonsInOrderOfForce": [{ "claimIds": ["carrier_delivered"], "point": "…" }],
-  "sectionPlan": {
-    "summary":     { "claimIds": [], "job": "…" },
-    "shipping":    { "claimIds": [], "job": "…" },
-    "lineItems":   { "claimIds": [], "job": "…" },
-    "chronology":  { "claimIds": [], "job": "…" },
-    "conclusion":  { "claimIds": [], "job": "…" }
-  },
+  "theoryChosen": "which playbook theory this case uses",
+  "sectionPlan": [
+    { "key": "summary",    "claimIds": [], "job": "…" },
+    { "key": "shipping",   "claimIds": [], "job": "what this exhibit proves for this claim" },
+    { "key": "chronology", "claimIds": [], "job": "…" },
+    { "key": "conclusion", "claimIds": [], "job": "…" }
+  ],
+  "omittedSections": [{ "key": "lineItems", "why": "adds nothing to this theory" }],
   "specificsPlacement": { "4 days": "chronology", "75 days": "summary" }
 }
 ```
@@ -61,33 +62,67 @@ The last field puts each specific in exactly one section. That enforces the copy
 
 **Candidates:** generate 3 drafts (temperature about 0.7 on models that accept it), then check and judge them. Best of 3 costs cents and removes the "sometimes good, sometimes flat" variance seen in the pilot.
 
-## 4. Reason-code playbooks
+## 4. Reason-code playbooks: they own the middle of the letter
 
-Each playbook is a system block per family: what the network considers compelling evidence, which theories win, and which claims are core. Build the first one from the Visa Dispute Management Guidelines (the maintainer's preferred source) and the Mastercard equivalent.
+One playbook per claim family, sent as a system block. It owns everything between the summary and the conclusion (Plan 2 §2.4). Build each one from the Visa Dispute Management Guidelines (the maintainer's preferred source) and the Mastercard equivalent. Each playbook defines:
 
-**Item not received (13.1 / 4855), the first playbook:**
-- **The analyst's question:** was it delivered, and was all of it delivered?
-- **Winning theories:**
-  - *Delivered and notified.* Carrier delivery, the same-day delivery notice, and the time that passed before the dispute.
-  - *Whole order in one tracked shipment.* This removes any partial-delivery escape.
-  - *Ordered again after delivery,* when Q1 confirms it.
+```ts
+interface Playbook {
+  family: ReasonCodeFamilyKey;
+  analystQuestion: string;          // the one question the issuer decides on
+  theories: Array<{                 // winning case theories, with the claims each needs
+    name: string; requiresClaims: string[]; punchlineShape: string;
+  }>;
+  sections: Array<{                 // evidence sections in DEFAULT order of force
+    key: EvidenceSectionKey;        // "shipping" | "lineItems" | "chronology" | "authentication" | "customerHistory" | "listing" | "policy" | "communication" | …
+    mustProve: string;              // what this exhibit proves FOR THIS CLAIM
+    includeWhen: string[];          // claim ids; the section is omitted when none is present
+  }>;
+  leaveOut: string[];               // evidence irrelevant to this claim; never shown or argued
+  never: string[];                  // family-specific truth limits (on top of Plan 2 §3)
+}
+```
+
+### The playbooks at a glance (the default evidence order; the strategist may adapt it per case)
+
+| Claim | Analyst's question | Evidence sections, strongest first | Leave out |
+|---|---|---|---|
+| **Item not received** (Visa 13.1 / MC 4855) | Was it delivered, and all of it? | Carrier delivery (shipment card) → whole-order scope (line items) → timeline, including the same-day delivery notice and the interval before the dispute → post-delivery contact or orders (when present) | Payment authentication, IP, AVS |
+| **Fraud / not authorised** (10.4 / 4837) | Did the real cardholder make this purchase? | Authentication (3-D Secure, Apple Pay, verified card-code and address results, quoted only by the existing verified-wording rule) → the same customer's history (earlier undisputed orders, account age, same device or IP) → activity after the purchase → delivery (secondary) | Line-item arithmetic; shipping as the lead |
+| **Not as described** (13.3) | Did they get what was advertised? | The listing as shown at purchase → what was sent (items, variants) → the customer's messages and the return offered → policy | Delivery as the lead (not disputed), IP |
+| **Credit not processed** (13.6) | Is a refund owed? | Policy terms accepted at checkout → the return record → the messages | Delivery, authentication |
+| **Cancelled subscription** (13.2) | Was it cancelled before this charge? | Terms accepted → cancellation record → use after the claimed cancellation → notices sent | Shipping |
+| **Duplicate** (12.6) | Are these two separate purchases? | The two orders side by side: items, times, fulfilments | Almost everything else |
+
+### Item not received: the first playbook in full
+- **Analyst's question:** was it delivered, and was all of it delivered?
+- **Theories:**
+  - *Delivered and notified.* Carrier delivery, the same-day delivery notice, and the interval before the dispute.
+  - *Whole order in one tracked shipment.* This closes the partial-delivery escape.
+  - *Ordered again after delivery,* when Plan 3 Q1 confirms it.
+  - *Delivered after the dispute opened* (a different lead: the claim is now answered).
+  - *Signed for.*
+  - *Several parcels, some delivered* (argue the delivered ones; never volunteer the others' status).
 - **Core claims:** `carrier_delivered`, `carrier_is_third_party`, `whole_order_in_shipment`. **Strong:** the timing and notification claims.
-- **Never:** destination or address, personal receipt, absence arguments, lateness under the rules.
+- **Never:** destination or address, personal receipt, absence arguments, lateness under the network rules.
 
-Later playbooks: fraud (10.4 / 4837: authentication, wallet, IP, history), not as described (13.3), credit not processed (13.6), duplicate (12.6), subscription cancelled (13.2).
+Build order: item not received first, with the reference case and #360980. Then fraud, which has the most volume and very different evidence. Then the rest.
 
 ## 5. Output schema (writer)
 
 ```json
 {
   "headline": "the punchline, printed in the pull-quote above section 01 (replaces today's template headline)",
-  "summary":    { "paragraphs": ["…"], "claimIds": ["…"] },
-  "shipping":   { "paragraphs": ["…"], "claimIds": ["…"] },
-  "lineItems":  { "paragraphs": ["…"], "claimIds": ["…"] },
-  "chronology": { "paragraphs": ["…"], "claimIds": ["…"] },
+  "summary": { "paragraphs": ["…"], "claimIds": ["…"] },
+  "evidenceSections": [
+    { "key": "shipping",   "paragraphs": ["…"], "claimIds": ["…"] },
+    { "key": "lineItems",  "paragraphs": ["…"], "claimIds": ["…"] },
+    { "key": "chronology", "paragraphs": ["…"], "claimIds": ["…"] }
+  ],
   "conclusion": { "paragraphs": ["…"], "claimIds": ["…"] }
 }
 ```
+`evidenceSections` is **ordered**: the renderer prints them in this order, numbered in sequence. Only keys the playbook allows are accepted, and a section with no prose is omitted, together with its exhibit when that exhibit has no other purpose.
 Claims are cited **per section, not per sentence** (Plan 1, root cause 6), so the writing can breathe.
 
 Today the headline is a code template (`lib/defence/pdf/thesisTemplates.ts`, `executiveSummary:item_not_received`). For opted-in letters the model writes it and code checks it. The layout does not change; only the text in the pull-quote does. **The maintainer must approve this change** (CLAUDE.md rule 8: the design is spec, and this changes the design's content, not its structure).

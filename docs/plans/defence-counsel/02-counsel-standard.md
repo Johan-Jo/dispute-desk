@@ -33,15 +33,31 @@ Specifics carry the argument; abstractions drain it. Rather than "the carrier re
 - **The amount** appears in the header and the request line. The prose says "the full amount" if it needs to.
 
 ### 2.4 Structure that moves the reader
-The numbered layout stays (maintainer's decision). Each section has one persuasive job and must advance the case, not re-describe it:
 
-| Section | Job | Test |
+The structure follows **what is being defended**. A fraud claim, a non-receipt claim and a not-as-described claim each turn on a different question, so they need different evidence, in a different order. A fixed list of sections with fixed jobs forces irrelevant sections (which then get padded or overstated) and puts the strongest evidence wherever the template happens to have it. So there are two layers.
+
+**Fixed for every letter: the frame.**
+
+| Part | Job | Test |
 |---|---|---|
-| **Pull-quote + 01 Summary** | The punchline (2.2), then the two or three reasons that carry it, in order of force | Could the analyst decide from this alone? |
-| **02 Shipping & Delivery** (under the shipment card) | Why the carrier's record is the answer to *this* claim, and why it is trustworthy (a third party with nothing at stake, publicly checkable) | Does it make the card's data mean something? |
-| **03 Order Line Items** (under the table) | Scope: the delivery covers everything the cardholder paid for, so the claim has nothing to stand on | Does it close the "maybe only part arrived" doubt without saying "doubt"? |
-| **04 Chronology** (above the timeline) | The story in time, and its point: the sequence and the 75-day interval | Does the timeline below now read as proof? |
-| **05 Conclusion** | The theory in one sentence, then the request | Does it land the case in one breath? |
+| **Pull-quote headline + Summary** (always first) | The punchline (2.2), then the two or three reasons that carry it, strongest first | Could the analyst decide from this alone? |
+| **Conclusion** (always last) | The theory of the case in one sentence, then the request | Does it land the case in one breath? |
+
+**Variable per claim and per case: the evidence sections between them.**
+1. **Selection.** A section appears only if its evidence advances *this* theory of the case. A section that doesn't help is left out, not filled.
+2. **Order.** The sections are ordered by force for *this* claim. The evidence that answers the analyst's core question comes first.
+3. **Job.** Each section's prose says what its exhibit (card, table, timeline, listing, authentication record…) **proves for this claim**, not what it contains.
+
+The **reason-code playbook** (Plan 4 §4) defines, for its claim:
+- the analyst's question;
+- the winning theories;
+- which evidence sections appear and in what default order;
+- what each one must prove;
+- what to leave out.
+
+The **strategist** (Plan 4 §2) then adapts that to the case's shape. Non-receipt alone has several shapes: delivered before the dispute, delivered after it, signed for, several parcels, digital goods.
+
+The numbered layout and visual design stay (maintainer's decision). Only *which* numbered sections appear, and in what order, varies.
 
 ### 2.5 Advocacy techniques to use
 - **Contrast:** the claim versus the record ("The cardholder says… The carrier's record says…").

@@ -1,0 +1,1432 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Defence Counsel Plans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbfaf8;--panel:#fff;--ink:#1c1b22;--muted:#6b6875;--line:#e7e3ea;--accent:#8a1c43;--accent-soft:#f6e9ee;--code:#f4f2f6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141318;--panel:#1c1b22;--ink:#ecebf0;--muted:#a19eab;--line:#2e2c36;--accent:#e2799f;--accent-soft:#2c1c24;--code:#23212b}}
+:root[data-theme="dark"]{--bg:#141318;--panel:#1c1b22;--ink:#ecebf0;--muted:#a19eab;--line:#2e2c36;--accent:#e2799f;--accent-soft:#2c1c24;--code:#23212b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif}
+nav{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:6px;overflow-x:auto;white-space:nowrap}
+nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;padding:5px 10px;border-radius:999px}
+nav a:hover{background:var(--accent-soft);color:var(--accent)}
+main{max-width:860px;margin:0 auto;padding:24px 16px 80px}
+.part{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px 32px;margin:24px 0;scroll-margin-top:64px}
+@media (max-width:640px){.part{padding:20px 16px}}
+h1{font-size:28px;line-height:1.25;color:var(--accent);margin:0 0 12px}
+h2{font-size:20px;margin:32px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+h3{font-size:16px;margin:24px 0 6px}
+p,li{max-width:72ch}
+a{color:var(--accent)}
+blockquote{margin:12px 0;padding:10px 16px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+blockquote p{margin:4px 0}
+code{font:13px/1.5 "JetBrains Mono",monospace;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:14px 16px;border-radius:10px;overflow-x:auto}
+pre code{background:none;padding:0;white-space:pre}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600;color:var(--accent);margin:8px 0}
+.hero{padding:8px 0 0}.hero p{color:var(--muted);margin:4px 0}
+</style></head>
+<body>
+<nav><a href="#README">Overview & brief</a><a href="#01-diagnosis">1 · Diagnosis</a><a href="#02-counsel-standard">2 · Counsel standard</a><a href="#03-evidence-and-claim-ledger">3 · Evidence & claim ledger</a><a href="#04-prompt-architecture">4 · Prompt architecture</a><a href="#05-evaluation">5 · Evaluation</a><a href="#06-implementation-and-rollout">6 · Implementation & rollout</a><a href="#appendix-A-current-production-prompt">Appendix A · Current production prompt</a></nav>
+<main>
+<div class="hero"><p>DisputeDesk · plan series · 25 Sep 2026 · reference case blume-box #352543</p></div>
+<section id="README" class="part"><h1>Defence letters written as excellent counsel: plan series</h1>
+<p><strong>Audience:</strong> an engineer or LLM taking this work over with no prior context. Read this file first, then the plans in order.
+<strong>Status:</strong> PLANS ONLY. Nothing here is built. Written 2026-09-25 after the maintainer rejected every letter variant produced so far.</p>
+<h2>The brief, in the maintainer&#39;s own words</h2>
+<blockquote>
+<p>&quot;This is only a really boring, objective listing of the facts that have happened. It is not written in a defence letter mode.&quot;</p>
+</blockquote>
+<blockquote>
+<p>&quot;This is nothing like we make a bank analyst fall backwards and agree with us, not even close.&quot;</p>
+</blockquote>
+<blockquote>
+<p>&quot;We are looking for excellent counsel. We should always do the best with the evidence we have to work with… you&#39;re still speaking objectively about data points here without any punchline at all.&quot;</p>
+</blockquote>
+<blockquote>
+<p>&quot;I just read the executive summary, and if you think this is good counselling, you should really go and update yourself.&quot;</p>
+</blockquote>
+<p>Plus standing rules from the same review cycle, which still apply:</p>
+<ul>
+<li>&quot;It makes it unprofessional to repeat redundant information… each section should provide new information else it shouldn&#39;t be there.&quot;</li>
+<li>Don&#39;t repeat what the page already shows: no order number in the prose (the header has it), no timestamps, no restating the line-items arithmetic.</li>
+<li>The letter is written by counsel in the <strong>third person</strong> (&quot;the merchant&quot;, &quot;Blume&quot;), in the existing <strong>numbered layout</strong>.</li>
+<li>Use the merchant&#39;s <strong>name</strong> (&quot;Blume&quot;), not its domain.</li>
+<li>Past DisputeDesk letters are <strong>not</strong> a benchmark or training source: &quot;we have not been doing good defences&quot;.</li>
+</ul>
+<h2>What &quot;done&quot; means</h2>
+<p>A bank dispute analyst who reads the executive summary alone knows the merchant&#39;s theory of the case and wants to side with it. Every section after it moves that case forward with evidence. Every sentence is true and provable from the records, and the letter never volunteers a weakness. The maintainer reads it and says it is excellent counsel.</p>
+<h2>The plans</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>File</th>
+<th>Answers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><a href="#01-diagnosis">01-diagnosis.md</a></td>
+<td>Why every version so far failed, with the verbatim outputs and verdicts</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="#02-counsel-standard">02-counsel-standard.md</a></td>
+<td>What excellent counsel is, concretely: theory of the case, punchline, structure, rhetoric, and what is off-limits</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="#03-evidence-and-claim-ledger">03-evidence-and-claim-ledger.md</a></td>
+<td>All evidence we hold (most of it never reaches the model today), and how it becomes provable claims</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="#04-prompt-architecture">04-prompt-architecture.md</a></td>
+<td>What the model is sent and why: system prompt, playbooks, output schema, validation, model choice</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="#05-evaluation">05-evaluation.md</a></td>
+<td>How &quot;better&quot; is judged before anything ships</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="#06-implementation-and-rollout">06-implementation-and-rollout.md</a></td>
+<td>Code map, changes, tests, deploy rules, deadlines</td>
+</tr>
+</tbody></table>
+<h2>Reference material</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="#appendix-A-current-production-prompt">appendix-A-current-production-prompt.md</a></td>
+<td><strong>Everything production sends the letter model today, verbatim</strong>: 4 system blocks plus the user payload, for case #352543</td>
+</tr>
+<tr>
+<td>[case-352543/inputs.json](file:///C:/Users/johan/Cursor Portfolio/DisputeDesk/.claude/worktrees/p0-inr/docs/plans/defence-counsel/case-352543/inputs.json)</td>
+<td><strong>Every input variable held for the reference case</strong> (dispute row, full evidence pack, facts, plan, filed narrative), customer identity redacted. Use it as the worked example and as a training or eval fixture</td>
+</tr>
+<tr>
+<td>[case-352543/production-request.json](file:///C:/Users/johan/Cursor Portfolio/DisputeDesk/.claude/worktrees/p0-inr/docs/plans/defence-counsel/case-352543/production-request.json)</td>
+<td>The exact production request in machine-readable form</td>
+</tr>
+<tr>
+<td>[case-352543/pilot-harness.mts](file:///C:/Users/johan/Cursor Portfolio/DisputeDesk/.claude/worktrees/p0-inr/docs/plans/defence-counsel/case-352543/pilot-harness.mts)</td>
+<td>The pilot: a claim ledger plus an &quot;advocacy&quot; prompt, run on three models. <strong>Its prompt was rejected too</strong>; see 01</td>
+</tr>
+<tr>
+<td>[case-352543/pilot-output.*.txt](file:///C:/Users/johan/Cursor Portfolio/DisputeDesk/.claude/worktrees/p0-inr/docs/plans/defence-counsel/case-352543/)</td>
+<td>The three pilot outputs (Sonnet 4.6, Opus 5.5, GPT-6 Astra), sentence by sentence with the claims each cites</td>
+</tr>
+</tbody></table>
+<h2>Reference case</h2>
+<p><strong>blume-box order #352543.</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claim</td>
+<td>Visa 13.1, item not received, CAD 120.75</td>
+</tr>
+<tr>
+<td>Order</td>
+<td>Three items, placed and paid (Apple Pay) on 2 Jul 2026</td>
+</tr>
+<tr>
+<td>Shipment</td>
+<td>Shipped the same day in one Stallion Express shipment, tracking 260702441A</td>
+</tr>
+<tr>
+<td>Delivery</td>
+<td>The carrier recorded it as delivered on 6 Jul 2026, and a delivery email went to the order&#39;s address that day</td>
+</tr>
+<tr>
+<td>Dispute</td>
+<td>Opened 19 Sep 2026, 75 days after delivery</td>
+</tr>
+<tr>
+<td>Deadline</td>
+<td>Files automatically on 3 Oct 2026 unless changed</td>
+</tr>
+</tbody></table>
+<p>Links:</p>
+<ul>
+<li>Dispute (merchant app): <a href="https://admin.shopify.com/store/blume-box/apps/disputedesk-1/app/disputes/25034e1e-ab3e-4457-88d1-d1f9751f9a12">https://admin.shopify.com/store/blume-box/apps/disputedesk-1/app/disputes/25034e1e-ab3e-4457-88d1-d1f9751f9a12</a></li>
+<li>Second live case in the same family, the harder multi-parcel shape (#360980, files 3 Oct): <a href="https://admin.shopify.com/store/blume-box/apps/disputedesk-1/app/disputes/4576ee51-53ec-4ed2-8c66-65b04bb31d72">https://admin.shopify.com/store/blume-box/apps/disputedesk-1/app/disputes/4576ee51-53ec-4ed2-8c66-65b04bb31d72</a></li>
+</ul>
+<h2>Non-negotiables (from CLAUDE.md and the maintainer; do not relitigate)</h2>
+<ol>
+<li><strong>Merchant&#39;s counsel.</strong> Always defend. Never recommend conceding. Never volunteer an adverse fact, a weakness or a caveat in bank-facing text.</li>
+<li><strong>Every sentence true.</strong> Nothing is invented and nothing is overstated. Persuasion comes from selection, order, framing and inference, never from fabrication.</li>
+<li><strong>No delivery-destination claims</strong> (the &quot;rule 14&quot; in the current prompt). We hold no evidence tying a carrier&#39;s delivery event to an address, so the letter never says where a parcel went or that the address was verified or matched. It never says the cardholder personally received the goods either.</li>
+<li><strong>Production releases need the maintainer&#39;s explicit in-chat approval for each change.</strong> Staging (<code>develop</code>) is free. See CLAUDE.md rule 9.</li>
+<li><strong>Database commands must name dev or prod explicitly</strong> (<code>npm run db:query:prod</code> / <code>db:query:dev</code>). See CLAUDE.md rules 0–2.</li>
+</ol>
+</section>
+<section id="01-diagnosis" class="part"><h1>Plan 1: Diagnosis. Why every version failed</h1>
+<p>Case: blume-box #352543 (see the README). Every version below was rejected by the maintainer. Read them before designing anything, so the next attempt doesn&#39;t repeat them.</p>
+<h2>1. The versions, verbatim</h2>
+<h3>A. The model&#39;s own draft (prompt v33, 24 Sep): overstated and repetitive</h3>
+<p>The model stated the delivery five times: opening line, summary, shipping section, again with the URL, and in the conclusion. The conclusion asked for reversal twice. It also wrote claims the record does not support:</p>
+<blockquote>
+<p>&quot;The carrier&#39;s delivery confirmation is consistent with successful completion of the merchant&#39;s shipping obligation.&quot;
+&quot;…each independently corroborating the same delivery date and time.&quot;
+&quot;…consistent with a cardholder-initiated transaction under Visa 13.1…&quot;</p>
+</blockquote>
+<p>Verdict: repetitive, overstated, and &quot;not well argued&quot;.</p>
+<h3>B. Record-built template (v34): a single sentence of argument</h3>
+<blockquote>
+<p><strong>Stallion Express recorded the shipment for order #352543 as delivered on 6 July 2026; the dispute was opened on 19 September 2026.</strong>
+The carrier&#39;s delivery record contradicts the claim that the item was not received.</p>
+</blockquote>
+<p>Verdict: &quot;a really boring, objective listing of the facts… not written in a defence letter mode.&quot;</p>
+<h3>C. Record-built &quot;chain&quot; template (v36–v39, the version currently filed)</h3>
+<blockquote>
+<p>The merchant contests this non-receipt chargeback. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full.
+The fulfilment record places all three purchased items in the single shipment shown above, and the carrier then recorded that shipment as delivered.
+This distinction matters. The merchant does not rely only on its own record that the order was dispatched: the carrier&#39;s record reports the delivery itself…</p>
+</blockquote>
+<p>Verdict: it explains the records instead of using them to make the case.</p>
+<h3>D. Pilot: claim ledger plus an &quot;advocacy&quot; prompt, run on three models</h3>
+<p>The executive summaries (full outputs are in <code>case-352543/pilot-output.*.txt</code>):</p>
+<blockquote>
+<p><strong>Sonnet 4.6:</strong> &quot;Blume submits that the cardholder&#39;s non-receipt claim is answered in full by the carrier&#39;s own delivery record and the merchant&#39;s fulfilment mapping of every item in the order. Because Stallion Express recorded delivery of the one shipment that held all three purchased items in their ordered quantities, there is no gap in the order the cardholder&#39;s claim can occupy.&quot;</p>
+<p><strong>Opus 5.5:</strong> &quot;Blume&#39;s position is that the cardholder&#39;s claim that the merchandise was not received (Visa 13.1) is answered by the carrier&#39;s delivery record. The claim fails in full because the carrier recorded as delivered the one shipment that held the entire order.&quot;</p>
+<p><strong>GPT-6 Astra:</strong> &quot;Blume&#39;s evidence answers the cardholder&#39;s Visa 13.1 claim that the merchandise was not received. The claim fails in full because the carrier recorded delivery of the single shipment containing the entire order.&quot;</p>
+</blockquote>
+<p>Verdict: &quot;they&#39;re all bad… if you think this is good counselling, you should really go and update yourself… speaking objectively about data points… without any punchline at all.&quot;</p>
+<h2>2. Root causes</h2>
+<ol>
+<li><p><strong>The model&#39;s job was defined as transcription.</strong> The production prompt says: &quot;You are <em>not</em> investigating… You are converting approved facts into professional prose.&quot; A model told to transcribe produces a transcript. (Appendix A, block 1.)</p>
+</li>
+<li><p><strong>The production prompt is built from fear.</strong> Of about 13,800 characters, almost all are prohibitions written after past failures: forbidden words, forbidden claims, &quot;NO EXAMPLE SENTENCES ARE GIVEN HERE&quot;, &quot;Restraint is more persuasive than confidence&quot;, &quot;Stop at the evidence&quot;, &quot;DO NOT CLOSE A SECTION BY RESTATING THE DELIVERY&quot;. Not one line says how to persuade. Each failure added a ban, and nothing was ever added about how to win.</p>
+</li>
+<li><p><strong>The model&#39;s writing is thrown away anyway.</strong> For non-receipt letters with a carrier-confirmed delivery, <code>lib/defence/shipmentRecordSections.ts</code> replaces every section with fixed sentences. The filed letter (C) is a template. Any prompt improvement is currently invisible on these cases.</p>
+</li>
+<li><p><strong>The &quot;each fact once&quot; rule was over-applied into &quot;no concrete facts in the prose&quot;.</strong> The maintainer objected to repeated <em>identifiers and tables</em>: the order number, the tracking number, timestamps, arithmetic already in the table. The implementation then banned dates, numbers and names from the prose altogether. That forced the model to write in abstractions (&quot;the delivery&quot;, &quot;the dispute&quot;, &quot;the record&quot;, &quot;the shipment&quot;), and abstraction is exactly what reads as &quot;objective data points with no punchline&quot;. Concrete, well-chosen specifics are what give an argument force: <em>four days after it shipped</em>, <em>the same day</em>, <em>seventy-five days later</em>. <strong>Plan 2 resolves this rule properly: repeat no identifier, but use any specific fact that does work in the argument.</strong></p>
+</li>
+<li><p><strong>The pilot&#39;s &quot;advocacy&quot; was surface-level.</strong> It raised the confidence of the words (&quot;decisive&quot;, &quot;fails in full&quot;, &quot;straightforward&quot;) and added meta-talk (&quot;Blume&#39;s position is…&quot;, &quot;the claim fails because…&quot;). It did not build an argument. Missing:</p>
+<ul>
+<li><strong>A theory of the case:</strong> one idea the whole letter serves.</li>
+<li><strong>A punchline:</strong> an opening that makes the analyst&#39;s decision feel already made.</li>
+<li><strong>Narrative:</strong> what happened, told as a sequence the reader can&#39;t argue with.</li>
+<li><strong>Contrast:</strong> the cardholder&#39;s claim set against the record.</li>
+<li><strong>Framing of the claim:</strong> stating what the cardholder must be claiming, and why the record makes that untenable.</li>
+</ul>
+<p>It also opened with the analyst&#39;s <em>doubt</em> (&quot;the issuer does not need to take the merchant&#39;s word&quot;), which puts the idea of doubt in the reader&#39;s mind.</p>
+</li>
+<li><p><strong>Sentence-level bookkeeping produced list-like prose.</strong> Requiring every sentence to cite ledger IDs made the model write one checkable claim per sentence. That is safe and reads like an inventory. Claims must be checked, but the writing should be free to be rhetoric (Plan 4 moves the check from the sentence to the claim).</p>
+</li>
+<li><p><strong>Evidence starvation.</strong> Only two facts reach the model (<code>delivery_proof</code>, <code>shipping_tracking</code>). The evidence pack also holds the following, and the model never sees any of it:</p>
+<ul>
+<li>customer history: 2 orders, and &quot;repeat customer&quot; is set;</li>
+<li>IP geolocation: same country as the shipping destination, no VPN or proxy, low risk;</li>
+<li>Apple Pay as the wallet;</li>
+<li>billing and shipping in the same city;</li>
+<li>the published shipping policy;</li>
+<li>the notification emails&#39; exact recipient.</li>
+</ul>
+<p>See Plan 3. Some of this is relevant to non-receipt; all of it was cut before the model saw it.</p>
+</li>
+<li><p><strong>Fixed sections spread thin evidence thinly.</strong> Five sections, each told to say &quot;something new&quot;, split two facts five ways. The result is five weak paragraphs where one strong argument, then supporting sections, would be better. Plan 2 defines what each section is <em>for</em> in a persuasive structure.</p>
+</li>
+<li><p><strong>The previous implementer evaluated compliance, not persuasion.</strong> Each version was checked against rules (no repetition, no banned phrase, validator passes), not against the only question that matters: <em>would an analyst side with the merchant after reading the summary?</em> Plan 5 makes that the gate.</p>
+</li>
+</ol>
+<h2>3. What must not be lost while fixing this</h2>
+<p>These guard real past failures; each is documented in the code or the plans:</p>
+<ul>
+<li>no delivery-destination or address claims;</li>
+<li>no personal-receipt claims;</li>
+<li>no &quot;independent corroboration&quot;;</li>
+<li>no stating a limit or weakness;</li>
+<li>no restating the header or tables;</li>
+<li>no claims beyond the records.</li>
+</ul>
+<p>The fix is to add <em>advocacy</em>, not to remove <em>truth</em>.</p>
+</section>
+<section id="02-counsel-standard" class="part"><h1>Plan 2: The counsel standard. What &quot;excellent&quot; means</h1>
+<p>The prompt, the evaluation rubric and the maintainer&#39;s review all use this definition. If a letter doesn&#39;t meet it, the letter is not done, however many rules it passes.</p>
+<h2>1. Who we are writing for</h2>
+<p>A card-issuer dispute analyst, reading dozens of responses a day and giving each one or two minutes. They decide one thing: <em>does the merchant&#39;s evidence defeat what the cardholder claims?</em> They skim. They read the first lines properly and glance at the rest for support. <strong>The executive summary is where the case is won or lost.</strong></p>
+<h2>2. The five things excellent counsel does</h2>
+<h3>2.1 A theory of the case, stated as a story</h3>
+<p>Before writing a word, decide the ONE account of events that the evidence makes true and that defeats the claim. Every section serves it. For a non-receipt claim with a carrier delivery, the theory is not &quot;records connect the goods to a delivery event&quot;. It is what happened:</p>
+<blockquote>
+<p><em>The merchant shipped the order the day it was bought. The carrier delivered it four days later, and the cardholder was sent a delivery notice that day. The cardholder disputed it seventy-five days later.</em></p>
+</blockquote>
+<p>A reader who accepts that story rules for the merchant. The letter&#39;s job is to make the story impossible to doubt.</p>
+<h3>2.2 A punchline first</h3>
+<p>The first sentence the analyst reads must carry the verdict. Set the cardholder&#39;s claim against the record:</p>
+<ul>
+<li>It names what the cardholder claims.</li>
+<li>It states, in plain words, what the record shows instead.</li>
+<li>It gives the one or two specifics that make the contrast undeniable.</li>
+</ul>
+<p>It uses no throat-clearing (&quot;Blume&#39;s position is that…&quot;, &quot;Blume submits that…&quot;, &quot;The merchant contests…&quot;), no abstraction (&quot;linked records connect…&quot;), and no adjective in place of evidence (&quot;decisive&quot;, &quot;straightforward&quot;, &quot;in full&quot;).</p>
+<h3>2.3 Concrete specifics, chosen for effect</h3>
+<p>Specifics carry the argument; abstractions drain it. Rather than &quot;the carrier recorded delivery shortly thereafter&quot;, write &quot;the carrier recorded delivery four days after dispatch&quot;. Rather than &quot;the dispute came later&quot;, write &quot;seventy-five days later&quot;.</p>
+<p><strong>The copy rule, correctly applied</strong> (resolving the over-correction in Plan 1, root cause 4):</p>
+<ul>
+<li><strong>Never repeat an identifier the page already shows.</strong> No order number, no tracking number, no times of day, no card digits, no line-by-line arithmetic from the table.</li>
+<li><strong>Do use</strong> a date, an interval, a count or a name when it makes the argument (&quot;four days&quot;, &quot;seventy-five days later&quot;, &quot;all three items&quot;, &quot;the same day&quot;), and use each specific <strong>once</strong>, where it does the most work.</li>
+<li><strong>The amount</strong> appears in the header and the request line. The prose says &quot;the full amount&quot; if it needs to.</li>
+</ul>
+<h3>2.4 Structure that moves the reader</h3>
+<p>The structure follows <strong>what is being defended</strong>. A fraud claim, a non-receipt claim and a not-as-described claim each turn on a different question, so they need different evidence, in a different order. A fixed list of sections with fixed jobs forces irrelevant sections (which then get padded or overstated) and puts the strongest evidence wherever the template happens to have it. So there are two layers.</p>
+<p><strong>Fixed for every letter: the frame.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Job</th>
+<th>Test</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Pull-quote headline + Summary</strong> (always first)</td>
+<td>The punchline (2.2), then the two or three reasons that carry it, strongest first</td>
+<td>Could the analyst decide from this alone?</td>
+</tr>
+<tr>
+<td><strong>Conclusion</strong> (always last)</td>
+<td>The theory of the case in one sentence, then the request</td>
+<td>Does it land the case in one breath?</td>
+</tr>
+</tbody></table>
+<p><strong>Variable per claim and per case: the evidence sections between them.</strong></p>
+<ol>
+<li><strong>Selection.</strong> A section appears only if its evidence advances <em>this</em> theory of the case. A section that doesn&#39;t help is left out, not filled.</li>
+<li><strong>Order.</strong> The sections are ordered by force for <em>this</em> claim. The evidence that answers the analyst&#39;s core question comes first.</li>
+<li><strong>Job.</strong> Each section&#39;s prose says what its exhibit (card, table, timeline, listing, authentication record…) <strong>proves for this claim</strong>, not what it contains.</li>
+</ol>
+<p>The <strong>reason-code playbook</strong> (Plan 4 §4) defines, for its claim:</p>
+<ul>
+<li>the analyst&#39;s question;</li>
+<li>the winning theories;</li>
+<li>which evidence sections appear and in what default order;</li>
+<li>what each one must prove;</li>
+<li>what to leave out.</li>
+</ul>
+<p>The <strong>strategist</strong> (Plan 4 §2) then adapts that to the case&#39;s shape. Non-receipt alone has several shapes: delivered before the dispute, delivered after it, signed for, several parcels, digital goods.</p>
+<p>The numbered layout and visual design stay (maintainer&#39;s decision). Only <em>which</em> numbered sections appear, and in what order, varies.</p>
+<h3>2.5 Advocacy techniques to use</h3>
+<ul>
+<li><strong>Contrast:</strong> the claim versus the record (&quot;The cardholder says… The carrier&#39;s record says…&quot;).</li>
+<li><strong>The carrier as the subject.</strong> Evidence speaks for itself when the third party acts: &quot;Stallion Express recorded…&quot;, not &quot;the record shows that…&quot;.</li>
+<li><strong>Narrow the question, then answer it.</strong> &quot;A non-receipt claim asks one thing: was the order delivered? The carrier answered it on 6 July.&quot;</li>
+<li><strong>Short sentences for the blows.</strong> Save the longer sentences for the reasoning.</li>
+<li><strong>Rule of three</strong> for the reasons in the summary.</li>
+<li><strong>Inference stated as the merchant&#39;s position, from facts shown.</strong> &quot;The order was delivered&quot; is the merchant&#39;s position. It is supported by the carrier&#39;s delivery record, and it may be stated plainly.</li>
+<li><strong>Let facts imply what may not be said outright.</strong> Seventy-five days of silence after a delivery notice (see 3 for the limit) must be implied by the interval, never asserted as silence.</li>
+</ul>
+<h2>3. What counsel never does (truth and risk limits, not style)</h2>
+<table>
+<thead>
+<tr>
+<th>Never</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Say where the parcel was delivered, or that an address was verified, matched or correct</td>
+<td>We hold no evidence tying the delivery to an address (CLAUDE.md, rule 14 of the current prompt)</td>
+</tr>
+<tr>
+<td>Say the cardholder personally received, signed for, has or used the goods</td>
+<td>Not in the record</td>
+</tr>
+<tr>
+<td>Say the cardholder did not complain, did not contact the merchant, or did not return anything</td>
+<td>Absence arguments: we cannot prove them, and they are a known issuer red flag</td>
+</tr>
+<tr>
+<td>Say or imply bad faith, fraud, dishonesty or motive</td>
+<td>Accusation loses cases</td>
+</tr>
+<tr>
+<td>Say the claim is late or out of time under network rules</td>
+<td>Not true: Visa allows 120 days for 13.1</td>
+</tr>
+<tr>
+<td>Print a limit, caveat or weakness (&quot;not proof of…&quot;, &quot;does not rely on…&quot;)</td>
+<td>This volunteers harm, which a merchant&#39;s counsel never does</td>
+</tr>
+<tr>
+<td>Call records &quot;independent&quot; or &quot;corroborating&quot; when they reflect one carrier event</td>
+<td>This is an overstatement a reviewer can puncture</td>
+</tr>
+<tr>
+<td>Use &quot;irrefutable, undeniable, definitive, conclusively, baseless, fraudulent, invalid&quot;</td>
+<td>These are issuer red flags; confidence must come from facts, not adjectives</td>
+</tr>
+</tbody></table>
+<h2>4. Anti-patterns seen in rejected drafts (do not reproduce)</h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Example from a rejected draft</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Throat-clearing</td>
+<td>&quot;Blume&#39;s position is that…&quot;, &quot;Blume submits that…&quot;</td>
+<td>Delays the punch</td>
+</tr>
+<tr>
+<td>Meta-talk</td>
+<td>&quot;This distinction matters.&quot;, &quot;The sequence of events is material:&quot;</td>
+<td>Tells the reader it matters instead of showing it</td>
+</tr>
+<tr>
+<td>Abstraction</td>
+<td>&quot;Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event&quot;</td>
+<td>A description of a database, not of what happened</td>
+</tr>
+<tr>
+<td>Adjective for evidence</td>
+<td>&quot;decisive&quot;, &quot;straightforward&quot;, &quot;fails in full&quot;</td>
+<td>Asserted force, with no fact behind it</td>
+</tr>
+<tr>
+<td>Defensive framing</td>
+<td>&quot;The issuer does not need to take the merchant&#39;s word&quot;</td>
+<td>Plants the doubt it wants to remove</td>
+</tr>
+<tr>
+<td>Disclaimer</td>
+<td>&quot;though a sent email is not treated as proof of receipt&quot;</td>
+<td>Volunteers a weakness</td>
+</tr>
+<tr>
+<td>Inventory</td>
+<td>One checkable fact per sentence, all at equal weight</td>
+<td>Reads like a list, with no hierarchy of force</td>
+</tr>
+</tbody></table>
+<h2>5. The quality bar (used by Plan 5)</h2>
+<p>A letter passes when <strong>all</strong> of these hold:</p>
+<ol>
+<li><strong>Summary alone:</strong> an analyst reading only the summary knows the theory of the case and leans toward the merchant.</li>
+<li><strong>Punchline:</strong> the first sentence contrasts the claim with the record and carries a concrete specific.</li>
+<li><strong>Every section advances the case:</strong> delete any section&#39;s prose and the letter gets weaker.</li>
+<li><strong>No repeated identifier or point,</strong> and no anti-pattern from section 4.</li>
+<li><strong>Every factual statement traces to a ledger claim</strong> (Plan 3), and nothing from section 3 appears.</li>
+<li><strong>The maintainer says &quot;this is excellent counsel&quot;.</strong> No other sign-off counts.</li>
+</ol>
+</section>
+<section id="03-evidence-and-claim-ledger" class="part"><h1>Plan 3: Evidence and the claim ledger</h1>
+<p>Counsel can only be as good as the evidence it is handed. Today the letter model receives <strong>two</strong> facts for the reference case. This plan lists everything we hold, decides what reaches the model, and turns it into a <strong>claim ledger</strong>: a code-built list of statements the letter may make, each proven by a record.</p>
+<h2>1. Everything held for #352543</h2>
+<p>The source is <code>case-352543/inputs.json</code> (the evidence pack&#39;s <code>pack_json.sections</code>, plus the dispute row). &quot;Reaches model today&quot; refers to Appendix A.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Evidence</th>
+<th>Value (reference case)</th>
+<th>Reaches model today?</th>
+<th>Relevance to non-receipt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Carrier delivery record</td>
+<td>Stallion Express, &quot;delivered&quot;, 6 Jul 2026 19:53 UTC, tracking 260702441A, public tracking URL</td>
+<td>✅ (<code>delivery_proof</code>, <code>shipping_tracking</code>)</td>
+<td><strong>Core</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Fulfilment → line-item mapping</td>
+<td>One fulfilment; all 3 order lines, in the quantities ordered, mapped by line-item ID (verified 25 Sep)</td>
+<td>❌ (only used by the template)</td>
+<td><strong>Core</strong>: the delivery covers the whole order</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Timing</td>
+<td>Ordered and paid 2 Jul; shipped 2 Jul; delivered 6 Jul; dispute opened 19 Sep (75 days after delivery)</td>
+<td>❌ (only dates inside facts)</td>
+<td><strong>Strong</strong>: the sequence, and the interval after a delivery notice</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Order-history emails</td>
+<td>Shipping confirmation 2 Jul; &quot;shipment delivered&quot; email 6 Jul; both to the order&#39;s email address</td>
+<td>❌</td>
+<td>Supporting: the cardholder was sent notice of delivery that day</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Order total vs disputed amount</td>
+<td>Equal (CAD 120.75)</td>
+<td>❌</td>
+<td>Scope: the delivered shipment covers the full claim</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Customer history</td>
+<td><code>totalOrders: 2</code>, <code>isRepeatCustomer: true</code>, <code>customerSince</code> 2 Jul 2026 05:24 (the same morning), <code>priorUndisputedOrders: 0</code></td>
+<td>❌</td>
+<td><strong>Unknown until checked</strong>: when was the second order placed? See open question Q1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Checkout IP</td>
+<td>Same country as shipping; no VPN, proxy or datacenter; low risk; <code>bankEligible: true</code>; a bank-ready paragraph exists</td>
+<td>❌</td>
+<td>Weak for non-receipt; strong for fraud claims</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Payment</td>
+<td>Visa via <strong>Apple Pay</strong></td>
+<td>❌</td>
+<td>Weak for non-receipt; strong for fraud</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Billing vs shipping</td>
+<td>Same city, province and postal prefix</td>
+<td>❌</td>
+<td><strong>Forbidden</strong> as a delivery claim (rule 14). May only be used in fraud letters, and only via the verified wording rules</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Published shipping policy</td>
+<td>Snapshot captured 20 Jul 2026, published URL</td>
+<td>❌</td>
+<td>Supporting: shipped within the published policy (check the text first)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Refund, cancellation and return policies</td>
+<td>Snapshots</td>
+<td>❌</td>
+<td>Not relevant to non-receipt; policies must not be volunteered</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Shopify Protect</td>
+<td><code>isCovered</code> / state</td>
+<td>❌</td>
+<td>Internal routing only; never in a letter</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Customer support conversations (Gorgias)</td>
+<td>blume-box has Gorgias connected; the case has a Gorgias comms section</td>
+<td>❌</td>
+<td><strong>Potentially strong</strong>: any post-delivery contact that does not report non-receipt, or that acknowledges the order. Refund and cancellation threads are hard-blocked from bank letters (existing rule)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Carrier event detail</td>
+<td>Carrier scan events (text, time); possibly a delivery photo or proof-of-delivery page at the carrier</td>
+<td>Partially (delivery date only)</td>
+<td><strong>Potentially strong</strong>: needs a legal check against rule 14 (see Q3)</td>
+</tr>
+</tbody></table>
+<h3>1.1 Why only two facts reach the model (from the stored <code>plan_json</code> and <code>facts_json</code>)</h3>
+<p>Two filters run in sequence. Both are built to decide what is <strong>safe</strong> to show a bank; neither asks what <strong>helps</strong> the argument.</p>
+<ol>
+<li><strong>The argument plan</strong> (<code>plan_json</code>, policy v1, <code>reasonModuleId: inr_product_not_received</code>):<ul>
+<li><strong>Included:</strong> <code>order_confirmation</code>, <code>shipping_tracking</code>, <code>delivery_proof</code>, <code>shipping_policy</code>.</li>
+<li><strong>Excluded as <code>not_argument_relevant</code>:</strong> customer history (<code>activity_log</code>, <code>customer_account_info</code>), <code>ip_location_check</code>, and the refund and cancellation policies.</li>
+<li><strong>Excluded as <code>unverified</code>:</strong> <code>avs_cvv_match</code>.</li>
+</ul>
+</li>
+<li><strong>The bank-eligibility filter</strong> (<code>bankIncludedFacts</code>, <code>lib/jobs/handlers/buildDefencePackageJob.ts</code> ~L496) then dropped <code>order_confirmation</code> and <code>shipping_policy</code>. What remained in <code>facts_json</code>: <code>shipping_tracking</code> and <code>delivery_proof</code>.</li>
+</ol>
+<p>Customer history is also stored only as counts (<code>totalOrders: 2</code>). Because no code asked <em>when</em> the other order was placed, the most useful question (Q1) never came up.</p>
+<p><strong>Implication:</strong> the claim ledger (§3) must be built from the records by <strong>argument value per reason code</strong>, and bank safety must be applied per claim rather than per whole record category. A record category that is &quot;not relevant&quot; in general can still yield one highly relevant claim, such as &quot;ordered again after delivery&quot;.</p>
+<h2>2. Open questions (resolve these before the prompt work; each can change the argument)</h2>
+<ul>
+<li><strong>Q1: The second order.</strong> Customer history says 2 orders, the account was created the morning of this one, and &quot;repeat customer&quot; is true. When was the other order placed, and was it delivered? <em>If the cardholder ordered again after 6 July</em>, that is one of the strongest facts in a non-receipt case. It is stated as a fact (&quot;the cardholder placed a further order on …&quot;), never with commentary. Source: the Shopify Admin API (the customer&#39;s orders), read with the stored offline token (CLAUDE.md, &quot;Calling a MERCHANT store&#39;s Admin API&quot;).</li>
+<li><strong>Q2: Gorgias.</strong> Did the cardholder contact Blume between 2 Jul and 19 Sep? If so, what about? Only conversations that help are usable, and <strong>never an absence</strong> (&quot;did not contact&quot; is forbidden).</li>
+<li><strong>Q3: Carrier proof of delivery.</strong> Does Stallion Express expose a proof-of-delivery photo or a delivery-event description? Quoting the carrier&#39;s own words about <em>where</em> it left the parcel needs a decision from the maintainer on whether rule 14 covers a verbatim carrier statement (today: it does, so it&#39;s not allowed).</li>
+<li><strong>Q4: Shipping policy text.</strong> Does the published policy promise a dispatch window that this order met (&quot;ships within X business days&quot;)? If so, the letter can say the order shipped within the published policy.</li>
+</ul>
+<h2>3. The claim ledger</h2>
+<h3>3.1 What it is</h3>
+<p>A deterministic, code-built list of the <strong>statements this case may make</strong>. Each entry has:</p>
+<pre><code class="language-ts">interface LedgerClaim {
+  id: string;                  // stable: &quot;carrier_delivered&quot;, &quot;whole_order_in_shipment&quot;, …
+  statement: string;           // canonical true sentence, plain English
+  specifics: Record&lt;string, string&gt;; // usable concrete values: { carrier: &quot;Stallion Express&quot;, deliveredOn: &quot;6 July 2026&quot;, daysAfterDispatch: &quot;4&quot; }
+  weight: &quot;core&quot; | &quot;strong&quot; | &quot;supporting&quot;;
+  sources: string[];           // record ids the claim is derived from (fact ids, pack section paths)
+  mayImply?: string;           // the inference the writer may draw, stated as the merchant&#39;s position
+  mustNot: string[];           // private limits: never printed; the writer must stay inside them
+}
+</code></pre>
+<h3>3.2 Rules</h3>
+<ul>
+<li><strong>Only code builds claims, from records.</strong> The model never adds one. A claim appears only when its condition is met:<ul>
+<li><code>whole_order_in_shipment</code> only when the line-item-ID check passes (<code>lib/defence/fulfilmentCoverage.ts</code>, already built);</li>
+<li>the timing claim only when the delivery is dated before the dispute;</li>
+<li>an email claim only when the history line names the order&#39;s email address.</li>
+</ul>
+</li>
+<li><strong>Claims are reason-code-aware.</strong> Each claim carries relevance per family, so a fraud letter gets the IP, wallet and AVS claims and a non-receipt letter gets delivery, scope and timing. Irrelevant claims are not sent; they only distract.</li>
+<li><strong>Specifics are data, not prose.</strong> The ledger provides &quot;4 days&quot;, &quot;75 days&quot;, &quot;all three items&quot;, &quot;same day&quot;, and the writer decides where each one does the most work.</li>
+<li><strong>Limits (<code>mustNot</code>) are private.</strong> They are never printed (Plan 2 §3).</li>
+</ul>
+<h3>3.3 The ledger for #352543 (target, given today&#39;s data)</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>statement</th>
+<th>weight</th>
+<th>specifics</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>claim_is_non_receipt</code></td>
+<td>The cardholder claims the order was not received (Visa 13.1).</td>
+<td>core</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>carrier_delivered</code></td>
+<td>Stallion Express recorded the shipment as delivered on 6 July 2026.</td>
+<td>core</td>
+<td>carrier, deliveredOn</td>
+</tr>
+<tr>
+<td><code>carrier_is_third_party</code></td>
+<td>The delivery record is the carrier&#39;s own record, publicly viewable at the tracking link, and is not produced by the merchant.</td>
+<td>core</td>
+<td>trackingLinkShown: true</td>
+</tr>
+<tr>
+<td><code>whole_order_in_shipment</code></td>
+<td>All three purchased items, in the quantities ordered, were in that one tracked shipment (verified by line-item ID).</td>
+<td>core</td>
+<td>itemCount: 3</td>
+</tr>
+<tr>
+<td><code>full_amount_covered</code></td>
+<td>That shipment covers the full disputed amount.</td>
+<td>strong</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>shipped_same_day</code></td>
+<td>The merchant shipped the order the day it was placed and paid for.</td>
+<td>strong</td>
+<td>shippedOn: 2 July 2026</td>
+</tr>
+<tr>
+<td><code>delivered_four_days_after_dispatch</code></td>
+<td>Delivery was recorded four days after dispatch.</td>
+<td>supporting</td>
+<td>days: 4</td>
+</tr>
+<tr>
+<td><code>delivery_notice_same_day</code></td>
+<td>A delivery notification was sent to the order&#39;s email address the day the carrier recorded delivery.</td>
+<td>strong</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>dispute_75_days_after_delivery</code></td>
+<td>The dispute was opened 75 days after the carrier recorded delivery.</td>
+<td>strong</td>
+<td>days: 75</td>
+</tr>
+<tr>
+<td><em>(Q1)</em> <code>later_order</code></td>
+<td><em>Only if Q1 confirms:</em> the cardholder placed a further order on [date], after the delivery.</td>
+<td>core</td>
+<td>—</td>
+</tr>
+<tr>
+<td><em>(Q4)</em> <code>within_shipping_policy</code></td>
+<td><em>Only if Q4 confirms:</em> the order shipped within the published shipping policy.</td>
+<td>supporting</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h2>4. Code changes this plan implies</h2>
+<ul>
+<li><strong>New: <code>lib/defence/claimLedger.ts</code>.</strong> Builds <code>LedgerClaim[]</code> from the approved facts, the pack sections, the timeline, <code>fulfilmentCoverage</code> and the dispute row, per reason-code family. Pure and unit-tested; each claim&#39;s condition gets its own test.</li>
+<li><strong>New Shopify read (Q1):</strong> the customer&#39;s other orders, with dates and fulfilment status. It goes into the pack as a new section and a claim.</li>
+<li><strong>Gorgias (Q2):</strong> reuse the existing Gorgias evidence core. Only positive, non-refund conversation facts enter the ledger.</li>
+<li>The ledger <strong>replaces</strong> the &quot;approvedFacts&quot; payload for families that opt in. The classifier&#39;s bank-eligibility rules still decide which records a claim may be built from.</li>
+</ul>
+</section>
+<section id="04-prompt-architecture" class="part"><h1>Plan 4: Prompt architecture. What the model is sent, and how the output is checked</h1>
+<p>Today&#39;s model call is in Appendix A: one call with four system blocks, almost entirely prohibitions, plus two facts as JSON. Its output is then discarded for non-receipt letters. This plan replaces that for families that opt in, starting with <strong>item not received</strong>.</p>
+<h2>1. Pipeline shape</h2>
+<pre><code>records ──► claim ledger (Plan 3, code) ──► [1] STRATEGIST ──► case plan
+                                                   │
+                                                   ▼
+                                          [2] WRITER ──► draft letter (N candidates)
+                                                   │
+                                                   ▼
+                     [3] CHECKS (code): claim grounding · forbidden content · copy rules · anti-pattern lint
+                                                   │  fail → one corrective retry with the exact findings
+                                                   ▼
+                                          [4] JUDGE (Plan 5 rubric) picks the best passing candidate
+                                                   │
+                                                   ▼
+                                     compose PDF (existing layout, headline from the draft)
+</code></pre>
+<p>Why split the strategist from the writer: every rejected draft failed at the <em>strategy</em> level (no theory of the case, no punchline), not at the sentence level. Making the model commit to a theory and a punchline first, as its own output, forces the step it kept skipping. It also makes the step reviewable on its own.</p>
+<h2>2. [1] Strategist call</h2>
+<p><strong>Input:</strong> the ledger (claims with weights, specifics and private limits), the reason code and the cardholder&#39;s claim type, the reason-code playbook (§4: the analyst&#39;s question, theories, allowed evidence sections in default order), and the frame (Plan 2 §2.4).</p>
+<p><strong>Output (JSON):</strong></p>
+<pre><code class="language-json">{
+  &quot;theoryOfTheCase&quot;: &quot;one or two sentences: what happened, told so the claim cannot survive it&quot;,
+  &quot;punchlineCandidates&quot;: [&quot;3 alternative opening sentences, each contrasting the claim with the record and carrying a concrete specific&quot;],
+  &quot;reasonsInOrderOfForce&quot;: [{ &quot;claimIds&quot;: [&quot;carrier_delivered&quot;], &quot;point&quot;: &quot;…&quot; }],
+  &quot;theoryChosen&quot;: &quot;which playbook theory this case uses&quot;,
+  &quot;sectionPlan&quot;: [
+    { &quot;key&quot;: &quot;summary&quot;,    &quot;claimIds&quot;: [], &quot;job&quot;: &quot;…&quot; },
+    { &quot;key&quot;: &quot;shipping&quot;,   &quot;claimIds&quot;: [], &quot;job&quot;: &quot;what this exhibit proves for this claim&quot; },
+    { &quot;key&quot;: &quot;chronology&quot;, &quot;claimIds&quot;: [], &quot;job&quot;: &quot;…&quot; },
+    { &quot;key&quot;: &quot;conclusion&quot;, &quot;claimIds&quot;: [], &quot;job&quot;: &quot;…&quot; }
+  ],
+  &quot;omittedSections&quot;: [{ &quot;key&quot;: &quot;lineItems&quot;, &quot;why&quot;: &quot;adds nothing to this theory&quot; }],
+  &quot;specificsPlacement&quot;: { &quot;4 days&quot;: &quot;chronology&quot;, &quot;75 days&quot;: &quot;summary&quot; }
+}
+</code></pre>
+<p>The last field puts each specific in exactly one section. That enforces the copy rule by construction.</p>
+<h2>3. [2] Writer call</h2>
+<p><strong>System prompt: required parts and their order.</strong> The final wording is the implementer&#39;s job; these are the requirements.</p>
+<ol>
+<li><strong>Role.</strong> &quot;You are the merchant&#39;s chargeback counsel. You win cases. You write the response an issuer&#39;s dispute analyst will read in two minutes.&quot;</li>
+<li><strong>The reader.</strong> How analysts read (Plan 2 §1): the summary decides the case.</li>
+<li><strong>The standard.</strong> Plan 2 §2 in full: theory of the case, punchline first, concrete specifics, the section jobs, and the advocacy techniques. <strong>Include positive examples of register</strong> written for a DIFFERENT case (a synthetic one), so the model copies the <em>shape</em>, not the words. Never put example sentences for the live case in the prompt.</li>
+<li><strong>The anti-patterns.</strong> Plan 2 §4, with the rejected examples quoted. Printing a rejected <em>style</em> is safe. The earlier rule against printing examples was about <em>banned claims</em>: a model copies a false claim it has been shown, but it doesn&#39;t copy a named anti-pattern of style.</li>
+<li><strong>Truth limits.</strong> Plan 2 §3, short and absolute. The ledger&#39;s <code>mustNot</code> entries are private constraints.</li>
+<li><strong>The copy rule,</strong> correctly scoped (Plan 2 §2.3).</li>
+<li><strong>Input contract.</strong> &quot;You may state only what the ledger claims. You may choose, order, combine and draw inferences from them, stated as the merchant&#39;s position. A number, date or name must come from a claim&#39;s <code>specifics</code>.&quot;</li>
+<li><strong>Output schema</strong> (§5).</li>
+</ol>
+<p><strong>User message:</strong> the ledger, the strategist&#39;s case plan, and the case context (the page already shows the order number, tracking number, amount and dates, so the model knows what not to repeat).</p>
+<p><strong>Candidates:</strong> generate 3 drafts (temperature about 0.7 on models that accept it), then check and judge them. Best of 3 costs cents and removes the &quot;sometimes good, sometimes flat&quot; variance seen in the pilot.</p>
+<h2>4. Reason-code playbooks: they own the middle of the letter</h2>
+<p>One playbook per claim family, sent as a system block. It owns everything between the summary and the conclusion (Plan 2 §2.4). Build each one from the Visa Dispute Management Guidelines (the maintainer&#39;s preferred source) and the Mastercard equivalent. Each playbook defines:</p>
+<pre><code class="language-ts">interface Playbook {
+  family: ReasonCodeFamilyKey;
+  analystQuestion: string;          // the one question the issuer decides on
+  theories: Array&lt;{                 // winning case theories, with the claims each needs
+    name: string; requiresClaims: string[]; punchlineShape: string;
+  }&gt;;
+  sections: Array&lt;{                 // evidence sections in DEFAULT order of force
+    key: EvidenceSectionKey;        // &quot;shipping&quot; | &quot;lineItems&quot; | &quot;chronology&quot; | &quot;authentication&quot; | &quot;customerHistory&quot; | &quot;listing&quot; | &quot;policy&quot; | &quot;communication&quot; | …
+    mustProve: string;              // what this exhibit proves FOR THIS CLAIM
+    includeWhen: string[];          // claim ids; the section is omitted when none is present
+  }&gt;;
+  leaveOut: string[];               // evidence irrelevant to this claim; never shown or argued
+  never: string[];                  // family-specific truth limits (on top of Plan 2 §3)
+}
+</code></pre>
+<h3>The playbooks at a glance (the default evidence order; the strategist may adapt it per case)</h3>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Analyst&#39;s question</th>
+<th>Evidence sections, strongest first</th>
+<th>Leave out</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Item not received</strong> (Visa 13.1 / MC 4855)</td>
+<td>Was it delivered, and all of it?</td>
+<td>Carrier delivery (shipment card) → whole-order scope (line items) → timeline, including the same-day delivery notice and the interval before the dispute → post-delivery contact or orders (when present)</td>
+<td>Payment authentication, IP, AVS</td>
+</tr>
+<tr>
+<td><strong>Fraud / not authorised</strong> (10.4 / 4837)</td>
+<td>Did the real cardholder make this purchase?</td>
+<td>Authentication (3-D Secure, Apple Pay, verified card-code and address results, quoted only by the existing verified-wording rule) → the same customer&#39;s history (earlier undisputed orders, account age, same device or IP) → activity after the purchase → delivery (secondary)</td>
+<td>Line-item arithmetic; shipping as the lead</td>
+</tr>
+<tr>
+<td><strong>Not as described</strong> (13.3)</td>
+<td>Did they get what was advertised?</td>
+<td>The listing as shown at purchase → what was sent (items, variants) → the customer&#39;s messages and the return offered → policy</td>
+<td>Delivery as the lead (not disputed), IP</td>
+</tr>
+<tr>
+<td><strong>Credit not processed</strong> (13.6)</td>
+<td>Is a refund owed?</td>
+<td>Policy terms accepted at checkout → the return record → the messages</td>
+<td>Delivery, authentication</td>
+</tr>
+<tr>
+<td><strong>Cancelled subscription</strong> (13.2)</td>
+<td>Was it cancelled before this charge?</td>
+<td>Terms accepted → cancellation record → use after the claimed cancellation → notices sent</td>
+<td>Shipping</td>
+</tr>
+<tr>
+<td><strong>Duplicate</strong> (12.6)</td>
+<td>Are these two separate purchases?</td>
+<td>The two orders side by side: items, times, fulfilments</td>
+<td>Almost everything else</td>
+</tr>
+</tbody></table>
+<h3>Item not received: the first playbook in full</h3>
+<ul>
+<li><strong>Analyst&#39;s question:</strong> was it delivered, and was all of it delivered?</li>
+<li><strong>Theories:</strong><ul>
+<li><em>Delivered and notified.</em> Carrier delivery, the same-day delivery notice, and the interval before the dispute.</li>
+<li><em>Whole order in one tracked shipment.</em> This closes the partial-delivery escape.</li>
+<li><em>Ordered again after delivery,</em> when Plan 3 Q1 confirms it.</li>
+<li><em>Delivered after the dispute opened</em> (a different lead: the claim is now answered).</li>
+<li><em>Signed for.</em></li>
+<li><em>Several parcels, some delivered</em> (argue the delivered ones; never volunteer the others&#39; status).</li>
+</ul>
+</li>
+<li><strong>Core claims:</strong> <code>carrier_delivered</code>, <code>carrier_is_third_party</code>, <code>whole_order_in_shipment</code>. <strong>Strong:</strong> the timing and notification claims.</li>
+<li><strong>Never:</strong> destination or address, personal receipt, absence arguments, lateness under the network rules.</li>
+</ul>
+<p>Build order: item not received first, with the reference case and #360980. Then fraud, which has the most volume and very different evidence. Then the rest.</p>
+<h2>5. Output schema (writer)</h2>
+<pre><code class="language-json">{
+  &quot;headline&quot;: &quot;the punchline, printed in the pull-quote above section 01 (replaces today&#39;s template headline)&quot;,
+  &quot;summary&quot;: { &quot;paragraphs&quot;: [&quot;…&quot;], &quot;claimIds&quot;: [&quot;…&quot;] },
+  &quot;evidenceSections&quot;: [
+    { &quot;key&quot;: &quot;shipping&quot;,   &quot;paragraphs&quot;: [&quot;…&quot;], &quot;claimIds&quot;: [&quot;…&quot;] },
+    { &quot;key&quot;: &quot;lineItems&quot;,  &quot;paragraphs&quot;: [&quot;…&quot;], &quot;claimIds&quot;: [&quot;…&quot;] },
+    { &quot;key&quot;: &quot;chronology&quot;, &quot;paragraphs&quot;: [&quot;…&quot;], &quot;claimIds&quot;: [&quot;…&quot;] }
+  ],
+  &quot;conclusion&quot;: { &quot;paragraphs&quot;: [&quot;…&quot;], &quot;claimIds&quot;: [&quot;…&quot;] }
+}
+</code></pre>
+<p><code>evidenceSections</code> is <strong>ordered</strong>: the renderer prints them in this order, numbered in sequence. Only keys the playbook allows are accepted, and a section with no prose is omitted, together with its exhibit when that exhibit has no other purpose.
+Claims are cited <strong>per section, not per sentence</strong> (Plan 1, root cause 6), so the writing can breathe.</p>
+<p>Today the headline is a code template (<code>lib/defence/pdf/thesisTemplates.ts</code>, <code>executiveSummary:item_not_received</code>). For opted-in letters the model writes it and code checks it. The layout does not change; only the text in the pull-quote does. <strong>The maintainer must approve this change</strong> (CLAUDE.md rule 8: the design is spec, and this changes the design&#39;s content, not its structure).</p>
+<h2>6. [3] Checks (code), replacing sentence bookkeeping</h2>
+<ol>
+<li><strong>Grounding.</strong> Every date, number, amount, day-count, carrier name and item count in the text must match a <code>specifics</code> value of a claim cited in that section. Anything else is rejected.</li>
+<li><strong>Forbidden content.</strong> Reuse what exists, unchanged:<ul>
+<li><code>validateNarrative</code>: INR <code>prohibitedBankPhrases</code> and guarded phrases;</li>
+<li><code>claimGuards</code> (rule 14, destination);</li>
+<li><code>deliveryPostDatesDispute</code>.
+These encode real past failures (Plan 1 §3).</li>
+</ul>
+</li>
+<li><strong>Copy rule.</strong> No order number, tracking number, time of day or card digits. Each specific at most once across the letter.</li>
+<li><strong>Anti-pattern lint (new).</strong> Regexes for throat-clearing (&quot;… position is that&quot;, &quot;submits that&quot;), meta-talk (&quot;this distinction matters&quot;, &quot;is material&quot;), disclaimers (&quot;not proof&quot;, &quot;does not rely&quot;, &quot;context only&quot;), adjective-for-evidence (&quot;decisive&quot;, &quot;straightforward&quot;), and defensive framing (&quot;does not need to take&quot;, &quot;word for it&quot;).</li>
+<li><strong>One corrective retry.</strong> The exact findings are fed back (the pilot showed this works). If it still fails, fall back to today&#39;s record-built template: a safe letter always files.</li>
+</ol>
+<h2>7. Models</h2>
+<p>The pilot compared Sonnet 4.6, Opus 5.5 and GPT-6 Astra, and all three failed on <em>direction</em>, not on ability. So choose the model <em>after</em> the new prompt exists, by the Plan 5 evaluation. Candidates: Opus 5.5 (writer and strategist), GPT-6 Astra, and Sonnet 5. The staging pilot route already supports the Anthropic models; GPT-6 Astra can be called locally (the key is in <code>.env.production.local</code>).</p>
+<h2>8. What happens to today&#39;s prompt</h2>
+<ul>
+<li><code>BASE_SYSTEM_PROMPT</code> stays for families that haven&#39;t opted in.</li>
+<li>For opted-in families, the new prompt and pipeline are used behind a flag (<code>DEFENCE_COUNSEL_V2_FAMILIES=item_not_received</code>). The record-built templates (<code>shipmentRecordSections.ts</code>) become the <strong>fallback only</strong>.</li>
+</ul>
+</section>
+<section id="05-evaluation" class="part"><h1>Plan 5: Evaluation. How &quot;better&quot; is decided before anything ships</h1>
+<p>The previous cycle judged letters by rule compliance, one draft at a time, in production. It failed. This plan puts persuasion first and keeps the maintainer&#39;s time for the final say.</p>
+<p><strong>Past DisputeDesk letters and their outcomes are NOT used</strong>, neither as examples nor as a benchmark. The maintainer: &quot;we have not been doing good defences. Up until now, there&#39;s no value in that.&quot;</p>
+<h2>1. The eval set: cases, not letters</h2>
+<p>About 12 real open or recent disputes, chosen to cover the shapes counsel must handle. The <strong>inputs</strong> are used (ledger records), never the letters we wrote:</p>
+<table>
+<thead>
+<tr>
+<th>Shape</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Single parcel, carrier-delivered, dispute long after</td>
+<td>#352543 (reference)</td>
+</tr>
+<tr>
+<td>Multi-parcel, one delivered and one only shipped</td>
+<td>#360980</td>
+</tr>
+<tr>
+<td>Delivered after the dispute opened</td>
+<td>find one</td>
+</tr>
+<tr>
+<td>Signature on delivery</td>
+<td>find one</td>
+</tr>
+<tr>
+<td>Delivered, no line-item mapping (count only)</td>
+<td>find one</td>
+</tr>
+<tr>
+<td>Digital goods, access record</td>
+<td>find one</td>
+</tr>
+<tr>
+<td>Fraud 10.4 with Apple Pay, IP match and history</td>
+<td>find one (for the fraud playbook later)</td>
+</tr>
+<tr>
+<td>Not as described (13.3) with a listing snapshot</td>
+<td>find one (later playbook)</td>
+</tr>
+</tbody></table>
+<p>Each family&#39;s playbook ships only when its own cases pass. Item not received comes first.</p>
+<p>Store each as a fixture: <code>inputs.json</code> in the shape of <code>case-352543/inputs.json</code>, redacted.</p>
+<h2>2. The judge: an LLM acting as the issuer analyst</h2>
+<p>A separate model call (a different model from the writer where possible) with this role:</p>
+<blockquote>
+<p>&quot;You are a senior dispute analyst at a card issuer. You have two minutes. Read the merchant&#39;s response.&quot;</p>
+</blockquote>
+<p>It returns:</p>
+<pre><code class="language-json">{
+  &quot;decisionAfterSummaryOnly&quot;: &quot;merchant | cardholder | undecided&quot;,
+  &quot;decisionAfterFullLetter&quot;:  &quot;merchant | cardholder | undecided&quot;,
+  &quot;theoryOfTheCase&quot;: &quot;what you understood the merchant&#39;s story to be, in one sentence&quot;,
+  &quot;strongestLine&quot;: &quot;…&quot;,
+  &quot;weakestLine&quot;: &quot;…&quot;,
+  &quot;scores&quot;: { &quot;punchline&quot;: 1-5, &quot;clarity&quot;: 1-5, &quot;evidenceUse&quot;: 1-5, &quot;noRepetition&quot;: 1-5, &quot;credibility&quot;: 1-5 },
+  &quot;redFlags&quot;: [&quot;any overstatement, accusation, disclaimer, or anything that made you doubt the merchant&quot;]
+}
+</code></pre>
+<p>Hard fails, regardless of score:</p>
+<ul>
+<li>any Plan 2 §3 item;</li>
+<li>any code check failure (Plan 4 §6);</li>
+<li><code>decisionAfterSummaryOnly</code> other than &quot;merchant&quot; on a case whose ledger has all core claims.</li>
+</ul>
+<h2>3. Loop</h2>
+<ol>
+<li>Run the full eval set for each prompt or model variant. That&#39;s about 12 cases × 3 candidates.</li>
+<li>Rank the variants by: hard fails (must be 0), then summary-only merchant decisions, then mean score.</li>
+<li><strong>The maintainer reviews only the best three and worst three letters of the leading variant, printed in chat</strong>, not every draft.</li>
+<li>The maintainer&#39;s verdict overrides the judge. When they disagree, update the rubric or the judge prompt with the maintainer&#39;s reason, so the judge learns what excellent means <em>to this maintainer</em>.</li>
+</ol>
+<h2>4. Acceptance to ship (the item-not-received family)</h2>
+<ul>
+<li>0 hard fails across the eval set;</li>
+<li>summary-only decision &quot;merchant&quot; on every case where the core claims are present;</li>
+<li>the maintainer calls the reference case (#352543) and #360980 &quot;excellent counsel&quot;.</li>
+</ul>
+<h2>5. Tooling</h2>
+<ul>
+<li>Extend <code>case-352543/pilot-harness.mts</code> into <code>scripts/eval/counsel-eval.mts</code>, with fixtures under <code>scripts/eval/fixtures/</code>.</li>
+<li>Anthropic calls: the staging pilot route (<code>app/api/public/pilot-inr-letter/route.ts</code>) exists and is token-gated. Alternatively, add a local workspace-scoped key to <code>.env.local</code>: the key there today needs an <code>anthropic-workspace-id</code>. OpenAI calls run locally.</li>
+<li>Output one HTML report per run: the letters side by side, the judge&#39;s JSON, and the check results.</li>
+</ul>
+</section>
+<section id="06-implementation-and-rollout" class="part"><h1>Plan 6: Implementation and rollout</h1>
+<h2>1. Code map: where the letter is made today</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>File</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Job entry</td>
+<td><code>lib/jobs/handlers/buildDefencePackageJob.ts</code></td>
+<td>Loads the dispute and pack, classifies facts, calls the model, applies overrides, validates, composes, renders</td>
+</tr>
+<tr>
+<td>Fact classification</td>
+<td><code>lib/defence/factClassifier.ts</code></td>
+<td>Decides which records are bank-eligible. Its rules stay the authority on what may reach a bank</td>
+</tr>
+<tr>
+<td>Model call</td>
+<td><code>lib/defence/narrativeWriter.ts</code></td>
+<td><code>BASE_SYSTEM_PROMPT</code>, <code>buildLlmFactPayload</code>, <code>generateNarrative</code>. Model <code>claude-sonnet-4-6</code> (env <code>DEFENCE_PACKAGE_DEFAULT_MODEL</code>), <code>PROMPT_VERSION</code> 39</td>
+</tr>
+<tr>
+<td>Family overlay / module / strategies</td>
+<td><code>lib/defence/reasonCodes/families/item_not_received.ts</code>, <code>lib/defence/reasonCodes/registry.ts</code>, <code>lib/defence/strategies/*</code></td>
+<td>The overlay also holds the INR prohibited and guarded phrase lists</td>
+</tr>
+<tr>
+<td>Template override (INR)</td>
+<td><code>lib/defence/shipmentRecordSections.ts</code></td>
+<td>Replaces the model&#39;s text for single- and multi-parcel INR letters. Becomes the fallback under this plan</td>
+</tr>
+<tr>
+<td>Item-by-item coverage</td>
+<td><code>lib/defence/fulfilmentCoverage.ts</code></td>
+<td>Already built; the basis of <code>whole_order_in_shipment</code></td>
+</tr>
+<tr>
+<td>Validation</td>
+<td><code>lib/defence/validateNarrative.ts</code>, <code>lib/defence/claimGuards.ts</code>, <code>lib/defence/internalConstraints.ts</code></td>
+<td>Reused as-is</td>
+</tr>
+<tr>
+<td>Section visibility</td>
+<td><code>lib/defence/sectionVisibility.ts</code></td>
+<td>Record-built sections carry <code>source: &quot;record&quot;</code>. The new counsel sections should too, or get their own source value</td>
+</tr>
+<tr>
+<td>Headline / request templates</td>
+<td><code>lib/defence/pdf/thesisTemplates.ts</code>, <code>thesisTokens.ts</code>, <code>renderThesis.ts</code></td>
+<td>The pull-quote headline is templated today</td>
+</tr>
+<tr>
+<td>Composition + PDF</td>
+<td><code>lib/defence/pdf/composePdfBlocks.ts</code>, <code>lib/defence/pdf/DefencePackageDocument.tsx</code></td>
+<td>Numbered layout. Line-items and chronology prose slots exist. The conclusion prints reasoning, then the request</td>
+</tr>
+<tr>
+<td>In-app preview</td>
+<td><code>app/(embedded)/app/disputes/[id]/tabs/sections/DefencePackageHtmlView.tsx</code></td>
+<td>Must mirror the PDF</td>
+</tr>
+<tr>
+<td>Merchant name</td>
+<td><code>buildDefencePackageJob.ts</code> (<code>merchantDisplayName</code>, uses the domain)</td>
+<td><strong>Change to <code>shops.shop_name</code> (&quot;Blume&quot;)</strong>, per the maintainer</td>
+</tr>
+</tbody></table>
+<h2>2. Work packages, in order</h2>
+<ol>
+<li><strong>WP1: Evidence (Plan 3 §2).</strong> Resolve Q1–Q4 for the reference case. Add the customer&#39;s-other-orders read, and the Gorgias claim extraction if it helps.</li>
+<li><strong>WP2: Claim ledger (Plan 3 §3).</strong> <code>lib/defence/claimLedger.ts</code> plus tests, one per claim condition.</li>
+<li><strong>WP3: Counsel standard in prompts (Plans 2 and 4).</strong> Strategist and writer prompts, the INR playbook, and synthetic register examples.</li>
+<li><strong>WP4: Checks (Plan 4 §6).</strong> Grounding, copy rule, anti-pattern lint, corrective retry, template fallback.</li>
+<li><strong>WP5: Eval harness (Plan 5).</strong> Fixtures, judge, report. Iterate WP3 until the Plan 5 §4 acceptance criteria are met.</li>
+<li><strong>WP6: Pipeline wiring behind a flag.</strong> Includes <strong>per-claim section order</strong> in the PDF (<code>DefencePackageDocument.tsx</code>) and the in-app view (<code>DefencePackageHtmlView.tsx</code>): print the evidence sections in the order the writer returns, numbered in sequence. The visual design is unchanged. <strong>Approved by the maintainer on 2026-09-25</strong> (in chat: &quot;yes please&quot;, after the reorder was proposed). All of it behind the flag <code>DEFENCE_COUNSEL_V2_FAMILIES</code>. Headline from the model (needs the maintainer&#39;s approval, see Plan 4 §5). Merchant name from <code>shop_name</code>. Bump <code>PROMPT_VERSION</code>, <code>COMPOSITION_VERSION</code> and <code>VALIDATOR_VERSION</code> as their pinned tests require.</li>
+<li><strong>WP7: Rollout.</strong><ul>
+<li>Staging first.</li>
+<li>Canary on 2–3 live INR cases: read each letter, and get the maintainer&#39;s approval of the text.</li>
+<li>Then production (maintainer approval required for each change).</li>
+<li>Then rebuild the remaining open INR disputes after printing the list for a yes (standing rule: canary before bulk).</li>
+</ul>
+</li>
+</ol>
+<h2>3. Repo rules the implementer must follow (from CLAUDE.md and memory)</h2>
+<ul>
+<li><strong>Branches:</strong> work on a branch. Open a PR to <code>develop</code> (staging; auto-merge is fine). For <code>master</code> (production), get the maintainer&#39;s explicit in-chat yes <strong>for that change</strong>. Never use <code>--admin</code>, and never auto-merge a <code>master</code> PR.</li>
+<li><strong>Database:</strong> use <code>npm run db:query:prod</code> / <code>db:query:dev</code> only (a guard confirms the target). Never pipe the output through <code>tail</code>.</li>
+<li><strong>Before calling it done:</strong> run <code>npm test</code> and <code>npx tsc --noEmit</code>, plus <code>npm run build</code> for UI changes. Update <code>docs/technical.md</code> in the same commit.</li>
+<li><strong>Rebuilding one case:</strong> <code>node scripts/build-one-pack.mjs &lt;disputeId&gt; --rebuild --env-file .env.production.local --apply</code>. Poll <code>defence_packages</code> for the new row, and filter by <code>created_at</code>.</li>
+<li><strong>Local PDF preview:</strong> <code>node scripts/build-pdf-worker.mjs</code>, then <code>node scripts/pdf-worker/render-defence-pdf.mjs &lt; doc.json &gt; out.pdf</code>.</li>
+<li><strong>Copy:</strong> each fact once (memory <code>feedback_letter_copy_each_fact_once</code>), applied as scoped in Plan 2 §2.3.</li>
+<li><strong>Show text for approval in chat</strong>, not only as a file path.</li>
+</ul>
+<h2>4. Deadlines and live cases</h2>
+<ul>
+<li><strong>#352543</strong> (single parcel) and <strong>#360980</strong> (two parcels) both file automatically on <strong>3 Oct 2026</strong> through the deadline cron (08:00 UTC), using the current template letter unless it&#39;s replaced first.</li>
+<li><strong>Recommendation:</strong> get the INR playbook through WP2–WP5 on these two cases first. If they pass Plan 5 acceptance and the maintainer approves before 2 Oct, ship behind the flag for those two. Otherwise they file on the current template.</li>
+</ul>
+<h2>5. Cleanup owed from the pilot</h2>
+<ul>
+<li>Remove <code>app/api/public/pilot-inr-letter/route.ts</code> (a token-gated staging route, never active in production) once the eval harness has its own path.</li>
+<li>The local token lives in the previous implementer&#39;s session scratchpad, not in the repo.</li>
+</ul>
+</section>
+<section id="appendix-A-current-production-prompt" class="part"><h1>Appendix A · Current production prompt</h1><details><summary>Show the full prompt and payload (long)</summary><h1>Appendix A: What production sends the letter model today (verbatim)</h1>
+<p>This is reconstructed from the real code (<code>lib/defence/narrativeWriter.ts</code> <code>generateNarrative</code>, <code>buildLlmFactPayload</code>, and the reason-code, family and strategy registries) for blume-box #352543. The package is <code>1fc1c70a</code> and the prompt version is 39. The customer&#39;s identity is redacted. The machine-readable copy is <code>case-352543/production-request.json</code>.</p>
+<ul>
+<li>Endpoint: <code>POST https://api.anthropic.com/v1/messages</code></li>
+<li>Model: <code>claude-sonnet-4-6</code>, temperature 0.2, max_tokens 4096</li>
+<li>System prompt: 4 blocks, each cached</li>
+<li>The user message is ONE JSON string (the fact payload below)</li>
+</ul>
+<p>IMPORTANT: for non-receipt letters with a carrier-confirmed delivery, the model&#39;s output is THEN DISCARDED. Fixed sentences built from the records replace it (<code>lib/defence/shipmentRecordSections.ts</code>). The filed letter is a template, not this model&#39;s writing.</p>
+<h2>System block 1: BASE_SYSTEM_PROMPT</h2>
+<pre><code class="language-text">You are a chargeback representment narrative writer for DisputeDesk.
+
+Your task is to convert APPROVED dispute evidence into professional, bank-facing
+argument sections.
+
+Rules:
+1. Use only the facts in approvedFacts.
+2. Do not invent, assume, infer, estimate, or embellish.
+3. You are not investigating. You are not deciding what happened. You are
+   converting approved facts into professional prose.
+4. Every paragraph must be traceable to at least one approved fact id, via
+   usedFactIds on the section.
+5. Do not mention facts whose ids appear in internalOnlyFactIds (those facts
+   are forbidden — their values are intentionally absent from this payload).
+6. Do not mention missing evidence in bank-facing text. The missingEvidence
+   list is for omission decisions only.
+7. Professional, bank-facing language. In FULL mode you may use firm
+   evidentiary framing — verbs like &quot;establishes&quot;, &quot;demonstrates&quot;,
+   &quot;confirms&quot;, &quot;evidences&quot;, &quot;corroborates&quot;, &quot;records&quot;, &quot;documents&quot;, &quot;shows&quot;.
+   Quote specific values from approved facts to ground each claim
+   (e.g. &quot;the carrier confirmed delivery on 2026-05-12, tracking
+   1234567890 (PostNord)&quot;, &quot;the customer
+   confirmed receipt on 2026-05-13&quot;). State the relationship between
+   fact and reason code explicitly (e.g. &quot;These authentication results
+   are consistent with a cardholder-initiated transaction under Visa 10.4.&quot;).
+
+   PAYMENT AUTHENTICATION CODES (AVS / CVV) — DO NOT quote the raw
+   single-letter gateway result codes (&quot;Y&quot;, &quot;M&quot;, &quot;N&quot;, &quot;Z&quot;, &quot;A&quot;, &quot;W&quot;,
+   &quot;X&quot;, etc.) in any merchant prose. Raw letter codes look unhinged in
+   bank-facing prose and force the reader to look up the AVS/CVV
+   reference.
+
+   QUOTE verificationSummary VERBATIM. It is the ONLY approved wording
+   for address or security-code verification. Do not paraphrase it, do
+   not extend it, and do not write address- or security-code language
+   that is not in it.
+
+   IF verificationSummary IS NULL OR ABSENT: the case has no citable
+   verification. OMIT THE ENTIRE SUBJECT. Write nothing asserting that
+   an address, a billing detail or a security code was checked,
+   verified, matched, confirmed, accepted, on record or in agreement
+   with anything — in any wording, in any section. Do not hedge it
+   either: a softened, qualified or &quot;consistent with&quot; version of an
+   unsupported assertion is the same assertion. Argue the case from the
+   facts you do have.
+
+   NO EXAMPLE SENTENCES ARE GIVEN HERE, in either direction. Concrete
+   claim text in this prompt is what produced the failure this rule
+   exists to prevent: printed as an illustration, it was reproduced as
+   output on cases that did not carry the evidence. The only text you
+   may write on this subject is a verbatim copy of the runtime value of
+   verificationSummary.
+
+8. Do NOT use overclaim or accusatory language: NEVER use &quot;irrefutable&quot;,
+   &quot;definitive proof&quot;, &quot;definitively proves&quot;, &quot;definitively shows
+   authorization&quot;, &quot;undeniable&quot;, &quot;unequivocally&quot;, &quot;baseless&quot;, &quot;invalidates
+   the claim&quot;, &quot;fraudulent cardholder&quot;, &quot;the customer is lying&quot;, &quot;the
+   dispute is invalid&quot;. These are bank-side red flags. Restraint is more
+   persuasive than confidence.
+
+8a. Do NOT use absolute authorization conclusions. NEVER write:
+   - &quot;establishes that the transaction was authorized&quot;
+   - &quot;proves the transaction was authorized&quot;
+   - &quot;confirms the transaction was authorized&quot;
+   - &quot;definitively shows authorization&quot;
+   Use softer evidentiary framing instead:
+   - &quot;strongly supports that the transaction was authorized by the cardholder&quot;
+   - &quot;is consistent with a cardholder-authorized transaction&quot;
+   - &quot;supports the conclusion that the transaction was authorized&quot;
+   - &quot;contradicts the claim of an unauthorized transaction&quot;
+
+8b. CARD-NOT-PRESENT disputes only: NEVER claim the cardholder had
+   &quot;possession of the physical card&quot;, &quot;had the physical card&quot;, &quot;held
+   the card&quot;, or that the &quot;card was physically present&quot;. Card-not-present
+   evidence does not establish physical possession — and the reason it does
+   not is NOT a licence to describe what it does establish instead. Any
+   statement about what was verified, checked or held on record is governed
+   by rule 7 and by nothing else.
+
+   NO REPLACEMENT SENTENCE IS OFFERED, and none is quoted here — a
+   prompt that prints the sentence it is banning teaches that sentence.
+   The suggestions that used to sit at this point all asserted
+   card-verification evidence, so on an address-only case they implied
+   a security-code result that did not exist. Rule 7 is the whole
+   contract: quote verificationSummary verbatim and add nothing. If you
+   cannot say it by quoting, do not say it.
+
+8c. FULFILLMENT precision. order.fulfillmentStatus=FULFILLED alone is
+   NOT delivery, access, use, or service completion. The forbidden
+   words below MUST NOT appear in ANY section unless a matching
+   approved fact exists in approvedFacts:
+
+     FORBIDDEN WITHOUT MATCHING FACT:
+       &quot;received&quot;, &quot;delivered&quot;, &quot;accessed&quot;, &quot;used&quot;, &quot;downloaded&quot;,
+       &quot;logged in&quot;, &quot;streamed&quot;, &quot;completed&quot;, &quot;fulfilled&quot;,
+       &quot;shipped&quot;, &quot;dispatched&quot;
+
+   This applies in EVERY section including chronologyArgument.
+
+   NEVER echo the raw order-system status enum. Do NOT write the
+   mechanical phrase &quot;fulfillment status of FULFILLED/UNFULFILLED/
+   PARTIAL&quot; (in any casing) and never write the bare token UNFULFILLED.
+   Describe what the record shows in plain bank-facing language instead:
+     WRONG → &quot;the order&#39;s fulfillment status of fulfilled&quot;
+     RIGHT → &quot;the order was fulfilled and the goods were delivered&quot;
+             (only when a delivery/access fact supports it — see below)
+     RIGHT → &quot;the order record shows the goods left the merchant&quot;
+
+   Concrete examples for an UNFULFILLED order with no delivery_proof:
+
+     WRONG → &quot;the order was placed and dispatched&quot;
+     WRONG → &quot;the package was shipped from the merchant&quot;
+     WRONG → &quot;the customer received the order&quot;
+     RIGHT → &quot;the order record was created&quot;
+     RIGHT → &quot;the payment was authorised&quot;
+     RIGHT → &quot;the order was placed via the web channel&quot;
+
+   When in doubt about whether a fact supports a fulfilment word,
+   use the neutral phrasing.
+   - &quot;received&quot; / &quot;delivered to the customer&quot; → delivery_proof or
+     shipping_tracking with proofType=delivered_confirmed or
+     =signature_confirmed, OR
+     digital_access_log with digitalAccessUsed=true, OR service_access
+     with serviceDelivered=true.
+   - &quot;accessed&quot; / &quot;used&quot; / &quot;downloaded&quot; / &quot;logged in&quot; / &quot;streamed&quot; →
+     digital_access_log or service_access with digitalAccessUsed=true.
+   - &quot;access granted&quot; → digital_access_log or service_access with
+     digitalAccessGranted=true.
+   - &quot;service completed&quot; / &quot;service delivered&quot; → service_access with
+     serviceDelivered=true or serviceCompleted=true.
+   If only fulfillmentStatus=FULFILLED exists with no delivery/access
+   fact, leave fulfillmentArgument EMPTY and add it to omittedSections
+   — the renderer will emit a minimal neutral sentence in its place.
+9. If approvedFacts are weak or incomplete, write a NARROWER argument. Do not
+   fill gaps. If a section has no supporting facts, return an empty string for
+   that section AND list its sectionKey in omittedSections.
+10. packageMode governs tone:
+    - &quot;full&quot;   → firm evidentiary framing as in rule 7. Sections may close
+                 with a one-sentence assertion linking the cited facts to
+                 the reason code in question (e.g. &quot;These signals are
+                 consistent with cardholder-initiated activity under
+                 [reason code].&quot;). Length: 3–6 sentences per section.
+    - &quot;narrow&quot; → hedged framing required. Use &quot;The available evidence
+                 supports…&quot;, &quot;The available records indicate…&quot;, &quot;The
+                 submitted evidence is consistent with…&quot;. Executive
+                 summary must be one paragraph of ≤ 4 sentences. No
+                 declarative reason-code conclusions.
+11. Return valid JSON only. No markdown. No code fences. No prose outside JSON.
+12. Schema of the JSON output:
+
+{
+  &quot;executiveSummary&quot;:            { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;transactionOverviewArgument&quot;: { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;chronologyArgument&quot;:          { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;paymentAuthenticationArgument&quot;: { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;fulfillmentArgument&quot;:         { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;communicationArgument&quot;:       { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;policyArgument&quot;:              { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;manualEvidenceArgument&quot;:      { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;conclusion&quot;:                  { &quot;text&quot;: &quot;...&quot;, &quot;usedFactIds&quot;: [&quot;...&quot;] },
+  &quot;omittedSections&quot;: [{ &quot;sectionKey&quot;: &quot;fulfillmentArgument&quot;, &quot;reason&quot;: &quot;...&quot; }],
+  &quot;warnings&quot;: []
+}
+
+13. If a section has no supporting approved facts, return:
+    { &quot;text&quot;: &quot;&quot;, &quot;usedFactIds&quot;: [] }
+    and add an entry to omittedSections.
+
+14. CLAIM CAPABILITIES. The payload carries a `claimCapabilities` array —
+    the claim classes this case is AUTHORIZED to make, derived from the
+    approved facts. A claim class absent from that array must not appear in
+    any section, in any wording.
+
+    &quot;address_delivery&quot; is NOT authorized on any case today. You must never
+    state, imply, or paraphrase that a delivery occurred AT a particular
+    physical address, and never characterise the DELIVERY DESTINATION at all —
+    not as verified, matched, confirmed, the cardholder&#39;s, the customer&#39;s own,
+    held on record, nor as corresponding to any other address on the order.
+    DisputeDesk holds no evidence connecting a delivery event to an address,
+    so there is nothing true you can say about where the parcel went.
+
+    NO EXAMPLE OF THE FORBIDDEN SENTENCE IS PRINTED HERE. Three were, until
+    2026-08-11, and the model reproduced them: three of four packages in that
+    day&#39;s canary failed on this rule, in the very sections the examples were
+    written for. An illustration of a banned claim is still an instance of the
+    claim, sitting in the context window on every call.
+
+    WHAT THIS RULE DOES NOT PROHIBIT. Rule 7&#39;s standalone
+    payment-authentication clause stays permitted — a verbatim copy of the
+    runtime verificationSummary, presented as an AUTHENTICATION statement and
+    nothing else. What is forbidden is COUPLING that clause to a delivery, so
+    that the address becomes a destination. Authentication and delivery are
+    claims about different facts and different evidence.
+
+    The same distinction is enforced structurally by `isLicensedAvsClause`: a
+    clause opening in a destination role — a directional preposition
+    introducing the delivery predicate&#39;s argument — is refused however it goes
+    on to read. So the copied clause may stand on its own; it may not become
+    the place something was delivered to. No sample sentence is printed here
+    for either case, for the reason rule 7 gives.
+
+    Permitted delivery wording (when a delivery fact is approved): the
+    carrier name, the tracking number, the tracking URL, the delivery status,
+    and the delivery date. A captured signature may be cited only when the
+    fact carries signedByName.
+    Only the PERMITTED form is illustrated, because a positive template can be
+    copied safely and carries no address:
+      RIGHT → &quot;the carrier confirmed delivery on 12 May 2026 (PostNord,
+               tracking 1234567890)&quot;
+      RIGHT → &quot;the carrier recorded a signature on delivery&quot;
+
+    A PLACE IS AN ADDRESS, WHATEVER YOU CALL IT. The prohibition is on
+    asserting that the parcel ARRIVED SOMEWHERE, not on the word &quot;address&quot;.
+    Nouns naming where it ended up — destination, premises, residence, home,
+    location — are the same claim and are equally forbidden. The delivery
+    fact records that the carrier marked the shipment delivered; it does not
+    record where, and the where cannot be proven from it.
+
+    DO NOT CLOSE A SECTION BY RESTATING THE DELIVERY AS AN ARRIVAL. Once you
+    have cited carrier, tracking number and date, the fulfilment point is
+    made. A summarising final sentence adds no fact, and it is where this
+    claim keeps appearing: measured on production 2026-08-13, five packages
+    failed validation on precisely this shape — four in fulfillmentArgument,
+    one in conclusion, every one a closing arrival sentence written AFTER
+    correctly worded evidence. Stop at the evidence.
+
+    THE SUMMARISING SECTIONS ARE NOT EXEMPT — executiveSummary LEAST OF ALL.
+    &quot;Stop at the evidence&quot; can read as a contradiction in a section whose whole
+    purpose is to restate, so state it plainly: executiveSummary and conclusion
+    are bound by this rule exactly as fulfillmentArgument is. Measured on
+    production 2026-08-15, a package failed on this shape in executiveSummary
+    and fulfillmentArgument TOGETHER, after a retry, on a case whose delivery
+    evidence was otherwise worded correctly — the summary reached for an
+    arrival precisely because summarising is what the section is for.
+    A summary may restate the delivery in the permitted form above, verbatim if
+    need be. What it may not do is convert that evidence into a statement about
+    where the parcel ended up. If the permitted form feels too thin to close on,
+    close on something else — the authorisation, the account history, the
+    absence of a return — or close on nothing.
+
+    If a section has no fact that can be expressed in that permitted form,
+    return an empty string for it and list it in omittedSections (rules 9 and
+    13). An empty section is correct; a section filled with a claim about
+    where the parcel went is not.
+
+    This is enforced structurally after generation. A section that makes an
+    unauthorized claim fails validation and the package is not filed.
+</code></pre>
+<h2>System block 2: family overlay (item_not_received)</h2>
+<pre><code class="language-text">ITEM NOT RECEIVED — how the shipments are described:
+MULTIPLE SHIPMENTS. When a delivery fact carries `shipments`, the order left in more than one parcel. Account for EVERY entry: in fulfillmentArgument describe each one, and in executiveSummary state that the order was fulfilled in that many shipments. For each entry give the products it contained (items) and the carrier, then state only what THAT entry supports:
+- referenceIsTrackingNumber true: cite reference as the tracking number, with trackingUrl when present.
+- referenceIsTrackingNumber false: call reference the shipping reference, never a tracking number, and give no link.
+- proofType delivered_confirmed or signature_confirmed: the carrier&#39;s record confirms delivery on deliveredAt.
+- proofType in_transit with inTransitSince: the carrier&#39;s tracking record first shows the shipment in transit on inTransitSince.
+- proofType in_transit without inTransitSince: the carrier&#39;s record shows the shipment in transit (status as retrieved on carrierStatusObservedAt).
+- any other proofType: the carrier has NO record for this parcel. Write it in exactly this shape and nothing more: &#39;The merchant fulfilled &lt;items&gt; on &lt;fulfilledAt&gt; (&lt;carrier&gt; shipping reference &lt;reference&gt;).&#39; For this parcel never use tendered, handed, accepted, dispatched, shipped, sent, collected, picked up, in transit, delivered, or left the merchant&#39;s possession, and never include it in a sentence that says what a carrier did or holds.
+- A sentence covering the whole order (&#39;both items&#39;, &#39;each item&#39;, &#39;the order&#39;) may only say the merchant fulfilled them. Carrier handling, and any mention of a carrier record, belongs only in a sentence about the parcel whose own entry records it.
+Never write a proofType value itself; use plain words.
+FORBIDDEN WORDING, whatever the shipment: ordering the dispute, the chargeback or its filing against any date other than a carrier-confirmed delivery (so never against a fulfilment, a hand-over, a shipment in transit, or a parcel without a carrier record); &#39;left the merchant&#39;s possession&#39;; &#39;tendered to their respective carriers&#39;; &#39;handed to the carriers&#39;; &#39;both items were shipped&#39;. Say only what each parcel&#39;s own entry records.
+AFFIRMATIVE ONLY. Describe what the records show. Never describe what a record lacks (a scan, a signature, a confirmation, an event), and never describe the merchant&#39;s position by what it declines to claim.
+TIMING. Never relate a fulfilment, a transit status or any carrier event to when the dispute was opened or filed, or to when the order was placed, and never count the days between them. State each record&#39;s own date and nothing about the interval.
+SECTIONS. Leave transactionOverviewArgument and chronologyArgument empty and list both in omittedSections: the document shows the transaction in its case details and prints the timeline itself.
+ONE SOURCE, STATED ONCE. A tracking record and a delivery confirmation drawn from the same carrier event are one record: attribute the delivery to the carrier once, and never call records independent of or corroborating each other. Never characterise who initiated the transaction; the claim is non-receipt.
+</code></pre>
+<h2>System block 3: reason-code module (inr_product_not_received)</h2>
+<pre><code class="language-text">You are writing a bank-facing response to an ITEM NOT RECEIVED CLAIM (cardholder alleges the merchandise/service was not received). The reason code is the issuer/cardholder&#39;s CLAIM CATEGORY, not a merchant admission.
+Prioritise delivery / access evidence: tracking number, carrier, delivery date and time, signature where present, pickup proof, digital access logs, shipping address that matches what was authorised.
+Do NOT claim delivery unless an approved delivery_proof fact carries proofType=&#39;delivered_confirmed&#39; or proofType=&#39;signature_confirmed&#39;.
+Do NOT claim digital access unless an approved digital_access_log or service_access fact is present.
+When the tracking record stops short of a delivery confirmation, frame the argument around what the tracking does show (handed to carrier, in transit, last scan), never claiming delivery and never describing what the record lacks.
+</code></pre>
+<h2>System block 4: strategies (item_not_received_delivery_proof_stack, item_not_received_narrow_fallback)</h2>
+<pre><code class="language-text">STRATEGY FOCUS — delivery proof stack:
+Build the fulfillmentArgument and executiveSummary around the carrier delivery record. When proofType=signature_confirmed, lead with the captured signature. When proofType=delivered_confirmed (unsigned), describe the carrier&#39;s delivery confirmation without overclaiming signature capture.
+Cite carrier, trackingNumber, trackingUrl and deliveredAt when present in the approved fact value — these are the identifiers an issuer can independently verify.
+NEVER state which physical address received the parcel, and never describe an address as verified, matched, confirmed, AVS-confirmed, the cardholder&#39;s, or the same as the billing address. DisputeDesk holds no evidence tying a delivery event to a specific address. Write &#39;the carrier confirmed delivery of the shipment&#39;, not &#39;delivered to the cardholder&#39;s verified address&#39;.
+
+---
+
+STRATEGY FOCUS — narrow fallback:
+Use this framing when delivery / access evidence is thin. Frame around what tracking DOES show (carrier hand-off, in-transit scans, last-known status) without claiming delivery.
+When the tracking record stops short of a delivery confirmation, describe the tracking timeline as far as it goes — never claim the package was delivered, and never describe what the record lacks.
+Use hedged framing throughout: &#39;The available records indicate…&#39;, &#39;The submitted tracking shows…&#39;.
+</code></pre>
+<h2>User message (fact payload)</h2>
+<pre><code class="language-json">{
+  &quot;packageId&quot;: &quot;1fc1c70a-f0f1-4d6e-8a48-a1ffcf61707a&quot;,
+  &quot;disputeId&quot;: &quot;25034e1e-ab3e-4457-88d1-d1f9751f9a12&quot;,
+  &quot;reasonCode&quot;: &quot;13.1&quot;,
+  &quot;packageMode&quot;: &quot;full&quot;,
+  &quot;caseStrength&quot;: &quot;moderate&quot;,
+  &quot;claimCapabilities&quot;: [
+    &quot;delivery_occurred&quot;
+  ],
+  &quot;reasonCodeGuidance&quot;: {
+    &quot;key&quot;: &quot;inr_product_not_received&quot;,
+    &quot;displayName&quot;: &quot;Visa 13.1 / Mastercard 4855&quot;,
+    &quot;claimType&quot;: &quot;Item not received claim&quot;,
+    &quot;prioritize&quot;: [
+      &quot;delivery_proof&quot;,
+      &quot;shipping_tracking&quot;,
+      &quot;digital_access_log&quot;,
+      &quot;service_access&quot;,
+      &quot;customer_communication&quot;,
+      &quot;order_record&quot;
+    ],
+    &quot;avoid&quot;: [
+      &quot;ip_location&quot;,
+      &quot;device_session&quot;,
+      &quot;fraud_screening&quot;
+    ],
+    &quot;mustNotClaim&quot;: [
+      &quot;the customer is lying about receipt&quot;,
+      &quot;definitive proof of receipt&quot;,
+      &quot;the order was clearly delivered&quot;
+    ],
+    &quot;criticalCategories&quot;: [
+      &quot;delivery_proof&quot;
+    ],
+    &quot;allowedFactCategories&quot;: [
+      &quot;product_listing&quot;,
+      &quot;delivery_proof&quot;,
+      &quot;shipping_tracking&quot;,
+      &quot;digital_access_log&quot;,
+      &quot;service_access&quot;,
+      &quot;customer_communication&quot;,
+      &quot;communication&quot;,
+      &quot;order_record&quot;,
+      &quot;billing_match&quot;,
+      &quot;policy_shipping&quot;,
+      &quot;manual_evidence&quot;
+    ]
+  },
+  &quot;strategyKeys&quot;: [
+    &quot;item_not_received_delivery_proof_stack&quot;,
+    &quot;item_not_received_narrow_fallback&quot;
+  ],
+  &quot;approvedFacts&quot;: [
+    {
+      &quot;id&quot;: &quot;shipping_tracking#gid://shopify/Fulfillment/6559203492033&quot;,
+      &quot;category&quot;: &quot;shipping_tracking&quot;,
+      &quot;label&quot;: &quot;Shipping tracking&quot;,
+      &quot;strength&quot;: &quot;moderate&quot;,
+      &quot;value&quot;: {
+        &quot;carrier&quot;: &quot;Stallion Express&quot;,
+        &quot;deliveredAt&quot;: &quot;2026-07-06T19:53:02Z&quot;,
+        &quot;fieldKey&quot;: &quot;shipping_tracking&quot;,
+        &quot;proofType&quot;: &quot;delivered_confirmed&quot;,
+        &quot;signedByName&quot;: null,
+        &quot;trackingNumber&quot;: &quot;260702441A&quot;,
+        &quot;trackingUrl&quot;: &quot;https://stallionexpress.ca/track/?tracking=260702441A&quot;
+      }
+    },
+    {
+      &quot;id&quot;: &quot;delivery_proof#gid://shopify/Fulfillment/6559203492033&quot;,
+      &quot;category&quot;: &quot;delivery_proof&quot;,
+      &quot;label&quot;: &quot;Delivery confirmation&quot;,
+      &quot;strength&quot;: &quot;moderate&quot;,
+      &quot;value&quot;: {
+        &quot;carrier&quot;: &quot;Stallion Express&quot;,
+        &quot;deliveredAt&quot;: &quot;2026-07-06T19:53:02Z&quot;,
+        &quot;fieldKey&quot;: &quot;delivery_proof&quot;,
+        &quot;proofType&quot;: &quot;delivered_confirmed&quot;,
+        &quot;signedByName&quot;: null,
+        &quot;trackingNumber&quot;: &quot;260702441A&quot;,
+        &quot;trackingUrl&quot;: &quot;https://stallionexpress.ca/track/?tracking=260702441A&quot;
+      }
+    }
+  ],
+  &quot;manualEvidence&quot;: [],
+  &quot;internalOnlyFactIds&quot;: [],
+  &quot;missingEvidence&quot;: []
+}
+</code></pre>
+</details></section>
+
+</main>
+</body></html>

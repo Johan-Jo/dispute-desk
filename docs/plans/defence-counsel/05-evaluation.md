@@ -17,6 +17,9 @@ About 12 real open or recent disputes, chosen to cover the shapes counsel must h
 | Delivered, no line-item mapping (count only) | find one |
 | Digital goods, access record | find one |
 | Fraud 10.4 with Apple Pay, IP match and history | find one (for the fraud playbook later) |
+| Not as described (13.3) with a listing snapshot | find one (later playbook) |
+
+Each family's playbook ships only when its own cases pass. Item not received comes first.
 
 Store each as a fixture: `inputs.json` in the shape of `case-352543/inputs.json`, redacted.
 
