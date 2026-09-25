@@ -34,11 +34,27 @@ export interface CounselResult {
   best: CounselCandidate | null;
 }
 
+/** The first complete JSON object in a model reply (models sometimes add a
+ *  second block or commentary after it). String-aware brace matching. */
 export function parseJson<T>(raw: string): T {
   const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error(`no JSON object in model output: ${raw.slice(0, 200)}`);
-  return JSON.parse(raw.slice(start, end + 1)) as T;
+  if (start < 0) throw new Error(`no JSON object in model output: ${raw.slice(0, 200)}`);
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) return JSON.parse(raw.slice(start, i + 1)) as T;
+  }
+  throw new Error(`unterminated JSON object in model output: ${raw.slice(0, 200)}`);
 }
 
 /** The letter as the analyst sees it, for the fact-checker and the judge. */

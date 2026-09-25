@@ -23,6 +23,9 @@ export interface LedgerClaim {
   sources: string[];
   /** Private limits. Never printed; the writer must stay inside them. */
   mustNot: string[];
+  /** A row this claim adds to the Chronology exhibit (e.g. the customer's
+   *  later order), so the evidence is shown, not only described. */
+  timelineEvent?: { at: string; text: string };
 }
 
 /** One of the cardholder's orders on the merchant's store (Admin API read). */

@@ -208,6 +208,9 @@ export function describeChronologyEvent(
   e: ChronologyEvent,
   shipments: readonly Shipment[],
 ): { title: string; marker: ChronologyMarker } {
+  // Counsel v2: the customer's later order, added as an exhibit row by the
+  // claim ledger (lib/defence/counsel/claimLedger.ts, later_order).
+  if (/^The same customer placed order\b/.test(e.text)) return { title: "Same customer ordered again", marker: "filled" };
   if (/tracking record shows .* in transit/i.test(e.text)) return { title: "In transit with carrier", marker: "green" };
   if (/records delivery of|carrier confirmed delivery|recorded the shipment as delivered|collected the shipment|delivered the shipment to a pickup point/i.test(e.text)) {
     return { title: "Delivered by carrier", marker: "green" };

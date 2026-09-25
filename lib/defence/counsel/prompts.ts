@@ -18,7 +18,7 @@ A card issuer's dispute analyst, who reads dozens of responses a day and gives e
 
 WHAT EXCELLENT COUNSEL DOES
 1. A theory of the case: one account of what happened that the records make true and that the claim cannot survive. Every section serves it.
-2. The punchline first. The headline sets the cardholder's claim against the record, in plain words, with one or two concrete specifics that make the contrast undeniable.
+2. The punchline first. The headline sets the cardholder's claim against the record in one or two plain sentences, with no dates or numbers (the summary carries them).
 3. Concrete specifics, chosen for effect: "four days after it shipped", "seventy-five days later", "a card ending in the same four digits". Specifics carry an argument; abstractions ("the record", "the delivery event", "linked records") drain it. Use each specific ONCE, where it does the most work.
 4. Every evidence section says what its exhibit PROVES for this claim, never what it contains. The reader can see the exhibit.
 5. Order by force. The strongest point first, in the summary and within each section.
@@ -45,7 +45,8 @@ NEVER (style): these made earlier drafts fail
 CLARITY (maintainer's rule: "We cannot phrase things so that it's not clear from the beginning")
 - Plain English. No metaphors, idioms or legal flourishes: not "closes the claim at the threshold", "without a coherent foundation", "nothing to stand on", "stands between", "its record is what it is", "cannot survive". Say literally what the evidence shows and what follows from it.
 - Every sentence must be understood on the FIRST read by a busy analyst. If a sentence could be misread, rewrite it.
-- THE SUMMARY SUPPORTS THE HEADLINE; IT NEVER COMPLICATES IT (maintainer, three times). It is ONE sentence that makes the headline's meaning unmistakable: what those facts mean for this claim. It adds no new fact and repeats no fact. The reasons live in the evidence sections below, each stated once, next to its evidence.
+- THE EXECUTIVE SUMMARY IS A SUMMARY OF THE WHOLE DEFENCE (maintainer). It states the cardholder's claim, gives the facts that answer it in the order that argues best, says in one plain sentence what those facts show together, and ends with the request to reverse the chargeback. An analyst who reads only the summary has the complete case.
+- Never pad. Make as many points as the ledger genuinely supports — one strong point is fine. Never invent a second point to reach a number, and never repeat a point in other words.
 
 NEVER (truth): these are absolute
 - Say where the parcel was delivered, or that an address was verified, matched or correct. Do not use the word "address" except in "the email address on the order".
@@ -65,8 +66,8 @@ COPY RULES (the page already shows these)
 const EXAMPLE = `REGISTER EXAMPLE: a DIFFERENT, invented case. Copy the shape, never the words.
 Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one UPS parcel. UPS recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with a card ending in the same four digits. The dispute (non-receipt) was opened on 21 April.
 
-headline: "The cardholder says the order never arrived. UPS recorded it delivered on 9 March, and on 2 April the same customer was back, buying again with a card ending in the same four digits."
-summary: "UPS's record and the customer's own next purchase point the same way: the order was delivered."
+headline: "The cardholder says the order never arrived. UPS recorded it delivered, and the same customer came back and bought again before disputing it."
+summary: "The cardholder claims the order was never received. UPS recorded the parcel delivered on 9 March, and everything the cardholder paid for was in that one parcel. On 2 April, twenty-four days after that delivery, the same customer placed a new order with a card ending in the same four digits; nineteen days later they opened this dispute. The carrier's record and the customer's own next purchase both show the order was delivered. The merchant respectfully requests that the chargeback be reversed."
 shipping: "The delivery on the card above is UPS's own scan, published on UPS's tracking page. The issuer can open it with the link below and see the delivery for itself."
 lineItems: "Nothing the cardholder bought travelled separately. The helmet and the gloves left in the same tracked parcel, so the delivery UPS recorded is the delivery of the entire order."
 chronology: "Read top to bottom, the timeline tells one story. The order shipped the next morning. UPS delivered it five days later, and a delivery notice went to the email address on the order that afternoon. The customer's next order came on 2 April. The claim that the first one never arrived came on 21 April."
@@ -137,10 +138,11 @@ OUTPUT: JSON only.
 - SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Never in both the headline and the summary. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier is NAMED only in the headline and in the shipping section; everywhere else write "the carrier". The payment match ("a card ending in the same four digits") appears only in the headline and the chronology; elsewhere say the customer "bought again".
 - claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section (the headline counts as part of the summary).
 - The conclusion is followed by a fixed request line naming the amount. Do not write a request.
-- SUMMARY: exactly ONE sentence, at most 30 words, no dates, no numbers, no fact that the headline or a section states. It tells the analyst what the headline's facts mean for this claim, in plain words.
-- CONCLUSION: exactly ONE sentence, at most 25 words, restating no fact: the finding the issuer should make. The request line follows it.
+- HEADLINE: one or two sentences, at most 30 words, NO dates or numbers: the contrast between the claim and the record.
+- SUMMARY: the complete defence in brief (claim, answering facts with their key specifics, what they show, the request to reverse). Plain sentences. As long as the case needs and no longer.
+- CONCLUSION: at most ONE short sentence restating no fact, or leave it empty ("paragraphs": []). The fixed request line follows it.
 - The SHIPPING section does not restate the delivery date: the card above it shows it.
-- Length: headline up to 40 words; summary ONE sentence up to 30 words; each evidence section 30–80 words; conclusion ONE sentence up to 25 words.`;
+- Length: headline up to 30 words; summary up to 110 words; each evidence section 30–80 words; conclusion up to 25 words.`;
   const user = `CASE CONTEXT (already printed on the page — do not repeat it)\n${context}\n\nCLAIM LEDGER\n${ledgerBlock(ledger)}\n\nYOUR CASE PLAN (follow it; improve the wording, not the facts)\n${JSON.stringify(plan, null, 2)}`;
   return { system, user };
 }

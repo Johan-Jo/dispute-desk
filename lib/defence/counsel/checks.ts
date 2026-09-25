@@ -135,17 +135,19 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   if (ctx.carrierName && count(ctx.carrierName) > 2) {
     issues.push(`copy: "${ctx.carrierName}" is named ${count(ctx.carrierName)} times (at most twice; then "the carrier")`);
   }
-  // The summary supports the headline and never complicates it: one sentence,
-  // at most 30 words, no dates or numbers (maintainer, three times). The
-  // conclusion is one sentence, at most 25 words, leading into the request.
+  // Executive summary = the whole defence in brief, ending with the request
+  // (maintainer, 2026-09-25). The headline is the contrast only: no dates or
+  // numbers, so the two never compete. The conclusion is optional and short.
+  const headlineText = P.find((p) => p.where === "headline")?.text ?? "";
   const summaryText = P.find((p) => p.where === "summary")?.text ?? "";
   const conclusionText = P.find((p) => p.where === "conclusion")?.text ?? "";
   const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter(Boolean);
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
-  if (sentences(summaryText).length !== 1) issues.push(`summary: must be ONE sentence (has ${sentences(summaryText).length})`);
-  if (words(summaryText) > 30) issues.push(`summary: at most 30 words (has ${words(summaryText)})`);
-  if (specificsIn(summaryText).length) issues.push(`summary: no dates or numbers (found ${specificsIn(summaryText).join(", ")})`);
-  if (sentences(conclusionText).length !== 1) issues.push(`conclusion: must be ONE sentence (has ${sentences(conclusionText).length})`);
+  if (specificsIn(headlineText).length) issues.push(`headline: no dates or numbers (found ${specificsIn(headlineText).join(", ")}); the summary carries them`);
+  if (words(headlineText) > 30) issues.push(`headline: at most 30 words (has ${words(headlineText)})`);
+  if (words(summaryText) > 110) issues.push(`summary: at most 110 words (has ${words(summaryText)})`);
+  if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
+  if (sentences(conclusionText).length > 1) issues.push(`conclusion: at most ONE sentence (has ${sentences(conclusionText).length})`);
   if (words(conclusionText) > 25) issues.push(`conclusion: at most 25 words (has ${words(conclusionText)})`);
   // Distinctive phrases, like specifics, appear at most twice in the letter.
   for (const phrase of ["same four digits", "same apple pay wallet", "public tracking page", "not a merchant document", "not the merchant's"]) {
