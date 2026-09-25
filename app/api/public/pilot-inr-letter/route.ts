@@ -51,7 +51,8 @@ export async function POST(req: Request): Promise<Response> {
     body: JSON.stringify({
       model,
       max_tokens: 3000,
-      temperature: 0.4,
+      // Opus 5.5 rejects `temperature` (deprecated for that model).
+      ...(model === "claude-opus-5-5" ? {} : { temperature: 0.4 }),
       system: body.system.slice(0, 40_000),
       messages: [{ role: "user", content: body.user.slice(0, 4_000) }],
     }),
