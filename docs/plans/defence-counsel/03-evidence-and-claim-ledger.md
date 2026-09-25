@@ -23,6 +23,20 @@ The source is `case-352543/inputs.json` (the evidence pack's `pack_json.sections
 | 13 | Customer support conversations (Gorgias) | blume-box has Gorgias connected; the case has a Gorgias comms section | ❌ | **Potentially strong**: any post-delivery contact that does not report non-receipt, or that acknowledges the order. Refund and cancellation threads are hard-blocked from bank letters (existing rule) |
 | 14 | Carrier event detail | Carrier scan events (text, time); possibly a delivery photo or proof-of-delivery page at the carrier | Partially (delivery date only) | **Potentially strong**: needs a legal check against rule 14 (see Q3) |
 
+### 1.1 Why only two facts reach the model (from the stored `plan_json` and `facts_json`)
+
+Two filters run in sequence. Both are built to decide what is **safe** to show a bank; neither asks what **helps** the argument.
+
+1. **The argument plan** (`plan_json`, policy v1, `reasonModuleId: inr_product_not_received`):
+   - **Included:** `order_confirmation`, `shipping_tracking`, `delivery_proof`, `shipping_policy`.
+   - **Excluded as `not_argument_relevant`:** customer history (`activity_log`, `customer_account_info`), `ip_location_check`, and the refund and cancellation policies.
+   - **Excluded as `unverified`:** `avs_cvv_match`.
+2. **The bank-eligibility filter** (`bankIncludedFacts`, `lib/jobs/handlers/buildDefencePackageJob.ts` ~L496) then dropped `order_confirmation` and `shipping_policy`. What remained in `facts_json`: `shipping_tracking` and `delivery_proof`.
+
+Customer history is also stored only as counts (`totalOrders: 2`). Because no code asked *when* the other order was placed, the most useful question (Q1) never came up.
+
+**Implication:** the claim ledger (§3) must be built from the records by **argument value per reason code**, and bank safety must be applied per claim rather than per whole record category. A record category that is "not relevant" in general can still yield one highly relevant claim, such as "ordered again after delivery".
+
 ## 2. Open questions (resolve these before the prompt work; each can change the argument)
 
 - **Q1: The second order.** Customer history says 2 orders, the account was created the morning of this one, and "repeat customer" is true. When was the other order placed, and was it delivered? *If the cardholder ordered again after 6 July*, that is one of the strongest facts in a non-receipt case. It is stated as a fact ("the cardholder placed a further order on …"), never with commentary. Source: the Shopify Admin API (the customer's orders), read with the stored offline token (CLAUDE.md, "Calling a MERCHANT store's Admin API").
