@@ -158,7 +158,7 @@ describe("single-parcel non-receipt letters argue the case from the records", ()
 
   it("summary: the position, the amount and the chain the case rests on", () => {
     expect(out.executiveSummary.text).toBe(
-      "The merchant contests this CAD 120.75 non-receipt chargeback. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full.",
+      "The merchant contests this non-receipt chargeback. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full.",
     );
   });
 
@@ -233,8 +233,8 @@ describe("single-parcel non-receipt letters argue the case from the records", ()
     expect(prose).not.toContain("260702441A");
     expect(prose).not.toMatch(/\b\d{1,2}:\d{2}\b/);
     expect(prose).not.toContain("Stallion Express");
-    // The amount once in the prose (the summary); the request line names it.
-    expect(prose.match(/CAD 120\.75/g)).toHaveLength(1);
+    // No amount in the prose: the header, cards and request line carry it.
+    expect(prose).not.toContain("120.75");
   });
 
   it("keeps the model's other sections", () => {
