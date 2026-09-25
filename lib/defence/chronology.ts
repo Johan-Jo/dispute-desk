@@ -36,6 +36,9 @@ export interface ChronologyEvent {
  * `DisputeContextLike`) pass a superset of this shape.
  */
 export interface ChronologyContext {
+  /** The disputed order's total as printed in the line-items table
+   *  ("CAD 120.75"). Named on the "placed this order" row. */
+  orderTotalDisplay?: string | null;
   /** Full event timeline from the pack's access_log section.
    *  Threaded through by:
    *    - PDF: `meta.timelineEvents` (set by `buildDefencePackageJob`)
@@ -265,6 +268,17 @@ export function formatChronologyTimestamp(iso: string): string {
   return `${mon} ${day}, ${yyyy}, ${hh}:${mm} UTC`;
 }
 
+/** "placed this order" → "placed order #352543 for CAD 120.75";
+ *  "opened a chargeback totaling" → "opened a chargeback on order #352543,
+ *  totaling". Both still match their allow-list patterns. */
+function nameTheOrder(text: string, context: ChronologyContext): string {
+  const name = context.orderName;
+  if (!name) return text;
+  return text
+    .replace(/\bplaced this order\b/, `placed order ${name}${context.orderTotalDisplay ? ` for ${context.orderTotalDisplay}` : ""}`)
+    .replace(/\bopened a chargeback totaling\b/, `opened a chargeback on order ${name}, totaling`);
+}
+
 export function buildChronologyEvents(
   context: ChronologyContext,
   facts: EvidenceFact[] = [],
@@ -273,7 +287,7 @@ export function buildChronologyEvents(
   const rich = context.timelineEvents;
   if (Array.isArray(rich) && rich.length > 0) {
     const normalized = [...rich]
-      .map((e) => ({ ...e, text: normalizeChronologyText(e.text) }))
+      .map((e) => ({ ...e, text: nameTheOrder(normalizeChronologyText(e.text), context) }))
       .sort((a, b) => a.at.localeCompare(b.at));
     // Bank-facing hygiene: keep ONLY allow-listed evidentiary events.
     // Shopify's raw Order.events is an open-ended free-text stream that

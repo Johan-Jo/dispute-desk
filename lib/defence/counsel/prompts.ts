@@ -46,6 +46,7 @@ NEVER (style): these made earlier drafts fail
 CLARITY (maintainer's rule: "We cannot phrase things so that it's not clear from the beginning")
 - Plain English. No metaphors, idioms or legal flourishes: not "closes the claim at the threshold", "without a coherent foundation", "nothing to stand on", "stands between", "its record is what it is", "cannot survive". Say literally what the evidence shows and what follows from it.
 - Every sentence must be understood on the FIRST read by a busy analyst. If a sentence could be misread, rewrite it.
+- EVERY SENTENCE ADDS SOMETHING NEW (maintainer, repeatedly). Never restate a point in other words, even inside one section: "all items were in one shipment", "there was no second shipment" and "the delivery covers the entire order" are ONE point, said once. Never add a phrase that repeats what the same sentence already says ("on 2 July — the same day").
 - THE EXECUTIVE SUMMARY IS A SUMMARY OF THE WHOLE DEFENCE (maintainer). It states the cardholder's claim, gives the facts that answer it in the order that argues best, says in one plain sentence what those facts show together, and ends with the request to reverse the chargeback. An analyst who reads only the summary has the complete case.
 - Never pad. Make as many points as the ledger genuinely supports — one strong point is fine. Never invent a second point to reach a number, and never repeat a point in other words.
 
@@ -109,9 +110,9 @@ Return JSON only:
   "theoryChosen": "the playbook theory name",
   "punchlineCandidates": ["three alternative opening sentences for the executive summary, each setting the claim against the record"],
   "reasonsInOrderOfForce": [{ "claimIds": ["…"], "point": "…" }],
-  "sectionPlan": [{ "key": "shipping|lineItems|chronology", "claimIds": ["…"], "job": "what this section proves for this claim" }],
+  "sectionPlan": [{ "key": "${playbook.sections.map((s) => s.key).join("|")}", "claimIds": ["…"], "job": "what this section proves for this claim" }],
   "omittedSections": [{ "key": "…", "why": "…" }],
-  "specificsPlacement": { "<specific as it will be written>": "summary|shipping|lineItems|chronology|conclusion" }
+  "specificsPlacement": { "<specific as it will be written>": "summary|${playbook.sections.map((s) => s.key).join("|")}" }
 }
 sectionPlan lists the evidence sections in the order they will print. specificsPlacement gives each specific exactly one home.`;
   const user = `CASE CONTEXT (already printed on the page)\n${context}\n\nCLAIM LEDGER (the only facts you may use)\n${ledgerBlock(ledger)}`;
@@ -130,16 +131,18 @@ ${playbookBlock(playbook)}
 OUTPUT: JSON only.
 {
   "summary": { "paragraphs": ["…"], "claimIds": ["…"] },
-  "evidenceSections": [ { "key": "shipping|lineItems|chronology", "paragraphs": ["…"], "claimIds": ["…"] } ],
-  "conclusion": { "paragraphs": ["…"], "claimIds": ["…"] }
+  "evidenceSections": [ { "key": "${playbook.sections.map((s) => s.key).join("|")}", "paragraphs": ["…"], "claimIds": ["…"] } ],
+  "conclusion": { "paragraphs": [], "claimIds": [] }
 }
 - evidenceSections are printed in the order you give. Omit a section rather than fill it.
+- The executive summary already states the whole defence. An evidence section adds ONLY what its exhibit shows that the summary did not say (e.g. that the delivery record is the carrier's own, publicly checkable). It never restates a fact from the summary. If there is nothing new to add, give it "paragraphs": [] — the exhibit (card, table, timeline) still prints.
 - SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier is NAMED only in the headline and in the shipping section; everywhere else write "the carrier". The payment match ("a card ending in the same four digits") appears only in the headline and the chronology; elsewhere say the customer "bought again".
 - claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section.
 - The conclusion is followed by a fixed request line naming the amount. Do not write a request.
 - There is NO headline. The executive summary is the only summary: it opens with the punchline sentence.
+- The SUMMARY must carry every [core] claim in the ledger (briefly), because the sections below no longer repeat them. Never state a conclusion ("in full") without the fact that proves it.
 - SUMMARY: the complete defence, short and with punch: the claim against the record, the facts that decide it, the request to reverse. AT MOST 70 WORDS. Short sentences. Cut every word that does not win the case.
-- CONCLUSION: at most ONE short sentence restating no fact, or leave it empty ("paragraphs": []). The fixed request line follows it.
+- CONCLUSION: always empty ("paragraphs": []). The executive summary already makes the case; the fixed request line closes the letter.
 - The SHIPPING section does not restate the delivery date: the card above it shows it.
 - Length: summary at most 70 words; each evidence section 30–80 words; conclusion up to 25 words.`;
   const user = `CASE CONTEXT (already printed on the page — do not repeat it)\n${context}\n\nCLAIM LEDGER\n${ledgerBlock(ledger)}\n\nYOUR CASE PLAN (follow it; improve the wording, not the facts)\n${JSON.stringify(plan, null, 2)}`;
@@ -161,12 +164,13 @@ Flag a sentence when:
 - events are put in the wrong order, or a relation ("before", "after", "the same day", "then") contradicts the ledger;
 - it states a fact that no ledger claim supports;
 - it says or implies what the cardholder thought, knew, intended or would have done ("a purchase that only makes sense if…", "they knew", "they would not have…");
-- it says where a parcel was delivered, or that anyone personally received it.
+- it says where a parcel was delivered, or that anyone personally received it;
+- it restates a point already made earlier in the letter or in the same section, in the same or other words (e.g. "one shipment" then "no second shipment" then "the entire order"), or a phrase repeats what its own sentence already says ("on 2 July — the same day").
 
-Do NOT flag style, tone or reasonable argument drawn from ledger facts.
+Do NOT flag style, tone or reasonable argument drawn from ledger facts. DO flag repetition as described above; name the earlier sentence it repeats. A phrase that relates two DIFFERENT events ("a delivery notification went out that same day" after the delivery) is not repetition; do not flag it.
 
 CLAIM LEDGER
-${ledger.map((c) => `- ${c.id}: ${c.statement}`).join("\n")}
+${ledger.map((c) => `- ${c.id}: ${c.statement}${Object.keys(c.specifics).length ? ` (values: ${JSON.stringify(c.specifics)})` : ""}`).join("\n")}
 
 Return JSON only: { "errors": [ { "sentence": "…", "problem": "…" } ] } — an empty array when every sentence is correct.`;
   return { system, user: letterText };

@@ -107,6 +107,14 @@ export async function writeCounselLetter(args: {
 
   // Code checks first; when they pass, the model fact-check (relations,
   // sequence, intent) — a true number on the wrong interval passes code.
+  // Sections the playbook does not carry are dropped, not failed.
+  const allowed = new Set(args.playbook.sections.map((s) => s.key));
+  const normalize = (d: CounselDraft): CounselDraft => ({
+    ...d,
+    evidenceSections: (d.evidenceSections ?? []).filter((s) => allowed.has(s.key)),
+    conclusion: { paragraphs: [], claimIds: [] },
+  });
+
   const allIssues = async (d: CounselDraft): Promise<string[]> => {
     const code = checkDraft(d, args.check);
     if (code.length) return code;
@@ -119,7 +127,7 @@ export async function writeCounselLetter(args: {
 
   const candidates = await Promise.all(
     Array.from({ length: n }, async (_, i): Promise<CounselCandidate> => {
-      let draft = parseJson<CounselDraft>(await args.call({ ...wp, temperature: 0.7, maxTokens: 3000 }));
+      let draft = normalize(parseJson<CounselDraft>(await args.call({ ...wp, temperature: 0.7, maxTokens: 3000 })));
       const firstIssues = await allIssues(draft);
       let issues = firstIssues;
       let retried = false;
@@ -133,7 +141,7 @@ export async function writeCounselLetter(args: {
             "Copy every sentence that was not flagged word for word. Do not add new sentences, dates or numbers.",
           `PREVIOUS DRAFT:\n${JSON.stringify(draft, null, 2)}`,
         ].join("\n\n");
-        draft = parseJson<CounselDraft>(await args.call({ system: wp.system, user, temperature: 0.2, maxTokens: 3000 }));
+        draft = normalize(parseJson<CounselDraft>(await args.call({ system: wp.system, user, temperature: 0.2, maxTokens: 3000 })));
         issues = await allIssues(draft);
       }
       log(`candidate ${i + 1}: first ${firstIssues.length} issue(s), final ${issues.length}`);

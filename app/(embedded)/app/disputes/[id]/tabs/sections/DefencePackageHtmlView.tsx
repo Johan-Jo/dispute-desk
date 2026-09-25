@@ -50,6 +50,7 @@ import {
   describeChronologyEvent,
   emphasisSegments,
   lineItemsTotal,
+  orderPlacedLine,
   productsOf,
   deliveryFactIds,
   shipmentCards,
@@ -215,9 +216,11 @@ function fmtAmount(amount: number | string | null | undefined, currency: string 
 function chronologyEvents(
   dispute: DisputeContextLike | undefined,
   facts: EvidenceFact[],
+  orderTotalDisplay: string | null = null,
 ): ChronologyEvent[] {
   return buildChronologyEvents(
     {
+      orderTotalDisplay,
       timelineEvents: dispute?.timelineEvents ?? null,
       transactionDate: dispute?.transactionDate ?? null,
       orderName: dispute?.orderName ?? null,
@@ -486,8 +489,8 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     : null;
   const reasonModule = moduleKey ? ALL_REASON_CODE_MODULES.find((m) => m.key === moduleKey) ?? null : null;
 
-  const chrono = chronologyEvents(dispute, facts);
   const lineItems: LineItem[] = buildLineItems(facts);
+  const chrono = chronologyEvents(dispute, facts, lineItemsTotal(lineItems)?.amount ?? null);
   const total = lineItemsTotal(lineItems);
   const shipments = shipmentsOf(facts);
   const multiParcel = shipments.length > 1;
@@ -709,6 +712,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
 
         {lineItems.length > 0 ? (
           <Section number={num()} title={t("orderLineItems")}>
+            {orderPlacedLine(dispute?.orderName, dispute?.transactionDate) ? (
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+                {orderPlacedLine(dispute?.orderName, dispute?.transactionDate)}
+              </div>
+            ) : null}
             <ZebraTable
               head={["Description", "Qty", "Price"]}
               widths={["70%", "10%", "20%"]}
@@ -742,7 +750,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
 
         {chrono.length > 0 || chronologyBody ? (
           <Section number={num()} title={SECTION_TITLES.chronologyArgument}>
-            {chronologyBody ? <Prose text={chronologyBody} /> : null}
+            {chronologyBody ? (
+              <div style={{ marginBottom: 20 }}>
+                <Prose text={chronologyBody} />
+              </div>
+            ) : null}
             {chrono.length > 0 ? <ChronologyView events={chrono} shipments={shipments} /> : null}
           </Section>
         ) : null}
