@@ -239,7 +239,8 @@ export function applyShipmentRecordSections(
  * verified item by item) puts every purchased item in that shipment; so the
  * delivery evidence addresses the complete disputed purchase. Each section
  * carries its own part of it:
- *   - summary: the position, the amount, and the chain the case rests on;
+ *   - summary: the position and the chain the case rests on (the amount is
+ *     in the header and the request line);
  *   - shipping (under the card): order → shipment → carrier delivery, and
  *     why the carrier's record, not the merchant's, answers non-receipt;
  *   - line items (under the table): the shipment covers every item (only
@@ -305,7 +306,6 @@ export function applySingleParcelRecordSections(
   const signed = v.proofType === "signature_confirmed";
   const factIds = delivery.map((f) => f.id);
   const events = ctx.timelineEvents ?? [];
-  const amount = disputedAmountDisplay(ctx.disputeAmount, ctx.disputeCurrency);
   const coverage = fulfilmentCoverage(ctx.packSections, tracking, events);
   const allItems = coverage?.kind === "verified";
   const itemCount = coverage?.kind === "verified" ? coverage.itemCount : 0;
@@ -323,7 +323,8 @@ export function applySingleParcelRecordSections(
 
   // ── Executive summary ──
   const summary = [
-    `The merchant contests this${amount ? ` ${amount}` : ""} non-receipt chargeback.`,
+    // No amount: the header, the cards and the request line carry it.
+    "The merchant contests this non-receipt chargeback.",
     allItems
       ? "Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full."
       : "Linked order, fulfilment and carrier records connect the order to the tracked shipment and its delivery event, an affirmative basis to contest the claim.",
