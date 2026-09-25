@@ -620,6 +620,9 @@ export function DefencePackageDocument({
     );
   };
 
+  const overviewBlock = findBlock(composedBlocks, "transactionOverviewArgument");
+  const lineItemsArgument =
+    overviewBlock?.recordBuilt && lineItems.length > 0 ? blockBody(overviewBlock) : null;
   const chronologyBlock = findBlock(composedBlocks, "chronologyArgument");
   const chronologyBody = blockBody(chronologyBlock);
   const conclusion = findBlock(composedBlocks, "conclusion");
@@ -644,7 +647,9 @@ export function DefencePackageDocument({
         {/* The argument starts on page 2, under the running header. */}
         <View break>
           {prose("executiveSummary")}
-          {prose("transactionOverviewArgument")}
+          {/* A record-built overview argues the line items: it prints under
+              the table instead (review of #352543, 2026-09-25). */}
+          {lineItemsArgument ? null : prose("transactionOverviewArgument")}
           {prose("paymentAuthenticationArgument")}
 
           {multiParcel ? (
@@ -694,6 +699,11 @@ export function DefencePackageDocument({
           {lineItems.length > 0 ? (
             <Section number={num()} title="Order Line Items" keepTogether={lineItems.length <= 10}>
               <LineItemsTable items={lineItems} />
+              {lineItemsArgument ? (
+                <View style={{ marginTop: 14 }}>
+                  <Prose text={lineItemsArgument} emphasise={productNames} />
+                </View>
+              ) : null}
             </Section>
           ) : null}
 
@@ -711,13 +721,16 @@ export function DefencePackageDocument({
 
           {conclusion && (conclusionBody || conclusion.thesisText.trim()) ? (
             <Section number={num()} title={conclusion.heading} keepTogether>
+              {/* The reasoning, then the request (review of #352543). */}
               <View style={styles.conclusion}>
-                {conclusion.thesisText.trim() ? (
-                  <Text style={[styles.conclusionRequest, conclusionBody ? {} : { marginBottom: 0 }]}>
-                    {conclusion.thesisText.trim()}
+                {conclusionBody ? (
+                  <Text style={[styles.conclusionBody, conclusion.thesisText.trim() ? { marginBottom: 10 } : {}]}>
+                    {conclusionBody}
                   </Text>
                 ) : null}
-                {conclusionBody ? <Text style={styles.conclusionBody}>{conclusionBody}</Text> : null}
+                {conclusion.thesisText.trim() ? (
+                  <Text style={[styles.conclusionRequest, { marginBottom: 0 }]}>{conclusion.thesisText.trim()}</Text>
+                ) : null}
               </View>
             </Section>
           ) : null}

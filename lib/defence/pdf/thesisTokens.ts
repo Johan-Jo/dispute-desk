@@ -261,4 +261,12 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
     predicateId: null,
     extract: () => "the chargeback identified above",
   },
+
+  /** The disputed amount from the case, "CAD 120.75" — not a fact claim. */
+  disputedAmount: {
+    name: "disputedAmount",
+    description: "The disputed amount as the case records it (\"CAD 120.75\"), for the request line.",
+    predicateId: null,
+    extract: (_facts, ctx?: ThesisContext) => ctx?.disputedAmount ?? null,
+  },
 };

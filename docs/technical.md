@@ -2865,6 +2865,26 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 
 **Getting late delivery TO an open dispute:** nothing re-fetched an existing dispute's order once its pack was built, so a carrier delivery that lands weeks after the dispute opened never reached the case. The nightly cron [app/api/cron/refresh-open-disputes/route.ts](../app/api/cron/refresh-open-disputes/route.ts) (02:30 UTC) re-ingests each open dispute's order via `normalizeOrderIngest` and enqueues a `build_pack` when the order's `delivery_status` changed (esp. → `Delivered`). The rebuild then flows through the strength rule + improvement notification above automatically. Bounded (`MAX_PER_RUN`, oldest-refreshed first) and gated by `cronEnvGate`.
 
+**Use the records to make the case (2026-09-25, fourth review of #352543).** The reasoning is now spread across its proper sections, and each link in the argument depends on the record that supports it. The argument: the claim is non-receipt; the shipment linked to the purchase has a carrier-recorded delivery; the fulfilment mapping puts every purchased item in that shipment; so the delivery evidence covers the complete disputed purchase.
+
+- **Item-by-item coverage (`lib/defence/fulfilmentCoverage.ts`).** The order and fulfilment queries now fetch line-item IDs. The pack's order `lineItems[].lineItemId` and shipping `fulfillments[].items[].lineItemId` carry them. `fulfilmentCoverage` returns one of three results:
+  - `verified` only when the fulfilment carrying the tracking number maps, by ID, to every order line item in the quantity ordered;
+  - `history` when only the order history's "<actor> marked N items as fulfilled" line is available (a count is not an item match). The letter then quotes that line and claims no item-by-item match;
+  - null otherwise.
+- **Sections.**
+
+  | Section | States |
+  |---|---|
+  | Summary | position, disputed amount, the chain the case rests on |
+  | Shipping & Delivery | order → shipment → carrier delivery; why the carrier's record, not the merchant's, answers non-receipt |
+  | Order Line Items | printed under the table: the shipment covers each product (verified only); the money reconciles to the disputed amount (only when it does) |
+  | Chronology | above the timeline: the delivery is dated before the dispute (not "made before" it); the emails as shipment updates sent to the customer's recorded email address (only when the history line names the order's email, now carried as the order section's `email`), never as proof of receipt |
+  | Conclusion | reasoning first, then the request line, which now names the amount for item not received (`disputedAmount` token, COMPOSITION_VERSION 3) |
+- **Record-built sections pass the family deny list.** The job now runs `omitDeniedSections` BEFORE `applyShipmentRecordSections`. Record-built sections carry `source: "record"` (`NarrativeSection`), and composed blocks carry `recordBuilt`. `isSectionShown` (sectionVisibility.ts) lets them through, while model text and stale rows in a deny-listed section stay hidden. A record-built transaction overview prints under Order Line Items in both renderers.
+- **Conclusion order (all letters).** The body prints before the request line in the PDF and the in-app preview.
+
+PROMPT_VERSION 36. Regression: `lib/defence/__tests__/singleParcelRecordSections.test.ts` (coverage, sections, conditions, full validator).
+
 **Remove repeated wording, not reasoning (2026-09-25, third review of #352543).** The record-only rewrite below went too far: one sentence of argument and no reasoning. The single-parcel sections still come from the records (`applySingleParcelRecordSections`), but each part now has its own job again, and the shipping section argues the chain the records form. `RecordSectionContext` also carries the Order Line Items rows and the disputed amount and currency.
 
 | Part | States |
