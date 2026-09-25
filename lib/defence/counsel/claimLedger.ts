@@ -13,6 +13,8 @@
 
 import { classifyChronologyEvent } from "../chronology";
 import { fulfilmentCoverage } from "../fulfilmentCoverage";
+import { isCeItem3Citable, resolveCardNetwork } from "../../argument/avsCodeMap";
+import type { AddressExhibit } from "../types";
 import type { CustomerOrderSummary, LedgerClaim, LedgerInput } from "./types";
 
 const MONTHS = [
@@ -271,6 +273,16 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
   }
 
   const later = laterOrder(input.customerOrders, input.orderName, deliveredAt);
+  // With a later order before the dispute, its two intervals (delivery →
+  // later order → dispute) tell the story; a third, delivery → dispute,
+  // only invites arithmetic (judge, #352543). The claim stays; its interval goes.
+  if (later && opened && Date.parse(later.createdAt) < Date.parse(opened)) {
+    const c = claims.find((x) => x.id === "dispute_after_delivery");
+    if (c) {
+      c.statement = `The dispute was opened on ${longDate(opened)}, after the carrier recorded delivery.`;
+      c.specifics = { disputeOpenedOn: longDate(opened)! };
+    }
+  }
   if (later) {
     const disputed = input.customerOrders.find((o) => o.name === input.orderName) ?? null;
     const sameCard =
@@ -322,7 +334,77 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     });
   }
 
+  for (const c of addressClaims(orderData, sections)) add(c);
+
   return claims;
+}
+
+/**
+ * Address claims (maintainer, 2026-09-25: "we need to have the address as
+ * part of the model"). Made only when the shipping and billing addresses on
+ * the order are identical, and always with both printed as an exhibit — an
+ * address claim is never made without the addresses shown. When they differ
+ * nothing is said and nothing is printed: a mismatch is not volunteered.
+ *
+ * What these claims do NOT say: that the parcel was delivered to that address.
+ * The carrier record carries no delivery location, and `address_delivery`
+ * (claimCapabilities.ts) stays ungranted.
+ */
+const ADDRESS_FIELDS = ["address1", "address2", "city", "provinceCode", "zip", "countryCode"] as const;
+
+function addressClaims(orderData: Obj, sections: LedgerInput["packSections"]): LedgerClaim[] {
+  const sa = obj(orderData.shippingAddressFull);
+  const ba = obj(orderData.billingAddressFull);
+  if (!sa || !ba) return [];
+  // Street, city, postal code and country must be on both; "Unit 5" vs no
+  // unit is a difference, so the comparison is on every field.
+  if (!(["address1", "city", "zip", "countryCode"] as const).every((f) => str(sa[f]) && str(ba[f]))) return [];
+  const norm = (x: unknown) => (str(x) ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!ADDRESS_FIELDS.every((f) => norm(sa[f]) === norm(ba[f]))) return [];
+
+  const lines = (a: Obj) =>
+    [
+      str(a.address1),
+      str(a.address2),
+      [str(a.city), [str(a.provinceCode), str(a.zip)].filter(Boolean).join(" ")].filter(Boolean).join(", "),
+      str(a.country) ?? str(a.countryCode),
+    ].filter((l): l is string => !!l);
+
+  // The issuer's own address check, cited only on a primary-sourced cell
+  // (Visa Y / M today — avsCodeMap.ts).
+  const pay = sections
+    .map((s) => obj(s?.data))
+    .find((d) => !!d && typeof d.avsResultCode === "string");
+  const network = pay ? resolveCardNetwork(pay) : "unknown";
+  const avsCode = pay ? str(pay.avsResultCode)!.toUpperCase() : null;
+  const avs = avsCode && isCeItem3Citable(network, avsCode) ? { code: avsCode, network } : null;
+
+  const exhibit: AddressExhibit = { shipping: lines(sa), billing: lines(ba), avs };
+  const NOT_DELIVERY =
+    "Never say the parcel was delivered to, reached, arrived at or was received at any address: the carrier's record gives no delivery location.";
+  const out: LedgerClaim[] = [
+    {
+      id: "shipping_matches_billing",
+      statement:
+        "The shipping address entered at checkout is identical to the billing address. Both are printed side by side in the Shipping section.",
+      specifics: {},
+      weight: "strong",
+      sources: ["pack.order.shippingAddressFull", "pack.order.billingAddressFull"],
+      mustNot: [NOT_DELIVERY, "Never print any part of either address; the exhibit shows them."],
+      addressExhibit: exhibit,
+    },
+  ];
+  if (avs) {
+    out.push({
+      id: "billing_address_verified",
+      statement: "When the payment was authorised, the card issuer's address check (AVS) matched the billing address.",
+      specifics: {},
+      weight: "strong",
+      sources: ["pack.payment.avsResultCode"],
+      mustNot: [NOT_DELIVERY, "Never print the AVS result code; the exhibit shows it."],
+    });
+  }
+  return out;
 }
 
 function walletName(w: string): string {

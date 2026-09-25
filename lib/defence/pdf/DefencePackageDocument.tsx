@@ -39,6 +39,7 @@ import {
   emphasisSegments,
   lineItemsTotal,
   orderPlacedLine,
+  addressCard,
   productsOf,
   shipmentCards,
   shipmentsOf,
@@ -48,6 +49,7 @@ import {
   type ShipmentCard as ShipmentCardModel,
 } from "../render/documentModel";
 import type {
+  AddressExhibit,
   ComposedDocumentBlock,
   EvidenceFact,
   ManualEvidenceRecord,
@@ -96,6 +98,9 @@ export interface DefencePackageMeta {
   /** Line items extracted from `pack_json.sections[type=order].data.lineItems`
    *  by `deriveOrderContext`. */
   lineItemsFromContext?: Array<{ description: string; quantity: number; price: string; kind?: "item" | "adjustment" }>;
+  /** Counsel v2: shipping and billing addresses, printed only when the letter
+   *  claims they are identical (DefenceNarrativeOutput.addressExhibit). */
+  addressExhibit?: AddressExhibit | null;
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -393,7 +398,7 @@ function ShipmentCard({ card, wide = false }: { card: ShipmentCardModel; wide?: 
     <View style={styles.shipCard} wrap={false}>
       <View style={styles.shipHead}>
         <View style={styles.shipHeadRow}>
-          <Text style={styles.shipLabel}>Shipment {card.index}</Text>
+          <Text style={styles.shipLabel}>{card.eyebrow ?? `Shipment ${card.index}`}</Text>
           <Pill tone={card.status.tone} label={card.status.label} />
         </View>
         <Text style={styles.shipProduct}>{card.product}</Text>
@@ -670,6 +675,11 @@ export function DefencePackageDocument({
               <View style={styles.shipRow} wrap={false}>
                 <ShipmentCard card={shipmentCards([single], chronology)[0]} wide />
               </View>
+              {addressCard(meta.addressExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 12 }]} wrap={false}>
+                  <ShipmentCard card={addressCard(meta.addressExhibit)!} wide />
+                </View>
+              ) : null}
               {blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
                 <View style={{ marginTop: 14 }}>
                   <Prose

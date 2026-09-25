@@ -477,6 +477,15 @@ export interface FactPredicate {
 }
 
 /** What the LLM returns. Validated by `validateNarrative`. */
+/** Two addresses from the order record, formatted as printed lines. */
+export interface AddressExhibit {
+  shipping: string[];
+  billing: string[];
+  /** The card issuer's AVS result on the billing address, when it is a
+   *  citable full match (avsCodeMap.ts `isCeItem3Citable`). */
+  avs?: { code: string; network: string } | null;
+}
+
 export interface DefenceNarrativeOutput {
   executiveSummary: NarrativeSection;
   transactionOverviewArgument: NarrativeSection;
@@ -491,6 +500,12 @@ export interface DefenceNarrativeOutput {
    *  model and checked by code, printed in the pull-quote above the summary
    *  instead of the templated headline. Absent on every other letter. */
   headline?: string;
+  /** Counsel v2: the shipping and billing addresses, printed side by side in
+   *  the Shipping section. Present only when the letter claims they are
+   *  identical (claimLedger.ts, `shipping_matches_billing`): an address
+   *  claim is never made without the addresses shown (maintainer,
+   *  2026-09-25). */
+  addressExhibit?: AddressExhibit;
   omittedSections: OmittedSection[];
   /** Free-text warnings from the model — informational; validation may
    *  promote them to errors. */

@@ -51,6 +51,7 @@ import {
   emphasisSegments,
   lineItemsTotal,
   orderPlacedLine,
+  addressCard,
   productsOf,
   deliveryFactIds,
   shipmentCards,
@@ -380,7 +381,7 @@ function ShipmentCardView({ card, wide = false }: { card: ShipmentCard; wide?: b
     <div style={{ border: `1px solid ${C.hairline}`, borderRadius: 12, overflow: "hidden" }}>
       <div style={{ background: C.accentSoft, padding: "14px 18px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <span style={{ ...css.eyebrow, fontSize: 11 }}>Shipment {card.index}</span>
+          <span style={{ ...css.eyebrow, fontSize: 11 }}>{card.eyebrow ?? `Shipment ${card.index}`}</span>
           <Pill tone={card.status.tone} label={card.status.label} />
         </div>
         <div style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{card.product}</div>
@@ -405,7 +406,7 @@ function ShipmentCardView({ card, wide = false }: { card: ShipmentCard; wide?: b
             }
           >
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{f.label}</div>
-            <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>
+            <div style={{ fontSize: 14, color: C.ink, fontWeight: 500, whiteSpace: "pre-line" }}>
               {f.value}
               {f.reference ? (
                 <>
@@ -658,6 +659,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             {shipmentCards([single], chrono).map((card) => (
               <ShipmentCardView key={card.index} card={card} wide />
             ))}
+            {addressCard(narrative.addressExhibit) ? (
+              <div style={{ marginTop: 12 }}>
+                <ShipmentCardView card={addressCard(narrative.addressExhibit)!} wide />
+              </div>
+            ) : null}
             {visible("fulfillmentArgument") ? (
               <div style={{ marginTop: 16 }}>
                 <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />

@@ -38,7 +38,8 @@ export const ITEM_NOT_RECEIVED: Playbook = {
     {
       key: "shipping",
       exhibit: "the shipment card above the section (carrier, tracking number, shipped and delivered dates); the tracking link is printed at the end of the section",
-      mustProve: "that the delivery the cardholder denies is recorded by the carrier itself, a third party, on a public record the issuer can open",
+      mustProve:
+        "that the delivery the cardholder denies is recorded by the carrier itself, a third party, on a public record the issuer can open; and, when the ledger has shipping_matches_billing, that the shipping address is the billing address (both are printed side by side under the card)",
       includeWhen: ["carrier_delivered"],
     },
     {
@@ -49,9 +50,9 @@ export const ITEM_NOT_RECEIVED: Playbook = {
       includeWhen: ["dispute_after_delivery", "later_order", "delivery_notice_same_day", "shipped_promptly"],
     },
   ],
-  leaveOut: ["payment authentication (3-D Secure, AVS, CVV)", "IP address and device", "refund, return and cancellation policies"],
+  leaveOut: ["payment authentication (3-D Secure, CVV; AVS except as the ledger's billing_address_verified claim states)", "IP address and device", "refund, return and cancellation policies"],
   never: [
-    "Where the parcel was delivered, or that any address was verified or matched.",
+    "Where the parcel was delivered, or that it reached, arrived at or was received at any address. Any address statement beyond what the ledger's address claims allow.",
     "That the cardholder personally received, signed for, has or used the goods.",
     "That the cardholder did not complain, contact the merchant or return anything.",
     "That the claim is late or out of time under network rules.",

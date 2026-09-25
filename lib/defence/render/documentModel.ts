@@ -13,7 +13,7 @@
  * "delivered" ONLY when a carrier recorded the delivery.
  */
 
-import type { EvidenceFact } from "../types";
+import type { AddressExhibit, EvidenceFact } from "../types";
 import { classifyChronologyEvent, type ChronologyEvent } from "../chronology";
 import type { LineItem } from "./lineItems";
 
@@ -128,6 +128,8 @@ export interface ShipmentCardField {
 
 export interface ShipmentCard {
   index: number;
+  /** Card label; "Shipment {index}" when absent. */
+  eyebrow?: string;
   product: string;
   status: { tone: PillTone; label: string };
   fields: ShipmentCardField[];
@@ -214,6 +216,27 @@ export function orderPlacedLine(orderName: string | null | undefined, iso: strin
       })();
   const parts = [orderName ? `Order ${orderName}` : null, when].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;
+}
+
+/** The address exhibit as a card: shipping and billing side by side, and
+ *  the issuer's address check when it is citable. Printed only when the
+ *  letter claims the two are identical (counsel claimLedger.ts). */
+const NL = "\n";
+
+export function addressCard(ex: AddressExhibit | null | undefined): ShipmentCard | null {
+  if (!ex || !ex.shipping.length || !ex.billing.length) return null;
+  const fields: ShipmentCardField[] = [
+    { label: "Shipping address", value: ex.shipping.join(NL) },
+    { label: "Billing address", value: ex.billing.join(NL) },
+  ];
+  if (ex.avs) fields.push({ label: "Card issuer's address check (AVS)", value: `Full match (${ex.avs.code})` });
+  return {
+    index: 0,
+    eyebrow: "Order addresses",
+    product: "Shipping address identical to billing address",
+    status: { tone: "green", label: "Identical" },
+    fields,
+  };
 }
 
 export type ChronologyMarker = "filled" | "hollow" | "green";
