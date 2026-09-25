@@ -727,6 +727,13 @@ export function DefencePackageDocument({
                   <Prose text={lineItemsArgument} emphasise={productNames} />
                 </View>
               ) : null}
+              {/* The same customer's later order, under the disputed order's
+                  items (maintainer, 2026-09-25: it fits this page). */}
+              {laterOrderCard(meta.laterOrderExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 22 }]} wrap={false}>
+                  <ShipmentCard card={laterOrderCard(meta.laterOrderExhibit)!} wide />
+                </View>
+              ) : null}
             </Section>
           ) : null}
 
@@ -740,11 +747,6 @@ export function DefencePackageDocument({
               {chronologyBody ? (
                 <View style={{ marginBottom: 18 }}>
                   <Prose text={chronologyBody} />
-                </View>
-              ) : null}
-              {laterOrderCard(meta.laterOrderExhibit) ? (
-                <View style={[styles.shipRow, { marginBottom: 18 }]} wrap={false}>
-                  <ShipmentCard card={laterOrderCard(meta.laterOrderExhibit)!} wide />
                 </View>
               ) : null}
               {chronology.length > 0 ? <Chronology events={chronology} shipments={shipments} /> : null}

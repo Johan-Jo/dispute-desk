@@ -752,6 +752,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                 <Prose text={lineItemsArgument} emphasise={productNames} />
               </div>
             ) : null}
+            {laterOrderCard(narrative.laterOrderExhibit) ? (
+              <div style={{ marginTop: 24 }}>
+                <ShipmentCardView card={laterOrderCard(narrative.laterOrderExhibit)!} wide />
+              </div>
+            ) : null}
           </Section>
         ) : null}
 
@@ -760,11 +765,6 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             {chronologyBody ? (
               <div style={{ marginBottom: 20 }}>
                 <Prose text={chronologyBody} />
-              </div>
-            ) : null}
-            {laterOrderCard(narrative.laterOrderExhibit) ? (
-              <div style={{ marginBottom: 20 }}>
-                <ShipmentCardView card={laterOrderCard(narrative.laterOrderExhibit)!} wide />
               </div>
             ) : null}
             {chrono.length > 0 ? <ChronologyView events={chrono} shipments={shipments} /> : null}
