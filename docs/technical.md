@@ -2875,6 +2875,8 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 
 The prose carries only the argument. It says "this order" and "the carrier", and gives no order number, tracking number or time of day. The disputed amount appears once in the summary and again in the request line. The opening line reads "… recorded the shipment for this order as delivered on …". The reconciliation ends "reconciles to the full disputed amount", and the chronology and email paragraphs no longer restate dates. `singleParcelRecordSections.test.ts` pins the rule ("COPY RULE").
 
+The reconciliation sentence was later removed as well: the table's rows and Total already show the arithmetic. Under Order Line Items the prose now says only what the table cannot show, that the shipment holds every item, and only when the item-by-item check (`fulfilmentCoverage`) passes. PROMPT_VERSION 38.
+
 **Use the records to make the case (2026-09-25, fourth review of #352543).** The reasoning is now spread across its proper sections, and each link in the argument depends on the record that supports it. The argument: the claim is non-receipt; the shipment linked to the purchase has a carrier-recorded delivery; the fulfilment mapping puts every purchased item in that shipment; so the delivery evidence covers the complete disputed purchase.
 
 - **Item-by-item coverage (`lib/defence/fulfilmentCoverage.ts`).** The order and fulfilment queries now fetch line-item IDs. The pack's order `lineItems[].lineItemId` and shipping `fulfillments[].items[].lineItemId` carry them. `fulfilmentCoverage` returns one of three results:

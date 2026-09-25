@@ -266,52 +266,11 @@ function isItemNotReceived(moduleKey: string | null | undefined): boolean {
   }
 }
 
-function money(price: string): { currency: string; amount: number } | null {
-  const m = price.match(/^([A-Z]{3})\s+(-?\d+(?:\.\d+)?)$/);
-  return m ? { currency: m[1], amount: Number(m[2]) } : null;
-}
-
 const fmt = (currency: string, amount: number) => `${currency} ${amount.toFixed(2)}`;
-const cents = (n: number) => Math.round(n * 100);
-const joinAnd = (xs: string[]) =>
-  xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
 /** The disputed amount as the letter prints it: "CAD 120.75". */
 export function disputedAmountDisplay(amount: number | null | undefined, currency: string | null | undefined): string | null {
   return typeof amount === "number" && Number.isFinite(amount) && currency ? fmt(currency, amount) : null;
-}
-
-/**
- * "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus
- * CAD 10.00 shipping and CAD 12.75 tax, reconciles to CAD 120.75, the full
- * disputed amount." Null unless every row is in the dispute's currency and
- * the rows add up to the disputed amount exactly.
- */
-function reconciliation(ctx: RecordSectionContext): string | null {
-  const rows = ctx.lineItems ?? [];
-  const items = rows.filter((r) => r.kind !== "adjustment");
-  const adjustments = rows.filter((r) => r.kind === "adjustment");
-  const currency = ctx.disputeCurrency ?? null;
-  const disputed = ctx.disputeAmount;
-  if (!currency || typeof disputed !== "number" || items.length === 0) return null;
-  const parsed = rows.map((r) => money(r.price));
-  if (parsed.some((p) => !p || p.currency !== currency)) return null;
-  if (cents(parsed.reduce((s, p) => s + p!.amount, 0)) !== cents(disputed)) return null;
-  const subtotal = items.reduce((s, r) => s + money(r.price)!.amount, 0);
-  const less: string[] = [];
-  const plus: string[] = [];
-  for (const r of adjustments) {
-    const a = money(r.price)!.amount;
-    const label = r.description.toLowerCase();
-    if (a < 0) less.push(label === "discount" ? `the ${fmt(currency, -a)} discount` : `${fmt(currency, -a)} in ${label}`);
-    else plus.push(`${fmt(currency, a)} ${label}`);
-  }
-  const steps = [less.length ? `less ${joinAnd(less)}` : null, plus.length ? `plus ${joinAnd(plus)}` : null]
-    .filter((x): x is string => x !== null);
-  if (steps.length === 0) {
-    return `The merchandise total of ${fmt(currency, subtotal)} is the full disputed amount.`;
-  }
-  return `The merchandise total of ${fmt(currency, subtotal)}, ${steps.join(", ")}, reconciles to the full disputed amount.`;
 }
 
 /** The address an order-history email line names: "… to Name (a@b.c)". */
@@ -384,15 +343,12 @@ export function applySingleParcelRecordSections(
     .join("\n\n");
 
   // ── Order Line Items (under the table) ──
-  const sums = reconciliation(ctx);
-  const lineItemsProse = [
-    allItems
-      ? "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment."
-      : null,
-    sums ? `${sums}${allItems ? " The delivered shipment therefore accounts for the full amount contested." : ""}` : null,
-  ]
-    .filter((p): p is string => !!p)
-    .join("\n\n");
+  // Only what the table cannot show: that the shipment holds every item.
+  // The table's rows and Total already do the arithmetic — restating the
+  // numbers in prose is clutter (maintainer, 2026-09-25).
+  const lineItemsProse = allItems
+    ? "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment."
+    : "";
 
   // ── Chronology (above the timeline) ──
   const sequence = predates

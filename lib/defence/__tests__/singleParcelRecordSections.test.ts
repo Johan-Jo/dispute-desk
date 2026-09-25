@@ -170,12 +170,12 @@ describe("single-parcel non-receipt letters argue the case from the records", ()
     ]);
   });
 
-  it("line items: the shipment covers the complete order, and the money reconciles to the disputed amount", () => {
+  it("line items: only what the table cannot show — the shipment covers the complete order; no numbers restated", () => {
     expect(out.transactionOverviewArgument.source).toBe("record");
-    expect(out.transactionOverviewArgument.text.split(/\n\n/)).toEqual([
+    expect(out.transactionOverviewArgument.text).toBe(
       "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment.",
-      "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus CAD 10.00 shipping and CAD 12.75 tax, reconciles to the full disputed amount. The delivered shipment therefore accounts for the full amount contested.",
-    ]);
+    );
+    expect(out.transactionOverviewArgument.text).not.toMatch(/CAD|\d+\.\d{2}/);
   });
 
   it("chronology: the reported delivery date against the dispute, and the emails as updates sent", () => {
@@ -267,15 +267,9 @@ describe("every link is conditional on its record", () => {
     );
     const all = [out.executiveSummary.text, out.fulfillmentArgument.text, out.transactionOverviewArgument.text, out.conclusion.text].join(" ");
     expect(all).not.toMatch(/all three|complete order|each product|disputed goods|in full/);
-    // The money still reconciles — without claiming the shipment accounts for it.
-    expect(out.transactionOverviewArgument.text).toBe(
-      "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus CAD 10.00 shipping and CAD 12.75 tax, reconciles to the full disputed amount.",
-    );
-  });
-
-  it("no money line when the rows do not add up to the disputed amount", () => {
-    const out = build({ ...ctx, disputeAmount: 50 });
-    expect(out.transactionOverviewArgument.text).not.toContain("reconciles");
+    // Nothing under the table without a verified mapping.
+    expect(out.transactionOverviewArgument.text).toBe("");
+    expect(out.omittedSections.map((o) => o.sectionKey)).toContain("transactionOverviewArgument");
   });
 
   it("emails to another address are 'sent to the customer', not the recorded address", () => {
