@@ -2873,7 +2873,7 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 - the table: the amounts;
 - the timeline: every dated event.
 
-The prose carries only the argument. It says "this order" and "the carrier", and gives no order number, tracking number or time of day. The disputed amount appears once in the summary and again in the request line. The opening line reads "… recorded the shipment for this order as delivered on …". The reconciliation ends "reconciles to the full disputed amount", and the chronology and email paragraphs no longer restate dates. `singleParcelRecordSections.test.ts` pins the rule ("COPY RULE").
+The prose carries only the argument. It says "this order" and "the carrier", and gives no order number, tracking number or time of day. The disputed amount appears only in the request line (removed from the summary later the same day; PROMPT_VERSION 39). The opening line reads "… recorded the shipment for this order as delivered on …". The reconciliation ends "reconciles to the full disputed amount", and the chronology and email paragraphs no longer restate dates. `singleParcelRecordSections.test.ts` pins the rule ("COPY RULE").
 
 The reconciliation sentence was later removed as well: the table's rows and Total already show the arithmetic. Under Order Line Items the prose now says only what the table cannot show, that the shipment holds every item, and only when the item-by-item check (`fulfilmentCoverage`) passes. PROMPT_VERSION 38.
 
