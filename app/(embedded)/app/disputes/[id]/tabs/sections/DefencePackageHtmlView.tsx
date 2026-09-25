@@ -567,8 +567,8 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     if (!body) return null;
     // Counsel v2: the model-written punchline replaces the templated headline, as in the PDF.
     const thesis =
-      key === "executiveSummary" && narrative.headline?.trim()
-        ? narrative.headline.trim()
+      key === "executiveSummary" && narrative.headline !== undefined
+        ? narrative.headline.trim() || null
         : thesisFor(key, moduleKey, mode, facts, caseContext);
     return (
       <Section key={key} number={num()} title={sectionTitleFor(key, facts)}>

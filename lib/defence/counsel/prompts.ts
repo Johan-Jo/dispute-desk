@@ -14,18 +14,19 @@ import type { LedgerClaim, Playbook, StrategyPlan } from "./types";
 export const COUNSEL_PROMPT_VERSION = 1;
 
 const standard = (merchant: string) => `WHO READS THIS
-A card issuer's dispute analyst, who reads dozens of responses a day and gives each about two minutes. They read the opening properly and skim the rest for support. The headline and summary win or lose the case.
+A card issuer's dispute analyst, who reads dozens of responses a day and gives each about two minutes. They read the opening properly and skim the rest for support. The executive summary wins or loses the case.
 
 WHAT EXCELLENT COUNSEL DOES
 1. A theory of the case: one account of what happened that the records make true and that the claim cannot survive. Every section serves it.
-2. The punchline first. The headline sets the cardholder's claim against the record in one or two plain sentences, with no dates or numbers (the summary carries them).
+2. The punchline first. The executive summary OPENS with the punchline: the cardholder's claim set against the record, in one plain sentence. There is no separate headline above it.
 3. Concrete specifics, chosen for effect: "four days after it shipped", "seventy-five days later", "a card ending in the same four digits". Specifics carry an argument; abstractions ("the record", "the delivery event", "linked records") drain it. Use each specific ONCE, where it does the most work.
 4. Every evidence section says what its exhibit PROVES for this claim, never what it contains. The reader can see the exhibit.
 5. Order by force. The strongest point first, in the summary and within each section.
 
 TECHNIQUES
 - Contrast the claim with the record ("The cardholder says… The carrier says…").
-- Make the third party the subject: "Stallion Express recorded…", not "the record shows that…".
+- Make the third party the subject: "The carrier recorded…", not "the record shows that…".
+- NEVER name the carrier or its brand (maintainer: a reader does not know these companies, and the names change every case). Always "the carrier". The name is printed on the shipment card, which is enough.
 - Narrow the question, then answer it: a non-receipt claim asks one thing.
 - Short sentences for the blows; longer ones for the reasoning.
 - State the merchant's position plainly when the records support it: "The order was delivered."
@@ -60,17 +61,16 @@ NEVER (truth): these are absolute
 
 COPY RULES (the page already shows these)
 - No order number (the header has it), no tracking number, no URL, no time of day, no card digits, no amount (the header, the table and the request line carry them), no line-item arithmetic.
-- Name the merchant ("${merchant}") once at most. Name the carrier once in the prose at most (the headline counts); after that write "the carrier".
+- Name the merchant ("${merchant}") once at most. Never name the carrier: write "the carrier".
 - No point is made twice anywhere in the letter. Before answering, reread the whole letter and cut any sentence that repeats an earlier one in other words.`;
 
 const EXAMPLE = `REGISTER EXAMPLE: a DIFFERENT, invented case. Copy the shape, never the words.
-Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one UPS parcel. UPS recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with a card ending in the same four digits. The dispute (non-receipt) was opened on 21 April.
+Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one parcel. The carrier recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with a card ending in the same four digits. The dispute (non-receipt) was opened on 21 April.
 
-headline: "The cardholder says the order never arrived. UPS recorded it delivered, and the same customer came back and bought again before disputing it."
-summary: "The cardholder claims the order was never received. UPS recorded the parcel delivered on 9 March, and everything the cardholder paid for was in that one parcel. On 2 April, twenty-four days after that delivery, the same customer placed a new order with a card ending in the same four digits; nineteen days later they opened this dispute. The carrier's record and the customer's own next purchase both show the order was delivered. The merchant respectfully requests that the chargeback be reversed."
-shipping: "The delivery on the card above is UPS's own scan, published on UPS's tracking page. The issuer can open it with the link below and see the delivery for itself."
-lineItems: "Nothing the cardholder bought travelled separately. The helmet and the gloves left in the same tracked parcel, so the delivery UPS recorded is the delivery of the entire order."
-chronology: "Read top to bottom, the timeline tells one story. The order shipped the next morning. UPS delivered it five days later, and a delivery notice went to the email address on the order that afternoon. The customer's next order came on 2 April. The claim that the first one never arrived came on 21 April."
+summary: "The cardholder says the order never arrived. The carrier recorded it delivered on 9 March, with everything they paid for in one parcel. Twenty-four days later the same customer ordered again, on a card ending in the same four digits, and nineteen days after that disputed the first order. The merchant requests that the chargeback be reversed."
+shipping: "The delivery on the card above is the carrier's own scan, published on its public tracking page. The issuer can open it with the link below and see the delivery for itself."
+lineItems: "Nothing the cardholder bought travelled separately. The helmet and the gloves left in the same tracked parcel, so the delivery the carrier recorded is the delivery of the entire order."
+chronology: "Read top to bottom, the timeline tells one story. The order shipped the next morning. The carrier delivered it five days later, and a delivery notification went to the email address on the order that afternoon. The customer's next order came on 2 April. The claim that the first one never arrived came on 21 April."
 conclusion: "The order was delivered, in full, before the claim was made."`;
 
 function ledgerBlock(ledger: readonly LedgerClaim[]): string {
@@ -107,11 +107,11 @@ Return JSON only:
 {
   "theoryOfTheCase": "one or two sentences: what happened, told so the claim cannot survive it",
   "theoryChosen": "the playbook theory name",
-  "punchlineCandidates": ["three alternative headlines, each setting the claim against the record with a concrete specific"],
+  "punchlineCandidates": ["three alternative opening sentences for the executive summary, each setting the claim against the record"],
   "reasonsInOrderOfForce": [{ "claimIds": ["…"], "point": "…" }],
   "sectionPlan": [{ "key": "shipping|lineItems|chronology", "claimIds": ["…"], "job": "what this section proves for this claim" }],
   "omittedSections": [{ "key": "…", "why": "…" }],
-  "specificsPlacement": { "<specific as it will be written>": "headline|summary|shipping|lineItems|chronology|conclusion" }
+  "specificsPlacement": { "<specific as it will be written>": "summary|shipping|lineItems|chronology|conclusion" }
 }
 sectionPlan lists the evidence sections in the order they will print. specificsPlacement gives each specific exactly one home.`;
   const user = `CASE CONTEXT (already printed on the page)\n${context}\n\nCLAIM LEDGER (the only facts you may use)\n${ledgerBlock(ledger)}`;
@@ -129,20 +129,19 @@ ${playbookBlock(playbook)}
 
 OUTPUT: JSON only.
 {
-  "headline": "the punchline, one or two sentences (printed as the pull-quote above the summary)",
   "summary": { "paragraphs": ["…"], "claimIds": ["…"] },
   "evidenceSections": [ { "key": "shipping|lineItems|chronology", "paragraphs": ["…"], "claimIds": ["…"] } ],
   "conclusion": { "paragraphs": ["…"], "claimIds": ["…"] }
 }
 - evidenceSections are printed in the order you give. Omit a section rather than fill it.
-- SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Never in both the headline and the summary. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier is NAMED only in the headline and in the shipping section; everywhere else write "the carrier". The payment match ("a card ending in the same four digits") appears only in the headline and the chronology; elsewhere say the customer "bought again".
-- claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section (the headline counts as part of the summary).
+- SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier is NAMED only in the headline and in the shipping section; everywhere else write "the carrier". The payment match ("a card ending in the same four digits") appears only in the headline and the chronology; elsewhere say the customer "bought again".
+- claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section.
 - The conclusion is followed by a fixed request line naming the amount. Do not write a request.
-- HEADLINE: one or two sentences, at most 30 words, NO dates or numbers: the contrast between the claim and the record.
-- SUMMARY: the complete defence in brief (claim, answering facts with their key specifics, what they show, the request to reverse). Plain sentences. As long as the case needs and no longer.
+- There is NO headline. The executive summary is the only summary: it opens with the punchline sentence.
+- SUMMARY: the complete defence, short and with punch: the claim against the record, the facts that decide it, the request to reverse. AT MOST 70 WORDS. Short sentences. Cut every word that does not win the case.
 - CONCLUSION: at most ONE short sentence restating no fact, or leave it empty ("paragraphs": []). The fixed request line follows it.
 - The SHIPPING section does not restate the delivery date: the card above it shows it.
-- Length: headline up to 30 words; summary up to 110 words; each evidence section 30–80 words; conclusion up to 25 words.`;
+- Length: summary at most 70 words; each evidence section 30–80 words; conclusion up to 25 words.`;
   const user = `CASE CONTEXT (already printed on the page — do not repeat it)\n${context}\n\nCLAIM LEDGER\n${ledgerBlock(ledger)}\n\nYOUR CASE PLAN (follow it; improve the wording, not the facts)\n${JSON.stringify(plan, null, 2)}`;
   return { system, user };
 }
@@ -176,7 +175,7 @@ Return JSON only: { "errors": [ { "sentence": "…", "problem": "…" } ] } — 
 export function judgePrompt(letterText: string) {
   const system = `You are a senior dispute analyst at a card issuer. You review merchant responses to chargebacks and decide whether the merchant's evidence defeats the cardholder's claim. You have two minutes. You are sceptical of adjectives, of repetition, and of anything that sounds like the merchant protesting rather than proving. You notice when a letter lists records without telling you what they mean. You read each sentence ONCE: if you have to read a sentence twice, or its literal meaning could be taken the wrong way, that is a failure. Metaphors, idioms and legal flourishes ("closes the claim at the threshold", "without a coherent foundation", "nothing to stand on") also count as unclear: an analyst wants the plain fact and what it proves.
 
-Read the response below. First read ONLY the headline and summary and decide. Then read the rest and decide again.
+Read the response below. First read ONLY the executive summary and decide. Then read the rest and decide again.
 
 Return JSON only:
 {

@@ -142,9 +142,11 @@ export function composePdfBlocks(
     // case.
     // Counsel v2: the checked, model-written punchline replaces the
     // templated headline above the summary.
-    const headline = sectionKey === "executiveSummary" ? input.narrative.headline?.trim() : "";
-    const thesisText = headline
-      ? headline
+    // Counsel v2 sets `headline` (possibly empty): the templated pull-quote
+    // is never rendered for those letters.
+    const counsel = sectionKey === "executiveSummary" && input.narrative.headline !== undefined;
+    const thesisText = counsel
+      ? (input.narrative.headline ?? "").trim()
       : renderThesis({
           sectionKey,
           familyKey: input.familyKey,

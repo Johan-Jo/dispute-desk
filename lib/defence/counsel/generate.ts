@@ -66,7 +66,6 @@ export function letterForJudge(d: CounselDraft, pageContext: string): string {
   };
   return [
     `PAGE HEADER AND CASE DETAILS (printed above the letter):\n${pageContext}`,
-    `HEADLINE (pull-quote): ${d.headline}`,
     `SUMMARY:\n${d.summary.paragraphs.join("\n\n")}`,
     ...d.evidenceSections.map((s) => `${titles[s.key] ?? s.key}:\n${s.paragraphs.join("\n\n")}`),
     `CONCLUSION:\n${d.conclusion.paragraphs.join("\n\n")}\n[fixed request line follows: "The merchant respectfully requests reversal of the chargeback."]`,
