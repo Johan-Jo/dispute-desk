@@ -172,6 +172,7 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
     patterns: [
       /shipment (?:out for delivery|delivered) email was sent/i,
       /(?:out for delivery|delivered) email was sent/i,
+      /sent an? (?:shipment )?(?:out for delivery|delivered) email/i,
     ],
   },
   {
@@ -383,12 +384,10 @@ function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): C
   for (const s of shipments) {
     const items = itemsOf(s) ?? "the shipment";
     const carrier = str(s.carrier) ?? "The carrier";
-    const ref = s.referenceIsTrackingNumber === true ? str(s.reference) : null;
-    const tracking = ref ? ` (tracking ${ref})` : "";
     if (s.proofType === "in_transit" && str(s.inTransitSince)) {
       carrierEvents.push({
         at: str(s.inTransitSince) as string,
-        text: `${carrier}'s tracking record shows ${items} in transit${tracking}.`,
+        text: `${carrier}'s tracking record shows ${items} in transit.`,
       });
     } else if (
       (s.proofType === "delivered_confirmed" || s.proofType === "signature_confirmed") &&
@@ -396,7 +395,7 @@ function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): C
     ) {
       carrierEvents.push({
         at: str(s.deliveredAt) as string,
-        text: `${carrier} records delivery of ${items}${tracking}.`,
+        text: `${carrier} records delivery of ${items}.`,
       });
     }
   }

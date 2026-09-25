@@ -371,7 +371,7 @@ function ZebraTable({
   );
 }
 
-function ShipmentCardView({ card }: { card: ShipmentCard }) {
+function ShipmentCardView({ card, wide = false }: { card: ShipmentCard; wide?: boolean }) {
   return (
     <div style={{ border: `1px solid ${C.hairline}`, borderRadius: 12, overflow: "hidden" }}>
       <div style={{ background: C.accentSoft, padding: "14px 18px" }}>
@@ -381,14 +381,24 @@ function ShipmentCardView({ card }: { card: ShipmentCard }) {
         </div>
         <div style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{card.product}</div>
       </div>
-      <div style={{ padding: "4px 18px 10px" }}>
+      <div
+        style={
+          wide
+            ? { padding: "14px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }
+            : { padding: "4px 18px 10px" }
+        }
+      >
         {card.fields.map((f, i) => (
           <div
             key={f.label}
-            style={{
-              padding: "10px 0",
-              borderBottom: i === card.fields.length - 1 ? "none" : `1px solid ${C.hairline}`,
-            }}
+            style={
+              wide
+                ? {}
+                : {
+                    padding: "10px 0",
+                    borderBottom: i === card.fields.length - 1 ? "none" : `1px solid ${C.hairline}`,
+                  }
+            }
           >
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{f.label}</div>
             <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>
@@ -557,7 +567,8 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   };
 
   const conclusionBody = visible("conclusion");
-  const conclusionThesis = conclusionBody ? thesisFor("conclusion", moduleKey, mode, facts, caseContext) : null;
+  // The request line stands alone when the body is empty (record-built letters).
+  const conclusionThesis = thesisFor("conclusion", moduleKey, mode, facts, caseContext);
   const chronologyBody = visible("chronologyArgument");
 
   return (
@@ -623,11 +634,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
           </Section>
         ) : single ? (
           <Section number={num()} title={sectionTitleFor("fulfillmentArgument", facts)}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-              {shipmentCards([single], chrono).map((card) => (
-                <ShipmentCardView key={card.index} card={card} />
-              ))}
-            </div>
+            {shipmentCards([single], chrono).map((card) => (
+              <ShipmentCardView key={card.index} card={card} wide />
+            ))}
             {visible("fulfillmentArgument") ? (
               <div style={{ marginTop: 16 }}>
                 <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />
@@ -649,7 +658,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
         {prose("communicationArgument")}
         {prose("policyArgument")}
 
-        {!multiParcel ? (
+        {/* The PDF prints no Evidence Basis without rows; neither does the
+            preview when a shipment card already shows the record. */}
+        {!multiParcel && !(single && evidenceBasis.length === 0) ? (
           <Section number={num()} title={t("evidenceBasis")}>
             {evidenceBasis.length === 0 ? (
               <p style={css.paragraph}>{t("noBankEligibleFacts")}</p>
@@ -713,7 +724,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
           </Section>
         ) : null}
 
-        {conclusionBody ? (
+        {conclusionBody || conclusionThesis ? (
           <Section number={num()} title={SECTION_TITLES.conclusion}>
             <div style={{ background: C.accentSoft, borderRadius: 12, padding: "22px 26px" }}>
               {conclusionThesis ? (
@@ -721,7 +732,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                   {conclusionThesis}
                 </div>
               ) : null}
-              <div style={{ fontSize: 15, color: C.ink }}>{conclusionBody}</div>
+              {conclusionBody ? <div style={{ fontSize: 15, color: C.ink }}>{conclusionBody}</div> : null}
             </div>
           </Section>
         ) : null}

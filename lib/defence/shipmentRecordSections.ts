@@ -30,7 +30,22 @@
  *     what a record lacks.
  */
 
-import type { DefenceNarrativeOutput, EvidenceFact, NarrativeSection } from "./types";
+import { familyKeyForModule } from "./reasonCodes/familyRegistry";
+import type {
+  DefenceNarrativeOutput,
+  EvidenceFact,
+  NarrativeSection,
+  ReasonCodeModuleKey,
+} from "./types";
+
+/** What the single-parcel sections read besides the facts. */
+export interface RecordSectionContext {
+  moduleKey?: string | null;
+  orderName?: string | null;
+  disputeOpenedAt?: string | null;
+  /** The order timeline (Shopify Order.events, allow-listed downstream). */
+  timelineEvents?: ReadonlyArray<{ at: string; text: string }>;
+}
 
 type Shipment = Record<string, unknown>;
 
@@ -64,14 +79,6 @@ function itemsOf(s: Shipment): string {
   if (names.length === 0) return "The shipment";
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-}
-
-function hasCarrierRecord(s: Shipment): boolean {
-  return (
-    s.proofType === "in_transit" ||
-    s.proofType === "delivered_confirmed" ||
-    s.proofType === "signature_confirmed"
-  );
 }
 
 /** "GOFO tracking number YT… (https://…)" or "USPS shipping reference 26…". */
@@ -110,57 +117,14 @@ function parcelAccount(s: Shipment): string {
   return `${items}: shipped by the merchant${fulfilled ? ` on ${fulfilled}` : ""} (${id}).`;
 }
 
-/** Dated records only, oldest first — a true order, never an inferred one. */
-function chronology(shipments: Shipment[]): string {
-  const rows: Array<{ at: number; text: string }> = [];
-  for (const s of shipments) {
-    const items = itemsOf(s);
-    const carrier = str(s.carrier) ?? "The carrier";
-    const push = (iso: unknown, text: string) => {
-      const t = typeof iso === "string" ? Date.parse(iso) : NaN;
-      if (!Number.isNaN(t)) {
-        rows.push({ at: t, text: `${day(iso)}: ${text.charAt(0).toUpperCase()}${text.slice(1)}` });
-      }
-    };
-    // Dates and events only — identifiers and links appear once, in the
-    // fulfilment section.
-    if (s.proofType === "signature_confirmed" || s.proofType === "delivered_confirmed") {
-      push(s.deliveredAt, `${carrier} records delivery of ${items}.`);
-    } else if (s.proofType === "in_transit") {
-      push(s.inTransitSince, `${carrier}'s tracking record shows ${items} in transit.`);
-    } else {
-      push(s.fulfilledAt, `the merchant shipped ${items}${str(s.carrier) ? ` (${str(s.carrier)})` : ""}.`);
-    }
-  }
-  return rows
-    .sort((a, b) => a.at - b.at)
-    .map((r) => r.text)
-    .join(" ");
-}
-
 const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 function count(n: number): string {
   return NUMBER_WORDS[n] ?? String(n);
 }
 
-/** One clause per parcel for the summary: what its record shows, no
- *  identifiers or links (the fulfilment section carries those, once). */
-function summaryClause(s: Shipment): string {
-  const items = itemsOf(s);
-  const carrier = str(s.carrier) ?? "the carrier";
-  if (s.proofType === "signature_confirmed" || s.proofType === "delivered_confirmed") {
-    const when = day(s.deliveredAt);
-    return `${items}, which ${carrier}'s record shows delivered${when ? ` on ${when}` : ""}`;
-  }
-  if (s.proofType === "in_transit") {
-    const since = day(s.inTransitSince);
-    return since
-      ? `${items}, which ${carrier}'s tracking record first shows in transit on ${since}`
-      : `${items}, which ${carrier}'s tracking record shows in transit`;
-  }
-  const fulfilled = day(s.fulfilledAt);
-  return `${items}, shipped by the merchant${fulfilled ? ` on ${fulfilled}` : ""}`;
-}
+/** The conclusion body is left empty on purpose: its request line (a fixed
+ *  template, composePdfBlocks) is the whole conclusion. */
+const CONCLUSION_REASON = "The request line is the conclusion; the record is set out above.";
 
 function section(text: string, usedFactIds: string[]): NarrativeSection {
   return { text, usedFactIds };
@@ -192,18 +156,13 @@ function shipmentBasis(
 export function applyShipmentRecordSections(
   narrative: DefenceNarrativeOutput,
   approvedFacts: readonly EvidenceFact[],
+  ctx?: RecordSectionContext,
 ): DefenceNarrativeOutput {
   const basis = shipmentBasis(approvedFacts);
-  if (!basis) return narrative;
+  if (!basis) return ctx ? applySingleParcelRecordSections(narrative, approvedFacts, ctx) : narrative;
   const { shipments, factIds } = basis;
   const n = shipments.length;
   const accounts = shipments.map(parcelAccount);
-  const clauses = shipments.map(summaryClause);
-  const listed =
-    clauses.length === 2
-      ? `${clauses[0]}; and ${clauses[1]}`
-      : `${clauses.slice(0, -1).join("; ")}; and ${clauses[clauses.length - 1]}`;
-  const recorded = shipments.filter(hasCarrierRecord).map((s) => str(s.carrier)).filter(Boolean);
 
   /* Each section says something the others do not — the composed document
    * already opens every section with a fixed thesis line (thesisTemplates.ts),
@@ -217,11 +176,16 @@ export function applyShipmentRecordSections(
    *   - transaction overview: omitted — it would only repeat the summary,
    *     under a thesis written for card-fraud cases. */
   const omitted = narrative.omittedSections.filter(
-    (o) => o.sectionKey !== "transactionOverviewArgument" && o.sectionKey !== "chronologyArgument",
+    (o) =>
+      o.sectionKey !== "transactionOverviewArgument" &&
+      o.sectionKey !== "chronologyArgument" &&
+      o.sectionKey !== "conclusion",
   );
   return {
     ...narrative,
-    executiveSummary: section(`The order was sent in ${count(n)} parcels: ${listed}.`, factIds),
+    // The opening line states the delivered parcel; the cards state each
+    // parcel. The summary adds only how many there are.
+    executiveSummary: section(`The order was sent in ${count(n)} parcels, each set out below.`, factIds),
     transactionOverviewArgument: section("", []),
     fulfillmentArgument: section(
       [`The order was sent in ${count(n)} parcels.`, ...accounts].join("\n\n"),
@@ -232,12 +196,8 @@ export function applyShipmentRecordSections(
     // renderer already prints under this heading. A paragraph here repeated
     // them in a second, differently-ordered list (#360980, 2026-09-23).
     chronologyArgument: section("", []),
-    conclusion: section(
-      recorded.length > 0
-        ? `The request rests on ${recorded.length === 1 ? `${recorded[0]}'s tracking record` : "the carriers' tracking records"} and the merchant's shipping records set out above.`
-        : "The request rests on the merchant's shipping records set out above.",
-      factIds,
-    ),
+    // No body: the request line is the conclusion (see the single-parcel note).
+    conclusion: section("", []),
     omittedSections: [
       ...omitted,
       {
@@ -248,6 +208,97 @@ export function applyShipmentRecordSections(
         sectionKey: "chronologyArgument",
         reason: "Multi-parcel order: the dated parcel events are listed in the timeline.",
       },
+      { sectionKey: "conclusion", reason: CONCLUSION_REASON },
+    ],
+  };
+}
+
+/* ── Single parcel, carrier-confirmed delivery ─────────────────────────
+ *
+ * The same treatment for the commonest non-receipt letter: one parcel, a
+ * carrier record of delivery. Reviewed on blume-box #352543 (2026-09-24):
+ * the model's draft stated the delivery five times — the opening line, the
+ * summary, the shipping section, again with the URL, and the conclusion,
+ * which also asked for reversal twice — and added claims the record does not
+ * make ("successful completion of the merchant's shipping obligation").
+ *
+ * EVERY PART SAYS SOMETHING NO OTHER PART SAYS (maintainer, 2026-09-24:
+ * "each section should provide new information else it shouldn't be there").
+ *   - opening line: carrier, delivery date, dispute date (thesisTokens.ts);
+ *   - summary: the argument drawn from it — one sentence;
+ *   - shipment card: carrier, tracking number, shipped, delivered;
+ *   - shipping prose: only the tracking link, which nothing else prints;
+ *   - timeline: the dated events, customer emails included;
+ *   - conclusion: the request line alone — no body restating the record.
+ * Item not received only, and only for a carrier-confirmed delivery with a
+ * carrier and a tracking number. Everything else keeps the model's prose.
+ */
+
+function isItemNotReceived(moduleKey: string | null | undefined): boolean {
+  if (!moduleKey) return false;
+  try {
+    return familyKeyForModule(moduleKey as ReasonCodeModuleKey) === "item_not_received";
+  } catch {
+    return false;
+  }
+}
+
+export function applySingleParcelRecordSections(
+  narrative: DefenceNarrativeOutput,
+  approvedFacts: readonly EvidenceFact[],
+  ctx: RecordSectionContext,
+): DefenceNarrativeOutput {
+  if (!isItemNotReceived(ctx.moduleKey)) return narrative;
+  const delivery = approvedFacts.filter(
+    (f) => f.category === "delivery_proof" || f.category === "shipping_tracking",
+  );
+  const fact = delivery.find((f) => {
+    const v = (f.value ?? {}) as Record<string, unknown>;
+    return (
+      (v.proofType === "delivered_confirmed" || v.proofType === "signature_confirmed") &&
+      str(v.carrier) !== null &&
+      str(v.trackingNumber) !== null &&
+      day(v.deliveredAt) !== null
+    );
+  });
+  if (!fact) return narrative;
+  const v = (fact.value ?? {}) as Record<string, unknown>;
+  const carrier = str(v.carrier) as string;
+  const url = str(v.trackingUrl);
+  const deliveredAt = str(v.deliveredAt) as string;
+  const factIds = delivery.map((f) => f.id);
+
+  // The one thing the card and the timeline cannot carry: the link, as text.
+  const account = url ? `${carrier}'s tracking record for this shipment is available at ${url}.` : "";
+
+  const opened = ctx.disputeOpenedAt ? Date.parse(ctx.disputeOpenedAt) : NaN;
+  const predates = !Number.isNaN(opened) && Date.parse(deliveredAt) < opened;
+  // The inference, not the facts: the opening line directly above states them.
+  // "Contradicts" only when the record predates the dispute — a delivery
+  // after it answers the claim, but it was true when it was made.
+  const summary = predates
+    ? "The carrier's delivery record contradicts the claim that the item was not received."
+    : "The carrier's delivery record answers the claim that the item was not received.";
+
+  const omitted = narrative.omittedSections ?? [];
+  return {
+    ...narrative,
+    executiveSummary: section(summary, factIds),
+    transactionOverviewArgument: section("", []),
+    chronologyArgument: section("", []),
+    fulfillmentArgument: section(account, factIds),
+    // No body: the conclusion's request line is the whole conclusion.
+    conclusion: section("", []),
+    omittedSections: [
+      ...omitted.filter(
+        (o) =>
+          o.sectionKey !== "transactionOverviewArgument" &&
+          o.sectionKey !== "chronologyArgument" &&
+          o.sectionKey !== "conclusion",
+      ),
+      { sectionKey: "transactionOverviewArgument", reason: "The transaction is set out in the case details." },
+      { sectionKey: "chronologyArgument", reason: "The dated events are listed in the timeline." },
+      { sectionKey: "conclusion", reason: CONCLUSION_REASON },
     ],
   };
 }
