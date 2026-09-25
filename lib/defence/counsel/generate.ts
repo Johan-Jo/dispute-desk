@@ -1,15 +1,16 @@
 /**
  * Counsel v2 orchestration (plan 4 §1):
- *   ledger → STRATEGIST → WRITER ×N → CHECKS (+1 corrective retry each)
- *   → JUDGE → best passing draft, or null (the caller falls back to the
- *   record-built template, so a safe letter always files).
+ *   ledger → STRATEGIST → WRITER ×N → CHECKS + FACT-CHECK
+ *   (+ up to two surgical correction rounds each) → JUDGE → best passing
+ *   draft, or null (the caller falls back to the record-built template, so a
+ *   safe letter always files).
  *
  * The model call is injected, so the same code runs in the pipeline
  * (Anthropic client), the eval harness and the staging pilot.
  */
 
 import { checkDraft, type CheckContext } from "./checks";
-import { judgePrompt, strategistPrompt, writerPrompt } from "./prompts";
+import { factCheckPrompt, judgePrompt, strategistPrompt, writerPrompt } from "./prompts";
 import type { CounselDraft, JudgeVerdict, LedgerClaim, Playbook, StrategyPlan } from "./types";
 
 export type ModelCall = (req: {
@@ -40,7 +41,7 @@ export function parseJson<T>(raw: string): T {
   return JSON.parse(raw.slice(start, end + 1)) as T;
 }
 
-/** The letter as the analyst sees it, for the judge. */
+/** The letter as the analyst sees it, for the fact-checker and the judge. */
 export function letterForJudge(d: CounselDraft, pageContext: string): string {
   const titles: Record<string, string> = {
     shipping: "Shipping & Delivery (next to a shipment card: carrier, tracking number, shipped and delivered dates, tracking link)",
@@ -68,6 +69,8 @@ function rank(c: CounselCandidate): number {
   );
 }
 
+const CORRECTION_ROUNDS = 2;
+
 export async function writeCounselLetter(args: {
   ledger: readonly LedgerClaim[];
   playbook: Playbook;
@@ -79,30 +82,44 @@ export async function writeCounselLetter(args: {
   log?: (msg: string) => void;
 }): Promise<CounselResult> {
   const log = args.log ?? (() => {});
-  const n = args.candidates ?? 3;
+  const n = args.candidates ?? 5;
 
   const sp = strategistPrompt(args.ledger, args.playbook, args.pageContext, args.merchantName);
   const plan = parseJson<StrategyPlan>(await args.call({ ...sp, temperature: 0.3, maxTokens: 3000 }));
   log(`strategist: ${plan.theoryChosen} — ${plan.theoryOfTheCase}`);
 
   const wp = writerPrompt(args.ledger, args.playbook, plan, args.pageContext, args.merchantName);
+
+  // Code checks first; when they pass, the model fact-check (relations,
+  // sequence, intent) — a true number on the wrong interval passes code.
+  const allIssues = async (d: CounselDraft): Promise<string[]> => {
+    const code = checkDraft(d, args.check);
+    if (code.length) return code;
+    const fc = factCheckPrompt(args.ledger, letterForJudge(d, args.pageContext));
+    const res = parseJson<{ errors?: Array<{ sentence: string; problem: string }> }>(
+      await args.call({ ...fc, temperature: 0, maxTokens: 1500 }),
+    );
+    return (res.errors ?? []).map((e) => `fact-check: "${e.sentence}" — ${e.problem}`);
+  };
+
   const candidates = await Promise.all(
     Array.from({ length: n }, async (_, i): Promise<CounselCandidate> => {
-      let raw = await args.call({ ...wp, temperature: 0.7, maxTokens: 3000 });
-      let draft = parseJson<CounselDraft>(raw);
-      const firstIssues = checkDraft(draft, args.check);
+      let draft = parseJson<CounselDraft>(await args.call({ ...wp, temperature: 0.7, maxTokens: 3000 }));
+      const firstIssues = await allIssues(draft);
       let issues = firstIssues;
       let retried = false;
-      if (issues.length) {
+      // Surgical corrections: change only what was flagged, keep the rest.
+      for (let round = 0; round < CORRECTION_ROUNDS && issues.length; round++) {
         retried = true;
-        raw = await args.call({
-          system: wp.system,
-          user: `${wp.user}\n\nYOUR PREVIOUS DRAFT FAILED THESE CHECKS. Fix every one; keep everything that was not flagged.\n- ${issues.join("\n- ")}\n\nPREVIOUS DRAFT:\n${raw}`,
-          temperature: 0.4,
-          maxTokens: 3000,
-        });
-        draft = parseJson<CounselDraft>(raw);
-        issues = checkDraft(draft, args.check);
+        const user = [
+          wp.user,
+          `YOUR PREVIOUS DRAFT FAILED THESE CHECKS:\n- ${issues.join("\n- ")}`,
+          "Return the previous draft UNCHANGED except for the smallest edits that fix these problems. " +
+            "Copy every sentence that was not flagged word for word. Do not add new sentences, dates or numbers.",
+          `PREVIOUS DRAFT:\n${JSON.stringify(draft, null, 2)}`,
+        ].join("\n\n");
+        draft = parseJson<CounselDraft>(await args.call({ system: wp.system, user, temperature: 0.2, maxTokens: 3000 }));
+        issues = await allIssues(draft);
       }
       log(`candidate ${i + 1}: first ${firstIssues.length} issue(s), final ${issues.length}`);
       return { draft, firstIssues, issues, retried, verdict: null };
@@ -116,6 +133,8 @@ export async function writeCounselLetter(args: {
       c.verdict = parseJson<JudgeVerdict>(await args.call({ ...jp, temperature: 0, maxTokens: 1500 }));
     }),
   );
-  const best = passing.sort((a, b) => rank(b) - rank(a))[0] ?? null;
+  // A sentence the analyst had to read twice disqualifies the draft.
+  const clear = passing.filter((c) => (c.verdict?.unclearSentences ?? []).length === 0);
+  const best = clear.sort((a, b) => rank(b) - rank(a))[0] ?? null;
   return { plan, candidates, best };
 }

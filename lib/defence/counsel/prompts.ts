@@ -19,7 +19,7 @@ A card issuer's dispute analyst, who reads dozens of responses a day and gives e
 WHAT EXCELLENT COUNSEL DOES
 1. A theory of the case: one account of what happened that the records make true and that the claim cannot survive. Every section serves it.
 2. The punchline first. The headline sets the cardholder's claim against the record, in plain words, with one or two concrete specifics that make the contrast undeniable.
-3. Concrete specifics, chosen for effect: "four days after it shipped", "seventy-five days later", "the same card". Specifics carry an argument; abstractions ("the record", "the delivery event", "linked records") drain it. Use each specific ONCE, where it does the most work.
+3. Concrete specifics, chosen for effect: "four days after it shipped", "seventy-five days later", "a card ending in the same four digits". Specifics carry an argument; abstractions ("the record", "the delivery event", "linked records") drain it. Use each specific ONCE, where it does the most work.
 4. Every evidence section says what its exhibit PROVES for this claim, never what it contains. The reader can see the exhibit.
 5. Order by force. The strongest point first, in the summary and within each section.
 
@@ -39,6 +39,13 @@ NEVER (style): these made earlier drafts fail
 - Defensive framing that plants doubt: "The issuer does not need to take the merchant's word".
 - Disclaimers or weaknesses: "though a sent email is not proof of receipt", "the merchant does not rely on…". Limits are private instructions to you; NEVER print one.
 - An inventory: one flat fact per sentence, all at equal weight.
+- Clever or figurative framings whose literal meaning is off: "Three records stand between this claim and a reversal" reads as if the records BLOCK the reversal the merchant is asking for. Write literally.
+- Announced counts: "three records", "two facts", "three things". Say the points; do not count them.
+
+CLARITY (maintainer's rule: "We cannot phrase things so that it's not clear from the beginning")
+- Plain English. No metaphors, idioms or legal flourishes: not "closes the claim at the threshold", "without a coherent foundation", "nothing to stand on", "stands between", "its record is what it is", "cannot survive". Say literally what the evidence shows and what follows from it.
+- Every sentence must be understood on the FIRST read by a busy analyst. If a sentence could be misread, rewrite it.
+- The summary does not repeat the headline's facts. It gives the reasons the headline holds, strongest first, one plain sentence each.
 
 NEVER (truth): these are absolute
 - Say where the parcel was delivered, or that an address was verified, matched or correct. Do not use the word "address" except in "the email address on the order".
@@ -56,14 +63,14 @@ COPY RULES (the page already shows these)
 - No point is made twice anywhere in the letter. Before answering, reread the whole letter and cut any sentence that repeats an earlier one in other words.`;
 
 const EXAMPLE = `REGISTER EXAMPLE: a DIFFERENT, invented case. Copy the shape, never the words.
-Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one UPS parcel. UPS recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with the same card. The dispute (non-receipt) was opened on 21 April.
+Case: Northwind Outdoor. A helmet and gloves ordered on 3 March and shipped on 4 March in one UPS parcel. UPS recorded the delivery on 9 March, and a delivery notice was emailed that day. The same customer placed a new order on 2 April with a card ending in the same four digits. The dispute (non-receipt) was opened on 21 April.
 
-headline: "The cardholder says the order never arrived. UPS recorded it delivered on 9 March, and on 2 April the same customer was back, buying again with the same card."
-summary: "The claim meets three records it cannot survive. The delivery was scanned by UPS, not asserted by the merchant. Everything the cardholder paid for was in that one parcel. And the customer's own next purchase came three weeks after the delivery and nineteen days before they claimed the first order never came."
-shipping: "The delivery on the card above is UPS's own scan, published on UPS's tracking page. It is the record of a carrier with nothing at stake in this dispute, and the issuer can open it with one click."
+headline: "The cardholder says the order never arrived. UPS recorded it delivered on 9 March, and on 2 April the same customer was back, buying again with a card ending in the same four digits."
+summary: "The delivery was scanned by UPS, not asserted by the merchant. Everything the cardholder paid for was in that one parcel, so the delivery covers the whole order. And the customer's next purchase, on a card ending in the same four digits, came three weeks after that delivery and nineteen days before the claim that the first order never arrived."
+shipping: "The delivery on the card above is UPS's own scan, published on UPS's tracking page. The issuer can open it with the link below and see the delivery for itself."
 lineItems: "Nothing the cardholder bought travelled separately. The helmet and the gloves left in the same tracked parcel, so the delivery UPS recorded is the delivery of the entire order."
 chronology: "Read top to bottom, the timeline tells one story. The order shipped the next morning. UPS delivered it five days later, and a delivery notice went to the email address on the order that afternoon. The customer's next order came on 2 April. The claim that the first one never arrived came on 21 April."
-conclusion: "A carrier's delivery record covering the whole order, followed by the customer's own return to buy again, leaves the non-receipt claim with nothing to stand on."`;
+conclusion: "UPS recorded the delivery of the whole order, and the customer then bought again on a card ending in the same four digits before claiming the order never came. Both facts contradict the claim that it was not received."`;
 
 function ledgerBlock(ledger: readonly LedgerClaim[]): string {
   return ledger
@@ -127,17 +134,43 @@ OUTPUT: JSON only.
   "conclusion": { "paragraphs": ["…"], "claimIds": ["…"] }
 }
 - evidenceSections are printed in the order you give. Omit a section rather than fill it.
-- SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Never in both the headline and the summary. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier's name appears at most twice; otherwise "the carrier".
+- SPECIFICS PLACEMENT: each date, interval and count appears where the case plan's specificsPlacement puts it, and at most once more anywhere else. Never in both the headline and the summary. Elsewhere, refer to the event instead ("the delivery", "that order", "the dispute"). The carrier is NAMED only in the headline and in the shipping section; everywhere else write "the carrier". The payment match ("a card ending in the same four digits") appears only in the headline and the chronology; elsewhere say the customer "bought again".
 - claimIds per section: every ledger claim the section relies on. Every date, number, name or interval you write must come from the specifics of a claim you cite in that section (the headline counts as part of the summary).
 - The conclusion is followed by a fixed request line naming the amount. Do not write a request.
-- The SUMMARY contains no calendar dates: the headline directly above it carries them. The SHIPPING section does not restate the delivery date: the card above it shows it.
+- The SUMMARY contains NO dates and NO day counts ("6 July", "sixty-one days", "fourteen days"): the headline directly above it carries them. The summary says, in plain sentences, WHY those facts decide the claim: whose record the delivery is, that it covers the whole order, and what the customer did before claiming non-receipt. The SHIPPING section does not restate the delivery date: the card above it shows it.
 - Length: headline up to 40 words; summary 50–90 words; each evidence section 30–80 words; conclusion up to 40 words.`;
   const user = `CASE CONTEXT (already printed on the page — do not repeat it)\n${context}\n\nCLAIM LEDGER\n${ledgerBlock(ledger)}\n\nYOUR CASE PLAN (follow it; improve the wording, not the facts)\n${JSON.stringify(plan, null, 2)}`;
   return { system, user };
 }
 
+/**
+ * Fact-check (plan 4 §6, added after a draft wrote "Seventy-five days passed.
+ * Then, on 5 September" — a true number attached to the wrong interval, which
+ * the per-number grounding check cannot see). Every sentence is checked
+ * against the ledger for numbers, dates, sequence and relations, and for any
+ * statement about what the cardholder thought, knew or intended.
+ */
+export function factCheckPrompt(ledger: readonly LedgerClaim[], letterText: string) {
+  const system = `You are a meticulous fact-checker for a chargeback response. The CLAIM LEDGER below is the only set of true facts. Check the letter sentence by sentence.
+
+Flag a sentence when:
+- a number, date or interval is attached to the wrong event or the wrong pair of events (e.g. an interval that the ledger gives between A and C is written between A and B);
+- events are put in the wrong order, or a relation ("before", "after", "the same day", "then") contradicts the ledger;
+- it states a fact that no ledger claim supports;
+- it says or implies what the cardholder thought, knew, intended or would have done ("a purchase that only makes sense if…", "they knew", "they would not have…");
+- it says where a parcel was delivered, or that anyone personally received it.
+
+Do NOT flag style, tone or reasonable argument drawn from ledger facts.
+
+CLAIM LEDGER
+${ledger.map((c) => `- ${c.id}: ${c.statement}`).join("\n")}
+
+Return JSON only: { "errors": [ { "sentence": "…", "problem": "…" } ] } — an empty array when every sentence is correct.`;
+  return { system, user: letterText };
+}
+
 export function judgePrompt(letterText: string) {
-  const system = `You are a senior dispute analyst at a card issuer. You review merchant responses to chargebacks and decide whether the merchant's evidence defeats the cardholder's claim. You have two minutes. You are sceptical of adjectives, of repetition, and of anything that sounds like the merchant protesting rather than proving. You notice when a letter lists records without telling you what they mean.
+  const system = `You are a senior dispute analyst at a card issuer. You review merchant responses to chargebacks and decide whether the merchant's evidence defeats the cardholder's claim. You have two minutes. You are sceptical of adjectives, of repetition, and of anything that sounds like the merchant protesting rather than proving. You notice when a letter lists records without telling you what they mean. You read each sentence ONCE: if you have to read a sentence twice, or its literal meaning could be taken the wrong way, that is a failure. Metaphors, idioms and legal flourishes ("closes the claim at the threshold", "without a coherent foundation", "nothing to stand on") also count as unclear: an analyst wants the plain fact and what it proves.
 
 Read the response below. First read ONLY the headline and summary and decide. Then read the rest and decide again.
 
@@ -149,6 +182,7 @@ Return JSON only:
   "strongestLine": "…",
   "weakestLine": "…",
   "scores": { "punchline": 1-5, "clarity": 1-5, "evidenceUse": 1-5, "noRepetition": 1-5, "credibility": 1-5 },
+  "unclearSentences": ["quote every sentence you had to read twice, or whose literal meaning could be misread; empty if none"],
   "redFlags": ["overstatement, accusation, disclaimer, repetition, filler, or anything that made you doubt the merchant"]
 }`;
   return { system, user: letterText };
