@@ -286,7 +286,13 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
       specifics.daysBeforeDispute = String(b);
       specifics.daysBeforeDisputeWord = numberWord(b);
     }
-    if (sameCard) specifics.paidWith = later.wallet ? `the same card, through the same ${walletName(later.wallet)} wallet` : "the same card";
+    // Shopify gives brand, last four digits and wallet, not a card identity:
+    // say exactly that ("the same card" would overstate it).
+    if (sameCard) {
+      specifics.paidWith = later.wallet
+        ? `a card ending in the same four digits, through the same ${walletName(later.wallet)} wallet`
+        : "a card ending in the same four digits";
+    }
     if (later.deliveredAt) specifics.laterOrderDeliveredOn = longDate(later.deliveredAt)!;
     if (later.carrier && later.carrier === carrier) specifics.laterOrderCarrier = "the same carrier";
     add({
@@ -304,6 +310,7 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
         "Never comment on the cardholder's honesty or motive.",
         "Never say the later order was not disputed.",
         "Never print card digits.",
+        "Never say \"the same card\": say a card ending in the same four digits.",
       ],
     });
   }

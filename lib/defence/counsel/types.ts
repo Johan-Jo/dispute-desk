@@ -104,5 +104,6 @@ export interface JudgeVerdict {
   strongestLine: string;
   weakestLine: string;
   scores: { punchline: number; clarity: number; evidenceUse: number; noRepetition: number; credibility: number };
+  unclearSentences?: string[];
   redFlags: string[];
 }

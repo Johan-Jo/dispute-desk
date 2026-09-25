@@ -60,6 +60,11 @@ export function specificsIn(text: string): string[] {
 
 const LINT: Array<[RegExp, string]> = [
   [/\b(?:position is that|submits that|contends that|respectfully submits|wishes to)\b/i, "throat-clearing"],
+  [/\bsame card\b/i, "overstated: Shopify shows brand, last four digits and wallet; say 'a card ending in the same four digits'"],
+  [/\b(?:makes sense only|only makes sense|would not have|would never|must have (?:known|received)|knew|intended)\b/i, "speculation about what the cardholder thought or intended"],
+  [/\bstands? between\b/i, "figurative framing (reads as if it blocks the merchant's request)"],
+  [/\b(?:at the threshold|coherent foundation|nothing to stand on|cannot survive|survives? it|is what it is|falls apart|holds no water|leaves? no room)\b/i, "a metaphor or legal flourish; say it plainly"],
+  [/\b(?:two|three|four|five) (?:records|facts|things|points|pieces of evidence|reasons)\b/i, "an announced count; say the points instead"],
   [/\b(?:this distinction matters|is material|it is worth noting|it should be noted|notably)\b/i, "meta-talk"],
   [/\b(?:decisive(?:ly)?|straightforward|compelling|clearly|plainly shows|fails in full)\b/i, "adjective in place of evidence"],
   [/\b(?:take the merchant'?s word|word for it|without relying on (?:any )?(?:representation|document))\b/i, "defensive framing"],
@@ -129,6 +134,19 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   if (count(ctx.merchantName) > 1) issues.push(`copy: "${ctx.merchantName}" is named ${count(ctx.merchantName)} times (at most once)`);
   if (ctx.carrierName && count(ctx.carrierName) > 2) {
     issues.push(`copy: "${ctx.carrierName}" is named ${count(ctx.carrierName)} times (at most twice; then "the carrier")`);
+  }
+  // The summary sits right under the headline: no dates or day counts in it.
+  const summaryText = P.find((p) => p.where === "summary")?.text ?? "";
+  for (const s of specificsIn(summaryText)) {
+    const isDate = /\d{1,2} [A-Z]/.test(s);
+    const escaped = s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const isDayCount = new RegExp(`\\b${escaped}\\s+days?\\b`, "i").test(summaryText);
+    if (isDate || isDayCount) issues.push(`summary: "${s}" (no dates or day counts in the summary; the headline has them)`);
+  }
+  // Distinctive phrases, like specifics, appear at most twice in the letter.
+  for (const phrase of ["same four digits", "same apple pay wallet", "public tracking page", "not a merchant document", "not the merchant's"]) {
+    const n = all.toLowerCase().split(phrase).length - 1;
+    if (n > 2) issues.push(`copy: "${phrase}" is used ${n} times; at most twice`);
   }
   // Each specific at most twice in the letter, never twice in one part, and
   // never in both the headline and the summary directly under it.
