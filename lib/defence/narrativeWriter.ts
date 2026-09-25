@@ -213,7 +213,7 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v34 (2026-09-24) — single-parcel item-not-received letters with a carrier-
 // confirmed delivery are record-built (summary, shipping, conclusion), as
 // multi-parcel ones already were (#352543).
-const PROMPT_VERSION = 34;
+const PROMPT_VERSION = 35;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

@@ -31,6 +31,7 @@
  */
 
 import { familyKeyForModule } from "./reasonCodes/familyRegistry";
+import { classifyChronologyEvent } from "./chronology";
 import type {
   DefenceNarrativeOutput,
   EvidenceFact,
@@ -45,6 +46,10 @@ export interface RecordSectionContext {
   disputeOpenedAt?: string | null;
   /** The order timeline (Shopify Order.events, allow-listed downstream). */
   timelineEvents?: ReadonlyArray<{ at: string; text: string }>;
+  /** The Order Line Items rows (items plus discount/shipping/tax rows). */
+  lineItems?: ReadonlyArray<{ description: string; quantity: number; price: string; kind?: "item" | "adjustment" }>;
+  disputeAmount?: number | null;
+  disputeCurrency?: string | null;
 }
 
 type Shipment = Record<string, unknown>;
@@ -215,21 +220,29 @@ export function applyShipmentRecordSections(
 
 /* ── Single parcel, carrier-confirmed delivery ─────────────────────────
  *
- * The same treatment for the commonest non-receipt letter: one parcel, a
- * carrier record of delivery. Reviewed on blume-box #352543 (2026-09-24):
- * the model's draft stated the delivery five times — the opening line, the
- * summary, the shipping section, again with the URL, and the conclusion,
- * which also asked for reversal twice — and added claims the record does not
- * make ("successful completion of the merchant's shipping obligation").
+ * The commonest non-receipt letter: one parcel, a carrier record of delivery.
+ * Written from the records, reviewed on blume-box #352543 twice:
+ *   - 2026-09-24: the model's draft stated the delivery five times and added
+ *     claims the record does not make ("successful completion of the
+ *     merchant's shipping obligation");
+ *   - 2026-09-25: the record-only rewrite overcorrected — one sentence of
+ *     argument, no reasoning. "Remove repeated wording, not reasoning."
  *
- * EVERY PART SAYS SOMETHING NO OTHER PART SAYS (maintainer, 2026-09-24:
- * "each section should provide new information else it shouldn't be there").
+ * So each part has a distinct job, and the shipping section argues the CHAIN
+ * the records form, each link stated only when the data carries it:
  *   - opening line: carrier, delivery date, dispute date (thesisTokens.ts);
- *   - summary: the argument drawn from it — one sentence;
- *   - shipment card: carrier, tracking number, shipped, delivered;
- *   - shipping prose: only the tracking link, which nothing else prints;
- *   - timeline: the dated events, customer emails included;
- *   - conclusion: the request line alone — no body restating the record.
+ *   - summary: the merchant's position and what the defence rests on;
+ *   - shipping section (under the card): order → shipment (the fulfilment
+ *     record, with the item count when ONE fulfilment covers every item) →
+ *     carrier delivery; that delivery against the dispute date; the money,
+ *     when the items, discount, shipping and tax add up to the disputed
+ *     amount; the customer emails, as notices and never as proof of
+ *     receipt; the tracking link;
+ *   - conclusion body: what the request rests on, with the amount — the
+ *     request line itself is the fixed template above it.
+ * Never: "independent" corroboration (one carrier event, several copies),
+ * the passage of time as an argument, where the parcel was delivered
+ * (rule 14), or a sent email as receipt.
  * Item not received only, and only for a carrier-confirmed delivery with a
  * carrier and a tracking number. Everything else keeps the model's prose.
  */
@@ -241,6 +254,63 @@ function isItemNotReceived(moduleKey: string | null | undefined): boolean {
   } catch {
     return false;
   }
+}
+
+/** "19:53 UTC". */
+function clock(iso: string): string | null {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+}
+
+/** "6 July" — the year is already stated in the same paragraph. */
+function dayMonth(iso: string): string | null {
+  const full = day(iso);
+  return full ? full.replace(/\s\d{4}$/, "") : null;
+}
+
+function money(price: string): { currency: string; amount: number } | null {
+  const m = price.match(/^([A-Z]{3})\s+(-?\d+(?:\.\d+)?)$/);
+  return m ? { currency: m[1], amount: Number(m[2]) } : null;
+}
+
+const fmt = (currency: string, amount: number) => `${currency} ${amount.toFixed(2)}`;
+const cents = (n: number) => Math.round(n * 100);
+
+/**
+ * "The three items total CAD 145.50; less the CAD 47.50 discount, plus
+ * CAD 10.00 shipping and CAD 12.75 tax, the order comes to CAD 120.75, the
+ * full disputed amount." Null unless every row is in the dispute's currency
+ * and the rows add up to the disputed amount exactly.
+ */
+function reconciliation(ctx: RecordSectionContext, itemCount: number): string | null {
+  const rows = ctx.lineItems ?? [];
+  const items = rows.filter((r) => r.kind !== "adjustment");
+  const adjustments = rows.filter((r) => r.kind === "adjustment");
+  const currency = ctx.disputeCurrency ?? null;
+  const disputed = ctx.disputeAmount;
+  if (!currency || typeof disputed !== "number" || items.length === 0) return null;
+  const parsed = rows.map((r) => money(r.price));
+  if (parsed.some((p) => !p || p.currency !== currency)) return null;
+  const total = parsed.reduce((s, p) => s + p!.amount, 0);
+  if (cents(total) !== cents(disputed)) return null;
+  const subtotal = items.reduce((s, r) => s + money(r.price)!.amount, 0);
+  const itemsPhrase = `The ${itemCount === 1 ? "item costs" : `${count(itemCount)} items total`} ${fmt(currency, subtotal)}`;
+  if (adjustments.length === 0) {
+    return `${itemsPhrase}, the full disputed amount.`;
+  }
+  const less: string[] = [];
+  const plus: string[] = [];
+  for (const r of adjustments) {
+    const a = money(r.price)!.amount;
+    const label = r.description.toLowerCase();
+    if (a < 0) less.push(label === "discount" ? `the ${fmt(currency, -a)} discount` : `${fmt(currency, -a)} in ${label}`);
+    else plus.push(`${fmt(currency, a)} ${label}`);
+  }
+  const join = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+  const parts = [less.length ? `less ${join(less)}` : null, plus.length ? `plus ${join(plus)}` : null].filter(Boolean);
+  return `${itemsPhrase}; ${parts.join(", ")}, the order comes to ${fmt(currency, disputed)}, the full disputed amount.`;
 }
 
 export function applySingleParcelRecordSections(
@@ -264,21 +334,82 @@ export function applySingleParcelRecordSections(
   if (!fact) return narrative;
   const v = (fact.value ?? {}) as Record<string, unknown>;
   const carrier = str(v.carrier) as string;
+  const tracking = str(v.trackingNumber) as string;
   const url = str(v.trackingUrl);
   const deliveredAt = str(v.deliveredAt) as string;
+  const signed = v.proofType === "signature_confirmed";
   const factIds = delivery.map((f) => f.id);
+  const order = ctx.orderName ? `order ${ctx.orderName}` : "the order";
+  const events = ctx.timelineEvents ?? [];
 
-  // The one thing the card and the timeline cannot carry: the link, as text.
-  const account = url ? `${carrier}'s tracking record for this shipment is available at ${url}.` : "";
+  // Link 1 — order → shipment. "All N items" only when exactly ONE
+  // fulfilment is recorded and its item count equals the order's.
+  const itemCount = (ctx.lineItems ?? [])
+    .filter((r) => r.kind !== "adjustment")
+    .reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+  const fulfilments = events.filter((e) => classifyChronologyEvent(e.text) === "fulfillment_shipment");
+  const markedCount = fulfilments.length === 1 ? fulfilments[0].text.match(/marked (\d+) items? as fulfilled/i) : null;
+  const allItems = markedCount !== null && itemCount > 0 && Number(markedCount[1]) === itemCount;
+  const fulfilledOn = fulfilments.length === 1 ? day(fulfilments[0].at) : null;
+  const what = allItems
+    ? itemCount === 1
+      ? "records the purchased item as shipped"
+      : `records all ${count(itemCount)} purchased items as shipped together`
+    : "records the order as shipped";
+  const link1 = `The merchant's fulfilment record for ${order} ${what}${fulfilledOn ? ` on ${fulfilledOn}` : ""} under ${carrier} tracking number ${tracking}.`;
 
+  // Link 2 — shipment → carrier delivery.
+  const at = clock(deliveredAt);
+  const link2 =
+    `${carrier} then recorded that shipment as delivered on ${day(deliveredAt)}${at ? ` at ${at}` : ""}` +
+    `${signed ? ", with a signature" : ""}. ` +
+    "This is the carrier's own record, not the merchant's: it shows that the shipment carrying the disputed purchase reached delivered status.";
+
+  // Timing — the delivery against the dispute, as sequence only.
   const opened = ctx.disputeOpenedAt ? Date.parse(ctx.disputeOpenedAt) : NaN;
   const predates = !Number.isNaN(opened) && Date.parse(deliveredAt) < opened;
-  // The inference, not the facts: the opening line directly above states them.
-  // "Contradicts" only when the record predates the dispute — a delivery
-  // after it answers the claim, but it was true when it was made.
-  const summary = predates
-    ? "The carrier's delivery record contradicts the claim that the item was not received."
-    : "The carrier's delivery record answers the claim that the item was not received.";
+  const timing = predates
+    ? `The delivery was recorded on ${dayMonth(deliveredAt)}, and the dispute was opened on ${day(ctx.disputeOpenedAt)}: the record relied on here was made before the claim, not in response to it.`
+    : null;
+
+  // Money — only when the rows add up to the disputed amount.
+  const sums = reconciliation(ctx, itemCount);
+  const money_ = sums
+    ? allItems
+      ? `${sums} The shipment therefore accounts for the whole of the disputed purchase.`
+      : sums
+    : null;
+
+  // Notices — what the customer was told, never proof of receipt.
+  const confirmation = events.find((e) => classifyChronologyEvent(e.text) === "shipping_confirmation");
+  const notice = events.find((e) => classifyChronologyEvent(e.text) === "delivery_notification");
+  const notices = [
+    confirmation ? `a shipping confirmation email on ${dayMonth(confirmation.at)}` : null,
+    notice ? `a delivery notification on ${dayMonth(notice.at)}` : null,
+  ].filter((s): s is string => s !== null);
+  const emails = notices.length
+    ? `The order history also records ${notices.join(" and ")}, sent to the customer. They show the customer was kept informed; the delivery itself rests on the carrier's record.`
+    : null;
+
+  const linkLine = url ? `${carrier}'s tracking record for this shipment is available at ${url}.` : null;
+
+  const shipping = [`${link1} ${link2}`, timing, money_, emails, linkLine]
+    .filter((p): p is string => !!p)
+    .join("\n\n");
+
+  const amount =
+    typeof ctx.disputeAmount === "number" && ctx.disputeCurrency
+      ? `${fmt(ctx.disputeCurrency, ctx.disputeAmount)} `
+      : "";
+  const summary =
+    `The merchant contests the ${amount}non-receipt chargeback in full. ` +
+    "The defence rests on the chain of records set out below: the order identifies what was purchased, " +
+    `the fulfilment record ties ${allItems ? "those items" : "the order"} to the ${carrier} shipment, ` +
+    "and the carrier's record shows that shipment as delivered.";
+
+  const conclusion =
+    `The records connect the ${amount ? `full ${amount.trim()} ` : ""}purchase to a shipment that ${carrier} recorded as delivered` +
+    `${predates ? " before the dispute was opened" : ""}.`;
 
   const omitted = narrative.omittedSections ?? [];
   return {
@@ -286,9 +417,8 @@ export function applySingleParcelRecordSections(
     executiveSummary: section(summary, factIds),
     transactionOverviewArgument: section("", []),
     chronologyArgument: section("", []),
-    fulfillmentArgument: section(account, factIds),
-    // No body: the conclusion's request line is the whole conclusion.
-    conclusion: section("", []),
+    fulfillmentArgument: section(shipping, factIds),
+    conclusion: section(conclusion, factIds),
     omittedSections: [
       ...omitted.filter(
         (o) =>
@@ -298,7 +428,6 @@ export function applySingleParcelRecordSections(
       ),
       { sectionKey: "transactionOverviewArgument", reason: "The transaction is set out in the case details." },
       { sectionKey: "chronologyArgument", reason: "The dated events are listed in the timeline." },
-      { sectionKey: "conclusion", reason: CONCLUSION_REASON },
     ],
   };
 }

@@ -634,6 +634,12 @@ export async function handleBuildDefencePackage(
     orderName: orderContext.orderName ?? null,
     disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
     timelineEvents: orderContext.timelineEvents,
+    lineItems: orderContext.lineItems,
+    // numeric columns can arrive as strings
+    disputeAmount: Number.isFinite(Number((dispute as { amount?: unknown } | null)?.amount ?? NaN))
+      ? Number((dispute as { amount?: unknown }).amount)
+      : null,
+    disputeCurrency: (dispute as { currency_code?: string | null } | null)?.currency_code ?? null,
   };
   narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
   narrativeRes.narrative = omitDeniedSections(narrativeRes.narrative, reasonCodeModule.key);
