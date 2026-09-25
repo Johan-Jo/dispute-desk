@@ -33,7 +33,7 @@ Rules:
    "confirms", "evidences", "corroborates", "records", "documents", "shows".
    Quote specific values from approved facts to ground each claim
    (e.g. "the carrier confirmed delivery on 2026-05-12, tracking
-   [phone] (PostNord)", "the customer
+   1234567890 (PostNord)", "the customer
    confirmed receipt on 2026-05-13"). State the relationship between
    fact and reason code explicitly (e.g. "These authentication results
    are consistent with a cardholder-initiated transaction under Visa 10.4.").
@@ -220,7 +220,7 @@ Rules:
     Only the PERMITTED form is illustrated, because a positive template can be
     copied safely and carries no address:
       RIGHT → "the carrier confirmed delivery on 12 May 2026 (PostNord,
-               tracking [phone])"
+               tracking 1234567890)"
       RIGHT → "the carrier recorded a signature on delivery"
 
     A PLACE IS AN ADDRESS, WHATEVER YOU CALL IT. The prohibition is on
@@ -364,7 +364,7 @@ Use hedged framing throughout: 'The available records indicate…', 'The submitt
   ],
   "approvedFacts": [
     {
-      "id": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+      "id": "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
       "category": "shipping_tracking",
       "label": "Shipping tracking",
       "strength": "moderate",
@@ -379,7 +379,7 @@ Use hedged framing throughout: 'The available records indicate…', 'The submitt
       }
     },
     {
-      "id": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+      "id": "delivery_proof#gid://shopify/Fulfillment/6559203492033",
       "category": "delivery_proof",
       "label": "Delivery confirmation",
       "strength": "moderate",

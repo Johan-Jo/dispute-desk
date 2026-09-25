@@ -9,8 +9,8 @@
     "currency_code": "CAD",
     "customer_display_name": "[Cardholder Name]",
     "customer_email": "cardholder@example.com",
-    "dispute_evidence_gid": "gid://shopify/ShopifyPaymentsDisputeEvidence/[phone]",
-    "dispute_gid": "gid://shopify/ShopifyPaymentsDispute/[phone]",
+    "dispute_evidence_gid": "gid://shopify/ShopifyPaymentsDisputeEvidence/11211899073",
+    "dispute_gid": "gid://shopify/ShopifyPaymentsDispute/11213897921",
     "due_at": "2026-10-03T23:00:00+00:00",
     "evidence_alert_sent_at": "2026-09-19T02:54:49.12+00:00",
     "evidence_saved_to_shopify_at": null,
@@ -30,7 +30,7 @@
     "next_action_text": "Generate an evidence pack",
     "next_action_type": "generate_pack",
     "normalized_status": "new",
-    "order_gid": "gid://shopify/Order/[phone]",
+    "order_gid": "gid://shopify/Order/7427268018369",
     "order_name": "#352543",
     "outcome_amount_lost": null,
     "outcome_amount_recovered": null,
@@ -50,7 +50,7 @@
         "customerEmailAddress": "cardholder@example.com",
         "customerFirstName": "[Cardholder Name]",
         "customerLastName": "[Cardholder Name]",
-        "id": "gid://shopify/ShopifyPaymentsDisputeEvidence/[phone]",
+        "id": "gid://shopify/ShopifyPaymentsDisputeEvidence/11211899073",
         "shippingAddress": {
           "name": "[Cardholder Name]"
         },
@@ -59,11 +59,11 @@
       "evidenceDueBy": "2026-10-03T16:00:00-07:00",
       "evidenceSentOn": null,
       "finalizedOn": null,
-      "id": "gid://shopify/ShopifyPaymentsDispute/[phone]",
+      "id": "gid://shopify/ShopifyPaymentsDispute/11213897921",
       "initiatedAt": "2026-09-19T02:33:38Z",
       "order": {
-        "id": "gid://shopify/Order/[phone]",
-        "legacyResourceId": "[phone]",
+        "id": "gid://shopify/Order/7427268018369",
+        "legacyResourceId": "7427268018369",
         "name": "#352543"
       },
       "reasonDetails": {
@@ -271,7 +271,7 @@
         "riskLevel": "low",
         "score": "Moderate"
       },
-      "disputeGid": "gid://shopify/ShopifyPaymentsDispute/[phone]",
+      "disputeGid": "gid://shopify/ShopifyPaymentsDispute/11213897921",
       "disputeReason": "PRODUCT_NOT_RECEIVED",
       "evidence_model": {
         "definitionRegistryVersion": 1,
@@ -490,7 +490,7 @@
           },
           "delivery_proof": {
             "citableIds": [
-              "delivery_proof#gid://shopify/Fulfillment/[phone]"
+              "delivery_proof#gid://shopify/Fulfillment/6559203492033"
             ],
             "fieldKey": "delivery_proof",
             "merchantOverride": null,
@@ -508,7 +508,7 @@
                   "fulfillments": [
                     {
                       "deliveredAt": "2026-07-06T19:53:02Z",
-                      "fulfillmentId": "gid://shopify/Fulfillment/[phone]",
+                      "fulfillmentId": "gid://shopify/Fulfillment/6559203492033",
                       "status": "SUCCESS",
                       "tracking": [
                         {
@@ -526,11 +526,11 @@
                   "collectedAt": null,
                   "evidenceItemId": null,
                   "origin": "shopify_fulfillment",
-                  "sourceSystemId": "gid://shopify/Fulfillment/[phone]",
+                  "sourceSystemId": "gid://shopify/Fulfillment/6559203492033",
                   "supersedes": null
                 },
                 "quality": "corroborating",
-                "recordId": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+                "recordId": "delivery_proof#gid://shopify/Fulfillment/6559203492033",
                 "validity": {
                   "reasonToken": null,
                   "state": "valid"
@@ -538,7 +538,7 @@
               }
             ],
             "relevance": "critical",
-            "representativeId": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+            "representativeId": "delivery_proof#gid://shopify/Fulfillment/6559203492033",
             "status": {
               "applicable": true,
               "available": true,
@@ -877,7 +877,7 @@
           },
           "shipping_tracking": {
             "citableIds": [
-              "shipping_tracking#gid://shopify/Fulfillment/[phone]"
+              "shipping_tracking#gid://shopify/Fulfillment/6559203492033"
             ],
             "fieldKey": "shipping_tracking",
             "merchantOverride": null,
@@ -895,7 +895,7 @@
                   "fulfillments": [
                     {
                       "deliveredAt": "2026-07-06T19:53:02Z",
-                      "fulfillmentId": "gid://shopify/Fulfillment/[phone]",
+                      "fulfillmentId": "gid://shopify/Fulfillment/6559203492033",
                       "status": "SUCCESS",
                       "tracking": [
                         {
@@ -913,11 +913,11 @@
                   "collectedAt": null,
                   "evidenceItemId": null,
                   "origin": "shopify_fulfillment",
-                  "sourceSystemId": "gid://shopify/Fulfillment/[phone]",
+                  "sourceSystemId": "gid://shopify/Fulfillment/6559203492033",
                   "supersedes": null
                 },
                 "quality": "corroborating",
-                "recordId": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+                "recordId": "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
                 "validity": {
                   "reasonToken": null,
                   "state": "valid"
@@ -925,7 +925,7 @@
               }
             ],
             "relevance": "critical",
-            "representativeId": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+            "representativeId": "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
             "status": {
               "applicable": true,
               "available": true,
@@ -1046,7 +1046,7 @@
             "lineItems": [
               {
                 "currency": "USD",
-                "lineItemId": "gid://shopify/LineItem/[phone]",
+                "lineItemId": "gid://shopify/LineItem/18419719569601",
                 "presentmentCurrency": "CAD",
                 "presentmentTotal": "24.5",
                 "quantity": 1,
@@ -1057,7 +1057,7 @@
               },
               {
                 "currency": "USD",
-                "lineItemId": "gid://shopify/LineItem/[phone]",
+                "lineItemId": "gid://shopify/LineItem/18419719602369",
                 "presentmentCurrency": "CAD",
                 "presentmentTotal": "23.0",
                 "quantity": 1,
@@ -1068,7 +1068,7 @@
               },
               {
                 "currency": "USD",
-                "lineItemId": "gid://shopify/LineItem/[phone]",
+                "lineItemId": "gid://shopify/LineItem/18419719635137",
                 "presentmentCurrency": "CAD",
                 "presentmentTotal": "98.0",
                 "quantity": 1,
@@ -1078,7 +1078,7 @@
                 "variant": null
               }
             ],
-            "orderId": "gid://shopify/Order/[phone]",
+            "orderId": "gid://shopify/Order/7427268018369",
             "orderName": "#352543",
             "shippingAddress": {
               "city": "Carman",
@@ -1142,7 +1142,7 @@
             "timelineEvents": [
               {
                 "createdAt": "2026-07-02T05:33:17Z",
-                "message": "[Cardholder Name] placed this order on Online Store (checkout #[phone])."
+                "message": "[Cardholder Name] placed this order on Online Store (checkout #44522904158401)."
               },
               {
                 "createdAt": "2026-07-02T05:33:17Z",
@@ -1162,7 +1162,7 @@
               },
               {
                 "createdAt": "2026-07-02T05:33:19Z",
-                "message": "Received new order <a href=\"https://blume-box.myshopify.com/admin/orders/[phone]\">#352543</a> by [Cardholder Name]."
+                "message": "Received new order <a href=\"https://blume-box.myshopify.com/admin/orders/7427268018369\">#352543</a> by [Cardholder Name]."
               },
               {
                 "createdAt": "2026-07-02T16:22:35Z",
@@ -1178,7 +1178,7 @@
               },
               {
                 "createdAt": "2026-07-05T01:04:52Z",
-                "message": "$80.64 USD was added to your <a href=\"https://blume-box.myshopify.com/admin/payments/payouts/[phone]\">Jul 6, 2026</a> payout."
+                "message": "$80.64 USD was added to your <a href=\"https://blume-box.myshopify.com/admin/payments/payouts/139398873281\">Jul 6, 2026</a> payout."
               },
               {
                 "createdAt": "2026-07-06T19:53:02Z",
@@ -1194,7 +1194,7 @@
               },
               {
                 "createdAt": "2026-09-20T01:03:08Z",
-                "message": "$101.43 USD was deducted from your <a href=\"https://blume-box.myshopify.com/admin/payments/payouts/[phone]\">Sep 21, 2026</a> payout because of a chargeback."
+                "message": "$101.43 USD was deducted from your <a href=\"https://blume-box.myshopify.com/admin/payments/payouts/142262862017\">Sep 21, 2026</a> payout because of a chargeback."
               },
               {
                 "createdAt": "2026-07-06T19:53:02Z",
@@ -1250,20 +1250,20 @@
                 "deliveredAt": "2026-07-06T19:53:02Z",
                 "displayStatus": "DELIVERED",
                 "estimatedDeliveryAt": null,
-                "fulfillmentId": "gid://shopify/Fulfillment/[phone]",
+                "fulfillmentId": "gid://shopify/Fulfillment/6559203492033",
                 "items": [
                   {
-                    "lineItemId": "gid://shopify/LineItem/[phone]",
+                    "lineItemId": "gid://shopify/LineItem/18419719569601",
                     "quantity": 1,
                     "title": "Superbalm Tripeptide-1 Lip Tint in Wild Plum"
                   },
                   {
-                    "lineItemId": "gid://shopify/LineItem/[phone]",
+                    "lineItemId": "gid://shopify/LineItem/18419719602369",
                     "quantity": 1,
                     "title": "Blume Buds Power Patches for Acne"
                   },
                   {
-                    "lineItemId": "gid://shopify/LineItem/[phone]",
+                    "lineItemId": "gid://shopify/LineItem/18419719635137",
                     "quantity": 1,
                     "title": "Clear Skin Kit: Acne Essentials"
                   }
@@ -1307,7 +1307,7 @@
                 "contentHash": "b36833c04a04a2dc2b9ac5e87e5dd74a416a0ed91af84611e4f660c985da8d6d",
                 "policySnapshotId": "fd80a145-a874-4908-b6e1-465a334cec7f",
                 "policyType": "terms",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/2587557939.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textLength": 33920,
@@ -1318,7 +1318,7 @@
                 "contentHash": "15b7c4373d12bc7e57ea9fa0d0236cb99140ae54475f0d4af4ff703df944454b",
                 "policySnapshotId": "a8006dde-9915-4391-a88b-bf4c5b339ecb",
                 "policyType": "subscription",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/36465606849.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textLength": 3019,
@@ -1329,7 +1329,7 @@
                 "contentHash": "08c2fb9ee3983b0191ca9fa9a3ff7f4b70d6ffdb9319b177be2f1e59be167f17",
                 "policySnapshotId": "647770cf-3870-4d5c-8f1b-320422a6c9fb",
                 "policyType": "shipping",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/13941833779.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textLength": 42,
@@ -1340,7 +1340,7 @@
                 "contentHash": "af7c75f5eb0d92d8d7662e1f0d3fe579f0ed381c73fa63e9149e5e5b2df5001c",
                 "policySnapshotId": "d10444cb-590f-4ce8-8ee8-8b831d52517e",
                 "policyType": "refunds",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/2587492403.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textLength": 233,
@@ -1349,9 +1349,9 @@
               {
                 "capturedAt": "2026-07-20T16:52:35.618+00:00",
                 "contentHash": "b4448cf96309a859bad8ff81d5ee0dacbedb58d7fc7f383da4da46cf5f660127",
-                "policySnapshotId": "[phone]c5-4dfc-a6e7-b3aac6ba5eeb",
+                "policySnapshotId": "63120518-70c5-4dfc-a6e7-b3aac6ba5eeb",
                 "policyType": "privacy",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/2587525171.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textLength": 29175,
@@ -1362,7 +1362,7 @@
                 "contentHash": "a5a0a20d091a775703c47ed160220c6c681303ccbf2a82ec99e34d6d746ed875",
                 "policySnapshotId": "be41f62d-34ba-4885-aa36-3ed2fd254831",
                 "policyType": "contact",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/36465574081.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textLength": 25,
@@ -1393,7 +1393,7 @@
                 "capturedAt": "2026-07-20T16:52:36.946+00:00",
                 "policySnapshotId": "fd80a145-a874-4908-b6e1-465a334cec7f",
                 "policyType": "terms",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/2587557939.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
@@ -1416,7 +1416,7 @@
                 "capturedAt": "2026-07-20T16:52:36.363+00:00",
                 "policySnapshotId": "647770cf-3870-4d5c-8f1b-320422a6c9fb",
                 "policyType": "shipping",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/13941833779.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textPreview": "Orders will ship within 1-3 business days."
@@ -1439,7 +1439,7 @@
                 "capturedAt": "2026-07-20T16:52:35.876+00:00",
                 "policySnapshotId": "d10444cb-590f-4ce8-8ee8-8b831d52517e",
                 "policyType": "refunds",
-                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/2587492403.html?locale=en",
                 "source": "shopify_published",
                 "storagePath": null,
                 "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at cardholder@example.com within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
@@ -1499,13 +1499,13 @@
             "bankEligible": true,
             "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
             "distanceKm": null,
-            "ip": "[redacted IP]",
+            "ip": "203.0.113.10",
             "ipConsistencyLevel": "first_seen",
             "ipReuseCount": 0,
             "ipinfo": {
               "city": "Winkler",
               "country": "CA",
-              "ip": "[redacted IP]",
+              "ip": "203.0.113.10",
               "loc": "[redacted coordinates]",
               "org": "AS7122 Bell Canada",
               "privacy": {
@@ -1554,13 +1554,13 @@
         "bankEligible": true,
         "category": "shipping_tracking",
         "confidence": null,
-        "id": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+        "id": "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
         "includeInBankNarrative": true,
         "internalOnly": false,
         "label": "Shipping tracking",
         "merchantVisible": true,
         "source": "shopify_fulfillments",
-        "sourceRef": "0a528498-e699-40df-afab-8d[phone]",
+        "sourceRef": "0a528498-e699-40df-afab-8d4343385719",
         "strength": "moderate",
         "submissionRisk": false,
         "value": {
@@ -1575,7 +1575,7 @@
           "shipmentIndex": [
             {
               "carrier": "Stallion Express",
-              "instanceKey": "gid://shopify/Fulfillment/[phone]",
+              "instanceKey": "gid://shopify/Fulfillment/6559203492033",
               "proofType": "delivered_confirmed",
               "trackingNumber": "260702441A"
             }
@@ -1589,13 +1589,13 @@
         "bankEligible": true,
         "category": "delivery_proof",
         "confidence": null,
-        "id": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+        "id": "delivery_proof#gid://shopify/Fulfillment/6559203492033",
         "includeInBankNarrative": true,
         "internalOnly": false,
         "label": "Delivery confirmation",
         "merchantVisible": true,
         "source": "shopify_fulfillments",
-        "sourceRef": "0a528498-e699-40df-afab-8d[phone]",
+        "sourceRef": "0a528498-e699-40df-afab-8d4343385719",
         "strength": "moderate",
         "submissionRisk": false,
         "value": {
@@ -1610,7 +1610,7 @@
           "shipmentIndex": [
             {
               "carrier": "Stallion Express",
-              "instanceKey": "gid://shopify/Fulfillment/[phone]",
+              "instanceKey": "gid://shopify/Fulfillment/6559203492033",
               "proofType": "delivered_confirmed",
               "trackingNumber": "260702441A"
             }
@@ -1689,12 +1689,12 @@
         {
           "factCategory": "shipping_tracking",
           "fieldKey": "shipping_tracking",
-          "recordId": "shipping_tracking#gid://shopify/Fulfillment/[phone]"
+          "recordId": "shipping_tracking#gid://shopify/Fulfillment/6559203492033"
         },
         {
           "factCategory": "delivery_proof",
           "fieldKey": "delivery_proof",
-          "recordId": "delivery_proof#gid://shopify/Fulfillment/[phone]"
+          "recordId": "delivery_proof#gid://shopify/Fulfillment/6559203492033"
         },
         {
           "factCategory": "policy_shipping",
@@ -1711,8 +1711,8 @@
         "source": "record",
         "text": "As the timeline below shows, the carrier-recorded delivery is dated before the dispute was opened.\n\nThe order history also records shipping and delivery notifications sent to the customer's recorded email address. These document the updates sent; the evidence of delivery remains the carrier's record.",
         "usedFactIds": [
-          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
-          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+          "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
+          "delivery_proof#gid://shopify/Fulfillment/6559203492033"
         ]
       },
       "communicationArgument": {
@@ -1723,24 +1723,24 @@
         "source": "record",
         "text": "The order and fulfilment records place the disputed goods in the tracked shipment, and the carrier records that shipment as delivered. These records support the merchant's position that the complete purchase was delivered.",
         "usedFactIds": [
-          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
-          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+          "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
+          "delivery_proof#gid://shopify/Fulfillment/6559203492033"
         ]
       },
       "executiveSummary": {
         "source": "record",
         "text": "The merchant contests this non-receipt chargeback. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full.",
         "usedFactIds": [
-          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
-          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+          "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
+          "delivery_proof#gid://shopify/Fulfillment/6559203492033"
         ]
       },
       "fulfillmentArgument": {
         "source": "record",
         "text": "The fulfilment record places all three purchased items in the single shipment shown above, and the carrier then recorded that shipment as delivered.\n\nThis distinction matters. The merchant does not rely only on its own record that the order was dispatched: the carrier's record reports the delivery itself, which is the event a non-receipt claim puts in issue.\n\nCarrier tracking record: https://stallionexpress.ca/track/?tracking=260702441A",
         "usedFactIds": [
-          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
-          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+          "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
+          "delivery_proof#gid://shopify/Fulfillment/6559203492033"
         ]
       },
       "manualEvidenceArgument": {
@@ -1777,8 +1777,8 @@
         "source": "record",
         "text": "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment.",
         "usedFactIds": [
-          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
-          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+          "shipping_tracking#gid://shopify/Fulfillment/6559203492033",
+          "delivery_proof#gid://shopify/Fulfillment/6559203492033"
         ]
       },
       "warnings": []
