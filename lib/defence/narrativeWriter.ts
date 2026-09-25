@@ -210,7 +210,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // #352543: opening line states the carrier record and dispute date, no
 // transaction overview or chronology paragraph, no independence or
 // cardholder-initiated claims (family v9).
-const PROMPT_VERSION = 33;
+// v34 (2026-09-24) — single-parcel item-not-received letters with a carrier-
+// confirmed delivery are record-built (summary, shipping, conclusion), as
+// multi-parcel ones already were (#352543).
+const PROMPT_VERSION = 34;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

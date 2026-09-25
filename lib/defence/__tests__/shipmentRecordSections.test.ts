@@ -125,7 +125,7 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
       "$129.00 USD was captured using a Visa ending in 9720 via Shop Pay.",
       "Stallion marked 1 item as fulfilled from Canada (The Back to School Bundle).",
       "Easy Fulfillment: Bulk Fulfill marked 1 item as fulfilled from Canada (Sunburst Mineral SPF 50 Sunscreen).",
-      "GOFO's tracking record shows The Back to School Bundle in transit (tracking YT2640221437435982).",
+      "GOFO's tracking record shows The Back to School Bundle in transit.",
     ]);
   });
 
@@ -139,14 +139,13 @@ describe("multi-parcel non-receipt letters are written from the records", () => 
   });
 
   it("each section says something new: the parcels in full once, the request never twice", () => {
-    expect(out.executiveSummary.text).toBe(
-      "The order was sent in two parcels: The Back to School Bundle, which GOFO's tracking record first shows in transit on 17 September 2026; and Sunburst Mineral SPF 50 Sunscreen, shipped by the merchant on 16 September 2026.",
-    );
+    // The cards state each parcel; the summary only how many there are.
+    expect(out.executiveSummary.text).toBe("The order was sent in two parcels, each set out below.");
     expect(out.transactionOverviewArgument.text).toBe("");
     expect(out.omittedSections.map((o) => o.sectionKey)).toContain("transactionOverviewArgument");
-    expect(out.conclusion.text).toBe(
-      "The request rests on GOFO's tracking record and the merchant's shipping records set out above.",
-    );
+    // The request line is the whole conclusion (2026-09-24): no body.
+    expect(out.conclusion.text).toBe("");
+    expect(out.omittedSections.map((o) => o.sectionKey)).toContain("conclusion");
     expect(out.conclusion.text).not.toMatch(/request(s|ed)? (that|reversal)|reversed/i);
     // Identifiers and links appear in the fulfilment section only.
     for (const k of ["executiveSummary", "chronologyArgument", "conclusion"] as const) {

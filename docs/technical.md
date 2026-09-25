@@ -2865,6 +2865,19 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 
 **Getting late delivery TO an open dispute:** nothing re-fetched an existing dispute's order once its pack was built, so a carrier delivery that lands weeks after the dispute opened never reached the case. The nightly cron [app/api/cron/refresh-open-disputes/route.ts](../app/api/cron/refresh-open-disputes/route.ts) (02:30 UTC) re-ingests each open dispute's order via `normalizeOrderIngest` and enqueues a `build_pack` when the order's `delivery_status` changed (esp. → `Delivered`). The rebuild then flows through the strength rule + improvement notification above automatically. Bounded (`MAX_PER_RUN`, oldest-refreshed first) and gated by `cronEnvGate`.
 
+**Every part says something new (2026-09-24, second review of #352543).** The maintainer's rule: *"each section should provide new information else it shouldn't be there"*. Even after the tightening, the tracking number appeared five times and the delivery fact four. Single-parcel item-not-received letters with a carrier-confirmed delivery (carrier + tracking number) are now record-built, like multi-parcel ones, in `applySingleParcelRecordSections` (lib/defence/shipmentRecordSections.ts). It is called with a `RecordSectionContext` (module, order name, dispute-opened date, timeline); the job now derives `orderContext` before this step. One job per part:
+
+| Part | States |
+|---|---|
+| Opening line | carrier, order, delivery date, dispute date (when delivery came first). **No tracking number.** |
+| Summary body | the inference only: "The carrier's delivery record contradicts the claim that the item was not received." ("answers" when delivery came after the dispute opened) |
+| Shipment card | carrier, tracking number, shipped, delivered. **Full width, fields side by side** for one parcel (`ShipmentCard wide`) |
+| Shipping prose | only the tracking link as text |
+| Timeline | dated events, customer emails included; carrier lines no longer repeat the tracking number. The delivered email ("Stallion sent a shipment delivered email to …") is now allow-listed as `delivery_notification` |
+| Conclusion | the request line alone. The body is empty and listed in `omittedSections`. `composePdfBlocks` keeps a conclusion block whose thesis resolves even when the body is empty; both renderers draw it |
+
+Multi-parcel letters follow the same rule: the summary says only how many parcels there are, and the conclusion body is empty. The in-app preview no longer shows an empty "Evidence Basis — (No bank-eligible facts available.)" when the card already shows the record. Result on #352543: 3 pages instead of 4. PROMPT_VERSION 34. Regression: `lib/defence/__tests__/singleParcelRecordSections.test.ts`.
+
 **Item-not-received letter tightened (2026-09-24, review of #352543).** A reviewer found the same delivery assertion six times in one letter, a USD line-item total under a CAD dispute, and sentences that overstated their sources. Changes, all shared by the PDF and the in-app preview:
 
 - **Opening line states the record.** `deliveryRecordClause` + `disputeOpenedClause` (lib/defence/pdf/thesisTokens.ts) replace "The submitted records respond to the item-not-received claim": *"Stallion Express recorded the shipment for order #352543 (tracking 260702441A) as delivered on 6 July 2026; the dispute was opened on 19 September 2026."* The dispute date appears only when the delivery came first. On a multi-parcel order the clause names the delivered parcel as "a shipment". Tokens now take an optional `ThesisContext` (order name, dispute-opened date), threaded through `renderThesis`, `composePdfBlocks`, `projectPackageFromPlan`, the job and the HTML view. The fulfilment section's item-not-received thesis (a verbatim repeat) is gone. `COMPOSITION_VERSION` 2.

@@ -602,6 +602,22 @@ export async function handleBuildDefencePackage(
       (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
     ),
   };
+  // Derive order/payment/timeline context from the pack once (before the record sections, which read the
+  // timeline) — the PDF
+  // renderer + the workspace API both consume this shape. Before this
+  // call, the meta object hardcoded `null` for 8 fields the case-details
+  // table needs (card network, last 4, transaction date, gateway,
+  // financial/fulfillment status, order name, cardholder name) even
+  // though the data was already in `pack_json`.
+  const orderContext = deriveOrderContext(
+    sectionsRaw.map((s) => ({
+      type: s.type,
+      label: s.label,
+      source: s.source,
+      data: s.data ?? {},
+      fieldsProvided: s.fieldsProvided ?? [],
+    })),
+  );
   // Drop argument sections whose every supporting fact is withheld from the
   // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
   // disputes: 51 such sections across 27 cases. Blocking them would mean
@@ -610,7 +626,16 @@ export async function handleBuildDefencePackage(
   // Multi-parcel item-not-received letters: the parcel sections come from the
   // records, not the model (lib/defence/shipmentRecordSections.ts). No-op for
   // every other letter.
-  narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts);
+  // Item-not-received letters: parcel sections come from the records, not
+  // the model (lib/defence/shipmentRecordSections.ts) — multi-parcel, and a
+  // single carrier-confirmed delivery.
+  const recordContext = {
+    moduleKey: reasonCodeModule.key,
+    orderName: orderContext.orderName ?? null,
+    disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    timelineEvents: orderContext.timelineEvents,
+  };
+  narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
   narrativeRes.narrative = omitDeniedSections(narrativeRes.narrative, reasonCodeModule.key);
   const suppression = suppressUnsupportedSections({
     narrative: narrativeRes.narrative,
@@ -722,7 +747,7 @@ export async function handleBuildDefencePackage(
       // with its errors.
       // The retry output needs the same treatment; without this a retried
       // package keeps the unsupported section the first pass had removed.
-      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts);
+      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts, recordContext);
       retryRes.narrative = omitDeniedSections(retryRes.narrative, reasonCodeModule.key);
       const retrySuppression = suppressUnsupportedSections({
         narrative: retryRes.narrative,
@@ -808,21 +833,6 @@ export async function handleBuildDefencePackage(
     return { ok: false, retriable: false, reason: "validation_failed" };
   }
 
-  // Derive order/payment/timeline context from the pack once — the PDF
-  // renderer + the workspace API both consume this shape. Before this
-  // call, the meta object hardcoded `null` for 8 fields the case-details
-  // table needs (card network, last 4, transaction date, gateway,
-  // financial/fulfillment status, order name, cardholder name) even
-  // though the data was already in `pack_json`.
-  const orderContext = deriveOrderContext(
-    sectionsRaw.map((s) => ({
-      type: s.type,
-      label: s.label,
-      source: s.source,
-      data: s.data ?? {},
-      fieldsProvided: s.fieldsProvided ?? [],
-    })),
-  );
 
   // The merchant is named by its real storefront domain ("blume.com"), never
   // the myshopify alias (maintainer, 2026-09-24). `displayShopDomain` falls

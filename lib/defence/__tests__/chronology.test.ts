@@ -179,7 +179,7 @@ describe("buildChronologyEvents — multi-parcel delivery is stated once", () =>
       ],
     }, facts);
     expect(events.map((e) => e.text)).toEqual([
-      "GOFO records delivery of The Back to School Bundle (tracking YT2640221437435982).",
+      "GOFO records delivery of The Back to School Bundle.",
     ]);
   });
 

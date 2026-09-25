@@ -109,8 +109,30 @@ export function composePdfBlocks(
     const hasLlm = !sectionOmitted && llmText.length > 0;
 
     if (!hasFallback && !hasLlm) {
-      // Section is completely absent from the rendered PDF — produce
-      // no block. Renderer drops the heading too.
+      // The conclusion's request line is a conclusion on its own: a record-
+      // built letter leaves the body empty rather than restate the record
+      // (lib/defence/shipmentRecordSections.ts).
+      if (sectionKey === "conclusion") {
+        const request = renderThesis({
+          sectionKey,
+          familyKey: input.familyKey,
+          packageMode: input.packageMode,
+          approvedFacts: input.approvedFacts,
+          caseContext: input.caseContext,
+        });
+        if (request) {
+          blocks.push({
+            sectionKey,
+            heading: sectionTitleFor(sectionKey, input.approvedFacts),
+            thesisText: request,
+            llmText: "",
+            fallbackText: "",
+            usedFactIds: [],
+          });
+        }
+      }
+      // Any other section is completely absent from the rendered PDF — no
+      // block, and the renderer drops the heading too.
       continue;
     }
 
