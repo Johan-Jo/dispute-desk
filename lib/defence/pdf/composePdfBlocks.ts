@@ -13,7 +13,7 @@
  */
 
 import { renderThesis } from "./renderThesis";
-import { isSectionDeniedForModule } from "../sectionVisibility";
+import { isSectionShown } from "../sectionVisibility";
 import { SECTION_ORDER, sectionTitleFor } from "../render/sections";
 import type {
   ComposedDocumentBlock,
@@ -85,7 +85,7 @@ export function composePdfBlocks(
     // Per-module section deny list — sections ruled out for this
     // reason code are dropped before any fallback/LLM logic runs.
     // See lib/defence/sectionVisibility.ts.
-    if (isSectionDeniedForModule(sectionKey, input.moduleKey)) {
+    if (!isSectionShown(input.narrative, sectionKey, input.moduleKey)) {
       continue;
     }
 
@@ -155,6 +155,7 @@ export function composePdfBlocks(
       llmText: hasLlm ? llmText : "",
       fallbackText,
       usedFactIds: section.usedFactIds.slice(),
+      ...(section.source === "record" ? { recordBuilt: true } : {}),
     });
   }
 

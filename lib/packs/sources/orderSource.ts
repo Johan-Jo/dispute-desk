@@ -96,6 +96,7 @@ export async function collectOrderEvidence(
   if (!order) return [];
 
   const lineItems = order.lineItems.edges.map((e) => ({
+    lineItemId: e.node.id ?? null,
     title: e.node.title,
     variant: e.node.variantTitle,
     quantity: e.node.quantity,
@@ -136,6 +137,10 @@ export async function collectOrderEvidence(
       data: {
         orderId: order.id,
         orderName: order.name,
+        // The order's email address — so a letter can say the shipment
+        // updates in the order history went to it (the history lines name
+        // the address already).
+        email: order.email ?? null,
         createdAt: order.createdAt,
         financialStatus: order.displayFinancialStatus,
         fulfillmentStatus: order.displayFulfillmentStatus,

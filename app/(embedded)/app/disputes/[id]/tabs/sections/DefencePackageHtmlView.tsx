@@ -26,7 +26,8 @@ import type {
   NarrativeSectionKey,
   PackageMode,
 } from "@/lib/defence/types";
-import { isSectionDeniedForModule } from "@/lib/defence/sectionVisibility";
+import { isSectionShown } from "@/lib/defence/sectionVisibility";
+import { disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { buildChronologyEvents, type ChronologyEvent } from "@/lib/defence/chronology";
 import {
   SECTION_ORDER,
@@ -87,7 +88,7 @@ function thesisFor(
   moduleKey: string | null | undefined,
   mode: PackageMode,
   facts: EvidenceFact[],
-  caseContext?: { orderName?: string | null; disputeOpenedAt?: string | null },
+  caseContext?: { orderName?: string | null; disputeOpenedAt?: string | null; disputedAmount?: string | null },
 ): string | null {
   const familyKey = moduleKey
     ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
@@ -496,7 +497,14 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const shownOnCard = single ? deliveryFactIds(facts) : new Set<string>();
   const evidenceBasis = buildEvidenceBasisRows(facts).filter((r) => !shownOnCard.has(r.factId));
   const productNames = [...lineItems.map((it) => it.description), ...shipments.map(productsOf)];
-  const caseContext = { orderName: dispute?.orderName ?? null, disputeOpenedAt: dispute?.openedAt ?? null };
+  const caseContext = {
+    orderName: dispute?.orderName ?? null,
+    disputeOpenedAt: dispute?.openedAt ?? null,
+    disputedAmount: disputedAmountDisplay(
+      dispute?.amount == null ? null : Number(dispute.amount),
+      dispute?.currencyCode ?? null,
+    ),
+  };
 
   const fulfillmentFallbackVisible =
     omitted.has("fulfillmentArgument") &&
@@ -546,7 +554,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   }
 
   const visible = (key: NarrativeSectionKey) =>
-    !isSectionDeniedForModule(key, moduleKey) && !omitted.has(key) && narrative[key]?.text?.trim()
+    isSectionShown(narrative, key, moduleKey) && !omitted.has(key) && narrative[key]?.text?.trim()
       ? narrative[key].text.trim()
       : null;
 
@@ -570,6 +578,10 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   // The request line stands alone when the body is empty (record-built letters).
   const conclusionThesis = thesisFor("conclusion", moduleKey, mode, facts, caseContext);
   const chronologyBody = visible("chronologyArgument");
+  const lineItemsArgument =
+    narrative.transactionOverviewArgument?.source === "record" && lineItems.length > 0
+      ? visible("transactionOverviewArgument")
+      : null;
 
   return (
     <Card padding="500">
@@ -621,7 +633,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
         />
 
         {prose("executiveSummary")}
-        {prose("transactionOverviewArgument")}
+        {/* A record-built overview argues the line items: it prints under
+            the table instead, as in the PDF. */}
+        {lineItemsArgument ? null : prose("transactionOverviewArgument")}
         {prose("paymentAuthenticationArgument")}
 
         {multiParcel ? (
@@ -714,6 +728,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                 <span style={{ padding: "0 12px", textAlign: "right" }}>{total.amount}</span>
               </div>
             ) : null}
+            {lineItemsArgument ? (
+              <div style={{ marginTop: 16 }}>
+                <Prose text={lineItemsArgument} emphasise={productNames} />
+              </div>
+            ) : null}
           </Section>
         ) : null}
 
@@ -727,12 +746,13 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
         {conclusionBody || conclusionThesis ? (
           <Section number={num()} title={SECTION_TITLES.conclusion}>
             <div style={{ background: C.accentSoft, borderRadius: 12, padding: "22px 26px" }}>
-              {conclusionThesis ? (
-                <div style={{ fontSize: 18, fontWeight: 600, color: C.accent, lineHeight: 1.4, marginBottom: 10 }}>
-                  {conclusionThesis}
-                </div>
+              {/* The reasoning, then the request, as in the PDF. */}
+              {conclusionBody ? (
+                <div style={{ fontSize: 15, color: C.ink, marginBottom: conclusionThesis ? 12 : 0 }}>{conclusionBody}</div>
               ) : null}
-              {conclusionBody ? <div style={{ fontSize: 15, color: C.ink }}>{conclusionBody}</div> : null}
+              {conclusionThesis ? (
+                <div style={{ fontSize: 18, fontWeight: 600, color: C.accent, lineHeight: 1.4 }}>{conclusionThesis}</div>
+              ) : null}
             </div>
           </Section>
         ) : null}
