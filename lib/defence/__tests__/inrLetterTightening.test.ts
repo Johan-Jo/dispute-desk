@@ -35,15 +35,15 @@ const opening = (facts: EvidenceFact[], disputeOpenedAt: string | null) =>
   });
 
 describe("opening line — the carrier record, then the dispute date", () => {
-  it("states carrier, order, delivery date and the later dispute date — the tracking number is on the card only", () => {
+  it("states carrier, delivery date and the later dispute date — order and tracking numbers are in the header and on the card", () => {
     expect(opening([stallion], "2026-09-19T02:33:38Z")).toBe(
-      "Stallion Express recorded the shipment for order #352543 as delivered on 6 July 2026; the dispute was opened on 19 September 2026.",
+      "Stallion Express recorded the shipment for this order as delivered on 6 July 2026; the dispute was opened on 19 September 2026.",
     );
   });
 
   it("leaves the dispute date out when delivery came after it", () => {
     expect(opening([stallion], "2026-07-01T00:00:00Z")).toBe(
-      "Stallion Express recorded the shipment for order #352543 as delivered on 6 July 2026.",
+      "Stallion Express recorded the shipment for this order as delivered on 6 July 2026.",
     );
   });
 
@@ -56,7 +56,7 @@ describe("opening line — the carrier record, then the dispute date", () => {
       ],
     });
     expect(opening([multi], "2026-09-19T02:33:38Z")).toBe(
-      "GOFO recorded a shipment for order #352543 as delivered on 24 September 2026.",
+      "GOFO recorded a shipment for this order as delivered on 24 September 2026.",
     );
   });
 
