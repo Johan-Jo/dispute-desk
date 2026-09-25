@@ -35,7 +35,7 @@ export async function POST(req: Request): Promise<Response> {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY;
   if (!apiKey) return Response.json({ error: "no key" }, { status: 500 });
 
-  const body = (await req.json()) as { system?: string; user?: string; model?: string };
+  const body = (await req.json()) as { system?: string; user?: string; model?: string; temperature?: number; maxTokens?: number };
   const model = body.model ?? "claude-sonnet-4-6";
   if (!MODELS.has(model)) return Response.json({ error: "model not allowed" }, { status: 400 });
   if (typeof body.system !== "string" || typeof body.user !== "string") {
@@ -50,9 +50,11 @@ export async function POST(req: Request): Promise<Response> {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 3000,
+      max_tokens: Math.min(8000, Math.max(500, body.maxTokens ?? 3000)),
       // Opus 5.5 rejects `temperature` (deprecated for that model).
-      ...(model === "claude-opus-5-5" ? {} : { temperature: 0.4 }),
+      ...(model === "claude-opus-5-5"
+        ? {}
+        : { temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.4 }),
       system: body.system.slice(0, 40_000),
       messages: [{ role: "user", content: body.user.slice(0, 4_000) }],
     }),
