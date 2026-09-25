@@ -3409,7 +3409,9 @@ writes item-not-received letters from a code-built claim ledger. Address rule:
   holds the claim; everything else still hits the address-delivery detector.
 - **Later order.** The `later_order` claim carries the order as `narrative.laterOrderExhibit`; the PDF
   (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card under the Order Line Items table
-  (`documentModel.ts` `laterOrderCard`).
+  (`documentModel.ts` `laterOrderCard`). Its delivery date is shown only when the order arrived within the
+  merchant's delivery period (`deliveryPeriodDays`: a published delivery window, else the dispatch window plus
+  the disputed order's transit, else 10 days); a long order-to-delivery span is left out.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
