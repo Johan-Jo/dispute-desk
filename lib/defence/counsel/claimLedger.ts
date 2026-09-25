@@ -306,7 +306,17 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
         ? `a card ending in the same four digits, through the same ${walletName(later.wallet)} wallet`
         : "a card ending in the same four digits";
     }
-    if (later.deliveredAt) specifics.laterOrderDeliveredOn = longDate(later.deliveredAt)!;
+    // The later order's delivery date is shown only when it arrived within the
+    // merchant's delivery period: a long order-to-delivery span reads worse
+    // than it helps (maintainer, 2026-09-25, #363341: 16 days on a
+    // "ships within 1-3 business days" store).
+    const laterDelivered =
+      later.deliveredAt &&
+      calendarDays(later.createdAt, later.deliveredAt) <=
+        deliveryPeriodDays(sections, orderCreatedAt, shippedAt, deliveredAt)
+        ? later.deliveredAt
+        : null;
+    if (laterDelivered) specifics.laterOrderDeliveredOn = longDate(laterDelivered)!;
     if (later.carrier && later.carrier === carrier) specifics.laterOrderCarrier = "the same carrier";
     add({
       id: "later_order",
@@ -316,7 +326,7 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
         total: later.total ?? null,
         cardLast4: later.cardLast4,
         wallet: later.wallet ? walletName(later.wallet) : null,
-        deliveredAt: later.deliveredAt,
+        deliveredAt: laterDelivered,
       },
       timelineEvent: {
         at: later.createdAt,
@@ -328,7 +338,7 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
         `After the carrier recorded delivery of the disputed order, the same customer account placed a further order (${later.name}) on ${specifics.laterOrderOn}` +
         `${specifics.daysBeforeDispute ? `, ${specifics.daysBeforeDisputeWord} days before opening this dispute` : ""}` +
         `${sameCard ? `, paid with ${specifics.paidWith}` : ""}` +
-        `${later.deliveredAt ? `; ${specifics.laterOrderCarrier ?? "the carrier"} recorded that order as delivered on ${specifics.laterOrderDeliveredOn}` : ""}.`,
+        `${laterDelivered ? `; ${specifics.laterOrderCarrier ?? "the carrier"} recorded that order as delivered on ${specifics.laterOrderDeliveredOn}` : ""}.`,
       specifics,
       weight: "core",
       sources: ["shopify.customer.orders"],
@@ -413,6 +423,49 @@ function addressClaims(orderData: Obj, sections: LedgerInput["packSections"]): L
     });
   }
   return out;
+}
+
+/**
+ * The merchant's delivery period in calendar days, from the records:
+ *   1. a delivery window the shipping policy states ("delivered within 5-7
+ *      business days") — its upper bound;
+ *   2. else the dispatch window ("ship within 1-3 business days") plus the
+ *      disputed order's own transit time (shipped → carrier delivery);
+ *   3. else 10 days.
+ * Business days are counted as calendar days from the order date.
+ */
+export function deliveryPeriodDays(
+  sections: LedgerInput["packSections"],
+  orderCreatedAt: string | null,
+  shippedAt: string | null,
+  deliveredAt: string,
+): number {
+  const text =
+    ((obj(sections.find((s) => s?.type === "shipping_policy")?.data)?.policies as unknown[]) ?? [])
+      .map((p) => str(obj(p)?.textPreview))
+      .filter(Boolean)
+      .join(" ") || "";
+  const range = (verb: string) =>
+    text.match(new RegExp(`${verb}\\w*\\s+(?:with)?in\\s+(\\d+)\\s*(?:-|–|to)?\\s*(\\d+)?\\s+(business\\s+)?days`, "i"));
+  const toCalendar = (n: number, business: boolean) => {
+    if (!business || !orderCreatedAt) return n;
+    let d = Date.parse(orderCreatedAt);
+    let left = n;
+    let days = 0;
+    while (left > 0) {
+      d += 86_400_000;
+      days += 1;
+      const w = new Date(d).getUTCDay();
+      if (w !== 0 && w !== 6) left -= 1;
+    }
+    return days;
+  };
+  const upper = (m: RegExpMatchArray) => Number(m[2] ?? m[1]);
+  const deliver = range("deliver");
+  if (deliver) return toCalendar(upper(deliver), !!deliver[3]);
+  const ship = range("ship");
+  if (ship && shippedAt) return toCalendar(upper(ship), !!ship[3]) + Math.max(0, calendarDays(shippedAt, deliveredAt));
+  return 10;
 }
 
 function walletName(w: string): string {
