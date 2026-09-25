@@ -6,7 +6,7 @@
  * (model, N candidates) → checks (code) → judge (model) → composed PDF.
  */
 
-import type { EvidenceFact } from "../types";
+import type { AddressExhibit, EvidenceFact } from "../types";
 
 export type ClaimWeight = "core" | "strong" | "supporting";
 
@@ -26,6 +26,8 @@ export interface LedgerClaim {
   /** A row this claim adds to the Chronology exhibit (e.g. the customer's
    *  later order), so the evidence is shown, not only described. */
   timelineEvent?: { at: string; text: string };
+  /** The addresses this claim rests on, printed as an exhibit. */
+  addressExhibit?: AddressExhibit;
 }
 
 /** One of the cardholder's orders on the merchant's store (Admin API read). */

@@ -58,7 +58,7 @@ export function parseJson<T>(raw: string): T {
 }
 
 /** The letter as the analyst sees it, for the fact-checker and the judge. */
-export function letterForJudge(d: CounselDraft, pageContext: string): string {
+export function letterForJudge(d: CounselDraft, pageContext: string, withRequestLine = true): string {
   const titles: Record<string, string> = {
     shipping: "Shipping & Delivery (next to a shipment card: carrier, tracking number, shipped and delivered dates, tracking link)",
     lineItems: "Order Line Items (under the table of items and total)",
@@ -68,7 +68,8 @@ export function letterForJudge(d: CounselDraft, pageContext: string): string {
     `PAGE HEADER AND CASE DETAILS (printed above the letter):\n${pageContext}`,
     `SUMMARY:\n${d.summary.paragraphs.join("\n\n")}`,
     ...d.evidenceSections.map((s) => `${titles[s.key] ?? s.key}:\n${s.paragraphs.join("\n\n")}`),
-    `CONCLUSION:\n${d.conclusion.paragraphs.join("\n\n")}\n[fixed request line follows: "The merchant respectfully requests reversal of the chargeback."]`,
+    `CONCLUSION:\n${d.conclusion.paragraphs.join("\n\n")}` +
+      (withRequestLine ? `\n[fixed request line follows: "The merchant respectfully requests reversal of the chargeback."]` : ""),
   ].join("\n\n");
 }
 
@@ -118,7 +119,8 @@ export async function writeCounselLetter(args: {
   const allIssues = async (d: CounselDraft): Promise<string[]> => {
     const code = checkDraft(d, args.check);
     if (code.length) return code;
-    const fc = factCheckPrompt(args.ledger, letterForJudge(d, args.pageContext));
+    // The fixed request line is not the writer's: never flag it as a repeat.
+    const fc = factCheckPrompt(args.ledger, letterForJudge(d, args.pageContext, false));
     const res = parseJson<{ errors?: Array<{ sentence: string; problem: string }> }>(
       await args.call({ ...fc, temperature: 0, maxTokens: 1500 }),
     );

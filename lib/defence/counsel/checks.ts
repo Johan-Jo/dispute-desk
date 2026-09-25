@@ -79,6 +79,35 @@ const LINT: Array<[RegExp, string]> = [
   [/\baddress\b(?! on the order)/i, "the word 'address' outside 'the email address on the order'"],
 ];
 
+const DELIVERY_WORDS = /\b(?:deliver\w*|receiv\w*|reach\w*|arriv\w*|destination|left at|dropped|handed)\b/i;
+
+/**
+ * An address sentence the ledger authorises (claimLedger.ts `addressClaims`):
+ * "the shipping address is the same as / identical to / matches the billing
+ * address", and — with `billing_address_verified` — the issuer's address
+ * check matching the billing address. Never a sentence about where the parcel
+ * was delivered.
+ */
+export function isAllowedAddressSentence(sentence: string, ledger: readonly LedgerClaim[]): boolean {
+  if (!/\baddress/i.test(sentence) || DELIVERY_WORDS.test(sentence)) return false;
+  const ids = new Set(ledger.map((c) => c.id));
+  const matchesBilling =
+    /\bshipping address\b/i.test(sentence) &&
+    /\bbilling address\b/i.test(sentence) &&
+    /\b(?:same as|identical to|matche[sd]|match)\b/i.test(sentence);
+  const avs = /\baddress (?:check|verification)\b|\bAVS\b/i.test(sentence) && /\bbilling address\b/i.test(sentence);
+  if (avs) return ids.has("billing_address_verified") && ids.has("shipping_matches_billing");
+  return matchesBilling && ids.has("shipping_matches_billing");
+}
+
+/** Text with the authorised address sentences removed. */
+function withoutAllowedAddressSentences(text: string, ledger: readonly LedgerClaim[]): string {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .filter((s) => !isAllowedAddressSentence(s, ledger))
+    .join(" ");
+}
+
 type Where = "headline" | "summary" | EvidenceSectionKey | "conclusion";
 
 function parts(d: CounselDraft): Array<{ where: Where; text: string; claimIds: string[] }> {
@@ -144,7 +173,13 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
   if (specificsIn(headlineText).length) issues.push(`headline: no dates or numbers (found ${specificsIn(headlineText).join(", ")}); the summary carries them`);
   if (words(headlineText) > 30) issues.push(`headline: at most 30 words (has ${words(headlineText)})`);
-  if (words(summaryText) > 70) issues.push(`summary: at most 70 words (has ${words(summaryText)}); shorter, straight to the point`);
+  if (words(summaryText) > 80) {
+    issues.push(
+      `summary: ${words(summaryText)} words, the limit is 80 — cut at least ${words(summaryText) - 75} words. ` +
+        "Drop a supporting detail (a notification, how fast it shipped) or a clause that restates another; keep the claim, " +
+        "the delivery, the later order, the sentence tying them to the claim, and the request.",
+    );
+  }
   if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
   if (conclusionText.trim()) issues.push("conclusion: must be empty — the summary makes the case; the request line closes the letter");
   void sentences;
@@ -153,8 +188,8 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     const n = all.toLowerCase().split(phrase).length - 1;
     if (n > 2) issues.push(`copy: "${phrase}" is used ${n} times; at most twice`);
   }
-  // Each specific at most twice in the letter, never twice in one part, and
-  // never in both the headline and the summary directly under it.
+  // Each date and number ONCE in the letter (maintainer: "each fact stated
+  // once"). Elsewhere refer to the event: "the delivery", "that order".
   const uses = new Map<string, Where[]>();
   for (const p of P) {
     for (const s of specificsIn(p.text)) {
@@ -163,21 +198,36 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     }
   }
   for (const [s, where] of uses) {
-    if (where.length > 2) issues.push(`copy: "${s}" is used ${where.length} times (${where.join(", ")}); at most twice`);
-    else if (where.length === 2 && where[0] === where[1]) issues.push(`copy: "${s}" is used twice in ${where[0]}`);
-    else if (where.includes("headline") && where.includes("summary")) issues.push(`copy: "${s}" is in the headline and again in the summary right under it`);
+    if (where.length > 1) issues.push(`copy: "${s}" is used ${where.length} times (${where.join(", ")}); once only — elsewhere refer to the event ("the delivery", "that order")`);
+  }
+  // The exhibits' positions: prose prints ABOVE the timeline and the tracking
+  // link prints below the shipping prose.
+  for (const p of P) {
+    const m = p.text.match(/\b(?:timeline|table|chronology) above\b|\babove(?: the| this)? (?:timeline|table|chronology)\b/i);
+    if (m) issues.push(`${p.where}: "${m[0]}" — the timeline and the table print BELOW the text; say "the timeline below" or just "the timeline"`);
   }
 
   // 4. lint
   for (const p of P) {
+    const text = withoutAllowedAddressSentences(p.text, ctx.ledger);
     for (const [re, name] of LINT) {
-      const m = p.text.match(re);
+      const m = text.match(re);
       if (m) issues.push(`${p.where}: ${name} — "${m[0]}"`);
     }
   }
 
-  // 5. truth: the production validator, unchanged
-  const n = toNarrative(d, ctx.facts.map((f) => f.id));
+  // 5. truth: the production validator, unchanged. The authorised address
+  // sentences are taken out first: its address-delivery detector reads any
+  // "shipping address" sentence as a delivery claim, and these are not one.
+  const strip = (s: { paragraphs: string[] } | undefined) =>
+    s && { ...s, paragraphs: (s.paragraphs ?? []).map((t) => withoutAllowedAddressSentences(t, ctx.ledger)) };
+  const forTruth: CounselDraft = {
+    ...d,
+    summary: strip(d.summary) as CounselDraft["summary"],
+    evidenceSections: (d.evidenceSections ?? []).map((s) => strip(s) as CounselDraft["evidenceSections"][number]),
+    conclusion: strip(d.conclusion) as CounselDraft["conclusion"],
+  };
+  const n = toNarrative(forTruth, ctx.facts.map((f) => f.id));
   const res = validateNarrative({
     narrative: n,
     approvedFacts: ctx.facts as EvidenceFact[],
@@ -207,6 +257,7 @@ export function toNarrative(
   d: CounselDraft,
   factIds: string[],
   trackingLinkLine?: string | null,
+  ledger: readonly LedgerClaim[] = [],
 ): DefenceNarrativeOutput {
   const sec = (paragraphs: string[] | undefined): NarrativeSection => {
     const text = (paragraphs ?? []).map((p) => p.trim()).filter(Boolean).join("\n\n");
@@ -231,6 +282,10 @@ export function toNarrative(
     omittedSections: [],
     warnings: [],
   };
+  // The addresses are printed whenever the ledger holds the match, whether or
+  // not the prose mentions it: the exhibit is the evidence.
+  const addresses = ledger.find((c) => c.addressExhibit)?.addressExhibit;
+  if (addresses) narrative.addressExhibit = addresses;
   for (const k of [
     "transactionOverviewArgument", "chronologyArgument", "paymentAuthenticationArgument", "fulfillmentArgument", "conclusion",
     "communicationArgument", "policyArgument", "manualEvidenceArgument",
