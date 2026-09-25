@@ -1,0 +1,1787 @@
+{
+  "note": "All inputs held for blume-box #352543 (dispute 25034e1e). Customer identity redacted.",
+  "dispute": {
+    "amount": 120.75,
+    "attention_payload": {},
+    "attention_reason": null,
+    "closed_at": null,
+    "created_at": "2026-09-19T02:52:45.838938+00:00",
+    "currency_code": "CAD",
+    "customer_display_name": "[Cardholder Name]",
+    "customer_email": "cardholder@example.com",
+    "dispute_evidence_gid": "gid://shopify/ShopifyPaymentsDisputeEvidence/[phone]",
+    "dispute_gid": "gid://shopify/ShopifyPaymentsDispute/[phone]",
+    "due_at": "2026-10-03T23:00:00+00:00",
+    "evidence_alert_sent_at": "2026-09-19T02:54:49.12+00:00",
+    "evidence_saved_to_shopify_at": null,
+    "final_outcome": null,
+    "has_admin_override": false,
+    "high_value_alert_sent_at": null,
+    "id": "25034e1e-ab3e-4457-88d1-d1f9751f9a12",
+    "initiated_at": "2026-09-19T02:33:38+00:00",
+    "last_event_at": "2026-09-23T22:26:48.181+00:00",
+    "last_synced_at": "2026-09-25T16:03:23.266+00:00",
+    "needs_attention": true,
+    "needs_review": false,
+    "network_reason_code": "13.1",
+    "network_reason_code_confidence": "inferred",
+    "network_reason_code_resolved_at": "2026-09-25T14:42:40.206+00:00",
+    "new_dispute_alert_sent_at": "2026-09-19T02:54:47.231+00:00",
+    "next_action_text": "Generate an evidence pack",
+    "next_action_type": "generate_pack",
+    "normalized_status": "new",
+    "order_gid": "gid://shopify/Order/[phone]",
+    "order_name": "#352543",
+    "outcome_amount_lost": null,
+    "outcome_amount_recovered": null,
+    "outcome_confidence": null,
+    "outcome_source": null,
+    "overridden_fields": {},
+    "phase": "chargeback",
+    "raw_snapshot": {
+      "amount": {
+        "amount": "120.75",
+        "currencyCode": "CAD"
+      },
+      "disputeEvidence": {
+        "billingAddress": {
+          "name": "[Cardholder Name]"
+        },
+        "customerEmailAddress": "cardholder@example.com",
+        "customerFirstName": "[Cardholder Name]",
+        "customerLastName": "[Cardholder Name]",
+        "id": "gid://shopify/ShopifyPaymentsDisputeEvidence/[phone]",
+        "shippingAddress": {
+          "name": "[Cardholder Name]"
+        },
+        "uncategorizedFile": null
+      },
+      "evidenceDueBy": "2026-10-03T16:00:00-07:00",
+      "evidenceSentOn": null,
+      "finalizedOn": null,
+      "id": "gid://shopify/ShopifyPaymentsDispute/[phone]",
+      "initiatedAt": "2026-09-19T02:33:38Z",
+      "order": {
+        "id": "gid://shopify/Order/[phone]",
+        "legacyResourceId": "[phone]",
+        "name": "#352543"
+      },
+      "reasonDetails": {
+        "reason": "PRODUCT_NOT_RECEIVED"
+      },
+      "status": "NEEDS_RESPONSE",
+      "type": "CHARGEBACK"
+    },
+    "reason": "PRODUCT_NOT_RECEIVED",
+    "reminder_sent_at": null,
+    "review_due_at": null,
+    "review_state": null,
+    "shop_id": "6648353c-422a-4ee5-8bba-d75fee284b09",
+    "shopify_updated_at": null,
+    "status": "needs_response",
+    "status_reason": "New dispute — no evidence pack yet",
+    "strength_alert_level": "moderate",
+    "submission_state": "not_saved",
+    "submitted_at": null,
+    "sync_health": "ok",
+    "updated_at": "2026-09-19T02:52:45.838938+00:00",
+    "urgency_rank": 0
+  },
+  "evidencePack": {
+    "id": "c2df932c-548d-4073-ba92-981b7ba483ac",
+    "status": "ready",
+    "pack_json": {
+      "case_assessment": {
+        "assessmentVersion": 1,
+        "caseId": "25034e1e-ab3e-4457-88d1-d1f9751f9a12",
+        "completeness": {
+          "blockers": [],
+          "evidenceStrengthScore": 57,
+          "readiness": "ready_with_warnings",
+          "score": 69
+        },
+        "freshness": {
+          "computedAt": "2026-09-25T14:42:45.574Z",
+          "inputHash": "1cfa27b69fc85fb0023a35c27b5ec2910f56ba550fb0156c7cbdea75048c34ff",
+          "policyVersion": 4
+        },
+        "gateDecision": null,
+        "modelVersion": 2,
+        "reviewRequiredCount": 0,
+        "strength": {
+          "coverage": {
+            "shopifyProtectStatus": "INACTIVE",
+            "state": "not_covered"
+          },
+          "coveragePercent": 100,
+          "deliveryInTransit": false,
+          "fatalLoss": {
+            "messageToken": null,
+            "reason": null,
+            "triggered": false
+          },
+          "heroVariant": "could_win",
+          "improvementHintI18n": null,
+          "moderateCount": 1,
+          "nameMismatch": {
+            "capApplied": false,
+            "cardholderName": "[Cardholder Name]",
+            "customerName": "[Cardholder Name]",
+            "triggered": false
+          },
+          "overall": "moderate",
+          "overallBeforeRev5": "weak",
+          "returnedToSender": {
+            "messageToken": null,
+            "reason": null,
+            "returnedAt": null,
+            "triggered": false
+          },
+          "riskWeakness": {
+            "diagnostics": {
+              "fulfillmentCount": 1,
+              "recommendation": "ACCEPT",
+              "riskLevel": "LOW"
+            },
+            "message": null,
+            "reason": null,
+            "triggered": false
+          },
+          "score": 2,
+          "strengthReasonI18n": {
+            "key": "disputes.strengthReason.moderate.moderateOnly",
+            "params": {
+              "hint": {
+                "key": "disputes.decisiveHint.delivery",
+                "type": "i18n-key"
+              },
+              "label1": {
+                "key": "disputes.signalLabel.delivery",
+                "type": "i18n-key"
+              },
+              "label2": "empty"
+            }
+          },
+          "strongCount": 0,
+          "supportedClaims": 0,
+          "supportingCount": 2,
+          "totalClaims": 0
+        }
+      },
+      "case_assessment_gates": {
+        "coverage": {
+          "shopifyProtectStatus": "INACTIVE",
+          "state": "not_covered"
+        },
+        "creditAlreadyIssued": {
+          "coversDisputedAmount": false,
+          "triggered": false
+        },
+        "fatalLoss": {
+          "messageToken": null,
+          "reason": null,
+          "triggered": false
+        },
+        "nameMismatch": {
+          "cardholderName": "[Cardholder Name]",
+          "customerName": "[Cardholder Name]",
+          "triggered": false
+        },
+        "notProvided": {},
+        "riskWeakness": {
+          "diagnostics": {
+            "fulfillmentCount": 1,
+            "recommendation": "ACCEPT",
+            "riskLevel": "LOW"
+          },
+          "message": null,
+          "reason": null,
+          "triggered": false
+        }
+      },
+      "case_assessment_hash_terms": {
+        "gates": "4683b7094ade18f7",
+        "model": "6957c381e5eaeca4",
+        "payloads": "43e4cabf2a919feb"
+      },
+      "case_strength": {
+        "moderateCount": 1,
+        "overall": "moderate",
+        "overallBeforeRev5": "weak",
+        "strongCount": 0,
+        "supportingCount": 2
+      },
+      "completeness": {
+        "blockers": [],
+        "checklist": [
+          {
+            "collectable": true,
+            "field": "order_confirmation",
+            "label": "Order confirmation",
+            "present": true,
+            "required": true
+          },
+          {
+            "collectable": true,
+            "field": "shipping_tracking",
+            "label": "Shipping tracking status",
+            "present": true,
+            "required": true
+          },
+          {
+            "collectable": true,
+            "field": "delivery_proof",
+            "label": "Delivery confirmation",
+            "present": true,
+            "required": true
+          },
+          {
+            "collectable": true,
+            "field": "customer_communication",
+            "label": "Customer correspondence",
+            "present": false,
+            "required": false
+          }
+        ],
+        "evidenceStrengthScore": 75,
+        "recommended_actions": [
+          "Add Customer correspondence"
+        ],
+        "score": 75
+      },
+      "contradictions": [],
+      "coverage": {
+        "isCovered": false,
+        "shopifyProtectStatus": "INACTIVE",
+        "state": "not_covered"
+      },
+      "credit_already_issued": {
+        "amount": null,
+        "coverageUnknownCurrencyMismatch": false,
+        "coversDisputedAmount": false,
+        "refundedAt": null,
+        "residual": null,
+        "triggered": false
+      },
+      "device_location": {
+        "bankEligible": true,
+        "ipConsistencyLevel": "first_seen",
+        "ipReuseCount": 0,
+        "locationMatch": "same_country",
+        "riskLevel": "low",
+        "score": "Moderate"
+      },
+      "disputeGid": "gid://shopify/ShopifyPaymentsDispute/[phone]",
+      "disputeReason": "PRODUCT_NOT_RECEIVED",
+      "evidence_model": {
+        "definitionRegistryVersion": 1,
+        "derivedFrom": {
+          "evidenceItemIds": [],
+          "packId": "c2df932c-548d-4073-ba92-981b7ba483ac",
+          "sectionsHash": "0167230b77c0"
+        },
+        "disputeId": "25034e1e-ab3e-4457-88d1-d1f9751f9a12",
+        "fields": {
+          "activity_log": {
+            "citableIds": [
+              "activity_log#0"
+            ],
+            "fieldKey": "activity_log",
+            "merchantOverride": null,
+            "quality": "contextual",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "activity_log",
+                "payload": {
+                  "digitalAccessUsed": false,
+                  "eventCount": 15,
+                  "fieldKey": "activity_log"
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_order",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "contextual",
+                "recordId": "activity_log#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": "activity_log#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "avs_cvv_match": {
+            "citableIds": [],
+            "fieldKey": "avs_cvv_match",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "ineligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "avs_cvv_match",
+                "payload": {
+                  "addressVerified": false,
+                  "avsAuthority": "unverified",
+                  "avsNormalized": "unavailable",
+                  "avsResultCode": "U",
+                  "avsUnmapped": false,
+                  "cardholderName": "[Cardholder Name]",
+                  "citable": false,
+                  "citableAddressVerified": false,
+                  "cvvOutcome": null,
+                  "cvvResultCode": null,
+                  "fieldKey": "avs_cvv_match",
+                  "network": "visa",
+                  "securityCodeVerified": false
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "gateway_receipt",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": null,
+                "recordId": "avs_cvv_match#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "invalid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "cancellation_policy": {
+            "citableIds": [
+              "cancellation_policy#0"
+            ],
+            "fieldKey": "cancellation_policy",
+            "merchantOverride": null,
+            "quality": "contextual",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "cancellation_policy",
+                "payload": {
+                  "acceptedAtCheckout": false,
+                  "fieldKey": "cancellation_policy",
+                  "url": null
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_policy",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "contextual",
+                "recordId": "cancellation_policy#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": "cancellation_policy#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "customer_account_info": {
+            "citableIds": [
+              "customer_account_info#0"
+            ],
+            "fieldKey": "customer_account_info",
+            "merchantOverride": null,
+            "quality": "contextual",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "customer_account_info",
+                "payload": {
+                  "customerSince": "2026-07-02T05:24:46Z",
+                  "fieldKey": "customer_account_info",
+                  "priorUndisputedOrders": 0,
+                  "totalOrders": 2
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_order",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "contextual",
+                "recordId": "customer_account_info#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": "customer_account_info#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "customer_communication": {
+            "citableIds": [],
+            "fieldKey": "customer_communication",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "recommended",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "delivery_proof": {
+            "citableIds": [
+              "delivery_proof#gid://shopify/Fulfillment/[phone]"
+            ],
+            "fieldKey": "delivery_proof",
+            "merchantOverride": null,
+            "quality": "corroborating",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "delivery_proof",
+                "payload": {
+                  "deliveredAt": "2026-07-06T19:53:02Z",
+                  "fieldKey": "delivery_proof",
+                  "fulfillments": [
+                    {
+                      "deliveredAt": "2026-07-06T19:53:02Z",
+                      "fulfillmentId": "gid://shopify/Fulfillment/[phone]",
+                      "status": "SUCCESS",
+                      "tracking": [
+                        {
+                          "carrier": "Stallion Express",
+                          "number": "260702441A",
+                          "url": "https://stallionexpress.ca/track/?tracking=SE260702441A"
+                        }
+                      ]
+                    }
+                  ],
+                  "proofType": "delivered_confirmed",
+                  "signedByName": null
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_fulfillment",
+                  "sourceSystemId": "gid://shopify/Fulfillment/[phone]",
+                  "supersedes": null
+                },
+                "quality": "corroborating",
+                "recordId": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "critical",
+            "representativeId": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": true,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "device_session_consistency": {
+            "citableIds": [],
+            "fieldKey": "device_session_consistency",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "duplicate_explanation": {
+            "citableIds": [],
+            "fieldKey": "duplicate_explanation",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "fraud_risk_screening": {
+            "citableIds": [],
+            "fieldKey": "fraud_risk_screening",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "ip_location_check": {
+            "citableIds": [
+              "ip_location_check#0"
+            ],
+            "fieldKey": "ip_location_check",
+            "merchantOverride": null,
+            "quality": "corroborating",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "ip_location_check",
+                "payload": {
+                  "bankEligible": true,
+                  "fieldKey": "ip_location_check",
+                  "locationMatch": "same_country",
+                  "riskLevel": "low"
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_order",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "corroborating",
+                "recordId": "ip_location_check#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": "ip_location_check#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "no_return_initiated": {
+            "citableIds": [
+              "no_return_initiated#0"
+            ],
+            "fieldKey": "no_return_initiated",
+            "merchantOverride": null,
+            "quality": "corroborating",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "no_return_initiated",
+                "payload": {
+                  "fieldKey": "no_return_initiated",
+                  "returnStatus": "NO_RETURN"
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_order",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "corroborating",
+                "recordId": "no_return_initiated#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": "no_return_initiated#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "order_confirmation": {
+            "citableIds": [
+              "order_confirmation#0"
+            ],
+            "fieldKey": "order_confirmation",
+            "merchantOverride": null,
+            "quality": "contextual",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "order_confirmation",
+                "payload": {
+                  "channel": "web",
+                  "fieldKey": "order_confirmation",
+                  "orderName": "#352543"
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_order",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "contextual",
+                "recordId": "order_confirmation#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "critical",
+            "representativeId": "order_confirmation#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": true,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "product_description": {
+            "citableIds": [],
+            "fieldKey": "product_description",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "refund_policy": {
+            "citableIds": [
+              "refund_policy#0"
+            ],
+            "fieldKey": "refund_policy",
+            "merchantOverride": null,
+            "quality": "contextual",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "refund_policy",
+                "payload": {
+                  "acceptedAtCheckout": false,
+                  "fieldKey": "refund_policy",
+                  "url": null
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_policy",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "contextual",
+                "recordId": "refund_policy#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "not_applicable",
+            "representativeId": "refund_policy#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "refund_record": {
+            "citableIds": [],
+            "fieldKey": "refund_record",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "returned_parcel_outcome": {
+            "citableIds": [],
+            "fieldKey": "returned_parcel_outcome",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "critical",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": true,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "shipping_policy": {
+            "citableIds": [
+              "shipping_policy#0"
+            ],
+            "fieldKey": "shipping_policy",
+            "merchantOverride": null,
+            "quality": "contextual",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "shipping_policy",
+                "payload": {
+                  "acceptedAtCheckout": false,
+                  "fieldKey": "shipping_policy",
+                  "url": null
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_policy",
+                  "sourceSystemId": null,
+                  "supersedes": null
+                },
+                "quality": "contextual",
+                "recordId": "shipping_policy#0",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "recommended",
+            "representativeId": "shipping_policy#0",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": false,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "shipping_tracking": {
+            "citableIds": [
+              "shipping_tracking#gid://shopify/Fulfillment/[phone]"
+            ],
+            "fieldKey": "shipping_tracking",
+            "merchantOverride": null,
+            "quality": "corroborating",
+            "records": [
+              {
+                "citation": {
+                  "eligibility": "eligible",
+                  "reasonToken": null
+                },
+                "fieldKey": "shipping_tracking",
+                "payload": {
+                  "deliveredAt": "2026-07-06T19:53:02Z",
+                  "fieldKey": "shipping_tracking",
+                  "fulfillments": [
+                    {
+                      "deliveredAt": "2026-07-06T19:53:02Z",
+                      "fulfillmentId": "gid://shopify/Fulfillment/[phone]",
+                      "status": "SUCCESS",
+                      "tracking": [
+                        {
+                          "carrier": "Stallion Express",
+                          "number": "260702441A",
+                          "url": "https://stallionexpress.ca/track/?tracking=SE260702441A"
+                        }
+                      ]
+                    }
+                  ],
+                  "proofType": "delivered_confirmed",
+                  "signedByName": null
+                },
+                "provenance": {
+                  "collectedAt": null,
+                  "evidenceItemId": null,
+                  "origin": "shopify_fulfillment",
+                  "sourceSystemId": "gid://shopify/Fulfillment/[phone]",
+                  "supersedes": null
+                },
+                "quality": "corroborating",
+                "recordId": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+                "validity": {
+                  "reasonToken": null,
+                  "state": "valid"
+                }
+              }
+            ],
+            "relevance": "critical",
+            "representativeId": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+            "status": {
+              "applicable": true,
+              "available": true,
+              "blocking": false,
+              "required": true,
+              "satisfied": true,
+              "waived": null
+            }
+          },
+          "supporting_documents": {
+            "citableIds": [],
+            "fieldKey": "supporting_documents",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "optional",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          },
+          "tds_authentication": {
+            "citableIds": [],
+            "fieldKey": "tds_authentication",
+            "merchantOverride": null,
+            "quality": null,
+            "records": [],
+            "relevance": "not_applicable",
+            "representativeId": null,
+            "status": {
+              "applicable": true,
+              "available": false,
+              "blocking": false,
+              "required": false,
+              "satisfied": false,
+              "waived": null
+            }
+          }
+        },
+        "modelVersion": 2,
+        "nonEvidence": {
+          "coverage": {
+            "shopifyProtectStatus": "INACTIVE",
+            "state": "not_covered"
+          },
+          "disputeMetadata": {
+            "networkReasonCode": null,
+            "reason": "PRODUCT_NOT_RECEIVED"
+          },
+          "operational": {
+            "collectorErrors": [],
+            "retiredFields": [],
+            "unregisteredFields": []
+          },
+          "riskSignals": null
+        },
+        "reason": "PRODUCT_NOT_RECEIVED"
+      },
+      "fatal_loss": {
+        "messageToken": null,
+        "reason": null,
+        "triggered": false
+      },
+      "generatedAt": "2026-09-25T14:42:45.578Z",
+      "name_mismatch": {
+        "capApplied": false,
+        "cardholderName": "[Cardholder Name]",
+        "customerName": "[Cardholder Name]",
+        "triggered": false
+      },
+      "payment_context": {
+        "cardNetwork": "visa",
+        "family": "card",
+        "klarnaSubProduct": null,
+        "label": "Card (Apple Pay)",
+        "raw": "apple_pay"
+      },
+      "returned_to_sender": {
+        "messageToken": null,
+        "reason": null,
+        "returnedAt": null,
+        "triggered": false
+      },
+      "risk_weakness": {
+        "diagnostics": {
+          "fulfillmentCount": 1,
+          "recommendation": "ACCEPT",
+          "riskLevel": "LOW"
+        },
+        "message": null,
+        "reason": null,
+        "triggered": false
+      },
+      "sections": [
+        {
+          "data": {
+            "billingAddress": {
+              "city": "Carman",
+              "countryCode": "CA",
+              "provinceCode": "MB",
+              "zipPrefix": "R0G"
+            },
+            "cancelledAt": null,
+            "channel": "web",
+            "createdAt": "2026-07-02T05:33:17Z",
+            "customerTenure": {
+              "customerSince": "2026-07-02T05:24:46Z",
+              "totalOrders": "2"
+            },
+            "email": "cardholder@example.com",
+            "financialStatus": "PAID",
+            "fulfillmentStatus": "FULFILLED",
+            "lineItems": [
+              {
+                "currency": "USD",
+                "lineItemId": "gid://shopify/LineItem/[phone]",
+                "presentmentCurrency": "CAD",
+                "presentmentTotal": "24.5",
+                "quantity": 1,
+                "sku": "10111",
+                "title": "Superbalm Tripeptide-1 Lip Tint in Wild Plum",
+                "total": "17.24",
+                "variant": null
+              },
+              {
+                "currency": "USD",
+                "lineItemId": "gid://shopify/LineItem/[phone]",
+                "presentmentCurrency": "CAD",
+                "presentmentTotal": "23.0",
+                "quantity": 1,
+                "sku": "10160",
+                "title": "Blume Buds Power Patches for Acne",
+                "total": "16.18",
+                "variant": null
+              },
+              {
+                "currency": "USD",
+                "lineItemId": "gid://shopify/LineItem/[phone]",
+                "presentmentCurrency": "CAD",
+                "presentmentTotal": "98.0",
+                "quantity": 1,
+                "sku": "60068",
+                "title": "Clear Skin Kit: Acne Essentials",
+                "total": "68.94",
+                "variant": null
+              }
+            ],
+            "orderId": "gid://shopify/Order/[phone]",
+            "orderName": "#352543",
+            "shippingAddress": {
+              "city": "Carman",
+              "countryCode": "CA",
+              "provinceCode": "MB",
+              "zipPrefix": "R0G"
+            },
+            "totals": {
+              "currency": "USD",
+              "discounts": "33.42",
+              "presentment": {
+                "currency": "CAD",
+                "discounts": "47.5",
+                "shipping": "10.0",
+                "subtotal": "98.0",
+                "tax": "12.75",
+                "total": "120.75"
+              },
+              "refunded": "0.0",
+              "shipping": "7.04",
+              "subtotal": "68.94",
+              "tax": "8.97",
+              "total": "84.95"
+            }
+          },
+          "fieldsProvided": [
+            "order_confirmation"
+          ],
+          "label": "Order #352543",
+          "labelToken": {
+            "key": "packs.section.order",
+            "params": {
+              "orderName": "#352543"
+            }
+          },
+          "source": "shopify_order",
+          "type": "order"
+        },
+        {
+          "data": {
+            "returnStatus": "NO_RETURN"
+          },
+          "fieldsProvided": [
+            "no_return_initiated"
+          ],
+          "label": "No return initiated",
+          "labelToken": {
+            "key": "packs.section.noReturnInitiated"
+          },
+          "source": "shopify_order",
+          "type": "order"
+        },
+        {
+          "data": {
+            "customerTenure": {
+              "customerNote": null,
+              "customerSince": "2026-07-02T05:24:46Z",
+              "totalOrders": "2"
+            },
+            "timelineEventCount": 15,
+            "timelineEvents": [
+              {
+                "createdAt": "2026-07-02T05:33:17Z",
+                "message": "[Cardholder Name] placed this order on Online Store (checkout #[phone])."
+              },
+              {
+                "createdAt": "2026-07-02T05:33:17Z",
+                "message": "Confirmation #VL72J8J04 was generated for this order."
+              },
+              {
+                "createdAt": "2026-07-02T05:33:18Z",
+                "message": "A $120.75 CAD payment was processed using a Visa ending in 3627 via Apple Pay."
+              },
+              {
+                "createdAt": "2026-07-02T05:33:18Z",
+                "message": "$80.64 USD will be added to your Jul 6, 2026 payout."
+              },
+              {
+                "createdAt": "2026-07-02T05:33:19Z",
+                "message": "Order confirmation email was sent to [Cardholder Name] (cardholder@example.com)."
+              },
+              {
+                "createdAt": "2026-07-02T05:33:19Z",
+                "message": "Received new order <a href=\"https://blume-box.myshopify.com/admin/orders/[phone]\">#352543</a> by [Cardholder Name]."
+              },
+              {
+                "createdAt": "2026-07-02T16:22:35Z",
+                "message": "Stallion marked 3 items as fulfilled from Canada."
+              },
+              {
+                "createdAt": "2026-07-02T16:22:35Z",
+                "message": "Stallion sent a shipping confirmation email to [Cardholder Name] (cardholder@example.com)."
+              },
+              {
+                "createdAt": "2026-07-02T16:22:36Z",
+                "message": "This order was archived."
+              },
+              {
+                "createdAt": "2026-07-05T01:04:52Z",
+                "message": "$80.64 USD was added to your <a href=\"https://blume-box.myshopify.com/admin/payments/payouts/[phone]\">Jul 6, 2026</a> payout."
+              },
+              {
+                "createdAt": "2026-07-06T19:53:02Z",
+                "message": "Stallion sent a shipment delivered email to [Cardholder Name] (cardholder@example.com)."
+              },
+              {
+                "createdAt": "2026-09-19T02:52:43Z",
+                "message": "The customer opened a chargeback totaling $120.75 CAD + $15.00 USD."
+              },
+              {
+                "createdAt": "2026-09-19T02:52:43Z",
+                "message": "$101.43 USD will be deducted from your next payout because of a chargeback."
+              },
+              {
+                "createdAt": "2026-09-20T01:03:08Z",
+                "message": "$101.43 USD was deducted from your <a href=\"https://blume-box.myshopify.com/admin/payments/payouts/[phone]\">Sep 21, 2026</a> payout because of a chargeback."
+              },
+              {
+                "createdAt": "2026-07-06T19:53:02Z",
+                "message": "Carrier recorded the shipment as delivered."
+              }
+            ]
+          },
+          "fieldsProvided": [
+            "activity_log"
+          ],
+          "label": "Customer activity log",
+          "labelToken": {
+            "key": "packs.section.customerActivityLog"
+          },
+          "source": "shopify_order",
+          "type": "access_log"
+        },
+        {
+          "data": {
+            "customerNote": null,
+            "customerSince": "2026-07-02T05:24:46Z",
+            "disputeFreeHistory": true,
+            "isRepeatCustomer": true,
+            "priorUndisputedOrders": 0,
+            "totalOrders": 2
+          },
+          "fieldsProvided": [
+            "customer_account_info"
+          ],
+          "label": "Customer account details",
+          "labelToken": {
+            "key": "packs.section.customerAccountDetails"
+          },
+          "source": "shopify_order",
+          "type": "other"
+        },
+        {
+          "data": {
+            "deliveredAt": "2026-07-06T19:53:02Z",
+            "deliveryCoverage": "complete",
+            "fulfillmentCount": 1,
+            "fulfillments": [
+              {
+                "carrierStatusObservedAt": "2026-09-25T14:42:41.645Z",
+                "carrierTerminalEvent": null,
+                "carrierTracking": {
+                  "deliveredAtTracking": "2026-07-06T19:53:02Z",
+                  "deliveryStatus": "Delivered",
+                  "signedByName": null,
+                  "trackingSource": "shopify_native"
+                },
+                "createdAt": "2026-07-02T16:22:35Z",
+                "deliveredAt": "2026-07-06T19:53:02Z",
+                "displayStatus": "DELIVERED",
+                "estimatedDeliveryAt": null,
+                "fulfillmentId": "gid://shopify/Fulfillment/[phone]",
+                "items": [
+                  {
+                    "lineItemId": "gid://shopify/LineItem/[phone]",
+                    "quantity": 1,
+                    "title": "Superbalm Tripeptide-1 Lip Tint in Wild Plum"
+                  },
+                  {
+                    "lineItemId": "gid://shopify/LineItem/[phone]",
+                    "quantity": 1,
+                    "title": "Blume Buds Power Patches for Acne"
+                  },
+                  {
+                    "lineItemId": "gid://shopify/LineItem/[phone]",
+                    "quantity": 1,
+                    "title": "Clear Skin Kit: Acne Essentials"
+                  }
+                ],
+                "shipmentProofType": "delivered_confirmed",
+                "sourceConflict": false,
+                "status": "SUCCESS",
+                "tracking": [
+                  {
+                    "carrier": "Stallion Express",
+                    "number": "260702441A",
+                    "url": "https://stallionexpress.ca/track/?tracking=SE260702441A"
+                  }
+                ]
+              }
+            ],
+            "overallStatus": "FULFILLED",
+            "proofType": "delivered_confirmed",
+            "signedByName": null,
+            "sourceConflict": false
+          },
+          "fieldsProvided": [
+            "shipping_tracking",
+            "delivery_proof"
+          ],
+          "label": "Fulfillments (1)",
+          "labelToken": {
+            "key": "packs.section.fulfillments",
+            "params": {
+              "count": 1
+            }
+          },
+          "source": "shopify_fulfillments",
+          "type": "shipping"
+        },
+        {
+          "data": {
+            "policies": [
+              {
+                "capturedAt": "2026-07-20T16:52:36.946+00:00",
+                "contentHash": "b36833c04a04a2dc2b9ac5e87e5dd74a416a0ed91af84611e4f660c985da8d6d",
+                "policySnapshotId": "fd80a145-a874-4908-b6e1-465a334cec7f",
+                "policyType": "terms",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textLength": 33920,
+                "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+              },
+              {
+                "capturedAt": "2026-07-20T16:52:36.574+00:00",
+                "contentHash": "15b7c4373d12bc7e57ea9fa0d0236cb99140ae54475f0d4af4ff703df944454b",
+                "policySnapshotId": "a8006dde-9915-4391-a88b-bf4c5b339ecb",
+                "policyType": "subscription",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textLength": 3019,
+                "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+              },
+              {
+                "capturedAt": "2026-07-20T16:52:36.363+00:00",
+                "contentHash": "08c2fb9ee3983b0191ca9fa9a3ff7f4b70d6ffdb9319b177be2f1e59be167f17",
+                "policySnapshotId": "647770cf-3870-4d5c-8f1b-320422a6c9fb",
+                "policyType": "shipping",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textLength": 42,
+                "textPreview": "Orders will ship within 1-3 business days."
+              },
+              {
+                "capturedAt": "2026-07-20T16:52:35.876+00:00",
+                "contentHash": "af7c75f5eb0d92d8d7662e1f0d3fe579f0ed381c73fa63e9149e5e5b2df5001c",
+                "policySnapshotId": "d10444cb-590f-4ce8-8ee8-8b831d52517e",
+                "policyType": "refunds",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textLength": 233,
+                "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at cardholder@example.com within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+              },
+              {
+                "capturedAt": "2026-07-20T16:52:35.618+00:00",
+                "contentHash": "b4448cf96309a859bad8ff81d5ee0dacbedb58d7fc7f383da4da46cf5f660127",
+                "policySnapshotId": "[phone]c5-4dfc-a6e7-b3aac6ba5eeb",
+                "policyType": "privacy",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textLength": 29175,
+                "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+              },
+              {
+                "capturedAt": "2026-07-20T16:52:35.337+00:00",
+                "contentHash": "a5a0a20d091a775703c47ed160220c6c681303ccbf2a82ec99e34d6d746ed875",
+                "policySnapshotId": "be41f62d-34ba-4885-aa36-3ed2fd254831",
+                "policyType": "contact",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textLength": 25,
+                "textPreview": "Please email cardholder@example.com"
+              }
+            ]
+          },
+          "fieldsProvided": [
+            "cancellation_policy",
+            "shipping_policy",
+            "refund_policy"
+          ],
+          "label": "Store policies (6)",
+          "labelToken": {
+            "key": "packs.section.storePolicies",
+            "params": {
+              "count": 6
+            }
+          },
+          "source": "policy_snapshots",
+          "type": "policy"
+        },
+        {
+          "data": {
+            "__displayOnly": true,
+            "policies": [
+              {
+                "capturedAt": "2026-07-20T16:52:36.946+00:00",
+                "policySnapshotId": "fd80a145-a874-4908-b6e1-465a334cec7f",
+                "policyType": "terms",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+              }
+            ]
+          },
+          "fieldsProvided": [],
+          "label": "Cancellation policy",
+          "labelToken": {
+            "key": "packs.section.cancellationPolicy"
+          },
+          "source": "policy_snapshots",
+          "type": "cancellation_policy"
+        },
+        {
+          "data": {
+            "__displayOnly": true,
+            "policies": [
+              {
+                "capturedAt": "2026-07-20T16:52:36.363+00:00",
+                "policySnapshotId": "647770cf-3870-4d5c-8f1b-320422a6c9fb",
+                "policyType": "shipping",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textPreview": "Orders will ship within 1-3 business days."
+              }
+            ]
+          },
+          "fieldsProvided": [],
+          "label": "Shipping policy",
+          "labelToken": {
+            "key": "packs.section.shippingPolicy"
+          },
+          "source": "policy_snapshots",
+          "type": "shipping_policy"
+        },
+        {
+          "data": {
+            "__displayOnly": true,
+            "policies": [
+              {
+                "capturedAt": "2026-07-20T16:52:35.876+00:00",
+                "policySnapshotId": "d10444cb-590f-4ce8-8ee8-8b831d52517e",
+                "policyType": "refunds",
+                "publishedUrl": "https://checkout.shopify.com/345800755/policies/[phone].html?locale=en",
+                "source": "shopify_published",
+                "storagePath": null,
+                "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at cardholder@example.com within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+              }
+            ]
+          },
+          "fieldsProvided": [],
+          "label": "Refund policy",
+          "labelToken": {
+            "key": "packs.section.refundPolicy"
+          },
+          "source": "policy_snapshots",
+          "type": "refund_policy"
+        },
+        {
+          "data": {
+            "avsCvvStatus": "available",
+            "avsResultCode": "U",
+            "bin": "481813",
+            "cardCompany": "Visa",
+            "cardholderName": "[Cardholder Name]",
+            "cvvResultCode": null,
+            "expirationMonth": 12,
+            "expirationYear": 2028,
+            "gateway": "shopify_payments",
+            "lastFour": "•••• •••• •••• 3627",
+            "wallet": "APPLE_PAY"
+          },
+          "fieldsProvided": [
+            "avs_cvv_match"
+          ],
+          "label": "Payment verification (AVS/CVV)",
+          "labelToken": {
+            "key": "packs.section.paymentVerificationAvsCvv"
+          },
+          "source": "shopify_transactions",
+          "type": "other"
+        },
+        {
+          "data": {
+            "isCovered": false,
+            "shopifyProtectStatus": "INACTIVE",
+            "state": "not_covered"
+          },
+          "fieldsProvided": [
+            "shopify_protect_coverage"
+          ],
+          "label": "Shopify Protect coverage",
+          "labelToken": {
+            "key": "packs.section.shopifyProtect"
+          },
+          "source": "shopify_order",
+          "type": "other"
+        },
+        {
+          "data": {
+            "bankEligible": true,
+            "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+            "distanceKm": null,
+            "ip": "[redacted IP]",
+            "ipConsistencyLevel": "first_seen",
+            "ipReuseCount": 0,
+            "ipinfo": {
+              "city": "Winkler",
+              "country": "CA",
+              "ip": "[redacted IP]",
+              "loc": "[redacted coordinates]",
+              "org": "AS7122 Bell Canada",
+              "privacy": {
+                "hosting": false,
+                "proxy": false,
+                "vpn": false
+              },
+              "region": "Manitoba"
+            },
+            "locationMatch": "same_country",
+            "merchantGuidance": null,
+            "riskLevel": "low",
+            "score": "Moderate",
+            "shippingAddress": {
+              "city": "Carman",
+              "country": "CA",
+              "region": "MB"
+            },
+            "source": "order_client_ip",
+            "summary": "Location matches shipping country."
+          },
+          "fieldsProvided": [
+            "ip_location_check"
+          ],
+          "label": "IP & location check",
+          "labelToken": {
+            "key": "packs.section.ipLocationCheck"
+          },
+          "source": "ipinfo_io",
+          "type": "other"
+        }
+      ],
+      "template_override": null,
+      "version": 1
+    }
+  },
+  "defencePackage": {
+    "id": "1fc1c70a-f0f1-4d6e-8a48-a1ffcf61707a",
+    "prompt_version": 39,
+    "llm_model": "claude-sonnet-4-6",
+    "reason_code_module": "inr_product_not_received",
+    "family_key": "item_not_received",
+    "package_mode": "full",
+    "facts_json": [
+      {
+        "bankEligible": true,
+        "category": "shipping_tracking",
+        "confidence": null,
+        "id": "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+        "includeInBankNarrative": true,
+        "internalOnly": false,
+        "label": "Shipping tracking",
+        "merchantVisible": true,
+        "source": "shopify_fulfillments",
+        "sourceRef": "0a528498-e699-40df-afab-8d[phone]",
+        "strength": "moderate",
+        "submissionRisk": false,
+        "value": {
+          "carrier": "Stallion Express",
+          "deliveredAt": "2026-07-06T19:53:02Z",
+          "deliveryStatuses": [
+            "Delivered"
+          ],
+          "fieldKey": "shipping_tracking",
+          "proofType": "delivered_confirmed",
+          "returnedAt": null,
+          "shipmentIndex": [
+            {
+              "carrier": "Stallion Express",
+              "instanceKey": "gid://shopify/Fulfillment/[phone]",
+              "proofType": "delivered_confirmed",
+              "trackingNumber": "260702441A"
+            }
+          ],
+          "signedByName": null,
+          "trackingNumber": "260702441A",
+          "trackingUrl": "https://stallionexpress.ca/track/?tracking=260702441A"
+        }
+      },
+      {
+        "bankEligible": true,
+        "category": "delivery_proof",
+        "confidence": null,
+        "id": "delivery_proof#gid://shopify/Fulfillment/[phone]",
+        "includeInBankNarrative": true,
+        "internalOnly": false,
+        "label": "Delivery confirmation",
+        "merchantVisible": true,
+        "source": "shopify_fulfillments",
+        "sourceRef": "0a528498-e699-40df-afab-8d[phone]",
+        "strength": "moderate",
+        "submissionRisk": false,
+        "value": {
+          "carrier": "Stallion Express",
+          "deliveredAt": "2026-07-06T19:53:02Z",
+          "deliveryStatuses": [
+            "Delivered"
+          ],
+          "fieldKey": "delivery_proof",
+          "proofType": "delivered_confirmed",
+          "returnedAt": null,
+          "shipmentIndex": [
+            {
+              "carrier": "Stallion Express",
+              "instanceKey": "gid://shopify/Fulfillment/[phone]",
+              "proofType": "delivered_confirmed",
+              "trackingNumber": "260702441A"
+            }
+          ],
+          "signedByName": null,
+          "trackingNumber": "260702441A",
+          "trackingUrl": "https://stallionexpress.ca/track/?tracking=260702441A"
+        }
+      }
+    ],
+    "plan_json": {
+      "caseId": "25034e1e-ab3e-4457-88d1-d1f9751f9a12",
+      "deadlineOnly": false,
+      "excluded": [
+        {
+          "factCategory": "no_return_initiated",
+          "fieldKey": "no_return_initiated",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+          "reason": "not_argument_relevant",
+          "recordId": "no_return_initiated#0"
+        },
+        {
+          "factCategory": "prior_customer_history",
+          "fieldKey": "activity_log",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+          "reason": "not_argument_relevant",
+          "recordId": "activity_log#0"
+        },
+        {
+          "factCategory": "prior_customer_history",
+          "fieldKey": "customer_account_info",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+          "reason": "not_argument_relevant",
+          "recordId": "customer_account_info#0"
+        },
+        {
+          "factCategory": "policy_refund",
+          "fieldKey": "refund_policy",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+          "reason": "not_argument_relevant",
+          "recordId": "refund_policy#0"
+        },
+        {
+          "factCategory": "policy_cancellation",
+          "fieldKey": "cancellation_policy",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+          "reason": "not_argument_relevant",
+          "recordId": "cancellation_policy#0"
+        },
+        {
+          "factCategory": "payment_authentication",
+          "fieldKey": "avs_cvv_match",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.unverified",
+          "reason": "unverified",
+          "recordId": "avs_cvv_match#0"
+        },
+        {
+          "factCategory": "ip_location",
+          "fieldKey": "ip_location_check",
+          "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+          "reason": "not_argument_relevant",
+          "recordId": "ip_location_check#0"
+        }
+      ],
+      "freshness": {
+        "computedAt": "2026-09-25T14:44:39.773Z",
+        "inputHash": "d9023423fbe4fb58fa3a0ead6315d111bc7a711171ddb4aa6d92afe93c69c475",
+        "policyVersion": 1
+      },
+      "included": [
+        {
+          "factCategory": "order_record",
+          "fieldKey": "order_confirmation",
+          "recordId": "order_confirmation#0"
+        },
+        {
+          "factCategory": "shipping_tracking",
+          "fieldKey": "shipping_tracking",
+          "recordId": "shipping_tracking#gid://shopify/Fulfillment/[phone]"
+        },
+        {
+          "factCategory": "delivery_proof",
+          "fieldKey": "delivery_proof",
+          "recordId": "delivery_proof#gid://shopify/Fulfillment/[phone]"
+        },
+        {
+          "factCategory": "policy_shipping",
+          "fieldKey": "shipping_policy",
+          "recordId": "shipping_policy#0"
+        }
+      ],
+      "noSafeArgument": null,
+      "planVersion": 1,
+      "reasonModuleId": "inr_product_not_received"
+    },
+    "narrative_json_as_filed": {
+      "chronologyArgument": {
+        "source": "record",
+        "text": "As the timeline below shows, the carrier-recorded delivery is dated before the dispute was opened.\n\nThe order history also records shipping and delivery notifications sent to the customer's recorded email address. These document the updates sent; the evidence of delivery remains the carrier's record.",
+        "usedFactIds": [
+          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+        ]
+      },
+      "communicationArgument": {
+        "text": "",
+        "usedFactIds": []
+      },
+      "conclusion": {
+        "source": "record",
+        "text": "The order and fulfilment records place the disputed goods in the tracked shipment, and the carrier records that shipment as delivered. These records support the merchant's position that the complete purchase was delivered.",
+        "usedFactIds": [
+          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+        ]
+      },
+      "executiveSummary": {
+        "source": "record",
+        "text": "The merchant contests this non-receipt chargeback. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full.",
+        "usedFactIds": [
+          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+        ]
+      },
+      "fulfillmentArgument": {
+        "source": "record",
+        "text": "The fulfilment record places all three purchased items in the single shipment shown above, and the carrier then recorded that shipment as delivered.\n\nThis distinction matters. The merchant does not rely only on its own record that the order was dispatched: the carrier's record reports the delivery itself, which is the event a non-receipt claim puts in issue.\n\nCarrier tracking record: https://stallionexpress.ca/track/?tracking=260702441A",
+        "usedFactIds": [
+          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+        ]
+      },
+      "manualEvidenceArgument": {
+        "text": "",
+        "usedFactIds": []
+      },
+      "omittedSections": [
+        {
+          "reason": "No payment authentication facts (verificationSummary) are present in the approved facts.",
+          "sectionKey": "paymentAuthenticationArgument"
+        },
+        {
+          "reason": "No approved customer communication facts are available; customer_communication is listed in missingEvidence.",
+          "sectionKey": "communicationArgument"
+        },
+        {
+          "reason": "No approved policy facts are present in the approved facts.",
+          "sectionKey": "policyArgument"
+        },
+        {
+          "reason": "No manual evidence was submitted.",
+          "sectionKey": "manualEvidenceArgument"
+        }
+      ],
+      "paymentAuthenticationArgument": {
+        "text": "",
+        "usedFactIds": []
+      },
+      "policyArgument": {
+        "text": "",
+        "usedFactIds": []
+      },
+      "transactionOverviewArgument": {
+        "source": "record",
+        "text": "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment.",
+        "usedFactIds": [
+          "shipping_tracking#gid://shopify/Fulfillment/[phone]",
+          "delivery_proof#gid://shopify/Fulfillment/[phone]"
+        ]
+      },
+      "warnings": []
+    }
+  }
+}

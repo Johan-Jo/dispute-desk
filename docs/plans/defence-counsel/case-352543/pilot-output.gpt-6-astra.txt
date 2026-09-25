@@ -1,0 +1,19 @@
+MODEL: gpt-6-astra
+FIRST DRAFT: clean
+FINAL: clean
+
+## executiveSummary
+  [C10,C1,C2] Blume's evidence answers the cardholder's Visa 13.1 claim that the merchandise was not received.
+  [C1,C2] The claim fails in full because the carrier recorded delivery of the single shipment containing the entire order.
+## fulfillmentArgument
+  [C1,C4,C10] The carrier's own delivery record supplies the decisive evidence against non-receipt: it reports completed delivery, rather than merely the merchant's fulfilment of the order.
+  [C3] 
+The shipment's carrier tracking number connects that delivery status to the shipment at issue, and the publicly available carrier record at the link printed in this letter lets the issuer verify the status directly.
+## lineItemsArgument
+  [C2] The fulfilment record maps each purchased item and its ordered quantity to that same tracked shipment, establishing complete coverage item by item with no second or partial shipment.
+  [C1,C2,C9] The table's arithmetic reconciles the order total to the full disputed amount, so the documented delivery accounts for everything charged and challenged.
+## chronologyArgument
+  [C6,C10] The carrier recorded delivery and a delivery notification was sent to the email address on the order that same day; the cardholder opened the non-receipt dispute 75 days later.
+## conclusion
+  [C1,C2,C10] The carrier record and the complete-order mapping resolve the claim's two central questions: delivery and coverage.
+  [C1,C2,C9,C10] Because that evidence answers non-receipt for the whole disputed purchase, reversal of the chargeback in full follows.
