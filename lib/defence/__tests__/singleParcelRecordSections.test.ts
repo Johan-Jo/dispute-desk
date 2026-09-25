@@ -158,38 +158,37 @@ describe("single-parcel non-receipt letters argue the case from the records", ()
 
   it("summary: the position, the amount and the chain the case rests on", () => {
     expect(out.executiveSummary.text).toBe(
-      "The merchant contests the CAD 120.75 chargeback for non-receipt of order #352543. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and to its delivery event, giving an affirmative basis to contest non-receipt of the disputed order in full.",
+      "The merchant contests this CAD 120.75 non-receipt chargeback. Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full.",
     );
   });
 
   it("shipping: order → shipment → carrier delivery, and why the carrier's record answers non-receipt", () => {
     expect(out.fulfillmentArgument.text.split(/\n\n/)).toEqual([
-      "The fulfilment record links all three purchased items to a single shipment under Stallion Express tracking number 260702441A. The merchant recorded fulfilment on 2 July 2026, and Stallion Express subsequently recorded that shipment as delivered on 6 July 2026 at 19:53 UTC.",
-      "The distinction between fulfilment and delivery is material to this claim. The merchant does not rely only on its own record that the order was dispatched: the carrier's tracking record reports the delivery of the associated shipment, which is the event a non-receipt claim puts in issue.",
-      "Because the fulfilment record ties the order's items to this tracking number, the carrier's delivery record is the delivery record for the disputed goods.",
-      "Stallion Express's tracking record: https://stallionexpress.ca/track/?tracking=260702441A",
+      "The fulfilment record places all three purchased items in the single shipment shown above, and the carrier then recorded that shipment as delivered.",
+      "This distinction matters. The merchant does not rely only on its own record that the order was dispatched: the carrier's record reports the delivery itself, which is the event a non-receipt claim puts in issue.",
+      "Carrier tracking record: https://stallionexpress.ca/track/?tracking=260702441A",
     ]);
   });
 
   it("line items: the shipment covers the complete order, and the money reconciles to the disputed amount", () => {
     expect(out.transactionOverviewArgument.source).toBe("record");
     expect(out.transactionOverviewArgument.text.split(/\n\n/)).toEqual([
-      "The fulfilment mapping accounts for each product listed above, in the quantity ordered, within the shipment identified in this response. The delivery argument therefore covers the complete order, not an individual item or a separate partial shipment.",
-      "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus CAD 10.00 shipping and CAD 12.75 tax, reconciles to CAD 120.75, the full disputed amount. The shipment relied on therefore accounts for the full amount contested.",
+      "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment.",
+      "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus CAD 10.00 shipping and CAD 12.75 tax, reconciles to the full disputed amount. The delivered shipment therefore accounts for the full amount contested.",
     ]);
   });
 
   it("chronology: the reported delivery date against the dispute, and the emails as updates sent", () => {
     expect(out.chronologyArgument.source).toBe("record");
     expect(out.chronologyArgument.text.split(/\n\n/)).toEqual([
-      "The records show the progression from purchase and payment on 2 July to the carrier-recorded delivery on 6 July. The non-receipt dispute was opened on 19 September 2026. The delivery on which the merchant relies is therefore dated before the dispute.",
-      "The order history also records shipping and delivery notifications sent on 2 July and 6 July respectively to the customer's recorded email address. These document the shipment updates sent to the customer; the evidence of delivery remains the carrier's tracking record.",
+      "As the timeline below shows, the carrier-recorded delivery is dated before the dispute was opened.",
+      "The order history also records shipping and delivery notifications sent to the customer's recorded email address. These document the updates sent; the evidence of delivery remains the carrier's record.",
     ]);
   });
 
   it("conclusion: the reasoning — the request line with the amount follows it", () => {
     expect(out.conclusion.text).toBe(
-      "The order and fulfilment records identify the disputed goods within the tracked shipment, and Stallion Express records that shipment as delivered before the dispute was opened. Together, these records support the merchant's position that the complete purchase was delivered and provide grounds to contest the non-receipt claim in full.",
+      "The order and fulfilment records place the disputed goods in the tracked shipment, and the carrier records that shipment as delivered. These records support the merchant's position that the complete purchase was delivered.",
     );
     const blocks = composePdfBlocks({
       narrative: out,
@@ -220,6 +219,24 @@ describe("single-parcel non-receipt letters argue the case from the records", ()
     expect(prose).not.toMatch(/successful completion/i);
   });
 
+  it("COPY RULE: each fact once — no order number, tracking number, timestamp or carrier name in the prose", () => {
+    // The header carries the order number; the opening line the carrier; the
+    // card the tracking number and times; the table total the amount.
+    const prose = [
+      out.executiveSummary.text,
+      out.fulfillmentArgument.text.replace(/https:\/\/\S+/g, ""),
+      out.transactionOverviewArgument.text,
+      out.chronologyArgument.text,
+      out.conclusion.text,
+    ].join(" ");
+    expect(prose).not.toContain("352543");
+    expect(prose).not.toContain("260702441A");
+    expect(prose).not.toMatch(/\b\d{1,2}:\d{2}\b/);
+    expect(prose).not.toContain("Stallion Express");
+    // The amount once in the prose (the summary); the request line names it.
+    expect(prose.match(/CAD 120\.75/g)).toHaveLength(1);
+  });
+
   it("keeps the model's other sections", () => {
     expect(out.policyArgument.text).toBe("Policy text.");
   });
@@ -246,13 +263,13 @@ describe("every link is conditional on its record", () => {
   it("history count only: quotes the history, claims no item-by-item match", () => {
     const out = build({ ...ctx, packSections: undefined });
     expect(out.fulfillmentArgument.text).toContain(
-      "The fulfilment of order #352543 carries Stallion Express tracking number 260702441A; the order history records Stallion marking 3 items as fulfilled.",
+      "The order history records Stallion marking 3 items as fulfilled in the shipment shown above, and the carrier then recorded that shipment as delivered.",
     );
     const all = [out.executiveSummary.text, out.fulfillmentArgument.text, out.transactionOverviewArgument.text, out.conclusion.text].join(" ");
     expect(all).not.toMatch(/all three|complete order|each product|disputed goods|in full/);
     // The money still reconciles — without claiming the shipment accounts for it.
     expect(out.transactionOverviewArgument.text).toBe(
-      "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus CAD 10.00 shipping and CAD 12.75 tax, reconciles to CAD 120.75, the full disputed amount.",
+      "The merchandise total of CAD 145.50, less the CAD 47.50 discount, plus CAD 10.00 shipping and CAD 12.75 tax, reconciles to the full disputed amount.",
     );
   });
 
@@ -263,7 +280,7 @@ describe("every link is conditional on its record", () => {
 
   it("emails to another address are 'sent to the customer', not the recorded address", () => {
     const out = build({ ...ctx, customerEmail: "someone@else.com" });
-    expect(out.chronologyArgument.text).toContain("respectively to the customer.");
+    expect(out.chronologyArgument.text).toContain("notifications sent to the customer.");
   });
 
   it("no timing argument when the delivery is dated after the dispute", () => {

@@ -266,20 +266,6 @@ function isItemNotReceived(moduleKey: string | null | undefined): boolean {
   }
 }
 
-/** "19:53 UTC". */
-function clock(iso: string): string | null {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return null;
-  const d = new Date(t);
-  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
-}
-
-/** "6 July" — used where the year is already stated nearby. */
-function dayMonth(iso: unknown): string | null {
-  const full = day(iso);
-  return full ? full.replace(/\s\d{4}$/, "") : null;
-}
-
 function money(price: string): { currency: string; amount: number } | null {
   const m = price.match(/^([A-Z]{3})\s+(-?\d+(?:\.\d+)?)$/);
   return m ? { currency: m[1], amount: Number(m[2]) } : null;
@@ -325,7 +311,7 @@ function reconciliation(ctx: RecordSectionContext): string | null {
   if (steps.length === 0) {
     return `The merchandise total of ${fmt(currency, subtotal)} is the full disputed amount.`;
   }
-  return `The merchandise total of ${fmt(currency, subtotal)}, ${steps.join(", ")}, reconciles to ${fmt(currency, disputed)}, the full disputed amount.`;
+  return `The merchandise total of ${fmt(currency, subtotal)}, ${steps.join(", ")}, reconciles to the full disputed amount.`;
 }
 
 /** The address an order-history email line names: "… to Name (a@b.c)". */
@@ -354,13 +340,11 @@ export function applySingleParcelRecordSections(
   });
   if (!fact) return narrative;
   const v = (fact.value ?? {}) as Record<string, unknown>;
-  const carrier = str(v.carrier) as string;
   const tracking = str(v.trackingNumber) as string;
   const url = str(v.trackingUrl);
   const deliveredAt = str(v.deliveredAt) as string;
   const signed = v.proofType === "signature_confirmed";
   const factIds = delivery.map((f) => f.id);
-  const order = ctx.orderName ? `order ${ctx.orderName}` : "the order";
   const events = ctx.timelineEvents ?? [];
   const amount = disputedAmountDisplay(ctx.disputeAmount, ctx.disputeCurrency);
   const coverage = fulfilmentCoverage(ctx.packSections, tracking, events);
@@ -369,39 +353,33 @@ export function applySingleParcelRecordSections(
   const itemsWord = itemCount === 1 ? "the purchased item" : `all ${count(itemCount)} purchased items`;
   const opened = ctx.disputeOpenedAt ? Date.parse(ctx.disputeOpenedAt) : NaN;
   const predates = !Number.isNaN(opened) && Date.parse(deliveredAt) < opened;
-  const deliveredDay = day(deliveredAt) as string;
-  const at = clock(deliveredAt);
+
+  // COPY RULE (maintainer, 2026-09-25): every fact is stated ONCE, where it
+  // belongs, and the prose refers back to it. The page header carries the
+  // order number; the opening line the carrier and the two dates; the card
+  // the tracking number, shipped and delivered times; the table the amounts;
+  // the timeline every dated event. The prose carries the ARGUMENT — no
+  // order number, no tracking number, no timestamps, the carrier named once
+  // (in the opening line) and "the carrier" after.
 
   // ── Executive summary ──
   const summary = [
-    `The merchant contests the${amount ? ` ${amount}` : ""} chargeback for non-receipt of ${order}.`,
+    `The merchant contests this${amount ? ` ${amount}` : ""} non-receipt chargeback.`,
     allItems
-      ? "Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and to its delivery event, giving an affirmative basis to contest non-receipt of the disputed order in full."
-      : "Linked order, fulfilment and carrier records connect this order to the tracked shipment and to its delivery event, giving an affirmative basis to contest non-receipt of the disputed order.",
+      ? "Linked order, fulfilment and carrier records connect the purchased goods to the tracked shipment and its delivery event, an affirmative basis to contest the claim in full."
+      : "Linked order, fulfilment and carrier records connect the order to the tracked shipment and its delivery event, an affirmative basis to contest the claim.",
   ].join(" ");
 
-  // ── Shipping & Delivery ──
-  const fulfilledOn = coverage?.at ? day(coverage.at) : null;
+  // ── Shipping & Delivery (under the card) ──
   const link1 = allItems
-    ? `The fulfilment record links ${itemsWord} to a single shipment under ${carrier} tracking number ${tracking}.`
+    ? `The fulfilment record places ${itemsWord} in the single shipment shown above, and the carrier then recorded that shipment as delivered${signed ? ", with a signature" : ""}.`
     : coverage?.kind === "history"
-      ? `The fulfilment of ${order} carries ${carrier} tracking number ${tracking}; the order history records ${coverage.actor} marking ${coverage.markedCount} ${coverage.markedCount === 1 ? "item" : "items"} as fulfilled.`
-      : `The fulfilment of ${order} carries ${carrier} tracking number ${tracking}.`;
-  const link2 =
-    `${fulfilledOn ? `The merchant recorded fulfilment on ${fulfilledOn}, and ` : ""}` +
-    `${carrier} ${fulfilledOn ? "subsequently " : ""}recorded that shipment as delivered on ${deliveredDay}${at ? ` at ${at}` : ""}${signed ? ", with a signature" : ""}.`;
+      ? `The order history records ${coverage.actor} marking ${coverage.markedCount} ${coverage.markedCount === 1 ? "item" : "items"} as fulfilled in the shipment shown above, and the carrier then recorded that shipment as delivered${signed ? ", with a signature" : ""}.`
+      : `The carrier recorded the shipment shown above as delivered${signed ? ", with a signature" : ""}.`;
   const why =
-    "The distinction between fulfilment and delivery is material to this claim. The merchant does not rely only on its own record that the order was dispatched: " +
-    "the carrier's tracking record reports the delivery of the associated shipment, which is the event a non-receipt claim puts in issue.";
-  const relevance = allItems
-    ? "Because the fulfilment record ties the order's items to this tracking number, the carrier's delivery record is the delivery record for the disputed goods."
-    : null;
-  const shipping = [
-    `${link1} ${link2}`,
-    why,
-    relevance,
-    url ? `${carrier}'s tracking record: ${url}` : null,
-  ]
+    "This distinction matters. The merchant does not rely only on its own record that the order was dispatched: " +
+    "the carrier's record reports the delivery itself, which is the event a non-receipt claim puts in issue.";
+  const shipping = [link1, why, url ? `Carrier tracking record: ${url}` : null]
     .filter((p): p is string => !!p)
     .join("\n\n");
 
@@ -409,27 +387,16 @@ export function applySingleParcelRecordSections(
   const sums = reconciliation(ctx);
   const lineItemsProse = [
     allItems
-      ? `The fulfilment mapping accounts for each product listed above, in the quantity ordered, within the shipment identified in this response. The delivery argument therefore covers the complete order, not an individual item or a separate partial shipment.`
+      ? "The fulfilment record accounts for each product above, in the quantity ordered, within that one shipment. The delivery evidence therefore covers the complete order, not one item or a partial shipment."
       : null,
-    sums ? `${sums}${allItems ? " The shipment relied on therefore accounts for the full amount contested." : ""}` : null,
+    sums ? `${sums}${allItems ? " The delivered shipment therefore accounts for the full amount contested." : ""}` : null,
   ]
     .filter((p): p is string => !!p)
     .join("\n\n");
 
   // ── Chronology (above the timeline) ──
-  const placed = events.find((e) => classifyChronologyEvent(e.text) === "order_placed");
-  const paid = events.find((e) => classifyChronologyEvent(e.text) === "payment");
-  const start = placed ?? paid;
-  const startWhat = placed && paid && day(placed.at) === day(paid.at) ? "purchase and payment" : placed ? "purchase" : "payment";
   const sequence = predates
-    ? [
-        start
-          ? `The records show the progression from ${startWhat} on ${dayMonth(start.at)} to the carrier-recorded delivery on ${dayMonth(deliveredAt)}.`
-          : null,
-        `The non-receipt dispute was opened on ${day(ctx.disputeOpenedAt)}. The delivery on which the merchant relies is therefore dated before the dispute.`,
-      ]
-        .filter(Boolean)
-        .join(" ")
+    ? "As the timeline below shows, the carrier-recorded delivery is dated before the dispute was opened."
     : null;
   const orderEmail = ctx.customerEmail ? ctx.customerEmail.toLowerCase() : null;
   const confirmation = events.find((e) => classifyChronologyEvent(e.text) === "shipping_confirmation");
@@ -438,21 +405,21 @@ export function applySingleParcelRecordSections(
   const sameAddress = !!orderEmail && mailed.length > 0 && mailed.every((e) => emailIn(e.text) === orderEmail);
   const updates =
     confirmation && notice
-      ? `shipping and delivery notifications sent on ${dayMonth(confirmation.at)} and ${dayMonth(notice.at)} respectively`
+      ? "shipping and delivery notifications"
       : confirmation
-        ? `a shipping notification sent on ${dayMonth(confirmation.at)}`
+        ? "a shipping notification"
         : notice
-          ? `a delivery notification sent on ${dayMonth(notice.at)}`
+          ? "a delivery notification"
           : null;
   const emails = updates
-    ? `The order history also records ${updates}${sameAddress ? " to the customer's recorded email address" : " to the customer"}. These document the shipment updates sent to the customer; the evidence of delivery remains the carrier's tracking record.`
+    ? `The order history also records ${updates} sent to the ${sameAddress ? "customer's recorded email address" : "customer"}. These document the updates sent; the evidence of delivery remains the carrier's record.`
     : null;
   const chronology = [sequence, emails].filter((p): p is string => !!p).join("\n\n");
 
   // ── Conclusion (reasoning; the request line follows it) ──
   const conclusion = allItems
-    ? `The order and fulfilment records identify the disputed goods within the tracked shipment, and ${carrier} records that shipment as delivered${predates ? " before the dispute was opened" : ""}. Together, these records support the merchant's position that the complete purchase was delivered and provide grounds to contest the non-receipt claim in full.`
-    : `The order and fulfilment records connect this purchase to the tracked shipment, and ${carrier} records that shipment as delivered${predates ? " before the dispute was opened" : ""}. These records provide grounds to contest the non-receipt claim.`;
+    ? `The order and fulfilment records place the disputed goods in the tracked shipment, and the carrier records that shipment as delivered. These records support the merchant's position that the complete purchase was delivered.`
+    : `The order and fulfilment records connect the order to the tracked shipment, and the carrier records that shipment as delivered.`;
 
   const record = (text: string): NarrativeSection => ({ text, usedFactIds: text ? factIds : [], source: "record" });
   const keep = new Set(["transactionOverviewArgument", "chronologyArgument", "conclusion"]);

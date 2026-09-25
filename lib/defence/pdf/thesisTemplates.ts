@@ -63,8 +63,9 @@ import type { ThesisTemplate } from "../types";
  *   2  (2026-09-24) item-not-received opening line states the carrier record
  *      and the dispute date; its fulfilment-section repeat removed.
  *   3  (2026-09-25) item-not-received request line names the disputed amount.
+ *   4  (2026-09-25) opening line says "this order", not the order number.
  */
-export const COMPOSITION_VERSION = 3;
+export const COMPOSITION_VERSION = 4;
 
 export const THESIS_TEMPLATES: ThesisTemplate[] = [
   // ── executiveSummary ─────────────────────────────────────────────
