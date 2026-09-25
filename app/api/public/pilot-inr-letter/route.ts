@@ -24,7 +24,9 @@ function authorized(token: string): boolean {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  if (process.env.VERCEL_ENV === "production" || process.env.APP_ENV === "production") {
+  // Staging is the dev project's PRODUCTION deployment (VERCEL_ENV=production),
+  // so the allow-list is APP_ENV, the app's own identity.
+  if (process.env.APP_ENV !== "development") {
     return new Response("Not found", { status: 404 });
   }
   if (!authorized(req.headers.get("x-pilot-token") ?? "")) {
