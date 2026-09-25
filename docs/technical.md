@@ -3408,7 +3408,7 @@ writes item-not-received letters from a code-built claim ledger. Address rule:
   address" (and the AVS sentence), never with delivered/reached/received, and only when the ledger
   holds the claim; everything else still hits the address-delivery detector.
 - **Later order.** The `later_order` claim carries the order as `narrative.laterOrderExhibit`; the PDF
-  (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card above the timeline
+  (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card under the Order Line Items table
   (`documentModel.ts` `laterOrderCard`).
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
