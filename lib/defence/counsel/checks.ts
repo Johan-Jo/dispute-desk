@@ -83,7 +83,6 @@ type Where = "headline" | "summary" | EvidenceSectionKey | "conclusion";
 
 function parts(d: CounselDraft): Array<{ where: Where; text: string; claimIds: string[] }> {
   return [
-    { where: "headline", text: d.headline ?? "", claimIds: d.summary?.claimIds ?? [] },
     { where: "summary", text: (d.summary?.paragraphs ?? []).join(" "), claimIds: d.summary?.claimIds ?? [] },
     ...(d.evidenceSections ?? []).map((s) => ({ where: s.key as Where, text: (s.paragraphs ?? []).join(" "), claimIds: s.claimIds ?? [] })),
     { where: "conclusion", text: (d.conclusion?.paragraphs ?? []).join(" "), claimIds: d.conclusion?.claimIds ?? [] },
@@ -96,7 +95,6 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const allowedKeys = new Set(ctx.playbook.sections.map((s) => s.key));
 
   // 1. shape
-  if (!d || typeof d.headline !== "string" || !d.headline.trim()) issues.push("shape: missing headline");
   const seenKeys = new Set<string>();
   for (const s of d.evidenceSections ?? []) {
     if (!allowedKeys.has(s.key)) issues.push(`shape: section "${s.key}" is not in the playbook`);
@@ -132,8 +130,9 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   if (/\b\d{1,2}:\d{2}\b/.test(all)) issues.push("copy: a time of day");
   const count = (needle: string) => (needle ? all.split(needle).length - 1 : 0);
   if (count(ctx.merchantName) > 1) issues.push(`copy: "${ctx.merchantName}" is named ${count(ctx.merchantName)} times (at most once)`);
-  if (ctx.carrierName && count(ctx.carrierName) > 2) {
-    issues.push(`copy: "${ctx.carrierName}" is named ${count(ctx.carrierName)} times (at most twice; then "the carrier")`);
+  // Never the carrier's brand in the prose (maintainer): the card prints it.
+  if (ctx.carrierName && count(ctx.carrierName) > 0) {
+    issues.push(`copy: the carrier's name "${ctx.carrierName}" appears in the text; write "the carrier"`);
   }
   // Executive summary = the whole defence in brief, ending with the request
   // (maintainer, 2026-09-25). The headline is the contrast only: no dates or
@@ -145,7 +144,7 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
   if (specificsIn(headlineText).length) issues.push(`headline: no dates or numbers (found ${specificsIn(headlineText).join(", ")}); the summary carries them`);
   if (words(headlineText) > 30) issues.push(`headline: at most 30 words (has ${words(headlineText)})`);
-  if (words(summaryText) > 110) issues.push(`summary: at most 110 words (has ${words(summaryText)})`);
+  if (words(summaryText) > 70) issues.push(`summary: at most 70 words (has ${words(summaryText)}); shorter, straight to the point`);
   if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
   if (sentences(conclusionText).length > 1) issues.push(`conclusion: at most ONE sentence (has ${sentences(conclusionText).length})`);
   if (words(conclusionText) > 25) issues.push(`conclusion: at most 25 words (has ${words(conclusionText)})`);
@@ -218,7 +217,8 @@ export function toNarrative(
   if (shipping.text && trackingLinkLine) shipping.text = `${shipping.text}\n\n${trackingLinkLine}`;
   const empty: NarrativeSection = { text: "", usedFactIds: [] };
   const narrative: DefenceNarrativeOutput = {
-    headline: d.headline?.trim() || undefined,
+    // Empty, not absent: suppresses the templated pull-quote (one summary only).
+    headline: "",
     executiveSummary: sec(d.summary?.paragraphs),
     transactionOverviewArgument: sec(ev("lineItems")),
     chronologyArgument: sec(ev("chronology")),

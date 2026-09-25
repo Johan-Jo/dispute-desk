@@ -122,8 +122,9 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
   const deliveredOn = longDate(deliveredAt)!;
   add({
     id: "carrier_delivered",
-    statement: `${carrier} recorded the shipment as delivered on ${deliveredOn}.`,
-    specifics: { carrier, deliveredOn, deliveredOnShort: deliveredOn.replace(/ \d{4}$/, "") },
+    // Never the carrier's brand in prose (maintainer): the card prints it.
+    statement: `The carrier recorded the shipment as delivered on ${deliveredOn}.`,
+    specifics: { deliveredOn, deliveredOnShort: deliveredOn.replace(/ \d{4}$/, "") },
     weight: "core",
     sources: factIds,
     mustNot: [NO_DESTINATION],

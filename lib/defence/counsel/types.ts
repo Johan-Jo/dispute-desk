@@ -94,7 +94,8 @@ export interface CounselSection {
 }
 
 export interface CounselDraft {
-  headline: string;
+  /** Not used: one executive summary, no pull-quote (maintainer). */
+  headline?: string;
   summary: CounselSection;
   evidenceSections: Array<CounselSection & { key: EvidenceSectionKey }>;
   conclusion: CounselSection;
