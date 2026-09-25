@@ -213,7 +213,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v34 (2026-09-24) — single-parcel item-not-received letters with a carrier-
 // confirmed delivery are record-built (summary, shipping, conclusion), as
 // multi-parcel ones already were (#352543).
-const PROMPT_VERSION = 39;
+// v40 (2026-09-25) — item-not-received family names its forbidden words in the
+// prompt (no negated delivery, no denial framing): an in-transit
+// letter wrote "the order was not undelivered" twice and was refused (#102193).
+const PROMPT_VERSION = 40;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
