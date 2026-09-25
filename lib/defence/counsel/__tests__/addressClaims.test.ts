@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildItemNotReceivedLedger } from "../claimLedger";
-import { isAllowedAddressSentence, toNarrative } from "../checks";
+import { toNarrative } from "../checks";
 import { addressCard } from "../../render/documentModel";
 import type { EvidenceFact } from "../../types";
 import type { LedgerInput } from "../types";
@@ -64,14 +64,9 @@ describe("address claims (counsel ledger)", () => {
     expect(ledger.find((c) => c.addressExhibit)!.addressExhibit!.avs).toEqual({ code: "Y", network: "visa" });
   });
 
-  it("allows only the match sentences, never a delivery-location sentence", () => {
-    const withMatch = buildItemNotReceivedLedger(input({ shipping: HOME, billing: HOME, avs: "Y" }))!;
-    const without = buildItemNotReceivedLedger(input({ shipping: HOME, billing: { ...HOME, address1: "40 Main Road" } }))!;
-    const ok = "The shipping address entered at checkout is the same as the billing address.";
-    expect(isAllowedAddressSentence(ok, withMatch)).toBe(true);
-    expect(isAllowedAddressSentence(ok, without)).toBe(false);
-    expect(isAllowedAddressSentence("The card issuer's address check matched the billing address.", withMatch)).toBe(true);
-    expect(isAllowedAddressSentence("The carrier delivered it to the billing address.", withMatch)).toBe(false);
-    expect(isAllowedAddressSentence("The parcel reached the shipping address, the same as the billing address.", withMatch)).toBe(false);
+  it("states the match on the card, not in prose", () => {
+    const ledger = buildItemNotReceivedLedger(input({ shipping: HOME, billing: HOME }))!;
+    const card = addressCard(ledger.find((c) => c.addressExhibit)!.addressExhibit)!;
+    expect(card.product).toBe("The shipping address entered at checkout is identical to the billing address.");
   });
 });

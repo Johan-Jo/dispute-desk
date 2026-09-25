@@ -36,7 +36,8 @@ import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
-import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun } from "@/lib/defence/narrativeWriter";
+import { counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
@@ -172,12 +173,12 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("disputes")
-      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name, initiated_at")
+      .select("id, dispute_gid, order_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name, initiated_at")
       .eq("id", pkg.dispute_id)
       .single(),
     sb
       .from("shops")
-      .select("id, shop_domain, primary_domain")
+      .select("id, shop_domain, primary_domain, shop_name")
       .eq("id", pkg.shop_id)
       .single(),
   ]);
@@ -527,8 +528,78 @@ export async function handleBuildDefencePackage(
       subProduct: klarnaSubProduct,
     });
 
-  // Generate the narrative.
-  const narrativeRes = await generateNarrative(
+  /* ── Counsel v2 (lib/defence/counsel/run.ts) ─────────────────────────
+   * Item-not-received letters are written by the counsel pipeline first. A
+   * null result — no carrier-confirmed single delivery, no draft passing its
+   * checks, a model error — falls through to the template writer below,
+   * unchanged. Its letter still passes every validator this job runs; if it
+   * fails one, the existing retry regenerates with the template writer. */
+  let usedCounsel = false;
+  let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
+  if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment) {
+    const cap = await checkDailyCap(sb, pkg.shop_id);
+    if (!cap.capReached) {
+      try {
+        const orderCtx = deriveOrderContext(
+          sectionsRaw.map((s) => ({ type: s.type, label: s.label, source: s.source, data: s.data ?? {}, fieldsProvided: s.fieldsProvided ?? [] })),
+        );
+        counselRes = await runCounsel({
+          shopId: pkg.shop_id,
+          moduleKey: reasonCodeModule.key,
+          facts: planFacts,
+          packSections: sectionsRaw.map((s) => ({ type: s.type, source: s.source, data: s.data ?? {} })),
+          orderName: orderCtx.orderName ?? null,
+          orderGid: (dispute as { order_gid?: string | null } | null)?.order_gid ?? null,
+          disputeGid: dispute?.dispute_gid ?? null,
+          disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+          disputeAmount: Number.isFinite(Number(dispute?.amount)) ? Number(dispute?.amount) : null,
+          disputeCurrency: dispute?.currency_code ?? null,
+          amountDisplay: dispute?.amount != null ? `${dispute.currency_code ?? ""} ${dispute.amount}`.trim() : null,
+          cardLast4: orderCtx.cardLast4 ?? null,
+          merchantName:
+            (shop as { shop_name?: string | null } | null)?.shop_name?.trim() ||
+            (shop?.shop_domain
+              ? displayShopDomain({
+                  shop_domain: shop.shop_domain as string,
+                  primary_domain: (shop as { primary_domain?: string | null }).primary_domain ?? null,
+                })
+              : "The merchant"),
+        });
+      } catch (err) {
+        console.warn(
+          `[buildDefencePackage] counsel v2 failed for ${pkg.dispute_id}, using the template writer: ` +
+            (err instanceof Error ? err.message : String(err)),
+        );
+        counselRes = null;
+      }
+      if (counselRes) {
+        await writeRun(sb, { shopId: pkg.shop_id, packageId }, {
+          model: counselRes.modelUsed,
+          packageMode: classification.packageMode,
+          promptTokens: counselRes.tokens.prompt,
+          completionTokens: counselRes.tokens.completion,
+          durationMs: counselRes.durationMs,
+          validationStatus: "ok",
+          strategyKeys: ["counsel_v2"],
+          promptVersion: counselRes.promptVersion,
+        });
+      }
+    }
+  }
+
+  // Generate the narrative (template writer) unless counsel wrote it.
+  const narrativeRes = counselRes
+    ? {
+        narrative: counselRes.narrative,
+        modelUsed: counselRes.modelUsed,
+        promptVersion: counselRes.promptVersion,
+        promptFamily: counselRes.promptFamily,
+        tokens: counselRes.tokens,
+        durationMs: counselRes.durationMs,
+        capReached: false,
+        error: null as string | null,
+      }
+    : await generateNarrative(
     {
       packageId,
       disputeId: pkg.dispute_id,
@@ -550,6 +621,7 @@ export async function handleBuildDefencePackage(
       modelOverride: moduleOverride?.model ?? null,
     },
   );
+  usedCounsel = !!counselRes;
 
   if (narrativeRes.capReached) {
     return await markFailed(sb, pkg, narrativeRes.error ?? "daily cap reached", "daily_cap_reached", true);
@@ -647,7 +719,9 @@ export async function handleBuildDefencePackage(
   // then write their own (source "record") under Order Line Items and the
   // timeline (lib/defence/sectionVisibility.ts `isSectionShown`).
   narrativeRes.narrative = omitDeniedSections(narrativeRes.narrative, reasonCodeModule.key);
-  narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
+  if (!usedCounsel) {
+    narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
+  }
   const suppression = suppressUnsupportedSections({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -785,6 +859,10 @@ export async function handleBuildDefencePackage(
       // retry's.
       narrativeRes.narrative = retryRes.narrative;
       narrativeRes.modelUsed = retryRes.modelUsed;
+      // The retry is the template writer's letter, whoever wrote the first.
+      narrativeRes.promptVersion = retryRes.promptVersion;
+      narrativeRes.promptFamily = retryRes.promptFamily;
+      usedCounsel = false;
       narrativeRes.tokens.prompt += retryRes.tokens.prompt;
       narrativeRes.tokens.completion += retryRes.tokens.completion;
       narrativeRes.tokens.cached += retryRes.tokens.cached;
@@ -1157,8 +1235,10 @@ export async function handleBuildDefencePackage(
       cardholderName:
         orderContext.cardholderName ?? (dispute?.customer_display_name as string | null) ?? null,
       transactionDate: orderContext.transactionDate,
-      timelineEvents: orderContext.timelineEvents,
+      timelineEvents: [...(orderContext.timelineEvents ?? []), ...(narrativeRes.narrative.timelineAdditions ?? [])],
       lineItemsFromContext: orderContext.lineItems,
+      addressExhibit: narrativeRes.narrative.addressExhibit ?? null,
+      laterOrderExhibit: narrativeRes.narrative.laterOrderExhibit ?? null,
       generatedAt: new Date().toISOString(),
       version: pkg.version,
       packageMode: classification.packageMode,

@@ -987,7 +987,7 @@ function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
   }
 }
 
-async function checkDailyCap(
+export async function checkDailyCap(
   sb: ReturnType<typeof getServiceClient>,
   shopId: string,
 ): Promise<{ capReached: boolean; generations: number; inputTokens: number }> {
@@ -1013,7 +1013,7 @@ async function checkDailyCap(
   return { capReached, generations, inputTokens };
 }
 
-async function writeRun(
+export async function writeRun(
   sb: ReturnType<typeof getServiceClient>,
   ctx: GenerateNarrativeContext,
   row: {
@@ -1024,12 +1024,14 @@ async function writeRun(
     durationMs: number;
     validationStatus: "ok" | "failed" | "skipped" | "error";
     strategyKeys: string[];
+    /** Counsel v2 runs record their own prompt version. */
+    promptVersion?: number;
   },
 ): Promise<void> {
   await sb.from("defence_package_runs").insert({
     package_id: ctx.packageId,
     shop_id: ctx.shopId,
-    prompt_version: PROMPT_VERSION,
+    prompt_version: row.promptVersion ?? PROMPT_VERSION,
     model: row.model,
     package_mode: row.packageMode,
     prompt_tokens: row.promptTokens,
