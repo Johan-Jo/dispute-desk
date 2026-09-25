@@ -50,6 +50,9 @@ import {
   describeChronologyEvent,
   emphasisSegments,
   lineItemsTotal,
+  orderPlacedLine,
+  addressCard,
+  laterOrderCard,
   productsOf,
   deliveryFactIds,
   shipmentCards,
@@ -215,9 +218,11 @@ function fmtAmount(amount: number | string | null | undefined, currency: string 
 function chronologyEvents(
   dispute: DisputeContextLike | undefined,
   facts: EvidenceFact[],
+  orderTotalDisplay: string | null = null,
 ): ChronologyEvent[] {
   return buildChronologyEvents(
     {
+      orderTotalDisplay,
       timelineEvents: dispute?.timelineEvents ?? null,
       transactionDate: dispute?.transactionDate ?? null,
       orderName: dispute?.orderName ?? null,
@@ -377,7 +382,7 @@ function ShipmentCardView({ card, wide = false }: { card: ShipmentCard; wide?: b
     <div style={{ border: `1px solid ${C.hairline}`, borderRadius: 12, overflow: "hidden" }}>
       <div style={{ background: C.accentSoft, padding: "14px 18px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <span style={{ ...css.eyebrow, fontSize: 11 }}>Shipment {card.index}</span>
+          <span style={{ ...css.eyebrow, fontSize: 11 }}>{card.eyebrow ?? `Shipment ${card.index}`}</span>
           <Pill tone={card.status.tone} label={card.status.label} />
         </div>
         <div style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{card.product}</div>
@@ -402,7 +407,7 @@ function ShipmentCardView({ card, wide = false }: { card: ShipmentCard; wide?: b
             }
           >
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{f.label}</div>
-            <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>
+            <div style={{ fontSize: 14, color: C.ink, fontWeight: 500, whiteSpace: "pre-line" }}>
               {f.value}
               {f.reference ? (
                 <>
@@ -486,8 +491,8 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     : null;
   const reasonModule = moduleKey ? ALL_REASON_CODE_MODULES.find((m) => m.key === moduleKey) ?? null : null;
 
-  const chrono = chronologyEvents(dispute, facts);
   const lineItems: LineItem[] = buildLineItems(facts);
+  const chrono = chronologyEvents(dispute, facts, lineItemsTotal(lineItems)?.amount ?? null);
   const total = lineItemsTotal(lineItems);
   const shipments = shipmentsOf(facts);
   const multiParcel = shipments.length > 1;
@@ -565,7 +570,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const prose = (key: NarrativeSectionKey) => {
     const body = visible(key);
     if (!body) return null;
-    const thesis = thesisFor(key, moduleKey, mode, facts, caseContext);
+    // Counsel v2: the model-written punchline replaces the templated headline, as in the PDF.
+    const thesis =
+      key === "executiveSummary" && narrative.headline !== undefined
+        ? narrative.headline.trim() || null
+        : thesisFor(key, moduleKey, mode, facts, caseContext);
     return (
       <Section key={key} number={num()} title={sectionTitleFor(key, facts)}>
         {thesis ? <p style={css.thesis}>{thesis}</p> : null}
@@ -651,6 +660,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             {shipmentCards([single], chrono).map((card) => (
               <ShipmentCardView key={card.index} card={card} wide />
             ))}
+            {addressCard(narrative.addressExhibit) ? (
+              <div style={{ marginTop: 12 }}>
+                <ShipmentCardView card={addressCard(narrative.addressExhibit)!} wide />
+              </div>
+            ) : null}
             {visible("fulfillmentArgument") ? (
               <div style={{ marginTop: 16 }}>
                 <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />
@@ -705,6 +719,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
 
         {lineItems.length > 0 ? (
           <Section number={num()} title={t("orderLineItems")}>
+            {orderPlacedLine(dispute?.orderName, dispute?.transactionDate) ? (
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+                {orderPlacedLine(dispute?.orderName, dispute?.transactionDate)}
+              </div>
+            ) : null}
             <ZebraTable
               head={["Description", "Qty", "Price"]}
               widths={["70%", "10%", "20%"]}
@@ -738,7 +757,16 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
 
         {chrono.length > 0 || chronologyBody ? (
           <Section number={num()} title={SECTION_TITLES.chronologyArgument}>
-            {chronologyBody ? <Prose text={chronologyBody} /> : null}
+            {chronologyBody ? (
+              <div style={{ marginBottom: 20 }}>
+                <Prose text={chronologyBody} />
+              </div>
+            ) : null}
+            {laterOrderCard(narrative.laterOrderExhibit) ? (
+              <div style={{ marginBottom: 20 }}>
+                <ShipmentCardView card={laterOrderCard(narrative.laterOrderExhibit)!} wide />
+              </div>
+            ) : null}
             {chrono.length > 0 ? <ChronologyView events={chrono} shipments={shipments} /> : null}
           </Section>
         ) : null}

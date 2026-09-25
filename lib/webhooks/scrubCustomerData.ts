@@ -37,6 +37,11 @@ const SCRUBBABLE_KEYS = new Set([
 
 const REDACTED_VALUE = "[redacted]";
 
+/** Full addresses kept for the defence package (orderSource.ts). Redacted
+ *  whole when the blob belongs to the redacted customer (it contains their
+ *  email or name anywhere). */
+const ADDRESS_KEYS = new Set(["billingAddressFull", "shippingAddressFull"]);
+
 export interface ScrubTarget {
   email: string | null;
   name: string | null;
@@ -64,20 +69,33 @@ function valueMatches(candidate: unknown, target: ScrubTarget): boolean {
  */
 export function scrubCustomerData<T>(value: T, target: ScrubTarget): T {
   if (!target.email && !target.name) return value;
-  return walk(value, target) as T;
+  const belongsToTarget = containsTarget(value, target);
+  return walk(value, target, belongsToTarget) as T;
 }
 
-function walk(value: unknown, target: ScrubTarget): unknown {
+function containsTarget(value: unknown, target: ScrubTarget): boolean {
+  if (Array.isArray(value)) return value.some((v) => containsTarget(v, target));
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).some(
+      ([key, v]) => (SCRUBBABLE_KEYS.has(key) && valueMatches(v, target)) || containsTarget(v, target),
+    );
+  }
+  return false;
+}
+
+function walk(value: unknown, target: ScrubTarget, belongsToTarget = false): unknown {
   if (Array.isArray(value)) {
-    return value.map((v) => walk(v, target));
+    return value.map((v) => walk(v, target, belongsToTarget));
   }
   if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
       if (SCRUBBABLE_KEYS.has(key) && valueMatches(v, target)) {
         out[key] = REDACTED_VALUE;
+      } else if (belongsToTarget && ADDRESS_KEYS.has(key) && v !== null) {
+        out[key] = REDACTED_VALUE;
       } else {
-        out[key] = walk(v, target);
+        out[key] = walk(v, target, belongsToTarget);
       }
     }
     return out;

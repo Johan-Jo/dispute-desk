@@ -13,7 +13,7 @@
  * "delivered" ONLY when a carrier recorded the delivery.
  */
 
-import type { EvidenceFact } from "../types";
+import type { AddressExhibit, EvidenceFact, LaterOrderExhibit } from "../types";
 import { classifyChronologyEvent, type ChronologyEvent } from "../chronology";
 import type { LineItem } from "./lineItems";
 
@@ -128,6 +128,8 @@ export interface ShipmentCardField {
 
 export interface ShipmentCard {
   index: number;
+  /** Card label; "Shipment {index}" when absent. */
+  eyebrow?: string;
   product: string;
   status: { tone: PillTone; label: string };
   fields: ShipmentCardField[];
@@ -199,6 +201,68 @@ export function lineItemsTotal(items: readonly LineItem[]): { quantity: number; 
   };
 }
 
+/** "Order #352543 · placed 2 July 2026, 05:33 UTC" — the order's date on
+ *  the line-items exhibit (maintainer, 2026-09-25). */
+export function orderPlacedLine(orderName: string | null | undefined, iso: string | null | undefined): string | null {
+  const t = iso ? Date.parse(iso) : NaN;
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const when = Number.isNaN(t)
+    ? null
+    : (() => {
+        const d = new Date(t);
+        const hh = String(d.getUTCHours()).padStart(2, "0");
+        const mm = String(d.getUTCMinutes()).padStart(2, "0");
+        return `placed ${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
+      })();
+  const parts = [orderName ? `Order ${orderName}` : null, when].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** The address exhibit as a card: shipping and billing side by side, and
+ *  the issuer's address check when it is citable. Printed only when the
+ *  letter claims the two are identical (counsel claimLedger.ts). */
+const NL = "\n";
+
+export function addressCard(ex: AddressExhibit | null | undefined): ShipmentCard | null {
+  if (!ex || !ex.shipping.length || !ex.billing.length) return null;
+  const fields: ShipmentCardField[] = [
+    { label: "Shipping address", value: ex.shipping.join(NL) },
+    { label: "Billing address", value: ex.billing.join(NL) },
+  ];
+  if (ex.avs) fields.push({ label: "Card issuer's address check (AVS)", value: `Full match (${ex.avs.code})` });
+  return {
+    index: 0,
+    eyebrow: "Order addresses",
+    product: "Shipping address identical to billing address",
+    status: { tone: "green", label: "Identical" },
+    fields,
+  };
+}
+
+/** The same customer's later order as a card (counsel claimLedger.ts
+ *  `later_order`): the order the letter relies on, shown, not described. */
+export function laterOrderCard(ex: LaterOrderExhibit | null | undefined): ShipmentCard | null {
+  if (!ex) return null;
+  const day = (iso: string | null) => {
+    const t = iso ? Date.parse(iso) : NaN;
+    if (Number.isNaN(t)) return null;
+    const d = new Date(t);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  };
+  const fields: ShipmentCardField[] = [{ label: "Placed", value: day(ex.placedAt) ?? "—" }];
+  if (ex.total) fields.push({ label: "Amount", value: ex.total });
+  if (ex.cardLast4) fields.push({ label: "Paid with", value: `Card ending ${ex.cardLast4}${ex.wallet ? ` · ${ex.wallet}` : ""}` });
+  if (day(ex.deliveredAt)) fields.push({ label: "Delivered", value: day(ex.deliveredAt)! });
+  return {
+    index: 0,
+    eyebrow: "Same customer's later order",
+    product: `Order ${ex.name}`,
+    status: { tone: "green", label: "Paid" },
+    fields,
+  };
+}
+
 export type ChronologyMarker = "filled" | "hollow" | "green";
 
 /** A short title and a marker for each timeline event: filled for money and
@@ -208,6 +272,9 @@ export function describeChronologyEvent(
   e: ChronologyEvent,
   shipments: readonly Shipment[],
 ): { title: string; marker: ChronologyMarker } {
+  // Counsel v2: the customer's later order, added as an exhibit row by the
+  // claim ledger (lib/defence/counsel/claimLedger.ts, later_order).
+  if (/^The same customer placed order\b/.test(e.text)) return { title: "Same customer ordered again", marker: "filled" };
   if (/tracking record shows .* in transit/i.test(e.text)) return { title: "In transit with carrier", marker: "green" };
   if (/records delivery of|carrier confirmed delivery|recorded the shipment as delivered|collected the shipment|delivered the shipment to a pickup point/i.test(e.text)) {
     return { title: "Delivered by carrier", marker: "green" };

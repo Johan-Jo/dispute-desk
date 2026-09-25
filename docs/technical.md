@@ -3389,6 +3389,35 @@ authentication. Now:
   `PREVIEW_LINK_INVALID` otherwise.
 - Without `t`, the old session path is unchanged.
 
+### Defence counsel v2 — address claims (2026-09-25, not wired into the job yet)
+
+`lib/defence/counsel/` (branch `feat/defence-counsel-v2`; plans in `docs/plans/defence-counsel/`)
+writes item-not-received letters from a code-built claim ledger. Address rule:
+
+- **Data.** The order source keeps `billingAddressFull` / `shippingAddressFull` (street, unit, city,
+  province, postal code, country); `customers/redact` scrubs both (`scrubCustomerData.ts`, `ADDRESS_KEYS`).
+- **Claim.** `claimLedger.ts` `addressClaims` adds `shipping_matches_billing` only when every field
+  (street, unit, city, province, postal code, country; case and punctuation ignored) is identical on
+  both. When they differ nothing is said and nothing is printed: a mismatch is never volunteered.
+  `billing_address_verified` is added on top only for a citable AVS cell (`isCeItem3Citable`: Visa `Y`/`M`).
+- **Exhibit.** The claim carries both addresses. `toNarrative` sets `narrative.addressExhibit`; the PDF
+  (`meta.addressExhibit`) and the HTML view print an "Order addresses" card under the shipment card
+  (`documentModel.ts` `addressCard`). An address claim is never made without the addresses shown.
+- **Never** a delivery-location claim: `address_delivery` (`claimCapabilities.ts`) stays ungranted.
+  `checks.ts` `isAllowedAddressSentence` lets through only "shipping address is the same as the billing
+  address" (and the AVS sentence), never with delivered/reached/received, and only when the ledger
+  holds the claim; everything else still hits the address-delivery detector.
+- **Later order.** The `later_order` claim carries the order as `narrative.laterOrderExhibit`; the PDF
+  (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card above the timeline
+  (`documentModel.ts` `laterOrderCard`).
+- **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
+  later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
+  second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
+  "not supported by the record"; the fixed request line with the amount follows.
+- **Wiring note.** When counsel v2 is wired into `buildDefencePackageJob`, pass
+  `narrative.addressExhibit` / `laterOrderExhibit` to `meta`, and apply the same allowed-sentence exemption
+  before the job's `validateNarrative` call.
+
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
 `lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude
