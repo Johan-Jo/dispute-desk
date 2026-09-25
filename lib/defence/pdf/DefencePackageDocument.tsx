@@ -40,6 +40,7 @@ import {
   lineItemsTotal,
   orderPlacedLine,
   addressCard,
+  laterOrderCard,
   productsOf,
   shipmentCards,
   shipmentsOf,
@@ -50,6 +51,7 @@ import {
 } from "../render/documentModel";
 import type {
   AddressExhibit,
+  LaterOrderExhibit,
   ComposedDocumentBlock,
   EvidenceFact,
   ManualEvidenceRecord,
@@ -101,6 +103,8 @@ export interface DefencePackageMeta {
   /** Counsel v2: shipping and billing addresses, printed only when the letter
    *  claims they are identical (DefenceNarrativeOutput.addressExhibit). */
   addressExhibit?: AddressExhibit | null;
+  /** Counsel v2: the customer's later order (DefenceNarrativeOutput.laterOrderExhibit). */
+  laterOrderExhibit?: LaterOrderExhibit | null;
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -736,6 +740,11 @@ export function DefencePackageDocument({
               {chronologyBody ? (
                 <View style={{ marginBottom: 18 }}>
                   <Prose text={chronologyBody} />
+                </View>
+              ) : null}
+              {laterOrderCard(meta.laterOrderExhibit) ? (
+                <View style={[styles.shipRow, { marginBottom: 18 }]} wrap={false}>
+                  <ShipmentCard card={laterOrderCard(meta.laterOrderExhibit)!} wide />
                 </View>
               ) : null}
               {chronology.length > 0 ? <Chronology events={chronology} shipments={shipments} /> : null}

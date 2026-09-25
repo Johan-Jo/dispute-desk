@@ -310,6 +310,14 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     if (later.carrier && later.carrier === carrier) specifics.laterOrderCarrier = "the same carrier";
     add({
       id: "later_order",
+      laterOrderExhibit: {
+        name: later.name,
+        placedAt: later.createdAt,
+        total: later.total ?? null,
+        cardLast4: later.cardLast4,
+        wallet: later.wallet ? walletName(later.wallet) : null,
+        deliveredAt: later.deliveredAt,
+      },
       timelineEvent: {
         at: later.createdAt,
         text:

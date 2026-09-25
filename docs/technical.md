@@ -3407,8 +3407,15 @@ writes item-not-received letters from a code-built claim ledger. Address rule:
   `checks.ts` `isAllowedAddressSentence` lets through only "shipping address is the same as the billing
   address" (and the AVS sentence), never with delivered/reached/received, and only when the ledger
   holds the claim; everything else still hits the address-delivery detector.
+- **Later order.** The `later_order` claim carries the order as `narrative.laterOrderExhibit`; the PDF
+  (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card above the timeline
+  (`documentModel.ts` `laterOrderCard`).
+- **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
+  later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
+  second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
+  "not supported by the record"; the fixed request line with the amount follows.
 - **Wiring note.** When counsel v2 is wired into `buildDefencePackageJob`, pass
-  `narrative.addressExhibit` to `meta.addressExhibit`, and apply the same allowed-sentence exemption
+  `narrative.addressExhibit` / `laterOrderExhibit` to `meta`, and apply the same allowed-sentence exemption
   before the job's `validateNarrative` call.
 
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)

@@ -13,7 +13,7 @@
  * "delivered" ONLY when a carrier recorded the delivery.
  */
 
-import type { AddressExhibit, EvidenceFact } from "../types";
+import type { AddressExhibit, EvidenceFact, LaterOrderExhibit } from "../types";
 import { classifyChronologyEvent, type ChronologyEvent } from "../chronology";
 import type { LineItem } from "./lineItems";
 
@@ -235,6 +235,30 @@ export function addressCard(ex: AddressExhibit | null | undefined): ShipmentCard
     eyebrow: "Order addresses",
     product: "Shipping address identical to billing address",
     status: { tone: "green", label: "Identical" },
+    fields,
+  };
+}
+
+/** The same customer's later order as a card (counsel claimLedger.ts
+ *  `later_order`): the order the letter relies on, shown, not described. */
+export function laterOrderCard(ex: LaterOrderExhibit | null | undefined): ShipmentCard | null {
+  if (!ex) return null;
+  const day = (iso: string | null) => {
+    const t = iso ? Date.parse(iso) : NaN;
+    if (Number.isNaN(t)) return null;
+    const d = new Date(t);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  };
+  const fields: ShipmentCardField[] = [{ label: "Placed", value: day(ex.placedAt) ?? "—" }];
+  if (ex.total) fields.push({ label: "Amount", value: ex.total });
+  if (ex.cardLast4) fields.push({ label: "Paid with", value: `Card ending ${ex.cardLast4}${ex.wallet ? ` · ${ex.wallet}` : ""}` });
+  if (day(ex.deliveredAt)) fields.push({ label: "Delivered", value: day(ex.deliveredAt)! });
+  return {
+    index: 0,
+    eyebrow: "Same customer's later order",
+    product: `Order ${ex.name}`,
+    status: { tone: "green", label: "Paid" },
     fields,
   };
 }

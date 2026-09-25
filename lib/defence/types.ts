@@ -486,6 +486,16 @@ export interface AddressExhibit {
   avs?: { code: string; network: string } | null;
 }
 
+/** The same customer's later order (Admin API read), shown as an exhibit. */
+export interface LaterOrderExhibit {
+  name: string;
+  placedAt: string;
+  total: string | null;
+  cardLast4: string | null;
+  wallet: string | null;
+  deliveredAt: string | null;
+}
+
 export interface DefenceNarrativeOutput {
   executiveSummary: NarrativeSection;
   transactionOverviewArgument: NarrativeSection;
@@ -506,6 +516,9 @@ export interface DefenceNarrativeOutput {
    *  claim is never made without the addresses shown (maintainer,
    *  2026-09-25). */
   addressExhibit?: AddressExhibit;
+  /** Counsel v2: the customer's later order, printed as a card in the
+   *  Chronology section when the letter relies on it (Grok review). */
+  laterOrderExhibit?: LaterOrderExhibit;
   omittedSections: OmittedSection[];
   /** Free-text warnings from the model — informational; validation may
    *  promote them to errors. */
