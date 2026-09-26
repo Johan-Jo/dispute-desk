@@ -1,6 +1,6 @@
 # Counsel v2 — cost refactor
 
-Status: PLAN, 2026-09-26. Nothing here is built.
+Status: BUILT 2026-09-26 on `feat/counsel-v2-cost-refactor` (§10); not yet in production.
 Scope: cost of the counsel v2 letter writer (`lib/defence/counsel/`) only. Letter rules, exhibits and
 validators stay as they are.
 
@@ -154,3 +154,46 @@ Two ways to stop the spend in the meantime:
 - set `DEFENCE_COUNSEL_V2=off` in the production Vercel env (no deploy; the template writer takes over), or
 - lower `DEFENCE_COUNSEL_DAILY_RUN_CAP`.
 #352543's v12 letter is already written and stays the filed version either way.
+
+## 10. What was built (2026-09-26)
+
+All six changes (§3.1–§3.6) and the telemetry (§6), with three deviations found by the offline eval (§5).
+
+| | Plan | Built |
+|---|---|---|
+| Code-written text | Shipping pair, carrier sentence, conclusion; model writes summary + optional chronology sentence | Shipping and Conclusion word for word as FILED in v12 (package `caa70bf2`). **No Chronology prose**, as in v12: a code-written dispatch sentence volunteered "shipped ten days after it was placed" on #350764 |
+| Review model | Haiku 4.5 | **Sonnet 4.6.** Haiku flagged the correct "sixty-one days later … fourteen days after that" on #352543 as "inverted" in every run (5/5), even with the intervals precomputed; Sonnet flagged none. +~$0.005 per package |
+| New code check | — | The summary may not say "the complete order" unless `whole_order_in_shipment` is in the ledger (#350764 said it without the proof) |
+| Static summary prompt | ≤ 1,500 tokens | ~1,250 tokens (above Sonnet's 1,024 cache minimum), cached |
+
+**Eval (`scripts/counsel/eval-counsel.mts`, production inputs, read-only).** Only **4** eligible cases exist: of
+the last 1,000 non-receipt disputes, the rest are PayPal/Klarna (the job never runs counsel on them), have no single
+carrier-confirmed delivery, or have no package. Two full runs (8 letters):
+
+- 8/8 letters written by counsel (no template fallback); 7/8 first drafts clean;
+- judge decides for the merchant from the summary alone: 8/8;
+- 2.0–2.3 calls and $0.011–0.026 per package **uncached** (the test route has no caching; production caches the
+  summary prompt), against ≈ $0.45 before;
+- the judge's only "unclear" flags (3 of 8 letters) are on **code-written v12 sentences**: "The delivery shown on the
+  card above is the carrier's own scan, published on its public tracking page; the issuer can open it with the link
+  below." and "There was no partial or second shipment, so no part of the non-receipt claim falls outside this
+  delivery." Left as filed; the maintainer decides.
+
+**#352543 side by side** (`scripts/.snapshots/counsel-eval/`, git-ignored): `352543-v12-filed.pdf` (production),
+`352543-v12-local.pdf` (the same letter through the local render path; text identical to the filed PDF) and
+`352543-refactor-local.pdf`. Only the executive summary differs:
+
+- v12: "The cardholder claims the order was not received. The carrier recorded delivery of the complete order on 6 July
+  2026, and sixty-one days later the same customer placed a new order with the same payment method — fourteen days
+  before opening this dispute. The non-receipt claim is not supported by the carrier's delivery record or by the
+  customer's subsequent purchase. The merchant requests that the chargeback be reversed."
+- refactor: "The cardholder says the order was never received. The carrier recorded delivery of the complete order on
+  6 July 2026. Sixty-one days later, the same customer placed a new order, paid with a card ending in the same four
+  digits, and fourteen days after that opened this dispute. The non-receipt claim is not supported by the carrier's
+  delivery record or by the customer's later purchase. The merchant requests that the chargeback be reversed."
+
+**Rebuilds after release.** v12 carries no input hash, so the first rebuild of #352543 (or any pre-refactor counsel
+package) writes a new letter once (~$0.015); rebuilds after that reuse it at $0.
+
+**Migration** `20260926120000_defence_package_runs_counsel_cost` (`cached_tokens`, `stage_tokens`) is applied to dev
+and prod (additive, nullable), so run rows are not lost when the code ships.

@@ -85,6 +85,8 @@ export interface CallClaudeResult {
   promptTokens: number;
   completionTokens: number;
   cachedTokens: number;
+  /** Tokens written to the prompt cache (billed at 1.25× input). Absent on errors. */
+  cacheWriteTokens?: number;
   durationMs: number;
   error: string | null;
 }
@@ -156,6 +158,7 @@ export async function callClaudeMessages(
     const promptTokens = data.usage?.input_tokens ?? 0;
     const completionTokens = data.usage?.output_tokens ?? 0;
     const cachedTokens = data.usage?.cache_read_input_tokens ?? 0;
+    const cacheWriteTokens = data.usage?.cache_creation_input_tokens ?? 0;
 
     const block = data.content?.find((b) => b.type === "text");
     const raw = block?.text ?? null;
@@ -165,6 +168,7 @@ export async function callClaudeMessages(
         promptTokens,
         completionTokens,
         cachedTokens,
+        cacheWriteTokens,
         durationMs,
         error: "Empty response from Claude",
       };
@@ -181,6 +185,7 @@ export async function callClaudeMessages(
       promptTokens,
       completionTokens,
       cachedTokens,
+      cacheWriteTokens,
       durationMs,
       error: null,
     };
