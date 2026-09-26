@@ -990,27 +990,33 @@ function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
 export async function checkDailyCap(
   sb: ReturnType<typeof getServiceClient>,
   shopId: string,
-): Promise<{ capReached: boolean; generations: number; inputTokens: number }> {
+): Promise<{ capReached: boolean; generations: number; inputTokens: number; counselRuns: number }> {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await sb
     .from("defence_package_runs")
-    .select("prompt_tokens")
+    .select("prompt_tokens, strategy_keys")
     .eq("shop_id", shopId)
     .eq("daily_bucket", today);
   if (error) {
     // Soft-fail: log and proceed. We'd rather make the call than block on a
     // count query.
     console.warn("[defence] daily-cap query failed", error.message);
-    return { capReached: false, generations: 0, inputTokens: 0 };
+    return { capReached: false, generations: 0, inputTokens: 0, counselRuns: 0 };
   }
+  // Counsel v2 runs (lib/defence/counsel/run.ts) are uncached multi-call runs
+  // of 100k+ prompt tokens: counting them against the template writer's token
+  // cap would block every other build for the shop that day. They count as
+  // generations, and have their own per-day run cap (counsel/run.ts).
+  const isCounsel = (r: unknown) =>
+    ((r as { strategy_keys?: string[] | null }).strategy_keys ?? []).includes("counsel_v2");
   const generations = data?.length ?? 0;
-  const inputTokens = (data ?? []).reduce(
-    (sum, r) => sum + ((r as { prompt_tokens?: number | null }).prompt_tokens ?? 0),
-    0,
-  );
+  const counselRuns = (data ?? []).filter(isCounsel).length;
+  const inputTokens = (data ?? [])
+    .filter((r) => !isCounsel(r))
+    .reduce((sum, r) => sum + ((r as { prompt_tokens?: number | null }).prompt_tokens ?? 0), 0);
   const capReached =
     generations >= DAILY_GENERATION_CAP || inputTokens >= DAILY_TOKEN_CAP;
-  return { capReached, generations, inputTokens };
+  return { capReached, generations, inputTokens, counselRuns };
 }
 
 export async function writeRun(

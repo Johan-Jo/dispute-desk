@@ -37,7 +37,8 @@ import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun } from "@/lib/defence/narrativeWriter";
-import { counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
+import { COUNSEL_DAILY_RUN_CAP, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
+import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
@@ -538,7 +539,7 @@ export async function handleBuildDefencePackage(
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
   if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment) {
     const cap = await checkDailyCap(sb, pkg.shop_id);
-    if (!cap.capReached) {
+    if (!cap.capReached && cap.counselRuns < COUNSEL_DAILY_RUN_CAP) {
       try {
         const orderCtx = deriveOrderContext(
           sectionsRaw.map((s) => ({ type: s.type, label: s.label, source: s.source, data: s.data ?? {}, fieldsProvided: s.fieldsProvided ?? [] })),
@@ -564,6 +565,19 @@ export async function handleBuildDefencePackage(
                   primary_domain: (shop as { primary_domain?: string | null }).primary_domain ?? null,
                 })
               : "The merchant"),
+          // Every run is recorded, letter or not, so the counsel cap sees it.
+          onSpend: async (spend) => {
+            await writeRun(sb, { shopId: pkg.shop_id, packageId }, {
+              model: spend.model,
+              packageMode: classification.packageMode,
+              promptTokens: spend.tokens.prompt,
+              completionTokens: spend.tokens.completion,
+              durationMs: spend.durationMs,
+              validationStatus: spend.ok ? "ok" : "failed",
+              strategyKeys: ["counsel_v2"],
+              promptVersion: COUNSEL_PROMPT_VERSION,
+            });
+          },
         });
       } catch (err) {
         console.warn(
@@ -571,18 +585,6 @@ export async function handleBuildDefencePackage(
             (err instanceof Error ? err.message : String(err)),
         );
         counselRes = null;
-      }
-      if (counselRes) {
-        await writeRun(sb, { shopId: pkg.shop_id, packageId }, {
-          model: counselRes.modelUsed,
-          packageMode: classification.packageMode,
-          promptTokens: counselRes.tokens.prompt,
-          completionTokens: counselRes.tokens.completion,
-          durationMs: counselRes.durationMs,
-          validationStatus: "ok",
-          strategyKeys: ["counsel_v2"],
-          promptVersion: counselRes.promptVersion,
-        });
       }
     }
   }

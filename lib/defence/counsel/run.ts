@@ -24,6 +24,9 @@ import type { CustomerOrderSummary, LedgerClaim, LedgerInput } from "./types";
 export const COUNSEL_PROMPT_FAMILY = "counsel_v2";
 export const COUNSEL_DEFAULT_MODEL = "claude-sonnet-4-6";
 
+/** Counsel runs per shop per day (each is ~15–25 uncached model calls). */
+export const COUNSEL_DAILY_RUN_CAP = Number(process.env.DEFENCE_COUNSEL_DAILY_RUN_CAP ?? "25");
+
 export function counselEnabled(moduleKey: string): boolean {
   return moduleKey === "inr_product_not_received" && process.env.DEFENCE_COUNSEL_V2 !== "off";
 }
@@ -129,6 +132,9 @@ export async function runCounsel(args: {
   cardLast4: string | null;
   merchantName: string;
   log?: (m: string) => void;
+  /** Called once after the model calls, letter or not, so every run's spend
+   *  is recorded against the counsel cap. */
+  onSpend?: (spend: { model: string; tokens: CounselRunResult["tokens"]; durationMs: number; ok: boolean }) => Promise<void>;
 }): Promise<CounselRunResult | null> {
   if (!counselEnabled(args.moduleKey)) return null;
   const started = Date.now();
@@ -144,7 +150,10 @@ export async function runCounsel(args: {
     disputeCurrency: args.disputeCurrency,
     customerOrders,
   });
-  if (!ledger) return null;
+  if (!ledger) {
+    console.info(`[counsel] no ledger for ${args.orderName ?? "?"} (not a single carrier-confirmed delivery); template writer`);
+    return null;
+  }
 
   const delivery = args.facts.find(
     (f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && str(obj(f.value)?.trackingNumber),
@@ -193,7 +202,8 @@ export async function runCounsel(args: {
     merchantName: args.merchantName,
     pageContext,
     call,
-    candidates: 3,
+    // 5, as tested: with 3, a case whose drafts all trip one check falls back.
+    candidates: 5,
     log: args.log,
     check: {
       ledger,
@@ -207,7 +217,15 @@ export async function runCounsel(args: {
       trackingUrl,
     },
   });
-  if (!result.best) return null;
+  await args.onSpend?.({ model, tokens, durationMs: Date.now() - started, ok: !!result.best });
+  if (!result.best) {
+    // Visible in the logs: why the template writer took over.
+    console.warn(
+      `[counsel] no draft passed for ${args.orderName ?? "?"}: ` +
+        result.candidates.map((c, i) => `#${i + 1} ${c.issues.length ? c.issues.join(" | ").slice(0, 400) : `judge: ${JSON.stringify(c.verdict?.unclearSentences ?? [])}`}`).join(" || "),
+    );
+    return null;
+  }
 
   return {
     narrative: toNarrative(
