@@ -3077,7 +3077,7 @@ The workspace route and the `OUTCOME_DETECTED` email effect (`disputeEffectsDisp
 **Layout (DecidedView3):**
 1. **Header card.** "Order {n} — {reason}", a Lost/Won badge, "Decided: {date}", "View in Shopify Admin", then Amount / Customer / Date filed / Dispute reason.
 2. **One card holding the tabs and the panel.** On Overview, in order:
-   - **Hero.** An icon tile, "Dispute lost/won", "{product} · {claim}", a chip ("Final · nothing left to file" / "Final · the money is yours"), and the amount. Then the **executive summary** paragraph, then **Who responded:** (first line = responder, second = hold reason).
+   - **Hero.** An icon tile, "Dispute lost/won", "{product} · {claim}", a chip ("Final · nothing left to file" / "Final · the money is yours"), and the amount. Then the **executive summary** paragraph. (The design's "Who responded:" line was removed from the page on 2026-09-26 because the summary already says who filed; the outcome email keeps it.)
    - **What we saw in the record / What carried the case.** Facts, each with its source line; the top loss fact carries "Banks weight this heavily". Not-received losses add a note.
    - **What wins this type of dispute.** A "{had} / {total}" coverage score, a segmented bar, then the rows with On record / Missing / None / In policy / Not used pills.
    - **Next time** (losses only).

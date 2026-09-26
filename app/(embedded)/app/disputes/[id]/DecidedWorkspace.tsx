@@ -289,7 +289,12 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
               gap: 4,
               borderBottom: `1px solid ${DD.border}`,
               padding: "0 8px",
+              // Horizontal scroll only: the active tab's -1px underline
+              // overhang otherwise made the row scroll vertically and
+              // painted stray scrollbar arrows beside the tabs.
               overflowX: "auto",
+              overflowY: "hidden",
+              scrollbarWidth: "none",
               whiteSpace: "nowrap",
             }}
           >
@@ -437,27 +442,9 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                   >
                     {summary}
                   </div>
-                  {view.who ? (
-                    <div
-                      style={{
-                        borderTop: `1px solid ${hero.divider}`,
-                        paddingTop: 14,
-                        marginLeft: HERO_INDENT,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 4,
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      <span style={pretty}>
-                        <strong style={{ fontWeight: 600 }}>{t("disputes.decidedView.who.label")}</strong>{" "}
-                        {r(view.who.first)}
-                      </span>
-                      {view.who.second ? (
-                        <span style={{ color: DD.subtle, ...pretty }}>{r(view.who.second)}</span>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  {/* The design's "Who responded:" line was removed at the
+                      maintainer's request (2026-09-26): the summary paragraph
+                      above already states who filed. The outcome email keeps it. */}
                 </div>
 
                 {/* What we saw / What carried the case */}
