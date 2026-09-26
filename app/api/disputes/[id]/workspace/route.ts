@@ -14,7 +14,8 @@ import {
   merchantSuppliedAcknowledgementFromItems,
   resolveHeldState,
 } from "@/lib/disputes/heldState";
-import { loadDecidedResponse, type DecidedDisputeRow } from "@/lib/disputes/loadDecidedResponse";
+import { loadDecidedContext, type DecidedDisputeRow } from "@/lib/disputes/loadDecidedResponse";
+import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
@@ -1173,10 +1174,55 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // Decided cases only: who responded, and why DisputeDesk did not when it
   // didn't (lib/disputes/decidedResponse). Replaces the single "decided before
   // DisputeDesk filed" sentence, which was false on cases we held on purpose.
-  const decidedResponse =
+  const decidedOutcome =
     row.normalized_status === "won" || row.normalized_status === "lost"
-      ? await loadDecidedResponse(sb, row as DecidedDisputeRow)
+      ? (row.normalized_status as "won" | "lost")
       : null;
+  const decidedContext = decidedOutcome
+    ? await loadDecidedContext(sb, row as DecidedDisputeRow, { withOrder: true })
+    : null;
+  const decidedResponse = decidedContext?.response ?? null;
+  /* Inputs for the decided view (lib/disputes/decidedView). The client builds
+   * the view so dates and money format in the merchant's locale. Facts are the
+   * merchant-side evidence items — the complete record, including facts
+   * correctly withheld from the issuer. */
+  const decidedView: DecidedViewInputs | null = decidedOutcome
+    ? (() => {
+        const facts: Record<string, Record<string, unknown>> = {};
+        for (const [field, item] of Object.entries(evidenceItemsByField)) {
+          if (item.payload) facts[field] = item.payload as Record<string, unknown>;
+        }
+        const orderPayload = facts.order_confirmation ?? null;
+        const rawItems = Array.isArray(orderPayload?.lineItems)
+          ? (orderPayload.lineItems as Array<{ title?: unknown; quantity?: unknown }>)
+          : [];
+        const fatal = (packRow?.pack_json as { fatal_loss?: { reason?: string | null } } | null)
+          ?.fatal_loss;
+        const amount =
+          decidedOutcome === "lost"
+            ? Number(row.outcome_amount_lost ?? row.amount ?? 0)
+            : Number(row.outcome_amount_recovered ?? row.amount ?? 0);
+        return {
+          outcome: decidedOutcome,
+          phase: row.phase === "inquiry" ? "inquiry" : "chargeback",
+          reason: row.reason ?? null,
+          amount,
+          currency: row.currency_code ?? "USD",
+          openedAt: row.initiated_at ?? null,
+          dueAt: row.due_at ?? null,
+          closedAt: row.closed_at ?? null,
+          response: decidedResponse,
+          order: decidedContext?.order ?? null,
+          lineItems: rawItems
+            .filter((i) => typeof i.title === "string" && i.title.length > 0)
+            .map((i) => ({ title: i.title as string, quantity: Number(i.quantity ?? 1) })),
+          facts,
+          fatalLossReason: fatal?.reason ?? null,
+          firstPackAt: decidedContext?.firstPackAt ?? null,
+          events: decidedContext?.events ?? [],
+        };
+      })()
+    : null;
 
   return NextResponse.json({
     dispute,
@@ -1203,6 +1249,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // merchant) and the one contribution that can still change it.
     held,
     decidedResponse,
+    decidedView,
     evidenceLineItems,
     submissionSummary,
     // Derived first-class attachment inventory for the dispute Review

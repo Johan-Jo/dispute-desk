@@ -84,6 +84,8 @@ export const DECIDED_AUDIT_EVENT_TYPES = [
   "billing_blocked_email_sent",
   "review_conceded",
   "review_approved",
+  // Timeline only (decided view): the merchant was told.
+  "fatal_loss_alert_sent",
 ] as const;
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -118,7 +120,9 @@ function payloadText(p: Record<string, unknown>): string {
   return parts.join(" ").toLowerCase();
 }
 
-function reasonsFromEvent(ev: DecidedAuditEvent, hasPack: boolean): HoldReason[] {
+/** The hold reasons one audit row supports. Exported for the decided view's
+ *  timeline, which dates the hold by the first row carrying the reason. */
+export function holdReasonsOfEvent(ev: DecidedAuditEvent, hasPack: boolean): HoldReason[] {
   const p = asRecord(ev.event_payload);
   const text = payloadText(p);
   const out: HoldReason[] = [];
@@ -135,6 +139,12 @@ function reasonsFromEvent(ev: DecidedAuditEvent, hasPack: boolean): HoldReason[]
       if (hasPack) return [];
       if (text.includes("auto_build_off")) return ["auto_build_off"];
       if (text.includes("quota_exceeded") || text.includes("feature_blocked")) return ["plan_limit"];
+      return [];
+    case "auto_save_blocked":
+    case "defence_package_blocked_unsafe_claim":
+      break;
+    default:
+      // Notifications, approvals and anything added later hold nothing.
       return [];
   }
 
@@ -167,7 +177,7 @@ export function classifyHoldReason(input: {
 }): HoldReason | null {
   const found = new Set<HoldReason>();
   for (const ev of input.events) {
-    for (const r of reasonsFromEvent(ev, input.hasPack)) found.add(r);
+    for (const r of holdReasonsOfEvent(ev, input.hasPack)) found.add(r);
   }
   if (input.reviewState === "conceded") found.add("merchant_conceded");
   // An approval clears the review hold: "waiting for your review" would then

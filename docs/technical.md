@@ -3041,10 +3041,10 @@ Rules that are load-bearing:
 | `before_install` | `closed_at` < first install (`min(shops.created_at, installed_at)` — `installed_at` moves on reinstall) | "This dispute was decided before DisputeDesk was installed." |
 | `we` | any DisputeDesk save: `disputes.evidence_saved_to_shopify_at`, `evidence_packs.saved_to_shopify_at`, or a `defence_packages` row with `status='submitted'` | `outcomeExplanation` filed copy |
 | `sent_before_install` | `evidenceSentOn` < first install | "A response was sent through Shopify on {date}, before DisputeDesk was installed." |
-| `shopify` | `evidenceSentOn` set, not ours | "DisputeDesk did not file evidence on this case. The response on file was sent through Shopify on {date}." |
-| `none` | nothing sent | decided before `due_at` → "The decision came on {date}, before the response deadline and before any evidence was filed."; otherwise "No evidence was filed on this case." |
+| `shopify` | `evidenceSentOn` set, not ours | "Shopify sent its automatic response on {date}." (design wording) |
+| `none` | nothing sent | decided before `due_at` → "The bank decided on {date}, before the response deadline and before any response was filed."; otherwise "No response was filed." |
 
-`shopify` covers both Shopify's automatic response and a merchant filing in Admin — the API cannot distinguish them, so copy says "sent through Shopify", never "Shopify's automatic response".
+`shopify` covers both Shopify's automatic response and a merchant filing in Admin — the API cannot distinguish them. PR 1 therefore said "sent through Shopify"; the design (PR 2) says "Shopify sent its automatic response", which is what ships. **Open question for the maintainer** (plan §4a): keep the design wording, or return to "sent through Shopify". The hold-reason sentence is the second line, in the design's form "DisputeDesk held this case: {reason}".
 
 **Hold reason** (appended sentence; `shopify` / `none` only). Classified from `audit_events` (`auto_save_blocked`, `parked_for_review`, `defence_package_blocked_unsafe_claim`, `auto_build_skipped`, `billing_blocked_email_sent`, `review_conceded`, `review_approved`) plus `disputes.review_state`. Priority order — first match wins: `merchant_conceded` → `not_shipped` (`inr_no_fulfillment`) → `refunded` (`refund_issued`) → `covered` → `plan_limit` (`quota_exceeded`/`feature_blocked`) → `auto_build_off` → `awaiting_review` → `thin_evidence`. Rules:
 
@@ -3057,7 +3057,51 @@ Prod distribution at ship (1,111 decided): 880 `before_install`, 85 `we`, 27 `se
 
 **Email.** Same sentences, same order. `before_install` / `sent_before_install` add no paragraph (unprompted "before your time with us" is noise). A case filed through the older evidence-pack path has no package row; the resolver's filing date stands in so it still gets "We filed your evidence on {date}".
 
-**Live-case UI suppressed on decided disputes.** `OverviewTab`: the gate actions ("Add missing evidence" / "Save anyway" — `isReadOnly` is only true once *we* saved) and "What happens now". `WorkspaceShell`: the strength chip. A dedicated decided view (outcome card, "What we saw", "What wins this type", "Next time", past-tense timeline) is PR 2 of the plan.
+**Live-case UI suppressed on decided disputes.** `OverviewTab`: the gate actions ("Add missing evidence" / "Save anyway" — `isReadOnly` is only true once *we* saved) and "What happens now". `WorkspaceShell`: the strength chip. Since PR 2 (below) a decided dispute no longer renders `OverviewTab` at all; these suppressions remain as the fallback when `decidedView` is absent.
+
+#### Decided-dispute view (2026-09-26)
+
+**Design (the spec, rule 8):** Claude Design project `39b1425e-9413-47de-8fe4-64c9cc11af3a`, `Decided Dispute View.dc.html` / `DecidedView.dc.html`. **Code:** `lib/disputes/decidedView.ts` (pure builder), `app/(embedded)/app/disputes/[id]/DecidedWorkspace.tsx` (renderer), routed from `WorkspaceShell` whenever the workspace API returns `decidedView` (won/lost only).
+
+**Data flow.** The workspace route assembles `DecidedViewInputs`:
+- the `loadDecidedContext` result (who responded, audit events, first pack date, `shopify_orders` row)
+- the latest pack's evidence items by field, which is the merchant-side record, including facts withheld from the issuer
+- line items from `order_confirmation`
+- `pack_json.fatal_loss.reason`
+
+The client calls `buildDecidedView(inputs, { date, money })`, so dates and money format in the merchant's locale. Every string is a token under `disputes.decidedView.*` (6 locales).
+
+**Layout, top to bottom:**
+1. **Header card.** "Order {n}", then a Lost/Won badge and a Chargeback/Inquiry badge, then "View in Shopify Admin", then Amount · Customer · Opened · Response was due · Decided.
+2. **Tab row,** marked "Read-only · decided case".
+3. **Outcome card** (neutral). A dot, "Dispute lost/won · decided {date}", "{product} · {claim}", "Amount lost / Recovered", then the **Who responded** block (first line = responder, second = hold reason), then a footer: "This decision is final…" plus the link to the bank's reasoning in Shopify Admin.
+4. **What we saw in the record / What carried the case,** next to **What wins this type of dispute** (per reason family, marked had / missing / none for this case).
+5. **Next time** (lost only).
+6. **What happened** (past-tense timeline).
+
+The Evidence and Review tabs render their normal bodies inside a card.
+
+**Rules that are load-bearing:**
+- **Checklist rows are observations.** No evidence items at all → the checklist is hidden, not marked "Missing" everywhere (prod #347615). "Delivery to the billing address" needs a confirmed delivery **and** shipping = billing **and** AVS match. Delivery alone read "Had" on #349145, whose card address did not match. The AVS row is dropped when no AVS exists (PayPal, Klarna).
+- **"Next time" fires only on a data trigger:**
+  - never shipped → ship or cancel (with the real days unshipped, from `shopify_orders.created_at_shopify` to `initiated_at`)
+  - shipped after the dispute → ship or cancel
+  - fulfilled without tracking → share tracking
+  - fraud + Shopify risk CANCEL/INVESTIGATE + shipped → hold high-risk orders
+  - fraud without 3DS → 3-D Secure
+  - one per family for product, refund and subscription
+
+  At most three. Never on a win.
+- **Timeline steps come only from stored timestamps:**
+  - `initiated_at`
+  - first `evidence_packs.created_at`. `pack_created` audit rows mostly lack `dispute_id` (34 of 870).
+  - the first audit row carrying the winning hold reason
+  - `fatal_loss_alert_sent` / `billing_blocked_email_sent`
+  - our filing date
+  - `evidenceSentOn` (Shopify's response, only when we did not file)
+  - `shopify_orders.cancelled_at` on or after the dispute opened
+  - `closed_at`
+- **The "not-received" note** ("the bank's question is 'was it delivered?'…") renders only on a delivery-family loss without confirmed delivery.
 
 ### Returned-to-sender Gate (2026-08-20)
 
