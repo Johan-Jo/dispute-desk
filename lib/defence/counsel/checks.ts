@@ -144,11 +144,17 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   if (words(summaryText) > 80) {
     issues.push(
       `summary: ${words(summaryText)} words, the limit is 80 — cut at least ${words(summaryText) - 75} words. ` +
-        "Drop a supporting detail or a clause that restates another; keep the claim, " +
+        "Drop a supporting detail (a delivery notification, dispatch timing, a date that repeats an interval) or a clause that restates another; keep the claim, " +
         "the delivery, the later order, the sentence tying them to the claim, and the request.",
     );
   }
   if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
+  // "The complete order" is a claim: only the item-by-item fulfilment check
+  // (whole_order_in_shipment) proves it (eval, #350764).
+  const wholeOrder = summaryText.match(/\b(?:complete|entire|whole|full)\s+order\b|\ball (?:of )?the (?:items|goods|products)\b/i);
+  if (wholeOrder && !byId.has("whole_order_in_shipment")) {
+    issues.push(`summary: "${wholeOrder[0]}" — the records do not show the whole order in one shipment; say "the order"`);
+  }
   // Distinctive phrases, like specifics, appear at most twice in the letter.
   for (const phrase of ["same four digits", "same apple pay wallet", "public tracking page", "not a merchant document", "not the merchant's"]) {
     const n = P.filter((p) => p.where !== "conclusion").map((p) => p.text).join("\n").toLowerCase().split(phrase).length - 1;

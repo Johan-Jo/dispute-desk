@@ -3,7 +3,7 @@
  *
  * Item-not-received disputes only. Builds the claim ledger from the pack plus
  * a live read of the customer's other orders, writes the letter (generate.ts:
- * code-written sections, one model-written summary, one small-model review,
+ * code-written sections, one model-written summary, one review call,
  * at most one correction) and returns it as a DefenceNarrativeOutput — or
  * null, in which case the job writes the template letter exactly as before.
  * Nothing here can make a case file less than it did without counsel.
@@ -28,8 +28,11 @@ import type { CounselDraft, CustomerOrderSummary, LedgerClaim, LedgerInput } fro
 
 export const COUNSEL_PROMPT_FAMILY = "counsel_v2";
 export const COUNSEL_DEFAULT_MODEL = "claude-sonnet-4-6";
-/** The review call (fact-check + clarity) runs on the small model. */
-export const COUNSEL_REVIEW_MODEL = "claude-haiku-4-5";
+/** The review call (fact-check + clarity). Not Haiku: in the offline eval
+ *  (2026-09-26) it flagged correct intervals on #352543 as "inverted" in every
+ *  run, its own note calling the sentence correct; Sonnet flagged none. One
+ *  Sonnet review adds ~$0.005 per package. Override: DEFENCE_COUNSEL_REVIEW_MODEL. */
+export const COUNSEL_REVIEW_MODEL = "claude-sonnet-4-6";
 
 /** Counsel runs per shop per day (each is 2–4 model calls since the cost refactor). */
 export const COUNSEL_DAILY_RUN_CAP = Number(process.env.DEFENCE_COUNSEL_DAILY_RUN_CAP ?? "25");
@@ -295,7 +298,7 @@ export async function runCounsel(args: {
       model: m,
       // The summary system prompt is static across cases: cached, so the
       // correction and the next case's write read it at the cache rate. The
-      // review prompt is under Haiku's minimum cacheable length; not marked.
+      // review prompt is under the minimum cacheable length; not marked.
       system: [stage === "review" ? { type: "text", text: system } : { type: "text", text: system, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: user }],
       temperature,
