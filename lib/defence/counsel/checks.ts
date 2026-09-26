@@ -31,6 +31,11 @@ export interface CheckContext {
   /** Identifiers the page already prints: order number, tracking number, card digits, amount. */
   pageIdentifiers: string[];
   trackingUrl: string | null;
+  /** Multi-parcel: every parcel's carrier (none may be named in the prose). */
+  carrierNames?: string[];
+  /** Product names the prose may quote: masked before the number, copy and
+   *  style checks ("Sunburst Mineral SPF 50 Sunscreen" is not a number 50). */
+  productNames?: string[];
 }
 
 const MONTH = "(?:January|February|March|April|May|June|July|August|September|October|November|December)";
@@ -83,11 +88,14 @@ const LINT: Array<[RegExp, string]> = [
 
 type Where = "summary" | EvidenceSectionKey | "conclusion";
 
-function parts(d: CounselDraft): Array<{ where: Where; text: string; claimIds: string[] }> {
+function parts(d: CounselDraft, productNames: readonly string[] = []): Array<{ where: Where; text: string; claimIds: string[] }> {
+  // Longest first, so a name that contains another is masked whole.
+  const names = [...productNames].filter(Boolean).sort((a, b) => b.length - a.length);
+  const mask = (t: string) => names.reduce((x, n) => x.split(n).join("the product"), t);
   return [
-    { where: "summary", text: (d.summary?.paragraphs ?? []).join(" "), claimIds: d.summary?.claimIds ?? [] },
-    ...(d.evidenceSections ?? []).map((s) => ({ where: s.key as Where, text: (s.paragraphs ?? []).join(" "), claimIds: s.claimIds ?? [] })),
-    { where: "conclusion", text: (d.conclusion?.paragraphs ?? []).join(" "), claimIds: d.conclusion?.claimIds ?? [] },
+    { where: "summary", text: mask((d.summary?.paragraphs ?? []).join(" ")), claimIds: d.summary?.claimIds ?? [] },
+    ...(d.evidenceSections ?? []).map((s) => ({ where: s.key as Where, text: mask((s.paragraphs ?? []).join(" ")), claimIds: s.claimIds ?? [] })),
+    { where: "conclusion", text: mask((d.conclusion?.paragraphs ?? []).join(" ")), claimIds: d.conclusion?.claimIds ?? [] },
   ];
 }
 
@@ -103,7 +111,7 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     if (seenKeys.has(s.key)) issues.push(`shape: section "${s.key}" appears twice`);
     seenKeys.add(s.key);
   }
-  const P = parts(d);
+  const P = parts(d, ctx.productNames);
   for (const p of P) for (const id of p.claimIds) if (!byId.has(id)) issues.push(`${p.where}: unknown claim "${id}"`);
 
   // 2. grounding: every date and number must be a specific of a ledger
@@ -133,8 +141,8 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const count = (needle: string) => (needle ? all.split(needle).length - 1 : 0);
   if (count(ctx.merchantName) > 1) issues.push(`copy: "${ctx.merchantName}" is named ${count(ctx.merchantName)} times (at most once)`);
   // Never the carrier's brand in the prose (maintainer): the card prints it.
-  if (ctx.carrierName && count(ctx.carrierName) > 0) {
-    issues.push(`copy: the carrier's name "${ctx.carrierName}" appears in the text; write "the carrier"`);
+  for (const name of new Set([ctx.carrierName, ...(ctx.carrierNames ?? [])].filter((x): x is string => !!x))) {
+    if (count(name) > 0) issues.push(`copy: the carrier's name "${name}" appears in the text; write "the carrier"`);
   }
   // Executive summary = the whole defence in brief, ending with the request
   // (maintainer, 2026-09-25). The conclusion and the Shipping pair are
@@ -152,7 +160,7 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   // "The complete order" is a claim: only the item-by-item fulfilment check
   // (whole_order_in_shipment) proves it (eval, #350764).
   const wholeOrder = summaryText.match(/\b(?:complete|entire|whole|full)\s+order\b|\ball (?:of )?the (?:items|goods|products)\b/i);
-  if (wholeOrder && !byId.has("whole_order_in_shipment")) {
+  if (wholeOrder && !byId.has("whole_order_in_shipment") && !byId.has("all_parcels_delivered")) {
     issues.push(`summary: "${wholeOrder[0]}" — the records do not show the whole order in one shipment; say "the order"`);
   }
   // Distinctive phrases, like specifics, appear at most twice in the letter.
