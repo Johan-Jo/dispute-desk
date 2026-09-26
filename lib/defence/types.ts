@@ -522,6 +522,10 @@ export interface DefenceNarrativeOutput {
   /** Counsel v2: rows the letter adds to the Chronology exhibit (the later
    *  order), merged into the timeline by both renderers. */
   timelineAdditions?: Array<{ at: string; text: string }>;
+  /** Counsel v2: the hash of the letter's inputs and the model-written
+   *  summary. A rebuild with the same hash reuses the summary and calls no
+   *  model (counsel/run.ts, cost refactor §3.6). */
+  counsel?: { inputHash: string; summary: string[] };
   omittedSections: OmittedSection[];
   /** Free-text warnings from the model — informational; validation may
    *  promote them to errors. */

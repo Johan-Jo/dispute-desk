@@ -3402,23 +3402,47 @@ quoting the banned word (`familyRegistry.test.ts` forbids that). `PROMPT_VERSION
 code-built claim ledger.
 
 - **In the job.** `buildDefencePackageJob` calls `runCounsel` (`counsel/run.ts`) before the template writer for
-  `inr_product_not_received` card disputes. It reads the customer's other orders live (Admin API, `makeAuthedRequest`),
-  builds the ledger, and runs strategist → 3 writer drafts → checks + fact-check (≤2 surgical corrections) → judge
-  on `DEFENCE_COUNSEL_MODEL` (default `claude-sonnet-4-6`). A null result (no single carrier-confirmed delivery,
-  no passing draft, any error) falls through to the template writer unchanged. The counsel letter then passes the
-  same `validateNarrative` / projection / composed-document checks; on a validation failure the existing retry
-  regenerates with the template writer. `applyShipmentRecordSections` is skipped for counsel letters.
-  One `defence_package_runs` row per counsel run (summed tokens, `strategy_keys = [counsel_v2]`), so the
-  per-shop daily cap counts it; `prompt_family = counsel_v2`, `prompt_version = COUNSEL_PROMPT_VERSION`.
-  Kill switch: `DEFENCE_COUNSEL_V2=off`. Merchant name: `shops.shop_name`, else the storefront domain.
-- **Spend and limits (prod canary #352543, 2026-09-26).** 5 drafts. Every counsel run, letter or not, writes one
-  `defence_package_runs` row (`strategy_keys = [counsel_v2]`). `checkDailyCap` counts those rows as generations but NOT
-  in the template writer's 50k prompt-token cap (one counsel run is 100k+ uncached tokens and would block the shop's
-  other builds for the day); counsel has its own cap, `DEFENCE_COUNSEL_DAILY_RUN_CAP` (default 25 runs per shop per
-  day). A null result logs `[counsel] no draft passed …` with each draft's failing checks.
-- **Fact-check exemptions.** The conclusion (restates by design) and the Shipping pair "all items in the single
-  tracked shipment" + "no partial or second shipment" (required together) are never flagged as repetition. The
-  first prod run failed all drafts on exactly these and fell back to the template writer.
+  `inr_product_not_received` card disputes. It reads the customer's other orders live (Admin API, `makeAuthedRequest`)
+  and builds the ledger. A null result (no single carrier-confirmed delivery, no passing summary, any error) falls
+  through to the template writer unchanged. The counsel letter then passes the same `validateNarrative` / projection /
+  composed-document checks; on a validation failure the existing retry regenerates with the template writer.
+  `applyShipmentRecordSections` is skipped for counsel letters. `prompt_family = counsel_v2`,
+  `prompt_version = COUNSEL_PROMPT_VERSION` (2). Kill switch: `DEFENCE_COUNSEL_V2=off`. Merchant name:
+  `shops.shop_name`, else the storefront domain.
+- **How the letter is written (cost refactor, 2026-09-26; plan `docs/plans/counsel-v2-cost-refactor.plan.md`).** The first
+  prod run (#352543 v12) cost ≈ $0.45 in ~32 uncached calls. Now:
+  - **Code writes what the records fix** (`counsel/recordSections.ts`): the Shipping & Delivery section (the carrier's own
+    scan + tracking link; "All N items … single tracked shipment. There was no partial or second shipment, so no part of the
+    non-receipt claim falls outside this delivery.") and the Conclusion, word for word as FILED in #352543 v12 (package
+    `caa70bf2`), pinned by `recordSections.test.ts`. No Chronology prose (v12 had none; dispatch timing is never
+    volunteered). The summary may not say "the complete order" unless `whole_order_in_shipment` is in the ledger (code check). The theory of the case is the first playbook theory whose claims are all in the ledger
+    (`pickTheory`). No strategist call.
+  - **The model writes only the executive summary** (≤ 80 words), from a STATIC system prompt (`SUMMARY_SYSTEM`, ~1,250
+    tokens, sent with `cache_control: ephemeral`; the case goes in the user message). Rules the code checks enforce are
+    not repeated in the prompt.
+  - **One review call** (`COUNSEL_REVIEW_MODEL` = `claude-sonnet-4-6`, override `DEFENCE_COUNSEL_REVIEW_MODEL`): fact-check +
+    clarity over the summary, only after the code checks pass, given the case's events and intervals precomputed
+    (`timelineBlock`). Not Haiku, as the plan proposed: in the offline eval Haiku flagged correct intervals on #352543 as
+    "inverted" in every run. Any finding → **one** surgical correction (same cached prompt), checked and
+    reviewed again; if that fails, the template writer. Calls per package: 2 (write, review), at most 4.
+  - **No judge in production.** `judgePrompt` is used only by the offline eval, `scripts/counsel/eval-counsel.mts`.
+  - **Reuse.** `counselInputHash` hashes the ledger (claims, specifics, limits, exhibits), the page context, the
+    merchant name, the models and `COUNSEL_PROMPT_VERSION` (which also versions the code-written wording). It is stored
+    with the summary in `narrative_json.counsel = { inputHash, summary }`. A rebuild whose latest non-failed counsel
+    package for the dispute has the same hash reuses the summary (re-checked against today's ledger) and calls no model.
+- **Spend, limits and telemetry.** Every counsel run, letter or not, writes one `defence_package_runs` row with
+  `cached_tokens` and `stage_tokens` (`[{stage, model, input, output, cacheRead, cacheWrite}]`; migration
+  `20260926120000`). `strategy_keys = [counsel_v2]` for a run that called a model, `[counsel_v2_reused]` (and
+  `stage_tokens = []`) for a reused letter. `checkDailyCap` counts counsel runs as generations but not in the template
+  writer's 50k prompt-token cap, and counts reused rows against nothing; counsel has its own cap,
+  `DEFENCE_COUNSEL_DAILY_RUN_CAP` (default 25 model-calling runs per shop per day). A failed summary logs
+  `[counsel] summary failed …` with its findings. Cost: `lib/defence/counsel/cost.ts` (list prices; budget
+  `COUNSEL_COST_BUDGET_USD` = $0.05), `scripts/sql/counsel-cost-daily.sql` (median / p90 per package per day), and the
+  daily `/api/cron/counsel-cost-monitor` (07:30 UTC), which emails the admin address when yesterday's median package
+  cost exceeds the budget.
+- **Fact-check exemptions.** The review never flags the summary's tie-back sentence or request against the Conclusion,
+  or "the complete order" against the Shipping item count. The Shipping pair and the Conclusion are code-written and
+  are not reviewed.
 - **Exhibits and timeline.** `narrative.addressExhibit`, `laterOrderExhibit` and `timelineAdditions` are stored
   in `narrative_json`; the job passes them to the PDF `meta` (timeline rows merged into `timelineEvents`) and the
   HTML view merges `timelineAdditions` into its chronology.
