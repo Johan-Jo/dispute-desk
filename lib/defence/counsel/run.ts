@@ -2,29 +2,36 @@
  * Counsel v2 inside the package job (buildDefencePackageJob.ts).
  *
  * Item-not-received disputes only. Builds the claim ledger from the pack plus
- * a live read of the customer's other orders, runs the strategist → writer →
- * checks → fact-check → judge loop, and returns the letter as a
- * DefenceNarrativeOutput — or null, in which case the job writes the
- * template letter exactly as before. Nothing here can make a case file less
- * than it did without counsel.
+ * a live read of the customer's other orders, writes the letter (generate.ts:
+ * code-written sections, one model-written summary, one small-model review,
+ * at most one correction) and returns it as a DefenceNarrativeOutput — or
+ * null, in which case the job writes the template letter exactly as before.
+ * Nothing here can make a case file less than it did without counsel.
  *
- * Kill switch: DEFENCE_COUNSEL_V2=off.
+ * Reuse: the letter's inputs are hashed. When a previous counsel letter for
+ * the dispute has the same hash, its summary is reused and no model is called.
+ *
+ * Kill switch: DEFENCE_COUNSEL_V2=off. Cost plan: docs/plans/counsel-v2-cost-refactor.plan.md.
  */
 
+import { createHash } from "node:crypto";
 import { callClaudeMessages } from "../anthropicClient";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import type { DefenceNarrativeOutput, EvidenceFact } from "../types";
 import { buildItemNotReceivedLedger } from "./claimLedger";
-import { toNarrative } from "./checks";
-import { writeCounselLetter, type ModelCall } from "./generate";
+import { checkDraft, toNarrative, type CheckContext } from "./checks";
+import { composeDraft, writeCounselLetter, type CounselStage, type ModelCall } from "./generate";
 import { ITEM_NOT_RECEIVED } from "./playbooks";
 import { COUNSEL_PROMPT_VERSION } from "./prompts";
-import type { CustomerOrderSummary, LedgerClaim, LedgerInput } from "./types";
+import { buildRecordSections } from "./recordSections";
+import type { CounselDraft, CustomerOrderSummary, LedgerClaim, LedgerInput } from "./types";
 
 export const COUNSEL_PROMPT_FAMILY = "counsel_v2";
 export const COUNSEL_DEFAULT_MODEL = "claude-sonnet-4-6";
+/** The review call (fact-check + clarity) runs on the small model. */
+export const COUNSEL_REVIEW_MODEL = "claude-haiku-4-5";
 
-/** Counsel runs per shop per day (each is ~15–25 uncached model calls). */
+/** Counsel runs per shop per day (each is 2–4 model calls since the cost refactor). */
 export const COUNSEL_DAILY_RUN_CAP = Number(process.env.DEFENCE_COUNSEL_DAILY_RUN_CAP ?? "25");
 
 export function counselEnabled(moduleKey: string): boolean {
@@ -107,6 +114,16 @@ export async function fetchCustomerOrders(shopId: string, orderGid: string): Pro
   }
 }
 
+/** One model call's usage, for defence_package_runs.stage_tokens. */
+export interface CounselStageUsage {
+  stage: CounselStage;
+  model: string;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
 export interface CounselRunResult {
   narrative: DefenceNarrativeOutput;
   ledger: LedgerClaim[];
@@ -115,6 +132,45 @@ export interface CounselRunResult {
   promptFamily: string;
   tokens: { prompt: number; completion: number; cached: number };
   durationMs: number;
+  /** True when a previous letter was reused and no model was called. */
+  reused: boolean;
+}
+
+/**
+ * The hash of everything the letter depends on (cost refactor §3.6). Same
+ * hash → same letter: the ledger (claims, specifics, limits, exhibits), what
+ * the page prints around it, the prompt version (which also versions the
+ * code-written sentences) and the models.
+ */
+export function counselInputHash(args: {
+  ledger: readonly LedgerClaim[];
+  pageContext: string;
+  merchantName: string;
+  check: Pick<CheckContext, "carrierName" | "pageIdentifiers" | "trackingUrl">;
+  writeModel: string;
+  reviewModel: string;
+}): string {
+  const sorted = (o: Record<string, string>) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
+  const payload = {
+    v: COUNSEL_PROMPT_VERSION,
+    writeModel: args.writeModel,
+    reviewModel: args.reviewModel,
+    merchantName: args.merchantName,
+    pageContext: args.pageContext,
+    carrierName: args.check.carrierName,
+    pageIdentifiers: args.check.pageIdentifiers,
+    trackingUrl: args.check.trackingUrl,
+    ledger: args.ledger.map((c) => ({
+      id: c.id,
+      statement: c.statement,
+      specifics: sorted(c.specifics),
+      mustNot: c.mustNot,
+      timelineEvent: c.timelineEvent ?? null,
+      addressExhibit: c.addressExhibit ?? null,
+      laterOrderExhibit: c.laterOrderExhibit ?? null,
+    })),
+  };
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
 export async function runCounsel(args: {
@@ -132,9 +188,19 @@ export async function runCounsel(args: {
   cardLast4: string | null;
   merchantName: string;
   log?: (m: string) => void;
-  /** Called once after the model calls, letter or not, so every run's spend
-   *  is recorded against the counsel cap. */
-  onSpend?: (spend: { model: string; tokens: CounselRunResult["tokens"]; durationMs: number; ok: boolean }) => Promise<void>;
+  /** The summary of a previous counsel letter for this dispute with this
+   *  input hash, or null. Reuse makes no model call. */
+  findReusable?: (inputHash: string) => Promise<string[] | null>;
+  /** Called once per run, letter or not, reused or not, so every run's spend
+   *  is recorded (and the counsel cap sees the ones that called a model). */
+  onSpend?: (spend: {
+    model: string;
+    tokens: CounselRunResult["tokens"];
+    stages: CounselStageUsage[];
+    durationMs: number;
+    ok: boolean;
+    reused: boolean;
+  }) => Promise<void>;
 }): Promise<CounselRunResult | null> {
   if (!counselEnabled(args.moduleKey)) return null;
   const started = Date.now();
@@ -179,12 +245,58 @@ export async function runCounsel(args: {
     .filter(Boolean)
     .join("\n");
 
+  const check: CheckContext = {
+    ledger,
+    playbook: ITEM_NOT_RECEIVED,
+    facts: args.facts,
+    disputeOpenedAt: args.disputeOpenedAt,
+    merchantName: args.merchantName,
+    carrierName,
+    pageIdentifiers: [args.orderName, args.orderName?.replace(/^#/, ""), trackingNumber, args.cardLast4, amountDigits, disputeNumber]
+      .filter((x): x is string => !!x),
+    trackingUrl,
+  };
   const model = process.env.DEFENCE_COUNSEL_MODEL ?? COUNSEL_DEFAULT_MODEL;
+  const reviewModel = process.env.DEFENCE_COUNSEL_REVIEW_MODEL ?? COUNSEL_REVIEW_MODEL;
+  const inputHash = counselInputHash({ ledger, pageContext, merchantName: args.merchantName, check, writeModel: model, reviewModel });
+  const trackingLine = trackingUrl ? `Carrier tracking record: ${trackingUrl}` : null;
+  const factIds = args.facts.map((f) => f.id);
+  const finish = (draft: CounselDraft): DefenceNarrativeOutput => ({
+    ...toNarrative(draft, factIds, trackingLine, ledger),
+    counsel: { inputHash, summary: draft.summary.paragraphs },
+  });
   const tokens = { prompt: 0, completion: 0, cached: 0 };
-  const call: ModelCall = async ({ system, user, temperature, maxTokens }) => {
+  const stages: CounselStageUsage[] = [];
+  const result = (draft: CounselDraft, reused: boolean): CounselRunResult => ({
+    narrative: finish(draft),
+    ledger,
+    modelUsed: model,
+    promptVersion: COUNSEL_PROMPT_VERSION,
+    promptFamily: COUNSEL_PROMPT_FAMILY,
+    tokens,
+    durationMs: Date.now() - started,
+    reused,
+  });
+
+  // Reuse (§3.6): same inputs → the same letter, no model call. The stored
+  // summary still has to pass today's code checks against today's ledger.
+  const previous = args.findReusable ? await args.findReusable(inputHash).catch(() => null) : null;
+  if (previous?.length) {
+    const draft = composeDraft({ paragraphs: previous, claimIds: [] }, buildRecordSections(ledger));
+    if (checkDraft(draft, check).length === 0) {
+      await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: true, reused: true });
+      return result(draft, true);
+    }
+  }
+
+  const call: ModelCall = async ({ stage, system, user, temperature, maxTokens }) => {
+    const m = stage === "review" ? reviewModel : model;
     const r = await callClaudeMessages({
-      model,
-      system: [{ type: "text", text: system }],
+      model: m,
+      // The summary system prompt is static across cases: cached, so the
+      // correction and the next case's write read it at the cache rate. The
+      // review prompt is under Haiku's minimum cacheable length; not marked.
+      system: [stage === "review" ? { type: "text", text: system } : { type: "text", text: system, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: user }],
       temperature,
       maxTokens,
@@ -192,53 +304,27 @@ export async function runCounsel(args: {
     tokens.prompt += r.promptTokens;
     tokens.completion += r.completionTokens;
     tokens.cached += r.cachedTokens;
+    stages.push({ stage, model: m, input: r.promptTokens, output: r.completionTokens, cacheRead: r.cachedTokens, cacheWrite: r.cacheWriteTokens ?? 0 });
     if (!r.raw) throw new Error(r.error ?? "empty model reply");
     return r.raw;
   };
 
-  const result = await writeCounselLetter({
-    ledger,
-    playbook: ITEM_NOT_RECEIVED,
-    merchantName: args.merchantName,
-    pageContext,
-    call,
-    // 5, as tested: with 3, a case whose drafts all trip one check falls back.
-    candidates: 5,
-    log: args.log,
-    check: {
-      ledger,
-      playbook: ITEM_NOT_RECEIVED,
-      facts: args.facts,
-      disputeOpenedAt: args.disputeOpenedAt,
-      merchantName: args.merchantName,
-      carrierName,
-      pageIdentifiers: [args.orderName, args.orderName?.replace(/^#/, ""), trackingNumber, args.cardLast4, amountDigits, disputeNumber]
-        .filter((x): x is string => !!x),
-      trackingUrl,
-    },
-  });
-  await args.onSpend?.({ model, tokens, durationMs: Date.now() - started, ok: !!result.best });
-  if (!result.best) {
+  let written: Awaited<ReturnType<typeof writeCounselLetter>>;
+  try {
+    written = await writeCounselLetter({ ledger, playbook: ITEM_NOT_RECEIVED, merchantName: args.merchantName, pageContext, call, log: args.log, check });
+  } catch (err) {
+    // A model error is still spend: record it before the job falls back.
+    await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: false, reused: false });
+    throw err;
+  }
+  await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: written.ok, reused: false });
+  if (!written.ok) {
     // Visible in the logs: why the template writer took over.
     console.warn(
-      `[counsel] no draft passed for ${args.orderName ?? "?"}: ` +
-        result.candidates.map((c, i) => `#${i + 1} ${c.issues.length ? c.issues.join(" | ").slice(0, 400) : `judge: ${JSON.stringify(c.verdict?.unclearSentences ?? [])}`}`).join(" || "),
+      `[counsel] summary failed for ${args.orderName ?? "?"} after ${written.corrected ? "one correction" : "the first draft"}: ` +
+        written.issues.join(" | ").slice(0, 800),
     );
     return null;
   }
-
-  return {
-    narrative: toNarrative(
-      result.best.draft,
-      args.facts.map((f) => f.id),
-      trackingUrl ? `Carrier tracking record: ${trackingUrl}` : null,
-      ledger,
-    ),
-    ledger,
-    modelUsed: model,
-    promptVersion: COUNSEL_PROMPT_VERSION,
-    promptFamily: COUNSEL_PROMPT_FAMILY,
-    tokens,
-    durationMs: Date.now() - started,
-  };
+  return result(written.draft, false);
 }

@@ -1,37 +1,42 @@
 /**
- * Counsel v2 orchestration (plan 4 §1):
- *   ledger → STRATEGIST → WRITER ×N → CHECKS + FACT-CHECK
- *   (+ up to two surgical correction rounds each) → JUDGE → best passing
- *   draft, or null (the caller falls back to the record-built template, so a
- *   safe letter always files).
+ * Counsel v2 orchestration (cost refactor, docs/plans/counsel-v2-cost-refactor.plan.md):
  *
+ *   ledger → theory (code) + sections and conclusion (code, recordSections.ts)
+ *          → SUMMARY (model) → checks (code) → REVIEW (small model)
+ *          → at most ONE correction of the summary, checked and reviewed again
+ *          → the letter, or `ok: false` (the caller falls back to the
+ *            record-built template, so a safe letter always files).
+ *
+ * 2 calls when the first summary passes, 3–4 when it needs the correction.
  * The model call is injected, so the same code runs in the pipeline
- * (Anthropic client), the eval harness and the staging pilot.
+ * (Anthropic client) and the offline eval harness.
  */
 
 import { checkDraft, type CheckContext } from "./checks";
-import { factCheckPrompt, judgePrompt, strategistPrompt, writerPrompt } from "./prompts";
-import type { CounselDraft, JudgeVerdict, LedgerClaim, Playbook, StrategyPlan } from "./types";
+import { correctionUserPrompt, REVIEW_SYSTEM, reviewUserPrompt, SUMMARY_SYSTEM, summaryUserPrompt } from "./prompts";
+import { buildRecordSections, pickTheory, recordSectionsText, type Theory } from "./recordSections";
+import type { CounselDraft, LedgerClaim, Playbook } from "./types";
+
+export type CounselStage = "write" | "review" | "correction";
 
 export type ModelCall = (req: {
+  stage: CounselStage;
+  /** Static across cases for "write" and "correction" (sent as a cached block). */
   system: string;
   user: string;
   temperature?: number;
   maxTokens?: number;
 }) => Promise<string>;
 
-export interface CounselCandidate {
-  draft: CounselDraft;
-  firstIssues: string[];
-  issues: string[];
-  retried: boolean;
-  verdict: JudgeVerdict | null;
-}
-
 export interface CounselResult {
-  plan: StrategyPlan;
-  candidates: CounselCandidate[];
-  best: CounselCandidate | null;
+  theory: Theory;
+  draft: CounselDraft;
+  /** Issues on the first summary (code checks, then review). */
+  firstIssues: string[];
+  /** Issues on the letter returned; empty when ok. */
+  issues: string[];
+  corrected: boolean;
+  ok: boolean;
 }
 
 /** The first complete JSON object in a model reply (models sometimes add a
@@ -57,7 +62,7 @@ export function parseJson<T>(raw: string): T {
   throw new Error(`unterminated JSON object in model output: ${raw.slice(0, 200)}`);
 }
 
-/** The letter as the analyst sees it, for the fact-checker and the judge. */
+/** The letter as the analyst sees it, for the offline judge. */
 export function letterForJudge(d: CounselDraft, pageContext: string, withRequestLine = true): string {
   const titles: Record<string, string> = {
     shipping: "Shipping & Delivery (next to a shipment card: carrier, tracking number, shipped and delivered dates, tracking link)",
@@ -73,19 +78,25 @@ export function letterForJudge(d: CounselDraft, pageContext: string, withRequest
   ].join("\n\n");
 }
 
-function rank(c: CounselCandidate): number {
-  const v = c.verdict;
-  if (!v) return -1;
-  const s = v.scores;
-  return (
-    (v.decisionAfterSummaryOnly === "merchant" ? 100 : 0) +
-    (v.decisionAfterFullLetter === "merchant" ? 50 : 0) +
-    (s.punchline + s.clarity + s.evidenceUse + s.noRepetition + s.credibility) * 2 -
-    v.redFlags.length * 3
-  );
+/** A summary paragraph list from the model's reply, whatever its shape. */
+function summaryFrom(raw: string): { paragraphs: string[]; claimIds: string[] } {
+  const r = parseJson<{ summary?: unknown; claimIds?: unknown }>(raw);
+  const s = r.summary;
+  const paragraphs = (Array.isArray(s) ? s : typeof s === "string" ? [s] : [])
+    .filter((p): p is string => typeof p === "string")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const claimIds = Array.isArray(r.claimIds) ? r.claimIds.filter((x): x is string => typeof x === "string") : [];
+  return { paragraphs, claimIds };
 }
 
-const CORRECTION_ROUNDS = 2;
+/** The letter from a summary and the code-written parts. */
+export function composeDraft(
+  summary: { paragraphs: string[]; claimIds: string[] },
+  record: ReturnType<typeof buildRecordSections>,
+): CounselDraft {
+  return { summary, evidenceSections: record.evidenceSections, conclusion: record.conclusion };
+}
 
 export async function writeCounselLetter(args: {
   ledger: readonly LedgerClaim[];
@@ -94,71 +105,66 @@ export async function writeCounselLetter(args: {
   pageContext: string;
   check: CheckContext;
   call: ModelCall;
-  candidates?: number;
   log?: (msg: string) => void;
 }): Promise<CounselResult> {
   const log = args.log ?? (() => {});
-  const n = args.candidates ?? 5;
-
-  const sp = strategistPrompt(args.ledger, args.playbook, args.pageContext, args.merchantName);
-  const plan = parseJson<StrategyPlan>(await args.call({ ...sp, temperature: 0.3, maxTokens: 3000 }));
-  log(`strategist: ${plan.theoryChosen} — ${plan.theoryOfTheCase}`);
-
-  const wp = writerPrompt(args.ledger, args.playbook, plan, args.pageContext, args.merchantName);
-
-  // Code checks first; when they pass, the model fact-check (relations,
-  // sequence, intent) — a true number on the wrong interval passes code.
-  // Sections the playbook does not carry are dropped, not failed.
-  const allowed = new Set(args.playbook.sections.map((s) => s.key));
-  const normalize = (d: CounselDraft): CounselDraft => ({
-    ...d,
-    evidenceSections: (d.evidenceSections ?? []).filter((s) => allowed.has(s.key)),
+  const theory = pickTheory(args.ledger, args.playbook);
+  const record = buildRecordSections(args.ledger);
+  const recordText = recordSectionsText(record);
+  const caseUser = summaryUserPrompt({
+    ledger: args.ledger,
+    theory,
+    recordText,
+    pageContext: args.pageContext,
+    merchantName: args.merchantName,
   });
+  log(`theory: ${theory.name}`);
 
-  const allIssues = async (d: CounselDraft): Promise<string[]> => {
-    const code = checkDraft(d, args.check);
+  // Code checks first; only a draft that passes them is worth a review call.
+  const issuesOf = async (draft: CounselDraft): Promise<string[]> => {
+    const code = checkDraft(draft, args.check);
     if (code.length) return code;
-    // The fixed request line is not the writer's: never flag it as a repeat.
-    const fc = factCheckPrompt(args.ledger, letterForJudge(d, args.pageContext, false));
-    const res = parseJson<{ errors?: Array<{ sentence: string; problem: string }> }>(
-      await args.call({ ...fc, temperature: 0, maxTokens: 1500 }),
+    const res = parseJson<{
+      errors?: Array<{ sentence?: string; problem?: string }>;
+      unclear?: Array<{ sentence?: string; problem?: string }>;
+    }>(
+      await args.call({
+        stage: "review",
+        system: REVIEW_SYSTEM,
+        user: reviewUserPrompt(args.ledger, draft.summary.paragraphs, recordText),
+        temperature: 0,
+        maxTokens: 800,
+      }),
     );
-    return (res.errors ?? []).map((e) => `fact-check: "${e.sentence}" — ${e.problem}`);
+    return [
+      ...(res.errors ?? []).map((e) => `fact-check: "${e.sentence ?? ""}" — ${e.problem ?? ""}`),
+      ...(res.unclear ?? []).map((e) => `unclear: "${e.sentence ?? ""}" — ${e.problem ?? "rewrite it plainly"}`),
+    ];
   };
 
-  const candidates = await Promise.all(
-    Array.from({ length: n }, async (_, i): Promise<CounselCandidate> => {
-      let draft = normalize(parseJson<CounselDraft>(await args.call({ ...wp, temperature: 0.7, maxTokens: 3000 })));
-      const firstIssues = await allIssues(draft);
-      let issues = firstIssues;
-      let retried = false;
-      // Surgical corrections: change only what was flagged, keep the rest.
-      for (let round = 0; round < CORRECTION_ROUNDS && issues.length; round++) {
-        retried = true;
-        const user = [
-          wp.user,
-          `YOUR PREVIOUS DRAFT FAILED THESE CHECKS:\n- ${issues.join("\n- ")}`,
-          "Return the previous draft UNCHANGED except for the smallest edits that fix these problems. " +
-            "Copy every sentence that was not flagged word for word. Do not add new sentences, dates or numbers.",
-          `PREVIOUS DRAFT:\n${JSON.stringify(draft, null, 2)}`,
-        ].join("\n\n");
-        draft = normalize(parseJson<CounselDraft>(await args.call({ system: wp.system, user, temperature: 0.2, maxTokens: 3000 })));
-        issues = await allIssues(draft);
-      }
-      log(`candidate ${i + 1}: first ${firstIssues.length} issue(s), final ${issues.length}`);
-      return { draft, firstIssues, issues, retried, verdict: null };
-    }),
+  const first = summaryFrom(
+    await args.call({ stage: "write", system: SUMMARY_SYSTEM, user: caseUser, temperature: 0.4, maxTokens: 600 }),
   );
+  let draft = composeDraft(first, record);
+  const firstIssues = await issuesOf(draft);
+  let issues = firstIssues;
+  let corrected = false;
 
-  const passing = candidates.filter((c) => c.issues.length === 0);
-  await Promise.all(
-    passing.map(async (c) => {
-      const jp = judgePrompt(letterForJudge(c.draft, args.pageContext));
-      c.verdict = parseJson<JudgeVerdict>(await args.call({ ...jp, temperature: 0, maxTokens: 1500 }));
-    }),
-  );
-  // A sentence the analyst had to read twice disqualifies the draft.
-  const clear = passing.filter((c) => (c.verdict?.unclearSentences ?? []).length === 0);
-  const best = clear.sort((a, b) => rank(b) - rank(a))[0] ?? null;
-  return { plan, candidates, best };
+  if (issues.length) {
+    // One surgical correction; if it fails too, the template writer files.
+    corrected = true;
+    const fixed = summaryFrom(
+      await args.call({
+        stage: "correction",
+        system: SUMMARY_SYSTEM,
+        user: correctionUserPrompt(caseUser, first.paragraphs, issues),
+        temperature: 0.2,
+        maxTokens: 600,
+      }),
+    );
+    draft = composeDraft(fixed, record);
+    issues = await issuesOf(draft);
+  }
+  log(`first ${firstIssues.length} issue(s)${corrected ? `, after correction ${issues.length}` : ""}`);
+  return { theory, draft, firstIssues, issues, corrected, ok: issues.length === 0 };
 }

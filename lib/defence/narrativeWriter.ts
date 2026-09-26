@@ -987,6 +987,9 @@ function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
   }
 }
 
+/** A counsel v2 letter reused from a previous build (no model call). */
+export const COUNSEL_REUSED_STRATEGY_KEY = "counsel_v2_reused";
+
 export async function checkDailyCap(
   sb: ReturnType<typeof getServiceClient>,
   shopId: string,
@@ -1003,13 +1006,15 @@ export async function checkDailyCap(
     console.warn("[defence] daily-cap query failed", error.message);
     return { capReached: false, generations: 0, inputTokens: 0, counselRuns: 0 };
   }
-  // Counsel v2 runs (lib/defence/counsel/run.ts) are uncached multi-call runs
-  // of 100k+ prompt tokens: counting them against the template writer's token
-  // cap would block every other build for the shop that day. They count as
-  // generations, and have their own per-day run cap (counsel/run.ts).
-  const isCounsel = (r: unknown) =>
-    ((r as { strategy_keys?: string[] | null }).strategy_keys ?? []).includes("counsel_v2");
-  const generations = data?.length ?? 0;
+  // Counsel v2 runs (lib/defence/counsel/run.ts) have their own per-day run
+  // cap and are kept out of the template writer's token cap: a counsel run's
+  // spend must never block the template letter that is its fallback. They
+  // count as generations.
+  const keys = (r: unknown) => (r as { strategy_keys?: string[] | null }).strategy_keys ?? [];
+  const isCounsel = (r: unknown) => keys(r).includes("counsel_v2");
+  // A reused counsel letter made no model call: it counts against nothing.
+  const rows = (data ?? []).filter((r) => !keys(r).includes(COUNSEL_REUSED_STRATEGY_KEY));
+  const generations = rows.length;
   const counselRuns = (data ?? []).filter(isCounsel).length;
   const inputTokens = (data ?? [])
     .filter((r) => !isCounsel(r))
@@ -1032,9 +1037,12 @@ export async function writeRun(
     strategyKeys: string[];
     /** Counsel v2 runs record their own prompt version. */
     promptVersion?: number;
+    /** Counsel v2: prompt-cache reads, and per-call usage (cost refactor §6). */
+    cachedTokens?: number;
+    stageTokens?: unknown[];
   },
 ): Promise<void> {
-  await sb.from("defence_package_runs").insert({
+  const { error } = await sb.from("defence_package_runs").insert({
     package_id: ctx.packageId,
     shop_id: ctx.shopId,
     prompt_version: row.promptVersion ?? PROMPT_VERSION,
@@ -1045,7 +1053,11 @@ export async function writeRun(
     duration_ms: row.durationMs,
     validation_status: row.validationStatus,
     strategy_keys: row.strategyKeys,
+    ...(row.cachedTokens !== undefined ? { cached_tokens: row.cachedTokens } : {}),
+    ...(row.stageTokens !== undefined ? { stage_tokens: row.stageTokens } : {}),
   });
+  // A lost row is a run the daily caps cannot see: say so.
+  if (error) console.warn("[defence] run telemetry insert failed", error.message);
 }
 
 function truncate(s: string, n: number): string {
