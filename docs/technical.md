@@ -3412,15 +3412,18 @@ code-built claim ledger.
 - **How the letter is written (cost refactor, 2026-09-26; plan `docs/plans/counsel-v2-cost-refactor.plan.md`).** The first
   prod run (#352543 v12) cost ≈ $0.45 in ~32 uncached calls. Now:
   - **Code writes what the records fix** (`counsel/recordSections.ts`): the Shipping & Delivery section (the carrier's own
-    scan + tracking link; "All N items … single tracked shipment. There was no partial or second shipment."), the
-    Chronology note (dispatch timing, same-day delivery notification) and the Conclusion, in the v12 wording, pinned by
-    `recordSections.test.ts`. The theory of the case is the first playbook theory whose claims are all in the ledger
+    scan + tracking link; "All N items … single tracked shipment. There was no partial or second shipment, so no part of the
+    non-receipt claim falls outside this delivery.") and the Conclusion, word for word as FILED in #352543 v12 (package
+    `caa70bf2`), pinned by `recordSections.test.ts`. No Chronology prose (v12 had none; dispatch timing is never
+    volunteered). The summary may not say "the complete order" unless `whole_order_in_shipment` is in the ledger (code check). The theory of the case is the first playbook theory whose claims are all in the ledger
     (`pickTheory`). No strategist call.
-  - **The model writes only the executive summary** (≤ 80 words), from a STATIC system prompt (`SUMMARY_SYSTEM`, ~1,150
+  - **The model writes only the executive summary** (≤ 80 words), from a STATIC system prompt (`SUMMARY_SYSTEM`, ~1,250
     tokens, sent with `cache_control: ephemeral`; the case goes in the user message). Rules the code checks enforce are
     not repeated in the prompt.
-  - **One review call on `claude-haiku-4-5`** (`DEFENCE_COUNSEL_REVIEW_MODEL`): fact-check + clarity over the summary,
-    only after the code checks pass. Any finding → **one** surgical correction (same cached prompt), checked and
+  - **One review call** (`COUNSEL_REVIEW_MODEL` = `claude-sonnet-4-6`, override `DEFENCE_COUNSEL_REVIEW_MODEL`): fact-check +
+    clarity over the summary, only after the code checks pass, given the case's events and intervals precomputed
+    (`timelineBlock`). Not Haiku, as the plan proposed: in the offline eval Haiku flagged correct intervals on #352543 as
+    "inverted" in every run. Any finding → **one** surgical correction (same cached prompt), checked and
     reviewed again; if that fails, the template writer. Calls per package: 2 (write, review), at most 4.
   - **No judge in production.** `judgePrompt` is used only by the offline eval, `scripts/counsel/eval-counsel.mts`.
   - **Reuse.** `counselInputHash` hashes the ledger (claims, specifics, limits, exhibits), the page context, the

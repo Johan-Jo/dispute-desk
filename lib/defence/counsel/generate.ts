@@ -2,7 +2,7 @@
  * Counsel v2 orchestration (cost refactor, docs/plans/counsel-v2-cost-refactor.plan.md):
  *
  *   ledger → theory (code) + sections and conclusion (code, recordSections.ts)
- *          → SUMMARY (model) → checks (code) → REVIEW (small model)
+ *          → SUMMARY (model) → checks (code) → REVIEW (model, one call)
  *          → at most ONE correction of the summary, checked and reviewed again
  *          → the letter, or `ok: false` (the caller falls back to the
  *            record-built template, so a safe letter always files).
@@ -73,7 +73,7 @@ export function letterForJudge(d: CounselDraft, pageContext: string, withRequest
     `PAGE HEADER AND CASE DETAILS (printed above the letter):\n${pageContext}`,
     `SUMMARY:\n${d.summary.paragraphs.join("\n\n")}`,
     ...d.evidenceSections.map((s) => `${titles[s.key] ?? s.key}:\n${s.paragraphs.join("\n\n")}`),
-    `CONCLUSION (a closing argument that restates the strongest facts BY DESIGN — its restatement is never repetition):\n${d.conclusion.paragraphs.join("\n\n")}` +
+    `CONCLUSION:\n${d.conclusion.paragraphs.join("\n\n")}` +
       (withRequestLine ? `\n[fixed request line follows: "The merchant respectfully requests reversal of the chargeback."]` : ""),
   ].join("\n\n");
 }
@@ -159,7 +159,7 @@ export async function writeCounselLetter(args: {
         system: SUMMARY_SYSTEM,
         user: correctionUserPrompt(caseUser, first.paragraphs, issues),
         temperature: 0.2,
-        maxTokens: 600,
+        maxTokens: 800,
       }),
     );
     draft = composeDraft(fixed, record);

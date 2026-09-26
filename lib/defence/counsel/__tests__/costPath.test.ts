@@ -1,7 +1,7 @@
 /**
  * The cost refactor's call budget (docs/plans/counsel-v2-cost-refactor.plan.md):
  * 2 model calls when the first summary passes, at most 4 otherwise, the
- * static prompt cached, the review on the small model, and no call at all
+ * static prompt cached, the review on COUNSEL_REVIEW_MODEL, and no call at all
  * when a rebuild's inputs are unchanged.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -98,7 +98,7 @@ const runArgs = {
 };
 
 describe("runCounsel", () => {
-  it("caches the static summary prompt, reviews on Haiku, and records per-call usage", async () => {
+  it("caches the static summary prompt, reviews on the review model, and records per-call usage", async () => {
     callClaudeMessages
       .mockResolvedValueOnce(reply(summaryJson(V12_SUMMARY), { promptTokens: 1400, cacheWriteTokens: 1200 }))
       .mockResolvedValueOnce(reply(CLEAN, { promptTokens: 900, completionTokens: 20 }));
@@ -116,7 +116,7 @@ describe("runCounsel", () => {
 
     const spend = (onSpend.mock.calls[0] as unknown[])[0] as { stages: Array<{ stage: string; model: string }>; reused: boolean };
     expect(spend.reused).toBe(false);
-    expect(spend.stages.map((s) => `${s.stage}:${s.model}`)).toEqual(["write:claude-sonnet-4-6", "review:claude-haiku-4-5"]);
+    expect(spend.stages.map((s) => `${s.stage}:${s.model}`)).toEqual(["write:claude-sonnet-4-6", `review:${COUNSEL_REVIEW_MODEL}`]);
     expect(res?.narrative.counsel?.summary).toEqual([V12_SUMMARY]);
     expect(res?.narrative.executiveSummary.text).toBe(V12_SUMMARY);
     expect(res?.narrative.fulfillmentArgument.text).toMatch(/\n\nCarrier tracking record: https:\/\/track\.northwind\.example\/NW123456789$/);

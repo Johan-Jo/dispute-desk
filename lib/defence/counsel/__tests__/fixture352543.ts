@@ -83,7 +83,13 @@ export const LEDGER: LedgerClaim[] = [
   },
 ];
 
-/** The v12 summary, as filed. */
+/** The summary FILED as v12 (production narrative_json, package caa70bf2). */
+export const FILED_V12_SUMMARY =
+  "The cardholder claims the order was not received. The carrier recorded delivery of the complete order on 6 July 2026, and sixty-one days later " +
+  "the same customer placed a new order with the same payment method — fourteen days before opening this dispute. The non-receipt claim is not " +
+  "supported by the carrier's delivery record or by the customer's subsequent purchase. The merchant requests that the chargeback be reversed.";
+
+/** A summary in the v12 shape, with the card match spelled out. */
 export const V12_SUMMARY =
   "The cardholder says the order was never received. The carrier recorded delivery of the complete order on 6 July 2026. " +
   "Sixty-one days later, the same customer placed a new order — paid with a card ending in the same four digits — and fourteen days after that opened this dispute. " +

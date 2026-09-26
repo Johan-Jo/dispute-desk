@@ -3,8 +3,8 @@
  * Plan series: docs/plans/defence-counsel/ (plans 2–4).
  *
  * Pipeline (cost refactor): records → claim ledger (code) → theory, sections
- * and conclusion (code) → summary (model) → checks (code) → review (small
- * model) → composed PDF. The judge runs only in the offline eval harness.
+ * and conclusion (code) → summary (model) → checks (code) → review (model)
+ * → composed PDF. The judge runs only in the offline eval harness.
  */
 
 import type { AddressExhibit, EvidenceFact, LaterOrderExhibit } from "../types";

@@ -46,6 +46,7 @@ const { writeCounselLetter, letterForJudge, parseJson } = await import("../../li
 const { judgePrompt } = await import("../../lib/defence/counsel/prompts");
 const { ITEM_NOT_RECEIVED } = await import("../../lib/defence/counsel/playbooks");
 const { runCostUsd } = await import("../../lib/defence/counsel/cost");
+const { isNonCardPaymentFamily } = await import("../../lib/disputes/paymentContext");
 type Stage = import("../../lib/defence/counsel/run").CounselStageUsage;
 type Verdict = import("../../lib/defence/counsel/types").JudgeVerdict;
 
@@ -69,21 +70,21 @@ const sb = getServiceClient();
 const limit = Number(arg("limit") ?? "8");
 let disputeIds = args("dispute");
 if (!disputeIds.length) {
-  // The most recent item-not-received packages, one per dispute; #352543 first.
+  // The most recent non-receipt disputes, #352543 first. Most are PayPal or
+  // Klarna (skipped below, as in the job), so the pool is wide.
   const { data } = await sb
-    .from("defence_packages")
-    .select("dispute_id, created_at")
-    .eq("reason_code_module", "inr_product_not_received")
-    .neq("status", "failed")
-    .order("created_at", { ascending: false })
-    .limit(400);
-  disputeIds = ["25034e1e-ab3e-4457-88d1-d1f9751f9a12", ...new Set((data ?? []).map((r) => r.dispute_id as string))];
-  disputeIds = [...new Set(disputeIds)];
+    .from("disputes")
+    .select("id")
+    .eq("reason", "PRODUCT_NOT_RECEIVED")
+    .order("initiated_at", { ascending: false })
+    .range(0, 999);
+  disputeIds = [...new Set(["25034e1e-ab3e-4457-88d1-d1f9751f9a12", ...(data ?? []).map((r) => r.id as string)])];
 }
 
 const out: unknown[] = [];
 const lines: string[] = [];
 let evaluated = 0;
+const seenOrders = new Set<string>();
 for (const disputeId of disputeIds) {
   if (evaluated >= limit) break;
   const { data: pkg } = await sb
@@ -103,8 +104,17 @@ for (const disputeId of disputeIds) {
   const sections = ((pack?.pack_json as { sections?: unknown[] } | null)?.sections ?? []) as Array<{
     type: string; label?: string; source?: string; data?: Record<string, unknown>; fieldsProvided?: string[];
   }>;
+  // The job runs counsel for card disputes only (buildDefencePackageJob.ts).
+  const family = (pack?.pack_json as { payment_context?: { family?: string } } | null)?.payment_context?.family ?? null;
+  if (isNonCardPaymentFamily(family)) {
+    lines.push(`- ${disputeId}: non-card payment (${family}) — the job never runs counsel, skipped`);
+    continue;
+  }
   const facts = (pkg.facts_json ?? []) as never[];
   const ctx = deriveOrderContext(sections.map((s) => ({ type: s.type, label: s.label ?? "", source: s.source ?? "", data: s.data ?? {}, fieldsProvided: s.fieldsProvided ?? [] })) as never);
+  // One case per order (an inquiry and its chargeback share the order).
+  if (ctx.orderName && seenOrders.has(`${pkg.shop_id}:${ctx.orderName}`)) continue;
+  if (ctx.orderName) seenOrders.add(`${pkg.shop_id}:${ctx.orderName}`);
   const customerOrders = d?.order_gid ? await fetchCustomerOrders(pkg.shop_id, d.order_gid) : [];
   const ledger = buildItemNotReceivedLedger({
     moduleKey: "inr_product_not_received",
@@ -143,7 +153,7 @@ for (const disputeId of disputeIds) {
     merchantName,
     pageContext,
     call: async ({ stage, system, user, temperature, maxTokens }) => {
-      const m = stage === "review" ? COUNSEL_REVIEW_MODEL : COUNSEL_DEFAULT_MODEL;
+      const m = stage === "review" ? (arg("review-model") ?? COUNSEL_REVIEW_MODEL) : COUNSEL_DEFAULT_MODEL;
       const res = await model(m, system, user, temperature, maxTokens);
       stages.push({ stage, model: m, input: res.input, output: res.output, cacheRead: 0, cacheWrite: 0 });
       return res.text;
