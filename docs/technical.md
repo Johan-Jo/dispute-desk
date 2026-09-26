@@ -3589,7 +3589,7 @@ SIL OFL, registered by the worker before rendering), with one burgundy accent.
 - **Pages 2 and on:** numbered sections (burgundy badge, title and rule).
   - **Multi-parcel orders:** shipment cards show the carrier with a tracking number or shipping
     reference, the fulfilment time, and the first carrier event or the fulfilling app. They
-    replace both the fulfilment prose and Evidence Basis.
+    replace Evidence Basis; a counsel v2 letter prints its address card and record-built Shipping prose under them.
   - **Order Line Items** ends with a total row.
   - **Chronology** is a vertical timeline with titled events and markers: filled for money and
     fulfilment, hollow for notifications, green for the carrier's record.
@@ -3597,6 +3597,9 @@ SIL OFL, registered by the worker before rendering), with one burgundy accent.
 - **Headers and footers:** a running header on pages 2 and on, and "Dispute · Order … n / N" on
   every page.
 - **Renderer quirks,** measured with a local render harness:
+  - A node's bottom **margin** counts toward react-pdf's presence check (`@react-pdf/layout` `shouldBreak`), so a
+    section whose content fit but whose 24pt margin did not was moved whole to the next page (#360980 v23: the
+    executive summary alone on page 2; content ended at 641 of 656pt). Sections space with `paddingBottom` instead.
   - A fixed element anchored with `bottom` and a render prop did not draw, so both the header
     and the footer are fixed Views anchored from the **top**, with a View render prop.
   - Automatic hyphenation is off.
