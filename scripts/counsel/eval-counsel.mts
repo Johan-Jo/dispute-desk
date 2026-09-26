@@ -135,6 +135,7 @@ for (const disputeId of disputeIds) {
   const dv = ((facts as Array<{ category: string; value: Record<string, string> }>).find(
     (f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && f.value?.trackingNumber,
   )?.value ?? {}) as Record<string, string>;
+  const parcels = (((facts as Array<{ value: { shipments?: Array<{ carrier?: string; reference?: string; items?: Array<{ title?: string }> }> } }>).map((f) => f.value?.shipments).find((x) => Array.isArray(x) && x.length > 1)) ?? []) as Array<{ carrier?: string; reference?: string; items?: Array<{ title?: string }> }>;
   const disputeNumber = d?.dispute_gid?.split("/").pop() ?? null;
   const amountDisplay = d?.amount != null ? `${d.currency_code ?? ""} ${d.amount}`.trim() : null;
   const pageContext = [
@@ -165,10 +166,16 @@ for (const disputeId of disputeIds) {
       disputeOpenedAt: d?.initiated_at ?? null,
       merchantName,
       carrierName: dv.carrier ?? null,
-      pageIdentifiers: [ctx.orderName, ctx.orderName?.replace(/^#/, ""), dv.trackingNumber, ctx.cardLast4, amountDisplay?.match(/\d+(?:\.\d+)?/)?.[0], disputeNumber].filter(
+      pageIdentifiers: [ctx.orderName, ctx.orderName?.replace(/^#/, ""), dv.trackingNumber, ctx.cardLast4, amountDisplay?.match(/\d+(?:\.\d+)?/)?.[0], disputeNumber, ...parcels.map((p) => p.reference)].filter(
         (x): x is string => !!x,
       ),
       trackingUrl: dv.trackingUrl ?? null,
+      ...(parcels.length > 1
+        ? {
+            carrierNames: parcels.map((p) => p.carrier).filter(Boolean),
+            productNames: parcels.flatMap((p) => (p.items ?? []).map((it) => it.title)).filter(Boolean),
+          }
+        : {}),
     },
   });
   const seconds = (Date.now() - t0) / 1000;

@@ -234,12 +234,21 @@ export async function runCounsel(args: {
   const disputeNumber = args.disputeGid?.split("/").pop() ?? null;
   const amountDigits = args.amountDisplay?.match(/\d+(?:\.\d+)?/)?.[0] ?? null;
 
+  // Multi-parcel: one card per parcel carries its carrier, reference and link.
+  const parcels = ledger.some((c) => c.parcel)
+    ? ((args.facts
+        .map((f) => obj(f.value)?.shipments)
+        .find((x) => Array.isArray(x) && x.length > 1) as unknown[] | undefined) ?? []).map((x) => obj(x) ?? {})
+    : [];
+  const multi = parcels.length > 1;
   const hasAddresses = ledger.some((c) => c.addressExhibit);
   const hasLater = ledger.some((c) => c.laterOrderExhibit);
   const pageContext = [
     `Header: ${[disputeNumber && `Dispute ${disputeNumber}`, args.orderName && `Order ${args.orderName}`, args.amountDisplay].filter(Boolean).join(" · ")} · submitted on behalf of ${args.merchantName}.`,
     `Case details table: merchant, card network${args.cardLast4 ? `, card ending ${args.cardLast4}` : ""}, transaction date, order number, disputed amount.`,
-    `Shipment card: carrier, tracking number, shipped and delivered dates. Tracking link printed below the shipping section.`,
+    multi
+      ? "Parcel cards, one per parcel: its products, carrier, tracking number or shipping reference, shipped date, delivery date where the carrier recorded one, and the tracking link where one exists."
+      : `Shipment card: carrier, tracking number, shipped and delivered dates. Tracking link printed below the shipping section.`,
     hasAddresses ? "Order addresses card under the shipment card: shipping and billing address side by side, stated identical." : null,
     `Line-items table: products, adjustments, total.${hasLater ? " Under it, a card for the same customer's later order (order number, date, amount, card ending, wallet)." : ""}`,
     "Timeline: the order's events (order, payment, shipping, delivery, notifications) and the chargeback, with dates.",
@@ -255,14 +264,23 @@ export async function runCounsel(args: {
     disputeOpenedAt: args.disputeOpenedAt,
     merchantName: args.merchantName,
     carrierName,
-    pageIdentifiers: [args.orderName, args.orderName?.replace(/^#/, ""), trackingNumber, args.cardLast4, amountDigits, disputeNumber]
-      .filter((x): x is string => !!x),
+    pageIdentifiers: [
+      args.orderName, args.orderName?.replace(/^#/, ""), trackingNumber, args.cardLast4, amountDigits, disputeNumber,
+      ...parcels.map((s) => str(s.reference)),
+    ].filter((x): x is string => !!x),
     trackingUrl,
+    ...(multi
+      ? {
+          carrierNames: parcels.map((s) => str(s.carrier)).filter((x): x is string => !!x),
+          productNames: parcels.flatMap((s) => ((s.items as unknown[]) ?? []).map((it) => str(obj(it)?.title))).filter((x): x is string => !!x),
+        }
+      : {}),
   };
   const model = process.env.DEFENCE_COUNSEL_MODEL ?? COUNSEL_DEFAULT_MODEL;
   const reviewModel = process.env.DEFENCE_COUNSEL_REVIEW_MODEL ?? COUNSEL_REVIEW_MODEL;
   const inputHash = counselInputHash({ ledger, pageContext, merchantName: args.merchantName, check, writeModel: model, reviewModel });
-  const trackingLine = trackingUrl ? `Carrier tracking record: ${trackingUrl}` : null;
+  // Multi-parcel: each card prints its own link.
+  const trackingLine = trackingUrl && !multi ? `Carrier tracking record: ${trackingUrl}` : null;
   const factIds = args.facts.map((f) => f.id);
   const finish = (draft: CounselDraft): DefenceNarrativeOutput => ({
     ...toNarrative(draft, factIds, trackingLine, ledger),

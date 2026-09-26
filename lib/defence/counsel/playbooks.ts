@@ -11,6 +11,20 @@ export const ITEM_NOT_RECEIVED: Playbook = {
   familyKey: "item_not_received",
   analystQuestion: "Was the order delivered, and was all of it delivered?",
   theories: [
+    // Multi-parcel orders (claimLedger.ts `buildMultiParcelLedger`): their
+    // ledgers carry these claims instead of `carrier_delivered`.
+    {
+      name: "every_parcel_delivered",
+      requiresClaims: ["all_parcels_delivered", "order_in_parcels"],
+      shape:
+        "The order went out in several parcels and the carrier recorded every one of them as delivered. Lead with the carrier's deliveries against the claim.",
+    },
+    {
+      name: "delivered_parcel_and_rest_shipped",
+      requiresClaims: ["some_parcel_delivered", "order_in_parcels"],
+      shape:
+        "The order went out in several parcels. Lead with the parcel the carrier recorded as delivered and name what it contained; then say the merchant shipped the rest. Never say or imply the other parcels were delivered.",
+    },
     {
       name: "delivered_and_came_back",
       requiresClaims: ["carrier_delivered", "later_order"],
