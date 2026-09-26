@@ -3411,6 +3411,14 @@ code-built claim ledger.
   One `defence_package_runs` row per counsel run (summed tokens, `strategy_keys = [counsel_v2]`), so the
   per-shop daily cap counts it; `prompt_family = counsel_v2`, `prompt_version = COUNSEL_PROMPT_VERSION`.
   Kill switch: `DEFENCE_COUNSEL_V2=off`. Merchant name: `shops.shop_name`, else the storefront domain.
+- **Spend and limits (prod canary #352543, 2026-09-26).** 5 drafts. Every counsel run, letter or not, writes one
+  `defence_package_runs` row (`strategy_keys = [counsel_v2]`). `checkDailyCap` counts those rows as generations but NOT
+  in the template writer's 50k prompt-token cap (one counsel run is 100k+ uncached tokens and would block the shop's
+  other builds for the day); counsel has its own cap, `DEFENCE_COUNSEL_DAILY_RUN_CAP` (default 25 runs per shop per
+  day). A null result logs `[counsel] no draft passed …` with each draft's failing checks.
+- **Fact-check exemptions.** The conclusion (restates by design) and the Shipping pair "all items in the single
+  tracked shipment" + "no partial or second shipment" (required together) are never flagged as repetition. The
+  first prod run failed all drafts on exactly these and fell back to the template writer.
 - **Exhibits and timeline.** `narrative.addressExhibit`, `laterOrderExhibit` and `timelineAdditions` are stored
   in `narrative_json`; the job passes them to the PDF `meta` (timeline rows merged into `timelineEvents`) and the
   HTML view merges `timelineAdditions` into its chronology.
