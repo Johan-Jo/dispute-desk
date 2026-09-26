@@ -219,11 +219,12 @@ function chronologyEvents(
   dispute: DisputeContextLike | undefined,
   facts: EvidenceFact[],
   orderTotalDisplay: string | null = null,
+  additions: ReadonlyArray<{ at: string; text: string }> = [],
 ): ChronologyEvent[] {
   return buildChronologyEvents(
     {
       orderTotalDisplay,
-      timelineEvents: dispute?.timelineEvents ?? null,
+      timelineEvents: additions.length ? [...(dispute?.timelineEvents ?? []), ...additions] : (dispute?.timelineEvents ?? null),
       transactionDate: dispute?.transactionDate ?? null,
       orderName: dispute?.orderName ?? null,
       cardNetwork: dispute?.cardNetwork ?? null,
@@ -492,7 +493,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const reasonModule = moduleKey ? ALL_REASON_CODE_MODULES.find((m) => m.key === moduleKey) ?? null : null;
 
   const lineItems: LineItem[] = buildLineItems(facts);
-  const chrono = chronologyEvents(dispute, facts, lineItemsTotal(lineItems)?.amount ?? null);
+  const chrono = chronologyEvents(dispute, facts, lineItemsTotal(lineItems)?.amount ?? null, narrative.timelineAdditions ?? []);
   const total = lineItemsTotal(lineItems);
   const shipments = shipmentsOf(facts);
   const multiParcel = shipments.length > 1;

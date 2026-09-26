@@ -213,7 +213,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v34 (2026-09-24) — single-parcel item-not-received letters with a carrier-
 // confirmed delivery are record-built (summary, shipping, conclusion), as
 // multi-parcel ones already were (#352543).
-const PROMPT_VERSION = 39;
+// v40 (2026-09-25) — item-not-received family names its forbidden words in the
+// prompt (no negated delivery, no denial framing): an in-transit
+// letter wrote "the order was not undelivered" twice and was refused (#102193).
+const PROMPT_VERSION = 40;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -984,7 +987,7 @@ function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
   }
 }
 
-async function checkDailyCap(
+export async function checkDailyCap(
   sb: ReturnType<typeof getServiceClient>,
   shopId: string,
 ): Promise<{ capReached: boolean; generations: number; inputTokens: number }> {
@@ -1010,7 +1013,7 @@ async function checkDailyCap(
   return { capReached, generations, inputTokens };
 }
 
-async function writeRun(
+export async function writeRun(
   sb: ReturnType<typeof getServiceClient>,
   ctx: GenerateNarrativeContext,
   row: {
@@ -1021,12 +1024,14 @@ async function writeRun(
     durationMs: number;
     validationStatus: "ok" | "failed" | "skipped" | "error";
     strategyKeys: string[];
+    /** Counsel v2 runs record their own prompt version. */
+    promptVersion?: number;
   },
 ): Promise<void> {
   await sb.from("defence_package_runs").insert({
     package_id: ctx.packageId,
     shop_id: ctx.shopId,
-    prompt_version: PROMPT_VERSION,
+    prompt_version: row.promptVersion ?? PROMPT_VERSION,
     model: row.model,
     package_mode: row.packageMode,
     prompt_tokens: row.promptTokens,

@@ -519,6 +519,9 @@ export interface DefenceNarrativeOutput {
   /** Counsel v2: the customer's later order, printed as a card in the
    *  Chronology section when the letter relies on it (Grok review). */
   laterOrderExhibit?: LaterOrderExhibit;
+  /** Counsel v2: rows the letter adds to the Chronology exhibit (the later
+   *  order), merged into the timeline by both renderers. */
+  timelineAdditions?: Array<{ at: string; text: string }>;
   omittedSections: OmittedSection[];
   /** Free-text warnings from the model — informational; validation may
    *  promote them to errors. */
