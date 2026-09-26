@@ -1472,7 +1472,6 @@
         "lost": "Nous avons transmis vos preuves le {date}. La banque a tout de même tranché en faveur du titulaire de la carte.",
         "won": "Nous avons transmis vos preuves le {date}, et la banque a tranché en votre faveur."
       },
-      "notDefendedByUs": "Ce litige a été tranché avant que DisputeDesk ne transmette la moindre preuve.",
       "factor": {
         "avs_mismatch": "L'adresse de facturation de la carte ne correspondait pas à celle de la commande",
         "cardholder_name_mismatch": "Le nom associé à la carte différait du nom de l'acheteur",
@@ -1490,6 +1489,247 @@
         "title": "Ce qui a probablement affaibli ce dossier",
         "caveat": "L'émetteur ne communique pas son raisonnement exact. Voici les principaux signaux de risque de l'évaluation complète, y compris ceux qui n'ont pas été transmis à la banque.",
         "fraudRecommendation": "Recommandation : examinez ou annulez manuellement les futures commandes à haut risque lorsque la vérification du paiement échoue ou que les noms du titulaire et de l'acheteur diffèrent, surtout si le compte présente déjà une contestation."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Ce litige a été tranché avant l'installation de DisputeDesk.",
+      "sentBeforeInstall": "Une réponse a été envoyée via Shopify le {date}, avant l'installation de DisputeDesk.",
+      "shopifySent": "Une réponse a été envoyée via Shopify le {date}.",
+      "shopifySentNoDate": "Une réponse a été envoyée via Shopify.",
+      "noneBeforeDeadline": "La banque a tranché le {date}, avant la date limite de réponse et avant qu'aucune réponse ne soit transmise.",
+      "noneFiled": "Aucune réponse n'a été transmise.",
+      "holdReason": {
+        "merchant_conceded": "Vous avez choisi de ne pas contester ce litige.",
+        "not_shipped": "DisputeDesk a mis ce litige en attente : la commande n'a jamais été expédiée, aucune livraison ne pouvait donc être montrée honnêtement à la banque.",
+        "refunded": "DisputeDesk a mis ce litige en attente : la commande avait déjà été remboursée.",
+        "covered": "DisputeDesk a mis ce litige en attente : Shopify Protect couvrait cette commande.",
+        "plan_limit": "DisputeDesk n'a pas pu préparer de preuves pour ce litige : la limite de votre forfait était atteinte.",
+        "auto_build_off": "DisputeDesk n'a pas préparé de preuves pour ce litige : la préparation automatique était désactivée pour votre boutique.",
+        "awaiting_review": "DisputeDesk a mis ce litige en attente : il attendait votre validation avant d'être transmis.",
+        "thin_evidence": "DisputeDesk a mis ce litige en attente : les preuves disponibles étaient trop minces pour argumenter."
+      }
+    },
+    "decidedView": {
+      "header": {
+        "decided": "Tranché le :"
+      },
+      "hero": {
+        "chipLost": "Définitif · plus rien à transmettre",
+        "chipWon": "Définitif · l'argent vous reste"
+      },
+      "outcome": {
+        "titleLost": "Litige perdu",
+        "titleWon": "Litige gagné",
+        "amountLost": "Montant perdu",
+        "amountRecovered": "Récupéré"
+      },
+      "product": {
+        "one": "{title} ({count, plural, one {# article} other {# articles}})",
+        "many": "{title} et {others} de plus ({count, plural, one {# article} other {# articles}})"
+      },
+      "claim": {
+        "FRAUDULENT": "Le client affirme ne pas avoir effectué cet achat",
+        "UNRECOGNIZED": "Le client ne reconnaît pas le débit",
+        "PRODUCT_NOT_RECEIVED": "Produit non reçu",
+        "PRODUCT_UNACCEPTABLE": "Produit non conforme à la description",
+        "SUBSCRIPTION_CANCELLED": "Le client affirme avoir résilié l'abonnement",
+        "DUPLICATE": "Le client affirme avoir été débité deux fois",
+        "CREDIT_NOT_PROCESSED": "Le client affirme que son remboursement n'a jamais été traité",
+        "GENERAL": "Litige général"
+      },
+      "who": {
+        "label": "Qui a répondu :",
+        "weFiled": "DisputeDesk a transmis vos preuves le {date}."
+      },
+      "summary": {
+        "claim": {
+          "FRAUDULENT": "Le client a déclaré à sa banque ne pas avoir effectué cet achat.",
+          "UNRECOGNIZED": "Le client a déclaré à sa banque ne pas reconnaître le débit.",
+          "PRODUCT_NOT_RECEIVED": "Le client a déclaré à sa banque que la commande n'était jamais arrivée.",
+          "PRODUCT_UNACCEPTABLE": "Le client a déclaré à sa banque que le produit n'était pas conforme à la description.",
+          "SUBSCRIPTION_CANCELLED": "Le client a déclaré à sa banque avoir déjà résilié l'abonnement.",
+          "DUPLICATE": "Le client a déclaré à sa banque avoir été débité deux fois.",
+          "CREDIT_NOT_PROCESSED": "Le client a déclaré à sa banque qu'un remboursement n'avait jamais été traité.",
+          "GENERAL": "Le client a contesté le débit auprès de sa banque."
+        },
+        "evidence": "{clauses}.",
+        "evidenceHeld": "{clauses} : il n'y avait donc aucun argument honnête à présenter.",
+        "response": {
+          "weFiledWon": "DisputeDesk a transmis ces preuves le {date}, et la banque a tranché en votre faveur.",
+          "weFiledWonNoFacts": "DisputeDesk a transmis vos preuves le {date}, et la banque a tranché en votre faveur.",
+          "weFiledLost": "DisputeDesk a transmis les preuves le {date}, et la banque a tout de même donné raison au client.",
+          "shopifyWon": "Une réponse a été envoyée via Shopify, et la banque a tranché en votre faveur.",
+          "shopifyLost": "Une réponse a été envoyée via Shopify, et la banque a donné raison au client.",
+          "noneWon": "La banque a tranché en votre faveur.",
+          "noneLost": "Aucune réponse n'a été transmise, et la banque a donné raison au client.",
+          "beforeInstallWon": "La banque a tranché en votre faveur avant l'installation de DisputeDesk.",
+          "beforeInstallLost": "La banque a donné raison au client avant l'installation de DisputeDesk."
+        },
+        "closingWon": "Les {amount} vous restent acquis.",
+        "closingNotShipped": "Expédier ou rembourser les commandes bloquées est le moyen le plus sûr d'éviter cela la prochaine fois.",
+        "closingLost": "Les mesures ci-dessous sont les changements les plus utiles pour la prochaine fois.",
+        "clause": {
+          "neverShipped": "elle n'a jamais été expédiée",
+          "shippedAfterDispute": "elle n'a été expédiée qu'après l'ouverture du litige",
+          "noDelivery": "rien au dossier ne montrait de livraison",
+          "avs_mismatch": "l'adresse de facturation de la carte ne correspondait pas à la commande",
+          "cardholder_name_mismatch": "le nom sur la carte différait de celui de l'acheteur",
+          "prior_chargebacks": "le client avait déjà contesté un débit",
+          "ip_country_mismatch": "la commande avait été passée depuis un autre pays",
+          "ip_high_risk": "le paiement provenait d'un réseau à haut risque",
+          "no_signature_on_fraud": "personne n'a signé la livraison",
+          "weak_identity_signals": "seul le pays du client a pu être confirmé",
+          "avs_match": "son adresse de facturation correspondait à la carte",
+          "signature_confirmed": "la livraison a été signée",
+          "delivery_confirmed": "le transporteur a confirmé la livraison",
+          "priorUndisputed": "{count, plural, one {il avait déjà commandé chez vous une fois sans problème} other {il avait déjà commandé chez vous # fois sans problème}}",
+          "threeDs": "le paiement a passé 3-D Secure"
+        }
+      },
+      "facts": {
+        "titleLost": "Ce que nous avons vu au dossier",
+        "titleWon": "Ce qui a porté le litige",
+        "subLost": "Faits tirés de la commande et de nos données. Ce n'est pas la motivation de la banque.",
+        "subWon": "Preuves figurant dans la réponse transmise par DisputeDesk",
+        "subRecord": "Faits tirés de la commande et de nos données",
+        "weightPill": "Les banques y accordent beaucoup de poids",
+        "noteNotReceived": "Pour une réclamation « non reçu », la banque se pose une question : a-t-il été livré ? Rien au dossier ne disait oui.",
+        "title": {
+          "neverShipped": "La commande n'a jamais été expédiée",
+          "shippedAfterDispute": "La commande n'a été expédiée qu'après l'ouverture du litige",
+          "noTracking": "Il n'existait ni numéro de suivi ni confirmation de livraison",
+          "priorUndisputed": "{count, plural, one {# commande antérieure de ce client n'a jamais été contestée} other {# commandes antérieures de ce client n'ont jamais été contestées}}",
+          "threeDs": "Le paiement a passé 3-D Secure"
+        },
+        "source": {
+          "order": "Données de commande Shopify",
+          "payment": "Données de paiement Shopify",
+          "customer": "Données client Shopify",
+          "ip": "Adresse IP au paiement",
+          "carrier": "Suivi du transporteur",
+          "unfulfilled": "Statut d'exécution : non traitée · Données de commande Shopify",
+          "shipped": "Expédiée le {date} · Données de commande Shopify"
+        }
+      },
+      "checklist": {
+        "title": "Ce qui fait gagner ce type de litige",
+        "thisCase": "Ce litige",
+        "item": {
+          "tracking": "Suivi du transporteur jusqu'à l'adresse du client",
+          "deliveryConfirmation": "Confirmation de livraison (signature au-dessus de votre seuil)",
+          "promisedDelivery": "Date de livraison promise au paiement",
+          "communication": "Historique des échanges avec le client",
+          "addressMatch": "Adresse de facturation et code de sécurité concordants",
+          "deliveryToBilling": "Livraison à l'adresse de facturation",
+          "priorOrders": "Commandes antérieures non contestées du même client",
+          "threeDs": "Authentification 3-D Secure",
+          "productDescription": "Description du produit conforme à ce qui a été envoyé",
+          "refundPolicy": "Politique de retour et de remboursement affichée au paiement",
+          "refundRecord": "Preuve de remboursement, ou raison pour laquelle aucun n'était dû",
+          "noReturn": "Aucun retour reçu",
+          "cancellationPolicy": "Conditions de résiliation affichées à l'inscription",
+          "activityAfterCancel": "Activité du client après la date de résiliation",
+          "duplicateExplanation": "Explication indiquant que les débits étaient des achats distincts",
+          "orderConfirmation": "Confirmation de commande",
+          "storePolicies": "Politiques de la boutique"
+        },
+        "state": {
+          "had": "Au dossier",
+          "policy": "Dans la politique",
+          "missing": "Manquant",
+          "none": "Aucun",
+          "notUsed": "Non utilisé",
+          "notChecked": "Non vérifié"
+        },
+        "coverage": "des éléments que les banques recherchent figuraient au dossier"
+      },
+      "next": {
+        "title": "La prochaine fois",
+        "shipOrCancel": {
+          "title": "Expédiez, ou annulez et remboursez, avant que le client ne conteste",
+          "detail": {
+            "chargeback": "Cette commande est restée {days, plural, one {# jour} other {# jours}} sans être expédiée avant la rétrofacturation.",
+            "inquiry": "Cette commande est restée {days, plural, one {# jour} other {# jours}} sans être expédiée avant la demande de renseignements."
+          },
+          "detailLate": "Elle n'a été expédiée qu'après la contestation du client."
+        },
+        "shareTracking": {
+          "title": "Partagez le suivi avec le client à l'expédition",
+          "detail": "Cette commande n'avait pas de numéro de suivi."
+        },
+        "holdHighRisk": {
+          "title": "Bloquez les commandes que Shopify signale comme à haut risque",
+          "detail": "Shopify avait signalé cette commande avant son expédition."
+        },
+        "threeDs": {
+          "title": "Activez 3-D Secure pour les commandes à risque",
+          "detail": "Les paiements authentifiés transfèrent la responsabilité des litiges pour fraude à la banque émettrice."
+        },
+        "selfServeCancel": {
+          "title": "Permettez la résiliation en libre-service et confirmez-la par e-mail",
+          "detail": "Les clients qui peuvent résilier facilement s'adressent rarement à leur banque."
+        },
+        "describeProduct": {
+          "title": "Décrivez les produits avec précision et montrez ce qui est expédié",
+          "detail": "Les litiges pour non-conformité dépendent de la correspondance entre l'annonce et ce qui est arrivé."
+        },
+        "confirmRefunds": {
+          "title": "Remboursez rapidement et envoyez une confirmation datée par e-mail",
+          "detail": "Une confirmation de remboursement répond directement à un litige pour remboursement non traité."
+        },
+        "sub": "Mesures à prendre sur vos prochaines commandes, d'après ce litige"
+      },
+      "timeline": {
+        "title": "Ce qui s'est passé",
+        "opened": "Litige ouvert",
+        "openedDetail": "{claim}. Réponse attendue le {due}.",
+        "openedDetailNoDue": "{claim}.",
+        "gathered": "Preuves rassemblées",
+        "gatheredNoDelivery": "Ni suivi ni confirmation de livraison sur la commande.",
+        "held": {
+          "not_shipped": {
+            "title": "En attente : commande non expédiée",
+            "detail": "Rien au dossier ne montrait de livraison, nous n'avons donc rien transmis."
+          },
+          "refunded": {
+            "title": "En attente : déjà remboursée",
+            "detail": "Nous n'avons rien transmis, car la commande avait déjà été remboursée."
+          },
+          "covered": {
+            "title": "En attente : couverte par Shopify Protect",
+            "detail": "Nous n'avons rien transmis, car Shopify Protect couvre cette commande."
+          },
+          "thin_evidence": {
+            "title": "En attente : preuves trop minces",
+            "detail": "Nous n'avons rien transmis, car les preuves étaient trop minces pour argumenter."
+          },
+          "awaiting_review": {
+            "title": "En attente : votre validation",
+            "detail": "Les règles de cette boutique ne transmettent rien sans votre accord."
+          },
+          "plan_limit": {
+            "title": "Non préparé : limite du forfait atteinte",
+            "detail": "La limite de dossiers de votre forfait était atteinte."
+          },
+          "auto_build_off": {
+            "title": "Non préparé : préparation automatique désactivée",
+            "detail": "La préparation automatique des preuves était désactivée pour votre boutique."
+          },
+          "merchant_conceded": {
+            "title": "Vous avez choisi de ne pas contester"
+          }
+        },
+        "emailed": "Vous avez reçu un e-mail",
+        "emailedFatalLoss": "Nous avons expliqué pourquoi ce litige ne pouvait pas être défendu honnêtement.",
+        "emailedPlanLimit": "Nous vous avons signalé que la limite de votre forfait était atteinte.",
+        "weFiled": "DisputeDesk a transmis vos preuves",
+        "weFiledDetail": "Enregistrées dans Shopify et transmises ensuite à la banque.",
+        "shopifySent": "Réponse envoyée via Shopify",
+        "cancelled": "Vous avez annulé la commande",
+        "lost": "Perdu",
+        "lostDetail": "{amount} n'ont pas été restitués.",
+        "won": "Gagné",
+        "wonDetail": "{amount} récupérés."
       }
     },
     "improvementHint": "Ajoutez {label} pour renforcer votre dossier.",

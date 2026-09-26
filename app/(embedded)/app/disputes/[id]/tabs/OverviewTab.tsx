@@ -54,6 +54,7 @@ import {
   outcomeExplanationToken,
   resolveOutcomeExplanation,
 } from "@/lib/disputes/outcomeExplanation";
+import { decidedResponseTokens } from "@/lib/disputes/decidedResponse";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
@@ -394,37 +395,52 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const decidedOutcome: "won" | "lost" | null =
     lifecycle === "won" ? "won" : lifecycle === "lost" ? "lost" : null;
 
+  /* Who responded on a decided case — resolved server-side from the pack,
+   * package and audit rows (lib/disputes/decidedResponse). A case DisputeDesk
+   * did not file gets its own sentences: who did respond, and why we held.
+   * The old single sentence ("decided before DisputeDesk filed any evidence")
+   * was false on cases we held on purpose — order #360499. */
+  const decidedResponse = data.decidedResponse ?? null;
+  const weFiled = decidedResponse?.responder === "we";
+  const bankFacingPackage = data.defencePackage?.bankFacing as
+    | { submitted_at?: string | null; facts_json?: unknown }
+    | null
+    | undefined;
+  /* Post-decision learning is merchant-only and must see the complete
+   * assessment, including facts correctly withheld from the issuer. The
+   * previous implementation read only bankFacing.facts_json, making AVS,
+   * name and account-history warnings disappear and allowing an unsigned
+   * parcel to become the headline. */
+  const assessmentFacts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
+    ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
+  );
+  /* What we filed, when we filed it. A bank-facing package is the richest
+   * record; a case saved through the older evidence-pack path has none, so
+   * the server's filing date stands in. Null when we did not file — and a
+   * package row alone does not count once the server says someone else
+   * responded. */
+  const filedPack =
+    (bankFacingPackage && (!decidedResponse || weFiled)) || weFiled
+      ? {
+          submittedAt: bankFacingPackage?.submitted_at ?? decidedResponse?.filedAt ?? null,
+          facts:
+            assessmentFacts.length > 0 ? assessmentFacts : bankFacingPackage?.facts_json ?? null,
+        }
+      : null;
+
   const outcomeExplanationText = (() => {
     if (!decidedOutcome) return null;
-    // Presence of the submitted defence package — NOT
-    // `dispute.submissionState` — is what says DisputeDesk defended this
-    // case. That flag is also true on historical imports back-filled at
-    // install, which closed before the app existed.
-    const bankFacing = data.defencePackage?.bankFacing as
-      | { submitted_at?: string | null; facts_json?: unknown }
-      | null
-      | undefined;
-    /* Post-decision learning is merchant-only and must see the complete
-     * assessment, including facts correctly withheld from the issuer. The
-     * previous implementation read only bankFacing.facts_json, making AVS,
-     * name and account-history warnings disappear and allowing an unsigned
-     * parcel to become the headline. */
-    const assessmentFacts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
-      ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
-    );
+    if (decidedResponse && !weFiled) {
+      const tokens = decidedResponseTokens(decidedResponse, (iso) => formatDate(iso));
+      return tokens.length > 0 ? tokens.map((tk) => resolveToken(tRoot, tk)).join(" ") : null;
+    }
     const explanation = resolveOutcomeExplanation({
       outcome: decidedOutcome,
       reason: dispute.reason ?? null,
       customerName: dispute.customerName ?? null,
-      pack: bankFacing
-        ? {
-            submittedAt: bankFacing.submitted_at ?? null,
-            facts: assessmentFacts.length > 0 ? assessmentFacts : bankFacing.facts_json,
-          }
-        : null,
+      pack: filedPack,
     });
-    const filedAt =
-      explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
+    if (explanation.kind === "not_filed_by_us") return null;
     /* The learning panel below owns the factor explanation on lost cases.
      * Feeding the same factor into this filing sentence rendered an exact
      * duplicate immediately above the panel. Keep the richer explanation for
@@ -437,23 +453,18 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     const token = outcomeExplanationToken(
       heroExplanation,
       decidedOutcome,
-      filedAt ? formatDate(filedAt) : null,
+      explanation.filedAt ? formatDate(explanation.filedAt) : null,
     );
     return token ? resolveToken(tRoot, token) : null;
   })();
 
   const outcomeLearningFactors = (() => {
-    if (decidedOutcome !== "lost") return null;
-    const facts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
-      ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
-    );
+    if (decidedOutcome !== "lost" || !filedPack) return null;
     return resolveOutcomeExplanation({
       outcome: "lost",
       reason: dispute.reason ?? null,
       customerName: dispute.customerName ?? null,
-      pack: data.defencePackage?.bankFacing
-        ? { submittedAt: null, facts }
-        : null,
+      pack: { submittedAt: null, facts: filedPack.facts },
     });
   })();
   const outcomeLearningList =
@@ -1186,8 +1197,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               `auto_save_blocked` event: the pipeline's PARK branch writes
               `parked_for_review`, not `auto_save_blocked`, so keying only on
               the audit row made the ask depend on which path happened to
-              evaluate the pack. */}
-          {(autoSaveBlock || held?.held) && !isReadOnly && (
+              evaluate the pack.
+
+              Never on a decided case: `isReadOnly` only turns true once
+              DisputeDesk saved, so a case we held and then lost kept offering
+              "Add missing evidence" / "Save anyway" after the bank had ruled
+              (order #360499). */}
+          {(autoSaveBlock || held?.held) && !isReadOnly && !isDecided && (
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${heroTone.border}` }}>
               {held?.offer === "cardholder_acknowledgement" && (
                 <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: "0 0 10px", lineHeight: 1.55, maxWidth: 760 }}>
@@ -1365,7 +1381,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* O2: Timeline — step titles colored per state (green/blue/gray) per Figma */}
+      {/* O2: Timeline — step titles colored per state (green/blue/gray) per Figma.
+          Live cases only: "What happens now" has no answer once the bank has
+          ruled. A past-tense "What happened" timeline is PR 2 of
+          docs/plans/decided-dispute-view.plan.md. */}
+      {!isDecided && (
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
         <BlockStack gap="300">
           <Text as="h3" variant="headingSm">{tExtra("whatHappensNow")}</Text>
@@ -1411,6 +1431,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </BlockStack>
         </BlockStack>
       </div>
+      )}
 
       {/* Merchant-attention card (plan §6.2) — driven by
           presentation.attention. Shown ONLY for `requested` — a real,

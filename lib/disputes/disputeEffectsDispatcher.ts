@@ -42,6 +42,11 @@ import {
   sendOutcomePostedAlert,
   type OutcomeVariant,
 } from "@/lib/email/sendOutcomePostedAlert";
+import {
+  DECIDED_VIEW_DISPUTE_COLUMNS,
+  loadDecidedViewInputs,
+  type DecidedViewDisputeRow,
+} from "@/lib/disputes/loadDecidedResponse";
 import { enqueueGorgiasEnrichment } from "@/lib/integrations/gorgias/enqueueEnrichment";
 import { withEffectDedup } from "./dispatchOnce";
 import { keyForEffect } from "./disputeEventKey";
@@ -406,11 +411,24 @@ async function dispatchOutcomeDetected(
       // context doesn't carry it, but the row does.
       const { data: row } = await sb
         .from("disputes")
-        .select("order_name")
+        .select(`order_name, ${DECIDED_VIEW_DISPUTE_COLUMNS}`)
         .eq("id", event.disputeId)
         .maybeSingle();
       const orderName =
         (row as { order_name?: string | null } | null)?.order_name ?? null;
+      // The decided view's inputs — the SAME loader the Overview uses, so the
+      // email's summary, facts and "Next time" match the page exactly. The
+      // event's variant is authoritative for the outcome (the row may not
+      // have caught up yet). Null on a read error; the email then keeps its
+      // existing wording.
+      const decidedView =
+        (variant === "won" || variant === "lost") && row
+          ? await loadDecidedViewInputs(sb, {
+              ...(row as unknown as DecidedViewDisputeRow),
+              normalized_status: variant,
+            })
+          : null;
+      const decidedResponse = decidedView?.response ?? null;
       // The submitted defence package, when we built one. Presence — not
       // `submission_state` — is what says DisputeDesk defended this case;
       // that flag is also true on historical imports back-filled at
@@ -450,6 +468,8 @@ async function dispatchOutcomeDetected(
         // helper switches to "dispute"-worded copy for this phase.
         phase: event.context.phase === "inquiry" ? "inquiry" : "chargeback",
         defencePackage,
+        decidedResponse,
+        decidedView,
       });
     },
   });
