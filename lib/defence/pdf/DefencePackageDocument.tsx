@@ -628,7 +628,11 @@ export function DefencePackageDocument({
     if (!block || !body) return null;
     return (
       <Section key={key} number={num()} title={block.heading} thesis={block.thesisText.trim() || undefined}>
-        <Prose text={body} emphasise={productNames} />
+        {/* Product names are bolded where they tell parcels and items apart
+            (shipping, line items). The summary and conclusion argue the case,
+            and bold names there pull the eye to the least important words
+            (maintainer, #360980, 2026-09-26). */}
+        <Prose text={body} emphasise={key === "executiveSummary" || key === "conclusion" ? [] : productNames} />
       </Section>
     );
   };

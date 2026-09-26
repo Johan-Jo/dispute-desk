@@ -3933,6 +3933,10 @@ interface HeldState {
 
 Tests: `lib/disputes/__tests__/heldState.test.ts` (derivation), `tests/unit/heldCopyTruth.test.ts` (six-locale catalog guard), `lib/email/__tests__/newDisputeAlertHeldVariant.test.ts` (rendered HTML).
 
+**Review and Forward tab (2026-09-26).** The Complete Defence Package card receives `held.held` (`autoFilesOnDueDate`). While a held case's latest package is a draft (or stale) and not yet with Shopify, the card offers no "Approve vX" and shows `disputes.reviewTab.package.autoFiles` instead: "Saved to Shopify automatically on {due date}. … No approval is needed." Approving never filed a held case early (the deadline cron promotes and saves the latest draft on the due date), so the button asked for a step that does not exist (maintainer, #360980). Review mode and non-held cases keep the approval. Test: `tests/unit/completeDefencePackageCard.render.test.tsx`.
+
+**Product-name emphasis.** Both renderers bold order product names in prose only where they tell parcels and items apart (Shipping, line items); the executive summary and the conclusion are not emphasised (`DefencePackageDocument.tsx` / `DefencePackageHtmlView.tsx` `prose()`).
+
 ### Store-wide automation mode (2026-07-27)
 
 Replaces the per-dispute-type Automatic/Review grid. **One switch per shop**, plus an explicit amount safeguard.
