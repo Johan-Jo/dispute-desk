@@ -279,3 +279,39 @@ describe("CompleteDefencePackageCard — a FAILED rebuild over a filed version",
     expect(html).toContain("Draft v5 is ready for review");
   });
 });
+
+/* Auto-pilot holding a case for its due date (#360980, 2026-09-26): the
+ * deadline cron files the latest draft by itself, so the card says when,
+ * and offers no approval that would change nothing. */
+describe("CompleteDefencePackageCard — held on Auto-pilot for the due date", () => {
+  const props = (held: boolean, over: Partial<CardProps> = {}): CardProps => ({
+    packId: "pack-1",
+    submittedToShopifyAt: null,
+    autoFilesOnDueDate: held,
+    dispute: { dueAt: "2026-10-03T23:00:00.000Z" },
+    defencePackage: { latest: row(), bankFacing: null, currentPromptVersion: 10, safety: SAFE },
+    ...over,
+  });
+  const title = PKG.autoFiles.title.replace("{date}", "");
+
+  it("says when it files, and offers no approval", () => {
+    const html = render(props(true));
+    expect(contains(html, title)).toBe(true);
+    expect(html).toMatch(/Oct 3, 2026|3 Oct 2026/);
+    expect(contains(html, PKG.autoFiles.body)).toBe(true);
+    expect(contains(html, "Approve v2")).toBe(false);
+    // Review and regenerate stay reachable.
+    expect(contains(html, PKG.viewPdf)).toBe(true);
+    expect(contains(html, PKG.moreActions)).toBe(true);
+  });
+
+  it("keeps the approval when the case is not held (review mode, or not yet decided)", () => {
+    const html = render(props(false));
+    expect(contains(html, title)).toBe(false);
+    expect(contains(html, "Approve v2")).toBe(true);
+  });
+
+  it("does not claim automatic filing once the package is with Shopify", () => {
+    expect(contains(render(props(true, { submittedToShopifyAt: "2026-09-27T08:00:00.000Z" })), title)).toBe(false);
+  });
+});
