@@ -3061,30 +3061,49 @@ Prod distribution at ship (1,111 decided): 880 `before_install`, 85 `we`, 27 `se
 
 #### Decided-dispute view (2026-09-26)
 
-**Design (the spec, rule 8):** Claude Design project `39b1425e-9413-47de-8fe4-64c9cc11af3a`, `Decided Dispute View.dc.html` / `DecidedView.dc.html`. **Code:** `lib/disputes/decidedView.ts` (pure builder), `app/(embedded)/app/disputes/[id]/DecidedWorkspace.tsx` (renderer), routed from `WorkspaceShell` whenever the workspace API returns `decidedView` (won/lost only).
+**Design (the spec, rule 8):** Claude Design project `39b1425e-9413-47de-8fe4-64c9cc11af3a`, `Decided Dispute View.dc.html` → **`DecidedView3.dc.html`** (third revision; it replaced v1, which never reached a merchant). **Code:**
+- `lib/disputes/decidedView.ts`: pure builder, tokens only
+- `lib/disputes/decidedViewText.ts`: the executive-summary paragraph
+- `app/(embedded)/app/disputes/[id]/DecidedWorkspace.tsx`: the renderer, routed from `WorkspaceShell` whenever the workspace API returns `decidedView` (won/lost only)
 
-**Data flow.** The workspace route assembles `DecidedViewInputs`:
-- the `loadDecidedContext` result (who responded, audit events, first pack date, `shopify_orders` row)
-- the latest pack's evidence items by field, which is the merchant-side record, including facts withheld from the issuer
-- line items from `order_confirmation`
+**One assembly for the page and the email.** `loadDecidedViewInputs` (in `lib/disputes/loadDecidedResponse.ts`) reads:
+- the dispute row
+- `loadDecidedContext`: who responded, audit events, first pack date, the `shopify_orders` row
+- the latest pack's evidence items by field
 - `pack_json.fatal_loss.reason`
 
-The client calls `buildDecidedView(inputs, { date, money })`, so dates and money format in the merchant's locale. Every string is a token under `disputes.decidedView.*` (6 locales).
+The workspace route and the `OUTCOME_DETECTED` email effect (`disputeEffectsDispatcher.ts`) both call it. The builder then runs with the caller's formatter: the client's locale, or `createTranslator` over the store locale in `decidedEmailSections`. The Overview and the email therefore show the same summary, facts and "Next time". A test asserts the email's summary string equals the page's.
 
-**Layout, top to bottom:**
-1. **Header card.** "Order {n}", then a Lost/Won badge and a Chargeback/Inquiry badge, then "View in Shopify Admin", then Amount · Customer · Opened · Response was due · Decided.
-2. **Tab row,** marked "Read-only · decided case".
-3. **Outcome card** (neutral). A dot, "Dispute lost/won · decided {date}", "{product} · {claim}", "Amount lost / Recovered", then the **Who responded** block (first line = responder, second = hold reason), then a footer: "This decision is final…" plus the link to the bank's reasoning in Shopify Admin.
-4. **What we saw in the record / What carried the case,** next to **What wins this type of dispute** (per reason family, marked had / missing / none for this case).
-5. **Next time** (lost only).
-6. **What happened** (past-tense timeline).
+**Layout (DecidedView3):**
+1. **Header card.** "Order {n} — {reason}", a Lost/Won badge, "Decided: {date}", "View in Shopify Admin", then Amount / Customer / Date filed / Dispute reason.
+2. **One card holding the tabs and the panel.** On Overview, in order:
+   - **Hero.** An icon tile, "Dispute lost/won", "{product} · {claim}", a chip ("Final · nothing left to file" / "Final · the money is yours"), and the amount. Then the **executive summary** paragraph, then **Who responded:** (first line = responder, second = hold reason).
+   - **What we saw in the record / What carried the case.** Facts, each with its source line; the top loss fact carries "Banks weight this heavily". Not-received losses add a note.
+   - **What wins this type of dispute.** A "{had} / {total}" coverage score, a segmented bar, then the rows with On record / Missing / None / In policy / Not used pills.
+   - **Next time** (losses only).
+   - **What happened.** Ringed timeline dots, with "{date} · {detail}" under each title.
 
-The Evidence and Review tabs render their normal bodies inside a card.
+**Executive summary**, built from data and never free text:
+1. The claim, e.g. "The customer told their bank the order never arrived."
+2. The case's own facts, as lower-case clauses joined with the locale's list format (`Intl.ListFormat`) and capitalised. When the hold reason is "not shipped", this sentence adds ", so there was no honest case to put forward".
+3. Who responded and how the bank ruled.
+4. A closing line: on a win, "The {amount} stays with you."; on a never-shipped loss, the ship-or-refund line; on any other loss that has "Next time" steps, a pointer to them.
+
+A win with no recorded facts uses "DisputeDesk filed your evidence…", never "that evidence" (prod #347615).
+
+**Outcome email (`sendOutcomePostedAlert.ts`).** On won/lost with `decidedView`, the body is:
+- the summary paragraph
+- the Who-responded line
+- up to four facts, each with its source
+- "Next time"
+- the chip as the result line
+
+This replaces the one-size template, which claimed "the card network accepted your defence package" even on cases DisputeDesk never filed. If the view fails to load, the template is used as before. `accepted` is unchanged.
 
 **Rules that are load-bearing:**
-- **Checklist rows are observations.** No evidence items at all → the checklist is hidden, not marked "Missing" everywhere (prod #347615). "Delivery to the billing address" needs a confirmed delivery **and** shipping = billing **and** AVS match. Delivery alone read "Had" on #349145, whose card address did not match. The AVS row is dropped when no AVS exists (PayPal, Klarna).
+- **Checklist rows are observations.** No evidence items → the checklist is hidden, not marked Missing everywhere (#347615). "Delivery to the billing address" needs a confirmed delivery **and** shipping = billing **and** an AVS match (#349145). The AVS row is dropped when no AVS exists (PayPal, Klarna).
 - **"Next time" fires only on a data trigger:**
-  - never shipped → ship or cancel (with the real days unshipped, from `shopify_orders.created_at_shopify` to `initiated_at`)
+  - never shipped → ship or cancel, with the real days unshipped
   - shipped after the dispute → ship or cancel
   - fulfilled without tracking → share tracking
   - fraud + Shopify risk CANCEL/INVESTIGATE + shipped → hold high-risk orders
@@ -3092,16 +3111,8 @@ The Evidence and Review tabs render their normal bodies inside a card.
   - one per family for product, refund and subscription
 
   At most three. Never on a win.
-- **Timeline steps come only from stored timestamps:**
-  - `initiated_at`
-  - first `evidence_packs.created_at`. `pack_created` audit rows mostly lack `dispute_id` (34 of 870).
-  - the first audit row carrying the winning hold reason
-  - `fatal_loss_alert_sent` / `billing_blocked_email_sent`
-  - our filing date
-  - `evidenceSentOn` (Shopify's response, only when we did not file)
-  - `shopify_orders.cancelled_at` on or after the dispute opened
-  - `closed_at`
-- **The "not-received" note** ("the bank's question is 'was it delivered?'…") renders only on a delivery-family loss without confirmed delivery.
+- **Timeline steps come only from stored timestamps.** Nothing but the decision may be dated after the decision; a pack rebuilt afterwards is dropped (dev seed #9010). `pack_created` audit rows mostly lack `dispute_id`, so "Evidence gathered" uses the first `evidence_packs.created_at`.
+- **Merchant-facing only.** None of these strings may reach the bank-facing package.
 
 ### Returned-to-sender Gate (2026-08-20)
 
