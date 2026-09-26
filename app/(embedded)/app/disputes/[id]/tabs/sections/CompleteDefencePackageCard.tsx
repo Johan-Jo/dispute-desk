@@ -90,6 +90,14 @@ export type PresentationStatusLike =
 
 interface Props {
   packId: string | null;
+  /**
+   * Auto-pilot is holding this case for its due date (`HeldState.held`,
+   * lib/disputes/heldState.ts). The deadline cron finalizes and saves the
+   * latest draft on the due date by itself, so approving changes nothing:
+   * the card says when it files instead of asking for an approval
+   * (maintainer, #360980, 2026-09-26).
+   */
+  autoFilesOnDueDate?: boolean;
   /** Used to render the inline HTML defence view + the days-remaining
    *  badge. Optional — when absent the card still works, just without
    *  the case-details / countdown enrichment. */
@@ -240,6 +248,7 @@ function StatusBadge({ status }: { status: Status }) {
 
 export function CompleteDefencePackageCard({
   packId,
+  autoFilesOnDueDate = false,
   dispute,
   submittedToShopifyAt,
   shopifyAdminUrl,
@@ -678,7 +687,11 @@ export function CompleteDefencePackageCard({
     submitPending,
     safety: defencePackage?.safety,
   });
-  const canFinalize = actionState.canFinalize;
+  // Held on Auto-pilot and not yet with Shopify: nothing waits for an
+  // approval, so none is offered. The package still previews and regenerates.
+  const filesAutomatically =
+    autoFilesOnDueDate && !submittedToShopifyAt && !!dispute?.dueAt && (latest?.status === "draft" || latest?.status === "stale");
+  const canFinalize = actionState.canFinalize && !filesAutomatically;
   const canSubmit = actionState.canSubmit;
   // Regenerate gate (unchanged rules, now derived in one place): the
   // pre-submit cases (draft / stale / failed) are always reachable; a
@@ -1097,6 +1110,16 @@ export function CompleteDefencePackageCard({
               <p>{tPkg("newEvidenceAvailableBody")}</p>
             </Banner>
           )}
+          {filesAutomatically ? (
+            <Banner
+              tone="info"
+              title={tPkg("autoFiles.title", {
+                date: new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(dispute!.dueAt!)),
+              })}
+            >
+              <p>{tPkg("autoFiles.body")}</p>
+            </Banner>
+          ) : null}
 
           {/* Action row — one primary at a time, plain-language labels,
               Regenerate demoted to a "More actions" overflow.
