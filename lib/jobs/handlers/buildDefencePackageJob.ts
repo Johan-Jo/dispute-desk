@@ -36,8 +36,8 @@ import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
-import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun } from "@/lib/defence/narrativeWriter";
-import { COUNSEL_DAILY_RUN_CAP, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
+import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
+import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
@@ -565,16 +565,36 @@ export async function handleBuildDefencePackage(
                   primary_domain: (shop as { primary_domain?: string | null }).primary_domain ?? null,
                 })
               : "The merchant"),
+          // Rebuild with unchanged inputs: reuse the last counsel letter's
+          // summary for this dispute (no model call). Any failed package is
+          // skipped; the summary is re-checked against today's ledger.
+          findReusable: async (inputHash) => {
+            const { data } = await sb
+              .from("defence_packages")
+              .select("narrative_json")
+              .eq("dispute_id", pkg.dispute_id)
+              .eq("prompt_family", COUNSEL_PROMPT_FAMILY)
+              .neq("status", "failed")
+              .eq("narrative_json->counsel->>inputHash", inputHash)
+              .order("version", { ascending: false })
+              .limit(1);
+            const summary = (data?.[0]?.narrative_json as { counsel?: { summary?: unknown } } | null)?.counsel?.summary;
+            return Array.isArray(summary) && summary.every((p) => typeof p === "string") ? (summary as string[]) : null;
+          },
           // Every run is recorded, letter or not, so the counsel cap sees it.
+          // Reused letters are recorded too (zero tokens), under their own
+          // strategy key, which neither cap counts.
           onSpend: async (spend) => {
             await writeRun(sb, { shopId: pkg.shop_id, packageId }, {
               model: spend.model,
               packageMode: classification.packageMode,
               promptTokens: spend.tokens.prompt,
               completionTokens: spend.tokens.completion,
+              cachedTokens: spend.tokens.cached,
+              stageTokens: spend.stages,
               durationMs: spend.durationMs,
               validationStatus: spend.ok ? "ok" : "failed",
-              strategyKeys: ["counsel_v2"],
+              strategyKeys: [spend.reused ? COUNSEL_REUSED_STRATEGY_KEY : "counsel_v2"],
               promptVersion: COUNSEL_PROMPT_VERSION,
             });
           },
