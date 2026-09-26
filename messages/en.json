@@ -831,7 +831,6 @@
         "lost": "We filed your evidence on {date}. The bank still decided for the cardholder.",
         "won": "We filed your evidence on {date}, and the bank ruled in your favour."
       },
-      "notDefendedByUs": "This dispute was decided before DisputeDesk filed any evidence for it.",
       "factor": {
         "avs_mismatch": "The card's billing address did not match the address on the order",
         "cardholder_name_mismatch": "The name registered to the card differed from the buyer's name",
@@ -849,6 +848,189 @@
         "title": "What likely weakened this case",
         "caveat": "The issuer does not share its exact reasoning. These are the strongest risk signals in the complete assessment, including signals kept out of the bank-facing response.",
         "fraudRecommendation": "Recommended action: manually review or cancel future high-risk orders when payment verification fails or the cardholder and buyer names differ, especially when the account has a previous chargeback."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "This dispute was decided before DisputeDesk was installed.",
+      "sentBeforeInstall": "A response was sent through Shopify on {date}, before DisputeDesk was installed.",
+      "shopifySent": "Shopify sent its automatic response on {date}.",
+      "shopifySentNoDate": "Shopify sent its automatic response.",
+      "noneBeforeDeadline": "The bank decided on {date}, before the response deadline and before any response was filed.",
+      "noneFiled": "No response was filed.",
+      "holdReason": {
+        "merchant_conceded": "You chose not to defend this case.",
+        "not_shipped": "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully put in front of the bank.",
+        "refunded": "DisputeDesk held this case: the order had already been refunded.",
+        "covered": "DisputeDesk held this case: Shopify Protect covered this order.",
+        "plan_limit": "DisputeDesk couldn't build evidence for this case: your plan's limit had been reached.",
+        "auto_build_off": "DisputeDesk didn't build evidence for this case: automatic building was turned off for your store.",
+        "awaiting_review": "DisputeDesk held this case: it was waiting for your review before filing.",
+        "thin_evidence": "DisputeDesk held this case: the evidence on record was too thin to argue."
+      }
+    },
+    "decidedView": {
+      "readOnly": "Read-only · decided case",
+      "header": {
+        "title": "Order {order}",
+        "opened": "Opened",
+        "due": "Response was due",
+        "decided": "Decided"
+      },
+      "outcome": {
+        "titleLost": "Dispute lost",
+        "titleWon": "Dispute won",
+        "decided": "· decided {date}",
+        "amountLost": "Amount lost",
+        "amountRecovered": "Recovered",
+        "final": "This decision is final. There is nothing left to file.",
+        "bankReasoning": "Your bank's written reasoning is in <link>Shopify Admin</link>."
+      },
+      "product": {
+        "one": "{title} ({count, plural, one {# item} other {# items}})",
+        "many": "{title} and {others} more ({count, plural, one {# item} other {# items}})"
+      },
+      "claim": {
+        "FRAUDULENT": "Customer says they didn't make this purchase",
+        "UNRECOGNIZED": "Customer doesn't recognise the charge",
+        "PRODUCT_NOT_RECEIVED": "Product not received",
+        "PRODUCT_UNACCEPTABLE": "Product not as described",
+        "SUBSCRIPTION_CANCELLED": "Customer says they cancelled the subscription",
+        "DUPLICATE": "Customer says they were charged twice",
+        "CREDIT_NOT_PROCESSED": "Customer says their refund was never processed",
+        "GENERAL": "General dispute"
+      },
+      "who": {
+        "title": "Who responded",
+        "weFiled": "DisputeDesk filed your evidence on {date}."
+      },
+      "facts": {
+        "titleLost": "What we saw in the record",
+        "titleWon": "What carried the case",
+        "bullet": "{clause}.",
+        "neverShipped": "The order was never shipped (fulfilment status: unfulfilled).",
+        "shippedAfterDispute": "The order shipped on {date}, after the dispute was opened.",
+        "noTracking": "No tracking number or delivery confirmation existed.",
+        "noteNotReceived": "On a not-received claim the bank's question is \"was it delivered?\", and nothing on record said yes.",
+        "priorUndisputed": "{count, plural, one {The customer had # earlier order from this store that was never disputed.} other {The customer had # earlier orders from this store that were never disputed.}}"
+      },
+      "checklist": {
+        "title": "What wins this type of dispute",
+        "thisCase": "This case",
+        "item": {
+          "tracking": "Carrier tracking to the customer's address",
+          "deliveryConfirmation": "Delivery confirmation (signature above your threshold)",
+          "promisedDelivery": "Delivery date promised at checkout",
+          "communication": "Customer communication record",
+          "addressMatch": "Billing address and security code match",
+          "deliveryToBilling": "Delivery to the billing address",
+          "priorOrders": "Earlier undisputed orders by the same customer",
+          "threeDs": "3-D Secure authentication",
+          "productDescription": "Product description that matches what was sent",
+          "refundPolicy": "Return and refund policy shown at checkout",
+          "refundRecord": "Refund record, or why no refund was due",
+          "noReturn": "No return was received",
+          "cancellationPolicy": "Cancellation terms shown at sign-up",
+          "activityAfterCancel": "Customer activity after the cancellation date",
+          "duplicateExplanation": "Explanation that the charges were separate purchases",
+          "orderConfirmation": "Order confirmation",
+          "storePolicies": "Store policies"
+        },
+        "state": {
+          "had": "Had",
+          "policy": "Policy",
+          "missing": "Missing",
+          "none": "None",
+          "notUsed": "Not used",
+          "notChecked": "Not checked"
+        }
+      },
+      "next": {
+        "title": "Next time",
+        "shipOrCancel": {
+          "title": "Ship or cancel-and-refund before the customer disputes.",
+          "detail": {
+            "chargeback": "This order sat unshipped {days, plural, one {# day} other {# days}} before the chargeback.",
+            "inquiry": "This order sat unshipped {days, plural, one {# day} other {# days}} before the inquiry."
+          },
+          "detailLate": "It shipped only after the customer had disputed it."
+        },
+        "shareTracking": {
+          "title": "Share tracking with the customer when the order ships.",
+          "detail": "No tracking number was on this order."
+        },
+        "holdHighRisk": {
+          "title": "Hold orders Shopify flags as high risk.",
+          "detail": "Shopify flagged this order before it shipped."
+        },
+        "threeDs": {
+          "title": "Turn on 3-D Secure for risky orders.",
+          "detail": "Authenticated payments move liability for fraud claims to the card issuer."
+        },
+        "selfServeCancel": {
+          "title": "Make cancelling self-serve and confirm it by email.",
+          "detail": "Customers who can cancel easily rarely go to their bank instead."
+        },
+        "describeProduct": {
+          "title": "Describe products precisely and show what ships.",
+          "detail": "Not-as-described claims turn on whether the listing matched what arrived."
+        },
+        "confirmRefunds": {
+          "title": "Refund promptly and email a dated confirmation.",
+          "detail": "A refund confirmation answers a refund-not-processed claim directly."
+        }
+      },
+      "timeline": {
+        "title": "What happened",
+        "opened": "Dispute opened",
+        "openedDetail": "{claim}. Response due {due}.",
+        "openedDetailNoDue": "{claim}.",
+        "gathered": "Evidence gathered",
+        "gatheredNoDelivery": "No tracking or delivery confirmation was on the order.",
+        "held": {
+          "not_shipped": {
+            "title": "Held: order not shipped",
+            "detail": "We didn't file, because nothing on record showed delivery."
+          },
+          "refunded": {
+            "title": "Held: order already refunded",
+            "detail": "We didn't file, because the order had already been refunded."
+          },
+          "covered": {
+            "title": "Held: covered by Shopify Protect",
+            "detail": "We didn't file, because Shopify Protect covers this order."
+          },
+          "thin_evidence": {
+            "title": "Held: evidence too thin",
+            "detail": "We didn't file, because the evidence on record was too thin to argue."
+          },
+          "awaiting_review": {
+            "title": "Held: waiting for your review",
+            "detail": "This store's rules don't file without your approval."
+          },
+          "plan_limit": {
+            "title": "Not built: plan limit reached",
+            "detail": "Your plan's pack limit had been reached."
+          },
+          "auto_build_off": {
+            "title": "Not built: automatic building off",
+            "detail": "Automatic evidence building was turned off for your store."
+          },
+          "merchant_conceded": {
+            "title": "You chose not to defend"
+          }
+        },
+        "emailed": "You were emailed",
+        "emailedFatalLoss": "We explained why this case couldn't be defended truthfully.",
+        "emailedPlanLimit": "We told you your plan's limit had been reached.",
+        "weFiled": "DisputeDesk filed your evidence",
+        "weFiledDetail": "Saved to Shopify and submitted to the bank.",
+        "shopifySent": "Shopify's automatic response sent",
+        "shopifySentDetail": "Shopify sends its own response when nothing is filed by the deadline.",
+        "cancelled": "You cancelled the order",
+        "lost": "Lost",
+        "lostDetail": "{amount} was not returned.",
+        "won": "Won",
+        "wonDetail": "{amount} recovered."
       }
     },
     "improvementHint": "Add {label} to strengthen your case.",

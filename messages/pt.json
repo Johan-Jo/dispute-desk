@@ -1472,7 +1472,6 @@
         "lost": "Enviámos as suas provas a {date}. Ainda assim, o banco decidiu a favor do titular do cartão.",
         "won": "Enviámos as suas provas a {date}, e o banco decidiu a seu favor."
       },
-      "notDefendedByUs": "Esta contestação foi decidida antes de a DisputeDesk ter enviado quaisquer provas.",
       "factor": {
         "avs_mismatch": "A morada de faturação do cartão não correspondia à morada da encomenda",
         "cardholder_name_mismatch": "O nome registado no cartão era diferente do nome do comprador",
@@ -1490,6 +1489,189 @@
         "title": "O que provavelmente enfraqueceu este caso",
         "caveat": "O emissor não partilha o motivo exato da decisão. Estes são os sinais de risco mais fortes da avaliação completa, incluindo os que não foram enviados ao banco.",
         "fraudRecommendation": "Recomendação: analise ou cancele manualmente futuras encomendas de alto risco quando a verificação do pagamento falhar ou os nomes do titular e do comprador forem diferentes, sobretudo se a conta já tiver um chargeback."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Esta contestação foi decidida antes de a DisputeDesk ser instalada.",
+      "sentBeforeInstall": "Foi enviada uma resposta através da Shopify a {date}, antes de a DisputeDesk ser instalada.",
+      "shopifySent": "A Shopify enviou a sua resposta automática a {date}.",
+      "shopifySentNoDate": "A Shopify enviou a sua resposta automática.",
+      "noneBeforeDeadline": "O banco decidiu a {date}, antes do prazo de resposta e antes de ter sido enviada qualquer resposta.",
+      "noneFiled": "Não foi enviada nenhuma resposta.",
+      "holdReason": {
+        "merchant_conceded": "Optou por não contestar este caso.",
+        "not_shipped": "A DisputeDesk reteve este caso: a encomenda nunca foi enviada, pelo que não havia nenhuma entrega que pudéssemos apresentar ao banco com verdade.",
+        "refunded": "A DisputeDesk reteve este caso: a encomenda já tinha sido reembolsada.",
+        "covered": "A DisputeDesk reteve este caso: o Shopify Protect cobria esta encomenda.",
+        "plan_limit": "A DisputeDesk não conseguiu preparar provas para este caso: o limite do seu plano tinha sido atingido.",
+        "auto_build_off": "A DisputeDesk não preparou provas para este caso: a preparação automática estava desativada para a sua loja.",
+        "awaiting_review": "A DisputeDesk reteve este caso: estava a aguardar a sua revisão antes do envio.",
+        "thin_evidence": "A DisputeDesk reteve este caso: as provas disponíveis eram demasiado escassas para argumentar."
+      }
+    },
+    "decidedView": {
+      "readOnly": "Só de leitura · caso decidido",
+      "header": {
+        "title": "Encomenda {order}",
+        "opened": "Aberta",
+        "due": "Prazo de resposta",
+        "decided": "Decidida"
+      },
+      "outcome": {
+        "titleLost": "Contestação perdida",
+        "titleWon": "Contestação ganha",
+        "decided": "· decidida a {date}",
+        "amountLost": "Montante perdido",
+        "amountRecovered": "Recuperado",
+        "final": "Esta decisão é definitiva. Não há mais nada a enviar.",
+        "bankReasoning": "A fundamentação escrita do seu banco está no <link>Shopify Admin</link>."
+      },
+      "product": {
+        "one": "{title} ({count, plural, one {# artigo} other {# artigos}})",
+        "many": "{title} e mais {others} ({count, plural, one {# artigo} other {# artigos}})"
+      },
+      "claim": {
+        "FRAUDULENT": "O cliente diz que não fez esta compra",
+        "UNRECOGNIZED": "O cliente não reconhece a cobrança",
+        "PRODUCT_NOT_RECEIVED": "Produto não recebido",
+        "PRODUCT_UNACCEPTABLE": "Produto não corresponde à descrição",
+        "SUBSCRIPTION_CANCELLED": "O cliente diz que cancelou a subscrição",
+        "DUPLICATE": "O cliente diz que foi cobrado duas vezes",
+        "CREDIT_NOT_PROCESSED": "O cliente diz que o reembolso nunca foi processado",
+        "GENERAL": "Contestação geral"
+      },
+      "who": {
+        "title": "Quem respondeu",
+        "weFiled": "A DisputeDesk enviou as suas provas a {date}."
+      },
+      "facts": {
+        "titleLost": "O que vimos no registo",
+        "titleWon": "O que sustentou o caso",
+        "bullet": "{clause}.",
+        "neverShipped": "A encomenda nunca foi enviada (estado de processamento: não processada).",
+        "shippedAfterDispute": "A encomenda foi enviada a {date}, depois de a contestação ter sido aberta.",
+        "noTracking": "Não existia número de seguimento nem confirmação de entrega.",
+        "noteNotReceived": "Numa reclamação de não receção, a pergunta do banco é «foi entregue?», e nada no registo dizia que sim.",
+        "priorUndisputed": "{count, plural, one {O cliente tinha # encomenda anterior nesta loja que nunca foi contestada.} other {O cliente tinha # encomendas anteriores nesta loja que nunca foram contestadas.}}"
+      },
+      "checklist": {
+        "title": "O que ganha este tipo de contestação",
+        "thisCase": "Este caso",
+        "item": {
+          "tracking": "Seguimento da transportadora até à morada do cliente",
+          "deliveryConfirmation": "Confirmação de entrega (assinatura acima do seu limite)",
+          "promisedDelivery": "Data de entrega prometida no checkout",
+          "communication": "Registo de comunicação com o cliente",
+          "addressMatch": "Morada de faturação e código de segurança coincidem",
+          "deliveryToBilling": "Entrega na morada de faturação",
+          "priorOrders": "Encomendas anteriores não contestadas do mesmo cliente",
+          "threeDs": "Autenticação 3-D Secure",
+          "productDescription": "Descrição do produto que corresponde ao que foi enviado",
+          "refundPolicy": "Política de devoluções e reembolsos mostrada no checkout",
+          "refundRecord": "Registo do reembolso, ou porque não era devido",
+          "noReturn": "Não foi recebida nenhuma devolução",
+          "cancellationPolicy": "Condições de cancelamento mostradas na adesão",
+          "activityAfterCancel": "Atividade do cliente após a data de cancelamento",
+          "duplicateExplanation": "Explicação de que as cobranças eram compras distintas",
+          "orderConfirmation": "Confirmação da encomenda",
+          "storePolicies": "Políticas da loja"
+        },
+        "state": {
+          "had": "Tinha",
+          "policy": "Política",
+          "missing": "Em falta",
+          "none": "Nenhum",
+          "notUsed": "Não usado",
+          "notChecked": "Não verificado"
+        }
+      },
+      "next": {
+        "title": "Da próxima vez",
+        "shipOrCancel": {
+          "title": "Envie, ou cancele e reembolse, antes de o cliente contestar.",
+          "detail": {
+            "chargeback": "Esta encomenda esteve {days, plural, one {# dia} other {# dias}} por enviar antes do chargeback.",
+            "inquiry": "Esta encomenda esteve {days, plural, one {# dia} other {# dias}} por enviar antes do pedido de informação."
+          },
+          "detailLate": "Só foi enviada depois de o cliente a ter contestado."
+        },
+        "shareTracking": {
+          "title": "Partilhe o seguimento com o cliente quando a encomenda for enviada.",
+          "detail": "Esta encomenda não tinha número de seguimento."
+        },
+        "holdHighRisk": {
+          "title": "Retenha as encomendas que a Shopify assinala como de alto risco.",
+          "detail": "A Shopify assinalou esta encomenda antes de ser enviada."
+        },
+        "threeDs": {
+          "title": "Ative o 3-D Secure para encomendas de risco.",
+          "detail": "Os pagamentos autenticados transferem a responsabilidade das reclamações de fraude para o banco emissor."
+        },
+        "selfServeCancel": {
+          "title": "Permita o cancelamento em self-service e confirme-o por e-mail.",
+          "detail": "Clientes que conseguem cancelar facilmente raramente recorrem ao banco."
+        },
+        "describeProduct": {
+          "title": "Descreva os produtos com precisão e mostre o que é enviado.",
+          "detail": "As reclamações de produto não conforme dependem de o anúncio corresponder ao que chegou."
+        },
+        "confirmRefunds": {
+          "title": "Reembolse depressa e envie por e-mail uma confirmação datada.",
+          "detail": "Uma confirmação de reembolso responde diretamente a uma reclamação de reembolso não processado."
+        }
+      },
+      "timeline": {
+        "title": "O que aconteceu",
+        "opened": "Contestação aberta",
+        "openedDetail": "{claim}. Resposta até {due}.",
+        "openedDetailNoDue": "{claim}.",
+        "gathered": "Provas reunidas",
+        "gatheredNoDelivery": "A encomenda não tinha seguimento nem confirmação de entrega.",
+        "held": {
+          "not_shipped": {
+            "title": "Retido: encomenda não enviada",
+            "detail": "Não enviámos nada, porque nada no registo demonstrava a entrega."
+          },
+          "refunded": {
+            "title": "Retido: já reembolsada",
+            "detail": "Não enviámos nada, porque a encomenda já tinha sido reembolsada."
+          },
+          "covered": {
+            "title": "Retido: coberto pelo Shopify Protect",
+            "detail": "Não enviámos nada, porque o Shopify Protect cobre esta encomenda."
+          },
+          "thin_evidence": {
+            "title": "Retido: provas insuficientes",
+            "detail": "Não enviámos nada, porque as provas eram demasiado escassas para argumentar."
+          },
+          "awaiting_review": {
+            "title": "Retido: a aguardar a sua revisão",
+            "detail": "As regras desta loja não enviam nada sem a sua aprovação."
+          },
+          "plan_limit": {
+            "title": "Não preparado: limite do plano atingido",
+            "detail": "O limite de pacotes do seu plano tinha sido atingido."
+          },
+          "auto_build_off": {
+            "title": "Não preparado: preparação automática desativada",
+            "detail": "A preparação automática de provas estava desativada para a sua loja."
+          },
+          "merchant_conceded": {
+            "title": "Optou por não contestar"
+          }
+        },
+        "emailed": "Recebeu um e-mail",
+        "emailedFatalLoss": "Explicámos porque é que este caso não podia ser defendido com verdade.",
+        "emailedPlanLimit": "Informámos que o limite do seu plano tinha sido atingido.",
+        "weFiled": "A DisputeDesk enviou as suas provas",
+        "weFiledDetail": "Guardadas na Shopify e enviadas ao banco.",
+        "shopifySent": "Resposta automática da Shopify enviada",
+        "shopifySentDetail": "A Shopify envia a sua própria resposta quando nada é enviado até ao prazo.",
+        "cancelled": "Cancelou a encomenda",
+        "lost": "Perdida",
+        "lostDetail": "{amount} não foram devolvidos.",
+        "won": "Ganha",
+        "wonDetail": "{amount} recuperados."
       }
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",

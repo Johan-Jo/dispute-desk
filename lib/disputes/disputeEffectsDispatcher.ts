@@ -42,6 +42,7 @@ import {
   sendOutcomePostedAlert,
   type OutcomeVariant,
 } from "@/lib/email/sendOutcomePostedAlert";
+import { loadDecidedResponse, type DecidedDisputeRow } from "@/lib/disputes/loadDecidedResponse";
 import { enqueueGorgiasEnrichment } from "@/lib/integrations/gorgias/enqueueEnrichment";
 import { withEffectDedup } from "./dispatchOnce";
 import { keyForEffect } from "./disputeEventKey";
@@ -406,11 +407,22 @@ async function dispatchOutcomeDetected(
       // context doesn't carry it, but the row does.
       const { data: row } = await sb
         .from("disputes")
-        .select("order_name")
+        .select(
+          "id, shop_id, order_name, closed_at, due_at, submitted_at, evidence_saved_to_shopify_at, review_state",
+        )
         .eq("id", event.disputeId)
         .maybeSingle();
       const orderName =
         (row as { order_name?: string | null } | null)?.order_name ?? null;
+      // Who responded, and why DisputeDesk did not when it didn't — the same
+      // resolver the Overview renders, so the email and the page agree.
+      // Null on a read error; the email then keeps its existing wording.
+      const decidedResponse =
+        variant === "won" || variant === "lost"
+          ? row
+            ? await loadDecidedResponse(sb, row as DecidedDisputeRow)
+            : null
+          : null;
       // The submitted defence package, when we built one. Presence — not
       // `submission_state` — is what says DisputeDesk defended this case;
       // that flag is also true on historical imports back-filled at
@@ -450,6 +462,7 @@ async function dispatchOutcomeDetected(
         // helper switches to "dispute"-worded copy for this phase.
         phase: event.context.phase === "inquiry" ? "inquiry" : "chargeback",
         defencePackage,
+        decidedResponse,
       });
     },
   });
