@@ -831,7 +831,6 @@
         "lost": "We filed your evidence on {date}. The bank still decided for the cardholder.",
         "won": "We filed your evidence on {date}, and the bank ruled in your favour."
       },
-      "notDefendedByUs": "This dispute was decided before DisputeDesk filed any evidence for it.",
       "factor": {
         "avs_mismatch": "The card's billing address did not match the address on the order",
         "cardholder_name_mismatch": "The name registered to the card differed from the buyer's name",
@@ -849,6 +848,24 @@
         "title": "What likely weakened this case",
         "caveat": "The issuer does not share its exact reasoning. These are the strongest risk signals in the complete assessment, including signals kept out of the bank-facing response.",
         "fraudRecommendation": "Recommended action: manually review or cancel future high-risk orders when payment verification fails or the cardholder and buyer names differ, especially when the account has a previous chargeback."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "This dispute was decided before DisputeDesk was installed.",
+      "sentBeforeInstall": "A response was sent through Shopify on {date}, before DisputeDesk was installed.",
+      "shopifySent": "DisputeDesk did not file evidence on this case. The response on file was sent through Shopify on {date}.",
+      "shopifySentNoDate": "DisputeDesk did not file evidence on this case. The response on file was sent through Shopify.",
+      "noneBeforeDeadline": "The decision came on {date}, before the response deadline and before any evidence was filed.",
+      "noneFiled": "No evidence was filed on this case.",
+      "holdReason": {
+        "merchant_conceded": "You chose not to defend it.",
+        "not_shipped": "DisputeDesk held it because the order was never shipped, so there was no delivery we could truthfully show the bank.",
+        "refunded": "DisputeDesk held it because the order had already been refunded.",
+        "covered": "DisputeDesk held it because Shopify Protect covered this order.",
+        "plan_limit": "DisputeDesk could not build the evidence because your plan's limit had been reached.",
+        "auto_build_off": "Automatic evidence building was turned off for your store.",
+        "awaiting_review": "It was waiting for your review before filing.",
+        "thin_evidence": "DisputeDesk held it because the evidence on record was too thin to argue."
       }
     },
     "improvementHint": "Add {label} to strengthen your case.",

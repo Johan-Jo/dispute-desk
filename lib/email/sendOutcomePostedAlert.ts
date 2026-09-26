@@ -45,6 +45,11 @@ import {
   outcomeExplanationToken,
   resolveOutcomeExplanation,
 } from "@/lib/disputes/outcomeExplanation";
+import {
+  decidedResponseTokens,
+  type DecidedResponse,
+} from "@/lib/disputes/decidedResponse";
+import type { I18nToken } from "@/lib/i18n/token";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -80,6 +85,13 @@ export interface OutcomePostedAlertContext {
    * Omit (or pass null) and the email keeps its existing wording exactly.
    */
   defencePackage?: { submittedAt: string | null; facts: unknown } | null;
+  /**
+   * Who responded, and why DisputeDesk did not when it didn't
+   * (`lib/disputes/decidedResponse`) — the same answer the Overview renders.
+   * When it says someone else responded, the email explains that instead of
+   * the filing sentence. Omit (or pass null) to keep the package-only path.
+   */
+  decidedResponse?: DecidedResponse | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -682,47 +694,75 @@ async function outcomeExplanationSentence(input: {
   outcome: "won" | "lost";
   reason: string | null;
   pack: { submittedAt: string | null; facts: unknown } | null;
+  decided: DecidedResponse | null;
 }): Promise<string | null> {
   try {
+    const formatDate = (iso: string) =>
+      new Date(iso).toLocaleDateString(input.locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    const messages = await getMessages(input.locale);
+
+    // Someone other than DisputeDesk responded (or nobody did): say who, and
+    // why we held — the same sentences the Overview renders. Pre-install
+    // cases get no paragraph: an unprompted email volunteering "this was
+    // before your time with us" is noise.
+    const decided = input.decided;
+    if (decided && decided.responder !== "we") {
+      if (decided.responder === "before_install" || decided.responder === "sent_before_install") {
+        return null;
+      }
+      const tokens = decidedResponseTokens(decided, formatDate);
+      if (tokens.length === 0) return null;
+      const parts: string[] = [];
+      for (const tk of tokens) {
+        const text = renderEmailToken(messages, tk);
+        if (text === null) return null;
+        parts.push(text);
+      }
+      return parts.join(" ");
+    }
+
+    // We filed. A package row is the richest record; a case saved through the
+    // older evidence-pack path has none, so the resolver's filing date stands in.
+    const pack =
+      input.pack ??
+      (decided?.responder === "we" ? { submittedAt: decided.filedAt, facts: null } : null);
     const explanation = resolveOutcomeExplanation({
       outcome: input.outcome,
       reason: input.reason,
-      pack: input.pack,
+      pack,
     });
-    const filedAt =
-      explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
-    // A historical import gets no paragraph at all. The Overview header
-    // states it plainly because the merchant is looking at that case; an
-    // unprompted email volunteering "we did nothing here" is noise.
-    if (explanation.kind === "not_defended_by_us") return null;
+    if (explanation.kind === "not_filed_by_us") return null;
 
-    const formattedDate = filedAt
-      ? new Date(filedAt).toLocaleDateString(input.locale, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
-      : null;
+    const formattedDate = explanation.filedAt ? formatDate(explanation.filedAt) : null;
     const token = outcomeExplanationToken(explanation, input.outcome, formattedDate);
     if (!token) return null;
-
-    const messages = await getMessages(input.locale);
-    const template = lookupMessage(messages, token.key);
-    if (!template) return null;
-
-    let out = template;
-    for (const [name, value] of Object.entries(token.params ?? {})) {
-      const resolved =
-        typeof value === "object" && value !== null && "key" in value
-          ? lookupMessage(messages, (value as { key: string }).key)
-          : String(value);
-      if (resolved === null) return null;
-      out = out.split(`{${name}}`).join(resolved);
-    }
-    return out;
+    return renderEmailToken(messages, token);
   } catch {
     return null;
   }
+}
+
+/** Resolve one token against the locale bundle. Null on any missing key. */
+function renderEmailToken(
+  messages: Awaited<ReturnType<typeof getMessages>>,
+  token: I18nToken,
+): string | null {
+  const template = lookupMessage(messages, token.key);
+  if (!template) return null;
+  let out = template;
+  for (const [name, value] of Object.entries(token.params ?? {})) {
+    const resolved =
+      typeof value === "object" && value !== null && "key" in value
+        ? lookupMessage(messages, (value as { key: string }).key)
+        : String(value);
+    if (resolved === null) return null;
+    out = out.split(`{${name}}`).join(resolved);
+  }
+  return out;
 }
 
 function formatCurrency(
@@ -827,6 +867,7 @@ export async function sendOutcomePostedAlert(
         outcome: ctx.outcome,
         reason: ctx.reason,
         pack: ctx.defencePackage ?? null,
+        decided: ctx.decidedResponse ?? null,
       });
       // Slot in after the result statement and before the "no further
       // action / review what happened" paragraph, which then reads as the

@@ -1472,7 +1472,6 @@
         "lost": "Enviámos as suas provas a {date}. Ainda assim, o banco decidiu a favor do titular do cartão.",
         "won": "Enviámos as suas provas a {date}, e o banco decidiu a seu favor."
       },
-      "notDefendedByUs": "Esta contestação foi decidida antes de a DisputeDesk ter enviado quaisquer provas.",
       "factor": {
         "avs_mismatch": "A morada de faturação do cartão não correspondia à morada da encomenda",
         "cardholder_name_mismatch": "O nome registado no cartão era diferente do nome do comprador",
@@ -1490,6 +1489,24 @@
         "title": "O que provavelmente enfraqueceu este caso",
         "caveat": "O emissor não partilha o motivo exato da decisão. Estes são os sinais de risco mais fortes da avaliação completa, incluindo os que não foram enviados ao banco.",
         "fraudRecommendation": "Recomendação: analise ou cancele manualmente futuras encomendas de alto risco quando a verificação do pagamento falhar ou os nomes do titular e do comprador forem diferentes, sobretudo se a conta já tiver um chargeback."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Esta contestação foi decidida antes de a DisputeDesk ser instalada.",
+      "sentBeforeInstall": "Foi enviada uma resposta através da Shopify a {date}, antes de a DisputeDesk ser instalada.",
+      "shopifySent": "A DisputeDesk não enviou provas neste caso. A resposta registada foi enviada através da Shopify a {date}.",
+      "shopifySentNoDate": "A DisputeDesk não enviou provas neste caso. A resposta registada foi enviada através da Shopify.",
+      "noneBeforeDeadline": "A decisão chegou a {date}, antes do prazo de resposta e antes de terem sido enviadas quaisquer provas.",
+      "noneFiled": "Não foram enviadas provas neste caso.",
+      "holdReason": {
+        "merchant_conceded": "Optou por não contestar.",
+        "not_shipped": "A DisputeDesk reteve o caso porque a encomenda nunca foi enviada, pelo que não havia nenhuma entrega que pudéssemos mostrar ao banco com verdade.",
+        "refunded": "A DisputeDesk reteve o caso porque a encomenda já tinha sido reembolsada.",
+        "covered": "A DisputeDesk reteve o caso porque o Shopify Protect cobria esta encomenda.",
+        "plan_limit": "A DisputeDesk não conseguiu preparar as provas porque o limite do seu plano tinha sido atingido.",
+        "auto_build_off": "A preparação automática de provas estava desativada para a sua loja.",
+        "awaiting_review": "Estava a aguardar a sua revisão antes do envio.",
+        "thin_evidence": "A DisputeDesk reteve o caso porque as provas disponíveis eram demasiado escassas para argumentar."
       }
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",

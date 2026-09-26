@@ -168,11 +168,19 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
       tokens: LIFECYCLE_CHIP[presentation.lifecycle],
     });
   }
-  headerChips.push({
-    key: "strength",
-    label: t(`presentation.strength.detail.${strength}`),
-    tokens: STRENGTH_CHIP[strength],
-  });
+  // Strength is a live-case verdict — "how good is the case we are about to
+  // file". Once the bank has ruled it answers nothing, and on a case whose
+  // assessment went stale it read "Not yet assessed" on a dispute assessed
+  // four times (order #360499).
+  const isDecided =
+    presentation?.lifecycle === "won" || presentation?.lifecycle === "lost";
+  if (!isDecided) {
+    headerChips.push({
+      key: "strength",
+      label: t(`presentation.strength.detail.${strength}`),
+      tokens: STRENGTH_CHIP[strength],
+    });
+  }
   // A recorded merchant review decision OVERRIDES the raw attention pill:
   // once the merchant has approved (scheduled) / conceded / held, the
   // heading must reflect that standing decision instead of still saying
