@@ -1,7 +1,9 @@
 /**
- * Code checks on a counsel draft (plan 4 §6). A draft that fails gets one
- * corrective retry with these exact findings; a draft that fails twice is
- * discarded, and the letter falls back to the record-built template.
+ * Code checks on a counsel draft (plan 4 §6). The summary is the model's; the
+ * sections and the conclusion are code-written (recordSections.ts) and must
+ * pass the same checks, which the tests pin. A summary that fails gets one
+ * corrective retry with these exact findings; if that fails too, the letter
+ * falls back to the record-built template.
  *
  *   1. shape      — allowed section keys, known claim ids
  *   2. grounding  — every date and number comes from a ledger claim's specifics
@@ -79,7 +81,7 @@ const LINT: Array<[RegExp, string]> = [
   [/\baddress\b(?! on the order)/i, "the word 'address' outside 'the email address on the order'"],
 ];
 
-type Where = "headline" | "summary" | EvidenceSectionKey | "conclusion";
+type Where = "summary" | EvidenceSectionKey | "conclusion";
 
 function parts(d: CounselDraft): Array<{ where: Where; text: string; claimIds: string[] }> {
   return [
@@ -135,38 +137,18 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     issues.push(`copy: the carrier's name "${ctx.carrierName}" appears in the text; write "the carrier"`);
   }
   // Executive summary = the whole defence in brief, ending with the request
-  // (maintainer, 2026-09-25). The headline is the contrast only: no dates or
-  // numbers, so the two never compete. The conclusion is optional and short.
-  const headlineText = P.find((p) => p.where === "headline")?.text ?? "";
+  // (maintainer, 2026-09-25). The conclusion and the Shipping pair are
+  // written by code (recordSections.ts), so they need no check here.
   const summaryText = P.find((p) => p.where === "summary")?.text ?? "";
-  const conclusionText = P.find((p) => p.where === "conclusion")?.text ?? "";
-  const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter(Boolean);
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
-  if (specificsIn(headlineText).length) issues.push(`headline: no dates or numbers (found ${specificsIn(headlineText).join(", ")}); the summary carries them`);
-  if (words(headlineText) > 30) issues.push(`headline: at most 30 words (has ${words(headlineText)})`);
   if (words(summaryText) > 80) {
     issues.push(
       `summary: ${words(summaryText)} words, the limit is 80 — cut at least ${words(summaryText) - 75} words. ` +
-        "Drop a supporting detail (a notification, how fast it shipped) or a clause that restates another; keep the claim, " +
+        "Drop a supporting detail or a clause that restates another; keep the claim, " +
         "the delivery, the later order, the sentence tying them to the claim, and the request.",
     );
   }
   if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
-  // The conclusion is a closing argument (Grok review, maintainer
-  // 2026-09-25): the two strongest facts restated WITHOUT dates or numbers,
-  // then "not supported by the record". The fixed request line follows it.
-  if (!conclusionText.trim()) issues.push("conclusion: required — restate the two strongest facts (no dates or numbers), then say the claim is not supported by the record");
-  if (specificsIn(conclusionText).length) issues.push(`conclusion: no dates or numbers (found ${specificsIn(conclusionText).join(", ")}); refer to the events`);
-  if (words(conclusionText) > 45) issues.push(`conclusion: at most 45 words (has ${words(conclusionText)})`);
-  if (/\brevers/i.test(conclusionText)) issues.push("conclusion: no request — the fixed request line follows it");
-  // Shipping spells out the whole order in one shipment (Grok review).
-  const shippingText = P.find((p) => p.where === "shipping")?.text ?? "";
-  const whole = ctx.ledger.find((c) => c.id === "whole_order_in_shipment");
-  const countWord = whole?.specifics.itemCountWord ?? "";
-  if (whole && !(shippingText.toLowerCase().includes(countWord) && /\bshipment\b/i.test(shippingText))) {
-    issues.push(`shipping: must state outright that all ${whole.specifics.itemCountWord} items were in this single tracked shipment, with no partial or second shipment`);
-  }
-  void sentences;
   // Distinctive phrases, like specifics, appear at most twice in the letter.
   for (const phrase of ["same four digits", "same apple pay wallet", "public tracking page", "not a merchant document", "not the merchant's"]) {
     const n = P.filter((p) => p.where !== "conclusion").map((p) => p.text).join("\n").toLowerCase().split(phrase).length - 1;
@@ -181,8 +163,11 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
       uses.set(k, [...(uses.get(k) ?? []), p.where]);
     }
   }
+  // Code-written sections state different facts by construction; a number
+  // shared between two of them ("three items", "one to three days") is not a
+  // repeat. The check is for the model's text.
   for (const [s, where] of uses) {
-    if (where.length > 1) issues.push(`copy: "${s}" is used ${where.length} times (${where.join(", ")}); once only — elsewhere refer to the event ("the delivery", "that order")`);
+    if (where.length > 1 && where.includes("summary")) issues.push(`copy: "${s}" is used ${where.length} times (${where.join(", ")}); once only — elsewhere refer to the event ("the delivery", "that order")`);
   }
   // The exhibits' positions: prose prints ABOVE the timeline and the tracking
   // link prints below the shipping prose.

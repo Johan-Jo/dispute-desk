@@ -19,4 +19,16 @@ describe("daily cap with counsel v2 runs", () => {
     );
     expect(cap).toEqual({ capReached: false, generations: 2, inputTokens: 700, counselRuns: 1 });
   });
+
+  it("counts a reused counsel letter (no model call) against neither cap", async () => {
+    const cap = await checkDailyCap(
+      fakeSb([
+        { prompt_tokens: 0, strategy_keys: ["counsel_v2_reused"] },
+        { prompt_tokens: 0, strategy_keys: ["counsel_v2_reused"] },
+        { prompt_tokens: 3000, strategy_keys: ["counsel_v2"] },
+      ]),
+      "shop",
+    );
+    expect(cap).toEqual({ capReached: false, generations: 1, inputTokens: 0, counselRuns: 1 });
+  });
 });

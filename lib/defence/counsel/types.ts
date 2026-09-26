@@ -2,8 +2,9 @@
  * Defence counsel v2: the letter written as the merchant's counsel.
  * Plan series: docs/plans/defence-counsel/ (plans 2–4).
  *
- * Pipeline: records → claim ledger (code) → strategist (model) → writer
- * (model, N candidates) → checks (code) → judge (model) → composed PDF.
+ * Pipeline (cost refactor): records → claim ledger (code) → theory, sections
+ * and conclusion (code) → summary (model) → checks (code) → review (small
+ * model) → composed PDF. The judge runs only in the offline eval harness.
  */
 
 import type { AddressExhibit, EvidenceFact, LaterOrderExhibit } from "../types";
@@ -82,16 +83,6 @@ export interface Playbook {
   sections: PlaybookSection[];
   leaveOut: string[];
   never: string[];
-}
-
-export interface StrategyPlan {
-  theoryOfTheCase: string;
-  theoryChosen: string;
-  punchlineCandidates: string[];
-  reasonsInOrderOfForce: Array<{ claimIds: string[]; point: string }>;
-  sectionPlan: Array<{ key: EvidenceSectionKey; claimIds: string[]; job: string }>;
-  omittedSections: Array<{ key: EvidenceSectionKey; why: string }>;
-  specificsPlacement: Record<string, string>;
 }
 
 export interface CounselSection {
