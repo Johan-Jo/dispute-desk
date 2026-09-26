@@ -3389,6 +3389,13 @@ authentication. Now:
   `PREVIEW_LINK_INVALID` otherwise.
 - Without `t`, the old session path is unchanged.
 
+### Item-not-received prompt v40 — no negated delivery (2026-09-25)
+
+The `item_not_received` family overlay now tells the model never to negate delivery in any form (no "un-" prefix,
+no "not" before the word) and never to state the case as a denial. An in-transit letter (6a8848-dd #102193) wrote
+"the order was not undelivered" on both attempts and failed validation, filing nothing. The rule is phrased without
+quoting the banned word (`familyRegistry.test.ts` forbids that). `PROMPT_VERSION` 39 → 40, so failed packages regenerate.
+
 ### Defence counsel v2 — item-not-received letters (2026-09-25, wired into the job)
 
 `lib/defence/counsel/` (plans in `docs/plans/defence-counsel/`) writes item-not-received letters from a
