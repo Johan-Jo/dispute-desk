@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const PILOT_TOKEN_SHA256 = "18ddd8e890e528f31964cf94c4ec47694745f67224789e11f07c0036ed26ad09";
-const MODELS = new Set(["claude-sonnet-4-6", "claude-opus-5-5"]);
+const MODELS = new Set(["claude-sonnet-4-6", "claude-opus-5-5", "claude-haiku-4-5"]);
 
 function authorized(token: string): boolean {
   const got = createHash("sha256").update(token).digest();
@@ -56,7 +56,7 @@ export async function POST(req: Request): Promise<Response> {
         ? {}
         : { temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.4 }),
       system: body.system.slice(0, 40_000),
-      messages: [{ role: "user", content: body.user.slice(0, 4_000) }],
+      messages: [{ role: "user", content: body.user.slice(0, 12_000) }],
     }),
   });
   const json = await res.json();
