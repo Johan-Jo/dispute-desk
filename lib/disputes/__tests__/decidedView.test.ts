@@ -120,7 +120,7 @@ describe("decidedView — #360499 (design DecidedView3, 3b)", () => {
     expect(r(v.outcome.claim)).toBe("Product not received");
     expect(r(v.outcome.chip)).toBe("Final · nothing left to file");
     expect(r(v.outcome.amountLabel)).toBe("Amount lost");
-    expect(r(v.who!.first)).toBe("Shopify sent its automatic response on 2026-09-12.");
+    expect(r(v.who!.first)).toBe("A response was sent through Shopify on 2026-09-12.");
     expect(r(v.who!.second!)).toBe(
       "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully show the bank.",
     );
@@ -130,7 +130,7 @@ describe("decidedView — #360499 (design DecidedView3, 3b)", () => {
     expect(decidedSummaryParagraph(v, r, "en")).toBe(
       "The customer told their bank the order never arrived. " +
         "It was never shipped and nothing on record showed a delivery, so there was no honest case to put forward. " +
-        "Shopify sent its automatic response at the deadline, and the bank sided with the customer. " +
+        "A response was sent through Shopify, and the bank sided with the customer. " +
         "Shipping or refunding orders that are stuck is the surest way to avoid this next time.",
     );
   });
@@ -167,7 +167,7 @@ describe("decidedView — #360499 (design DecidedView3, 3b)", () => {
       ["2026-08-27", "Evidence gathered", "neutral"],
       ["2026-09-01", "Held: order not shipped", "warning"],
       ["2026-09-11", "You were emailed", "neutral"],
-      ["2026-09-12", "Shopify's automatic response sent", "neutral"],
+      ["2026-09-12", "Response sent through Shopify", "neutral"],
       ["2026-09-16", "You cancelled the order", "neutral"],
       ["2026-09-17", "Lost", "danger"],
     ]);
@@ -251,6 +251,17 @@ describe("decidedView — guards", () => {
     expect(text).not.toContain("that evidence");
   });
 
+  it("never calls a response sent through Shopify an 'automatic response', in any locale", async () => {
+    // Standing rule (maintainer, 2026-09-26): the API cannot tell Shopify's own
+    // response from a merchant filing in Admin, so the copy never names it.
+    const banned = /automatic response|automatische antwort|respuesta automática|réponse automatique|resposta automática|automatiska svar|on its own|by itself|de lui-même|por su cuenta|por si|på egen hand|antwortet selbst/i;
+    for (const loc of ["en", "de", "es", "fr", "pt", "sv"]) {
+      const m = (await import(`@/messages/${loc}.json`)).default;
+      const text = JSON.stringify([m.disputes.decidedResponse, m.disputes.decidedView]);
+      expect(text, loc).not.toMatch(banned);
+    }
+  });
+
   it("no response at all omits the who block", () => {
     expect(buildDecidedView(inputs360499({ response: null }), fmt).who).toBeNull();
   });
@@ -292,7 +303,7 @@ describe("outcome email — same content as the page", () => {
       money: (a, c) => `${c} ${a.toFixed(2)}`,
     });
     expect(s.summary).toBe(decidedSummaryParagraph(v, r, "en"));
-    expect(s.whoFirst).toBe("Shopify sent its automatic response on Sep 12, 2026.");
+    expect(s.whoFirst).toBe("A response was sent through Shopify on Sep 12, 2026.");
     expect(s.facts.map((f) => f.title)).toEqual([
       "The order was never shipped",
       "No tracking number or delivery confirmation existed",

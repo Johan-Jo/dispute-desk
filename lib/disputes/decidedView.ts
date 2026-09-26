@@ -487,7 +487,7 @@ function timelineSection(
     steps.push({ at: resp.filedAt, title: tk("timeline.weFiled"), detail: tk("timeline.weFiledDetail"), tone: "primary" });
   }
   if ((resp?.responder === "shopify" || resp?.responder === "sent_before_install") && resp.sentAt) {
-    steps.push({ at: resp.sentAt, title: tk("timeline.shopifySent"), detail: tk("timeline.shopifySentDetail"), tone: "neutral" });
+    steps.push({ at: resp.sentAt, title: tk("timeline.shopifySent"), detail: null, tone: "neutral" });
   }
 
   const cancelled = input.order?.cancelledAt ?? null;
