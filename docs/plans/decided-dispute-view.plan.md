@@ -24,7 +24,7 @@
 | Aug 27 → Sep 11 | Pack built 4×, score 42, missing tracking and delivery. Fatal-loss gate `inr_no_fulfillment` blocked filing. Letter to the bank skipped 3× (`no_bank_eligible_facts`). |
 | Sep 11 06:16 | Merchant emailed the fatal-loss alert |
 | Sep 11 08:00 | Deadline cron: `defence_package_blocked_unsafe_claim`, reason `fatal_loss` |
-| Sep 12 07:43 | **Shopify's automatic response** sent (`evidence_sent_on`) |
+| Sep 12 07:43 | **Response sent through Shopify** (`evidence_sent_on`) |
 | Sep 16 | Merchant cancelled the order |
 | Sep 17 | Lost |
 
@@ -67,7 +67,7 @@ A decided dispute gets a dedicated Overview layout. Live-case components don't r
 │ Dispute lost · decided Sep 17, 2026                    USD 85.41 lost   │
 │ The Back to School Bundle (1 item) · Product not received               │
 │ This decision is final. There is nothing left to file.                  │
-│ Who responded: Shopify sent its automatic response on Sep 12.            │
+│ Who responded: A response was sent through Shopify on Sep 12.         │
 │   DisputeDesk held this case: the order was never shipped, so there was │
 │   no delivery we could truthfully put in front of the bank.             │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -91,7 +91,7 @@ A decided dispute gets a dedicated Overview layout. Live-case components don't r
 └──────────────────────────────────────────────────────────────────────────┘
 ┌ What happened (timeline, past tense, replaces "What happens now") ───────┐
 │ Aug 27 Dispute opened · Aug 27 Evidence gathered · Sep 1 Held: order not│
-│ shipped · Sep 11 You were emailed · Sep 12 Shopify's automatic response │
+│ shipped · Sep 11 You were emailed · Sep 12 Response sent through Shopify │
 │ sent · Sep 17 Lost                                                       │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -111,7 +111,7 @@ Replaces `not_defended_by_us`. Each state is resolved from stored data, never in
 | State | Condition | Line |
 |---|---|---|
 | `we_filed` | `defence_packages.status='submitted'` OR `evidence_packs.saved_to_shopify_at` set | "DisputeDesk filed your evidence on {date}." |
-| `we_held_shopify_sent` | Pack exists, we never saved, `evidence_sent_on` set | "Shopify sent its automatic response on {date}. DisputeDesk held this case: {hold reason}." |
+| `we_held_shopify_sent` | Pack exists, we never saved, `evidence_sent_on` set | "A response was sent through Shopify on {date}. DisputeDesk held this case: {hold reason}." |
 | `we_held_nothing_sent` | Pack exists, never saved, no `evidence_sent_on` | "No response was filed. DisputeDesk held this case: {hold reason}." |
 | `before_install` | `closed_at` < shop install | "This dispute was decided before DisputeDesk was installed." (the only state that keeps the current sentence, reworded) |
 | `unknown` | Anything else | No line at all, rather than a guess |
@@ -144,9 +144,9 @@ Reading 3 cases per bucket showed the five states above were too coarse. Almost 
 | A response went through Shopify **before the shop installed** | #92361 (sent Aug 23, installed Aug 29) | New responder `sent_before_install`; no hold is blamed |
 | Approved but never filed, and won anyway | #90627 | No reason named: plain "No response was filed." Not a guess. |
 
-**Shipped model:** responder ∈ `before_install | we | sent_before_install | shopify | none` × a separate `holdReason` (priority: `merchant_conceded` → `not_shipped` → `refunded` → `covered` → `plan_limit` → `auto_build_off` → `awaiting_review` → `thin_evidence`) × `decidedBeforeDeadline`. PR 1 said "sent through Shopify" because the API can't tell Shopify's auto-send apart from a merchant filing in Admin; PR 2 follows the design ("Shopify sent its automatic response") and leaves that choice open for the maintainer.
+**Shipped model:** responder ∈ `before_install | we | sent_before_install | shopify | none` × a separate `holdReason` (priority: `merchant_conceded` → `not_shipped` → `refunded` → `covered` → `plan_limit` → `auto_build_off` → `awaiting_review` → `thin_evidence`) × `decidedBeforeDeadline`. PR 1 said "sent through Shopify" because the API can't tell Shopify's auto-send apart from a merchant filing in Admin; Decided 2026-09-26 by the maintainer: copy never says "automatic response"; it says "a response was sent through Shopify".
 
-**Verified on prod** (read-only, the real loader over all 1,111 decided disputes): 880 `before_install`, 85 `we`, 27 `sent_before_install`. Held: `awaiting_review` 90, `auto_build_off` 13, `plan_limit` 8, `not_shipped` 2, `merchant_conceded` 1, no reason 6. Zero load failures. #360499 renders (PR 2 wording): *"Shopify sent its automatic response on Sep 12, 2026." / "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully put in front of the bank."*
+**Verified on prod** (read-only, the real loader over all 1,111 decided disputes): 880 `before_install`, 85 `we`, 27 `sent_before_install`. Held: `awaiting_review` 90, `auto_build_off` 13, `plan_limit` 8, `not_shipped` 2, `merchant_conceded` 1, no reason 6. Zero load failures. #360499 renders (PR 2 wording): *"A response was sent through Shopify on Sep 12, 2026." / "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully put in front of the bank."*
 
 **Open, not in PR 1:** #90627 (approved, never filed) suggests the deadline cron can miss an approved case. That is a filing question, not a copy question. Needs its own look.
 
@@ -179,7 +179,7 @@ Existing rules stay: observed facts only, "banks weight this heavily" and never 
 
 No recommendation fires without its trigger. Zero is a valid result, and the card is then hidden.
 
-**5.4 `decidedTimeline(audit_events, dispute)` → past-tense steps.** Built from the audit rows already written (opened, pack built, held + reason, alert emailed, filed by us / Shopify's automatic response, decided). Replaces "What happens now" on decided cases.
+**5.4 `decidedTimeline(audit_events, dispute)` → past-tense steps.** Built from the audit rows already written (opened, pack built, held + reason, alert emailed, filed by us / response sent through Shopify, decided). Replaces "What happens now" on decided cases.
 
 **Why deterministic and not an LLM narrative like Sidekick:** CLAUDE.md rule 5 (no English in `lib/`, 6 locales), no per-view API cost, and it can't hallucinate. Sidekick's own text for this case invented a tracking scenario for an order that never shipped. Every sentence here is a token driven by a stored fact.
 

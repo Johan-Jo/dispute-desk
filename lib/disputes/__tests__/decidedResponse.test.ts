@@ -96,7 +96,7 @@ describe("decidedResponse — order #360499", () => {
     expect(resp.decidedBeforeDeadline).toBe(false);
 
     const text = render(decidedResponseTokens(resp, fmt));
-    expect(text).toContain("Shopify sent its automatic response on 2026-09-12.");
+    expect(text).toContain("A response was sent through Shopify on 2026-09-12.");
     expect(text).toContain("the order was never shipped");
     // The sentence this replaced — false on this case.
     expect(text).not.toContain("decided before DisputeDesk");
