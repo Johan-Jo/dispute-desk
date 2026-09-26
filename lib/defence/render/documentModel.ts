@@ -233,7 +233,7 @@ export function addressCard(ex: AddressExhibit | null | undefined): ShipmentCard
   return {
     index: 0,
     eyebrow: "Order addresses",
-    product: "Shipping address identical to billing address",
+    product: "The shipping address entered at checkout is identical to the billing address.",
     status: { tone: "green", label: "Identical" },
     fields,
   };

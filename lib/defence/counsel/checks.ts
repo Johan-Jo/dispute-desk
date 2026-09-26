@@ -79,35 +79,6 @@ const LINT: Array<[RegExp, string]> = [
   [/\baddress\b(?! on the order)/i, "the word 'address' outside 'the email address on the order'"],
 ];
 
-const DELIVERY_WORDS = /\b(?:deliver\w*|receiv\w*|reach\w*|arriv\w*|destination|left at|dropped|handed)\b/i;
-
-/**
- * An address sentence the ledger authorises (claimLedger.ts `addressClaims`):
- * "the shipping address is the same as / identical to / matches the billing
- * address", and — with `billing_address_verified` — the issuer's address
- * check matching the billing address. Never a sentence about where the parcel
- * was delivered.
- */
-export function isAllowedAddressSentence(sentence: string, ledger: readonly LedgerClaim[]): boolean {
-  if (!/\baddress/i.test(sentence) || DELIVERY_WORDS.test(sentence)) return false;
-  const ids = new Set(ledger.map((c) => c.id));
-  const matchesBilling =
-    /\bshipping address\b/i.test(sentence) &&
-    /\bbilling address\b/i.test(sentence) &&
-    /\b(?:same as|identical to|matche[sd]|match)\b/i.test(sentence);
-  const avs = /\baddress (?:check|verification)\b|\bAVS\b/i.test(sentence) && /\bbilling address\b/i.test(sentence);
-  if (avs) return ids.has("billing_address_verified") && ids.has("shipping_matches_billing");
-  return matchesBilling && ids.has("shipping_matches_billing");
-}
-
-/** Text with the authorised address sentences removed. */
-function withoutAllowedAddressSentences(text: string, ledger: readonly LedgerClaim[]): string {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .filter((s) => !isAllowedAddressSentence(s, ledger))
-    .join(" ");
-}
-
 type Where = "headline" | "summary" | EvidenceSectionKey | "conclusion";
 
 function parts(d: CounselDraft): Array<{ where: Where; text: string; claimIds: string[] }> {
@@ -222,25 +193,14 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
 
   // 4. lint
   for (const p of P) {
-    const text = withoutAllowedAddressSentences(p.text, ctx.ledger);
     for (const [re, name] of LINT) {
-      const m = text.match(re);
+      const m = p.text.match(re);
       if (m) issues.push(`${p.where}: ${name} — "${m[0]}"`);
     }
   }
 
-  // 5. truth: the production validator, unchanged. The authorised address
-  // sentences are taken out first: its address-delivery detector reads any
-  // "shipping address" sentence as a delivery claim, and these are not one.
-  const strip = (s: { paragraphs: string[] } | undefined) =>
-    s && { ...s, paragraphs: (s.paragraphs ?? []).map((t) => withoutAllowedAddressSentences(t, ctx.ledger)) };
-  const forTruth: CounselDraft = {
-    ...d,
-    summary: strip(d.summary) as CounselDraft["summary"],
-    evidenceSections: (d.evidenceSections ?? []).map((s) => strip(s) as CounselDraft["evidenceSections"][number]),
-    conclusion: strip(d.conclusion) as CounselDraft["conclusion"],
-  };
-  const n = toNarrative(forTruth, ctx.facts.map((f) => f.id));
+  // 5. truth: the production validator, unchanged
+  const n = toNarrative(d, ctx.facts.map((f) => f.id));
   const res = validateNarrative({
     narrative: n,
     approvedFacts: ctx.facts as EvidenceFact[],
@@ -301,6 +261,8 @@ export function toNarrative(
   if (addresses) narrative.addressExhibit = addresses;
   const later = ledger.find((c) => c.laterOrderExhibit)?.laterOrderExhibit;
   if (later) narrative.laterOrderExhibit = later;
+  const rows = ledger.flatMap((c) => (c.timelineEvent ? [c.timelineEvent] : []));
+  if (rows.length) narrative.timelineAdditions = rows;
   for (const k of [
     "transactionOverviewArgument", "chronologyArgument", "paymentAuthenticationArgument", "fulfillmentArgument", "conclusion",
     "communicationArgument", "policyArgument", "manualEvidenceArgument",

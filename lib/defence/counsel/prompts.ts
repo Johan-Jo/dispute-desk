@@ -20,11 +20,13 @@ function addressRule(ledger: readonly LedgerClaim[]): string {
   if (!ids.has("shipping_matches_billing")) {
     return 'Say where the parcel was delivered, or that an address was verified, matched or correct. Do not use the word "address" except in "the email address on the order".';
   }
-  return (
-    'Say where the parcel was delivered, or that it reached, arrived at or was received at any address. The ONLY address statements allowed are: that the shipping address is the same as the billing address' +
-    (ids.has("billing_address_verified") ? ", and that the card issuer's address check matched the billing address" : "") +
-    '. Both addresses are printed in the Shipping section; never print any part of them.'
-  );
+  // The match is stated on the record-built address card, not in prose: the
+  // production address-delivery detector reads any "shipping address"
+  // sentence as a delivery claim, and loosening it would let the template
+  // writer assert a match it cannot see.
+  return 'Say where the parcel was delivered, or write about addresses at all. An "Order addresses" card under the shipment card already states that the shipping address is identical to the billing address' +
+    (ids.has("billing_address_verified") ? " and that the card issuer's address check matched it" : "") +
+    ', and shows both. Do not use the word "address" except in "the email address on the order".';
 }
 
 const standard = (merchant: string, ledger: readonly LedgerClaim[]) => `WHO READS THIS

@@ -408,7 +408,7 @@ function addressClaims(orderData: Obj, sections: LedgerInput["packSections"]): L
       specifics: {},
       weight: "strong",
       sources: ["pack.order.shippingAddressFull", "pack.order.billingAddressFull"],
-      mustNot: [NOT_DELIVERY, "Never print any part of either address; the exhibit shows them."],
+      mustNot: [NOT_DELIVERY, "Never write about addresses: the address card states the match and shows both."],
       addressExhibit: exhibit,
     },
   ];
@@ -419,7 +419,7 @@ function addressClaims(orderData: Obj, sections: LedgerInput["packSections"]): L
       specifics: {},
       weight: "strong",
       sources: ["pack.payment.avsResultCode"],
-      mustNot: [NOT_DELIVERY, "Never print the AVS result code; the exhibit shows it."],
+      mustNot: [NOT_DELIVERY, "Never write about the address check: the address card shows it."],
     });
   }
   return out;
