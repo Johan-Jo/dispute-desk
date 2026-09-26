@@ -31,6 +31,9 @@ export interface LedgerClaim {
   addressExhibit?: AddressExhibit;
   /** The later order this claim rests on, printed as an exhibit. */
   laterOrderExhibit?: LaterOrderExhibit;
+  /** Multi-parcel orders: the parcel this claim states, from its own record
+   *  (claimLedger.ts `buildMultiParcelLedger`). */
+  parcel?: { index: number; items: string; state: "delivered" | "signed" | "in_transit" | "shipped"; hasLink: boolean };
 }
 
 /** One of the cardholder's orders on the merchant's store (Admin API read). */

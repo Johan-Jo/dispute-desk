@@ -76,10 +76,9 @@ const NO_DESTINATION = "Never say where the parcel was delivered, to whom, or th
 
 export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | null {
   const delivery = input.facts.filter((f) => f.category === "delivery_proof" || f.category === "shipping_tracking");
-  // Multi-parcel letters are out of scope for v2 (falls back to the template).
-  if (delivery.some((f) => Array.isArray(obj(f.value)?.shipments) && ((obj(f.value)!.shipments as unknown[]).length > 1))) {
-    return null;
-  }
+  // Two or more parcels: each parcel is stated from its own record.
+  const multi = delivery.find((f) => Array.isArray(obj(f.value)?.shipments) && (obj(f.value)!.shipments as unknown[]).length > 1);
+  if (multi) return buildMultiParcelLedger(input, (obj(multi.value)!.shipments as unknown[]).map(obj).filter((x): x is Obj => !!x), delivery.map((f) => f.id));
   const fact = delivery.find((f) => {
     const v = obj(f.value) ?? {};
     return (
@@ -272,6 +271,29 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     }
   }
 
+  addLaterOrder(claims, input, { deliveredAt, carrier, orderCreatedAt, shippedAt });
+
+  for (const c of addressClaims(orderData, sections)) add(c);
+
+  return claims;
+}
+
+
+/**
+ * The customer's later order (the strongest non-receipt fact after the
+ * delivery itself), shared by the single- and multi-parcel ledgers.
+ * `deliveredAt` is the delivery of the WHOLE disputed order: the claim says
+ * the customer came back after the order was delivered.
+ */
+function addLaterOrder(
+  claims: LedgerClaim[],
+  input: LedgerInput,
+  d: { deliveredAt: string; carrier: string | null; orderCreatedAt: string | null; shippedAt: string | null },
+): void {
+  const { deliveredAt, carrier, orderCreatedAt, shippedAt } = d;
+  const sections = input.packSections;
+  const opened = input.disputeOpenedAt;
+  const add = (c: LedgerClaim) => claims.push(c);
   const later = laterOrder(input.customerOrders, input.orderName, deliveredAt);
   // With a later order before the dispute, its two intervals (delivery →
   // later order → dispute) tell the story; a third, delivery → dispute,
@@ -352,9 +374,6 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     });
   }
 
-  for (const c of addressClaims(orderData, sections)) add(c);
-
-  return claims;
 }
 
 /**
@@ -493,4 +512,179 @@ function laterOrder(
       )
       .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))[0] ?? null
   );
+}
+
+/* ── Two or more parcels ─────────────────────────────────────────────────
+ *
+ * blume-box #360980: two products in two parcels. One has a carrier-confirmed
+ * delivery; the other only the merchant's shipping reference. Each parcel is
+ * stated ONLY from its own record (the validator reads every parcel-scoped
+ * sentence against the parcel it names, validator v8–v13):
+ *   - delivered: the carrier's delivery date, from its own record;
+ *   - in transit: that the carrier's record shows it in transit, undated;
+ *   - no carrier record: "the merchant shipped" it, nothing more.
+ * Never a fulfilment date against the order or the dispute (item_not_received
+ * v6: on #360980 that interval exposes a late shipment), and a delivery is
+ * related to the dispute only when EVERY parcel was delivered before it.
+ * With no carrier-confirmed delivery on any parcel there is no counsel
+ * letter (null → template writer).
+ */
+const DELIVERED = new Set(["delivered_confirmed", "signature_confirmed"]);
+
+/** "The Back to School Bundle", "2 × Lip Tint and Power Patches". */
+export function parcelItems(s: Obj): string {
+  const names = ((s.items as unknown[]) ?? [])
+    .map(obj)
+    .map((it) => {
+      const title = str(it?.title);
+      if (!title) return null;
+      return typeof it!.quantity === "number" && it!.quantity > 1 ? `${it!.quantity} × ${title}` : title;
+    })
+    .filter((t): t is string => !!t);
+  if (names.length === 0) return "the order's items";
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/** Every purchased item, in the quantity ordered, is in one of the parcels —
+ *  line item by line item (the multi-parcel form of `fulfilmentCoverage`). */
+function allItemsInParcels(sections: LedgerInput["packSections"], shipments: readonly Obj[]): number | null {
+  const order = obj(sections.find((s) => s?.type === "order" && Array.isArray(obj(s.data)?.lineItems))?.data);
+  const fulfilments = ((obj(sections.find((s) => s?.type === "shipping")?.data)?.fulfillments as unknown[]) ?? []).map(obj);
+  if (!order) return null;
+  const ordered = new Map<string, number>();
+  for (const it of (order.lineItems as unknown[]).map(obj)) {
+    const id = str(it?.lineItemId);
+    if (!id) return null;
+    ordered.set(id, (ordered.get(id) ?? 0) + (typeof it!.quantity === "number" ? it!.quantity : 0));
+  }
+  const shipped = new Map<string, number>();
+  for (const s of shipments) {
+    const ref = str(s.reference);
+    const f = fulfilments.find((x) => ((x?.tracking as unknown[]) ?? []).some((t) => obj(t)?.number === ref));
+    if (!ref || !f || !Array.isArray(f.items)) return null;
+    for (const it of (f.items as unknown[]).map(obj)) {
+      const id = str(it?.lineItemId);
+      if (!id || !ordered.has(id)) return null;
+      shipped.set(id, (shipped.get(id) ?? 0) + (typeof it!.quantity === "number" ? it!.quantity : 0));
+    }
+  }
+  if (ordered.size === 0) return null;
+  for (const [id, n] of ordered) if (n <= 0 || shipped.get(id) !== n) return null;
+  return [...ordered.values()].reduce((a, b) => a + b, 0);
+}
+
+function buildMultiParcelLedger(input: LedgerInput, shipments: Obj[], factIds: string[]): LedgerClaim[] | null {
+  const delivered = shipments.filter((s) => DELIVERED.has(String(s.proofType)) && longDate(str(s.deliveredAt)));
+  if (delivered.length === 0) return null;
+  const sections = input.packSections;
+  const orderData = obj(sections.find((s) => s?.type === "order" && obj(s.data)?.orderName)?.data) ?? {};
+  const n = shipments.length;
+  const claims: LedgerClaim[] = [];
+  const add = (c: LedgerClaim) => claims.push(c);
+  const noTiming = "Never relate a shipment to the order date or the dispute, and never count days between them.";
+
+  add({
+    id: "claim_is_non_receipt",
+    statement: "The cardholder claims the order was not received (Visa 13.1 / Mastercard 4855).",
+    specifics: {},
+    weight: "core",
+    sources: ["dispute.reason"],
+    mustNot: [],
+  });
+
+  const itemCount = allItemsInParcels(sections, shipments);
+  add({
+    id: "order_in_parcels",
+    statement:
+      `The order was sent in ${numberWord(n)} parcels` +
+      (itemCount ? ", and every purchased item, in the quantity ordered, was in one of them (verified item by item against the order's line items)." : "."),
+    specifics: { parcelCount: String(n), parcelCountWord: numberWord(n), ...(itemCount ? { allItemsInParcels: "yes" } : {}) },
+    weight: "core",
+    sources: ["pack.shipping.fulfillments.items", ...factIds],
+    mustNot: [noTiming],
+  });
+
+  shipments.forEach((s, i) => {
+    const items = parcelItems(s);
+    const proof = String(s.proofType);
+    const on = longDate(str(s.deliveredAt));
+    const state: NonNullable<LedgerClaim["parcel"]>["state"] =
+      DELIVERED.has(proof) && on ? (proof === "signature_confirmed" ? "signed" : "delivered") : proof === "in_transit" ? "in_transit" : "shipped";
+    const isDelivered = state === "delivered" || state === "signed";
+    const statement = isDelivered
+      ? `The carrier recorded the parcel with ${items} as delivered on ${on}${state === "signed" ? ", with a signature" : ""}.`
+      : state === "in_transit"
+        ? `The carrier's tracking record shows the parcel with ${items} in transit.`
+        : `The merchant shipped the parcel with ${items}.`;
+    add({
+      id: `parcel_${i + 1}`,
+      statement,
+      specifics: { items, ...(isDelivered && on ? { deliveredOn: on, deliveredOnShort: on.replace(/ \d{4}$/, "") } : {}) },
+      weight: "core",
+      sources: factIds,
+      mustNot: isDelivered
+        ? [NO_DESTINATION, noTiming]
+        : [
+            "Never say or imply this parcel was delivered, received, collected, handed to a carrier or lost, and never say what its record lacks.",
+            noTiming,
+          ],
+      parcel: { index: i + 1, items, state, hasLink: s.referenceIsTrackingNumber === true && !!str(s.trackingUrl) },
+    });
+  });
+
+  const all = delivered.length === n;
+  if (all) {
+    add({
+      id: "all_parcels_delivered",
+      statement: "The carrier recorded every parcel of the order as delivered.",
+      specifics: {},
+      weight: "core",
+      sources: factIds,
+      mustNot: [NO_DESTINATION],
+    });
+  } else {
+    add({
+      id: "some_parcel_delivered",
+      statement: `The carrier recorded delivery of the parcel with ${delivered.map(parcelItems).join(" and of the parcel with ")}; the merchant shipped the rest of the order.`,
+      specifics: {},
+      weight: "core",
+      sources: factIds,
+      mustNot: ["Never say or imply the whole order, every parcel or every item was delivered.", NO_DESTINATION],
+    });
+  }
+
+  if (delivered.some((s) => s.referenceIsTrackingNumber === true && str(s.trackingUrl))) {
+    add({
+      id: "carrier_is_third_party",
+      statement:
+        "Each carrier-confirmed delivery is the carrier's own record on its public tracking page, linked on that parcel's card. It is not a merchant document.",
+      specifics: {},
+      weight: "core",
+      sources: factIds,
+      mustNot: ["Do not print tracking numbers, references or URLs; the cards print them."],
+    });
+  }
+
+  // Timing only when every parcel was delivered before the dispute: otherwise
+  // any delivery-vs-dispute sentence is refused (deliveryPostDatesDispute).
+  const opened = input.disputeOpenedAt;
+  const lastDelivered = delivered.map((s) => str(s.deliveredAt)!).sort().at(-1)!;
+  if (all && opened && Date.parse(lastDelivered) < Date.parse(opened)) {
+    add({
+      id: "dispute_after_delivery",
+      statement: `The dispute was opened on ${longDate(opened)}, after the carrier recorded delivery of every parcel.`,
+      specifics: { disputeOpenedOn: longDate(opened)! },
+      weight: "strong",
+      sources: ["dispute.initiated_at", ...factIds],
+      mustNot: ["Never say the claim is late or out of time under network rules.", "Never accuse the cardholder of bad faith."],
+    });
+  }
+  // The later order is argued only once the WHOLE order was delivered.
+  if (all) {
+    const shippedAt =
+      shipments.map((s) => str(s.fulfillmentEventAt) ?? str(s.fulfilledAt)).filter((x): x is string => !!x).sort().at(-1) ?? null;
+    addLaterOrder(claims, input, { deliveredAt: lastDelivered, carrier: null, orderCreatedAt: str(orderData.createdAt), shippedAt });
+  }
+  for (const c of addressClaims(orderData, sections)) add(c);
+  return claims;
 }

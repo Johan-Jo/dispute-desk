@@ -655,6 +655,18 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                 <ShipmentCardView key={card.index} card={card} />
               ))}
             </div>
+            {/* Counsel v2 multi-parcel letters, as in the PDF: the addresses
+                and the record-built prose under the cards. */}
+            {addressCard(narrative.addressExhibit) ? (
+              <div style={{ marginTop: 12 }}>
+                <ShipmentCardView card={addressCard(narrative.addressExhibit)!} wide />
+              </div>
+            ) : null}
+            {narrative.fulfillmentArgument?.source === "record" && visible("fulfillmentArgument") ? (
+              <div style={{ marginTop: 16 }}>
+                <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />
+              </div>
+            ) : null}
           </Section>
         ) : single ? (
           <Section number={num()} title={sectionTitleFor("fulfillmentArgument", facts)}>

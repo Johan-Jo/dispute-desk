@@ -3526,6 +3526,25 @@ code-built claim ledger.
   `COUNSEL_COST_BUDGET_USD` = $0.05), `scripts/sql/counsel-cost-daily.sql` (median / p90 per package per day), and the
   daily `/api/cron/counsel-cost-monitor` (07:30 UTC), which emails the admin address when yesterday's median package
   cost exceeds the budget.
+- **Multi-parcel orders (2026-09-26).** `buildMultiParcelLedger` (`claimLedger.ts`) states each parcel from its own
+  shipment record (`delivery_proof.value.shipments[]`): `parcel_N` is "recorded as delivered on {date}" only for a
+  carrier-confirmed delivery, "shows in transit" for an in-transit record, and "the merchant shipped" otherwise; never a
+  shipping date, never a shipment against the order date or the dispute. `order_in_parcels` says every purchased item
+  was in one of the parcels only when the fulfilment line items prove it item by item. `all_parcels_delivered` (then the
+  dispute timing, when every delivery precedes the dispute, and the later order) or `some_parcel_delivered` pick the
+  theory (`every_parcel_delivered` / `delivered_parcel_and_rest_shipped`). No carrier-confirmed delivery on any parcel →
+  no counsel letter (template writer). The code-written Shipping text and conclusion are scoped to what each parcel's
+  record proves ("…so the non-receipt claim is not supported for those goods"). The checks ban every parcel's carrier name
+  and reference, and mask product names ("SPF 50") before the number and style checks. The PDF and the HTML view print
+  a record-built Shipping section and the address card under the parcel cards; a template multi-parcel letter (prose not
+  record-built) is unchanged. #360980 in the offline eval: 2 calls, ≈ $0.014, first draft clean 3/3; the judge stays
+  "undecided" (one parcel has no carrier record), against "cardholder" for the template letter.
+- **Package safety gate (`packageSafety.ts`, 2026-09-26).** The reader behind "This defence package cannot be reviewed
+  automatically" knew only `{text, usedFactIds}` sections and two metadata keys, so every letter with a record-built
+  section (`source: "record"`) or counsel fields (`headline`, `addressExhibit`, `laterOrderExhibit`,
+  `timelineAdditions`, `counsel`) was unreadable and refused for saving and deadline filing (#352543 v11–v13 and three
+  6a8848-dd drafts). Each field now has an exact shape check (anything else still fails closed), and the headline,
+  added timeline rows and stored counsel summary are judged with the section prose.
 - **Fact-check exemptions.** The review never flags the summary's tie-back sentence or request against the Conclusion,
   or "the complete order" against the Shipping item count. The Shipping pair and the Conclusion are code-written and
   are not reviewed.

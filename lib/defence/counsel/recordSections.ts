@@ -31,7 +31,10 @@ const DEFAULT_THEORY: Theory = {
 export function pickTheory(ledger: readonly LedgerClaim[], playbook: Playbook): Theory {
   const ids = new Set(ledger.map((c) => c.id));
   const t = playbook.theories.find((x) => x.requiresClaims.every((id) => ids.has(id)));
-  return t ? { name: t.name, shape: t.shape, claims: t.requiresClaims } : DEFAULT_THEORY;
+  if (!t) return DEFAULT_THEORY;
+  // A multi-parcel summary names every parcel: each is its own claim.
+  const parcels = ledger.filter((c) => c.parcel).map((c) => c.id);
+  return { name: t.name, shape: t.shape, claims: [...t.requiresClaims, ...parcels] };
 }
 
 export interface RecordSections {
@@ -40,6 +43,7 @@ export interface RecordSections {
 }
 
 export function buildRecordSections(ledger: readonly LedgerClaim[]): RecordSections {
+  if (ledger.some((c) => c.parcel)) return buildMultiParcelSections(ledger);
   const byId = new Map(ledger.map((c) => [c.id, c]));
   const has = (id: string) => byId.has(id);
 
@@ -97,6 +101,78 @@ export function buildRecordSections(ledger: readonly LedgerClaim[]): RecordSecti
     },
   };
 }
+
+/**
+ * Multi-parcel orders (#360980). The cards above print each parcel's carrier,
+ * reference, dates and link; the prose says what the cards prove, parcel by
+ * parcel, each from its own record — never a date against the order or the
+ * dispute, never "delivered" for a parcel the carrier did not record as
+ * delivered, and nothing about what a record lacks.
+ */
+function buildMultiParcelSections(ledger: readonly LedgerClaim[]): RecordSections {
+  const byId = new Map(ledger.map((c) => [c.id, c]));
+  const parcels = ledger.filter((c) => c.parcel).map((c) => ({ id: c.id, ...c.parcel! }));
+  const inParcels = byId.get("order_in_parcels");
+  const everyItem = inParcels?.specifics.allItemsInParcels === "yes";
+  const delivered = parcels.filter((p) => p.state === "delivered" || p.state === "signed");
+  const all = byId.has("all_parcels_delivered");
+  const word = inParcels?.specifics.parcelCountWord ?? String(parcels.length);
+
+  const shipping: string[] = [
+    `The order was sent in ${word} parcels, shown on the cards above${everyItem ? ", and every item listed under Order Line Items was in one of them" : ""}.`,
+  ];
+  if (all) {
+    const linked = delivered.every((p) => p.hasLink);
+    shipping.push(
+      `The carrier recorded each parcel as delivered${delivered.some((p) => p.state === "signed") ? ", with a signature where its card shows one" : ""}` +
+        (linked ? "; each delivery is the carrier's own scan, published on its public tracking page, which the issuer can open with the link on the parcel's card." : "."),
+    );
+  } else {
+    for (const p of parcels) {
+      if (p.state === "delivered" || p.state === "signed") {
+        shipping.push(
+          `The parcel with ${p.items} is recorded as delivered${p.state === "signed" ? ", with a signature," : ""} by the carrier's own scan` +
+            (p.hasLink ? ", which the issuer can open with the link on its card." : "."),
+        );
+      } else if (p.state === "in_transit") {
+        shipping.push(`The carrier's tracking record shows the parcel with ${p.items} in transit.`);
+      } else {
+        shipping.push(`The merchant shipped the parcel with ${p.items}.`);
+      }
+    }
+  }
+
+  const later = byId.get("later_order");
+  const conclusion = all
+    ? [
+        "The carrier recorded delivery of every parcel in the order.",
+        later ? `After that delivery, the same customer placed a new order${later.specifics.paidWith ? " with the same payment method" : ""}.` : null,
+        "The non-receipt claim is not supported by the record.",
+      ]
+    : [
+        // Scoped to what the record proves: one parcel's delivery does not answer
+        // the claim for the others (offline judge, #360980).
+        `The carrier recorded delivery of the parcel with ${delivered.map((p) => p.items).join(" and of the parcel with ")}, so the non-receipt claim is not supported for those goods.`,
+        ...parcels.filter((p) => p.state !== "delivered" && p.state !== "signed").map((p) =>
+          p.state === "in_transit" ? `The carrier's tracking record shows the parcel with ${p.items} in transit.` : `The merchant shipped the parcel with ${p.items}.`,
+        ),
+      ];
+
+  return {
+    evidenceSections: [
+      {
+        key: "shipping",
+        paragraphs: [shipping.join(" ")],
+        claimIds: ["order_in_parcels", ...parcels.map((p) => p.id), ...(byId.has("carrier_is_third_party") ? ["carrier_is_third_party"] : [])],
+      },
+    ],
+    conclusion: {
+      paragraphs: [conclusion.filter((x): x is string => !!x).join(" ")],
+      claimIds: [all ? "all_parcels_delivered" : "some_parcel_delivered", ...(later ? ["later_order"] : [])],
+    },
+  };
+}
+
 
 /** The code-written text as the summary writer and the reviewer see it. */
 export function recordSectionsText(r: RecordSections): string {
