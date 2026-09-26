@@ -1472,7 +1472,6 @@
         "lost": "Wir haben Ihre Nachweise am {date} eingereicht. Die Bank hat dennoch zugunsten des Karteninhabers entschieden.",
         "won": "Wir haben Ihre Nachweise am {date} eingereicht, und die Bank hat zu Ihren Gunsten entschieden."
       },
-      "notDefendedByUs": "Dieser Fall wurde entschieden, bevor DisputeDesk Nachweise dafür eingereicht hat.",
       "factor": {
         "avs_mismatch": "Die Rechnungsadresse der Karte stimmte nicht mit der Adresse der Bestellung überein",
         "cardholder_name_mismatch": "Der für die Karte registrierte Name unterschied sich vom Namen des Käufers",
@@ -1490,6 +1489,24 @@
         "title": "Was diesen Fall wahrscheinlich geschwächt hat",
         "caveat": "Der Kartenaussteller teilt seine genaue Begründung nicht mit. Dies sind die stärksten Risikosignale aus der vollständigen Bewertung, einschließlich der Signale, die nicht an die Bank übermittelt wurden.",
         "fraudRecommendation": "Empfehlung: Prüfen oder stornieren Sie zukünftige Hochrisikobestellungen manuell, wenn die Zahlungsprüfung fehlschlägt oder Karteninhaber und Käufer unterschiedliche Namen haben – insbesondere bei früheren Rückbuchungen."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Dieser Fall wurde entschieden, bevor DisputeDesk installiert war.",
+      "sentBeforeInstall": "Eine Antwort wurde am {date} über Shopify gesendet, bevor DisputeDesk installiert war.",
+      "shopifySent": "DisputeDesk hat in diesem Fall keine Nachweise eingereicht. Die vorliegende Antwort wurde am {date} über Shopify gesendet.",
+      "shopifySentNoDate": "DisputeDesk hat in diesem Fall keine Nachweise eingereicht. Die vorliegende Antwort wurde über Shopify gesendet.",
+      "noneBeforeDeadline": "Die Entscheidung fiel am {date}, vor Ablauf der Antwortfrist und bevor Nachweise eingereicht wurden.",
+      "noneFiled": "In diesem Fall wurden keine Nachweise eingereicht.",
+      "holdReason": {
+        "merchant_conceded": "Sie haben sich entschieden, den Fall nicht anzufechten.",
+        "not_shipped": "DisputeDesk hat den Fall zurückgehalten, weil die Bestellung nie versandt wurde – es gab also keine Zustellung, die wir der Bank wahrheitsgemäß hätten belegen können.",
+        "refunded": "DisputeDesk hat den Fall zurückgehalten, weil die Bestellung bereits erstattet war.",
+        "covered": "DisputeDesk hat den Fall zurückgehalten, weil Shopify Protect diese Bestellung abgedeckt hat.",
+        "plan_limit": "DisputeDesk konnte keine Nachweise erstellen, weil das Limit Ihres Tarifs erreicht war.",
+        "auto_build_off": "Die automatische Erstellung von Nachweisen war für Ihren Shop ausgeschaltet.",
+        "awaiting_review": "Der Fall wartete vor dem Einreichen auf Ihre Prüfung.",
+        "thin_evidence": "DisputeDesk hat den Fall zurückgehalten, weil die vorliegenden Nachweise für eine Argumentation zu dünn waren."
       }
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",

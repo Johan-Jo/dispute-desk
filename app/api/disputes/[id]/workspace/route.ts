@@ -14,6 +14,7 @@ import {
   merchantSuppliedAcknowledgementFromItems,
   resolveHeldState,
 } from "@/lib/disputes/heldState";
+import { loadDecidedResponse, type DecidedDisputeRow } from "@/lib/disputes/loadDecidedResponse";
 import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
@@ -1169,6 +1170,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     },
   });
 
+  // Decided cases only: who responded, and why DisputeDesk did not when it
+  // didn't (lib/disputes/decidedResponse). Replaces the single "decided before
+  // DisputeDesk filed" sentence, which was false on cases we held on purpose.
+  const decidedResponse =
+    row.normalized_status === "won" || row.normalized_status === "lost"
+      ? await loadDecidedResponse(sb, row as DecidedDisputeRow)
+      : null;
+
   return NextResponse.json({
     dispute,
     pack,
@@ -1193,6 +1202,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // Auto-pilot hold — what the case is waiting for (a clock, not the
     // merchant) and the one contribution that can still change it.
     held,
+    decidedResponse,
     evidenceLineItems,
     submissionSummary,
     // Derived first-class attachment inventory for the dispute Review

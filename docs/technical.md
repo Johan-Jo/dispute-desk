@@ -3009,7 +3009,7 @@ The in-app `strengthReason` token is keyed on the fatal-loss reason ALONE (`case
 |---|---|---|
 | `we_defended_with_facts` | submitted `defence_packages` row with usable `facts_json` | "We filed your evidence on {date}. {clause} — banks weight this heavily…" |
 | `we_defended_no_facts` | pack row, no usable facts (e.g. Klarna: no card network) | "We filed your evidence on {date}. The bank still decided for the cardholder." |
-| `not_defended_by_us` | no pack row | "This dispute was decided before DisputeDesk filed any evidence for it." |
+| `not_filed_by_us` | no pack row | *(none — see "Who responded" below)* |
 
 **`submission_state = 'submitted_confirmed'` MUST NOT gate this.** It is true on ~390 disputes that closed *before* the shop installed — it records that a response reached Shopify, not who assembled it (`scripts/sql/filed-by-whom.sql`). Gating on it would claim credit for evidence merchants filed themselves, years earlier. Pack rows switch on at install rather than eroding (`pack-presence-by-era.sql`: 2026-Q3 139/140; 2026-Q1 and earlier 0), so presence is a reliable proxy — 96% post-install.
 
@@ -3027,6 +3027,37 @@ Rules that are load-bearing:
 **Email specifics.** Inserted as `body[1]` on `won`/`lost` and their `inquiry` counterparts. **`accepted` is excluded** — it is a catch-all that also reaches disputes we submitted, so it cannot know what was filed. The lookup is failure-tolerant at both layers: a read error or missing key degrades to the email's existing wording rather than costing the merchant the notification. Historical emails are not resent (`OUTCOME_DETECTED` is dedup-guarded), so already-decided cases get the sentence in the Overview only.
 
 **Won side is unvalidated.** The only won dispute holding a package is a Klarna inquiry (`cardNetwork: null`), where AVS and signature do not exist — so the win predicates cannot fire there and must not be tuned against it. Expect `we_defended_no_facts` until a card-network win is decided post-install.
+
+#### Who responded, and why DisputeDesk did not (2026-09-26)
+
+**Source:** `lib/disputes/decidedResponse.ts` (pure) + `lib/disputes/loadDecidedResponse.ts` (reads). The workspace API returns it as `decidedResponse` on won/lost disputes only; the outcome-email effect in `disputeEffectsDispatcher.ts` loads the same thing and passes it to `sendOutcomePostedAlert`. Plan: `docs/plans/decided-dispute-view.plan.md` (PR 1).
+
+**The defect.** `not_defended_by_us` rendered "This dispute was decided before DisputeDesk filed any evidence for it." on every decided case without a submitted package — including cases the pipeline **held on purpose**. Order #360499 (blume-box): fatal-loss `inr_no_fulfillment` held it for two weeks because the order never shipped, Shopify sent its response after the deadline, the bank decided six days later — and the page implied we had run out of time. The same case still offered "Add missing evidence" / "Save anyway" and a "Not yet assessed" chip.
+
+**Responder** — resolved in this order:
+
+| Responder | Condition | Copy |
+|---|---|---|
+| `before_install` | `closed_at` < first install (`min(shops.created_at, installed_at)` — `installed_at` moves on reinstall) | "This dispute was decided before DisputeDesk was installed." |
+| `we` | any DisputeDesk save: `disputes.evidence_saved_to_shopify_at`, `evidence_packs.saved_to_shopify_at`, or a `defence_packages` row with `status='submitted'` | `outcomeExplanation` filed copy |
+| `sent_before_install` | `evidenceSentOn` < first install | "A response was sent through Shopify on {date}, before DisputeDesk was installed." |
+| `shopify` | `evidenceSentOn` set, not ours | "DisputeDesk did not file evidence on this case. The response on file was sent through Shopify on {date}." |
+| `none` | nothing sent | decided before `due_at` → "The decision came on {date}, before the response deadline and before any evidence was filed."; otherwise "No evidence was filed on this case." |
+
+`shopify` covers both Shopify's automatic response and a merchant filing in Admin — the API cannot distinguish them, so copy says "sent through Shopify", never "Shopify's automatic response".
+
+**Hold reason** (appended sentence; `shopify` / `none` only). Classified from `audit_events` (`auto_save_blocked`, `parked_for_review`, `defence_package_blocked_unsafe_claim`, `auto_build_skipped`, `billing_blocked_email_sent`, `review_conceded`, `review_approved`) plus `disputes.review_state`. Priority order — first match wins: `merchant_conceded` → `not_shipped` (`inr_no_fulfillment`) → `refunded` (`refund_issued`) → `covered` → `plan_limit` (`quota_exceeded`/`feature_blocked`) → `auto_build_off` → `awaiting_review` → `thin_evidence`. Rules:
+
+- The classifier reads meaning from every field that has ever carried it — prod holds at least eight `auto_save_blocked` payload generations.
+- Build-skip reasons (`plan_limit`, `auto_build_off`) only explain a case **with no pack**; once a pack exists the skip was replayed.
+- An approval (`review_state='approved'` or a `review_approved` row) clears `awaiting_review`.
+- An unrecognised payload yields **no reason**, never a guess.
+
+Prod distribution at ship (1,111 decided): 880 `before_install`, 85 `we`, 27 `sent_before_install`, the rest held — `awaiting_review` 90, `auto_build_off` 13, `plan_limit` 8, `not_shipped` 2, `merchant_conceded` 1, no reason 6.
+
+**Email.** Same sentences, same order. `before_install` / `sent_before_install` add no paragraph (unprompted "before your time with us" is noise). A case filed through the older evidence-pack path has no package row; the resolver's filing date stands in so it still gets "We filed your evidence on {date}".
+
+**Live-case UI suppressed on decided disputes.** `OverviewTab`: the gate actions ("Add missing evidence" / "Save anyway" — `isReadOnly` is only true once *we* saved) and "What happens now". `WorkspaceShell`: the strength chip. A dedicated decided view (outcome card, "What we saw", "What wins this type", "Next time", past-tense timeline) is PR 2 of the plan.
 
 ### Returned-to-sender Gate (2026-08-20)
 
