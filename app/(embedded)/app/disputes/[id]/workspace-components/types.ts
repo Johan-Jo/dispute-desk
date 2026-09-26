@@ -9,6 +9,7 @@ import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 import type { HeldState } from "@/lib/disputes/heldState";
 import type { DecidedResponse } from "@/lib/disputes/decidedResponse";
+import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 import type { WorkspaceAssessmentPayload } from "@/lib/disputes/workspaceAssessmentTypes";
 
 /** Canonical tab indices for the dispute-detail workspace. Order per
@@ -339,6 +340,9 @@ export interface WorkspaceData {
   /** Decided cases only (lib/disputes/decidedResponse): who responded, and
    *  why DisputeDesk did not when it didn't. Null on live cases. */
   decidedResponse?: DecidedResponse | null;
+  /** Decided cases only: inputs for `buildDecidedView` (the decided-case
+   *  Overview, plan PR 2). Null on live cases. */
+  decidedView?: DecidedViewInputs | null;
   /** Per-row dispute-detail view-model from `deriveEvidenceLineItems`.
    *  Single source of truth for every UI surface; never duplicated. */
   evidenceLineItems: EvidenceLineItem[];

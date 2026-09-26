@@ -1,6 +1,6 @@
 # Decided disputes get their own view: what happened, what mattered, what to change
 
-**Status:** v1.1, 2026-09-26. **PR 1 implemented** on `feat/decided-dispute-view` (§4a records what step 0 changed). PR 2 waits on D-1…D-4; PR 3 needs separate approval.
+**Status:** v1.2, 2026-09-26. **PR 1 and PR 2 implemented** on `feat/decided-dispute-view` (PR #844). PR 2 follows the Claude Design "Decided Dispute View" (D-1 fixed copy, D-2 no fee, D-3 Shopify Admin pointer, D-4 design: all resolved by the design). PR 3 needs separate approval.
 **Builds on:** `docs/plans/lost-dispute-explanation.plan.md` (shipped 2026-08-29, `62459a25` + `c45699af`). That plan added one sentence and a "learning" list to the hero. This plan replaces the live-case layout on a decided dispute with a dedicated decided-case view.
 **Evidence:** prod `aokhplydttxtebvbeuzc`, queried 2026-09-26.
 
@@ -140,13 +140,13 @@ Reading 3 cases per bucket showed the five states above were too coarse. Almost 
 | Review-mode shop; the case was parked (`parked_for_review`) and never approved | #102014, #90877 | Hold reason `awaiting_review` |
 | No plan capacity: `auto_build_skipped` = `quota_exceeded` / `feature_blocked` / `auto_build_off`, so no pack ever existed | #99992, #97061 | Hold reasons `plan_limit`, `auto_build_off` |
 | Merchant conceded | #98141 | Hold reason `merchant_conceded` |
-| Decided **before the deadline**, often the day it opened | #98623, #102014 | "The decision came on {date}, before the response deadline…" For these cases the old sentence was actually true. |
+| Decided **before the deadline**, often the day it opened | #98623, #102014 | "The bank decided on {date}, before the response deadline…" For these cases the old sentence was actually true. |
 | A response went through Shopify **before the shop installed** | #92361 (sent Aug 23, installed Aug 29) | New responder `sent_before_install`; no hold is blamed |
-| Approved but never filed, and won anyway | #90627 | No reason named: plain "No evidence was filed on this case." Not a guess. |
+| Approved but never filed, and won anyway | #90627 | No reason named: plain "No response was filed." Not a guess. |
 
-**Shipped model:** responder ∈ `before_install | we | sent_before_install | shopify | none` × a separate `holdReason` (priority: `merchant_conceded` → `not_shipped` → `refunded` → `covered` → `plan_limit` → `auto_build_off` → `awaiting_review` → `thin_evidence`) × `decidedBeforeDeadline`. The copy says "sent through Shopify", never "Shopify's automatic response", because the API can't tell Shopify's auto-send apart from a merchant filing in Admin.
+**Shipped model:** responder ∈ `before_install | we | sent_before_install | shopify | none` × a separate `holdReason` (priority: `merchant_conceded` → `not_shipped` → `refunded` → `covered` → `plan_limit` → `auto_build_off` → `awaiting_review` → `thin_evidence`) × `decidedBeforeDeadline`. PR 1 said "sent through Shopify" because the API can't tell Shopify's auto-send apart from a merchant filing in Admin; PR 2 follows the design ("Shopify sent its automatic response") and leaves that choice open for the maintainer.
 
-**Verified on prod** (read-only, the real loader over all 1,111 decided disputes): 880 `before_install`, 85 `we`, 27 `sent_before_install`. Held: `awaiting_review` 90, `auto_build_off` 13, `plan_limit` 8, `not_shipped` 2, `merchant_conceded` 1, no reason 6. Zero load failures. #360499 renders: *"DisputeDesk did not file evidence on this case. The response on file was sent through Shopify on Sep 12, 2026. DisputeDesk held it because the order was never shipped, so there was no delivery we could truthfully show the bank."*
+**Verified on prod** (read-only, the real loader over all 1,111 decided disputes): 880 `before_install`, 85 `we`, 27 `sent_before_install`. Held: `awaiting_review` 90, `auto_build_off` 13, `plan_limit` 8, `not_shipped` 2, `merchant_conceded` 1, no reason 6. Zero load failures. #360499 renders (PR 2 wording): *"Shopify sent its automatic response on Sep 12, 2026." / "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully put in front of the bank."*
 
 **Open, not in PR 1:** #90627 (approved, never filed) suggests the deadline cron can miss an approved case. That is a filing question, not a copy question. Needs its own look.
 

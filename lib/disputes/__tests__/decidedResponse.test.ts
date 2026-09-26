@@ -96,7 +96,7 @@ describe("decidedResponse — order #360499", () => {
     expect(resp.decidedBeforeDeadline).toBe(false);
 
     const text = render(decidedResponseTokens(resp, fmt));
-    expect(text).toContain("sent through Shopify on 2026-09-12");
+    expect(text).toContain("Shopify sent its automatic response on 2026-09-12.");
     expect(text).toContain("the order was never shipped");
     // The sentence this replaced — false on this case.
     expect(text).not.toContain("decided before DisputeDesk");
@@ -171,7 +171,7 @@ describe("decidedResponse — who responded", () => {
     expect(resp.responder).toBe("none");
     expect(resp.decidedBeforeDeadline).toBe(true);
     const text = render(decidedResponseTokens(resp, fmt));
-    expect(text).toContain("The decision came on 2026-09-19, before the response deadline");
+    expect(text).toContain("The bank decided on 2026-09-19, before the response deadline");
     expect(text).toContain("waiting for your review");
   });
 
@@ -182,7 +182,7 @@ describe("decidedResponse — who responded", () => {
     });
     expect(resp.responder).toBe("none");
     expect(resp.decidedBeforeDeadline).toBe(false);
-    expect(render(decidedResponseTokens(resp, fmt))).toMatch(/^No evidence was filed on this case\./);
+    expect(render(decidedResponseTokens(resp, fmt))).toMatch(/^No response was filed\./);
   });
 
   it("a missing deadline never counts as 'decided before the deadline'", () => {

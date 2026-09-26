@@ -10,6 +10,7 @@ import { useDisputeWorkspace } from "./hooks/useDisputeWorkspace";
 import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
 import ReviewSubmitTab from "./tabs/ReviewSubmitTab";
+import DecidedWorkspace from "./DecidedWorkspace";
 import { TAB_INDEX } from "./workspace-components/types";
 import {
   ATTENTION_CHIP,
@@ -240,6 +241,32 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     { label: t("disputes.workspaceShell.facts.dateFiled"), value: formatDate(dispute.openedAt, locale) },
     { label: t("disputes.workspaceShell.facts.disputeReason"), value: reasonLabel },
   ];
+
+  /* A decided dispute gets its own layout (Claude Design "Decided Dispute
+   * View", plan docs/plans/decided-dispute-view.plan.md PR 2): the live-case
+   * header, hero and filing controls answer questions a closed case no longer
+   * has. The Evidence and Review tabs still render their normal bodies. */
+  if (data.decidedView) {
+    return (
+      <DecidedWorkspace
+        dispute={dispute}
+        inputs={data.decidedView}
+        backUrl={withShopParams("/app/disputes", searchParams)}
+        orderUrl={orderName ? orderUrl : null}
+        shopifyAdminUrl={shopifyAdminUrl}
+        tabs={tabs}
+        activeTab={clientState.activeTab}
+        onTabChange={(index) => actions.setActiveTab(index)}
+        renderTab={(index) =>
+          index === TAB_INDEX.reviewForward ? (
+            <ReviewSubmitTab workspace={workspace} />
+          ) : index === TAB_INDEX.evidence ? (
+            <EvidenceTab workspace={workspace} />
+          ) : null
+        }
+      />
+    );
+  }
 
   return (
     <Page
