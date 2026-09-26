@@ -160,7 +160,13 @@ export const styles = StyleSheet.create({
     lineHeight: 1.2,
   },
   section: {
-    marginBottom: 24,
+    // Padding, not margin: react-pdf's presence rule adds a node's bottom
+    // MARGIN to its height, so a section whose content fits but whose 24pt
+    // margin does not was moved whole to the next page — #360980 v23 left the
+    // executive summary alone on page 2 (content ended at 641 of 656pt).
+    // Padding is part of the section, so a section that fits stays and one
+    // that does not is split as usual.
+    paddingBottom: 24,
   },
 
   // ─── Running header / footer ─────────────────────────────────────────
