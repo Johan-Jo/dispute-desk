@@ -94,8 +94,9 @@ interface Props {
    * Auto-pilot is holding this case for its due date (`HeldState.held`,
    * lib/disputes/heldState.ts). The deadline cron finalizes and saves the
    * latest draft on the due date by itself, so approving changes nothing:
-   * the card says when it files instead of asking for an approval
-   * (maintainer, #360980, 2026-09-26).
+   * the card offers no approval. No banner either (maintainer, 2026-09-26):
+   * the card's intro already says Auto-pilot saves on the due date, and the
+   * deadline badge says when.
    */
   autoFilesOnDueDate?: boolean;
   /** Used to render the inline HTML defence view + the days-remaining
@@ -1110,16 +1111,6 @@ export function CompleteDefencePackageCard({
               <p>{tPkg("newEvidenceAvailableBody")}</p>
             </Banner>
           )}
-          {filesAutomatically ? (
-            <Banner
-              tone="info"
-              title={tPkg("autoFiles.title", {
-                date: new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(dispute!.dueAt!)),
-              })}
-            >
-              <p>{tPkg("autoFiles.body")}</p>
-            </Banner>
-          ) : null}
 
           {/* Action row — one primary at a time, plain-language labels,
               Regenerate demoted to a "More actions" overflow.
