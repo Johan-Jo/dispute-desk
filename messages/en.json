@@ -859,7 +859,7 @@
       "noneFiled": "No response was filed.",
       "holdReason": {
         "merchant_conceded": "You chose not to defend this case.",
-        "not_shipped": "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully put in front of the bank.",
+        "not_shipped": "DisputeDesk held this case: the order was never shipped, so there was no delivery we could truthfully show the bank.",
         "refunded": "DisputeDesk held this case: the order had already been refunded.",
         "covered": "DisputeDesk held this case: Shopify Protect covered this order.",
         "plan_limit": "DisputeDesk couldn't build evidence for this case: your plan's limit had been reached.",
@@ -869,21 +869,18 @@
       }
     },
     "decidedView": {
-      "readOnly": "Read-only · decided case",
       "header": {
-        "title": "Order {order}",
-        "opened": "Opened",
-        "due": "Response was due",
-        "decided": "Decided"
+        "decided": "Decided:"
+      },
+      "hero": {
+        "chipLost": "Final · nothing left to file",
+        "chipWon": "Final · the money is yours"
       },
       "outcome": {
         "titleLost": "Dispute lost",
         "titleWon": "Dispute won",
-        "decided": "· decided {date}",
         "amountLost": "Amount lost",
-        "amountRecovered": "Recovered",
-        "final": "This decision is final. There is nothing left to file.",
-        "bankReasoning": "Your bank's written reasoning is in <link>Shopify Admin</link>."
+        "amountRecovered": "Recovered"
       },
       "product": {
         "one": "{title} ({count, plural, one {# item} other {# items}})",
@@ -900,18 +897,78 @@
         "GENERAL": "General dispute"
       },
       "who": {
-        "title": "Who responded",
+        "label": "Who responded:",
         "weFiled": "DisputeDesk filed your evidence on {date}."
+      },
+      "summary": {
+        "claim": {
+          "FRAUDULENT": "The customer told their bank they didn't make this purchase.",
+          "UNRECOGNIZED": "The customer told their bank they didn't recognise the charge.",
+          "PRODUCT_NOT_RECEIVED": "The customer told their bank the order never arrived.",
+          "PRODUCT_UNACCEPTABLE": "The customer told their bank the product wasn't as described.",
+          "SUBSCRIPTION_CANCELLED": "The customer told their bank they had already cancelled the subscription.",
+          "DUPLICATE": "The customer told their bank they were charged twice.",
+          "CREDIT_NOT_PROCESSED": "The customer told their bank a refund was never processed.",
+          "GENERAL": "The customer disputed the charge with their bank."
+        },
+        "evidence": "{clauses}.",
+        "evidenceHeld": "{clauses}, so there was no honest case to put forward.",
+        "response": {
+          "weFiledWon": "DisputeDesk filed that evidence on {date}, and the bank ruled in your favour.",
+          "weFiledWonNoFacts": "DisputeDesk filed your evidence on {date}, and the bank ruled in your favour.",
+          "weFiledLost": "DisputeDesk filed the evidence on {date}, and the bank still sided with the customer.",
+          "shopifyWon": "Shopify sent its automatic response, and the bank ruled in your favour.",
+          "shopifyLost": "Shopify sent its automatic response at the deadline, and the bank sided with the customer.",
+          "noneWon": "The bank ruled in your favour.",
+          "noneLost": "No response was filed, and the bank sided with the customer.",
+          "beforeInstallWon": "The bank ruled in your favour before DisputeDesk was installed.",
+          "beforeInstallLost": "The bank sided with the customer before DisputeDesk was installed."
+        },
+        "closingWon": "The {amount} stays with you.",
+        "closingNotShipped": "Shipping or refunding orders that are stuck is the surest way to avoid this next time.",
+        "closingLost": "The steps below are the most useful changes for next time.",
+        "clause": {
+          "neverShipped": "it was never shipped",
+          "shippedAfterDispute": "it only shipped after the dispute was opened",
+          "noDelivery": "nothing on record showed a delivery",
+          "avs_mismatch": "the card's billing address didn't match the order",
+          "cardholder_name_mismatch": "the name on the card differed from the buyer's",
+          "prior_chargebacks": "the customer had disputed a charge before",
+          "ip_country_mismatch": "the order was placed from another country",
+          "ip_high_risk": "the checkout came from a high-risk network",
+          "no_signature_on_fraud": "nobody signed for the delivery",
+          "weak_identity_signals": "only the customer's country could be confirmed",
+          "avs_match": "their billing address matched the card",
+          "signature_confirmed": "the delivery was signed for",
+          "delivery_confirmed": "the carrier confirmed delivery",
+          "priorUndisputed": "{count, plural, one {they had ordered from you once before without a problem} other {they had ordered from you # times before without a problem}}",
+          "threeDs": "the payment passed 3-D Secure"
+        }
       },
       "facts": {
         "titleLost": "What we saw in the record",
         "titleWon": "What carried the case",
-        "bullet": "{clause}.",
-        "neverShipped": "The order was never shipped (fulfilment status: unfulfilled).",
-        "shippedAfterDispute": "The order shipped on {date}, after the dispute was opened.",
-        "noTracking": "No tracking number or delivery confirmation existed.",
-        "noteNotReceived": "On a not-received claim the bank's question is \"was it delivered?\", and nothing on record said yes.",
-        "priorUndisputed": "{count, plural, one {The customer had # earlier order from this store that was never disputed.} other {The customer had # earlier orders from this store that were never disputed.}}"
+        "subLost": "Facts from the order and our records. This is not the bank's reasoning.",
+        "subWon": "Evidence in the response DisputeDesk filed",
+        "subRecord": "Facts from the order and our records",
+        "weightPill": "Banks weight this heavily",
+        "noteNotReceived": "On a not-received claim the bank asks one question: was it delivered? Nothing on record said yes.",
+        "title": {
+          "neverShipped": "The order was never shipped",
+          "shippedAfterDispute": "The order only shipped after the dispute was opened",
+          "noTracking": "No tracking number or delivery confirmation existed",
+          "priorUndisputed": "{count, plural, one {# earlier order from this customer was never disputed} other {# earlier orders from this customer were never disputed}}",
+          "threeDs": "The payment passed 3-D Secure"
+        },
+        "source": {
+          "order": "From Shopify order data",
+          "payment": "From Shopify payment data",
+          "customer": "From Shopify customer data",
+          "ip": "From the checkout IP address",
+          "carrier": "From carrier tracking",
+          "unfulfilled": "Fulfilment status: unfulfilled · From Shopify order data",
+          "shipped": "Shipped {date} · From Shopify order data"
+        }
       },
       "checklist": {
         "title": "What wins this type of dispute",
@@ -936,48 +993,50 @@
           "storePolicies": "Store policies"
         },
         "state": {
-          "had": "Had",
-          "policy": "Policy",
+          "had": "On record",
+          "policy": "In policy",
           "missing": "Missing",
           "none": "None",
           "notUsed": "Not used",
           "notChecked": "Not checked"
-        }
+        },
+        "coverage": "of the items banks look for were on record for this case"
       },
       "next": {
         "title": "Next time",
         "shipOrCancel": {
-          "title": "Ship or cancel-and-refund before the customer disputes.",
+          "title": "Ship or cancel-and-refund before the customer disputes",
           "detail": {
-            "chargeback": "This order sat unshipped {days, plural, one {# day} other {# days}} before the chargeback.",
-            "inquiry": "This order sat unshipped {days, plural, one {# day} other {# days}} before the inquiry."
+            "chargeback": "This order sat unshipped for {days, plural, one {# day} other {# days}} before the chargeback.",
+            "inquiry": "This order sat unshipped for {days, plural, one {# day} other {# days}} before the inquiry."
           },
           "detailLate": "It shipped only after the customer had disputed it."
         },
         "shareTracking": {
-          "title": "Share tracking with the customer when the order ships.",
+          "title": "Share tracking with the customer when the order ships",
           "detail": "No tracking number was on this order."
         },
         "holdHighRisk": {
-          "title": "Hold orders Shopify flags as high risk.",
+          "title": "Hold orders Shopify flags as high risk",
           "detail": "Shopify flagged this order before it shipped."
         },
         "threeDs": {
-          "title": "Turn on 3-D Secure for risky orders.",
+          "title": "Turn on 3-D Secure for risky orders",
           "detail": "Authenticated payments move liability for fraud claims to the card issuer."
         },
         "selfServeCancel": {
-          "title": "Make cancelling self-serve and confirm it by email.",
+          "title": "Make cancelling self-serve and confirm it by email",
           "detail": "Customers who can cancel easily rarely go to their bank instead."
         },
         "describeProduct": {
-          "title": "Describe products precisely and show what ships.",
+          "title": "Describe products precisely and show what ships",
           "detail": "Not-as-described claims turn on whether the listing matched what arrived."
         },
         "confirmRefunds": {
-          "title": "Refund promptly and email a dated confirmation.",
+          "title": "Refund promptly and email a dated confirmation",
           "detail": "A refund confirmation answers a refund-not-processed claim directly."
-        }
+        },
+        "sub": "Steps you can take on future orders, based on this case"
       },
       "timeline": {
         "title": "What happened",
@@ -985,11 +1044,11 @@
         "openedDetail": "{claim}. Response due {due}.",
         "openedDetailNoDue": "{claim}.",
         "gathered": "Evidence gathered",
-        "gatheredNoDelivery": "No tracking or delivery confirmation was on the order.",
+        "gatheredNoDelivery": "No tracking or delivery confirmation on the order.",
         "held": {
           "not_shipped": {
             "title": "Held: order not shipped",
-            "detail": "We didn't file, because nothing on record showed delivery."
+            "detail": "Nothing on record showed delivery, so we did not file."
           },
           "refunded": {
             "title": "Held: order already refunded",
@@ -1020,12 +1079,12 @@
           }
         },
         "emailed": "You were emailed",
-        "emailedFatalLoss": "We explained why this case couldn't be defended truthfully.",
+        "emailedFatalLoss": "We explained why this case could not be defended truthfully.",
         "emailedPlanLimit": "We told you your plan's limit had been reached.",
         "weFiled": "DisputeDesk filed your evidence",
         "weFiledDetail": "Saved to Shopify and submitted to the bank.",
         "shopifySent": "Shopify's automatic response sent",
-        "shopifySentDetail": "Shopify sends its own response when nothing is filed by the deadline.",
+        "shopifySentDetail": "Shopify responds on its own when nothing is filed by the deadline.",
         "cancelled": "You cancelled the order",
         "lost": "Lost",
         "lostDetail": "{amount} was not returned.",
