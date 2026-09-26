@@ -106,6 +106,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
           before the supporting inclusion-review detail below. */}
       <CompleteDefencePackageCard
         packId={data?.pack?.id ?? null}
+        autoFilesOnDueDate={data?.held?.held === true}
         submittedToShopifyAt={view.submittedAt}
         shopifyAdminUrl={view.shopifyAdminUrl}
         presentationStatus={data?.presentationStatus}

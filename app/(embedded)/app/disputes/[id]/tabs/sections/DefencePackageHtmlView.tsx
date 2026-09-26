@@ -579,7 +579,11 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     return (
       <Section key={key} number={num()} title={sectionTitleFor(key, facts)}>
         {thesis ? <p style={css.thesis}>{thesis}</p> : null}
-        <Prose text={body} emphasise={productNames} />
+        {/* Product names are bolded where they tell parcels and items apart
+            (shipping, line items). The summary and conclusion argue the case,
+            and bold names there pull the eye to the least important words
+            (maintainer, #360980, 2026-09-26). */}
+        <Prose text={body} emphasise={key === "executiveSummary" || key === "conclusion" ? [] : productNames} />
       </Section>
     );
   };
