@@ -105,9 +105,17 @@ export function summaryUserPrompt(args: {
   return [
     `MERCHANT: "${args.merchantName}" (name it at most once).`,
     `ADDRESSES: ${addressRule(args.ledger)}`,
-    args.ledger.some((c) => c.id === "whole_order_in_shipment")
+    args.ledger.some((c) => c.id === "whole_order_in_shipment" || c.id === "all_parcels_delivered")
       ? 'WHOLE ORDER: in the delivery sentence say the carrier recorded delivery of "the complete order"; the claim sentence says only "the order".'
       : 'WHOLE ORDER: not proven for this case. Say "the order"; never "complete", "entire", "whole" or "all" of it.',
+    ...(args.ledger.some((c) => c.parcel)
+      ? [
+          "PARCELS: the order went out in several parcels, one card each. Name each parcel by its products, exactly as its claim does. " +
+            'Say "delivered" only of a parcel whose claim says the carrier recorded it as delivered; of a parcel the merchant shipped, say only that the merchant shipped it. ' +
+            "Never give a shipping date, never relate a shipment to the order date or the dispute, and do not count the parcels (the Shipping section does). " +
+            "Scope what the delivery proves to the delivered parcel's goods; never say the claim as a whole is not supported.",
+        ]
+      : []),
     `THEORY OF THE CASE: ${args.theory.name}: ${args.theory.shape}`,
     `THE SUMMARY MUST CARRY: claim_is_non_receipt, ${args.theory.claims.join(", ")}. Any other claim (a delivery notification, dispatch timing, transit time) only if the summary stays under 70 words.`,
     `PRINTED ON THE PAGE AROUND THE LETTER (do not repeat):\n${args.pageContext}`,
@@ -168,6 +176,16 @@ export function timelineBlock(ledger: readonly LedgerClaim[]): string {
   const delivered = by.get("carrier_delivered");
   const transit = by.get("transit_days");
   if (delivered) rows.push(`- Carrier recorded delivery: ${delivered.deliveredOn}${transit ? ` (${transit.transitDaysWord} days after shipping)` : ""}.`);
+  for (const c of ledger.filter((x) => x.parcel)) {
+    const p = c.parcel!;
+    rows.push(
+      p.state === "delivered" || p.state === "signed"
+        ? `- Parcel with ${p.items}: carrier recorded delivery on ${c.specifics.deliveredOn}.`
+        : p.state === "in_transit"
+          ? `- Parcel with ${p.items}: carrier's record shows it in transit (no delivery recorded).`
+          : `- Parcel with ${p.items}: shipped by the merchant (no carrier record of delivery).`,
+    );
+  }
   const later = by.get("later_order");
   if (later) {
     rows.push(`- Later order placed: ${later.laterOrderOn} — ${later.daysAfterDeliveryWord} days after the delivery.`);

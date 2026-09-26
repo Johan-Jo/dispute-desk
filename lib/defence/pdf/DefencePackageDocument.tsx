@@ -668,6 +668,24 @@ export function DefencePackageDocument({
           {multiParcel ? (
             <Section number={num()} title="Shipping, Delivery & Evidence">
               <ShipmentCards cards={shipmentCards(shipments, chronology)} />
+              {/* Counsel v2 multi-parcel letters: the addresses and the
+                  record-built prose under the cards (as on a single parcel).
+                  A template multi-parcel letter's prose repeats the cards, so
+                  it stays unprinted. */}
+              {addressCard(meta.addressExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 12 }]} wrap={false}>
+                  <ShipmentCard card={addressCard(meta.addressExhibit)!} wide />
+                </View>
+              ) : null}
+              {findBlock(composedBlocks, "fulfillmentArgument")?.recordBuilt &&
+              blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
+                <View style={{ marginTop: 14 }}>
+                  <Prose
+                    text={blockBody(findBlock(composedBlocks, "fulfillmentArgument")) as string}
+                    emphasise={productNames}
+                  />
+                </View>
+              ) : null}
             </Section>
           ) : single ? (
             <Section
