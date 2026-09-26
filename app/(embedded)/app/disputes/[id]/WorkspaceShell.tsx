@@ -251,6 +251,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
       <DecidedWorkspace
         dispute={dispute}
         inputs={data.decidedView}
+        reasonLabel={reasonLabel}
         backUrl={withShopParams("/app/disputes", searchParams)}
         orderUrl={orderName ? orderUrl : null}
         shopifyAdminUrl={shopifyAdminUrl}

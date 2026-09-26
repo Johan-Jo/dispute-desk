@@ -14,6 +14,7 @@ import {
   type DecidedAuditEvent,
   type DecidedResponse,
 } from "@/lib/disputes/decidedResponse";
+import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 
 export interface DecidedDisputeRow {
   id: string;
@@ -142,6 +143,97 @@ export async function loadDecidedContext(
             riskRecommendation: o.risk_recommendation_initial ?? null,
           }
         : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The dispute columns `loadDecidedViewInputs` reads. */
+export interface DecidedViewDisputeRow extends DecidedDisputeRow {
+  normalized_status: string | null;
+  phase: string | null;
+  reason: string | null;
+  amount: number | string | null;
+  currency_code: string | null;
+  initiated_at: string | null;
+  outcome_amount_lost?: number | string | null;
+  outcome_amount_recovered?: number | string | null;
+}
+
+export const DECIDED_VIEW_DISPUTE_COLUMNS =
+  "id, shop_id, order_gid, normalized_status, phase, reason, amount, currency_code, initiated_at, due_at, closed_at, submitted_at, evidence_saved_to_shopify_at, review_state, outcome_amount_lost, outcome_amount_recovered";
+
+/**
+ * Everything `buildDecidedView` needs, from the database. ONE assembly for the
+ * Overview (workspace API) and the outcome email, so the page and the email
+ * describe a decided case from the same rows. Null when the dispute is not
+ * decided or a read fails.
+ */
+export async function loadDecidedViewInputs(
+  sb: SupabaseClient,
+  row: DecidedViewDisputeRow,
+): Promise<DecidedViewInputs | null> {
+  const outcome =
+    row.normalized_status === "won" || row.normalized_status === "lost" ? row.normalized_status : null;
+  if (!outcome) return null;
+  try {
+    const [ctx, packRes] = await Promise.all([
+      loadDecidedContext(sb, row, { withOrder: true }),
+      sb
+        .from("evidence_packs")
+        .select("id, pack_json")
+        .eq("dispute_id", row.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    if (!ctx || packRes.error) return null;
+    const pack = packRes.data as { id: string; pack_json: unknown } | null;
+
+    // Evidence items by field — first write wins, as the workspace route and
+    // collectors do. The merchant-side record, including facts withheld from
+    // the issuer.
+    const facts: Record<string, Record<string, unknown>> = {};
+    if (pack) {
+      const { data: items, error } = await sb
+        .from("evidence_items")
+        .select("payload")
+        .eq("pack_id", pack.id)
+        .order("created_at", { ascending: true });
+      if (error) return null;
+      for (const it of (items ?? []) as Array<{ payload: Record<string, unknown> | null }>) {
+        const payload = it.payload;
+        const fields = (payload?.fieldsProvided as string[] | undefined) ?? [];
+        for (const f of fields) if (payload && !facts[f]) facts[f] = payload;
+      }
+    }
+    const rawItems = Array.isArray(facts.order_confirmation?.lineItems)
+      ? (facts.order_confirmation.lineItems as Array<{ title?: unknown; quantity?: unknown }>)
+      : [];
+    const fatal = (pack?.pack_json as { fatal_loss?: { reason?: string | null } } | null)?.fatal_loss;
+    const amount = Number(
+      (outcome === "lost" ? row.outcome_amount_lost : row.outcome_amount_recovered) ?? row.amount ?? 0,
+    );
+
+    return {
+      outcome,
+      phase: row.phase === "inquiry" ? "inquiry" : "chargeback",
+      reason: row.reason ?? null,
+      amount: Number.isFinite(amount) ? amount : 0,
+      currency: row.currency_code ?? "USD",
+      openedAt: row.initiated_at ?? null,
+      dueAt: row.due_at ?? null,
+      closedAt: row.closed_at ?? null,
+      response: ctx.response,
+      order: ctx.order,
+      lineItems: rawItems
+        .filter((i) => typeof i.title === "string" && i.title.length > 0)
+        .map((i) => ({ title: i.title as string, quantity: Number(i.quantity ?? 1) })),
+      facts,
+      fatalLossReason: fatal?.reason ?? null,
+      firstPackAt: ctx.firstPackAt,
+      events: ctx.events,
     };
   } catch {
     return null;

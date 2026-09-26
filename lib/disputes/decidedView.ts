@@ -72,6 +72,19 @@ export interface DecidedViewInputs {
 export type ChecklistState = "had" | "missing" | "none";
 export type TimelineTone = "muted" | "neutral" | "warning" | "primary" | "danger" | "success";
 
+export type FactTone = "good" | "bad";
+
+export interface ViewFact {
+  title: I18nToken;
+  /** Where the fact comes from — the design's grey line under each fact. */
+  source: I18nToken;
+  /** Lower-case clause for the summary paragraph, joined with a list format. */
+  clause: I18nToken | null;
+  tone: FactTone;
+  /** "Banks weight this heavily" pill — the top-ranked loss fact only. */
+  weighted: boolean;
+}
+
 export interface DecidedView {
   outcome: {
     title: I18nToken;
@@ -79,12 +92,35 @@ export interface DecidedView {
     product: I18nToken | null;
     claim: I18nToken;
     amountLabel: I18nToken;
+    chip: I18nToken;
+  };
+  /**
+   * The executive summary paragraph (design `DecidedView3`): what the customer
+   * claimed, what the record showed, who responded and how the bank ruled, and
+   * one closing line. `clauses` are joined by the renderer with the locale's
+   * list format and capitalised, so the sentence reads naturally in 6 locales.
+   */
+  summary: {
+    claim: I18nToken;
+    clauses: I18nToken[];
+    /** Append "so there was no honest case to put forward" to the clauses. */
+    held: boolean;
+    response: I18nToken;
+    closing: I18nToken | null;
   };
   who: { first: I18nToken; second: I18nToken | null } | null;
-  facts: { title: I18nToken; items: I18nToken[]; note: I18nToken | null };
+  facts: { title: I18nToken; sub: I18nToken; items: ViewFact[]; note: I18nToken | null };
   checklist: Array<{ item: I18nToken; state: ChecklistState; label: I18nToken }>;
   nextTime: Array<{ title: I18nToken; detail: I18nToken | null }>;
   timeline: Array<{ at: string; title: I18nToken; detail: I18nToken | null; tone: TimelineTone }>;
+}
+
+export interface DecidedViewFormat {
+  /** Full date, e.g. "Sep 17, 2026". */
+  date: (iso: string) => string;
+  /** Short date, e.g. "Sep 11". */
+  short: (iso: string) => string;
+  money: (amount: number, currency: string) => string;
 }
 
 const DELIVERY_CONFIRMED = new Set(["delivered_confirmed", "signature_confirmed"]);
@@ -173,7 +209,25 @@ function readCase(input: DecidedViewInputs): CaseFacts {
   };
 }
 
-function factsSection(input: DecidedViewInputs, c: CaseFacts, fmtDate: (iso: string) => string) {
+/** Where each outcome factor is read from. */
+const FACTOR_SOURCE: Record<string, string> = {
+  avs_mismatch: "payment",
+  cardholder_name_mismatch: "payment",
+  prior_chargebacks: "customer",
+  ip_country_mismatch: "ip",
+  ip_high_risk: "ip",
+  no_signature_on_fraud: "carrier",
+  weak_identity_signals: "ip",
+  signature_confirmed: "carrier",
+  avs_match: "payment",
+  delivery_confirmed: "carrier",
+};
+
+function factsSection(
+  input: DecidedViewInputs,
+  c: CaseFacts,
+  fmtDate: (iso: string) => string,
+): DecidedView["facts"] {
   const factorFacts = Object.entries(input.facts).map(([fieldKey, payload]) => ({
     value: { ...payload, fieldKey },
   }));
@@ -182,34 +236,56 @@ function factsSection(input: DecidedViewInputs, c: CaseFacts, fmtDate: (iso: str
     reason: input.reason,
     outcome: input.outcome,
   });
-  const bullet = (key: string): I18nToken => tk("facts.bullet", { clause: nested(key) });
-  const items: I18nToken[] = [];
+  const won = input.outcome === "won";
+  const tone: FactTone = won ? "good" : "bad";
+  const items: ViewFact[] = [];
+  const push = (title: I18nToken, source: I18nToken, clause: I18nToken | null) =>
+    items.push({ title, source, clause, tone, weighted: false });
 
-  if (input.outcome === "lost") {
+  if (!won) {
     const deliveryMatters = c.family === "delivery" || c.family === "product" || c.family === "fraud";
-    if (c.neverFulfilled) items.push(tk("facts.neverShipped"));
-    else if (c.fulfilledAfterOpen && input.order?.fulfilledAt) {
-      items.push(tk("facts.shippedAfterDispute", { date: fmtDate(input.order.fulfilledAt) }));
-    }
-    if (deliveryMatters && !c.deliveryConfirmed) {
-      items.push(
-        c.hasTracking ? bullet("disputes.outcomeExplanation.factor.no_delivery_confirmation") : tk("facts.noTracking"),
+    if (c.neverFulfilled) {
+      push(tk("facts.title.neverShipped"), tk("facts.source.unfulfilled"), tk("summary.clause.neverShipped"));
+    } else if (c.fulfilledAfterOpen && input.order?.fulfilledAt) {
+      push(
+        tk("facts.title.shippedAfterDispute"),
+        tk("facts.source.shipped", { date: fmtDate(input.order.fulfilledAt) }),
+        tk("summary.clause.shippedAfterDispute"),
       );
     }
-    for (const f of factors) {
-      if (f.code === "no_delivery_confirmation") continue; // stated above, more precisely
-      items.push(bullet(f.token.key));
+    if (deliveryMatters && !c.deliveryConfirmed) {
+      push(
+        c.hasTracking
+          ? { key: "disputes.outcomeExplanation.factor.no_delivery_confirmation" }
+          : tk("facts.title.noTracking"),
+        tk(c.hasTracking ? "facts.source.carrier" : "facts.source.order"),
+        tk("summary.clause.noDelivery"),
+      );
     }
-    const note =
-      c.family === "delivery" && !c.deliveryConfirmed ? tk("facts.noteNotReceived") : null;
-    return { title: tk("facts.titleLost"), items, note };
   }
+  for (const f of factors) {
+    if (f.code === "no_delivery_confirmation") continue; // stated above, more precisely
+    push(f.token, tk(`facts.source.${FACTOR_SOURCE[f.code] ?? "order"}`), tk(`summary.clause.${f.code}`));
+  }
+  if (won && c.priorUndisputed > 0) {
+    push(
+      tk("facts.title.priorUndisputed", { count: c.priorUndisputed }),
+      tk("facts.source.order"),
+      tk("summary.clause.priorUndisputed", { count: c.priorUndisputed }),
+    );
+  }
+  if (won && c.has("tds_authentication")) {
+    push(tk("facts.title.threeDs"), tk("facts.source.payment"), tk("summary.clause.threeDs"));
+  }
+  if (!won && items.length > 0) items[0].weighted = true;
 
-  for (const f of factors) items.push(bullet(f.token.key));
-  if (c.priorUndisputed > 0) {
-    items.push(tk("facts.priorUndisputed", { count: c.priorUndisputed }));
-  }
-  return { title: tk("facts.titleWon"), items, note: null };
+  const weFiled = input.response?.responder === "we";
+  return {
+    title: tk(won ? "facts.titleWon" : "facts.titleLost"),
+    sub: tk(!won ? "facts.subLost" : weFiled ? "facts.subWon" : "facts.subRecord"),
+    items,
+    note: !won && c.family === "delivery" && !c.deliveryConfirmed ? tk("facts.noteNotReceived") : null,
+  };
 }
 
 type Row = { item: string; state: ChecklistState; label: string };
@@ -348,7 +424,7 @@ function nextTimeSection(input: DecidedViewInputs, c: CaseFacts): DecidedView["n
 function timelineSection(
   input: DecidedViewInputs,
   claim: I18nToken,
-  fmtDate: (iso: string) => string,
+  fmtShort: (iso: string) => string,
   fmtMoney: (amount: number, currency: string) => string,
   c: CaseFacts,
 ): DecidedView["timeline"] {
@@ -361,7 +437,7 @@ function timelineSection(
       at: input.openedAt,
       title: tk("timeline.opened"),
       detail: input.dueAt
-        ? tk("timeline.openedDetail", { claim: claimParam, due: fmtDate(input.dueAt) })
+        ? tk("timeline.openedDetail", { claim: claimParam, due: fmtShort(input.dueAt) })
         : tk("timeline.openedDetailNoDue", { claim: claimParam }),
       tone: "muted",
     });
@@ -430,7 +506,16 @@ function timelineSection(
     );
   }
 
-  return steps
+  // Nothing but the decision itself may follow the decision. A pack rebuilt
+  // after the bank ruled is housekeeping, not part of what happened to the case.
+  const closedT = t(input.closedAt);
+  const decidedStep = steps[steps.length - 1];
+  const kept =
+    closedT === null
+      ? steps
+      : steps.filter((s) => s === decidedStep || (t(s.at) ?? 0) <= closedT);
+
+  return kept
     .map((s, i) => ({ s, i, at: t(s.at) ?? 0 }))
     .sort((a, b) => a.at - b.at || a.i - b.i)
     .map(({ s }) => s);
@@ -458,28 +543,90 @@ function whoSection(input: DecidedViewInputs, fmtDate: (iso: string) => string):
   return { first: tokens[0], second: tokens[1] ?? null };
 }
 
-export function buildDecidedView(
+const NARRATIVE_CLAIM = new Set([
+  "FRAUDULENT",
+  "UNRECOGNIZED",
+  "PRODUCT_NOT_RECEIVED",
+  "PRODUCT_UNACCEPTABLE",
+  "SUBSCRIPTION_CANCELLED",
+  "DUPLICATE",
+  "CREDIT_NOT_PROCESSED",
+]);
+
+function summarySection(
   input: DecidedViewInputs,
-  fmt: {
-    /** Full date, e.g. "Sep 17, 2026". */
-    date: (iso: string) => string;
-    money: (amount: number, currency: string) => string;
-  },
-): DecidedView {
+  c: CaseFacts,
+  facts: DecidedView["facts"],
+  nextTime: DecidedView["nextTime"],
+  fmt: DecidedViewFormat,
+): DecidedView["summary"] {
+  const won = input.outcome === "won";
+  const resp = input.response;
+  const reasonKey = (input.reason ?? "").toUpperCase();
+  const claim = tk(`summary.claim.${NARRATIVE_CLAIM.has(reasonKey) ? reasonKey : "GENERAL"}`);
+  const clauses = facts.items
+    .map((f) => f.clause)
+    .filter((x): x is I18nToken => x !== null)
+    .slice(0, 3);
+  const held =
+    !won &&
+    resp?.holdReason === "not_shipped" &&
+    (resp.responder === "shopify" || resp.responder === "none") &&
+    clauses.length > 0;
+
+  const side = won ? "Won" : "Lost";
+  let response: I18nToken;
+  switch (resp?.responder) {
+    case "we":
+      // "filed THAT evidence" needs evidence named just before it; with no
+      // clauses the sentence must stand alone (prod #347615).
+      response = resp.filedAt
+        ? tk(
+            won && clauses.length === 0 ? "summary.response.weFiledWonNoFacts" : `summary.response.weFiled${side}`,
+            { date: fmt.date(resp.filedAt) },
+          )
+        : tk(`summary.response.none${side}`);
+      break;
+    case "shopify":
+      response = tk(`summary.response.shopify${side}`);
+      break;
+    case "before_install":
+    case "sent_before_install":
+      response = tk(`summary.response.beforeInstall${side}`);
+      break;
+    default:
+      response = tk(`summary.response.none${side}`);
+  }
+
+  let closing: I18nToken | null = null;
+  if (won) closing = tk("summary.closingWon", { amount: fmt.money(input.amount, input.currency) });
+  else if (c.neverFulfilled && c.family === "delivery") closing = tk("summary.closingNotShipped");
+  else if (nextTime.length > 0) closing = tk("summary.closingLost");
+
+  return { claim, clauses, held, response, closing };
+}
+
+export function buildDecidedView(input: DecidedViewInputs, fmt: DecidedViewFormat): DecidedView {
   const c = readCase(input);
   const claim = claimToken(input.reason);
+  const facts = factsSection(input, c, fmt.date);
+  const checklist = checklistSection(c, input);
+  const nextTime = nextTimeSection(input, c);
+  const won = input.outcome === "won";
   return {
     outcome: {
-      title: tk(input.outcome === "lost" ? "outcome.titleLost" : "outcome.titleWon"),
+      title: tk(won ? "outcome.titleWon" : "outcome.titleLost"),
       decidedAt: input.closedAt,
       product: productToken(input.lineItems),
       claim,
-      amountLabel: tk(input.outcome === "lost" ? "outcome.amountLost" : "outcome.amountRecovered"),
+      amountLabel: tk(won ? "outcome.amountRecovered" : "outcome.amountLost"),
+      chip: tk(won ? "hero.chipWon" : "hero.chipLost"),
     },
+    summary: summarySection(input, c, facts, nextTime, fmt),
     who: whoSection(input, fmt.date),
-    facts: factsSection(input, c, fmt.date),
-    checklist: checklistSection(c, input),
-    nextTime: nextTimeSection(input, c),
-    timeline: timelineSection(input, claim, fmt.date, fmt.money, c),
+    facts,
+    checklist,
+    nextTime,
+    timeline: timelineSection(input, claim, fmt.short, fmt.money, c),
   };
 }
