@@ -11,9 +11,10 @@
  *
  * This module separates the two questions the old sentence conflated:
  *
- *   1. Who responded? — DisputeDesk, Shopify (its automatic response or the
- *      merchant in Admin; the API cannot tell those apart), or nobody. Plus
- *      the two pre-install shapes.
+ *   1. Who responded? — DisputeDesk, a response sent through Shopify (the API
+ *      cannot say whether Shopify or the merchant in Admin sent it, so copy
+ *      never names which — and never calls it an "automatic response"), or
+ *      nobody. Plus the two pre-install shapes.
  *   2. If not DisputeDesk, why not? — resolved from the audit trail the
  *      pipeline already writes. See `docs/plans/decided-dispute-view.plan.md` §4.
  *

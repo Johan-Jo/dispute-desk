@@ -3041,10 +3041,10 @@ Rules that are load-bearing:
 | `before_install` | `closed_at` < first install (`min(shops.created_at, installed_at)` — `installed_at` moves on reinstall) | "This dispute was decided before DisputeDesk was installed." |
 | `we` | any DisputeDesk save: `disputes.evidence_saved_to_shopify_at`, `evidence_packs.saved_to_shopify_at`, or a `defence_packages` row with `status='submitted'` | `outcomeExplanation` filed copy |
 | `sent_before_install` | `evidenceSentOn` < first install | "A response was sent through Shopify on {date}, before DisputeDesk was installed." |
-| `shopify` | `evidenceSentOn` set, not ours | "Shopify sent its automatic response on {date}." (design wording) |
+| `shopify` | `evidenceSentOn` set, not ours | "A response was sent through Shopify on {date}." |
 | `none` | nothing sent | decided before `due_at` → "The bank decided on {date}, before the response deadline and before any response was filed."; otherwise "No response was filed." |
 
-`shopify` covers both Shopify's automatic response and a merchant filing in Admin — the API cannot distinguish them. PR 1 therefore said "sent through Shopify"; the design (PR 2) says "Shopify sent its automatic response", which is what ships. **Open question for the maintainer** (plan §4a): keep the design wording, or return to "sent through Shopify". The hold-reason sentence is the second line, in the design's form "DisputeDesk held this case: {reason}".
+`shopify` covers both Shopify's own response and a merchant filing in Admin, and the API cannot tell them apart. **Standing rule (maintainer, 2026-09-26): merchant copy never calls it an "automatic response"** or says Shopify responded "on its own", in any locale. It says "a response was sent through Shopify". A test in `decidedView.test.ts` scans both namespaces in all 6 locales for the phrase. The hold-reason sentence is the second line, "DisputeDesk held this case: {reason}".
 
 **Hold reason** (appended sentence; `shopify` / `none` only). Classified from `audit_events` (`auto_save_blocked`, `parked_for_review`, `defence_package_blocked_unsafe_claim`, `auto_build_skipped`, `billing_blocked_email_sent`, `review_conceded`, `review_approved`) plus `disputes.review_state`. Priority order — first match wins: `merchant_conceded` → `not_shipped` (`inr_no_fulfillment`) → `refunded` (`refund_issued`) → `covered` → `plan_limit` (`quota_exceeded`/`feature_blocked`) → `auto_build_off` → `awaiting_review` → `thin_evidence`. Rules:
 
@@ -3096,7 +3096,7 @@ A win with no recorded facts uses "DisputeDesk filed your evidence…", never "t
 - the Who-responded line
 - up to four facts, each with its source
 - "Next time"
-- the chip as the result line
+- the chip as the result line. For cases we filed, the timeline line reads "Saved to Shopify and sent on to the bank": DisputeDesk submits to Shopify and never to a bank or card network directly
 
 This replaces the one-size template, which claimed "the card network accepted your defence package" even on cases DisputeDesk never filed. If the view fails to load, the template is used as before. `accepted` is unchanged.
 
