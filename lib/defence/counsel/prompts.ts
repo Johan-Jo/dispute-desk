@@ -183,7 +183,7 @@ Flag a sentence when:
 - it says where a parcel was delivered, or that anyone personally received it;
 - it restates a point already made earlier in the letter or in the same section, in the same or other words (e.g. "one shipment" then "no second shipment" then "the entire order"), or a phrase repeats what its own sentence already says ("on 2 July — the same day").
 
-Do NOT flag style, tone or reasonable argument drawn from ledger facts. DO flag repetition as described above; name the earlier sentence it repeats. The CONCLUSION deliberately restates the strongest facts as a closing argument: do not flag the conclusion as repetition (still flag it for wrong facts). A phrase that relates two DIFFERENT events ("a delivery notification went out that same day" after the delivery) is not repetition; do not flag it.
+Do NOT flag style, tone or reasonable argument drawn from ledger facts. DO flag repetition as described above; name the earlier sentence it repeats. The CONCLUSION deliberately restates the strongest facts as a closing argument: do not flag the conclusion as repetition (still flag it for wrong facts). Two sentences in the Shipping section are REQUIRED together by the merchant and are never repetition of each other: that all the items were in the single tracked shipment, and that there was no partial or second shipment. A phrase that relates two DIFFERENT events ("a delivery notification went out that same day" after the delivery) is not repetition; do not flag it.
 
 CLAIM LEDGER
 ${ledger.map((c) => `- ${c.id}: ${c.statement}${Object.keys(c.specifics).length ? ` (values: ${JSON.stringify(c.specifics)})` : ""}`).join("\n")}
