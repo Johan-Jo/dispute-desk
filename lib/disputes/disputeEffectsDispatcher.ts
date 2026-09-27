@@ -20,6 +20,8 @@
  *     variant). Triggered the moment Shopify's `finalized_on` flips
  *     null → timestamp. Effect-level dedup ensures the email fires
  *     exactly once even if cron + webhook both observe the transition.
+ *   - RESPONSE_CYCLE_REOPENED: evaluateRules → runAutomationPipeline for
+ *     the new cycle (the previous cycle's packs are already archived).
  *   - STATUS_CHANGED, DUE_DATE_CHANGED, DISPUTE_CLOSED: no per-event
  *     effects today; the dispute_events ledger entry is already
  *     written by the diff engine. (DISPUTE_CLOSED always fires
@@ -120,6 +122,9 @@ async function dispatchEvent(
       return;
     case "OUTCOME_DETECTED":
       await dispatchOutcomeDetected(args, event, summary);
+      return;
+    case "RESPONSE_CYCLE_REOPENED":
+      await dispatchResponseCycleReopened(args, event, summary);
       return;
     case "STATUS_CHANGED":
     case "DUE_DATE_CHANGED":
@@ -261,6 +266,86 @@ async function dispatchDisputeOpened(
       const deferNewDisputeEmail = pipelineResult?.action === "pack_enqueued";
       if (!deferNewDisputeEmail && !event.suppressEmail) {
         await sendOpenedAlertReviewVariant(args, event);
+      }
+    },
+  });
+
+  if (dedup.ran) summary.effectsRan++;
+  else summary.effectsSkipped++;
+}
+
+/**
+ * A new response cycle opened (reopen, or an answered inquiry escalated to a
+ * chargeback). `reconcile_response_cycle` already archived the previous
+ * cycle's packs, so the pipeline's "existing pack" check passes and a fresh
+ * build is queued. What happens after the build follows the shop's automation
+ * mode exactly as for a new dispute (plan decision D-3): auto files, review
+ * parks for the merchant. No email here — the reopen email is plan D4.
+ */
+async function dispatchResponseCycleReopened(
+  args: DispatchArgs,
+  event: DisputeTransitionEvent,
+  summary: DispatchSummary,
+): Promise<void> {
+  summary.effectsAttempted++;
+
+  const effectName = "rebuild_for_new_response_cycle";
+  const dedup = await withEffectDedup({
+    shopId: args.shopId,
+    disputeId: event.disputeId,
+    eventKey: keyForEffect(event, effectName),
+    effectName,
+    context: {
+      source: args.source,
+      correlation_id: args.correlationId ?? null,
+      reason: event.context.reason,
+      phase: event.context.phase,
+      skip_automation: Boolean(args.skipAutomation),
+    },
+    client: args.client,
+    effect: async () => {
+      if (args.skipAutomation) return;
+      const phase = event.context.phase;
+      const phaseForRules =
+        phase === "inquiry" || phase === "chargeback" ? phase : null;
+
+      let evalResult: Awaited<ReturnType<typeof evaluateRules>> | null = null;
+      try {
+        evalResult = await evaluateRules({
+          id: event.disputeId,
+          shop_id: args.shopId,
+          reason: event.context.reason,
+          status: event.newStatus ?? null,
+          amount: event.context.amount,
+          phase: phaseForRules,
+        });
+      } catch (err) {
+        summary.errors.push(
+          `rules(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return;
+      }
+
+      try {
+        if (normalizeMode(evalResult.action.mode) === "review") {
+          const sb = args.client ?? getServiceClient();
+          await sb
+            .from("disputes")
+            .update({ needs_review: true, updated_at: new Date().toISOString() })
+            .eq("id", event.disputeId);
+        }
+        await runAutomationPipeline({
+          id: event.disputeId,
+          shop_id: args.shopId,
+          reason: event.context.reason,
+          phase: phaseForRules,
+          pack_template_id:
+            evalResult.packTemplateId ?? evalResult.action.pack_template_id ?? null,
+        });
+      } catch (err) {
+        summary.errors.push(
+          `automation(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     },
   });

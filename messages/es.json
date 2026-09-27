@@ -4943,7 +4943,9 @@
       "support_note_added": "Nota añadida",
       "admin_override": "Ajuste de soporte",
       "admin_override_cleared": "Ajuste de soporte revertido",
-      "dispute_resynced": "Disputa actualizada desde Shopify"
+      "dispute_resynced": "Disputa actualizada desde Shopify",
+      "response_cycle_reopened": "Reabierta: se necesita una nueva respuesta",
+      "escalated_to_chargeback": "Escalada de consulta a contracargo"
     },
     "actors": {
       "merchant_user": "Usted",

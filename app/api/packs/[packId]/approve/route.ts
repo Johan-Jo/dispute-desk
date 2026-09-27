@@ -9,6 +9,7 @@ import {
   preflightLatestCandidate,
   preflightReasons,
 } from "@/lib/defence/packageSafety";
+import { isStaleCycle } from "@/lib/disputes/responseCycle";
 
 interface RouteParams {
   params: Promise<{ packId: string }>;
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, status, completeness_score")
+    .select("id, shop_id, dispute_id, status, completeness_score, response_cycle")
     .eq("id", packId)
     .eq("shop_id", shopId)
     .single();
@@ -65,6 +66,27 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       },
       { status: 409 }
     );
+  }
+
+  // Response-cycle guard: a pack from an earlier cycle answered a request
+  // Shopify has since replaced (reopen, or inquiry → chargeback). Approving
+  // it would schedule the old response for the new round.
+  if (pack.dispute_id) {
+    const { data: disputeRow } = await sb
+      .from("disputes")
+      .select("response_cycle")
+      .eq("id", pack.dispute_id)
+      .single();
+    if (isStaleCycle(pack.response_cycle as number | null, disputeRow?.response_cycle as number | null)) {
+      return NextResponse.json(
+        {
+          error: "STALE_RESPONSE_CYCLE",
+          code: "STALE_RESPONSE_CYCLE",
+          message: "This pack was built for an earlier round of this dispute. A new pack is needed for the current round.",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   /* ── PR-C1 candidate preflight, BEFORE any side effect ──

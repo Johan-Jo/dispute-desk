@@ -22,6 +22,7 @@ import { resolveStrength } from "@/lib/disputes/presentation/resolveStrength";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
+import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
 
 const PILL_STYLE = {
   padding: "2px 8px",
@@ -325,6 +326,17 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                   flexWrap: "wrap",
                 }}
               >
+                {/* Inquiry / Chargeback — the same pill the disputes list shows. */}
+                <span
+                  data-testid="dispute-phase-pill"
+                  style={{
+                    ...PILL_STYLE,
+                    background: phasePillColors(dispute.phase ?? null).bg,
+                    color: phasePillColors(dispute.phase ?? null).color,
+                  }}
+                >
+                  {phaseLabel(dispute.phase ?? null, t)}
+                </span>
                 {headerChips.map((chip) => (
                   <span
                     key={chip.key}

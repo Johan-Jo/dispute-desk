@@ -34,6 +34,18 @@ export function phaseBadgeTone(
   return "warning";
 }
 
+/**
+ * Pill colours for the phase badge — ONE definition shared by the disputes
+ * list (desktop + mobile) and every detail page, so they cannot drift.
+ * Null defaults to the chargeback colours, matching `phaseLabel`.
+ */
+export function phasePillColors(
+  phase: DisputePhase | null,
+): { bg: string; color: string } {
+  if (phase === "inquiry") return { bg: "#E0F2FE", color: "#075985" };
+  return { bg: "#FEF3C7", color: "#92400E" };
+}
+
 /** Label for phase badge. Null defaults to "Chargeback" (safer assumption). */
 export function phaseLabel(
   phase: DisputePhase | null,
