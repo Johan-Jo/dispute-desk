@@ -33,9 +33,9 @@ Our DB `status` matched Shopify on all 53 open disputes. **The sync is correct. 
 
   So `under_review` means two different things:
   - with `evidence_due_by = null`, before any deadline exists: Shopify's creation state, and nothing has been answered;
-  - after `needs_response`, with a deadline set: a response went through Shopify.
+  - after `needs_response`, with a deadline set: a response went through Shopify. Mein Maison examples: #100300 (answered 09-08 19:05), #99277 (09-21), #103403 (09-25).
 
-  A first observation of `under_review` **with** a deadline and no prior `needs_response` is a third case: under review, but we don't know who responded. We never claim a responder for it without a submission signal (review point 5). Mein Maison examples: #100300 (answered 09-08 19:05), #99277 (09-21), #103403 (09-25).
+  A first observation of `under_review` **with** a deadline and no prior `needs_response` is a third case: under review, but we don't know who responded. We never claim a responder for it without a submission signal (review point 5).
 - Inquiry responses in Shopify leave **no** `evidence_sent_on` and **no** `dispute_evidence.submitted_by_merchant_on`, so the status transition is our only observation. Chargebacks answered in Admin sometimes have `submitted_by_merchant_on` without `evidence_sent_on`. Example: #90055 was answered 08-25 and still shows "building evidence" with an out-of-credits warning.
 - **Side effect: credits spent on answered disputes.** Packs were built for #101259, #103403 and #103467 on 2026-09-25 21:25, after Shopify had already moved them to `under_review` that morning.
 
