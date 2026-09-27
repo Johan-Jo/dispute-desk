@@ -10,6 +10,7 @@ import {
   preflightReasons,
 } from "@/lib/defence/packageSafety";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import { BANK_CLAIM_DISPUTE_COLUMNS, bankClaimBlocksFiling, bankClaimInputFromRow } from "@/lib/disputes/bankClaim";
 
 interface RouteParams {
   params: Promise<{ packId: string }>;
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   if (pack.dispute_id) {
     const { data: disputeRow } = await sb
       .from("disputes")
-      .select("response_cycle")
+      .select(BANK_CLAIM_DISPUTE_COLUMNS)
       .eq("id", pack.dispute_id)
       .single();
     if (isStaleCycle(pack.response_cycle as number | null, disputeRow?.response_cycle as number | null)) {
@@ -83,6 +84,19 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           error: "STALE_RESPONSE_CYCLE",
           code: "STALE_RESPONSE_CYCLE",
           message: "This pack was built for an earlier round of this dispute. A new pack is needed for the current round.",
+        },
+        { status: 409 }
+      );
+    }
+    if (
+      disputeRow &&
+      (await bankClaimBlocksFiling(sb, pack.dispute_id as string, bankClaimInputFromRow(disputeRow as Record<string, unknown>)))
+    ) {
+      return NextResponse.json(
+        {
+          error: "BANK_CLAIM_REQUIRED",
+          code: "BANK_CLAIM_REQUIRED",
+          message: "Add the bank's claim from Shopify Admin before this response can be approved.",
         },
         { status: 409 }
       );

@@ -51,6 +51,7 @@ import {
 } from "@/lib/disputes/loadDecidedResponse";
 import { enqueueGorgiasEnrichment } from "@/lib/integrations/gorgias/enqueueEnrichment";
 import { withEffectDedup } from "./dispatchOnce";
+import { raiseBankClaimIfNeeded } from "./raiseBankClaim";
 import { keyForEffect } from "./disputeEventKey";
 import type {
   ApplyDisputeSnapshotResult,
@@ -113,6 +114,18 @@ async function dispatchEvent(
   event: DisputeTransitionEvent,
   summary: DispatchSummary,
 ): Promise<void> {
+  // The bank's claim: any transition that can make a dispute start needing
+  // it (lib/disputes/bankClaim.ts). Runs alongside the per-event effect.
+  if (
+    !args.skipAutomation &&
+    !event.historicalImport &&
+    (event.type === "DISPUTE_OPENED" ||
+      event.type === "STATUS_CHANGED" ||
+      event.type === "DUE_DATE_CHANGED")
+  ) {
+    await dispatchBankClaimCheck(args, event, summary);
+  }
+
   switch (event.type) {
     case "DISPUTE_OPENED":
       await dispatchDisputeOpened(args, event, summary);
@@ -125,6 +138,9 @@ async function dispatchEvent(
       return;
     case "RESPONSE_CYCLE_REOPENED":
       await dispatchResponseCycleReopened(args, event, summary);
+      // After the rebuild is queued: a reopened dispute always needs the
+      // bank's new claim before anything is filed.
+      if (!args.skipAutomation) await dispatchBankClaimCheck(args, event, summary);
       return;
     case "STATUS_CHANGED":
     case "DUE_DATE_CHANGED":
@@ -352,6 +368,30 @@ async function dispatchResponseCycleReopened(
 
   if (dedup.ran) summary.effectsRan++;
   else summary.effectsSkipped++;
+}
+
+/**
+ * Raise "add the bank's claim" (and email once per cycle) when the dispute
+ * needs it. Never throws into the dispatcher: a failure here must not block
+ * the pipeline or the other effects.
+ */
+async function dispatchBankClaimCheck(
+  args: DispatchArgs,
+  event: DisputeTransitionEvent,
+  summary: DispatchSummary,
+): Promise<void> {
+  try {
+    await raiseBankClaimIfNeeded({
+      shopId: args.shopId,
+      disputeId: event.disputeId,
+      suppressEmail: Boolean(event.suppressEmail),
+      client: args.client,
+    });
+  } catch (err) {
+    summary.errors.push(
+      `bank_claim(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 }
 
 /**

@@ -2264,7 +2264,26 @@
         "generic": "Este item precisa da sua confirmação antes de poder ser utilizado."
       }
     },
-    "multipleOnOrder": "{index} de {total} neste pedido"
+    "multipleOnOrder": "{index} de {total} neste pedido",
+    "bankClaim": {
+      "eyebrow": "Ação necessária",
+      "title": "Adicione a reclamação do banco",
+      "introReopened": "A Shopify reabriu esta disputa após uma resposta anterior. O banco pede uma nova resposta, e o que ele pede só aparece na Shopify.",
+      "introGeneral": "Esta disputa chegou sem um motivo específico do banco, então o código de motivo não diz o que o cliente está contestando.",
+      "why": "A Shopify mostra a explicação do banco (a reclamação do emissor) nos detalhes do estorno na página do pedido, mas não a compartilha com apps. Copie-a aqui para que a resposta responda ao que o banco realmente perguntou.",
+      "step1": "1. Abra o pedido na Shopify e encontre a reclamação do banco nos detalhes do estorno.",
+      "step2": "2. Cole o texto abaixo. Se a Shopify não mostrar nenhuma reclamação para esta disputa, marque a caixa.",
+      "openInShopify": "Abrir o pedido na Shopify",
+      "textLabel": "A reclamação do banco",
+      "textPlaceholder": "Cole a reclamação ou o resumo como a Shopify mostra",
+      "textHelp": "Usada só para decidir o que a resposta deve responder. Nunca é citada nem devolvida ao banco.",
+      "noClaimShown": "A Shopify não mostra nenhuma reclamação para esta disputa",
+      "noClaimShownHelp": "Os bancos nem sempre fornecem uma. O DisputeDesk então montará a resposta a partir do código de motivo.",
+      "holdNote": "Até que seja adicionada, o DisputeDesk não enviará resposta para esta disputa.",
+      "submit": "Salvar a reclamação do banco",
+      "errorWindowClosed": "A Shopify já encaminhou as provas desta disputa, então a reclamação não pode mais ser adicionada.",
+      "errorGeneric": "Não foi possível salvar a reclamação ({code}). Tente novamente."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banco não pode processar",
@@ -3680,6 +3699,10 @@
       "returnedToSenderParcels": {
         "title": "Quando uma encomenda é devolvida ao remetente",
         "body": "Por vezes a transportadora não consegue concluir uma entrega e devolve-lhe a encomenda. O cliente nunca recebeu o pedido — e, se mais tarde contestar a cobrança, isso altera o que o caso pode e não pode defender.\n\n**O que a DisputeDesk faz automaticamente**\n\nQuando detetamos uma devolução ao remetente nos dados da transportadora:\n\n1. Mostramos a linha de entrega como \"Devolvido ao remetente\", com a data da própria transportadora, em vez de a tratar como uma etiqueta nunca lida.\n2. Retiramos qualquer argumento que dependa de o cliente nunca ter devolvido a mercadoria. O Shopify pode continuar a indicar \"sem devolução\", porque nunca foi aberto um pedido de devolução — mas a mercadoria está consigo, e um argumento que diga o contrário seria falso.\n3. Classificamos o caso como de baixa probabilidade e impedimos qualquer envio automático, inclusive na data-limite. Uma encomenda devolvida nunca pode ter confirmação de entrega e, sem ela, o banco decide normalmente a favor do cliente.\n\n**O que precisamos de si**\n\nApenas uma coisa, e é justamente a que não conseguimos ver: **por que motivo a encomenda voltou.** A pergunta está no separador Provas.\n\n- **O cliente recusou a entrega** ou **nunca a levantou no ponto de recolha**: vale a pena argumentá-lo. Segundo as regras de consumo da UE, não aceitar uma encomenda não é uma devolução válida nem um exercício válido do direito de livre resolução. Incluímos isso na resposta por si.\n- **Não foi possível entregar na morada**: registamos, mas não incluímos na resposta. Não ajuda o caso e levanta uma questão que ninguém colocou.\n\nTambém perguntamos o que aconteceu à mercadoria depois de voltar. Essa resposta é para o seu registo e o nosso; nunca aparece na resposta enviada em seu nome.\n\n**Se ficou com a mercadoria e com o pagamento**\n\nA resposta honesta é normalmente reembolsar. O cliente pagou, nunca recebeu o pedido e a mercadoria está de volta consigo. Contestar raramente resulta e pode ainda custar-lhe a taxa da disputa. Reembolsar ou não é decisão sua — a DisputeDesk não o faz por si — mas a avaliação que vê reflete as probabilidades reais, não umas otimistas.\n\n**Uma nota sobre prazos**\n\nSe responder aceitando ajustar a cobrança, alguns prestadores de pagamento esperam o reembolso num prazo curto (a Klarna, por exemplo, reverte o pagamento automaticamente se o reembolso não chegar a tempo). Emita o reembolso logo depois de se comprometer."
+      },
+      "bankClaim": {
+        "title": "Por que o DisputeDesk pede a reclamação do banco",
+        "body": "Na maioria das disputas, o código de motivo diz ao DisputeDesk o que o cliente está contestando, e a resposta é montada a partir dele. Dois tipos de disputa são diferentes:\n\n• Disputas reabertas: a Shopify colocou de volta em \"precisa de resposta\" uma disputa que você já respondeu. O banco pede uma nova resposta, e a anterior não a resolve mais.\n• Disputas \"gerais\" sem código de motivo da rede: o banco não disse de que tipo é a disputa.\n\nNos dois casos, a única indicação do que o banco quer que seja respondido é a reclamação do banco (a Shopify a chama de reclamação do emissor). A Shopify a mostra nos detalhes do estorno na página do pedido no seu admin, mas não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho.\n\nO que fazer:\n1. Abra a disputa no DisputeDesk e use \"Abrir o pedido na Shopify\".\n2. Encontre a reclamação do banco nos detalhes do estorno e copie o texto.\n3. Cole-o no cartão \"Adicione a reclamação do banco\" e salve. Se a Shopify não mostrar nenhuma reclamação, marque \"A Shopify não mostra nenhuma reclamação para esta disputa\" — os bancos nem sempre fornecem uma.\n\nO DisputeDesk então reconstrói a resposta para responder à reclamação. A reclamação só é usada para decidir o que a resposta deve tratar; nunca é citada nem devolvida ao banco.\n\nAté que seja adicionada, o DisputeDesk não enviará resposta para essa disputa, nem no prazo final. Também enviamos um e-mail quando uma disputa passa a precisar dela."
       }
     },
     "embedded": {
@@ -6297,7 +6320,8 @@
       "feature_blocked": "Ação de cobrança necessária",
       "subscription_expired": "Ação de cobrança necessária",
       "payment_failed": "Ação de cobrança necessária",
-      "auto_build_off": "Automação pausada"
+      "auto_build_off": "Automação pausada",
+      "bank_claim_needed": "Falta a reclamação do banco"
     },
     "attentionBlockingSub": {
       "approval_gate": "O DisputeDesk aguarda sua aprovação para salvar o pacote de provas",
@@ -6306,7 +6330,8 @@
       "feature_blocked": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
       "subscription_expired": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
       "payment_failed": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
-      "auto_build_off": "A montagem automática de provas está desativada nas suas configurações"
+      "auto_build_off": "A montagem automática de provas está desativada nas suas configurações",
+      "bank_claim_needed": "Copie a reclamação do banco da Shopify — o DisputeDesk não enviará resposta até que seja adicionada"
     },
     "outcomeCard": {
       "title": "Resultado",

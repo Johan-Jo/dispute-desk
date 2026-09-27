@@ -2264,7 +2264,26 @@
         "generic": "Dieser Beweis benötigt Ihre Bestätigung, bevor er verwendet werden kann."
       }
     },
-    "multipleOnOrder": "{index} von {total} zu dieser Bestellung"
+    "multipleOnOrder": "{index} von {total} zu dieser Bestellung",
+    "bankClaim": {
+      "eyebrow": "Aktion erforderlich",
+      "title": "Begründung der Bank hinzufügen",
+      "introReopened": "Shopify hat diese Rückbuchung nach einer früheren Antwort wieder geöffnet. Die Bank verlangt eine neue Antwort, und worum es ihr geht, zeigt nur Shopify.",
+      "introGeneral": "Diese Rückbuchung kam ohne konkreten Grund von der Bank, der Grundcode sagt also nicht, was der Kunde beanstandet.",
+      "why": "Shopify zeigt die Erklärung der Bank (die Begründung des Kartenausstellers) in den Rückbuchungsdetails auf der Bestellseite an, gibt sie aber nicht an Apps weiter. Kopieren Sie sie hierher, damit die Antwort auf das eingeht, was die Bank tatsächlich gefragt hat.",
+      "step1": "1. Öffnen Sie die Bestellung in Shopify und suchen Sie die Begründung der Bank in den Rückbuchungsdetails.",
+      "step2": "2. Fügen Sie den Text unten ein. Wenn Shopify für diese Rückbuchung keine Begründung anzeigt, setzen Sie stattdessen das Häkchen.",
+      "openInShopify": "Bestellung in Shopify öffnen",
+      "textLabel": "Begründung der Bank",
+      "textPlaceholder": "Fügen Sie die Begründung oder ihre Zusammenfassung so ein, wie Shopify sie anzeigt",
+      "textHelp": "Wird nur verwendet, um zu entscheiden, worauf die Antwort eingehen muss. Sie wird nie zitiert oder an die Bank zurückgeschickt.",
+      "noClaimShown": "Shopify zeigt für diese Rückbuchung keine Begründung an",
+      "noClaimShownHelp": "Banken liefern nicht immer eine. DisputeDesk erstellt die Antwort dann anhand des Grundcodes.",
+      "holdNote": "Bis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort.",
+      "submit": "Begründung der Bank speichern",
+      "errorWindowClosed": "Shopify hat die Beweise für diese Rückbuchung bereits weitergeleitet, die Begründung kann nicht mehr hinzugefügt werden.",
+      "errorGeneric": "Die Begründung konnte nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
@@ -3680,6 +3699,10 @@
       "returnedToSenderParcels": {
         "title": "Wenn ein Paket an den Absender zurückgeht",
         "body": "Manchmal kann ein Zusteller eine Sendung nicht zustellen und bringt das Paket zu Ihnen zurück. Der Kunde hat die Bestellung nie erhalten — und wenn er die Zahlung später anficht, ändert das, worum es im Fall gehen kann und worum nicht.\n\n**Was DisputeDesk automatisch tut**\n\nSobald wir ein Rücksendeereignis des Zustellers erfassen:\n\n1. Zeigen wir die Zustellzeile als \"An den Absender zurückgesendet\" mit dem Datum des Zustellers, statt sie wie ein nie gescanntes Etikett zu behandeln.\n2. Entfernen wir jedes Argument, das darauf beruht, dass der Kunde die Ware nie zurückgeschickt hat. Shopify zeigt den Rücksendestatus womöglich weiterhin als \"keine Rücksendung\", weil nie eine Rücksendung beantragt wurde — aber die Ware ist bei Ihnen, und ein Argument, das das Gegenteil behauptet, wäre unwahr.\n3. Stufen wir den Fall als aussichtsarm ein und verhindern jede automatische Übermittlung, auch am Fristtag. Für ein zurückgesendetes Paket kann es nie eine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden.\n\n**Was wir von Ihnen brauchen**\n\nNur eines, und zwar genau das, was wir nicht sehen können: **warum das Paket zurückkam.** Die Frage finden Sie im Reiter \"Nachweise\".\n\n- **Der Kunde hat die Annahme verweigert** oder **das Paket nie an der Abholstelle abgeholt** — das ist ein Argument wert. Nach EU-Verbraucherrecht ist es weder eine gültige Rücksendung noch eine wirksame Ausübung des Widerrufsrechts, ein Paket einfach nicht anzunehmen. Wir nehmen das für Sie in die Stellungnahme auf.\n- **An die Adresse konnte nicht zugestellt werden** — wir halten es fest, nehmen es aber nicht in die Stellungnahme auf. Es hilft dem Fall nicht und wirft eine Frage auf, die niemand gestellt hat.\n\nWir fragen außerdem, was nach der Rücksendung mit der Ware geschehen ist. Diese Antwort dient Ihren und unseren Unterlagen; sie erscheint nie in der Stellungnahme, die in Ihrem Namen übermittelt wird.\n\n**Wenn Sie Ware und Zahlung behalten haben**\n\nDie ehrliche Antwort ist meist eine Rückerstattung. Der Kunde hat bezahlt, die Bestellung nie erhalten, und die Ware ist wieder bei Ihnen. Den Fall zu bestreiten gelingt selten und kann Sie zusätzlich die Fallgebühr kosten. Ob Sie erstatten, ist Ihre Entscheidung — DisputeDesk tut es nicht für Sie — aber die angezeigte Einschätzung bildet die tatsächlichen Chancen ab, nicht die optimistischen.\n\n**Hinweis zur Frist**\n\nWenn Sie zusagen, die Belastung anzupassen, erwarten manche Zahlungsanbieter die Rückerstattung innerhalb eines kurzen Zeitfensters (Klarna storniert die Zahlung zum Beispiel automatisch, wenn die Erstattung nicht rechtzeitig erfolgt). Erstatten Sie zügig, nachdem Sie sich dazu verpflichtet haben."
+      },
+      "bankClaim": {
+        "title": "Warum DisputeDesk nach der Begründung der Bank fragt",
+        "body": "Bei den meisten Rückbuchungen sagt der Grundcode DisputeDesk, was der Kunde beanstandet, und die Antwort wird darauf aufgebaut. Zwei Arten sind anders:\n\n• Wieder geöffnete Rückbuchungen: Shopify hat eine Rückbuchung, die Sie bereits beantwortet haben, wieder auf „Antwort erforderlich“ gesetzt. Die Bank verlangt eine neue Antwort, und Ihre frühere Antwort erledigt sie nicht mehr.\n• „Allgemeine“ Rückbuchungen ohne Netzwerk-Grundcode: Die Bank hat nicht angegeben, um welche Art von Rückbuchung es sich handelt.\n\nIn beiden Fällen sagt nur die Begründung der Bank (Shopify nennt sie Begründung des Kartenausstellers), worauf die Bank eine Antwort erwartet. Shopify zeigt sie in den Rückbuchungsdetails auf der Bestellseite in Ihrem Shopify-Adminbereich an, gibt sie aber nicht an Apps weiter. DisputeDesk kann sie daher nicht selbst lesen.\n\nSo gehen Sie vor:\n1. Öffnen Sie die Rückbuchung in DisputeDesk und nutzen Sie „Bestellung in Shopify öffnen“.\n2. Suchen Sie die Begründung der Bank in den Rückbuchungsdetails und kopieren Sie den Text.\n3. Fügen Sie ihn in die Karte „Begründung der Bank hinzufügen“ ein und speichern Sie. Wenn Shopify keine Begründung anzeigt, setzen Sie stattdessen das Häkchen bei „Shopify zeigt für diese Rückbuchung keine Begründung an“ – Banken liefern nicht immer eine.\n\nDisputeDesk erstellt die Antwort dann neu, sodass sie auf die Begründung eingeht. Die Begründung dient nur dazu, zu entscheiden, worauf die Antwort eingehen muss; sie wird nie zitiert oder an die Bank zurückgeschickt.\n\nBis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort, auch nicht zur Frist. Wir benachrichtigen Sie außerdem per E-Mail, sobald eine Rückbuchung sie benötigt."
       }
     },
     "embedded": {
@@ -6297,7 +6320,8 @@
       "feature_blocked": "Abrechnungsaktion erforderlich",
       "subscription_expired": "Abrechnungsaktion erforderlich",
       "payment_failed": "Abrechnungsaktion erforderlich",
-      "auto_build_off": "Automatisierung pausiert"
+      "auto_build_off": "Automatisierung pausiert",
+      "bank_claim_needed": "Begründung der Bank fehlt"
     },
     "attentionBlockingSub": {
       "approval_gate": "DisputeDesk wartet auf Ihre Freigabe, um das Beweispaket zu speichern",
@@ -6306,7 +6330,8 @@
       "feature_blocked": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
       "subscription_expired": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
       "payment_failed": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
-      "auto_build_off": "Die automatische Beweiserstellung ist in Ihren Einstellungen deaktiviert"
+      "auto_build_off": "Die automatische Beweiserstellung ist in Ihren Einstellungen deaktiviert",
+      "bank_claim_needed": "Übernehmen Sie die Begründung der Bank aus Shopify – DisputeDesk sendet keine Antwort, bevor sie hinzugefügt ist"
     },
     "outcomeCard": {
       "title": "Ergebnis",

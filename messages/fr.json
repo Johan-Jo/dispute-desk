@@ -2264,7 +2264,26 @@
         "generic": "Cet élément nécessite votre confirmation avant de pouvoir être utilisé."
       }
     },
-    "multipleOnOrder": "{index} sur {total} pour cette commande"
+    "multipleOnOrder": "{index} sur {total} pour cette commande",
+    "bankClaim": {
+      "eyebrow": "Action requise",
+      "title": "Ajoutez la réclamation de la banque",
+      "introReopened": "Shopify a rouvert ce litige après une première réponse. La banque demande une nouvelle réponse, et ce qu'elle demande n'apparaît que dans Shopify.",
+      "introGeneral": "Ce litige est arrivé sans motif précis de la banque : le code motif n'indique donc pas ce que le client conteste.",
+      "why": "Shopify affiche l'explication de la banque (la réclamation de l'émetteur) dans les détails de la rétrofacturation sur la page de la commande, mais ne la partage pas avec les applications. Copiez-la ici pour que la réponse traite ce que la banque a réellement demandé.",
+      "step1": "1. Ouvrez la commande dans Shopify et trouvez la réclamation de la banque dans les détails de la rétrofacturation.",
+      "step2": "2. Collez son texte ci-dessous. Si Shopify n'affiche aucune réclamation pour ce litige, cochez la case.",
+      "openInShopify": "Ouvrir la commande dans Shopify",
+      "textLabel": "La réclamation de la banque",
+      "textPlaceholder": "Collez la réclamation ou son résumé tel que Shopify l'affiche",
+      "textHelp": "Utilisée uniquement pour décider à quoi la réponse doit répondre. Elle n'est jamais citée ni renvoyée à la banque.",
+      "noClaimShown": "Shopify n'affiche aucune réclamation pour ce litige",
+      "noClaimShownHelp": "Les banques n'en fournissent pas toujours. DisputeDesk construira alors la réponse à partir du code motif.",
+      "holdNote": "Tant qu'elle n'est pas ajoutée, DisputeDesk n'enverra aucune réponse pour ce litige.",
+      "submit": "Enregistrer la réclamation de la banque",
+      "errorWindowClosed": "Shopify a déjà transmis les preuves de ce litige : la réclamation ne peut plus être ajoutée.",
+      "errorGeneric": "La réclamation n'a pas pu être enregistrée ({code}). Veuillez réessayer."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
@@ -3680,6 +3699,10 @@
       "returnedToSenderParcels": {
         "title": "Quand un colis est retourné à l’expéditeur",
         "body": "Il arrive qu’un transporteur ne puisse pas livrer et vous rapporte le colis. Le client n’a jamais reçu la commande — et s’il conteste ensuite le paiement, cela change ce que le dossier peut ou ne peut pas plaider.\n\n**Ce que DisputeDesk fait automatiquement**\n\nDès que nous détectons un retour à l’expéditeur chez le transporteur :\n\n1. Nous affichons la ligne de livraison comme « Retourné à l’expéditeur » avec la date du transporteur, au lieu de la traiter comme une étiquette jamais scannée.\n2. Nous retirons tout argument reposant sur le fait que le client n’a jamais renvoyé la marchandise. Shopify peut continuer d’indiquer « aucun retour », car aucune demande de retour n’a été ouverte — mais la marchandise est chez vous, et un argument affirmant le contraire serait faux.\n3. Nous classons le dossier comme peu susceptible d’aboutir et empêchons tout dépôt automatique, y compris à la date limite. Un colis retourné ne peut jamais avoir de confirmation de livraison et, sans elle, la banque tranche généralement en faveur du client.\n\n**Ce dont nous avons besoin de vous**\n\nUne seule chose, et c’est précisément celle que nous ne pouvons pas voir : **pourquoi le colis est revenu.** La question se trouve dans l’onglet Preuves.\n\n- **Le client a refusé la livraison** ou **ne l’a jamais retiré au point de retrait** : cela vaut la peine d’être plaidé. Selon les règles de consommation de l’UE, ne pas accepter un colis n’est ni un retour valable ni un exercice valable du droit de rétractation. Nous l’intégrons à la réponse pour vous.\n- **L’adresse ne permettait pas la livraison** : nous l’enregistrons, mais ne l’intégrons pas à la réponse. Cela n’aide pas le dossier et soulève une question que personne n’a posée.\n\nNous demandons aussi ce qu’est devenue la marchandise à son retour. Cette réponse sert à votre suivi et au nôtre ; elle n’apparaît jamais dans la réponse transmise en votre nom.\n\n**Si vous avez gardé la marchandise et le paiement**\n\nLa réponse honnête est le plus souvent de rembourser. Le client a payé, n’a jamais reçu la commande, et la marchandise est revenue chez vous. Contester aboutit rarement et peut vous coûter en plus les frais de litige. Rembourser ou non reste votre décision — DisputeDesk ne le fera pas à votre place — mais l’évaluation affichée reflète les chances réelles, pas les chances optimistes.\n\n**À propos des délais**\n\nSi vous répondez en acceptant d’ajuster le montant, certains prestataires de paiement attendent le remboursement dans un délai court (Klarna, par exemple, annule automatiquement le paiement si le remboursement n’arrive pas à temps). Effectuez le remboursement rapidement après vous y être engagé."
+      },
+      "bankClaim": {
+        "title": "Pourquoi DisputeDesk demande la réclamation de la banque",
+        "body": "Pour la plupart des litiges, le code motif indique à DisputeDesk ce que le client conteste, et la réponse est construite à partir de celui-ci. Deux types de litige sont différents :\n\n• Litiges rouverts : Shopify a remis à « réponse requise » un litige auquel vous aviez déjà répondu. La banque demande une nouvelle réponse, et la précédente ne le règle plus.\n• Litiges « généraux » sans code motif du réseau : la banque n'a pas précisé de quel type de litige il s'agit.\n\nDans les deux cas, la seule indication de ce que la banque attend est sa réclamation (Shopify l'appelle réclamation de l'émetteur). Shopify l'affiche dans les détails de la rétrofacturation sur la page de la commande dans votre administration, mais ne la partage pas avec les applications : DisputeDesk ne peut donc pas la lire seul.\n\nQue faire :\n1. Ouvrez le litige dans DisputeDesk et utilisez « Ouvrir la commande dans Shopify ».\n2. Trouvez la réclamation de la banque dans les détails de la rétrofacturation et copiez son texte.\n3. Collez-le dans la carte « Ajoutez la réclamation de la banque » et enregistrez. Si Shopify n'affiche aucune réclamation, cochez « Shopify n'affiche aucune réclamation pour ce litige » : les banques n'en fournissent pas toujours.\n\nDisputeDesk reconstruit alors la réponse pour qu'elle traite la réclamation. Celle-ci sert uniquement à décider à quoi la réponse doit répondre ; elle n'est jamais citée ni renvoyée à la banque.\n\nTant qu'elle n'est pas ajoutée, DisputeDesk n'enverra aucune réponse pour ce litige, y compris à l'échéance. Nous vous envoyons aussi un e-mail lorsqu'un litige commence à en avoir besoin."
       }
     },
     "embedded": {
@@ -6297,7 +6320,8 @@
       "feature_blocked": "Action de facturation requise",
       "subscription_expired": "Action de facturation requise",
       "payment_failed": "Action de facturation requise",
-      "auto_build_off": "Automatisation en pause"
+      "auto_build_off": "Automatisation en pause",
+      "bank_claim_needed": "Réclamation de la banque requise"
     },
     "attentionBlockingSub": {
       "approval_gate": "DisputeDesk attend votre approbation pour enregistrer le dossier de preuves",
@@ -6306,7 +6330,8 @@
       "feature_blocked": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
       "subscription_expired": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
       "payment_failed": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
-      "auto_build_off": "La constitution automatique des preuves est désactivée dans vos réglages"
+      "auto_build_off": "La constitution automatique des preuves est désactivée dans vos réglages",
+      "bank_claim_needed": "Copiez la réclamation de la banque depuis Shopify — DisputeDesk n'enverra aucune réponse avant qu'elle soit ajoutée"
     },
     "outcomeCard": {
       "title": "Résultat",

@@ -34,6 +34,9 @@ vi.mock("@/lib/email/sendNewDisputeAlert", () => ({
 vi.mock("@/lib/email/sendOutcomePostedAlert", () => ({
   sendOutcomePostedAlert: vi.fn(),
 }));
+vi.mock("@/lib/disputes/raiseBankClaim", () => ({
+  raiseBankClaimIfNeeded: vi.fn().mockResolvedValue({ needed: false }),
+}));
 vi.mock("@/lib/integrations/gorgias/enqueueEnrichment", () => ({
   enqueueGorgiasEnrichment: vi.fn().mockResolvedValue({ enqueued: false, reason: "not_connected" }),
 }));
@@ -575,5 +578,45 @@ describe("dispatchDisputeEffects — RESPONSE_CYCLE_REOPENED (plan B1, D-3)", ()
 
     expect(summary.effectsSkipped).toBe(1);
     expect(mockRunPipeline).not.toHaveBeenCalled();
+  });
+});
+
+describe("dispatchDisputeEffects — bank's claim check", () => {
+  it("runs after a reopen and on status changes, never for a historical import", async () => {
+    const { raiseBankClaimIfNeeded } = await import("@/lib/disputes/raiseBankClaim");
+    const mockRaise = vi.mocked(raiseBankClaimIfNeeded);
+    mockRaise.mockClear();
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+    mockEvaluateRules.mockResolvedValue({ action: { mode: "auto", pack_template_id: null }, packTemplateId: null } as never);
+    mockRunPipeline.mockResolvedValue({ action: "pack_enqueued" } as never);
+
+    await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([
+        { ...STATUS_CHANGED_EVENT, eventKey: "k1" },
+        {
+          type: "RESPONSE_CYCLE_REOPENED",
+          disputeId: "dispute-1",
+          shopId: "shop-1",
+          eventAt: "2026-09-20T08:00:00Z",
+          eventKey: "dispute-1:RESPONSE_CYCLE_REOPENED:resp:x",
+          newStatus: "needs_response",
+          context: OPENED_EVENT.context,
+        },
+      ]),
+      source: "webhook",
+      client,
+    });
+    expect(mockRaise).toHaveBeenCalledTimes(2);
+
+    mockRaise.mockClear();
+    await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([{ ...OPENED_EVENT, historicalImport: true }]),
+      source: "cron",
+      client,
+    });
+    expect(mockRaise).not.toHaveBeenCalled();
   });
 });

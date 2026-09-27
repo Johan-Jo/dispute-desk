@@ -809,6 +809,32 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
+  /** Record the bank's claim copied from Shopify Admin, or "Shopify shows
+   *  no claim" (lib/disputes/bankClaim.ts). The route clears the task and
+   *  queues a rebuild so the next letter answers the claim. */
+  const submitBankClaim = useCallback(
+    async (
+      text: string | null,
+      noClaimShown: boolean,
+    ): Promise<{ ok: boolean; error?: string; code?: string }> => {
+      if (!data?.pack) return { ok: false, error: "No pack", code: "NO_PACK" };
+      const res = await fetch(`/api/packs/${data.pack.id}/bank-claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, noClaimShown }),
+      });
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; code?: string }
+        | null;
+      fetchAll();
+      if (!res.ok) {
+        return { ok: false, error: body?.error ?? `Server error (${res.status})`, code: body?.code };
+      }
+      return { ok: true };
+    },
+    [data?.pack, fetchAll],
+  );
+
   /** Toggle a merchant inclusion override for a single evidence field.
    *
    *  Value semantics:
@@ -1237,6 +1263,7 @@ export function useDisputeWorkspace(disputeId: string) {
       toggleInclusionOverride,
       submitCardholderAcknowledgement,
       submitParcelOutcome,
+      submitBankClaim,
       submitToShopify,
       markJustSubmitted,
       exportPdf,

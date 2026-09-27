@@ -59,6 +59,7 @@ import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
 import { SubmissionSummaryPanel } from "./sections/SubmissionSummaryPanel";
+import { BankClaimCard } from "./sections/BankClaimCard";
 import {
   MERCHANT_UI_HIDDEN_FIELDS,
   isNonEvidenceAccountHistoryRow,
@@ -975,6 +976,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   return (
     <BlockStack gap="400">
+      {/* The bank's claim, when a reopened or `general` dispute needs it.
+          First on the page: nothing is filed until it is answered.
+          Renders null otherwise. */}
+      <BankClaimCard workspace={workspace} />
+
       {/* LSE-1: Visa CE 3.0 qualification verdict. Renders null when not applicable. */}
       <LiabilityShiftPanel disputeId={dispute.id} />
 
