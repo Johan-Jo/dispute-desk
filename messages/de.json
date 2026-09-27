@@ -4943,7 +4943,9 @@
       "support_note_added": "Notiz hinzugefügt",
       "admin_override": "Support-Anpassung",
       "admin_override_cleared": "Support-Anpassung zurückgenommen",
-      "dispute_resynced": "Streitfall aus Shopify aktualisiert"
+      "dispute_resynced": "Streitfall aus Shopify aktualisiert",
+      "response_cycle_reopened": "Wieder eröffnet – neue Antwort erforderlich",
+      "escalated_to_chargeback": "Von Anfrage zu Rückbuchung eskaliert"
     },
     "actors": {
       "merchant_user": "Sie",

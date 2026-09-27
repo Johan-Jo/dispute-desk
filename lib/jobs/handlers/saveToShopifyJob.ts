@@ -60,6 +60,7 @@ import {
   stampRebuildOutcome,
 } from "@/lib/automation/rebuildOutcome";
 import type { ClaimedJob, JobResult } from "../claimJobs";
+import { isStaleCycle } from "@/lib/disputes/responseCycle";
 
 const ALLOWED_PACK_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
 
@@ -83,7 +84,7 @@ export async function handleSaveToShopify(
     // The canonical selector needs the decision's inputs and the pack's
     // sections; the legacy path reads none of them and is unaffected.
     .select(
-      "id, shop_id, dispute_id, status, completeness_score, blockers, submission_readiness, pack_json, checklist_v2",
+      "id, shop_id, dispute_id, status, completeness_score, blockers, submission_readiness, pack_json, checklist_v2, response_cycle",
     )
     .eq("id", packId)
     .single();
@@ -125,10 +126,36 @@ export async function handleSaveToShopify(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, dispute_evidence_gid, dispute_gid, reason, network_reason_code, due_at, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at",
+      "id, dispute_evidence_gid, dispute_gid, reason, network_reason_code, due_at, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at, response_cycle",
     )
     .eq("id", pack.dispute_id)
     .single();
+
+  /* ── 2a. Response-cycle guard ──
+   *
+   * A pack built for an earlier response cycle answered a request Shopify has
+   * since replaced (reopen, or inquiry → chargeback). Filing it would send
+   * the old response to the new round. Non-retriable: only a rebuild for the
+   * current cycle can produce something fileable. */
+  if (dispute && isStaleCycle(pack.response_cycle as number | null, dispute.response_cycle as number | null)) {
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "save_to_shopify_refused_stale_cycle",
+      eventPayload: {
+        jobId: job.id,
+        packCycle: pack.response_cycle ?? null,
+        disputeCycle: dispute.response_cycle ?? null,
+      },
+    });
+    return {
+      ok: false,
+      retriable: false,
+      reason: `stale_response_cycle: pack is cycle ${pack.response_cycle ?? 1}, dispute is cycle ${dispute.response_cycle ?? 1}`,
+    };
+  }
   if (!dispute?.dispute_evidence_gid) {
     return {
       ok: false,

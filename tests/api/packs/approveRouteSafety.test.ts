@@ -61,6 +61,7 @@ const UNSAFE = {
 function mockSupabase(
   latest: Record<string, unknown> | null,
   queryError: { message: string } | null = null,
+  cycles: { pack: number; dispute: number } = { pack: 1, dispute: 1 },
 ) {
   const packUpdate = vi.fn().mockReturnValue({
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -84,6 +85,7 @@ function mockSupabase(
             dispute_id: DISPUTE_ID,
             status: "ready",
             completeness_score: 90,
+            response_cycle: cycles.pack,
           },
           error: null,
         }),
@@ -98,6 +100,13 @@ function mockSupabase(
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: queryError ? null : latest, error: queryError }),
+      };
+    }
+    if (table === "disputes") {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { response_cycle: cycles.dispute }, error: null }),
       };
     }
     if (table === "jobs") return { insert: jobsInsert };
@@ -244,5 +253,22 @@ describe("POST /api/packs/:packId/approve — PR-C1 preflight", () => {
     // The only `update` this route ever issues is the approval stamp on
     // evidence_packs; it never writes to defence_packages at all.
     expect(packUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/packs/:packId/approve — response-cycle guard (plan B0)", () => {
+  it("refuses a pack from an earlier response cycle with no approval and no enqueue", async () => {
+    const { packUpdate, jobsInsert, auditInsert } = mockSupabase(
+      { id: "pkg-4", version: 4, ...CLEAN },
+      null,
+      { pack: 1, dispute: 2 },
+    );
+    const res = await POST(req(), params);
+    const body = await res.json();
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("STALE_RESPONSE_CYCLE");
+    expect(packUpdate).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(auditInsert).not.toHaveBeenCalled();
   });
 });

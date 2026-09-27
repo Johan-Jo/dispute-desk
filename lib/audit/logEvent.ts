@@ -153,6 +153,12 @@ export type EventType =
   | "pack_regenerate_coalesced"
   | "pack_regenerate_coalesced_skipped_window_closed"
   | "pack_regenerate_coalesced_job_already_exists"
+  // Response cycles (lib/disputes/responseCycle.ts): a pack built for an
+  // earlier cycle (before a reopen or an inquiry → chargeback escalation)
+  // was refused by the save worker / the deadline cron. Payload
+  // `{ packCycle, disputeCycle }`.
+  | "save_to_shopify_refused_stale_cycle"
+  | "deadline_submit_refused_stale_cycle"
   // Merchant review lifecycle — POST /api/disputes/:id/review
   // (lib/disputes/reviewState.ts). actorType "merchant". Payload
   // `{ action, from, to }` where action ∈ hold|approve|concede|clear.
