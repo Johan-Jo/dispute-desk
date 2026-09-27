@@ -2273,13 +2273,12 @@
       "introReopened": "The bank is asking for a new response. Its reason is only visible in Shopify — paste it here so the response answers exactly what was asked.",
       "introGeneral": "The bank didn't give a specific reason for this dispute. Its reason is only visible in Shopify — paste it here so the response answers exactly what was asked.",
       "dueLabel": "Response due",
-      "daysLeft": "{count, plural, =1 {# day left} other {# days left}}",
       "dueToday": "Due today",
       "step1Title": "Find the claim in Shopify",
       "step1Path": "Order {order} → Chargeback details → Issuer claim",
-      "openInShopify": "Open order in Shopify",
-      "step2Title": "Paste it below",
-      "step2Body": "The full text or a short summary both work. No claim shown? Tick the box instead.",
+      "openInShopify": "Open dispute in Shopify ↗",
+      "step2Title": "Upload the claim file or paste the text",
+      "step2Body": "Download the claim from Shopify (usually a PDF) and drop it below. No claim shown? Tick the box instead.",
       "textLabel": "The bank's claim",
       "countRequired": "Required",
       "countChars": "{count, plural, =1 {# character} other {# characters}}",
@@ -2294,7 +2293,20 @@
       "save": "Save claim",
       "saved": "Saved",
       "errorWindowClosed": "Shopify has already forwarded the evidence for this dispute, so the claim can no longer be added.",
-      "errorGeneric": "The claim could not be saved ({code}). Please try again."
+      "errorGeneric": "The claim could not be saved ({code}). Please try again.",
+      "daysCount": "{count, plural, =1 {# day} other {# days}}",
+      "tabUpload": "Upload file",
+      "tabPaste": "Paste text",
+      "countFile": "1 file",
+      "dropTitle": "Drop the claim file here, or <browse>browse</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML or image · up to 10 MB",
+      "fileMetaReady": "{size} · Ready to save",
+      "fileMetaUploaded": "{size} · Uploaded",
+      "replace": "Replace",
+      "remove": "Remove",
+      "statusSaving": "Saving…",
+      "errorFileType": "Upload a PDF, TXT, DOC, DOCX, RTF, EML or image file.",
+      "errorFileSize": "The file is larger than 10 MB."
     }
   },
   "disputeReasons": {
@@ -3713,7 +3725,7 @@
       },
       "bankClaim": {
         "title": "Why DisputeDesk asks for the bank's claim",
-        "body": "For most disputes, the reason code tells DisputeDesk what the customer is disputing, and the response is built from that. Two kinds of dispute are different:\n\n• Reopened disputes: Shopify has put a dispute you already answered back to \"needs response\". The bank is asking for a new response, and your earlier one no longer settles it.\n• \"General\" disputes with no network reason code: the bank didn't say which kind of dispute it is.\n\nIn both cases, the only statement of what the bank wants answered is the bank's claim (Shopify calls it the issuer claim). Shopify shows it in the chargeback details on the order page in your Shopify admin, but doesn't share it with apps, so DisputeDesk can't read it on its own.\n\nWhat to do:\n1. Open the dispute in DisputeDesk and use \"Open the order in Shopify\".\n2. Find the bank's claim in the chargeback details and copy its text.\n3. Paste it into the \"Add the bank's claim\" card and save. If Shopify shows no claim for the dispute, tick \"Shopify shows no claim for this dispute\" instead — banks don't always provide one.\n\nDisputeDesk then rebuilds the response so it answers the claim. The claim is only used to decide what the response must address; it is never quoted or sent back to the bank.\n\nUntil the claim is added, DisputeDesk won't send a response for that dispute, including on the deadline. We also email you when a dispute starts needing it."
+        "body": "For most disputes, the reason code tells DisputeDesk what the customer is disputing, and the response is built from that. Two kinds of dispute are different:\n\n• Reopened disputes: Shopify has put a dispute you already answered back to \"needs response\". The bank is asking for a new response, and your earlier one no longer settles it.\n• \"General\" disputes with no network reason code: the bank didn't say which kind of dispute it is.\n\nIn both cases, the only statement of what the bank wants answered is the bank's claim (Shopify calls it the issuer claim). Shopify shows it in the chargeback details on the order page in your Shopify admin, but doesn't share it with apps, so DisputeDesk can't read it on its own.\n\nWhat to do:\n1. Open the dispute in DisputeDesk and use \"Open the order in Shopify\".\n2. Find the bank's claim in the chargeback details and download it (usually a PDF), or copy its text.\n3. Upload the file or paste the text in the \"Add the bank's claim\" card and save. If Shopify shows no claim for the dispute, tick \"Shopify shows no claim for this dispute\" instead — banks don't always provide one.\n\nDisputeDesk then rebuilds the response so it answers the claim. The claim is only used to decide what the response must address; it is never quoted or sent back to the bank.\n\nUntil the claim is added, DisputeDesk won't send a response for that dispute, including on the deadline. We also email you when a dispute starts needing it."
       }
     },
     "embedded": {

@@ -18,6 +18,13 @@
  * and re-nest manual items, and untyped manual rows are read as customer
  * correspondence. Then: audit, clear the merchant task, enqueue `build_pack`
  * so the next letter answers the claim with no further merchant action.
+ *
+ * Two request shapes (Claude Design "Bank Claim Card.dc.html"):
+ *   - JSON `{ text, noClaimShown }` — pasted text, or "Shopify shows no claim";
+ *   - multipart `file` — the claim file downloaded from Shopify (PDF, TXT,
+ *     DOC, DOCX, RTF, EML or image, ≤ 10 MB). Stored in `evidence-packs`;
+ *     its text is read (lib/disputes/bankClaimFile.ts) for the letter writer.
+ *     A file whose text cannot be read still counts as the answer.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -27,6 +34,15 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 import { BANK_CLAIM_MAX_TEXT, clearBankClaimNeeded } from "@/lib/disputes/bankClaim";
+import {
+  BANK_CLAIM_FILE_MAX_BYTES,
+  BANK_CLAIM_FILE_TYPES,
+  bankClaimFileExt,
+  extractBankClaimText,
+} from "@/lib/disputes/bankClaimFile";
+
+/** Same bucket as pack PDFs and manual uploads (see packs/upload/route.ts). */
+const STORAGE_BUCKET = "evidence-packs";
 
 export const runtime = "nodejs";
 
@@ -50,13 +66,42 @@ export async function POST(
   }
   const sb = getServiceClient();
 
-  const parsed = await parseJsonBody<BankClaimBody>(req);
-  if (parsed instanceof NextResponse) return parsed;
+  let text = "";
+  let noClaimShown = false;
+  let file: File | null = null;
+  const isMultipart = (req.headers.get("content-type") ?? "").includes("multipart/form-data");
+  if (isMultipart) {
+    const form = await req.formData().catch(() => null);
+    const f = form?.get("file");
+    file = f && typeof f === "object" && "arrayBuffer" in f ? (f as File) : null;
+    if (!file) {
+      return NextResponse.json({ error: "No file received.", code: "FILE_REQUIRED" }, { status: 400 });
+    }
+  } else {
+    const parsed = await parseJsonBody<BankClaimBody>(req);
+    if (parsed instanceof NextResponse) return parsed;
+    text = typeof parsed.text === "string" ? parsed.text.trim() : "";
+    noClaimShown = parsed.noClaimShown === true;
+  }
 
-  const text = typeof parsed.text === "string" ? parsed.text.trim() : "";
-  const noClaimShown = parsed.noClaimShown === true;
+  const fileExt = file ? bankClaimFileExt(file.name) : null;
+  if (file && !fileExt) {
+    return NextResponse.json(
+      {
+        error: "Upload a PDF, TXT, DOC, DOCX, RTF, EML or image file.",
+        code: "FILE_TYPE",
+      },
+      { status: 400 },
+    );
+  }
+  if (file && file.size > BANK_CLAIM_FILE_MAX_BYTES) {
+    return NextResponse.json(
+      { error: "The file is larger than 10 MB.", code: "FILE_TOO_LARGE" },
+      { status: 400 },
+    );
+  }
 
-  if (!text && !noClaimShown) {
+  if (!file && !text && !noClaimShown) {
     return NextResponse.json(
       {
         error: "Paste the bank's claim, or confirm that Shopify shows none.",
@@ -115,6 +160,32 @@ export async function POST(
   const cycle = (dispute?.response_cycle as number | null) ?? 1;
   const answeredAt = new Date().toISOString();
 
+  // File: store it, then read its text for the letter writer. Reading can
+  // fail (DOC/DOCX, a scan with no text, a model error) — the upload still
+  // counts as the merchant's answer.
+  let filePath: string | null = null;
+  let textSource: "pasted" | "file_text" | "file_ai" | null = text ? "pasted" : null;
+  let extractError: string | undefined;
+  if (file && fileExt) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    filePath = `${pack.shop_id}/${pack.dispute_id}/bank-claim-c${cycle}-${Date.now()}.${fileExt}`;
+    const { error: uploadErr } = await sb.storage.from(STORAGE_BUCKET).upload(filePath, buffer, {
+      contentType: file.type || BANK_CLAIM_FILE_TYPES[fileExt],
+      upsert: false,
+    });
+    if (uploadErr) {
+      console.error("[bank-claim] storage upload failed", { filePath, message: uploadErr.message });
+      return NextResponse.json(
+        { error: "We couldn't store this file. Please try again, or paste the text instead.", code: "UPLOAD_FAILED" },
+        { status: 500 },
+      );
+    }
+    const extracted = await extractBankClaimText(buffer, fileExt);
+    text = extracted.text ?? "";
+    textSource = extracted.source;
+    extractError = extracted.error;
+  }
+
   // Re-answering within the same cycle replaces the earlier answer.
   const { data: row, error: rowErr } = await sb
     .from("dispute_bank_claims")
@@ -125,6 +196,11 @@ export async function POST(
         response_cycle: cycle,
         claim_text: text || null,
         no_claim_shown: noClaimShown,
+        file_path: filePath,
+        file_name: file ? file.name.slice(0, 255) : null,
+        file_size: file ? file.size : null,
+        file_mime: file ? file.type || (fileExt ? BANK_CLAIM_FILE_TYPES[fileExt] : null) : null,
+        text_source: textSource,
         answered_at: answeredAt,
         answered_by: "merchant",
       },
@@ -151,12 +227,13 @@ export async function POST(
     actorType: auditActor.actorType,
     actorId: auditActor.actorId,
     eventType: "bank_claim_recorded",
-    // The claim text lives on the evidence item, not in the audit row.
+    // The claim text and file live on the dispute_bank_claims row, not here.
     eventPayload: {
       bankClaimId: row.id,
       cycle,
       noClaimShown,
       textLength: text.length,
+      file: file ? { ext: fileExt, size: file.size, textSource, extractError: extractError ?? null } : null,
     },
   });
 
@@ -166,5 +243,8 @@ export async function POST(
     entity_id: packId,
   });
 
-  return NextResponse.json({ ok: true, bankClaimId: row.id }, { status: 201 });
+  return NextResponse.json(
+    { ok: true, bankClaimId: row.id, textRead: file ? text.length > 0 : undefined },
+    { status: 201 },
+  );
 }

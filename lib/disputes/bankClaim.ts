@@ -55,10 +55,16 @@ export function needsBankClaim(d: BankClaimDisputeInput): boolean {
 }
 
 export interface BankClaimAnswer {
+  /** Pasted text, or the text read from the uploaded file. */
   text: string | null;
   noClaimShown: boolean;
   cycle: number;
   answeredAt: string;
+  /** The uploaded claim file, when the merchant uploaded one. */
+  fileName: string | null;
+  fileSize: number | null;
+  /** How `text` was obtained: pasted, read from a text file, or transcribed. */
+  textSource: "pasted" | "file_text" | "file_ai" | null;
 }
 
 /**
@@ -75,19 +81,24 @@ export async function loadBankClaimAnswer(
 ): Promise<BankClaimAnswer | null> {
   const { data } = await sb
     .from("dispute_bank_claims")
-    .select("claim_text, no_claim_shown, response_cycle, answered_at")
+    .select("claim_text, no_claim_shown, response_cycle, answered_at, file_path, file_name, file_size, text_source")
     .eq("dispute_id", disputeId)
     .eq("response_cycle", cycle ?? 1)
     .maybeSingle();
   if (!data) return null;
   const text = typeof data.claim_text === "string" && data.claim_text.trim() ? data.claim_text : null;
   const noClaimShown = data.no_claim_shown === true;
-  if (!text && !noClaimShown) return null;
+  // An uploaded file is an answer even when we could not read text from it.
+  const hasFile = typeof data.file_path === "string" && data.file_path.length > 0;
+  if (!text && !noClaimShown && !hasFile) return null;
   return {
     text,
     noClaimShown,
     cycle: Number(data.response_cycle ?? 1),
     answeredAt: String(data.answered_at ?? ""),
+    fileName: hasFile ? ((data.file_name as string | null) ?? null) : null,
+    fileSize: hasFile ? ((data.file_size as number | null) ?? null) : null,
+    textSource: (data.text_source as BankClaimAnswer["textSource"]) ?? null,
   };
 }
 
