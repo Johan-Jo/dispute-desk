@@ -72,6 +72,14 @@ export const DISPUTE_ATTENTION_REASONS = {
    *  `{ package_id: string | null, reasons: string[] }`. Cleared when a
    *  regenerated package passes the same preflight. */
   PACKAGE_REVIEW_REQUIRED: "package_review_required",
+
+  /** The dispute needs the bank's claim (issuer claim), which Shopify shows
+   *  only in Shopify Admin: a reopened dispute, or a `general` one with no
+   *  network reason code (lib/disputes/bankClaim.ts). Nothing is filed until
+   *  the merchant copies it across or confirms Shopify shows none. Payload:
+   *  `{ trigger: "reopened" | "general_reason", cycle: number }`. Cleared by
+   *  POST /api/packs/:id/bank-claim. */
+  BANK_CLAIM_NEEDED: "bank_claim_needed",
 } as const;
 
 export type DisputeAttentionReason =

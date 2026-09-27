@@ -104,6 +104,7 @@ function setup(opts: {
   dueAt?: string;
   packCycle?: number;
   disputeCycle?: number;
+  reason?: string;
 }) {
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
   const rpc = vi.fn(async () => ({
@@ -115,7 +116,7 @@ function setup(opts: {
     id: DISPUTE_ID,
     shop_id: SHOP_ID,
     dispute_gid: "gid://shopify/ShopifyPaymentsDispute/1",
-    reason: "fraudulent",
+    reason: opts.reason ?? "fraudulent",
     network_reason_code: null,
     amount: 100,
     currency_code: "USD",
@@ -177,6 +178,13 @@ function setup(opts: {
       };
     }
     if (table === "jobs") return { insert: jobsInsert };
+    if (table === "dispute_bank_claims") {
+      const q: Record<string, unknown> = {};
+      q.select = vi.fn(() => q);
+      q.eq = vi.fn(() => q);
+      q.maybeSingle = vi.fn(async () => ({ data: null, error: null }));
+      return q;
+    }
     throw new Error(`unexpected table: ${table}`);
   });
 
@@ -211,6 +219,14 @@ describe("deadline submit — a deadline relaxes NOTHING (P-6)", () => {
 
   it("RESPONSE CYCLE — a pack from before a reopen is never filed at the deadline", async () => {
     const { rpc } = setup({ packCycle: 1, disputeCycle: 2 });
+    const body = await (await GET(req())).json();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(body.enqueuedSubmit).toBe(0);
+    expect(body.blockedByDecision).toBe(1);
+  });
+
+  it("BANK CLAIM — a GENERAL dispute with no network code is not filed without the bank's claim", async () => {
+    const { rpc } = setup({ reason: "GENERAL", dueAt: new Date(Date.now() + 3600_000).toISOString() });
     const body = await (await GET(req())).json();
     expect(rpc).not.toHaveBeenCalled();
     expect(body.enqueuedSubmit).toBe(0);

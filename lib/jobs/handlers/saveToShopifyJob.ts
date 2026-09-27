@@ -61,6 +61,11 @@ import {
 } from "@/lib/automation/rebuildOutcome";
 import type { ClaimedJob, JobResult } from "../claimJobs";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import {
+  bankClaimBlocksFiling,
+  bankClaimInputFromRow,
+  bankClaimTrigger,
+} from "@/lib/disputes/bankClaim";
 
 const ALLOWED_PACK_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
 
@@ -126,7 +131,7 @@ export async function handleSaveToShopify(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, dispute_evidence_gid, dispute_gid, reason, network_reason_code, due_at, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at, response_cycle",
+      "id, dispute_evidence_gid, dispute_gid, reason, network_reason_code, due_at, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at, response_cycle, status, closed_at, final_outcome",
     )
     .eq("id", pack.dispute_id)
     .single();
@@ -155,6 +160,35 @@ export async function handleSaveToShopify(
       retriable: false,
       reason: `stale_response_cycle: pack is cycle ${pack.response_cycle ?? 1}, dispute is cycle ${dispute.response_cycle ?? 1}`,
     };
+  }
+
+  /* ── 2a'. Bank's claim guard ──
+   *
+   * A reopened dispute, or a `general` one with no network reason code,
+   * answers a claim only visible in Shopify Admin. Until the merchant has
+   * copied it across (or confirmed Shopify shows none), a letter built
+   * without it answers a question nobody asked — never file it. */
+  if (dispute) {
+    const claimInput = bankClaimInputFromRow(dispute as Record<string, unknown>);
+    if (await bankClaimBlocksFiling(sb, pack.dispute_id as string, claimInput)) {
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: "save_to_shopify_refused_bank_claim_missing",
+        eventPayload: {
+          jobId: job.id,
+          trigger: bankClaimTrigger(claimInput),
+          cycle: dispute.response_cycle ?? 1,
+        },
+      });
+      return {
+        ok: false,
+        retriable: false,
+        reason: "bank_claim_missing: add the bank's claim from Shopify Admin before filing",
+      };
+    }
   }
   if (!dispute?.dispute_evidence_gid) {
     return {

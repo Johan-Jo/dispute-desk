@@ -96,6 +96,11 @@ export interface WorkspaceDispute {
   openedAt: string;
   normalizedStatus: string;
   submissionState: string;
+  /** Response cycle (1 = first round). ≥ 2 once Shopify reopened an
+   *  answered dispute or an answered inquiry escalated. */
+  responseCycle?: number;
+  reopenedAt?: string | null;
+  escalatedFromInquiryAt?: string | null;
   /** Review-lifecycle state (2026-07-23). Gates + reflects the
    *  Hold/Approve/Concede action row on a parked/weak dispute. */
   needsReview?: boolean;
@@ -303,8 +308,21 @@ export interface GorgiasCommsBlock {
   tickets: GorgiasCommsTicketSummary[];
 }
 
+/** The bank's claim (lib/disputes/bankClaim.ts). `trigger` is set while the
+ *  dispute needs it; `answer` is the merchant's answer for this cycle. */
+export interface WorkspaceBankClaim {
+  trigger: "reopened" | "general_reason" | null;
+  answer: {
+    text: string | null;
+    noClaimShown: boolean;
+    cycle: number;
+    answeredAt: string;
+  } | null;
+}
+
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
+  bankClaim?: WorkspaceBankClaim;
   pack: WorkspacePack | null;
   /** Gorgias evidence core (null when the shop has no Gorgias
    *  integration — the review section self-hides). */

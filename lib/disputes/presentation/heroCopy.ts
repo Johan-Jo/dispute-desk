@@ -27,6 +27,7 @@ const HERO_STATED_BLOCKING = new Set([
   "subscription_expired",
   "payment_failed",
   "auto_build_off",
+  "bank_claim_needed",
 ]);
 
 const TERMINAL = new Set(["won", "lost", "closed"]);
