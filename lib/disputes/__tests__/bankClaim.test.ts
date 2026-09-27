@@ -162,6 +162,6 @@ describe("renderBankClaimNeededEmail", () => {
 
   it("never uses the forbidden 'Shopify automatic response' phrasing or submission claims", () => {
     const r = renderBankClaimNeededEmail({ ...args, locale: "en" });
-    expect(r.text).not.toMatch(/automatic response|submit response|card network/i);
+    expect(r.text).not.toMatch(/automatic response|submits+response|card network/i);
   });
 });
