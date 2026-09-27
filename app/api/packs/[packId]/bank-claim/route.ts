@@ -40,6 +40,7 @@ import {
   bankClaimFileExt,
   extractBankClaimText,
 } from "@/lib/disputes/bankClaimFile";
+import { ensureBankClaimAnalysis } from "@/lib/disputes/bankClaimAnalysisStore";
 
 /** Same bucket as pack PDFs and manual uploads (see packs/upload/route.ts). */
 const STORAGE_BUCKET = "evidence-packs";
@@ -201,6 +202,8 @@ export async function POST(
         file_size: file ? file.size : null,
         file_mime: file ? file.type || (fileExt ? BANK_CLAIM_FILE_TYPES[fileExt] : null) : null,
         text_source: textSource,
+        // A new answer is analysed afresh (below).
+        analysis: null,
         answered_at: answeredAt,
         answered_by: "merchant",
       },
@@ -220,6 +223,13 @@ export async function POST(
 
   await clearBankClaimNeeded(sb, pack.dispute_id as string);
 
+  // Read what the claim disputes BEFORE the rebuild is queued, so the next
+  // letter and checklist follow it (lib/disputes/bankClaimAnalysis.ts). A
+  // failed analysis is not fatal: the builders retry it lazily.
+  const analysis = text
+    ? await ensureBankClaimAnalysis(sb, pack.dispute_id as string, cycle).catch(() => null)
+    : null;
+
   await logAuditEvent({
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
@@ -234,6 +244,13 @@ export async function POST(
       noClaimShown,
       textLength: text.length,
       file: file ? { ext: fileExt, size: file.size, textSource, extractError: extractError ?? null } : null,
+      analysis: analysis
+        ? {
+            reason: analysis.reason,
+            authorizationDisputed: analysis.authorizationDisputed,
+            returnOrRefundRequested: analysis.returnOrRefundRequested,
+          }
+        : null,
     },
   });
 
