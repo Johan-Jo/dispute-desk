@@ -1,4 +1,4 @@
-# Mein Maison complaint: response status and the "no return" argument
+# Mein Maison complaint: response status, escalation visibility and the "no return" argument
 
 **Status:** PLAN, nothing implemented · **Author date:** 2026-09-27 · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
 
@@ -47,6 +47,22 @@ Our DB `status` matched Shopify on all 53 open disputes. **The sync is correct. 
   - `defence-package-deadline-submit` skips it (`normalized_status` is not actionable).
   - **No part of our system will act before the deadline.**
 
+**This happens often, and nothing records it.** On prod, all time, measured 2026-09-27:
+
+| Shop | Inquiry → chargeback (open now) | Reopened: `under_review → needs_response` after the first hour (open now) |
+|---|---|---|
+| 6a8848-dd (Mein Maison) | 39 (10) | 33 (11) |
+| cay-collective | 3 (1) | 3 (1) |
+
+- `applyDisputeSnapshot` overwrites `disputes.phase` silently on upsert. It emits no `phase_changed` event and has no column recording that an escalation happened.
+- The only trace is the `dispute_opened` event's `metadata_json.phase`. A merchant cannot see an escalation anywhere.
+
+### D. The detail page does not say whether it's an inquiry or a chargeback
+
+- The list shows a phase pill: `DesktopDisputesTable.tsx:47` `phasePillColors` plus `lib/disputes/phaseUtils.ts` `phaseLabel` / `phaseBadgeTone`. `MobileDisputeCard.tsx` shows it too.
+- The detail pages show nothing. `WorkspaceShell.tsx` (open disputes), `DecidedWorkspace.tsx` (won/lost) and the portal's `app/(portal)/portal/disputes/[id]/page.tsx` never render `phase`. The header is just "Order #…".
+- An inquiry and a chargeback need different things from the merchant: an inquiry can be refunded, a chargeback cannot (`reference_never_refund_an_open_chargeback`). The page they act on must say which one it is.
+
 ### C. `no_return_initiated` is overclaimed
 
 - **Source:** `lib/packs/sources/orderSource.ts`. We emit this fact when `returnStatus === NO_RETURN` and no refund exists.
@@ -70,18 +86,71 @@ B goes before A because it hides a live deadline from both the merchant and our 
   - `evidence_saved_to_shopify_at → null`
   - `reminder_sent_at → null`
   - `review_state → null`. An approval of the previous cycle's pack must not auto-file into the new cycle.
-- **Record:** emit a `response_cycle_reopened` event, with the old values in `metadata_json`, so the history is kept.
-- **If `phase` changed** (inquiry → chargeback), enqueue a pack rebuild. The reason module and the letter differ between phases.
+- **Record:** emit a `response_cycle_reopened` event, with the old values in `metadata_json`, so the history is kept. Stamp the new column `disputes.reopened_at` (the latest reopen).
+- **Phase change is recorded on its own, whether or not the status changes.** When `existing.phase = 'inquiry'` and the snapshot says `chargeback`:
+  - emit `escalated_to_chargeback` (visible to the merchant, `actor_type = 'shopify'`), with the old and new deadlines;
+  - stamp `disputes.escalated_from_inquiry_at`;
+  - enqueue a pack rebuild. The reason module and the letter differ between phases.
+- **Migration:** add both columns, `reopened_at timestamptz` and `escalated_from_inquiry_at timestamptz`. Section D renders both flags from these columns.
 - `updateNormalizedStatus` then derives an actionable status. Reminders, the deadline cron and the Action-required card pick the dispute up with no further change.
 
 **B2. Keep `evidenceSentOn` from resurrecting the old state.** Only set `submitted_confirmed` when the snapshot's `evidenceSentOn` is **newer** than the reopen event, not merely non-null. Otherwise a stale field flips the dispute straight back.
 
 **B3. Repair the existing rows.** Once B1 is on prod, the next sync repairs everything it touches. The two known rows should not wait for that. Their deadlines are 10-01 and 10-05, so run a scoped script: `scripts/sql/repair-reopened-submission-state.sql`. It selects rows where `status = 'needs_response' AND submission_state = 'submitted_confirmed'` and `closed_at IS NULL`, then prints the set before updating. Expected set on prod: #99142 and #99348, plus any other shop's rows. Run it on dev first. Emit a `response_cycle_reopened` event for each repaired row.
 
+**B4. Backfill the two new columns.**
+- `escalated_from_inquiry_at`: the rows where the `dispute_opened` event's phase is `inquiry` and `disputes.phase = 'chargeback'`. Expected: 42 on prod, 11 of them open.
+- `reopened_at`: the last `under_review → needs_response` event more than 1h after opening. Expected: 36 on prod, 12 open.
+- For the escalation timestamp, use the first `due_date_changed` or `status_changed` event after the inquiry cycle. If none exists, fall back to the reopen time.
+- Print per-shop counts first. Run on dev, then prod.
+
 **Tests:**
 - `applyDisputeSnapshot`: reopen resets every field, and a stale `evidenceSentOn` does not re-confirm.
 - `normalizeStatus`: `needs_response + not_saved` after a reopen maps to an actionable status.
 - `dispute-reminders`: a reopened dispute is selected.
+
+---
+
+## Fix D: make phase, escalation and reopening visible (P0 alongside B)
+
+B fixes what the system does. D makes sure the merchant can see it. A reset the merchant cannot see just looks like a dispute that went backwards.
+
+**D1. Phase badge on every detail page.**
+- Render the same pill the list uses, "Inquiry" or "Chargeback", from `phaseLabel` / `phaseBadgeTone` in `lib/disputes/phaseUtils.ts`, next to the header title.
+- Pages:
+  - `WorkspaceShell.tsx` (open disputes)
+  - `DecidedWorkspace.tsx` (won/lost)
+  - the portal's `app/(portal)/portal/disputes/[id]/page.tsx`
+  - the mobile detail layout (check at 393, 375 and 320 px)
+- Move `phasePillColors` out of `DesktopDisputesTable.tsx` into `phaseUtils.ts`, so list and detail cannot drift. Existing i18n keys only: `disputes.inquiryBadge` and the chargeback label.
+- **Design note (CLAUDE.md rule 8):** `DecidedWorkspace` transcribes Claude Design `DecidedView.dc.html`, which has no phase pill. Adding one is a deliberate change to that design at the maintainer's request (2026-09-27). It is not an interpretation of the design. See D-4.
+
+**D2. Escalation flag: "Escalated from inquiry".** Shown when `escalated_from_inquiry_at` is set.
+- **List:** a second chip next to the phase pill, "Chargeback · escalated from inquiry". It's filterable, so the merchant can find all 10 open escalations.
+- **Detail:** a banner above the tabs. "This started as an inquiry and the buyer escalated it to a chargeback on {date}. A new response is due by {deadline}." If we or Shopify had already responded to the inquiry, it adds: "The earlier response does not carry over."
+- **Timeline:** the `escalated_to_chargeback` event, rendered through `localizeDescription` (new event type in `MERCHANT_ACTIVITY_EVENT_TYPES`).
+- **Decided view:** for escalated disputes, the executive summary names the inquiry cycle, so "who responded" covers both rounds.
+
+**D3. Reopen flag: "Reopened — new response needed".** Shown when `reopened_at` is set, the status is `needs_response` and the dispute is not an escalation. Escalation already says this.
+- **List:** a chip.
+- **Detail:** a banner. "Shopify reopened this dispute on {date} after an earlier response. A new response is due by {deadline}."
+- **Timeline:** the `response_cycle_reopened` event.
+- **Dashboard:** these disputes land in **Action required**, not Building & monitoring, because a live deadline was hidden from the merchant before. Add `reopened_needs_response` as a new `MerchantAttention` reason in `resolveAttention.ts`, counted in `ACTION_REQUIRED_ATTENTION`.
+
+**D4. Email.** The escalation or reopen of an open dispute sends one email: "{Order} escalated to a chargeback — new deadline {date}". It's gated on the team-email / notification preferences, like `sendNewDisputeAlert`, and deduped per cycle. This follows the standing rule that merchant notifications go by email, not in-app flags only.
+- `historicalImport` suppression applies, so backfill (B4) sends nothing.
+
+**D5. Copy.** Every new string goes into all 6 locales in the same commit. Wording rules:
+- Use the established Inquiry/Chargeback terms per locale.
+- Never write "Shopify automatic response".
+- The banner states facts only: no "you must", no advice to concede.
+- Update the help articles (`help.embedded.*`: dispute statuses, inquiry vs chargeback) in the same commit.
+
+**Tests:**
+- Phase pill renders on all three detail pages (null phase → "Chargeback", matching `phaseLabel`'s safe default).
+- Escalation and reopen banners appear and disappear with the columns.
+- `resolveAttention`: reopened + `needs_response` → Action required.
+- Email dedupes per cycle and is suppressed on historical import.
 
 ---
 
@@ -175,22 +244,24 @@ This **reverses** the sanctioned phrase "The customer did not request a return."
 
 | Step | Ships | Gate |
 |---|---|---|
-| 1 | B1+B2 → develop, then subset-promote to master | **Per-change approval**. Target: on prod before 2026-10-01. |
-| 2 | B3 repair on prod | Print the set, then update. Verify #99142 and #99348 are actionable in the API output. |
+| 1 | B1+B2 + migration (`reopened_at`, `escalated_from_inquiry_at`) + D1 (phase pill) + D3 dashboard routing → develop, then subset-promote to master | **Per-change approval**. Target: on prod before 2026-10-01. D1 is small and independent, so it can go first on its own if B slips. |
+| 2 | B3 repair + B4 backfill on prod | Print the set, then update. Verify #99142 and #99348 show under **Action required** with the reopen or escalation banner. |
+| 2b | D2–D5 (escalation/reopen chips, banners, timeline, email, copy) → develop → master | **Per-change approval**. Check on prod data: Mein Maison's 10 open escalations are filterable in the list. |
 | 3 | A1–A4 + migration → develop | Run `mm-pres`-style script on prod data. Expect 17 open disputes that need a response (Building & monitoring + Action required, after B) and 36 under review for Mein Maison, which matches Shopify. |
 | 4 | A5 backfill on prod | Print per-shop counts first. |
 | 5 | C1–C5 → develop | Render 3 Mein Maison letters on prod data and read them. |
 | 6 | Master promotion of A + C | **Per-change approval** |
 | 7 | C7 canary 3, then the batch | Read the canary before the batch. |
-| 8 | Reply to Mein Maison | Only after 1–6 are in prod. Say what changed, with their own counts. |
+| 8 | Reply to Mein Maison | Only after 1–6 (including 2b) are in prod. Say what changed, with their own counts. |
 
-For every step: `npm test`, `npx tsc --noEmit`, `npm run build`, plus `docs/technical.md` (submission states, the no-return fact, the returns-channel setting) and the help articles in the same commit.
+For every step: `npm test`, `npx tsc --noEmit`, `npm run build`, plus `docs/technical.md` (submission states, reopen/escalation columns and events, the no-return fact, the returns-channel setting) and the help articles in the same commit.
 
 ## Decisions needed
 
 - **D-1:** Narrow the sanctioned no-return wording **for all shops** (proposed), or only for `email_or_other` shops? Proposed: for all shops. "Not recorded in Shopify" is always true. "Did not request" never is, unless we have the inbox.
 - **D-2:** Default `returns_channel` for existing shops: `null`, fail-safe (proposed), or pre-fill from `returnStatus` history?
-- **D-3:** On an inquiry → chargeback reopen, should we auto-build and file the new cycle per the shop's automation mode (proposed, consistent with the merchant's-counsel stance), or always park it for review?
+- **D-3:** On an inquiry → chargeback escalation or a reopen, should we auto-build and file the new cycle per the shop's automation mode (proposed, consistent with the merchant's-counsel stance), or always park it for review?
+- **D-4:** Design for the new UI (phase pill on detail pages, escalation/reopen chips and banners). Proposed: reuse the existing list pill and the existing banner component, with no new design. Alternatively, get a Claude Design pass first, since `DecidedWorkspace` is a design transcription (CLAUDE.md rule 8).
 
 ## Out of scope
 
