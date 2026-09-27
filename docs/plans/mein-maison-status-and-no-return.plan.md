@@ -1,6 +1,6 @@
 # Mein Maison complaint: response status, escalation visibility and the "no return" argument
 
-**Status:** PLAN rev 4, nothing implemented · **Author date:** 2026-09-27 · **Rev 2:** incorporates the code review of 2026-09-27 (response-cycle model, monotonic-guard override, pack/approval retirement, cycle-aware dedupe keys, no new attention value, Shopify creation state instead of an "ingest artifact", unattributed under-review state, no `returns_channel` prefill, no blanket correspondence exemption) · **Rev 3:** second review: no-deadline normalization branch + one shared predicate, pack-cycle migration rule + B4 pack reconciliation, A5 bounded to the current cycle with a live-status check, C2 test requires a specific supporting citation, D2 banner sentences gated on data · **Rev 4:** third review: cycle ledger with a stable anchor key and one idempotent `reconcileResponseCycle`, history reconstruction before live repair, both-order tests on the two known cases; C2 bans absence claims outright and allows only narrow descriptions of one cited message · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
+**Status:** PLAN rev 5, nothing implemented · **Author date:** 2026-09-27 · **Rev 2:** incorporates the code review of 2026-09-27 (response-cycle model, monotonic-guard override, pack/approval retirement, cycle-aware dedupe keys, no new attention value, Shopify creation state instead of an "ingest artifact", unattributed under-review state, no `returns_channel` prefill, no blanket correspondence exemption) · **Rev 3:** second review: no-deadline normalization branch + one shared predicate, pack-cycle migration rule + B4 pack reconciliation, A5 bounded to the current cycle with a live-status check, C2 test requires a specific supporting citation, D2 banner sentences gated on data · **Rev 4:** third review: cycle ledger with a stable anchor key and one idempotent `reconcileResponseCycle`, history reconstruction before live repair, both-order tests on the two known cases; C2 bans absence claims outright and allows only narrow descriptions of one cited message · **Rev 5:** maintainer design: "returns outside Shopify" toggle (default off) plus a per-dispute merchant confirmation, the one attributed exemption to the absence ban · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
 
 The complaint makes three claims, and the maintainer added a fourth item on 2026-09-27. Each was checked against prod and against the live Shopify REST API on 2026-09-27, and all four are real:
 
@@ -319,17 +319,35 @@ Script: `scripts/shopify/backfill-response-state.mjs`. It is dry-run by default 
 This **reverses** the sanctioned phrase "The customer did not request a return." in `claimGuards.test.ts:503`. That phrase is exactly the false sentence for an email-returns merchant (**decision D-1**).
 - Mirror the rule as a prompt instruction in the product and INR reason modules. Two layers, same as the bank non-disclosure rule.
 
-**C3. Stop scoring absence of data as strength.** In `caseStrength.ts`, `no_return_initiated` counts toward the product family's validity axis and the refund family **only when** the shop's return channel is known to be Shopify (C4).
-- Otherwise it stays in the letter as a supporting fact (scoped by C1 and C2) but cannot lift the rating.
+**C3. Score the no-return signal by the shop's setting.** In `caseStrength.ts`, `no_return_initiated` counts toward the product family's validity axis and the refund family as follows:
+- **Setting off (default, returns go through Shopify):** it counts as today.
+- **Setting on (returns handled outside Shopify, C4):** the Shopify record alone does **not** count. It counts only once the merchant has confirmed, on that dispute, that no request came in (C4b). Until then it stays in the letter as a supporting fact, scoped by C1 and C2, but cannot lift the rating.
 - The merchant-facing "No refund owed" label goes. It asserted an obligation we never checked.
 
-**C4. Shop setting: where do customers ask for returns?** `shop_settings.returns_channel`: `'shopify' | 'email_or_other' | null`.
-- Asked once in setup and editable in Settings → Automation.
-- **Stays `null` (unknown) until the merchant answers.** No prefill (review point 6): one Shopify return in a year proves the shop *sometimes* records returns there. It does not prove that email or other channels are absent. `null` is treated like `email_or_other` for scoring. Wording is governed by C2 for every shop regardless. That fails safe.
-- **Only `'shopify'` restores the scoring weight,** and it means the merchant confirmed that Shopify is the **only** channel. The setting copy asks exactly that: "Do customers request returns only through Shopify?"
-- Set Mein Maison to `email_or_other` once this ships.
+**C4. Shop setting: "Customers request returns outside Shopify" (maintainer's design, 2026-09-27).** One on/off toggle, `shop_settings.returns_outside_shopify boolean not null default false`.
+- **Where:** Settings → Automation, as a toggle with one line of help: "Turn this on if customers ask for returns or refunds by email, chat or phone rather than through Shopify. You'll then confirm, per dispute, whether a request came in."
+- **Default off.** Most shops handle returns through Shopify, so the Shopify record stays a scoring signal for them. This **replaces** the three-value `returns_channel` and **reverses** the review-1 "no prefill / stay unknown" rule (point 6, former D-2) by the maintainer's decision. Accepted risk: a shop that takes returns by email and never turns the toggle on is scored as if Shopify were the only channel. Letter wording stays safe regardless, because C2 applies to every shop.
+- Saved through the existing preferences route (`app/api/shop/preferences`) with an audit event `returns_outside_shopify_changed`.
+- Turning it on or off re-queues builds for the shop's open, not-yet-sent disputes. That is a small set, so no canary is needed; it is printed in the audit payload.
+- Turn it on for Mein Maison once this ships (Step 5), and tell them in the reply (Step 8).
 
-**C5. Ask for the evidence that actually answers the claim.** For `email_or_other` shops, the not-as-described checklist's top ask becomes "Customer correspondence". Merchants can supply it by connecting Gorgias (if they use it) or uploading the email thread.
+**C4b. Per-dispute confirmation: "Did this customer ask for a return or refund?"** A merchant attestation, built the same way as the returned-parcel outcome (`app/api/packs/[packId]/parcel-outcome/route.ts`) and the cardholder acknowledgement.
+- **When it shows:** only when the setting is on, and only for reason families where the no-return signal matters (product not as described, refund/credit not processed, and not received). A new checklist field `return_request_confirmation` with `requirementMode: "required_if_returns_outside_shopify"` in `lib/automation/completeness.ts`. It is `critical` but **not blocking**: an unanswered question never stops a filing (merchant's-counsel stance); it only withholds the scoring weight.
+- **Route:** `POST /api/packs/[packId]/return-request-confirmation`, a copy of the parcel-outcome shape:
+  - inserts a manual `evidence_items` row (`type: "comms"`, `source: "manual_upload"`, `payload.kind: "return_request_confirmation"`);
+  - patches `checklist_v2` so the row flips to available;
+  - writes an audit event;
+  - enqueues `build_pack`;
+  - applies the same "Shopify has already forwarded this" window guard (409 `WINDOW_CLOSED`).
+- **Answers** (`answer`), plus an optional note and an optional uploaded email through the existing upload route:
+  - `no_request_received`: "I checked; the customer did not ask us for a return or refund before the dispute." **Bank-facing.**
+  - `request_received`: the customer did ask. **Never bank-facing**, the same rule as the parcel outcome's `disposition` (it would be a confession). Merchant-UI only; the no-return signal is then dropped from scoring and from the letter for that dispute.
+  - `not_sure`: recorded, treated as unanswered.
+- **The card:** on the dispute detail page, next to the other manual evidence (`OverviewTab.tsx`, same placement as `ParcelOutcomeCard`), and on the portal and mobile detail pages. It reuses the existing card components, per D-4.
+- **Downstream (two layers, like the parcel outcome):** `lib/defence/factClassifier.ts` hands the writer a citable fact **only** for `no_request_received`. It never hands over `request_received` or the note. `lib/argument/canonicalEvidence.ts` and `lib/evidence/model/domains.ts` register the new kind; `decidedView.ts` and `heldState.ts` handle it the same way they handle `returned_parcel_outcome`.
+- **What the letter may say when confirmed.** Exactly one sanctioned, attributed sentence, citing the attestation fact id: "The merchant has confirmed that the customer did not contact the store to request a return or refund before opening the dispute." This is the **only** exemption to C2's absence ban: it states what the merchant confirmed, and the merchant is the one party who can see their own inbox. Any other absence wording still fails C2, cited or not.
+
+**C5. Ask for the evidence that actually answers the claim.** For shops with the setting on, the not-as-described checklist's top ask is the C4b confirmation, followed by "Customer correspondence". Merchants can supply correspondence by connecting Gorgias (if they use it) or uploading the email thread.
 - To verify before promising this to Mein Maison: do they have a Gorgias integration, and does the upload control render on the embedded detail page? (`feedback_ask_only_for_what_the_merchant_can_actually_do`)
 
 **C6. The card-network leak on #93670.** Check its resolved payment family and whether the PayPal overlay's prohibited phrases were applied.
@@ -349,7 +367,12 @@ This **reverses** the sanctioned phrase "The customer did not request a return."
   - "The customer never contacted us about this order." citing a fact → fails.
 - **A narrow description of a cited message passes:** "The customer's email of {date} asked about delivery timing." with a valid citable id → passes; the same sentence uncited → fails (citation check).
 - The sanctioned sentence "No return has been recorded in Shopify for this order." → passes.
-- Scoring: `email_or_other` + no_return alone ≠ Moderate.
+- **The attested sentence (C4b):** "The merchant has confirmed that the customer did not contact the store…" citing a `no_request_received` fact → passes; the same sentence without that citation, or citing any other fact → fails.
+- Scoring: setting on + no_return alone ≠ Moderate; setting on + `no_request_received` = today's weight; setting off = today's weight.
+- `request_received` never reaches the writer's facts, and its note never does either (factClassifier test, mirroring the parcel-outcome disposition test).
+- Route: 400 on an unknown answer, 409 while building and after `submitted_confirmed`, 201 with a queued `build_pack` otherwise.
+- The checklist row appears only with the setting on and only for the listed reason families; it is never blocking.
+- The toggle: default off for existing shops after migration; flipping it writes the audit event and re-queues open builds.
 - Label token parity (`verify-i18n-parity`).
 
 ---
@@ -363,17 +386,17 @@ This **reverses** the sanctioned phrase "The customer did not request a return."
 | 2b | D2–D5 (escalation/reopen chips, banners, timeline, email, copy) → develop → master | **Per-change approval**. Check on prod data: Mein Maison's 10 open escalations are filterable in the list. |
 | 3 | A1–A4 + migration → develop | Run `mm-pres`-style script on prod data. Expect 17 open disputes that need a response (Building & monitoring + Action required, after B) and 36 under review for Mein Maison, which matches Shopify. |
 | 4 | A5 backfill on prod | Print per-shop counts first. |
-| 5 | C1–C5 → develop | Render 3 Mein Maison letters on prod data and read them. |
+| 5 | C1–C5 + C4b (setting, confirmation route and card, migration) → develop | Render 3 Mein Maison letters on prod data and read them: one unanswered, one confirmed `no_request_received`, one `request_received`. Check the toggle and the card render on the embedded, portal and mobile detail pages. |
 | 6 | Master promotion of A + C | **Per-change approval** |
 | 7 | C7 canary 3, then the batch | Read the canary before the batch. |
 | 8 | Reply to Mein Maison | Only after 1–6 (including 2b) are in prod. Say what changed, with their own counts. |
 
-For every step: `npm test`, `npx tsc --noEmit`, `npm run build`, plus `docs/technical.md` (submission states, reopen/escalation columns and events, the no-return fact, the returns-channel setting) and the help articles in the same commit.
+For every step: `npm test`, `npx tsc --noEmit`, `npm run build`, plus `docs/technical.md` (submission states, reopen/escalation columns and events, the no-return fact, the returns-outside-Shopify setting and the per-dispute confirmation) and the help articles in the same commit.
 
 ## Decisions needed
 
-- **D-1 (deferred by the maintainer, 2026-09-27):** Fix C (C1–C7) waits on this decision; Steps 1–2b do not depend on it. Narrow the sanctioned no-return wording **for all shops** (proposed), or only for `email_or_other` shops? Proposed: for all shops. "Not recorded in Shopify" is always true. "Did not request" never is, unless we have the inbox.
-- ~~D-2~~ **Resolved by review:** `returns_channel` stays unknown until the merchant confirms. No prefill.
+- **D-1 (reshaped by the maintainer, 2026-09-27):** the answer is a setting plus a per-dispute confirmation (C4, C4b), not a choice between two wordings. Still open inside it: should C2's narrow wording ("No return has been recorded in Shopify") apply to **every** shop, including those with the setting off? Proposed: yes. It costs little, because a setting-off shop keeps the full scoring weight, and it stays true for a shop that takes email returns but never turned the toggle on.
+- ~~D-2~~ **Superseded by the maintainer (2026-09-27):** replaced by the C4 toggle, default off. The earlier review rule (stay unknown until the merchant confirms) no longer applies.
 - **D-3:** On an inquiry → chargeback escalation or a reopen, should we auto-build and file the new cycle per the shop's automation mode (proposed, consistent with the merchant's-counsel stance), or always park it for review?
 - **D-4:** Design for the new UI (phase pill on detail pages, escalation/reopen chips and banners). Proposed: reuse the existing list pill and the existing banner component, with no new design. Alternatively, get a Claude Design pass first, since `DecidedWorkspace` is a design transcription (CLAUDE.md rule 8).
 
