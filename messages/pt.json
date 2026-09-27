@@ -2273,13 +2273,12 @@
       "introReopened": "O banco pede uma nova resposta. O motivo só aparece na Shopify — cole-o aqui para que a resposta responda exatamente ao que foi perguntado.",
       "introGeneral": "O banco não deu um motivo específico para esta disputa. O motivo só aparece na Shopify — cole-o aqui para que a resposta responda exatamente ao que foi perguntado.",
       "dueLabel": "Prazo da resposta",
-      "daysLeft": "{count, plural, =1 {Falta # dia} other {Faltam # dias}}",
       "dueToday": "Vence hoje",
       "step1Title": "Encontre a reclamação na Shopify",
       "step1Path": "Pedido {order} → Detalhes do estorno → Reclamação do emissor",
-      "openInShopify": "Abrir o pedido na Shopify",
-      "step2Title": "Cole abaixo",
-      "step2Body": "Pode ser o texto completo ou um breve resumo. Nenhuma reclamação aparece? Marque a caixa.",
+      "openInShopify": "Abrir a disputa na Shopify ↗",
+      "step2Title": "Envie o arquivo da reclamação ou cole o texto",
+      "step2Body": "Baixe a reclamação na Shopify (geralmente um PDF) e solte-a abaixo. Nenhuma reclamação aparece? Marque a caixa.",
       "textLabel": "A reclamação do banco",
       "countRequired": "Obrigatório",
       "countChars": "{count, plural, =1 {# caractere} other {# caracteres}}",
@@ -2294,7 +2293,20 @@
       "save": "Salvar reclamação",
       "saved": "Salvo",
       "errorWindowClosed": "A Shopify já encaminhou as provas desta disputa, então a reclamação não pode mais ser adicionada.",
-      "errorGeneric": "Não foi possível salvar a reclamação ({code}). Tente novamente."
+      "errorGeneric": "Não foi possível salvar a reclamação ({code}). Tente novamente.",
+      "daysCount": "{count, plural, =1 {# dia} other {# dias}}",
+      "tabUpload": "Enviar arquivo",
+      "tabPaste": "Colar texto",
+      "countFile": "1 arquivo",
+      "dropTitle": "Solte aqui o arquivo da reclamação ou <browse>procure</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML ou imagem · até 10 MB",
+      "fileMetaReady": "{size} · Pronto para salvar",
+      "fileMetaUploaded": "{size} · Enviado",
+      "replace": "Substituir",
+      "remove": "Remover",
+      "statusSaving": "Salvando…",
+      "errorFileType": "Envie um arquivo PDF, TXT, DOC, DOCX, RTF, EML ou uma imagem.",
+      "errorFileSize": "O arquivo tem mais de 10 MB."
     }
   },
   "disputeReasons": {
@@ -3714,7 +3726,7 @@
       },
       "bankClaim": {
         "title": "Por que o DisputeDesk pede a reclamação do banco",
-        "body": "Na maioria das disputas, o código de motivo diz ao DisputeDesk o que o cliente está contestando, e a resposta é montada a partir dele. Dois tipos de disputa são diferentes:\n\n• Disputas reabertas: a Shopify colocou de volta em \"precisa de resposta\" uma disputa que você já respondeu. O banco pede uma nova resposta, e a anterior não a resolve mais.\n• Disputas \"gerais\" sem código de motivo da rede: o banco não disse de que tipo é a disputa.\n\nNos dois casos, a única indicação do que o banco quer que seja respondido é a reclamação do banco (a Shopify a chama de reclamação do emissor). A Shopify a mostra nos detalhes do estorno na página do pedido no seu admin, mas não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho.\n\nO que fazer:\n1. Abra a disputa no DisputeDesk e use \"Abrir o pedido na Shopify\".\n2. Encontre a reclamação do banco nos detalhes do estorno e copie o texto.\n3. Cole-o no cartão \"Adicione a reclamação do banco\" e salve. Se a Shopify não mostrar nenhuma reclamação, marque \"A Shopify não mostra nenhuma reclamação para esta disputa\" — os bancos nem sempre fornecem uma.\n\nO DisputeDesk então reconstrói a resposta para responder à reclamação. A reclamação só é usada para decidir o que a resposta deve tratar; nunca é citada nem devolvida ao banco.\n\nAté que seja adicionada, o DisputeDesk não enviará resposta para essa disputa, nem no prazo final. Também enviamos um e-mail quando uma disputa passa a precisar dela."
+        "body": "Na maioria das disputas, o código de motivo diz ao DisputeDesk o que o cliente está contestando, e a resposta é montada a partir dele. Dois tipos de disputa são diferentes:\n\n• Disputas reabertas: a Shopify colocou de volta em \"precisa de resposta\" uma disputa que você já respondeu. O banco pede uma nova resposta, e a anterior não a resolve mais.\n• Disputas \"gerais\" sem código de motivo da rede: o banco não disse de que tipo é a disputa.\n\nNos dois casos, a única indicação do que o banco quer que seja respondido é a reclamação do banco (a Shopify a chama de reclamação do emissor). A Shopify a mostra nos detalhes do estorno na página do pedido no seu admin, mas não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho.\n\nO que fazer:\n1. Abra a disputa no DisputeDesk e use \"Abrir o pedido na Shopify\".\n2. Encontre a reclamação do banco nos detalhes do estorno e baixe-a (geralmente um PDF) ou copie o texto.\n3. Envie o arquivo ou cole o texto no cartão \"Adicione a reclamação do banco\" e salve. Se a Shopify não mostrar nenhuma reclamação, marque \"A Shopify não mostra nenhuma reclamação para esta disputa\" — os bancos nem sempre fornecem uma.\n\nO DisputeDesk então reconstrói a resposta para responder à reclamação. A reclamação só é usada para decidir o que a resposta deve tratar; nunca é citada nem devolvida ao banco.\n\nAté que seja adicionada, o DisputeDesk não enviará resposta para essa disputa, nem no prazo final. Também enviamos um e-mail quando uma disputa passa a precisar dela."
       }
     },
     "embedded": {

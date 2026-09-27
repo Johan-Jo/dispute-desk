@@ -161,7 +161,7 @@ export type EventType =
   | "deadline_submit_refused_stale_cycle"
   // Bank's claim (lib/disputes/bankClaim.ts): the merchant copied the
   // issuer claim from Shopify Admin or confirmed none is shown
-  // (`{ bankClaimId, cycle, noClaimShown, textLength }`); or a filing
+  // (`{ bankClaimId, cycle, noClaimShown, textLength, file }`); or a filing
   // path refused because it is still missing (`{ trigger, cycle }`).
   | "bank_claim_recorded"
   | "save_to_shopify_refused_bank_claim_missing"

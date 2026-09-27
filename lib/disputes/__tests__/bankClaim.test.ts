@@ -69,8 +69,15 @@ describe("loadBankClaimAnswer / bankClaimBlocksFiling", () => {
   it("reads the answer for the CURRENT cycle only", async () => {
     const { sb, eqs } = claimClient({ claim_text: "Buyer says item never arrived", no_claim_shown: false, response_cycle: 2, answered_at: "2026-09-27T10:00:00Z" });
     const a = await loadBankClaimAnswer(sb, "d1", 2);
-    expect(a).toEqual({ text: "Buyer says item never arrived", noClaimShown: false, cycle: 2, answeredAt: "2026-09-27T10:00:00Z" });
+    expect(a).toMatchObject({ text: "Buyer says item never arrived", noClaimShown: false, cycle: 2, answeredAt: "2026-09-27T10:00:00Z", fileName: null });
     expect(eqs).toContainEqual(["response_cycle", 2]);
+  });
+
+  it("an uploaded file is an answer even when no text could be read from it", async () => {
+    const { sb } = claimClient({ claim_text: null, no_claim_shown: false, response_cycle: 2, answered_at: "t", file_path: "s/d/bank-claim-c2-1.docx", file_name: "claim.docx", file_size: 1234, text_source: null });
+    const a = await loadBankClaimAnswer(sb, "d1", 2);
+    expect(a).toMatchObject({ text: null, fileName: "claim.docx", fileSize: 1234 });
+    expect(await bankClaimBlocksFiling(sb, "d1", { ...base, responseCycle: 2 })).toBe(false);
   });
 
   it("'Shopify shows no claim' is a valid answer", async () => {
@@ -142,14 +149,14 @@ describe("renderBankClaimNeededEmail", () => {
   };
 
   for (const locale of ["en", "es", "pt", "fr", "de", "sv"] as const) {
-    it(`${locale}: links to the exact place, names the order, and promises no upload the card lacks`, () => {
+    it(`${locale}: links to the exact place, names the order, and offers the file upload the card has`, () => {
       const r = renderBankClaimNeededEmail({ ...args, locale });
       expect(r.html).toContain(args.disputeUrl);
       expect(r.html).toContain(args.shopifyUrl);
       expect(r.text).toContain(args.disputeUrl);
       expect(r.subject).toContain("#99142");
       expect(r.html).toContain("Oct 1, 2026");
-      expect(r.html.toLowerCase()).not.toMatch(/download|descarga|baixe|téléchargez|herunter|ladda ner/);
+      expect(r.html).toMatch(/PDF/);
     });
   }
 

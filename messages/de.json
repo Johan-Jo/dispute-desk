@@ -2273,13 +2273,12 @@
       "introReopened": "Die Bank verlangt eine neue Antwort. Ihre Begründung ist nur in Shopify sichtbar – fügen Sie sie hier ein, damit die Antwort genau auf die Frage eingeht.",
       "introGeneral": "Die Bank hat für diese Rückbuchung keinen konkreten Grund angegeben. Ihre Begründung ist nur in Shopify sichtbar – fügen Sie sie hier ein, damit die Antwort genau auf die Frage eingeht.",
       "dueLabel": "Antwort fällig am",
-      "daysLeft": "{count, plural, =1 {Noch # Tag} other {Noch # Tage}}",
       "dueToday": "Heute fällig",
       "step1Title": "Begründung in Shopify finden",
       "step1Path": "Bestellung {order} → Rückbuchungsdetails → Begründung des Kartenausstellers",
-      "openInShopify": "Bestellung in Shopify öffnen",
-      "step2Title": "Unten einfügen",
-      "step2Body": "Der vollständige Text oder eine kurze Zusammenfassung genügen. Keine Begründung angezeigt? Setzen Sie stattdessen das Häkchen.",
+      "openInShopify": "Rückbuchung in Shopify öffnen ↗",
+      "step2Title": "Datei der Begründung hochladen oder Text einfügen",
+      "step2Body": "Laden Sie die Begründung aus Shopify herunter (meist ein PDF) und ziehen Sie sie hierher. Keine Begründung angezeigt? Setzen Sie stattdessen das Häkchen.",
       "textLabel": "Begründung der Bank",
       "countRequired": "Erforderlich",
       "countChars": "{count, plural, =1 {# Zeichen} other {# Zeichen}}",
@@ -2294,7 +2293,20 @@
       "save": "Begründung speichern",
       "saved": "Gespeichert",
       "errorWindowClosed": "Shopify hat die Beweise für diese Rückbuchung bereits weitergeleitet, die Begründung kann nicht mehr hinzugefügt werden.",
-      "errorGeneric": "Die Begründung konnte nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut."
+      "errorGeneric": "Die Begründung konnte nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut.",
+      "daysCount": "{count, plural, =1 {# Tag} other {# Tage}}",
+      "tabUpload": "Datei hochladen",
+      "tabPaste": "Text einfügen",
+      "countFile": "1 Datei",
+      "dropTitle": "Datei der Begründung hier ablegen oder <browse>durchsuchen</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML oder Bild · bis 10 MB",
+      "fileMetaReady": "{size} · Bereit zum Speichern",
+      "fileMetaUploaded": "{size} · Hochgeladen",
+      "replace": "Ersetzen",
+      "remove": "Entfernen",
+      "statusSaving": "Wird gespeichert…",
+      "errorFileType": "Laden Sie eine PDF-, TXT-, DOC-, DOCX-, RTF-, EML- oder Bilddatei hoch.",
+      "errorFileSize": "Die Datei ist größer als 10 MB."
     }
   },
   "disputeReasons": {
@@ -3714,7 +3726,7 @@
       },
       "bankClaim": {
         "title": "Warum DisputeDesk nach der Begründung der Bank fragt",
-        "body": "Bei den meisten Rückbuchungen sagt der Grundcode DisputeDesk, was der Kunde beanstandet, und die Antwort wird darauf aufgebaut. Zwei Arten sind anders:\n\n• Wieder geöffnete Rückbuchungen: Shopify hat eine Rückbuchung, die Sie bereits beantwortet haben, wieder auf „Antwort erforderlich“ gesetzt. Die Bank verlangt eine neue Antwort, und Ihre frühere Antwort erledigt sie nicht mehr.\n• „Allgemeine“ Rückbuchungen ohne Netzwerk-Grundcode: Die Bank hat nicht angegeben, um welche Art von Rückbuchung es sich handelt.\n\nIn beiden Fällen sagt nur die Begründung der Bank (Shopify nennt sie Begründung des Kartenausstellers), worauf die Bank eine Antwort erwartet. Shopify zeigt sie in den Rückbuchungsdetails auf der Bestellseite in Ihrem Shopify-Adminbereich an, gibt sie aber nicht an Apps weiter. DisputeDesk kann sie daher nicht selbst lesen.\n\nSo gehen Sie vor:\n1. Öffnen Sie die Rückbuchung in DisputeDesk und nutzen Sie „Bestellung in Shopify öffnen“.\n2. Suchen Sie die Begründung der Bank in den Rückbuchungsdetails und kopieren Sie den Text.\n3. Fügen Sie ihn in die Karte „Begründung der Bank hinzufügen“ ein und speichern Sie. Wenn Shopify keine Begründung anzeigt, setzen Sie stattdessen das Häkchen bei „Shopify zeigt für diese Rückbuchung keine Begründung an“ – Banken liefern nicht immer eine.\n\nDisputeDesk erstellt die Antwort dann neu, sodass sie auf die Begründung eingeht. Die Begründung dient nur dazu, zu entscheiden, worauf die Antwort eingehen muss; sie wird nie zitiert oder an die Bank zurückgeschickt.\n\nBis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort, auch nicht zur Frist. Wir benachrichtigen Sie außerdem per E-Mail, sobald eine Rückbuchung sie benötigt."
+        "body": "Bei den meisten Rückbuchungen sagt der Grundcode DisputeDesk, was der Kunde beanstandet, und die Antwort wird darauf aufgebaut. Zwei Arten sind anders:\n\n• Wieder geöffnete Rückbuchungen: Shopify hat eine Rückbuchung, die Sie bereits beantwortet haben, wieder auf „Antwort erforderlich“ gesetzt. Die Bank verlangt eine neue Antwort, und Ihre frühere Antwort erledigt sie nicht mehr.\n• „Allgemeine“ Rückbuchungen ohne Netzwerk-Grundcode: Die Bank hat nicht angegeben, um welche Art von Rückbuchung es sich handelt.\n\nIn beiden Fällen sagt nur die Begründung der Bank (Shopify nennt sie Begründung des Kartenausstellers), worauf die Bank eine Antwort erwartet. Shopify zeigt sie in den Rückbuchungsdetails auf der Bestellseite in Ihrem Shopify-Adminbereich an, gibt sie aber nicht an Apps weiter. DisputeDesk kann sie daher nicht selbst lesen.\n\nSo gehen Sie vor:\n1. Öffnen Sie die Rückbuchung in DisputeDesk und nutzen Sie „Bestellung in Shopify öffnen“.\n2. Suchen Sie die Begründung der Bank in den Rückbuchungsdetails und laden Sie sie herunter (meist ein PDF) oder kopieren Sie den Text.\n3. Laden Sie die Datei hoch oder fügen Sie den Text in die Karte „Begründung der Bank hinzufügen“ ein und speichern Sie. Wenn Shopify keine Begründung anzeigt, setzen Sie stattdessen das Häkchen bei „Shopify zeigt für diese Rückbuchung keine Begründung an“ – Banken liefern nicht immer eine.\n\nDisputeDesk erstellt die Antwort dann neu, sodass sie auf die Begründung eingeht. Die Begründung dient nur dazu, zu entscheiden, worauf die Antwort eingehen muss; sie wird nie zitiert oder an die Bank zurückgeschickt.\n\nBis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort, auch nicht zur Frist. Wir benachrichtigen Sie außerdem per E-Mail, sobald eine Rückbuchung sie benötigt."
       }
     },
     "embedded": {

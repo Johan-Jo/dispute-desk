@@ -816,13 +816,22 @@ export function useDisputeWorkspace(disputeId: string) {
     async (
       text: string | null,
       noClaimShown: boolean,
+      file?: File | null,
     ): Promise<{ ok: boolean; error?: string; code?: string }> => {
       if (!data?.pack) return { ok: false, error: "No pack", code: "NO_PACK" };
-      const res = await fetch(`/api/packs/${data.pack.id}/bank-claim`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, noClaimShown }),
-      });
+      // A claim file goes as multipart; pasted text / "no claim" as JSON.
+      const init: RequestInit = file
+        ? (() => {
+            const form = new FormData();
+            form.append("file", file);
+            return { method: "POST", body: form };
+          })()
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, noClaimShown }),
+          };
+      const res = await fetch(`/api/packs/${data.pack.id}/bank-claim`, init);
       const body = (await res.json().catch(() => null)) as
         | { error?: string; code?: string }
         | null;

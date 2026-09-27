@@ -2273,13 +2273,12 @@
       "introReopened": "La banque demande une nouvelle réponse. Son motif n'est visible que dans Shopify — collez-le ici pour que la réponse traite exactement ce qui a été demandé.",
       "introGeneral": "La banque n'a pas donné de motif précis pour ce litige. Son motif n'est visible que dans Shopify — collez-le ici pour que la réponse traite exactement ce qui a été demandé.",
       "dueLabel": "Réponse avant le",
-      "daysLeft": "{count, plural, =1 {# jour restant} other {# jours restants}}",
       "dueToday": "Échéance aujourd'hui",
       "step1Title": "Trouvez la réclamation dans Shopify",
       "step1Path": "Commande {order} → Détails de la rétrofacturation → Réclamation de l'émetteur",
-      "openInShopify": "Ouvrir la commande dans Shopify",
-      "step2Title": "Collez-la ci-dessous",
-      "step2Body": "Le texte complet ou un court résumé conviennent. Aucune réclamation affichée ? Cochez la case.",
+      "openInShopify": "Ouvrir le litige dans Shopify ↗",
+      "step2Title": "Téléversez le fichier de la réclamation ou collez le texte",
+      "step2Body": "Téléchargez la réclamation depuis Shopify (généralement un PDF) et déposez-la ci-dessous. Aucune réclamation affichée ? Cochez la case.",
       "textLabel": "La réclamation de la banque",
       "countRequired": "Obligatoire",
       "countChars": "{count, plural, =1 {# caractère} other {# caractères}}",
@@ -2294,7 +2293,20 @@
       "save": "Enregistrer la réclamation",
       "saved": "Enregistré",
       "errorWindowClosed": "Shopify a déjà transmis les preuves de ce litige : la réclamation ne peut plus être ajoutée.",
-      "errorGeneric": "La réclamation n'a pas pu être enregistrée ({code}). Veuillez réessayer."
+      "errorGeneric": "La réclamation n'a pas pu être enregistrée ({code}). Veuillez réessayer.",
+      "daysCount": "{count, plural, =1 {# jour} other {# jours}}",
+      "tabUpload": "Téléverser un fichier",
+      "tabPaste": "Coller le texte",
+      "countFile": "1 fichier",
+      "dropTitle": "Déposez le fichier de la réclamation ici, ou <browse>parcourez</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML ou image · jusqu'à 10 Mo",
+      "fileMetaReady": "{size} · Prêt à enregistrer",
+      "fileMetaUploaded": "{size} · Téléversé",
+      "replace": "Remplacer",
+      "remove": "Retirer",
+      "statusSaving": "Enregistrement…",
+      "errorFileType": "Téléversez un fichier PDF, TXT, DOC, DOCX, RTF, EML ou une image.",
+      "errorFileSize": "Le fichier dépasse 10 Mo."
     }
   },
   "disputeReasons": {
@@ -3714,7 +3726,7 @@
       },
       "bankClaim": {
         "title": "Pourquoi DisputeDesk demande la réclamation de la banque",
-        "body": "Pour la plupart des litiges, le code motif indique à DisputeDesk ce que le client conteste, et la réponse est construite à partir de celui-ci. Deux types de litige sont différents :\n\n• Litiges rouverts : Shopify a remis à « réponse requise » un litige auquel vous aviez déjà répondu. La banque demande une nouvelle réponse, et la précédente ne le règle plus.\n• Litiges « généraux » sans code motif du réseau : la banque n'a pas précisé de quel type de litige il s'agit.\n\nDans les deux cas, la seule indication de ce que la banque attend est sa réclamation (Shopify l'appelle réclamation de l'émetteur). Shopify l'affiche dans les détails de la rétrofacturation sur la page de la commande dans votre administration, mais ne la partage pas avec les applications : DisputeDesk ne peut donc pas la lire seul.\n\nQue faire :\n1. Ouvrez le litige dans DisputeDesk et utilisez « Ouvrir la commande dans Shopify ».\n2. Trouvez la réclamation de la banque dans les détails de la rétrofacturation et copiez son texte.\n3. Collez-le dans la carte « Ajoutez la réclamation de la banque » et enregistrez. Si Shopify n'affiche aucune réclamation, cochez « Shopify n'affiche aucune réclamation pour ce litige » : les banques n'en fournissent pas toujours.\n\nDisputeDesk reconstruit alors la réponse pour qu'elle traite la réclamation. Celle-ci sert uniquement à décider à quoi la réponse doit répondre ; elle n'est jamais citée ni renvoyée à la banque.\n\nTant qu'elle n'est pas ajoutée, DisputeDesk n'enverra aucune réponse pour ce litige, y compris à l'échéance. Nous vous envoyons aussi un e-mail lorsqu'un litige commence à en avoir besoin."
+        "body": "Pour la plupart des litiges, le code motif indique à DisputeDesk ce que le client conteste, et la réponse est construite à partir de celui-ci. Deux types de litige sont différents :\n\n• Litiges rouverts : Shopify a remis à « réponse requise » un litige auquel vous aviez déjà répondu. La banque demande une nouvelle réponse, et la précédente ne le règle plus.\n• Litiges « généraux » sans code motif du réseau : la banque n'a pas précisé de quel type de litige il s'agit.\n\nDans les deux cas, la seule indication de ce que la banque attend est sa réclamation (Shopify l'appelle réclamation de l'émetteur). Shopify l'affiche dans les détails de la rétrofacturation sur la page de la commande dans votre administration, mais ne la partage pas avec les applications : DisputeDesk ne peut donc pas la lire seul.\n\nQue faire :\n1. Ouvrez le litige dans DisputeDesk et utilisez « Ouvrir la commande dans Shopify ».\n2. Trouvez la réclamation de la banque dans les détails de la rétrofacturation et téléchargez-la (généralement un PDF), ou copiez son texte.\n3. Téléversez le fichier ou collez le texte dans la carte « Ajoutez la réclamation de la banque » et enregistrez. Si Shopify n'affiche aucune réclamation, cochez « Shopify n'affiche aucune réclamation pour ce litige » : les banques n'en fournissent pas toujours.\n\nDisputeDesk reconstruit alors la réponse pour qu'elle traite la réclamation. Celle-ci sert uniquement à décider à quoi la réponse doit répondre ; elle n'est jamais citée ni renvoyée à la banque.\n\nTant qu'elle n'est pas ajoutée, DisputeDesk n'enverra aucune réponse pour ce litige, y compris à l'échéance. Nous vous envoyons aussi un e-mail lorsqu'un litige commence à en avoir besoin."
       }
     },
     "embedded": {
