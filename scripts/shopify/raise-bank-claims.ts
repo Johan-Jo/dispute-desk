@@ -30,6 +30,10 @@ function arg(name: string): string | null {
 const SHOP = arg("--shop");
 const APPLY = process.argv.includes("--apply");
 const EMAIL = process.argv.includes("--email");
+if (EMAIL && process.env.BANK_CLAIM_EMAILS_ENABLED !== "true") {
+  console.error("--email needs BANK_CLAIM_EMAILS_ENABLED=true (the merchant email is switched off).");
+  process.exit(1);
+}
 
 async function main() {
   const sb = getServiceClient();
