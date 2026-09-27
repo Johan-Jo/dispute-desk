@@ -1,6 +1,6 @@
 # Mein Maison complaint: response status, escalation visibility and the "no return" argument
 
-**Status:** PLAN rev 2, nothing implemented · **Author date:** 2026-09-27 · **Rev 2:** incorporates the code review of 2026-09-27 (response-cycle model, monotonic-guard override, pack/approval retirement, cycle-aware dedupe keys, no new attention value, Shopify creation state instead of an "ingest artifact", unattributed under-review state, no `returns_channel` prefill, no blanket correspondence exemption) · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
+**Status:** PLAN rev 3, nothing implemented · **Author date:** 2026-09-27 · **Rev 2:** incorporates the code review of 2026-09-27 (response-cycle model, monotonic-guard override, pack/approval retirement, cycle-aware dedupe keys, no new attention value, Shopify creation state instead of an "ingest artifact", unattributed under-review state, no `returns_channel` prefill, no blanket correspondence exemption) · **Rev 3:** second review: no-deadline normalization branch + one shared predicate, pack-cycle migration rule + B4 pack reconciliation, A5 bounded to the current cycle with a live-status check, C2 test requires a specific supporting citation, D2 banner sentences gated on data · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
 
 The complaint makes three claims, and the maintainer added a fourth item on 2026-09-27. Each was checked against prod and against the live Shopify REST API on 2026-09-27, and all four are real:
 
@@ -91,6 +91,13 @@ B goes before A because it hides a live deadline from both the merchant and our 
 **B0. Response-cycle model (migration).**
 - `disputes.response_cycle int not null default 1`, plus `reopened_at timestamptz` and `escalated_from_inquiry_at timestamptz`.
 - `evidence_packs.response_cycle int` and `defence_packages.response_cycle int`, stamped at build time from the dispute's current cycle.
+- **Migration rule for existing rows (review 2, point 2).** One migration, applied before any check reads the column:
+  1. add the columns as nullable;
+  2. backfill every existing `evidence_packs` and `defence_packages` row to `1`, the same as every dispute's initial `response_cycle` (`default 1`);
+  3. set them `not null default 1`.
+
+  No row is ever null when the checks run. B4 then moves disputes to cycle ≥ 2 and reconciles their packs at the same time.
+- **The checks ship behind the backfill.** The save, approval and deadline checks land in the same PR as the migration, but they only compare cycles. Until B4 has run, every dispute and every pack is on cycle 1, so the checks are a no-op and cannot refuse a legitimate pack.
 - **One invariant:** a pack, a defence package or an approval from cycle N can never be filed, auto-filed or shown as "ready" once the dispute is on cycle N+1. It is enforced in three places:
   - the save job (`saveToShopifyJob.ts`);
   - the deadline-submit cron (`defence-package-deadline-submit`);
@@ -134,6 +141,10 @@ When it starts, in one update:
 **B4. Backfill the history columns.**
 - `escalated_from_inquiry_at`: from the `dispute_opened` phase vs the current `phase`. For the timestamp, prefer the first `webhook_events` payload with `type: "chargeback"`. Fall back to the first following `due_date_changed`.
 - `reopened_at` and `response_cycle`: count the `needs_response → under_review(with deadline) → needs_response` rounds. Use `webhook_events.payload_excerpt` first, because `dispute_events` under-counts repeats (B2). Where webhook history has been cleaned up, use `dispute_events` and mark the value as a lower bound.
+- **Reconcile the packs when a dispute moves to cycle ≥ 2 (review 2, point 2).** In the same transaction:
+  - packs and bank letters created **after** the latest cycle start (`reopened_at`) are re-stamped to the new cycle, because they were built for it;
+  - those created **before** it are archived (evidence packs) or superseded (bank letters), and their `approved_for_save_at` is cleared, exactly as B1 does live.
+  - The script prints, per dispute, the packs it re-stamps and the packs it retires, before `--apply`.
 - Print per-shop counts before writing. The earlier measurement (42 escalations and 36 reopens, from events) is a lower bound for reopens. Run on dev, then prod.
 
 **Tests:**
@@ -165,7 +176,12 @@ B fixes what the system does. D makes sure the merchant can see it. A reset the 
 
 **D2. Escalation flag: "Escalated from inquiry".** Shown when `escalated_from_inquiry_at` is set.
 - **List:** a second chip next to the phase pill, "Chargeback · escalated from inquiry". It's filterable, so the merchant can find all 10 open escalations.
-- **Detail:** a banner above the tabs. "This started as an inquiry and the buyer escalated it to a chargeback on {date}. A new response is due by {deadline}." If we or Shopify had already responded to the inquiry, it adds: "The earlier response does not carry over."
+- **Detail:** a banner above the tabs. Each sentence appears only when its data establishes it (review 2, point 5):
+  - always: "This started as an inquiry and the buyer escalated it to a chargeback on {date}."
+  - only when the **current** Shopify status is `needs_response` **and** a real deadline exists: "A response is due by {deadline}."
+  - only when that escalation **opened a new response cycle** (B1 ran, so the `response_cycle_reopened` event exists for this escalation's cycle) **and** the previous cycle had a recorded response: "The response sent for the inquiry does not carry over."
+
+  An escalation that did not open a new cycle, for example one where the inquiry was never answered, or where Shopify reports `under_review`, shows only the first sentence. The "A response is due" line never shows on its own claim; it comes from live status and deadline.
 - **Timeline:** the `escalated_to_chargeback` event, rendered through `localizeDescription` (new event type in `MERCHANT_ACTIVITY_EVENT_TYPES`).
 - **Decided view:** for escalated disputes, the executive summary names the inquiry cycle, so "who responded" covers both rounds.
 
@@ -192,6 +208,7 @@ B fixes what the system does. D makes sure the merchant can see it. A reset the 
 **Tests:**
 - Phase pill renders on all three detail pages (null phase → "Chargeback", matching `phaseLabel`'s safe default).
 - Escalation and reopen banners appear and disappear with the columns.
+- D2 banner truth table: an escalation without a new cycle shows only the first sentence; `needs_response` + deadline adds the due line; a new cycle after a recorded inquiry response adds the carry-over line; `under_review` never shows a due line.
 - A reopened dispute in review mode lands in Action required through the existing approval-gate rung. In auto mode it lands in Building & monitoring. `resolveAttention` is unchanged.
 - Email dedupes per cycle and is suppressed on historical import.
 
@@ -201,6 +218,16 @@ B fixes what the system does. D makes sure the merchant can see it. A reset the 
 
 **A1. Tell Shopify's creation state apart from a response.** Revised after review: there is no ingest artifact to remove. `disputes/create` really does carry `under_review` with `evidence_due_by: null` (§0-A). The rule is:
 - `under_review` **and** no deadline (`due_at` null or epoch): **awaiting Shopify's deadline**. Nothing has been answered and nothing has been sent. It is shown as "New", and a pack may be built.
+- **Normalization branch (review 2, point 1).** Today `deriveNormalizedStatus` (`lib/disputeEvents/normalizeStatus.ts`) takes no deadline and maps **every** `under_review` to `submitted_to_bank`. It needs:
+  - a new `dueAt` input, passed from `updateNormalizedStatus`, which must add `due_at` to its select;
+  - an explicit first branch: `under_review` + no real deadline → `new`, with `status_reason` "Awaiting Shopify's response deadline";
+  - only `under_review` **with** a deadline still reaching `submitted_to_bank`.
+- **All three readers must agree, with one shared predicate** `isAwaitingShopifyDeadline({ status, dueAt })` in `lib/disputes/` used by:
+  - normalization (above);
+  - `isTransmissionConfirmed` / `resolveLifecycle` (returns false, so the dispute is not "Under review");
+  - the build gate (A3: a pack **may** be built, unlike the two responded states).
+
+  One test drives a single fixture (`under_review`, `due_at` null, `not_saved`) through all three and asserts the dashboard bucket, the detail lifecycle and the build decision together.
 - The 09-03 guard in `isTransmissionConfirmed` stays correct for this case, and a test pins it.
 - Separately, the status-changed feed hides the creation-state hop (`under_review → needs_response` while no deadline exists yet), so the activity feed stops showing a phantom "under review" on every new dispute. The event is still written.
 
@@ -225,9 +252,16 @@ B fixes what the system does. D makes sure the merchant can see it. A reset the 
 - Detail and list: "A response was sent through Shopify" (the established phrase; never "Shopify automatic response"). No strength warnings and no "held / needs review" chips on these disputes.
 - Help article `help.embedded.*` for dispute statuses: one paragraph explaining that we detect responses made in Shopify Admin.
 
-**A5. Backfill.** For each open `not_saved` dispute that Shopify has `under_review` with a deadline, classify it from `webhook_events` history first, then `dispute_events`, then the live `submitted_by_merchant_on`:
-- an observed `needs_response → under_review` with a deadline, or a submission signal → `responded_via_shopify`;
-- neither → `under_review_unattributed`.
+**A5. Backfill: classify only within the current cycle (review 2, point 3).** Run it **after** B4, so every dispute has its `response_cycle` and a cycle start. The cycle start is the latest of `reopened_at`, `escalated_from_inquiry_at` and `initiated_at`.
+1. **Check live status first.** Fetch the dispute and its evidence from Shopify. Continue only if Shopify **now** reports `under_review` with a real deadline and our `submission_state` is `not_saved`. Any other live state is printed and skipped.
+2. **Bound every signal by the cycle start.** A transition or submission signal counts only if its timestamp is **after** the current cycle start. So:
+   - an inquiry's response from before the escalation cannot mark the chargeback as answered;
+   - a response from before a later reopen cannot mark the new cycle as answered.
+3. **Classify:**
+   - a `needs_response → under_review` transition (with a deadline) inside the current cycle, from `webhook_events` first and then `dispute_events`, or `submitted_by_merchant_on` later than the cycle start → `responded_via_shopify`;
+   - neither inside the cycle → `under_review_unattributed`.
+
+The same cycle-start bound applies to the live A2 rule in `applyDisputeSnapshot`: a `submitted_by_merchant_on` older than the current cycle start never sets `responded_via_shopify`.
 
 Script: `scripts/shopify/backfill-response-state.mjs`. It is dry-run by default and prints every row with its evidence before `--apply`.
 - Print per-shop counts first. The expected result for Mein Maison is 16 inquiries plus #100506, #100825 and #90055, split across the two states. That is a check, not a selection criterion.
@@ -287,7 +321,11 @@ This **reverses** the sanctioned phrase "The customer did not request a return."
 - Cost at the counsel-v2 rate is about $0.016 per package.
 
 **Tests:**
-- Guard catches every paraphrase and allows the scoped sentence. It stays silent when a correspondence fact exists.
+- The guard catches every paraphrase and allows the scoped sentence ("No return has been recorded in Shopify for this order").
+- **The presence of a correspondence fact never silences the guard (review 2, point 4).** A contact-history sentence passes only when it cites a specific correspondence fact **and** that fact's content supports that sentence. Test cases:
+  - a correspondence fact exists, but the sentence is uncited → fails;
+  - the sentence cites a fact whose content doesn't mention returns → fails;
+  - it cites a fact that does support it → passes.
 - Scoring: `email_or_other` + no_return alone ≠ Moderate.
 - Label token parity (`verify-i18n-parity`).
 
