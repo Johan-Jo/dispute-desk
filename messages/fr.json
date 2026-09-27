@@ -2306,7 +2306,14 @@
       "remove": "Retirer",
       "statusSaving": "Enregistrement…",
       "errorFileType": "Téléversez un fichier PDF, TXT, DOC, DOCX, RTF, EML ou une image.",
-      "errorFileSize": "Le fichier dépasse 10 Mo."
+      "errorFileSize": "Le fichier dépasse 10 Mo.",
+      "savedTitle": "Réclamation de la banque reçue — reconstruction de la réponse",
+      "savedTitleDone": "Réclamation de la banque reçue — réponse mise à jour",
+      "savedSummaryNoClaim": "Aucune réclamation dans Shopify — utilisation du code motif",
+      "savedSummaryText": "{count, plural, =1 {Texte collé · # caractère} other {Texte collé · # caractères}}",
+      "savedDue": "Réponse avant le {date}",
+      "cancel": "Annuler",
+      "editClaim": "Modifier la réclamation"
     }
   },
   "disputeReasons": {

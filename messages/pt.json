@@ -2306,7 +2306,14 @@
       "remove": "Remover",
       "statusSaving": "Salvando…",
       "errorFileType": "Envie um arquivo PDF, TXT, DOC, DOCX, RTF, EML ou uma imagem.",
-      "errorFileSize": "O arquivo tem mais de 10 MB."
+      "errorFileSize": "O arquivo tem mais de 10 MB.",
+      "savedTitle": "Reclamação do banco recebida — refazendo a resposta",
+      "savedTitleDone": "Reclamação do banco recebida — resposta atualizada",
+      "savedSummaryNoClaim": "A Shopify não mostra reclamação — usando o código de motivo",
+      "savedSummaryText": "{count, plural, =1 {Texto colado · # caractere} other {Texto colado · # caracteres}}",
+      "savedDue": "Prazo da resposta: {date}",
+      "cancel": "Cancelar",
+      "editClaim": "Editar reclamação"
     }
   },
   "disputeReasons": {

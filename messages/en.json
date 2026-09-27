@@ -2306,7 +2306,14 @@
       "remove": "Remove",
       "statusSaving": "Saving…",
       "errorFileType": "Upload a PDF, TXT, DOC, DOCX, RTF, EML or image file.",
-      "errorFileSize": "The file is larger than 10 MB."
+      "errorFileSize": "The file is larger than 10 MB.",
+      "savedTitle": "Bank's claim received — rebuilding the response",
+      "savedTitleDone": "Bank's claim received — response updated",
+      "savedSummaryNoClaim": "No claim shown in Shopify — using the reason code",
+      "savedSummaryText": "{count, plural, =1 {Pasted text · # character} other {Pasted text · # characters}}",
+      "savedDue": "Response due {date}",
+      "cancel": "Cancel",
+      "editClaim": "Edit claim"
     }
   },
   "disputeReasons": {
