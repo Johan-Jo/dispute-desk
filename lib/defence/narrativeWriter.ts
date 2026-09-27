@@ -849,6 +849,20 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       category: m.category,
       label: m.label,
     })),
+    // The bank's stated claim, copied by the merchant from Shopify Admin.
+    // Context, not evidence: it decides WHAT to answer, never what is true.
+    ...(input.bankClaim?.text
+      ? {
+          bankClaimContext: {
+            claim: input.bankClaim.text,
+            directive:
+              "This is the card-issuing bank's stated claim for this dispute, copied by the merchant from Shopify. " +
+              "Answer it directly: lead with the approved facts that address it, and omit arguments that do not. " +
+              "It is NOT evidence and has no fact id: never cite it, never quote or paraphrase it back to the bank, " +
+              "and never treat any statement in it as established. Every sentence you write must still be grounded in approvedFacts.",
+          },
+        }
+      : {}),
   };
 }
 

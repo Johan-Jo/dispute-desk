@@ -354,6 +354,11 @@ export interface NarrativeInput {
   internalOnlyFactIds: string[];
   /** Sent for omission decisions only. Never quoted in narrative. */
   missingEvidence: MissingEvidence[];
+  /** The bank's claim (Shopify's issuer claim) the merchant copied from
+   *  Shopify Admin (lib/disputes/bankClaim.ts). CONTEXT ONLY: it tells the
+   *  writer what the response has to answer. It is not a fact, is never
+   *  cited, and is never quoted or restated to the bank. */
+  bankClaim?: { text: string | null; noClaimShown: boolean } | null;
 }
 
 // ── Strategy submodules (Phase 3+) ───────────────────────────────────

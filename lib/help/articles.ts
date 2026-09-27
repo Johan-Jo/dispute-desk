@@ -420,6 +420,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tags: ["chargeback", "formal dispute", "evidence", "lifecycle", "phase"],
   },
   {
+    slug: "bank-claim",
+    category: "lifecycle",
+    titleKey: "help.articles.bankClaim.title",
+    bodyKey: "help.articles.bankClaim.body",
+    relatedSlugs: ["understanding-chargebacks", "dispute-detail-page"],
+    tags: ["bank claim", "issuer claim", "reopened", "general", "reason code", "action required"],
+  },
+  {
     slug: "lifecycle-overview",
     category: "lifecycle",
     titleKey: "help.articles.lifecycleOverview.title",

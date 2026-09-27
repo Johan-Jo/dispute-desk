@@ -2264,7 +2264,26 @@
         "generic": "This item needs your confirmation before it can be used."
       }
     },
-    "multipleOnOrder": "{index} of {total} on this order"
+    "multipleOnOrder": "{index} of {total} on this order",
+    "bankClaim": {
+      "eyebrow": "Action required",
+      "title": "Add the bank's claim",
+      "introReopened": "Shopify reopened this dispute after an earlier response. The bank is asking for a new response, and what it's asking is only shown in Shopify.",
+      "introGeneral": "This dispute came in without a specific reason from the bank, so the reason code doesn't tell us what the customer is disputing.",
+      "why": "Shopify shows the bank's explanation (the issuer claim) in the chargeback details on the order page, but doesn't share it with apps. Copy it here so the response answers what the bank actually asked.",
+      "step1": "1. Open the order in Shopify and find the bank's claim in the chargeback details.",
+      "step2": "2. Paste its text below. If Shopify shows no claim for this dispute, tick the box instead.",
+      "openInShopify": "Open the order in Shopify",
+      "textLabel": "The bank's claim",
+      "textPlaceholder": "Paste the claim or its summary as Shopify shows it",
+      "textHelp": "Used only to decide what the response must answer. It is never quoted or sent back to the bank.",
+      "noClaimShown": "Shopify shows no claim for this dispute",
+      "noClaimShownHelp": "Banks don't always provide one. DisputeDesk will then build the response from the reason code.",
+      "holdNote": "Until this is added, DisputeDesk won't send a response for this dispute.",
+      "submit": "Save the bank's claim",
+      "errorWindowClosed": "Shopify has already forwarded the evidence for this dispute, so the claim can no longer be added.",
+      "errorGeneric": "The claim could not be saved ({code}). Please try again."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",
@@ -3679,6 +3698,10 @@
       "returnedToSenderParcels": {
         "title": "When a parcel is returned to sender",
         "body": "Sometimes a carrier cannot complete a delivery and brings the parcel back to you. The customer never received the order — and if they later dispute the charge, that changes what the case can and cannot be.\n\n**What DisputeDesk does automatically**\n\nWhen we read a return-to-sender event from the carrier, we:\n\n1. Show the delivery row as \"Returned to sender\" with the carrier's own date, instead of treating it as an unscanned label.\n2. Remove any argument that depends on the customer never having sent the goods back. Shopify may still show the return status as \"no return\", because no return request was ever opened — but the goods are with you, and an argument built on the opposite would be untrue.\n3. Mark the case as low likelihood and stop it from being filed automatically, including on the deadline. A returned parcel can never have a delivery confirmation, and without one the bank normally decides for the customer.\n\n**What we need from you**\n\nOne thing only, and it is the one thing we cannot see: **why the parcel came back.** You will find the question on the Evidence tab.\n\n- **The customer refused the delivery** or **never collected it from the pickup point** — this is worth arguing. Under EU consumer rules, simply not accepting a parcel is not a valid return and is not a valid use of the right of withdrawal. We put that in the response for you.\n- **The address could not be delivered to** — we record it, but we will not put it in the response. It does not help the case, and offering it invites a question nobody asked.\n\nWe also ask what happened to the goods after they came back. That answer is for your records and ours; it never appears in the response sent on your behalf.\n\n**If you kept the goods and the payment**\n\nThe honest answer is usually to refund. The customer paid, never received the order, and the goods are back with you. Arguing the point rarely succeeds and can leave you paying the dispute fee on top. Whether to refund is your decision — DisputeDesk will not do it for you — but the score you see reflects the real odds, not an optimistic one.\n\n**A note on timing**\n\nIf you respond by agreeing to adjust the charge, some payment providers expect the refund within a short window (Klarna, for example, reverses the payment automatically if the refund does not land in time). Issue the refund promptly after committing to it."
+      },
+      "bankClaim": {
+        "title": "Why DisputeDesk asks for the bank's claim",
+        "body": "For most disputes, the reason code tells DisputeDesk what the customer is disputing, and the response is built from that. Two kinds of dispute are different:\n\n• Reopened disputes: Shopify has put a dispute you already answered back to \"needs response\". The bank is asking for a new response, and your earlier one no longer settles it.\n• \"General\" disputes with no network reason code: the bank didn't say which kind of dispute it is.\n\nIn both cases, the only statement of what the bank wants answered is the bank's claim (Shopify calls it the issuer claim). Shopify shows it in the chargeback details on the order page in your Shopify admin, but doesn't share it with apps, so DisputeDesk can't read it on its own.\n\nWhat to do:\n1. Open the dispute in DisputeDesk and use \"Open the order in Shopify\".\n2. Find the bank's claim in the chargeback details and copy its text.\n3. Paste it into the \"Add the bank's claim\" card and save. If Shopify shows no claim for the dispute, tick \"Shopify shows no claim for this dispute\" instead — banks don't always provide one.\n\nDisputeDesk then rebuilds the response so it answers the claim. The claim is only used to decide what the response must address; it is never quoted or sent back to the bank.\n\nUntil the claim is added, DisputeDesk won't send a response for that dispute, including on the deadline. We also email you when a dispute starts needing it."
       }
     },
     "embedded": {
@@ -6311,7 +6334,8 @@
       "feature_blocked": "Billing action required",
       "subscription_expired": "Billing action required",
       "payment_failed": "Billing action required",
-      "auto_build_off": "Automation paused"
+      "auto_build_off": "Automation paused",
+      "bank_claim_needed": "Bank's claim needed"
     },
     "attentionBlockingSub": {
       "approval_gate": "DisputeDesk is waiting for your approval to save the evidence package",
@@ -6320,7 +6344,8 @@
       "feature_blocked": "A billing action is needed before DisputeDesk can continue",
       "subscription_expired": "A billing action is needed before DisputeDesk can continue",
       "payment_failed": "A billing action is needed before DisputeDesk can continue",
-      "auto_build_off": "Automatic evidence building is turned off in your settings"
+      "auto_build_off": "Automatic evidence building is turned off in your settings",
+      "bank_claim_needed": "Copy the bank's claim from Shopify — DisputeDesk won't send a response until it's added"
     },
     "outcomeCard": {
       "title": "Outcome",
