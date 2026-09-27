@@ -26,13 +26,8 @@ import {
   type FigmaOutcome,
   type TabId,
 } from "./disputeListHelpers";
-import { phaseLabel } from "@/lib/disputes/phaseUtils";
+import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
-
-function phasePillColors(phase: DisputePhase | null): { bg: string; color: string } {
-  if (phase === "inquiry") return { bg: "#E0F2FE", color: "#075985" };
-  return { bg: "#FEF3C7", color: "#92400E" };
-}
 
 function shortDate(iso: string | null, locale: string): string {
   if (!iso) return "—";

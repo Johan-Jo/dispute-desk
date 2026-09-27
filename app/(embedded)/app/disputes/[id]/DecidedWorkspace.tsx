@@ -24,6 +24,7 @@ import {
 } from "@/lib/disputes/decidedView";
 import { decidedSummaryParagraph } from "@/lib/disputes/decidedViewText";
 import type { WorkspaceDispute } from "./workspace-components/types";
+import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
 
 /* Design-system tokens (_ds_bundle.css :root) and the design's literals. */
 const DD = {
@@ -210,6 +211,25 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                 )}
               </h1>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                {/* Inquiry / Chargeback. Not in the Claude Design file: added at
+                    the maintainer's request (2026-09-27, plan D1 / D-4), with the
+                    list's pill colours and this row's badge geometry. */}
+                <span
+                  data-testid="dispute-phase-pill"
+                  style={{
+                    background: phasePillColors(dispute.phase ?? null).bg,
+                    color: phasePillColors(dispute.phase ?? null).color,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    lineHeight: "16px",
+                  }}
+                >
+                  {phaseLabel(dispute.phase ?? null, t)}
+                </span>
                 <span
                   style={{
                     ...(lost ? BADGE.danger : BADGE.success),

@@ -4943,7 +4943,9 @@
       "support_note_added": "Anteckning tillagd",
       "admin_override": "Supportjustering",
       "admin_override_cleared": "Supportjustering återställd",
-      "dispute_resynced": "Tvist uppdaterad från Shopify"
+      "dispute_resynced": "Tvist uppdaterad från Shopify",
+      "response_cycle_reopened": "Återöppnad – nytt svar behövs",
+      "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav"
     },
     "actors": {
       "merchant_user": "Du",

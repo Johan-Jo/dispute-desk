@@ -5130,7 +5130,9 @@
       "support_note_added": "Note Added",
       "admin_override": "Support adjustment",
       "admin_override_cleared": "Support adjustment reverted",
-      "dispute_resynced": "Dispute refreshed from Shopify"
+      "dispute_resynced": "Dispute refreshed from Shopify",
+      "response_cycle_reopened": "Reopened — new response needed",
+      "escalated_to_chargeback": "Escalated from inquiry to chargeback"
     },
     "eventDescriptions": {
       "submission_confirmed": "Submission confirmed by Shopify",
