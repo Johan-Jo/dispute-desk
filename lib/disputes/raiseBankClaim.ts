@@ -34,6 +34,18 @@ export interface RaiseBankClaimResult {
   emailed: boolean;
 }
 
+/**
+ * Kill switch for the merchant email, OFF unless explicitly enabled. Held
+ * off at launch (2026-09-27) so the maintainer can verify the card, the task
+ * and the filing gate on live disputes before any merchant is emailed. The
+ * task and the gate run regardless. The dedupe claim is NOT burned while
+ * off, so enabling it later still sends the email on the next transition
+ * (or via scripts/shopify/raise-bank-claims.ts --apply --email).
+ */
+export function bankClaimEmailsEnabled(): boolean {
+  return process.env.BANK_CLAIM_EMAILS_ENABLED === "true";
+}
+
 export function bankClaimEmailKey(disputeId: string, cycle: number): string {
   return `${disputeId}:BANK_CLAIM_NEEDED:c${cycle}`;
 }
@@ -72,7 +84,7 @@ export async function raiseBankClaimIfNeeded(args: {
   const marked = await markBankClaimNeeded(sb, args.disputeId, { trigger, cycle });
 
   let emailed = false;
-  if (!args.suppressEmail) {
+  if (!args.suppressEmail && bankClaimEmailsEnabled()) {
     const dedup = await withEffectDedup({
       shopId: args.shopId,
       disputeId: args.disputeId,
