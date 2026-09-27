@@ -372,7 +372,7 @@ For every step: `npm test`, `npx tsc --noEmit`, `npm run build`, plus `docs/tech
 
 ## Decisions needed
 
-- **D-1:** Narrow the sanctioned no-return wording **for all shops** (proposed), or only for `email_or_other` shops? Proposed: for all shops. "Not recorded in Shopify" is always true. "Did not request" never is, unless we have the inbox.
+- **D-1 (deferred by the maintainer, 2026-09-27):** Fix C (C1–C7) waits on this decision; Steps 1–2b do not depend on it. Narrow the sanctioned no-return wording **for all shops** (proposed), or only for `email_or_other` shops? Proposed: for all shops. "Not recorded in Shopify" is always true. "Did not request" never is, unless we have the inbox.
 - ~~D-2~~ **Resolved by review:** `returns_channel` stays unknown until the merchant confirms. No prefill.
 - **D-3:** On an inquiry → chargeback escalation or a reopen, should we auto-build and file the new cycle per the shop's automation mode (proposed, consistent with the merchant's-counsel stance), or always park it for review?
 - **D-4:** Design for the new UI (phase pill on detail pages, escalation/reopen chips and banners). Proposed: reuse the existing list pill and the existing banner component, with no new design. Alternatively, get a Claude Design pass first, since `DecidedWorkspace` is a design transcription (CLAUDE.md rule 8).
