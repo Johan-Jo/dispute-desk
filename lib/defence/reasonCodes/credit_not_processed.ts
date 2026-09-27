@@ -18,7 +18,7 @@ export const credit_not_processed: ReasonCodeGuidance = {
     "Prioritise: refund status, refund timeline, cancellation terms, partial refund records, store credit records, customer communication about the refund.",
     "Do NOT claim a refund was issued unless an approved refund_record fact carries refundStatus='processed'.",
     "If no refund was owed under policy, cite the approved refund policy fact (acceptedAtCheckout=true) explicitly.",
-    "When a no_return_initiated fact is present (no refund was issued AND the customer never initiated a return), you may argue the refund was not owed because the goods were never returned — cite the return status factually.",
+    "When a no_return_initiated fact is present, state it as what Shopify records — \"No return has been recorded in Shopify for this order.\" — and argue from the refund policy and refund record. Never write that the customer did not request or initiate a return: return requests can arrive by email or chat that Shopify never sees.",
   ].join("\n"),
   prioritize: [
     "refund_record",

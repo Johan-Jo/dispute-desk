@@ -56,6 +56,8 @@ import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { bankClaimInputFromRow, loadBankClaimAnswer, needsBankClaim } from "@/lib/disputes/bankClaim";
+import { effectiveReasonForClaim, scopeFactsToBankClaim } from "@/lib/disputes/bankClaimAnalysis";
+import { ensureBankClaimAnalysis } from "@/lib/disputes/bankClaimAnalysisStore";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
@@ -294,6 +296,26 @@ export async function handleBuildDefencePackage(
       status: c.status as ChecklistItemLike["status"],
     })) ?? [];
 
+  /* ── The bank's claim (lib/disputes/bankClaim.ts) ─────────────────────
+   * Loaded BEFORE the module is chosen, because on a `general` dispute the
+   * claim decides which template the letter is written from, and which
+   * facts it may cite (lib/disputes/bankClaimAnalysis.ts). Only looked up
+   * when the dispute needs it (reopened, or GENERAL with no network code).
+   * Counsel v2 does not take the claim, so a claimed case always goes to the
+   * template writer that does. */
+  const claimCycle = (dispute as { response_cycle?: number | null } | null)?.response_cycle ?? 1;
+  const bankClaim =
+    dispute && needsBankClaim(bankClaimInputFromRow(dispute as unknown as Record<string, unknown>))
+      ? await loadBankClaimAnswer(sb, pkg.dispute_id, claimCycle)
+      : null;
+  const bankClaimInput = bankClaim
+    ? { text: bankClaim.text, noClaimShown: bankClaim.noClaimShown }
+    : null;
+  const claimAnalysis = bankClaim?.text
+    ? await ensureBankClaimAnalysis(sb, pkg.dispute_id, claimCycle).catch(() => null)
+    : null;
+  const claimReason = effectiveReasonForClaim(dispute?.reason ?? null, claimAnalysis);
+
   // Resolve reason-code module with optional DB override.
   const reasonCode = dispute?.network_reason_code ?? null;
   // BNPL/local methods (Klarna, Affirm) carry no network reason code —
@@ -318,9 +340,20 @@ export async function handleBuildDefencePackage(
         version: moduleOverride.version ?? undefined,
       }
     : undefined;
-  const reasonCodeModule = isNonCardPayment
-    ? resolveReasonCodeModuleForContext(reasonCode, dispute?.reason ?? null, moduleOverrideInput)
-    : resolveReasonCodeModule(reasonCode, moduleOverrideInput);
+  // A GENERAL dispute whose bank's claim names a specific category is
+  // written from that category's module. The DB override was looked up for
+  // the ENQUEUED module key (generic_fallback), so it must not be layered
+  // onto the claim's module.
+  const moduleFromClaim =
+    !reasonCode && claimReason && claimReason !== (dispute?.reason ?? null)
+      ? resolveReasonCodeModuleForContext(null, claimReason, undefined)
+      : null;
+  const reasonCodeModule =
+    moduleFromClaim && moduleFromClaim.key !== "generic_fallback"
+      ? moduleFromClaim
+      : isNonCardPayment
+        ? resolveReasonCodeModuleForContext(reasonCode, dispute?.reason ?? null, moduleOverrideInput)
+        : resolveReasonCodeModule(reasonCode, moduleOverrideInput);
 
   // Resolve the family (Phase 1). One family per module today; the
   // family's overlayPromptBody fills in cross-cutting rules that span
@@ -507,6 +540,29 @@ export async function handleBuildDefencePackage(
     }
   }
 
+  /* The bank's claim scopes the facts the writer may cite: authorisation
+   * facts go when the bank says authorisation is not in dispute, and the
+   * "no return initiated" fact goes when the claim says a return was
+   * requested. Removed from the ONE list the writer, the validator and the
+   * PDF all read, so a sentence built on them cannot pass validation. */
+  if (claimAnalysis) {
+    const scoped = scopeFactsToBankClaim(planFacts, claimAnalysis);
+    if (scoped.removed.length > 0) {
+      planFacts = scoped.facts as typeof planFacts;
+      await logAuditEvent({
+        shopId: pkg.shop_id,
+        disputeId: pkg.dispute_id,
+        actorType: "system",
+        eventType: "defence_facts_scoped_to_bank_claim",
+        eventPayload: {
+          packageId,
+          claimReason: claimAnalysis.reason,
+          removed: scoped.removed,
+        },
+      });
+    }
+  }
+
   // Phase 3 — rank strategy submodules for this dispute. Empty result
   // (family has no strategies yet) is fine; the narrative writer
   // simply doesn't emit the 4th cached system block.
@@ -536,24 +592,6 @@ export async function handleBuildDefencePackage(
    * checks, a model error — falls through to the template writer below,
    * unchanged. Its letter still passes every validator this job runs; if it
    * fails one, the existing retry regenerates with the template writer. */
-  // The bank's claim for this response cycle, when the merchant copied it
-  // from Shopify Admin (lib/disputes/bankClaim.ts). Passed to the writer as
-  // what to answer. Counsel v2 does not take it, so a claimed case always
-  // goes to the template writer that does.
-  // Only looked up when the dispute needs it (reopened, or GENERAL with no
-  // network code) — every other build skips the query.
-  const bankClaim =
-    dispute && needsBankClaim(bankClaimInputFromRow(dispute as unknown as Record<string, unknown>))
-      ? await loadBankClaimAnswer(
-          sb,
-          pkg.dispute_id,
-          (dispute as { response_cycle?: number | null }).response_cycle ?? 1,
-        )
-      : null;
-  const bankClaimInput = bankClaim
-    ? { text: bankClaim.text, noClaimShown: bankClaim.noClaimShown }
-    : null;
-
   let usedCounsel = false;
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
   if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment && !bankClaim?.text) {

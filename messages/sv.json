@@ -2306,7 +2306,14 @@
       "remove": "Ta bort",
       "statusSaving": "Sparar…",
       "errorFileType": "Ladda upp en PDF-, TXT-, DOC-, DOCX-, RTF-, EML- eller bildfil.",
-      "errorFileSize": "Filen är större än 10 MB."
+      "errorFileSize": "Filen är större än 10 MB.",
+      "savedTitle": "Bankens anspråk mottaget – svaret byggs om",
+      "savedTitleDone": "Bankens anspråk mottaget – svaret uppdaterat",
+      "savedSummaryNoClaim": "Inget anspråk i Shopify – orsakskoden används",
+      "savedSummaryText": "{count, plural, =1 {Inklistrad text · # tecken} other {Inklistrad text · # tecken}}",
+      "savedDue": "Svar senast {date}",
+      "cancel": "Avbryt",
+      "editClaim": "Redigera anspråk"
     }
   },
   "disputeReasons": {

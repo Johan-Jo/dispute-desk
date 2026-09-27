@@ -360,6 +360,15 @@ Rules:
    If only fulfillmentStatus=FULFILLED exists with no delivery/access
    fact, leave fulfillmentArgument EMPTY and add it to omittedSections
    — the renderer will emit a minimal neutral sentence in its place.
+8c. RETURNS AND CUSTOMER CONTACT — state only what Shopify records. The only
+   permitted sentence about returns is: "No return has been recorded in
+   Shopify for this order." NEVER write that the customer did not request,
+   ask for, seek or initiate a return, refund, replacement or exchange;
+   never that they did not contact, reach out to or complain to the
+   merchant; never "through any channel" or "at any point". Merchants take
+   return requests by email and chat that Shopify never sees, so those
+   statements are beyond the record and may be false. A sentence of this
+   kind fails validation whatever facts are cited.
 9. If approvedFacts are weak or incomplete, write a NARROWER argument. Do not
    fill gaps. If a section has no supporting facts, return an empty string for
    that section AND list its sectionKey in omittedSections.
@@ -601,6 +610,22 @@ export async function generateNarrative(
         cache_control: { type: "ephemeral" },
       });
     }
+  }
+
+  // The bank's claim, when the merchant supplied it (lib/disputes/bankClaim.ts).
+  // A SYSTEM block, not only user-payload context: on the Sura Svenne test
+  // (2026-09-27) the claim as payload context was outranked by the module
+  // and the approved facts. Not cached — it is per-dispute.
+  if (input.bankClaim?.text) {
+    system.push({
+      type: "text",
+      text:
+        "THE BANK'S CLAIM FOR THIS DISPUTE (copied by the merchant from Shopify; it is what this response must answer):\n\n" +
+        input.bankClaim.text.slice(0, 8000) +
+        "\n\nRULES FOR THE CLAIM: Answer it. Lead with the approved facts that address what it disputes, and omit arguments about points it says are not in dispute. " +
+        "Never assert anything it contradicts. It is not evidence and has no fact id: never cite it, never quote or paraphrase it back to the bank, never treat a statement in it as established. " +
+        "If no approved fact addresses what it disputes, write a narrow response from the facts you have — do not fill the gap.",
+    });
   }
 
   // Attempt 1.

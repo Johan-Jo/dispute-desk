@@ -15,13 +15,16 @@ vi.mock("@/lib/disputes/bankClaimFile", async (orig) => {
     extractBankClaimText: vi.fn(async () => ({ text: "Issuer claim: item not as described", source: "file_ai" })),
   };
 });
+vi.mock("@/lib/disputes/bankClaimAnalysisStore", () => ({
+  ensureBankClaimAnalysis: vi.fn(async () => ({ reason: "PRODUCT_UNACCEPTABLE", authorizationDisputed: false, returnOrRefundRequested: true })),
+}));
 vi.mock("@/lib/audit/resolveActor", () => ({
   resolveAuditActor: vi.fn().mockResolvedValue({ actorType: "merchant", actorId: "u1" }),
 }));
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
-import { POST } from "@/app/api/packs/[packId]/bank-claim/route";
+import { DELETE, POST } from "@/app/api/packs/[packId]/bank-claim/route";
 import { NextRequest } from "next/server";
 
 const mockClient = vi.mocked(getServiceClient);
@@ -31,6 +34,7 @@ function setup(opts: { packStatus?: string; submissionState?: string; cycle?: nu
   const disputeUpdates: Record<string, unknown>[] = [];
   const jobs: Record<string, unknown>[] = [];
   const stored: Array<{ path: string; opts: unknown }> = [];
+  const deletes: boolean[] = [];
   const storage = {
     from: vi.fn(() => ({
       upload: vi.fn(async (path: string, _b: unknown, opts: unknown) => {
@@ -69,6 +73,15 @@ function setup(opts: { packStatus?: string; submissionState?: string; cycle?: nu
     }
     if (table === "dispute_bank_claims") {
       return {
+        delete: vi.fn(() => {
+          const d: Record<string, unknown> = {};
+          d.eq = vi.fn(() => d);
+          d.then = (r: (v: unknown) => unknown) => {
+            deletes.push(true);
+            return Promise.resolve({ error: null }).then(r);
+          };
+          return d;
+        }),
         upsert: vi.fn((row: Record<string, unknown>) => {
           upserts.push(row);
           return { select: vi.fn(() => ({ single: vi.fn(async () => ({ data: { id: "bc-1" }, error: null })) })) };
@@ -81,7 +94,7 @@ function setup(opts: { packStatus?: string; submissionState?: string; cycle?: nu
     throw new Error(`unexpected table: ${table}`);
   });
   mockClient.mockReturnValue({ from, storage } as never);
-  return { upserts, disputeUpdates, jobs, stored };
+  return { upserts, disputeUpdates, jobs, stored, deletes };
 }
 
 const req = (body: unknown) =>
@@ -157,6 +170,10 @@ describe("POST /api/packs/:packId/bank-claim — file upload", () => {
       file_size: 2048,
     });
     expect(jobs[0]).toMatchObject({ job_type: "build_pack" });
+    // A re-answer is analysed afresh; the analysis lands in the audit row.
+    expect(upserts[0]).toMatchObject({ analysis: null });
+    const audit = vi.mocked(logAuditEvent).mock.calls.at(-1)![0];
+    expect(audit.eventPayload).toMatchObject({ analysis: { reason: "PRODUCT_UNACCEPTABLE", returnOrRefundRequested: true } });
   });
 
   it("rejects an unsupported type and a file over 10 MB before storing anything", async () => {
@@ -168,5 +185,23 @@ describe("POST /api/packs/:packId/bank-claim — file upload", () => {
     expect(res.status).toBe(400);
     expect((await res.json()).code).toBe("FILE_TOO_LARGE");
     expect(b.stored).toHaveLength(0);
+  });
+});
+
+describe("DELETE /api/packs/:packId/bank-claim — withdraw ('Cancel')", () => {
+  it("removes the saved claim for the current cycle, audits it and queues a rebuild", async () => {
+    const { deletes, jobs } = setup({ cycle: 2 });
+    const res = await DELETE(new NextRequest("https://x.test/api/packs/pack-1/bank-claim", { method: "DELETE" }), params);
+    expect(res.status).toBe(200);
+    expect(deletes).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ job_type: "build_pack" });
+    expect(vi.mocked(logAuditEvent).mock.calls.at(-1)![0].eventType).toBe("bank_claim_withdrawn");
+  });
+
+  it("refuses once Shopify forwarded the evidence", async () => {
+    const { deletes } = setup({ submissionState: "submitted_confirmed" });
+    const res = await DELETE(new NextRequest("https://x.test/api/packs/pack-1/bank-claim", { method: "DELETE" }), params);
+    expect(res.status).toBe(409);
+    expect(deletes).toHaveLength(0);
   });
 });
