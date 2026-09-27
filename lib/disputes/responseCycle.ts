@@ -46,16 +46,23 @@ export interface PriorResponseRow {
 }
 
 /**
- * True when the row records a response for its current cycle: Shopify had it
- * `under_review` WITH a deadline (the creation state has none), or we hold a
- * submission signal.
+ * True when the row RECORDS a response for its current cycle: Shopify's
+ * `evidence_sent_on` (`submitted_at`), our own save, or a responded
+ * submission state.
+ *
+ * Deliberately NOT `under_review` on its own. Inquiries flip between
+ * `needs_response` and `under_review` with the SAME deadline and nothing
+ * sent — the buyer and the merchant messaging in Shopify (prod, 6a8848-dd,
+ * #99143: three flips in four days, `not_saved` throughout). Treating each
+ * flip as a reopen would archive and rebuild the pack every time. The bug a
+ * new cycle fixes is a stale "sent" state; with nothing recorded there is
+ * nothing stale, and the dispute already shows as needing a response.
  */
 export function hasPriorResponse(row: PriorResponseRow): boolean {
-  if (row.status === "under_review" && hasRealDeadline(row.due_at)) return true;
   if (row.submission_state && RESPONDED_SUBMISSION_STATES.has(row.submission_state)) {
     return true;
   }
-  return Boolean(row.submitted_at);
+  return Boolean(row.submitted_at || row.evidence_saved_to_shopify_at);
 }
 
 /**

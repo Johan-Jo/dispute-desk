@@ -60,7 +60,28 @@ function ledger() {
   };
 }
 
+// #99143 (prod): an inquiry flipping needs_response <-> under_review with the
+// SAME deadline and nothing ever sent — buyer/merchant messaging, not reopens.
+const H_99143: ObservedState[] = [
+  { at: "2026-09-21T14:06:03Z", status: "under_review", type: "inquiry", evidenceDueBy: null },
+  { at: "2026-09-21T14:07:45Z", status: "needs_response", type: "inquiry", evidenceDueBy: "2026-10-10T16:00:00+02:00" },
+  { at: "2026-09-21T17:08:59Z", status: "under_review", type: "inquiry", evidenceDueBy: "2026-10-10T16:00:00+02:00" },
+  { at: "2026-09-21T18:09:33Z", status: "needs_response", type: "inquiry", evidenceDueBy: "2026-10-10T16:00:00+02:00" },
+  { at: "2026-09-22T08:13:44Z", status: "under_review", type: "inquiry", evidenceDueBy: "2026-10-10T16:00:00+02:00" },
+  { at: "2026-09-22T10:01:50Z", status: "needs_response", type: "inquiry", evidenceDueBy: "2026-10-10T16:00:00+02:00" },
+];
+
 describe("planHistoryCycles", () => {
+  it("#99143: status flips with nothing recorded are not cycles", () => {
+    const plan = planHistoryCycles(H_99143, {
+      status: "needs_response",
+      due_at: "2026-10-10T14:00:00Z",
+      submitted_at: null,
+      submission_state: "not_saved",
+    });
+    expect(plan.cycles).toEqual([]);
+  });
+
   it("#99142: one reopen, anchored on the evidence_sent_on the live row also holds", () => {
     const plan = planHistoryCycles(H_99142, ROW_99142);
     expect(plan.cycles).toEqual([

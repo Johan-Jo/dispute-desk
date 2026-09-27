@@ -60,13 +60,24 @@ describe("responseCycle rules", () => {
     ).toBe(false);
   });
 
-  it("under_review WITH a deadline, or any submission signal, is a prior response", () => {
+  it("only a RECORDED response counts — under_review alone does not (inquiry messaging flips, #99143)", () => {
     const base = { status: "needs_response", due_at: DEADLINE, submitted_at: null, submission_state: "not_saved" };
-    expect(hasPriorResponse({ ...base, status: "under_review" })).toBe(true);
+    expect(hasPriorResponse({ ...base, status: "under_review" })).toBe(false);
     expect(hasPriorResponse({ ...base, submission_state: "submitted_confirmed" })).toBe(true);
     expect(hasPriorResponse({ ...base, submission_state: "saved_to_shopify" })).toBe(true);
     expect(hasPriorResponse({ ...base, submitted_at: "2026-09-01T00:00:00Z" })).toBe(true);
+    expect(hasPriorResponse({ ...base, evidence_saved_to_shopify_at: "2026-09-01T00:00:00Z" })).toBe(true);
     expect(hasPriorResponse(base)).toBe(false);
+  });
+
+  it("an inquiry flipping under_review -> needs_response with nothing recorded opens no cycle", () => {
+    expect(
+      opensNewResponseCycle({
+        existing: { status: "under_review", due_at: DEADLINE, submitted_at: null, submission_state: "not_saved" },
+        newStatus: "needs_response",
+        newDueAt: DEADLINE,
+      }),
+    ).toBe(false);
   });
 
   it("a new cycle needs needs_response + a real deadline + a prior response, as a transition", () => {
