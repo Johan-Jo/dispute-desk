@@ -112,6 +112,8 @@ function sectionLabelEn(section: EvidenceSection): string {
   return readSectionLabel(section, enTranslate);
 }
 import type { OrderContext } from "@/lib/automation/completeness";
+import { ensureBankClaimAnalysis } from "@/lib/disputes/bankClaimAnalysisStore";
+import { effectiveReasonForClaim } from "@/lib/disputes/bankClaimAnalysis";
 
 function decryptAccessToken(encrypted: string): string {
   try {
@@ -187,11 +189,32 @@ export async function buildPack(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at",
+      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at, response_cycle",
     )
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
+
+  // The bank's claim decides what this dispute is about when Shopify's own
+  // reason is GENERAL (lib/disputes/bankClaimAnalysis.ts): the evidence
+  // checklist, the strength assessment and the asks then follow the claim
+  // ("not as described" → product listing, return policy…) instead of the
+  // generic template. For THIS build only — disputes.reason stays Shopify's.
+  if (!dispute.reason || String(dispute.reason).toUpperCase() === "GENERAL") {
+    try {
+      const analysis = await ensureBankClaimAnalysis(
+        sb,
+        dispute.id as string,
+        (dispute as { response_cycle?: number | null }).response_cycle ?? 1,
+      );
+      const effective = effectiveReasonForClaim(dispute.reason as string | null, analysis);
+      if (effective && effective !== dispute.reason) {
+        (dispute as { reason: string | null }).reason = effective;
+      }
+    } catch (err) {
+      console.warn("[buildPack] bank-claim analysis failed", err instanceof Error ? err.message : err);
+    }
+  }
 
   const { data: shop } = await sb
     .from("shops")

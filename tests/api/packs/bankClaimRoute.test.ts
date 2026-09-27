@@ -15,6 +15,9 @@ vi.mock("@/lib/disputes/bankClaimFile", async (orig) => {
     extractBankClaimText: vi.fn(async () => ({ text: "Issuer claim: item not as described", source: "file_ai" })),
   };
 });
+vi.mock("@/lib/disputes/bankClaimAnalysisStore", () => ({
+  ensureBankClaimAnalysis: vi.fn(async () => ({ reason: "PRODUCT_UNACCEPTABLE", authorizationDisputed: false, returnOrRefundRequested: true })),
+}));
 vi.mock("@/lib/audit/resolveActor", () => ({
   resolveAuditActor: vi.fn().mockResolvedValue({ actorType: "merchant", actorId: "u1" }),
 }));
@@ -157,6 +160,10 @@ describe("POST /api/packs/:packId/bank-claim — file upload", () => {
       file_size: 2048,
     });
     expect(jobs[0]).toMatchObject({ job_type: "build_pack" });
+    // A re-answer is analysed afresh; the analysis lands in the audit row.
+    expect(upserts[0]).toMatchObject({ analysis: null });
+    const audit = vi.mocked(logAuditEvent).mock.calls.at(-1)![0];
+    expect(audit.eventPayload).toMatchObject({ analysis: { reason: "PRODUCT_UNACCEPTABLE", returnOrRefundRequested: true } });
   });
 
   it("rejects an unsupported type and a file over 10 MB before storing anything", async () => {
