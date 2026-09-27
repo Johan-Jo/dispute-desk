@@ -1,6 +1,6 @@
 # Mein Maison complaint: response status, escalation visibility and the "no return" argument
 
-**Status:** PLAN rev 3, nothing implemented · **Author date:** 2026-09-27 · **Rev 2:** incorporates the code review of 2026-09-27 (response-cycle model, monotonic-guard override, pack/approval retirement, cycle-aware dedupe keys, no new attention value, Shopify creation state instead of an "ingest artifact", unattributed under-review state, no `returns_channel` prefill, no blanket correspondence exemption) · **Rev 3:** second review: no-deadline normalization branch + one shared predicate, pack-cycle migration rule + B4 pack reconciliation, A5 bounded to the current cycle with a live-status check, C2 test requires a specific supporting citation, D2 banner sentences gated on data · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
+**Status:** PLAN rev 4, nothing implemented · **Author date:** 2026-09-27 · **Rev 2:** incorporates the code review of 2026-09-27 (response-cycle model, monotonic-guard override, pack/approval retirement, cycle-aware dedupe keys, no new attention value, Shopify creation state instead of an "ingest artifact", unattributed under-review state, no `returns_channel` prefill, no blanket correspondence exemption) · **Rev 3:** second review: no-deadline normalization branch + one shared predicate, pack-cycle migration rule + B4 pack reconciliation, A5 bounded to the current cycle with a live-status check, C2 test requires a specific supporting citation, D2 banner sentences gated on data · **Rev 4:** third review: cycle ledger with a stable anchor key and one idempotent `reconcileResponseCycle`, history reconstruction before live repair, both-order tests on the two known cases; C2 bans absence claims outright and allows only narrow descriptions of one cited message · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
 
 The complaint makes three claims, and the maintainer added a fourth item on 2026-09-27. Each was checked against prod and against the live Shopify REST API on 2026-09-27, and all four are real:
 
@@ -89,15 +89,21 @@ Our DB `status` matched Shopify on all 53 open disputes. **The sync is correct. 
 B goes before A because it hides a live deadline from both the merchant and our own crons. B is built around an explicit **response cycle**. Resetting individual fields is not enough (review points 1, 2 and 4).
 
 **B0. Response-cycle model (migration).**
-- `disputes.response_cycle int not null default 1`, plus `reopened_at timestamptz` and `escalated_from_inquiry_at timestamptz`.
+- **Cycle ledger (review 3, point 1): `dispute_response_cycles`**, one row per cycle *after* the first:
+  - `dispute_id`, `cycle int`, `started_at timestamptz` (the time **Shopify** reopened it; never "now"), `trigger` (`reopen` | `escalation`), `source` (`live` | `webhook_history` | `event_history` | `live_repair`);
+  - `anchor_key text` with **`unique (dispute_id, anchor_key)`**. The anchor is the prior response the cycle follows: `resp:{timestamp of that response}`. That is our `submitted_at`, Shopify's `evidence_sent_on`, or the time of the `under_review`-with-deadline transition. The anchor is the same whichever path discovers the cycle, and whenever it runs.
+- `disputes.response_cycle`, `disputes.reopened_at` and `evidence_packs` / `defence_packages.response_cycle` are **derived from the ledger, never incremented**:
+  - `response_cycle = 1 + count(ledger rows)`;
+  - `reopened_at = max(started_at)`.
+- Plus `disputes.escalated_from_inquiry_at timestamptz`.
 - `evidence_packs.response_cycle int` and `defence_packages.response_cycle int`, stamped at build time from the dispute's current cycle.
 - **Migration rule for existing rows (review 2, point 2).** One migration, applied before any check reads the column:
   1. add the columns as nullable;
   2. backfill every existing `evidence_packs` and `defence_packages` row to `1`, the same as every dispute's initial `response_cycle` (`default 1`);
   3. set them `not null default 1`.
 
-  No row is ever null when the checks run. B4 then moves disputes to cycle ≥ 2 and reconciles their packs at the same time.
-- **The checks ship behind the backfill.** The save, approval and deadline checks land in the same PR as the migration, but they only compare cycles. Until B4 has run, every dispute and every pack is on cycle 1, so the checks are a no-op and cannot refuse a legitimate pack.
+  No row is ever null when the checks run. The B3/B4 reconciliation then moves disputes to cycle ≥ 2 and reconciles their packs at the same time.
+- **The checks ship behind the backfill.** The save, approval and deadline checks land in the same PR as the migration, but they only compare cycles. Until the reconciliation has run, every dispute and every pack is on cycle 1, so the checks are a no-op and cannot refuse a legitimate pack.
 - **One invariant:** a pack, a defence package or an approval from cycle N can never be filed, auto-filed or shown as "ready" once the dispute is on cycle N+1. It is enforced in three places:
   - the save job (`saveToShopifyJob.ts`);
   - the deadline-submit cron (`defence-package-deadline-submit`);
@@ -110,11 +116,15 @@ B goes before A because it hides a live deadline from both the merchant and our 
 - the dispute was previously in a responded state: `existing.status = 'under_review'` *with* a deadline, or `submission_state ∈ {submitted_confirmed, saved_to_shopify, responded_via_shopify}`, or `existing.submitted_at` set.
 
 When it starts, in one update:
-- `response_cycle += 1`, `reopened_at = now`.
+- Call **`reconcileResponseCycle(disputeId, { anchorKey, startedAt, trigger, source: 'live' })`**. It is the only writer of cycle state, and the B3 and B4 scripts call it too:
+  1. `insert … on conflict (dispute_id, anchor_key) do nothing`. A cycle that already exists for this anchor is **not** added again.
+  2. Recompute `response_cycle` and `reopened_at` from the ledger.
+  3. Only if step 1 inserted a row, run the reset and retirement below. Re-running the function with a known anchor is a no-op.
+- `startedAt` is the time of the Shopify transition: the webhook's `received_at`, or else the snapshot's `shopifyUpdatedAt`. It is **not** the wall-clock time of the run, so a pack built for the new cycle is always newer than its cycle start.
 - **Explicit override of the monotonic guard** (lines 222-231): for this transition only, `submitted_at → null` is allowed. The guard keeps preserving `submitted_at` for every other `evidenceSentOn → null` walk-back, which is what it was built for, so the walk-back warning stays for everything else. The previous value goes into the event metadata, never lost.
 - Reset `submission_state → 'not_saved'`, `evidence_saved_to_shopify_at → null`, `reminder_sent_at → null` and `review_state → null`.
-- **Retire the previous cycle's artifacts.** Open `evidence_packs` rows for the dispute go to `status = 'archived'` with `approved_for_save_at → null`. The value stays in the event metadata for audit. Open `defence_packages` rows go to `status = 'superseded'`. The B0 check is the backstop if a row is missed.
-- Emit `response_cycle_reopened` with a **cycle-aware dedupe key** `${disputeId}:RESPONSE_CYCLE_REOPENED:c${newCycle}`, carrying the old `submitted_at`, `submission_state`, `review_state`, the retired pack ids and the old and new deadlines.
+- **Retire the previous cycle's artifacts, bounded by `startedAt`.** Only rows created **before** `startedAt` are retired. A pack built at or after the cycle start belongs to the new cycle and is re-stamped, never retired. Retired `evidence_packs` rows go to `status = 'archived'` with `approved_for_save_at → null`. The value stays in the event metadata for audit. Open `defence_packages` rows go to `status = 'superseded'`. The B0 check is the backstop if a row is missed.
+- Emit `response_cycle_reopened` with dedupe key `${disputeId}:RESPONSE_CYCLE_REOPENED:${anchorKey}`, keyed by anchor so it can't double-fire from two paths, carrying the old `submitted_at`, `submission_state`, `review_state`, the retired pack ids and the old and new deadlines.
 - Enqueue a pack build for the new cycle, following the shop's automation mode (decision D-3).
 
 **Phase change is recorded separately** (inquiry → chargeback), whether or not the status changes in the same snapshot:
@@ -129,23 +139,27 @@ When it starts, in one update:
 - Escalation and reopen emails (D4): keyed by the same cycle.
 - `submitted_confirmed` is only re-set when `evidenceSentOn` is **later than** the current cycle's `reopened_at`. A stale non-null value cannot flip a new cycle back to "sent".
 
-**B3. Repair the live rows. Select by current Shopify state, not by our DB or expected counts.**
-- Script: `scripts/shopify/repair-reopened-cycles.mjs`, using the offline token and `.env.production.local` with an explicit `--env-file`.
-- Candidates: open disputes where our DB believes a response was sent: `submitted_at` set, or `submission_state ∈ {submitted_confirmed, saved_to_shopify}`.
-- For **each** candidate, fetch the live REST dispute and dispute evidence, then print the complete set: order, phase, our state, Shopify `status`, `evidence_due_by`, `evidence_sent_on`, `submitted_by_merchant_on`, and whether the event history shows an earlier response.
-- **Update only rows confirmed to be in a new cycle:** Shopify `needs_response`, a real future deadline, Shopify `evidence_sent_on` null, AND evidence of an earlier response (our `submitted_at`, or a prior `under_review`-with-deadline in `dispute_events` or `webhook_events`). Every other row is listed and left alone.
-- The update runs the same code path as B1 (an exported `openNewResponseCycle()`), not hand-written SQL, so the retirement and events are identical.
-- Dry-run by default. Pass `--apply` to write. Run on dev first.
-- The expected set on prod is #99142 and #99348. That is a check on the output, **not** a selection criterion.
+**B3. Reconstruct history first (was B4).** Script: `scripts/shopify/reconcile-response-cycles.mjs --mode history`. It is dry-run by default.
+- **Escalation:** `escalated_from_inquiry_at` comes from the `dispute_opened` phase vs the current `phase`. For the timestamp, prefer the first `webhook_events` payload with `type: "chargeback"`. Fall back to the first following `due_date_changed`.
+- **Cycles:** for every dispute, walk `webhook_events.payload_excerpt` first (because `dispute_events` under-counts repeats, B2), then `dispute_events`. For each `under_review`-with-deadline (or evidence sent) followed by `needs_response` with a deadline, call `reconcileResponseCycle` with:
+  - `anchorKey` = that response's timestamp;
+  - `startedAt` = the `needs_response` payload's time;
+  - `source` = `webhook_history` or `event_history`.
 
-**B4. Backfill the history columns.**
-- `escalated_from_inquiry_at`: from the `dispute_opened` phase vs the current `phase`. For the timestamp, prefer the first `webhook_events` payload with `type: "chargeback"`. Fall back to the first following `due_date_changed`.
-- `reopened_at` and `response_cycle`: count the `needs_response → under_review(with deadline) → needs_response` rounds. Use `webhook_events.payload_excerpt` first, because `dispute_events` under-counts repeats (B2). Where webhook history has been cleaned up, use `dispute_events` and mark the value as a lower bound.
-- **Reconcile the packs when a dispute moves to cycle ≥ 2 (review 2, point 2).** In the same transaction:
-  - packs and bank letters created **after** the latest cycle start (`reopened_at`) are re-stamped to the new cycle, because they were built for it;
-  - those created **before** it are archived (evidence packs) or superseded (bank letters), and their `approved_for_save_at` is cleared, exactly as B1 does live.
-  - The script prints, per dispute, the packs it re-stamps and the packs it retires, before `--apply`.
+  Where webhook history has been cleaned up, the row is marked `event_history` and counted as a lower bound in the report.
+- **Packs:** reconciled inside `reconcileResponseCycle` by the `startedAt` bound (B1). It prints, per dispute, the packs it re-stamps and the packs it retires before `--apply`.
 - Print per-shop counts before writing. The earlier measurement (42 escalations and 36 reopens, from events) is a lower bound for reopens. Run on dev, then prod.
+
+**B4. Then confirm the live rows (was B3).** Script: the same file, `--mode live`, using the offline token and an explicit `--env-file`.
+- **Candidates:** open disputes that our DB **still** believes are sent after B3: `submitted_at` set, or `submission_state ∈ {submitted_confirmed, saved_to_shopify}`.
+- For **each** candidate, fetch the live REST dispute and its evidence, then print the complete set: order, phase, our state, Shopify `status`, `evidence_due_by`, `evidence_sent_on`, `submitted_by_merchant_on`, the anchor it would use, and whether the ledger already holds that anchor.
+- **Update only rows confirmed to be in a new cycle:** Shopify `needs_response`, a real future deadline, Shopify `evidence_sent_on` null, AND a prior response to anchor on. Every other row is listed and left alone.
+- It writes through `reconcileResponseCycle(… source: 'live_repair')`:
+  - `anchorKey` is the prior response's timestamp;
+  - `startedAt` is the earliest evidence of the reopen: the webhook or event time if one exists, otherwise the first sync that saw `needs_response` after the anchor. It is recorded once; a re-run hits the same anchor and changes nothing.
+- The expected result on prod is #99142 and #99348. That is a check on the output, **not** a selection criterion.
+
+**Why this order and this key.** History runs first, so the live step only handles what history could not see. That covers #99142, whose second `under_review → needs_response` was dropped by the old dedupe key. Because both steps (and the live sync) share one function and one anchor per cycle, running them in either order, or twice, gives the same cycle count, the same `reopened_at` and the same set of retired packs.
 
 **Tests:**
 - `applyDisputeSnapshot`:
@@ -157,6 +171,11 @@ When it starts, in one update:
 - B0 invariant: the save job, the deadline cron and the approve route each refuse a cycle-N pack on a cycle-N+1 dispute.
 - `dispute-reminders` and `defence-package-deadline-submit` select a reopened dispute.
 - Repair script: a row that fails any confirmation condition is printed and not updated.
+- **Idempotency across paths (review 3, point 1).** Fixtures shaped like **#99142** (second reopen missing from `dispute_events`, present only in live state) and **#99348** (inquiry answered, escalated, reopened):
+  - run history → live, then live → history, then each twice;
+  - every order ends with exactly **one** ledger row, `response_cycle = 2`, the same `reopened_at`, and the same retired set;
+  - a pack built for cycle 2 **between** the two steps is re-stamped to cycle 2 and never retired;
+  - a live snapshot arriving afterwards with the same anchor adds nothing and emits no second `response_cycle_reopened`.
 
 ---
 
@@ -252,7 +271,7 @@ B fixes what the system does. D makes sure the merchant can see it. A reset the 
 - Detail and list: "A response was sent through Shopify" (the established phrase; never "Shopify automatic response"). No strength warnings and no "held / needs review" chips on these disputes.
 - Help article `help.embedded.*` for dispute statuses: one paragraph explaining that we detect responses made in Shopify Admin.
 
-**A5. Backfill: classify only within the current cycle (review 2, point 3).** Run it **after** B4, so every dispute has its `response_cycle` and a cycle start. The cycle start is the latest of `reopened_at`, `escalated_from_inquiry_at` and `initiated_at`.
+**A5. Backfill: classify only within the current cycle (review 2, point 3).** Run it **after** B3 and B4, so every dispute has its `response_cycle` and a cycle start. The cycle start is the latest of `reopened_at`, `escalated_from_inquiry_at` and `initiated_at`.
 1. **Check live status first.** Fetch the dispute and its evidence from Shopify. Continue only if Shopify **now** reports `under_review` with a real deadline and our `submission_state` is `not_saved`. Any other live state is printed and skipped.
 2. **Bound every signal by the cycle start.** A transition or submission signal counts only if its timestamp is **after** the current cycle start. So:
    - an inquiry's response from before the escalation cannot mark the chargeback as answered;
@@ -291,9 +310,11 @@ Script: `scripts/shopify/backfill-response-state.mjs`. It is dry-run by default 
 - "inconsistent with a genuine … complaint", or
 - "has not followed the merchant's resolution process",
 
-There is **no blanket exemption** for "a `customer_communication` fact exists" (review point 6). Having some correspondence does not prove the specific statement. The guard stays on unconditionally in v1.
-- A sentence about the buyer's contact history may only appear as a **cited** statement drawn from a specific correspondence fact: for example, "The customer's message of {date} reports …", carrying that fact's citable id. It is checked by the existing citation validation, not by the guard.
-- "No return has been recorded in Shopify for this order" stays allowed. It is always true.
+**Mechanism: unconditional ban on absence claims, no content-support check (review 3, point 2).** The citation validator can prove that a cited fact id exists. It cannot prove that a message *supports* a sentence, and no set of messages can prove an absence ("did not request a return"). So:
+- **Absence and contact-history claims are banned outright.** They fail even when correspondence facts exist and even when cited. That covers every pattern above, plus "never contacted", "made no complaint" and "did not ask for a refund". There is no exemption path in v1.
+- **Allowed:** narrow statements that directly describe **one cited message**, such as "The customer's email of {date} asked about delivery timing", with that fact's citable id. The existing citation check enforces the id. These describe what a message says; they never generalise to what the customer did or did not do overall.
+- **Allowed:** "No return has been recorded in Shopify for this order." It is always true.
+- A content-support checker (verifying that a cited message supports a specific sentence) is **not** part of this plan. If one is wanted later, it needs its own design and evaluation.
 
 This **reverses** the sanctioned phrase "The customer did not request a return." in `claimGuards.test.ts:503`. That phrase is exactly the false sentence for an email-returns merchant (**decision D-1**).
 - Mirror the rule as a prompt instruction in the product and INR reason modules. Two layers, same as the bank non-disclosure rule.
@@ -322,10 +343,12 @@ This **reverses** the sanctioned phrase "The customer did not request a return."
 
 **Tests:**
 - The guard catches every paraphrase and allows the scoped sentence ("No return has been recorded in Shopify for this order").
-- **The presence of a correspondence fact never silences the guard (review 2, point 4).** A contact-history sentence passes only when it cites a specific correspondence fact **and** that fact's content supports that sentence. Test cases:
-  - a correspondence fact exists, but the sentence is uncited → fails;
-  - the sentence cites a fact whose content doesn't mention returns → fails;
-  - it cites a fact that does support it → passes.
+- **Absence claims fail whatever facts exist.** Test cases:
+  - "The customer did not request a return." with no correspondence → fails;
+  - the same sentence citing a correspondence fact → **still fails**;
+  - "The customer never contacted us about this order." citing a fact → fails.
+- **A narrow description of a cited message passes:** "The customer's email of {date} asked about delivery timing." with a valid citable id → passes; the same sentence uncited → fails (citation check).
+- The sanctioned sentence "No return has been recorded in Shopify for this order." → passes.
 - Scoring: `email_or_other` + no_return alone ≠ Moderate.
 - Label token parity (`verify-i18n-parity`).
 
@@ -336,7 +359,7 @@ This **reverses** the sanctioned phrase "The customer did not request a return."
 | Step | Ships | Gate |
 |---|---|---|
 | 1 | B0–B2 + migration (`response_cycle` on disputes/packs/defence packages, `reopened_at`, `escalated_from_inquiry_at`) + D1 (phase pill) → develop, then subset-promote to master | **Per-change approval**. Target: on prod before 2026-10-01. D1 is small and independent, so it can go first on its own if B slips. |
-| 2 | B3 repair (dry-run, read the full printed set, then `--apply`) + B4 backfill on prod | Update only rows confirmed against live Shopify. Verify #99142 and #99348 are no longer "Under review": new cycle, old packs archived, a new pack queued, and the deadline cron and reminders select them. |
+| 2 | B3 history reconstruction (dry-run, read, `--apply`), **then** B4 live confirmation (dry-run, read the full printed set, `--apply`) on prod | Both go through `reconcileResponseCycle`. Update only rows confirmed against live Shopify. Verify #99142 and #99348 are no longer "Under review": new cycle, old packs archived, a new pack queued, and the deadline cron and reminders select them. |
 | 2b | D2–D5 (escalation/reopen chips, banners, timeline, email, copy) → develop → master | **Per-change approval**. Check on prod data: Mein Maison's 10 open escalations are filterable in the list. |
 | 3 | A1–A4 + migration → develop | Run `mm-pres`-style script on prod data. Expect 17 open disputes that need a response (Building & monitoring + Action required, after B) and 36 under review for Mein Maison, which matches Shopify. |
 | 4 | A5 backfill on prod | Print per-shop counts first. |
