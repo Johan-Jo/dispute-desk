@@ -317,6 +317,9 @@ export interface WorkspaceBankClaim {
     noClaimShown: boolean;
     cycle: number;
     answeredAt: string;
+    fileName?: string | null;
+    fileSize?: number | null;
+    textSource?: "pasted" | "file_text" | "file_ai" | null;
   } | null;
 }
 

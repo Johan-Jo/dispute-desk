@@ -13,6 +13,11 @@
  * checkbox tile; footer status + Save claim. DS Badge/Button are this repo's
  * `components/ui`; colours are the global `--dd-*` tokens.
  *
+ * After a save the card COLLAPSES into the design's blue bar ("Bank's claim
+ * received — rebuilding the response", summary, due date, Cancel / Edit
+ * claim). Cancel withdraws the saved claim (DELETE route: task and filing
+ * hold return); Edit claim reopens the card prefilled with what was saved.
+ *
  * Behaviour: the issuer claim is shown only in Shopify Admin; the Admin API
  * has no field for it (lib/disputes/bankClaim.ts). A file is stored and its
  * text read for the letter writer (lib/disputes/bankClaimFile.ts).
@@ -54,14 +59,19 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
   const [file, setFileState] = useState<File | null>(null);
   const [drag, setDrag] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Kept on screen after a save in this session so the merchant sees the
-  // design's "Saved" state; the server stops asking once it has the answer.
+  // Set by a save in this session so the bar shows at once, before the
+  // workspace refetch returns the stored answer.
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  // The file saved earlier, shown in the file row when editing (no File object).
+  const [existingFile, setExistingFile] = useState<{ name: string; size: number | null } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const trigger = data?.bankClaim?.trigger ?? null;
   const answer = data?.bankClaim?.answer ?? null;
-  const visible = saved || (trigger !== null && answer === null);
+  const hasAnswer = saved || answer !== null;
+  const visible = trigger !== null || saved;
 
   useEffect(() => {
     if (visible && searchParams?.get("section") === "bank-claim") {
@@ -70,7 +80,11 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
   }, [visible, searchParams]);
 
   if (!visible || !data?.dispute) return null;
-  if (!saved && (derived.isBuilding || derived.isRegenerating)) return null;
+  const building = derived.isBuilding || derived.isRegenerating;
+  const collapsed = hasAnswer && !editing;
+  // The empty card is not offered while a build runs (the route refuses a
+  // save mid-build); the collapsed bar is — it is what shows the rebuild.
+  if (!collapsed && !editing && building) return null;
 
   const dispute = data.dispute;
   // The design's button opens the DISPUTE in Shopify Admin; the order page
@@ -79,7 +93,7 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
   const shopifyUrl =
     getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid) ??
     getShopifyOrderUrl(dispute.shopDomain, dispute.orderGid);
-  const ready = noClaim || (mode === "pdf" ? !!file : claim.trim().length > 0);
+  const ready = noClaim || (mode === "pdf" ? !!file || !!existingFile : claim.trim().length > 0);
 
   const dueDate = dispute.dueAt
     ? new Date(dispute.dueAt).toLocaleDateString(locale || undefined, {
@@ -114,25 +128,32 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
   const countLabel = noClaim
     ? t("countNotNeeded")
     : mode === "pdf"
-      ? file
+      ? file || existingFile
         ? t("countFile")
         : t("countRequired")
       : claim.length
         ? t("countChars", { count: claim.length })
         : t("countRequired");
 
-  const fileExt = file ? (file.name.split(".").pop() || "file").slice(0, 4) : "";
-  const fileSize = file
-    ? file.size > 1048576
-      ? `${(file.size / 1048576).toFixed(1)} MB`
-      : `${Math.max(1, Math.round(file.size / 1024))} KB`
-    : "";
+  const shownFile = file ? { name: file.name, size: file.size as number | null } : existingFile;
+  const fileExt = shownFile ? (shownFile.name.split(".").pop() || "file").slice(0, 4) : "";
+  const fileSize =
+    shownFile?.size != null
+      ? shownFile.size > 1048576
+        ? `${(shownFile.size / 1048576).toFixed(1)} MB`
+        : `${Math.max(1, Math.round(shownFile.size / 1024))} KB`
+      : "";
 
   const dot = saved ? "var(--dd-success)" : errorMessage ? "var(--dd-danger)" : ready ? "var(--dd-primary)" : "var(--dd-warning)";
   const status = saved ? t("statusSaved") : errorMessage ? errorMessage : ready ? t("statusReady") : t("statusHold");
 
   async function onSave() {
-    if (!ready || saved || saving) return;
+    if (!ready || saving) return;
+    // Editing, nothing changed: the saved file stands — just fold back up.
+    if (editing && !noClaim && mode === "pdf" && !file && existingFile) {
+      setEditing(false);
+      return;
+    }
     setSaving(true);
     setErrorMessage(null);
     try {
@@ -150,10 +171,63 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
         return;
       }
       setSaved(true);
+      setEditing(false);
+      setExistingFile(null);
     } finally {
       setSaving(false);
     }
   }
+
+  function onEdit() {
+    setErrorMessage(null);
+    if (answer?.noClaimShown) {
+      setNoClaim(true);
+    } else if (answer?.fileName) {
+      setNoClaim(false);
+      setMode("pdf");
+      setFileState(null);
+      setExistingFile({ name: answer.fileName, size: answer.fileSize ?? null });
+    } else if (answer?.text) {
+      setNoClaim(false);
+      setMode("text");
+      setClaim(answer.text);
+    }
+    setSaved(false);
+    setEditing(true);
+  }
+
+  async function onCancel() {
+    if (withdrawing) return;
+    setWithdrawing(true);
+    try {
+      const r = await actions.withdrawBankClaim();
+      if (r.ok) {
+        setSaved(false);
+        setEditing(false);
+        setClaim("");
+        setFileState(null);
+        setExistingFile(null);
+        setNoClaim(false);
+        setMode("pdf");
+      } else {
+        setErrorMessage(t("errorGeneric", { code: r.code ?? "unknown" }));
+      }
+    } finally {
+      setWithdrawing(false);
+    }
+  }
+
+  // Summary line of the collapsed bar: what was given, then the due date.
+  const summary = (() => {
+    if (saved && !answer) {
+      if (noClaim) return t("savedSummaryNoClaim");
+      if (mode === "pdf" && file) return file.name;
+      return t("savedSummaryText", { count: claim.trim().length });
+    }
+    if (answer?.noClaimShown) return t("savedSummaryNoClaim");
+    if (answer?.fileName) return answer.fileName;
+    return t("savedSummaryText", { count: answer?.text?.length ?? 0 });
+  })();
 
   const tab = (active: boolean) => ({
     display: "flex",
@@ -171,8 +245,68 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
     boxShadow: active ? "0 1px 2px rgba(11,18,32,.08)" : "none",
   });
 
-  const showDrop = mode === "pdf" && !file && !noClaim;
-  const showFile = mode === "pdf" && !!file && !noClaim;
+  const showDrop = mode === "pdf" && !shownFile && !noClaim;
+  const showFile = mode === "pdf" && !!shownFile && !noClaim;
+
+  if (collapsed) {
+    return (
+      <div id="bank-claim" ref={ref}>
+        <style>{`@keyframes ddspin{to{transform:rotate(360deg)}}`}</style>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            padding: "18px 20px",
+            background: "#EFF4FF",
+            border: "1px solid #93C5FD",
+            borderLeft: 0,
+            borderRadius: 12,
+            flexWrap: "wrap",
+            boxShadow: "inset 4px 0 0 var(--dd-primary),0 0 0 4px rgba(29,78,216,.08),0 8px 24px -12px rgba(29,78,216,.3)",
+            fontFamily: "Inter, system-ui, sans-serif",
+          }}
+        >
+          <div style={{ display: "flex", gap: 14, alignItems: "center", minWidth: 0, flex: 1 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#DBEAFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {building || (saved && !answer) ? (
+                <span
+                  aria-hidden
+                  style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid #93C5FD", borderTopColor: "var(--dd-primary)", animation: "ddspin .9s linear infinite", display: "block" }}
+                />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--dd-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--dd-text)" }}>
+                {building || (saved && !answer) ? t("savedTitle") : t("savedTitleDone")}
+              </span>
+              <span style={{ fontSize: 13, color: "var(--dd-text-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {dueDate ? `${summary} · ${t("savedDue", { date: dueDate })}` : summary}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0, whiteSpace: "nowrap" }}>
+            <Button variant="ghost" size="sm" type="button" onClick={onCancel} disabled={withdrawing}>
+              {t("cancel")}
+            </Button>
+            <Button variant="secondary" size="sm" type="button" onClick={onEdit} disabled={withdrawing}>
+              {t("editClaim")}
+            </Button>
+          </div>
+          {errorMessage ? (
+            <span role="alert" style={{ flexBasis: "100%", fontSize: 13, color: "var(--dd-danger)" }}>
+              {errorMessage}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
   const showText = mode === "text" || noClaim;
 
   return (
@@ -389,7 +523,7 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
               <span style={{ fontSize: 12, color: "var(--dd-text-muted)" }}>{t("dropHint")}</span>
             </div>
           ) : null}
-          {showFile && file ? (
+          {showFile && shownFile ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", border: "1px solid var(--dd-border)", borderRadius: 8, background: "var(--dd-surface)" }}>
               <div
                 style={{
@@ -411,17 +545,17 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
                 <span style={{ fontSize: 14, fontWeight: 500, color: "var(--dd-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {file.name}
+                  {shownFile.name}
                 </span>
                 <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>
-                  {saved ? t("fileMetaUploaded", { size: fileSize }) : t("fileMetaReady", { size: fileSize })}
+                  {!file && existingFile ? t("fileMetaUploaded", { size: fileSize }) : t("fileMetaReady", { size: fileSize })}
                 </span>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <Button variant="ghost" size="sm" type="button" onClick={pickFile} disabled={saving}>
                   {t("replace")}
                 </Button>
-                <Button variant="ghost" size="sm" type="button" onClick={() => { setFileState(null); reset(); }} disabled={saving}>
+                <Button variant="ghost" size="sm" type="button" onClick={() => { setFileState(null); setExistingFile(null); reset(); }} disabled={saving}>
                   {t("remove")}
                 </Button>
               </div>
@@ -510,8 +644,8 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
             <span role={errorMessage ? "alert" : undefined}>{saving ? t("statusSaving") : status}</span>
           </div>
           <div style={{ display: "flex", flexShrink: 0, whiteSpace: "nowrap" }}>
-            <Button variant="primary" type="button" disabled={!ready || saved || saving} onClick={onSave}>
-              {saved ? t("saved") : t("save")}
+            <Button variant="primary" type="button" disabled={!ready || saving} onClick={onSave}>
+              {t("save")}
             </Button>
           </div>
         </div>

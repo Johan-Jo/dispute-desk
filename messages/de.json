@@ -2306,7 +2306,14 @@
       "remove": "Entfernen",
       "statusSaving": "Wird gespeichert…",
       "errorFileType": "Laden Sie eine PDF-, TXT-, DOC-, DOCX-, RTF-, EML- oder Bilddatei hoch.",
-      "errorFileSize": "Die Datei ist größer als 10 MB."
+      "errorFileSize": "Die Datei ist größer als 10 MB.",
+      "savedTitle": "Begründung der Bank erhalten – Antwort wird neu erstellt",
+      "savedTitleDone": "Begründung der Bank erhalten – Antwort aktualisiert",
+      "savedSummaryNoClaim": "Keine Begründung in Shopify – Grundcode wird verwendet",
+      "savedSummaryText": "{count, plural, =1 {Eingefügter Text · # Zeichen} other {Eingefügter Text · # Zeichen}}",
+      "savedDue": "Antwort fällig am {date}",
+      "cancel": "Abbrechen",
+      "editClaim": "Begründung bearbeiten"
     }
   },
   "disputeReasons": {

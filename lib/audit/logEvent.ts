@@ -164,6 +164,8 @@ export type EventType =
   // (`{ bankClaimId, cycle, noClaimShown, textLength, file }`); or a filing
   // path refused because it is still missing (`{ trigger, cycle }`).
   | "bank_claim_recorded"
+  // The merchant withdrew the saved claim ("Cancel"); payload { cycle }.
+  | "bank_claim_withdrawn"
   // The letter builder removed facts the bank's claim makes irrelevant or
   // contradicts (lib/disputes/bankClaimAnalysis.ts). Payload
   // `{ packageId, claimReason, removed: [{ id, category, why }] }`.

@@ -33,7 +33,14 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
-import { BANK_CLAIM_MAX_TEXT, clearBankClaimNeeded } from "@/lib/disputes/bankClaim";
+import {
+  BANK_CLAIM_DISPUTE_COLUMNS,
+  BANK_CLAIM_MAX_TEXT,
+  bankClaimInputFromRow,
+  bankClaimTrigger,
+  clearBankClaimNeeded,
+  markBankClaimNeeded,
+} from "@/lib/disputes/bankClaim";
 import {
   BANK_CLAIM_FILE_MAX_BYTES,
   BANK_CLAIM_FILE_TYPES,
@@ -264,4 +271,68 @@ export async function POST(
     { ok: true, bankClaimId: row.id, textRead: file ? text.length > 0 : undefined },
     { status: 201 },
   );
+}
+
+/**
+ * DELETE /api/packs/:packId/bank-claim — withdraw the claim saved for the
+ * dispute's current response cycle ("Cancel" on the collapsed card, Claude
+ * Design "Bank Claim Card.dc.html"). The task comes back, filing is held
+ * again, and the letter is rebuilt without the claim. The stored file is
+ * kept (audit); only the answer row goes.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ packId: string }> },
+) {
+  const auditActor = await resolveAuditActor(req);
+  const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
+  const sb = getServiceClient();
+  const { data: pack } = await sb
+    .from("evidence_packs")
+    .select("id, shop_id, dispute_id")
+    .eq("id", packId)
+    .eq("shop_id", shopId)
+    .single();
+  if (!pack?.dispute_id) {
+    return NextResponse.json({ error: "Pack not found" }, { status: 404 });
+  }
+  const { data: dispute } = await sb
+    .from("disputes")
+    .select(`submission_state, ${BANK_CLAIM_DISPUTE_COLUMNS}`)
+    .eq("id", pack.dispute_id)
+    .single();
+  if (dispute?.submission_state === "submitted_confirmed") {
+    return NextResponse.json({ error: "WINDOW_CLOSED", code: "WINDOW_CLOSED" }, { status: 409 });
+  }
+  const cycle = (dispute?.response_cycle as number | null) ?? 1;
+  const { error } = await sb
+    .from("dispute_bank_claims")
+    .delete()
+    .eq("dispute_id", pack.dispute_id)
+    .eq("response_cycle", cycle);
+  if (error) {
+    return NextResponse.json({ error: error.message, code: "DELETE_FAILED" }, { status: 500 });
+  }
+
+  const trigger = dispute ? bankClaimTrigger(bankClaimInputFromRow(dispute as Record<string, unknown>)) : null;
+  if (trigger) await markBankClaimNeeded(sb, pack.dispute_id as string, { trigger, cycle });
+
+  await logAuditEvent({
+    shopId: pack.shop_id,
+    disputeId: pack.dispute_id,
+    packId,
+    actorType: auditActor.actorType,
+    actorId: auditActor.actorId,
+    eventType: "bank_claim_withdrawn",
+    eventPayload: { cycle },
+  });
+  await sb.from("jobs").insert({ shop_id: pack.shop_id, job_type: "build_pack", entity_id: packId });
+  return NextResponse.json({ ok: true });
 }
