@@ -69,7 +69,9 @@ export function capCacheControlBlocks(
 
 export interface ClaudeMessage {
   role: "user" | "assistant";
-  content: string;
+  /** Plain text, or content blocks (text / document / image) — the latter
+   *  for reading a PDF or image natively (lib/disputes/bankClaimFile.ts). */
+  content: string | Array<Record<string, unknown>>;
 }
 
 export interface CallClaudeInput {

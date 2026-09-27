@@ -57,7 +57,7 @@ const STRINGS: Record<Locale, S> = {
     why: "The bank's explanation of what the customer is disputing is only shown in your Shopify admin. Shopify doesn't share it with apps, so DisputeDesk can't read it on its own. Without it, a response can't answer what the bank actually asked.",
     steps: [
       "Open the order in Shopify and find the bank's claim in the chargeback details.",
-      "Copy the claim's text into DisputeDesk using the button below.",
+      "Upload the claim file (usually a PDF) or paste its text in DisputeDesk using the button below.",
       "If Shopify shows no claim for this dispute, just tell us — that's a valid answer.",
     ],
     holdNote: "Until then, DisputeDesk won't send a response for this dispute.",
@@ -76,7 +76,7 @@ const STRINGS: Record<Locale, S> = {
     why: "La explicación del banco sobre lo que disputa el cliente solo se muestra en tu administrador de Shopify. Shopify no la comparte con las aplicaciones, así que DisputeDesk no puede leerla por sí mismo. Sin ella, la respuesta no puede contestar lo que el banco preguntó realmente.",
     steps: [
       "Abre el pedido en Shopify y busca la reclamación del banco en los detalles del contracargo.",
-      "Copia el texto de la reclamación en DisputeDesk con el botón de abajo.",
+      "Sube el archivo de la reclamación (normalmente un PDF) o pega su texto en DisputeDesk con el botón de abajo.",
       "Si Shopify no muestra ninguna reclamación para esta disputa, indícanoslo: es una respuesta válida.",
     ],
     holdNote: "Hasta entonces, DisputeDesk no enviará ninguna respuesta para esta disputa.",
@@ -95,7 +95,7 @@ const STRINGS: Record<Locale, S> = {
     why: "A explicação do banco sobre o que o cliente está contestando só aparece no seu admin da Shopify. A Shopify não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho. Sem ela, a resposta não consegue responder ao que o banco realmente perguntou.",
     steps: [
       "Abra o pedido na Shopify e encontre a reclamação do banco nos detalhes do estorno.",
-      "Copie o texto da reclamação para o DisputeDesk usando o botão abaixo.",
+      "Envie o arquivo da reclamação (geralmente um PDF) ou cole o texto no DisputeDesk usando o botão abaixo.",
       "Se a Shopify não mostrar nenhuma reclamação para esta disputa, é só nos avisar — é uma resposta válida.",
     ],
     holdNote: "Até lá, o DisputeDesk não enviará nenhuma resposta para esta disputa.",
@@ -114,7 +114,7 @@ const STRINGS: Record<Locale, S> = {
     why: "L'explication de la banque sur ce que le client conteste n'apparaît que dans votre administration Shopify. Shopify ne la partage pas avec les applications, DisputeDesk ne peut donc pas la lire seul. Sans elle, la réponse ne peut pas répondre à ce que la banque a réellement demandé.",
     steps: [
       "Ouvrez la commande dans Shopify et trouvez la réclamation de la banque dans les détails de la rétrofacturation.",
-      "Copiez le texte de la réclamation dans DisputeDesk avec le bouton ci-dessous.",
+      "Téléversez le fichier de la réclamation (généralement un PDF) ou collez son texte dans DisputeDesk avec le bouton ci-dessous.",
       "Si Shopify n'affiche aucune réclamation pour ce litige, dites-le-nous : c'est une réponse valable.",
     ],
     holdNote: "D'ici là, DisputeDesk n'enverra aucune réponse pour ce litige.",
@@ -133,7 +133,7 @@ const STRINGS: Record<Locale, S> = {
     why: "Die Begründung der Bank, was der Kunde beanstandet, wird nur in Ihrem Shopify-Adminbereich angezeigt. Shopify gibt sie nicht an Apps weiter, daher kann DisputeDesk sie nicht selbst lesen. Ohne sie kann die Antwort nicht auf das eingehen, was die Bank tatsächlich gefragt hat.",
     steps: [
       "Öffnen Sie die Bestellung in Shopify und suchen Sie die Begründung der Bank in den Rückbuchungsdetails.",
-      "Kopieren Sie den Text der Begründung über die Schaltfläche unten in DisputeDesk.",
+      "Laden Sie die Datei der Begründung (meist ein PDF) hoch oder fügen Sie ihren Text über die Schaltfläche unten in DisputeDesk ein.",
       "Wenn Shopify für diese Rückbuchung keine Begründung anzeigt, teilen Sie uns das einfach mit – das ist eine gültige Antwort.",
     ],
     holdNote: "Bis dahin sendet DisputeDesk für diese Rückbuchung keine Antwort.",
@@ -152,7 +152,7 @@ const STRINGS: Record<Locale, S> = {
     why: "Bankens förklaring av vad kunden bestrider visas bara i din Shopify-admin. Shopify delar den inte med appar, så DisputeDesk kan inte läsa den själv. Utan den kan svaret inte bemöta det banken faktiskt frågade.",
     steps: [
       "Öppna ordern i Shopify och hitta bankens anspråk i återkravsdetaljerna.",
-      "Kopiera anspråkets text till DisputeDesk med knappen nedan.",
+      "Ladda upp anspråksfilen (oftast en PDF) eller klistra in texten i DisputeDesk med knappen nedan.",
       "Om Shopify inte visar något anspråk för den här tvisten, säg bara till – det är ett giltigt svar.",
     ],
     holdNote: "Tills dess skickar DisputeDesk inget svar för den här tvisten.",
