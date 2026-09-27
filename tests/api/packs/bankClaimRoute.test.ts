@@ -8,6 +8,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
 vi.mock("@/lib/middleware/extractShopId", () => ({ extractShopId: () => "shop-1" }));
 vi.mock("@/lib/audit/logEvent", () => ({ logAuditEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/disputes/bankClaimFile", async (orig) => {
+  const actual = await orig<typeof import("@/lib/disputes/bankClaimFile")>();
+  return {
+    ...actual,
+    extractBankClaimText: vi.fn(async () => ({ text: "Issuer claim: item not as described", source: "file_ai" })),
+  };
+});
 vi.mock("@/lib/audit/resolveActor", () => ({
   resolveAuditActor: vi.fn().mockResolvedValue({ actorType: "merchant", actorId: "u1" }),
 }));
@@ -23,6 +30,15 @@ function setup(opts: { packStatus?: string; submissionState?: string; cycle?: nu
   const upserts: Record<string, unknown>[] = [];
   const disputeUpdates: Record<string, unknown>[] = [];
   const jobs: Record<string, unknown>[] = [];
+  const stored: Array<{ path: string; opts: unknown }> = [];
+  const storage = {
+    from: vi.fn(() => ({
+      upload: vi.fn(async (path: string, _b: unknown, opts: unknown) => {
+        stored.push({ path, opts });
+        return { error: null };
+      }),
+    })),
+  };
   const from = vi.fn((table: string) => {
     if (table === "evidence_packs") {
       const q: Record<string, unknown> = {};
@@ -64,8 +80,8 @@ function setup(opts: { packStatus?: string; submissionState?: string; cycle?: nu
     }
     throw new Error(`unexpected table: ${table}`);
   });
-  mockClient.mockReturnValue({ from } as never);
-  return { upserts, disputeUpdates, jobs };
+  mockClient.mockReturnValue({ from, storage } as never);
+  return { upserts, disputeUpdates, jobs, stored };
 }
 
 const req = (body: unknown) =>
@@ -117,5 +133,39 @@ describe("POST /api/packs/:packId/bank-claim", () => {
     const res = await POST(req({ noClaimShown: true }), params);
     expect(res.status).toBe(201);
     expect(upserts[0]).toMatchObject({ claim_text: null, no_claim_shown: true });
+  });
+});
+
+function fileReq(name: string, bytes: number) {
+  const form = new FormData();
+  form.append("file", new File([new Uint8Array(bytes)], name, { type: "application/pdf" }));
+  return new NextRequest("https://x.test/api/packs/pack-1/bank-claim", { method: "POST", body: form });
+}
+
+describe("POST /api/packs/:packId/bank-claim — file upload", () => {
+  it("stores the file, saves the text read from it, and queues a rebuild", async () => {
+    const { upserts, stored, jobs } = setup({ cycle: 2 });
+    const res = await POST(fileReq("issuer-claim.pdf", 2048), params);
+    expect(res.status).toBe(201);
+    expect(stored[0]!.path).toMatch(/^shop-1\/d-1\/bank-claim-c2-\d+\.pdf$/);
+    expect(upserts[0]).toMatchObject({
+      response_cycle: 2,
+      claim_text: "Issuer claim: item not as described",
+      text_source: "file_ai",
+      file_name: "issuer-claim.pdf",
+      file_size: 2048,
+    });
+    expect(jobs[0]).toMatchObject({ job_type: "build_pack" });
+  });
+
+  it("rejects an unsupported type and a file over 10 MB before storing anything", async () => {
+    const a = setup();
+    expect((await POST(fileReq("virus.exe", 10), params)).status).toBe(400);
+    expect(a.stored).toHaveLength(0);
+    const b = setup();
+    const res = await POST(fileReq("big.pdf", 10 * 1024 * 1024 + 1), params);
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("FILE_TOO_LARGE");
+    expect(b.stored).toHaveLength(0);
   });
 });

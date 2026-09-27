@@ -2273,13 +2273,12 @@
       "introReopened": "Banken begär ett nytt svar. Skälet syns bara i Shopify – klistra in det här så att svaret bemöter exakt det som frågades.",
       "introGeneral": "Banken angav inget specifikt skäl för den här tvisten. Skälet syns bara i Shopify – klistra in det här så att svaret bemöter exakt det som frågades.",
       "dueLabel": "Svar senast",
-      "daysLeft": "{count, plural, =1 {# dag kvar} other {# dagar kvar}}",
       "dueToday": "Förfaller i dag",
       "step1Title": "Hitta anspråket i Shopify",
       "step1Path": "Order {order} → Återkravsdetaljer → Utfärdarens anspråk",
-      "openInShopify": "Öppna ordern i Shopify",
-      "step2Title": "Klistra in det nedan",
-      "step2Body": "Hela texten eller en kort sammanfattning fungerar. Visas inget anspråk? Kryssa i rutan i stället.",
+      "openInShopify": "Öppna tvisten i Shopify ↗",
+      "step2Title": "Ladda upp anspråksfilen eller klistra in texten",
+      "step2Body": "Ladda ner anspråket från Shopify (oftast en PDF) och släpp den nedan. Visas inget anspråk? Kryssa i rutan i stället.",
       "textLabel": "Bankens anspråk",
       "countRequired": "Obligatoriskt",
       "countChars": "{count, plural, =1 {# tecken} other {# tecken}}",
@@ -2294,7 +2293,20 @@
       "save": "Spara anspråk",
       "saved": "Sparat",
       "errorWindowClosed": "Shopify har redan vidarebefordrat bevisen för den här tvisten, så anspråket kan inte längre läggas till.",
-      "errorGeneric": "Anspråket kunde inte sparas ({code}). Försök igen."
+      "errorGeneric": "Anspråket kunde inte sparas ({code}). Försök igen.",
+      "daysCount": "{count, plural, =1 {# dag} other {# dagar}}",
+      "tabUpload": "Ladda upp fil",
+      "tabPaste": "Klistra in text",
+      "countFile": "1 fil",
+      "dropTitle": "Släpp anspråksfilen här, eller <browse>bläddra</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML eller bild · upp till 10 MB",
+      "fileMetaReady": "{size} · Klar att spara",
+      "fileMetaUploaded": "{size} · Uppladdad",
+      "replace": "Ersätt",
+      "remove": "Ta bort",
+      "statusSaving": "Sparar…",
+      "errorFileType": "Ladda upp en PDF-, TXT-, DOC-, DOCX-, RTF-, EML- eller bildfil.",
+      "errorFileSize": "Filen är större än 10 MB."
     }
   },
   "disputeReasons": {
@@ -3714,7 +3726,7 @@
       },
       "bankClaim": {
         "title": "Varför DisputeDesk ber om bankens anspråk",
-        "body": "För de flesta tvister talar orsakskoden om för DisputeDesk vad kunden bestrider, och svaret byggs utifrån den. Två sorters tvister är annorlunda:\n\n• Återöppnade tvister: Shopify har satt en tvist som du redan besvarat tillbaka till \"behöver svar\". Banken begär ett nytt svar, och ditt tidigare svar avgör den inte längre.\n• \"Allmänna\" tvister utan nätverkets orsakskod: banken angav inte vilken sorts tvist det är.\n\nI båda fallen är bankens anspråk (Shopify kallar det utfärdarens anspråk) det enda som säger vad banken vill ha besvarat. Shopify visar det i återkravsdetaljerna på ordersidan i din Shopify-admin, men delar det inte med appar, så DisputeDesk kan inte läsa det själv.\n\nSå gör du:\n1. Öppna tvisten i DisputeDesk och använd \"Öppna ordern i Shopify\".\n2. Hitta bankens anspråk i återkravsdetaljerna och kopiera texten.\n3. Klistra in den i kortet \"Lägg till bankens anspråk\" och spara. Om Shopify inte visar något anspråk, kryssa i \"Shopify visar inget anspråk för den här tvisten\" i stället – banker lämnar inte alltid ett.\n\nDisputeDesk bygger sedan om svaret så att det bemöter anspråket. Anspråket används bara för att avgöra vad svaret måste ta upp; det citeras aldrig och skickas aldrig tillbaka till banken.\n\nTills anspråket har lagts till skickar DisputeDesk inget svar för den tvisten, inte heller vid tidsfristen. Vi mejlar dig också när en tvist börjar behöva det."
+        "body": "För de flesta tvister talar orsakskoden om för DisputeDesk vad kunden bestrider, och svaret byggs utifrån den. Två sorters tvister är annorlunda:\n\n• Återöppnade tvister: Shopify har satt en tvist som du redan besvarat tillbaka till \"behöver svar\". Banken begär ett nytt svar, och ditt tidigare svar avgör den inte längre.\n• \"Allmänna\" tvister utan nätverkets orsakskod: banken angav inte vilken sorts tvist det är.\n\nI båda fallen är bankens anspråk (Shopify kallar det utfärdarens anspråk) det enda som säger vad banken vill ha besvarat. Shopify visar det i återkravsdetaljerna på ordersidan i din Shopify-admin, men delar det inte med appar, så DisputeDesk kan inte läsa det själv.\n\nSå gör du:\n1. Öppna tvisten i DisputeDesk och använd \"Öppna ordern i Shopify\".\n2. Hitta bankens anspråk i återkravsdetaljerna och ladda ner det (oftast en PDF) eller kopiera texten.\n3. Ladda upp filen eller klistra in texten i kortet \"Lägg till bankens anspråk\" och spara. Om Shopify inte visar något anspråk, kryssa i \"Shopify visar inget anspråk för den här tvisten\" i stället – banker lämnar inte alltid ett.\n\nDisputeDesk bygger sedan om svaret så att det bemöter anspråket. Anspråket används bara för att avgöra vad svaret måste ta upp; det citeras aldrig och skickas aldrig tillbaka till banken.\n\nTills anspråket har lagts till skickar DisputeDesk inget svar för den tvisten, inte heller vid tidsfristen. Vi mejlar dig också när en tvist börjar behöva det."
       }
     },
     "embedded": {
