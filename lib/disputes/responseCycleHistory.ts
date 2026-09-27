@@ -90,11 +90,15 @@ export function planHistoryCyclesAgainstLedger(
   const cycles: PlannedCycle[] = [];
   let escalatedAt: string | null = null;
 
+  // The row's recorded response (the same fields the live path anchors on).
+  // It can only belong to the reopen whose window contains it.
+  const rowResponseTs = row.submitted_at ?? row.evidence_saved_to_shopify_at ?? null;
+  const rowResponseMs = toMs(rowResponseTs);
+
   let prevStatus: string | null = null;
   let prevType: string | null = null;
-  let responded = false;
   let lastSent: string | null = null;
-  let firstAnsweredAt: string | null = null;
+  let windowStartMs = -Infinity;
   let escalatedSinceResponse = false;
 
   for (const s of sorted) {
@@ -103,27 +107,23 @@ export function planHistoryCyclesAgainstLedger(
       escalatedSinceResponse = true;
     }
 
-    if (s.evidenceSentOn) {
-      responded = true;
-      lastSent = s.evidenceSentOn;
-    }
-    const answered =
-      s.status === "under_review" &&
-      (requireDeadline ? hasRealDeadline(s.evidenceDueBy) : prevStatus === "needs_response");
-    if (answered) {
-      responded = true;
-      if (!firstAnsweredAt) firstAnsweredAt = s.at;
-    }
+    // Only a RECORDED response counts (see `hasPriorResponse`): an
+    // evidence_sent_on in the payload, or the row's recorded response when it
+    // falls inside this window. Status flips alone are buyer/merchant
+    // messaging on inquiries, not a response that a reopen could invalidate.
+    if (s.evidenceSentOn) lastSent = s.evidenceSentOn;
 
-    const reopens =
+    const transitionsIntoNeedsResponse =
       s.status === "needs_response" &&
       prevStatus !== null &&
       prevStatus !== "needs_response" &&
-      (!requireDeadline || hasRealDeadline(s.evidenceDueBy)) &&
-      responded;
+      (!requireDeadline || hasRealDeadline(s.evidenceDueBy));
 
-    if (reopens) {
-      const anchorTs = lastSent ?? firstAnsweredAt;
+    if (transitionsIntoNeedsResponse) {
+      const sMs = toMs(s.at);
+      const rowInWindow =
+        rowResponseTs && rowResponseMs > windowStartMs && rowResponseMs <= sMs ? rowResponseTs : null;
+      const anchorTs = lastSent ?? rowInWindow;
       const anchorKey = anchorTs ? anchorFromInstant(anchorTs) : null;
       if (anchorKey) {
         cycles.push({
@@ -131,34 +131,27 @@ export function planHistoryCyclesAgainstLedger(
           startedAt: s.at,
           trigger: escalatedSinceResponse ? "escalation" : "reopen",
         });
+        lastSent = null;
+        windowStartMs = sMs;
+        escalatedSinceResponse = false;
       }
-      responded = false;
-      lastSent = null;
-      firstAnsweredAt = null;
-      escalatedSinceResponse = false;
     }
 
     prevStatus = s.status;
     if (s.type) prevType = s.type;
   }
 
-  // The last reopen: anchor on the row exactly as the live path would, when
-  // the row's recorded response precedes that reopen (i.e. the row still
-  // describes the response the reopen follows). Webhook payloads often lack
-  // evidence_sent_on that the GraphQL sync did record (#99348).
-  const last = cycles[cycles.length - 1];
-  if (last) {
-    const liveAnchor = responseAnchorKey(row);
-    const rowResponseTs =
-      row.submitted_at ?? row.evidence_saved_to_shopify_at ?? null;
-    const prevStart = cycles.length > 1 ? toMs(cycles[cycles.length - 2]!.startedAt) : -Infinity;
-    if (
-      liveAnchor &&
-      rowResponseTs &&
-      toMs(rowResponseTs) <= toMs(last.startedAt) &&
-      toMs(rowResponseTs) > prevStart
-    ) {
-      last.anchorKey = liveAnchor;
+  // The live path anchors on the row (`responseAnchorKey`). Where the row's
+  // recorded response belongs to a planned cycle, use exactly that key so the
+  // two paths cannot disagree on formatting or precedence. Webhook payloads
+  // often lack an evidence_sent_on the GraphQL sync did record (#99348).
+  const liveAnchor = responseAnchorKey(row);
+  if (liveAnchor && rowResponseTs) {
+    for (let i = 0; i < cycles.length; i++) {
+      const from = i === 0 ? -Infinity : toMs(cycles[i - 1]!.startedAt);
+      if (rowResponseMs > from && rowResponseMs <= toMs(cycles[i]!.startedAt)) {
+        cycles[i]!.anchorKey = liveAnchor;
+      }
     }
   }
 

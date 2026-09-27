@@ -123,7 +123,7 @@ begin
     raise exception 'reconcile_response_cycle: dispute % not found', p_dispute_id;
   end if;
 
-  select submitted_at, submission_state, review_state, evidence_saved_to_shopify_at, closed_at
+  select submitted_at, submission_state, review_state, evidence_saved_to_shopify_at, closed_at, status
     into v_prev
     from disputes where id = p_dispute_id;
 
@@ -156,11 +156,15 @@ begin
   --     after a later cycle was opened) — the dispute's state belongs to the
   --     later cycle, whose artifacts were bounded when it opened;
   --   * the dispute is closed — its record of what was sent is history;
+  --   * Shopify is not CURRENTLY asking for a response (status is not
+  --     needs_response) — an old reopen that has since been answered or
+  --     decided must not flip the dispute back to "needs a response";
   --   * a response was already recorded AFTER this cycle began — the new
   --     round was answered, and clearing that would lose a real filing.
   if not v_inserted
      or p_started_at < v_reopened_at
      or v_prev.closed_at is not null
+     or v_prev.status is distinct from 'needs_response'
      or greatest(v_prev.submitted_at, v_prev.evidence_saved_to_shopify_at) > p_started_at
   then
     update disputes
