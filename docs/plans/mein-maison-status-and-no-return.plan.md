@@ -125,7 +125,7 @@ When it starts, in one update:
 - Reset `submission_state → 'not_saved'`, `evidence_saved_to_shopify_at → null`, `reminder_sent_at → null` and `review_state → null`.
 - **Retire the previous cycle's artifacts, bounded by `startedAt`.** Only rows created **before** `startedAt` are retired. A pack built at or after the cycle start belongs to the new cycle and is re-stamped, never retired. Retired `evidence_packs` rows go to `status = 'archived'` with `approved_for_save_at → null`. The value stays in the event metadata for audit. Open `defence_packages` rows go to `status = 'superseded'`. The B0 check is the backstop if a row is missed.
 - Emit `response_cycle_reopened` with dedupe key `${disputeId}:RESPONSE_CYCLE_REOPENED:${anchorKey}`, keyed by anchor so it can't double-fire from two paths, carrying the old `submitted_at`, `submission_state`, `review_state`, the retired pack ids and the old and new deadlines.
-- Enqueue a pack build for the new cycle, following the shop's automation mode (decision D-3).
+- Enqueue a pack build for the new cycle, following the shop's automation mode (D-3, resolved: follows the automation mode).
 
 **Phase change is recorded separately** (inquiry → chargeback), whether or not the status changes in the same snapshot:
 - emit `escalated_to_chargeback` (key `${disputeId}:ESCALATED_TO_CHARGEBACK`; this happens at most once per dispute);
@@ -395,9 +395,9 @@ For every step: `npm test`, `npx tsc --noEmit`, `npm run build`, plus `docs/tech
 
 ## Decisions needed
 
-- **D-1 (reshaped by the maintainer, 2026-09-27):** the answer is a setting plus a per-dispute confirmation (C4, C4b), not a choice between two wordings. Still open inside it: should C2's narrow wording ("No return has been recorded in Shopify") apply to **every** shop, including those with the setting off? Proposed: yes. It costs little, because a setting-off shop keeps the full scoring weight, and it stays true for a shop that takes email returns but never turned the toggle on.
+- ~~D-1~~ **Resolved (maintainer, 2026-09-27): narrow wording for every shop.** the answer is a setting plus a per-dispute confirmation (C4, C4b), not a choice between two wordings. Still open inside it: should C2's narrow wording ("No return has been recorded in Shopify") apply to **every** shop, including those with the setting off? Proposed: yes. It costs little, because a setting-off shop keeps the full scoring weight, and it stays true for a shop that takes email returns but never turned the toggle on.
 - ~~D-2~~ **Superseded by the maintainer (2026-09-27):** replaced by the C4 toggle, default off. The earlier review rule (stay unknown until the merchant confirms) no longer applies.
-- **D-3:** On an inquiry → chargeback escalation or a reopen, should we auto-build and file the new cycle per the shop's automation mode (proposed, consistent with the merchant's-counsel stance), or always park it for review?
+- ~~D-3~~ **Resolved (maintainer, 2026-09-27): follows the shop's automation mode.** On an inquiry → chargeback escalation or a reopen, should we auto-build and file the new cycle per the shop's automation mode (proposed, consistent with the merchant's-counsel stance), or always park it for review?
 - **D-4:** Design for the new UI (phase pill on detail pages, escalation/reopen chips and banners). Proposed: reuse the existing list pill and the existing banner component, with no new design. Alternatively, get a Claude Design pass first, since `DecidedWorkspace` is a design transcription (CLAUDE.md rule 8).
 
 ## Out of scope
