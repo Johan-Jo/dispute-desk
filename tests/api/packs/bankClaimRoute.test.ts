@@ -121,7 +121,8 @@ describe("POST /api/packs/:packId/bank-claim", () => {
       claim_text: "Buyer says the item was not as described",
       no_claim_shown: false,
     });
-    expect(disputeUpdates[0]).toMatchObject({ attention_reason: null, needs_attention: false });
+    // attention_payload is NOT NULL in the DB: clearing must write {} (null was rejected on prod).
+    expect(disputeUpdates[0]).toMatchObject({ attention_reason: null, needs_attention: false, attention_payload: {} });
     expect(jobs[0]).toMatchObject({ job_type: "build_pack", entity_id: "pack-1" });
     const audit = vi.mocked(logAuditEvent).mock.calls[0]![0];
     expect(audit.eventType).toBe("bank_claim_recorded");

@@ -147,16 +147,22 @@ export async function clearBankClaimNeeded(
   sb: SupabaseClient,
   disputeId: string,
 ): Promise<void> {
-  await sb
+  // `attention_payload` is NOT NULL (default '{}'): clearing it to null was
+  // rejected by Postgres and the task never cleared (Sura Svenne test,
+  // 2026-09-27). Same shape as the pipeline's gate-clear.
+  const { error } = await sb
     .from("disputes")
     .update({
       needs_attention: false,
       attention_reason: null,
-      attention_payload: null,
+      attention_payload: {},
       updated_at: new Date().toISOString(),
     })
     .eq("id", disputeId)
     .eq("attention_reason", BANK_CLAIM_NEEDED);
+  if (error) {
+    console.error("[bankClaim] failed to clear bank_claim_needed", { disputeId, message: error.message });
+  }
 }
 
 /** Dispute columns every caller of the predicate needs. */
