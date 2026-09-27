@@ -414,7 +414,10 @@ describe("claimGuards — negated statements are not claims (validator 4)", () =
         fact({ id: "no_return_initiated#shopify_order", category: "no_return_initiated" }),
       ],
     });
-    expect(result.failures).toEqual([]);
+    expect(result.failures.filter((f) => f.guardId === "refund_processed")).toEqual([]);
+    // Since Fix C (2026-09-27) this letter's "no return was initiated by the
+    // customer" is itself banned — see the return-absence suite below.
+    expect(result.failures.map((f) => f.guardId)).toEqual(["return_claim_beyond_record"]);
   });
 
   it("an affirmative refund claim still fires with the same fact set", () => {
@@ -562,5 +565,50 @@ describe("claimGuards — negated statements are not claims (validator 4)", () =
 
     const boundary = "no return was initiated, and a refund was issued";
     expect(isNegatedContext(boundary, boundary.indexOf("refund was"))).toBe(false);
+  });
+});
+
+describe("claimGuards — return / contact absence claims are banned outright (Fix C, C2)", () => {
+  const noReturn = fact({ id: "no_return_initiated#shopify_order", category: "no_return_initiated" });
+
+  it("fails every absence paraphrase, even with the no_return_initiated fact cited", () => {
+    for (const text of [
+      "The customer did not request a return.",
+      "The cardholder never asked for a refund before disputing.",
+      "No return was initiated by the customer.",
+      "No return request was made.",
+      "No refund has been requested.",
+      "There is no return request on record.",
+      "The customer has not initiated a return or exchange.",
+    ]) {
+      const r = runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [noReturn] });
+      expect(r.failures.map((f) => f.guardId), text).toContain("return_claim_beyond_record");
+    }
+  });
+
+  it("fails contact-history claims", () => {
+    for (const text of [
+      "The customer never contacted the merchant about this order.",
+      "The cardholder did not reach out before filing.",
+      "The customer made no complaint.",
+      "No complaint was received through any channel.",
+    ]) {
+      const r = runClaimGuards({ narrativeSections: narrative({ executiveSummary: { text } }), approvedFacts: [noReturn] });
+      expect(r.failures.map((f) => f.guardId), text).toContain("contact_claim_beyond_record");
+    }
+  });
+
+  it("allows the sanctioned sentence and ordinary refund facts", () => {
+    for (const text of [
+      "No return has been recorded in Shopify for this order.",
+      "No refund was issued.",
+      "The order was fulfilled on 2026-09-01.",
+    ]) {
+      const r = runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [noReturn] });
+      expect(
+        r.failures.filter((f) => f.guardId === "return_claim_beyond_record" || f.guardId === "contact_claim_beyond_record"),
+        text,
+      ).toEqual([]);
+    }
   });
 });
