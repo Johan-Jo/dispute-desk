@@ -2,13 +2,16 @@
 
 **Status:** PLAN, nothing implemented · **Author date:** 2026-09-27 · **Trigger:** Mein Maison (`6a8848-dd`, shop `ea035a1b-8aec-4305-ba2b-27713a6aeff3`) emailed on 2026-09-27 to say the system "would create more damage than good, as it is today".
 
-The complaint makes three claims. Each was checked against prod and against the live Shopify REST API on 2026-09-27, and all three are real:
+The complaint makes three claims, and the maintainer added a fourth item on 2026-09-27. Each was checked against prod and against the live Shopify REST API on 2026-09-27, and all four are real:
 
-| # | Merchant's claim | Verified finding | Class or instance? |
+| # | Claim | Verified finding | Class or instance? |
 |---|---|---|---|
 | A | "Disputes that have had responses already outside DisputeDesk are seen as pending." | 19 of the 34 disputes on the "Building & monitoring" card are `under_review` in Shopify, meaning a response already went through Shopify. | **Class.** It affects every shop that answers in Shopify Admin. |
 | B | "The number of cases and inquiries pending is very wrong." | The dashboard shows 34 building plus 19 under review. Shopify shows **17** that need a response and **36** under review. Two disputes are wrong in the dangerous direction (see B). | **Class** |
 | C | "Stuck on the fact that it does not detect a refund, so the case must be fought on that angle." | 27 of Mein Maison's last 50 letters (14 days) argue "no return was initiated". Some go further: "through any channel", "no return request is on record", "inconsistent with a genuine not-as-described complaint". Our only source is Shopify `returnStatus = NO_RETURN`. This merchant takes return requests by email. | **Class.** It affects every merchant whose returns happen outside Shopify. |
+| D | Maintainer: "Reopened disputes and inquiries that escalate to chargebacks need a clear flag, and the detail pages don't say whether it's an inquiry or a chargeback." | The list shows an Inquiry/Chargeback pill, but no detail page does. On prod, 42 disputes escalated from inquiry to chargeback (11 open) and 36 were reopened after a response (12 open). None of this is recorded or shown. | **Class** |
+
+Work order: **B** (reopen reset) and **D** (visibility) first, because a live deadline on 2026-10-01 is hidden. Then **A** (responses sent through Shopify) and **C** (no-return claims) in parallel.
 
 Our DB `status` matched Shopify on all 53 open disputes. **The sync is correct. The interpretation layered on top of it is wrong.**
 
@@ -57,12 +60,6 @@ Our DB `status` matched Shopify on all 53 open disputes. **The sync is correct. 
 - `applyDisputeSnapshot` overwrites `disputes.phase` silently on upsert. It emits no `phase_changed` event and has no column recording that an escalation happened.
 - The only trace is the `dispute_opened` event's `metadata_json.phase`. A merchant cannot see an escalation anywhere.
 
-### D. The detail page does not say whether it's an inquiry or a chargeback
-
-- The list shows a phase pill: `DesktopDisputesTable.tsx:47` `phasePillColors` plus `lib/disputes/phaseUtils.ts` `phaseLabel` / `phaseBadgeTone`. `MobileDisputeCard.tsx` shows it too.
-- The detail pages show nothing. `WorkspaceShell.tsx` (open disputes), `DecidedWorkspace.tsx` (won/lost) and the portal's `app/(portal)/portal/disputes/[id]/page.tsx` never render `phase`. The header is just "Order #…".
-- An inquiry and a chargeback need different things from the merchant: an inquiry can be refunded, a chargeback cannot (`reference_never_refund_an_open_chargeback`). The page they act on must say which one it is.
-
 ### C. `no_return_initiated` is overclaimed
 
 - **Source:** `lib/packs/sources/orderSource.ts`. We emit this fact when `returnStatus === NO_RETURN` and no refund exists.
@@ -70,6 +67,12 @@ Our DB `status` matched Shopify on all 53 open disputes. **The sync is correct. 
 - **Strength:** `lib/argument/caseStrength.ts` counts it as the product family's "validity" signal (the `refund` signal, labelled `disputes.signalLabelValue.noRefundOwed`). For Mein Maison's not-as-described cases it is often the fact that lifts the rating to Moderate. Example: #100705's strength reason is literally "No refund owed + Delivery".
 - **Letter:** the writer widens "Shopify has no return record" into a claim about the buyer's behaviour across all channels. The claim guards explicitly *sanction* "The customer did not request a return." (`claimGuards.test.ts:503`). For this merchant that sentence may simply be false.
 - **Unrelated leak:** 1 of the 50 letters (#93670, prompt v39, 09-25) cites "Visa 13 / Mastercard 4853" on what is probably a PayPal-wallet dispute. The PayPal overlay forbids this, so either the payment family didn't resolve or the overlay didn't apply. This needs checking before it is filed (§C6).
+
+### D. The detail page does not say whether it's an inquiry or a chargeback
+
+- The list shows a phase pill: `DesktopDisputesTable.tsx:47` `phasePillColors` plus `lib/disputes/phaseUtils.ts` `phaseLabel` / `phaseBadgeTone`. `MobileDisputeCard.tsx` shows it too.
+- The detail pages show nothing. `WorkspaceShell.tsx` (open disputes), `DecidedWorkspace.tsx` (won/lost) and the portal's `app/(portal)/portal/disputes/[id]/page.tsx` never render `phase`. The header is just "Order #…".
+- An inquiry and a chargeback need different things from the merchant: an inquiry can be refunded, a chargeback cannot (`reference_never_refund_an_open_chargeback`). The page they act on must say which one it is.
 
 ---
 
