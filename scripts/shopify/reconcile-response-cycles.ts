@@ -242,6 +242,45 @@ async function openCycle(
   return `RESET → c${r.cycle}; archived ${r.retiredPackIds.length} pack(s), superseded ${r.supersededDefencePackageIds.length}; ${rebuilt}`;
 }
 
+/**
+ * Live Shopify confirmation before any write that can RESET a dispute:
+ * Shopify must still report needs_response, a future deadline and no
+ * evidence sent. The stored status and history can be stale; a reset
+ * starts a rebuild, so it is only done against Shopify's current word.
+ */
+const sessions = new Map<string, Awaited<ReturnType<typeof getShopBackgroundSession>> | null>();
+async function liveConfirmsNewCycle(d: DisputeRow): Promise<{ ok: boolean; detail: string }> {
+  if (!sessions.has(d.shop_id)) {
+    try {
+      sessions.set(d.shop_id, await getShopBackgroundSession(d.shop_id));
+    } catch {
+      sessions.set(d.shop_id, null);
+    }
+  }
+  const session = sessions.get(d.shop_id);
+  const num = numericId(d.dispute_gid);
+  if (!session || !num) return { ok: false, detail: "no session / id" };
+  const res = await fetch(
+    `https://${session.shopDomain}/admin/api/${SHOPIFY_API_VERSION}/shopify_payments/disputes/${num}.json`,
+    { headers: { "X-Shopify-Access-Token": session.accessToken } },
+  );
+  const live = ((await res.json()) as { dispute?: Record<string, string | null> }).dispute ?? {};
+  const dueMs = live.evidence_due_by ? new Date(live.evidence_due_by).getTime() : NaN;
+  const ok =
+    live.status === "needs_response" &&
+    hasRealDeadline(live.evidence_due_by) &&
+    dueMs > Date.now() &&
+    !live.evidence_sent_on;
+  if (ok) {
+    d.status = live.status;
+    d.due_at = live.evidence_due_by;
+  }
+  return {
+    ok,
+    detail: `shopify=${live.status ?? "?"} due=${live.evidence_due_by ?? "-"} sent=${live.evidence_sent_on ?? "-"}`,
+  };
+}
+
 async function runHistory() {
   const disputes = await loadDisputes("all");
   let planned = 0;
@@ -266,10 +305,26 @@ async function runHistory() {
         `state=${d.submission_state} src=${source}` +
         (escalate ? ` escalated=${escalate}` : ""),
     );
-    for (const c of plan.cycles) {
-      const line = `    ${c.trigger} start=${c.startedAt} anchor=${c.anchorKey}`;
+    // Only the latest cycle of an open needs_response dispute can reset it
+    // (the SQL function enforces the rest); confirm those against Shopify.
+    const canReset = !d.closed_at && d.status === "needs_response";
+    const confirm = canReset && plan.cycles.length > 0 ? await liveConfirmsNewCycle(d) : null;
+    // Newest first: the latest cycle is the only one that may reset; older
+    // ones then land as "older than current" and only correct the count.
+    const ordered = [...plan.cycles.entries()].reverse();
+    for (const [i, c] of ordered) {
+      const isLatest = i === plan.cycles.length - 1;
+      let line = `    ${c.trigger} start=${c.startedAt} anchor=${c.anchorKey}`;
+      if (isLatest && confirm) line += ` [live: ${confirm.detail} → ${confirm.ok ? "RESET" : "NOT CONFIRMED, skipped"}]`;
+      else line += " [ledger only]";
       if (!APPLY) {
         console.log(line);
+        continue;
+      }
+      if (confirm && !confirm.ok) {
+        // Shopify does not confirm a live new cycle: write nothing for this
+        // dispute. A later run will pick it up if Shopify changes.
+        console.log(line + (isLatest ? "" : " (skipped with its dispute)"));
         continue;
       }
       console.log(`${line} → ${await openCycle(d, c, source)}`);
