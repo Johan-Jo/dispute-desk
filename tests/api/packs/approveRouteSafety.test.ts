@@ -62,6 +62,7 @@ function mockSupabase(
   latest: Record<string, unknown> | null,
   queryError: { message: string } | null = null,
   cycles: { pack: number; dispute: number } = { pack: 1, dispute: 1 },
+  disputeExtra: Record<string, unknown> = {},
 ) {
   const packUpdate = vi.fn().mockReturnValue({
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -106,8 +107,15 @@ function mockSupabase(
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: { response_cycle: cycles.dispute }, error: null }),
+        single: vi.fn().mockResolvedValue({ data: { response_cycle: cycles.dispute, ...disputeExtra }, error: null }),
       };
+    }
+    if (table === "dispute_bank_claims") {
+      const q: Record<string, unknown> = {};
+      q.select = vi.fn(() => q);
+      q.eq = vi.fn(() => q);
+      q.maybeSingle = vi.fn(async () => ({ data: null, error: null }));
+      return q;
     }
     if (table === "jobs") return { insert: jobsInsert };
     if (table === "audit_events") return { insert: auditInsert };
@@ -270,5 +278,22 @@ describe("POST /api/packs/:packId/approve — response-cycle guard (plan B0)", (
     expect(packUpdate).not.toHaveBeenCalled();
     expect(jobsInsert).not.toHaveBeenCalled();
     expect(auditInsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/packs/:packId/approve — bank's claim guard", () => {
+  it("refuses a reopened dispute until the bank's claim is added", async () => {
+    const { packUpdate, jobsInsert } = mockSupabase(
+      { id: "pkg-4", version: 4, ...CLEAN },
+      null,
+      { pack: 2, dispute: 2 },
+      { status: "needs_response", due_at: new Date(Date.now() + 3 * 86400_000).toISOString(), reason: "FRAUDULENT", network_reason_code: "10.4" },
+    );
+    const res = await POST(req(), params);
+    const body = await res.json();
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("BANK_CLAIM_REQUIRED");
+    expect(packUpdate).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
   });
 });

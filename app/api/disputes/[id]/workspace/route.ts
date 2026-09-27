@@ -32,6 +32,11 @@ import {
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import {
+  bankClaimInputFromRow,
+  bankClaimTrigger,
+  loadBankClaimAnswer,
+} from "@/lib/disputes/bankClaim";
 /*
  * `calculateCaseStrength` and `computeContributions` are deliberately NOT
  * imported here any more. Both now arrive through `buildWorkspaceAssessment`,
@@ -473,6 +478,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // synthetic 2-event path. Capped to 20 events upstream in
     // `lib/packs/sources/orderSource.ts`.
     timelineEvents: orderContext.timelineEvents,
+    // Response cycles + the bank's claim (lib/disputes/bankClaim.ts). The
+    // card asks for the claim when `bankClaim.trigger` is set and it has
+    // not been answered for this cycle.
+    responseCycle: (row.response_cycle as number | null) ?? 1,
+    reopenedAt: row.reopened_at ?? null,
+    escalatedFromInquiryAt: row.escalated_from_inquiry_at ?? null,
+  };
+
+  const bankClaimCycle = (row.response_cycle as number | null) ?? 1;
+  const bankClaim = {
+    trigger: bankClaimTrigger(bankClaimInputFromRow(row as Record<string, unknown>)),
+    answer: await loadBankClaimAnswer(sb, disputeId, bankClaimCycle),
   };
 
   // Reconcile persisted checklist_v2 against fields actually carried by
@@ -1184,6 +1201,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json({
     dispute,
+    bankClaim,
     pack,
     gorgiasComms,
     argumentMap,

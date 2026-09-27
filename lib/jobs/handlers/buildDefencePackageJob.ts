@@ -55,6 +55,7 @@ import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
+import { bankClaimInputFromRow, loadBankClaimAnswer, needsBankClaim } from "@/lib/disputes/bankClaim";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
@@ -174,7 +175,7 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("disputes")
-      .select("id, dispute_gid, order_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name, initiated_at")
+      .select("id, dispute_gid, order_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name, initiated_at, response_cycle")
       .eq("id", pkg.dispute_id)
       .single(),
     sb
@@ -535,9 +536,27 @@ export async function handleBuildDefencePackage(
    * checks, a model error — falls through to the template writer below,
    * unchanged. Its letter still passes every validator this job runs; if it
    * fails one, the existing retry regenerates with the template writer. */
+  // The bank's claim for this response cycle, when the merchant copied it
+  // from Shopify Admin (lib/disputes/bankClaim.ts). Passed to the writer as
+  // what to answer. Counsel v2 does not take it, so a claimed case always
+  // goes to the template writer that does.
+  // Only looked up when the dispute needs it (reopened, or GENERAL with no
+  // network code) — every other build skips the query.
+  const bankClaim =
+    dispute && needsBankClaim(bankClaimInputFromRow(dispute as unknown as Record<string, unknown>))
+      ? await loadBankClaimAnswer(
+          sb,
+          pkg.dispute_id,
+          (dispute as { response_cycle?: number | null }).response_cycle ?? 1,
+        )
+      : null;
+  const bankClaimInput = bankClaim
+    ? { text: bankClaim.text, noClaimShown: bankClaim.noClaimShown }
+    : null;
+
   let usedCounsel = false;
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
-  if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment) {
+  if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment && !bankClaim?.text) {
     const cap = await checkDailyCap(sb, pkg.shop_id);
     if (!cap.capReached && cap.counselRuns < COUNSEL_DAILY_RUN_CAP) {
       try {
@@ -636,6 +655,7 @@ export async function handleBuildDefencePackage(
       manualEvidence: classification.manual,
       internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
       missingEvidence: classification.missing,
+      bankClaim: bankClaimInput,
     },
     {
       shopId: pkg.shop_id,
@@ -833,6 +853,7 @@ export async function handleBuildDefencePackage(
         manualEvidence: classification.manual,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
         missingEvidence: classification.missing,
+        bankClaim: bankClaimInput,
       },
       {
         shopId: pkg.shop_id,

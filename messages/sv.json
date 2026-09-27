@@ -2264,7 +2264,26 @@
         "generic": "Den här uppgiften behöver din bekräftelse innan den kan användas."
       }
     },
-    "multipleOnOrder": "{index} av {total} på denna order"
+    "multipleOnOrder": "{index} av {total} på denna order",
+    "bankClaim": {
+      "eyebrow": "Åtgärd krävs",
+      "title": "Lägg till bankens anspråk",
+      "introReopened": "Shopify öppnade den här tvisten igen efter ett tidigare svar. Banken begär ett nytt svar, och vad den frågar visas bara i Shopify.",
+      "introGeneral": "Den här tvisten kom in utan något specifikt skäl från banken, så orsakskoden säger inte vad kunden bestrider.",
+      "why": "Shopify visar bankens förklaring (utfärdarens anspråk) i återkravsdetaljerna på ordersidan, men delar den inte med appar. Kopiera den hit så att svaret bemöter det banken faktiskt frågade.",
+      "step1": "1. Öppna ordern i Shopify och hitta bankens anspråk i återkravsdetaljerna.",
+      "step2": "2. Klistra in texten nedan. Om Shopify inte visar något anspråk för den här tvisten, kryssa i rutan i stället.",
+      "openInShopify": "Öppna ordern i Shopify",
+      "textLabel": "Bankens anspråk",
+      "textPlaceholder": "Klistra in anspråket eller sammanfattningen som Shopify visar den",
+      "textHelp": "Används bara för att avgöra vad svaret måste bemöta. Det citeras aldrig och skickas aldrig tillbaka till banken.",
+      "noClaimShown": "Shopify visar inget anspråk för den här tvisten",
+      "noClaimShownHelp": "Banker lämnar inte alltid ett. DisputeDesk bygger då svaret utifrån orsakskoden.",
+      "holdNote": "Tills det har lagts till skickar DisputeDesk inget svar för den här tvisten.",
+      "submit": "Spara bankens anspråk",
+      "errorWindowClosed": "Shopify har redan vidarebefordrat bevisen för den här tvisten, så anspråket kan inte längre läggas till.",
+      "errorGeneric": "Anspråket kunde inte sparas ({code}). Försök igen."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
@@ -3680,6 +3699,10 @@
       "returnedToSenderParcels": {
         "title": "När ett paket returneras till avsändaren",
         "body": "Ibland kan en transportör inte slutföra en leverans och lämnar tillbaka paketet till dig. Kunden fick aldrig sin order — och om de senare bestrider betalningen förändrar det vad ärendet kan och inte kan handla om.\n\n**Vad DisputeDesk gör automatiskt**\n\nNär vi läser av en returhändelse från transportören gör vi följande:\n\n1. Visar leveransraden som \"Returnerad till avsändaren\" med transportörens eget datum, i stället för att behandla den som en oskannad etikett.\n2. Tar bort alla argument som bygger på att kunden aldrig skickat tillbaka varorna. Shopify kan fortfarande visa returstatusen som \"ingen retur\", eftersom ingen returbegäran öppnades — men varorna finns hos dig, och ett argument byggt på motsatsen vore osant.\n3. Markerar ärendet som svagt och stoppar automatisk inlämning, även på deadline. Ett returnerat paket kan aldrig ha någon leveransbekräftelse, och utan en sådan avgör banken normalt till kundens fördel.\n\n**Vad vi behöver från dig**\n\nEn enda sak, och det är det vi inte kan se: **varför paketet kom tillbaka.** Frågan hittar du på fliken Bevis.\n\n- **Kunden vägrade ta emot leveransen** eller **hämtade aldrig ut den på utlämningsstället** — det är värt att argumentera för. Enligt EU:s konsumentregler är det ingen giltig retur och ingen giltig ångerrätt att bara låta bli att ta emot ett paket. Vi tar med det i svaret åt dig.\n- **Adressen gick inte att leverera till** — vi noterar det, men tar inte med det i svaret. Det hjälper inte ärendet, och att lyfta det bjuder in till en fråga ingen ställt.\n\nVi frågar också vad som hände med varorna när de kom tillbaka. Det svaret är för din och vår dokumentation; det tas aldrig med i svaret som skickas för din räkning.\n\n**Om du behållit både varorna och betalningen**\n\nDet ärliga svaret är oftast att återbetala. Kunden har betalat, aldrig fått sin order, och varorna är tillbaka hos dig. Att driva ärendet lyckas sällan och kan dessutom kosta dig tvisteavgiften. Om du ska återbetala är ditt beslut — DisputeDesk gör det inte åt dig — men bedömningen du ser speglar de verkliga oddsen, inte en optimistisk gissning.\n\n**En notering om tid**\n\nOm du svarar att du går med på att justera betalningen förväntar sig vissa betalleverantörer att återbetalningen sker inom kort tid (Klarna drar till exempel tillbaka betalningen automatiskt om återbetalningen inte kommer i tid). Gör återbetalningen snarast efter att du åtagit dig den."
+      },
+      "bankClaim": {
+        "title": "Varför DisputeDesk ber om bankens anspråk",
+        "body": "För de flesta tvister talar orsakskoden om för DisputeDesk vad kunden bestrider, och svaret byggs utifrån den. Två sorters tvister är annorlunda:\n\n• Återöppnade tvister: Shopify har satt en tvist som du redan besvarat tillbaka till \"behöver svar\". Banken begär ett nytt svar, och ditt tidigare svar avgör den inte längre.\n• \"Allmänna\" tvister utan nätverkets orsakskod: banken angav inte vilken sorts tvist det är.\n\nI båda fallen är bankens anspråk (Shopify kallar det utfärdarens anspråk) det enda som säger vad banken vill ha besvarat. Shopify visar det i återkravsdetaljerna på ordersidan i din Shopify-admin, men delar det inte med appar, så DisputeDesk kan inte läsa det själv.\n\nSå gör du:\n1. Öppna tvisten i DisputeDesk och använd \"Öppna ordern i Shopify\".\n2. Hitta bankens anspråk i återkravsdetaljerna och kopiera texten.\n3. Klistra in den i kortet \"Lägg till bankens anspråk\" och spara. Om Shopify inte visar något anspråk, kryssa i \"Shopify visar inget anspråk för den här tvisten\" i stället – banker lämnar inte alltid ett.\n\nDisputeDesk bygger sedan om svaret så att det bemöter anspråket. Anspråket används bara för att avgöra vad svaret måste ta upp; det citeras aldrig och skickas aldrig tillbaka till banken.\n\nTills anspråket har lagts till skickar DisputeDesk inget svar för den tvisten, inte heller vid tidsfristen. Vi mejlar dig också när en tvist börjar behöva det."
       }
     },
     "embedded": {
@@ -6297,7 +6320,8 @@
       "feature_blocked": "Faktureringsåtgärd krävs",
       "subscription_expired": "Faktureringsåtgärd krävs",
       "payment_failed": "Faktureringsåtgärd krävs",
-      "auto_build_off": "Automatisering pausad"
+      "auto_build_off": "Automatisering pausad",
+      "bank_claim_needed": "Bankens anspråk behövs"
     },
     "attentionBlockingSub": {
       "approval_gate": "DisputeDesk väntar på ditt godkännande för att spara bevispaketet",
@@ -6306,7 +6330,8 @@
       "feature_blocked": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
       "subscription_expired": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
       "payment_failed": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
-      "auto_build_off": "Automatisk bevisinsamling är avstängd i dina inställningar"
+      "auto_build_off": "Automatisk bevisinsamling är avstängd i dina inställningar",
+      "bank_claim_needed": "Kopiera bankens anspråk från Shopify – DisputeDesk skickar inget svar förrän det har lagts till"
     },
     "outcomeCard": {
       "title": "Utfall",

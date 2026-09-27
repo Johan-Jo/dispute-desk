@@ -51,6 +51,7 @@ const BLOCKING_ATTENTION_REASONS = new Set([
   "payment_failed",
   "missing_required_evidence",
   "auto_build_off",
+  "bank_claim_needed",
 ]);
 
 /** attention_reason values that are an explicit ask without halting
@@ -122,7 +123,8 @@ export type BlockingReason =
   | "feature_blocked"
   | "subscription_expired"
   | "payment_failed"
-  | "auto_build_off";
+  | "auto_build_off"
+  | "bank_claim_needed";
 
 export interface AttentionResult {
   attention: MerchantAttention;

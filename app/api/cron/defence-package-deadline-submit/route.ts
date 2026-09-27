@@ -65,6 +65,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { runDeadlineSubmitLegacy } from "./legacyRoute";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import { bankClaimBlocksFiling, bankClaimInputFromRow, bankClaimTrigger } from "@/lib/disputes/bankClaim";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -161,7 +162,7 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state, response_cycle",
+      "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state, response_cycle, closed_at, final_outcome",
     )
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
@@ -247,6 +248,25 @@ export async function GET(req: NextRequest) {
           },
         });
         continue;
+      }
+
+      // Bank's claim guard: a reopened or `general`-without-code dispute is
+      // never filed at the deadline without the claim the merchant copies
+      // from Shopify Admin. The dispute already shows "Action required".
+      {
+        const claimInput = bankClaimInputFromRow(d as Record<string, unknown>);
+        if (await bankClaimBlocksFiling(sb, d.id as string, claimInput)) {
+          summary.blockedByDecision++;
+          await logAuditEvent({
+            shopId: d.shop_id as string,
+            disputeId: d.id as string,
+            packId: pack.id as string,
+            actorType: "system",
+            eventType: "deadline_submit_refused_bank_claim_missing",
+            eventPayload: { trigger: bankClaimTrigger(claimInput), cycle: d.response_cycle ?? 1 },
+          });
+          continue;
+        }
       }
 
       let settings = settingsByShop.get(d.shop_id as string);
