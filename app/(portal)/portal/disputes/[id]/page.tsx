@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
 import { useDemoMode, useDemoData } from "@/lib/demo-mode";
+import { phaseBadgeTone } from "@/lib/disputes/phaseUtils";
+import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 interface Dispute {
   id: string;
@@ -18,6 +20,7 @@ interface Dispute {
   order_name: string | null;
   customer_display_name: string | null;
   status: string | null;
+  phase?: DisputePhase | null;
   reason: string | null;
   amount: number | null;
   currency_code: string | null;
@@ -483,6 +486,10 @@ export default function DisputeDetailPage() {
             <h1 className="text-2xl font-bold text-[#0B1220]">
               {t("disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? id })}
             </h1>
+            {/* Inquiry / Chargeback — same tones as the disputes list. */}
+            <Badge variant={phaseBadgeTone(dispute.phase ?? null)} data-testid="dispute-phase-pill">
+              {dispute.phase === "inquiry" ? t("inquiryBadge") : t("chargebackBadge")}
+            </Badge>
             {isSynthetic && <Badge variant="info">Synthetic</Badge>}
           </div>
           <p className="text-sm text-[#667085] mt-1">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : t("unknownReason")}</p>

@@ -29,8 +29,15 @@ import {
   OUTCOME_DETECTED,
   DISPUTE_CLOSED,
   SUBMISSION_CONFIRMED,
+  RESPONSE_CYCLE_REOPENED,
+  ESCALATED_TO_CHARGEBACK,
 } from "@/lib/disputeEvents/eventTypes";
 import type { DisputeSnapshot } from "./disputeSnapshot";
+import {
+  opensNewResponseCycle,
+  reconcileResponseCycle,
+  responseAnchorKey,
+} from "./responseCycle";
 
 const TERMINAL_STATUSES = new Set([
   "won",
@@ -52,7 +59,8 @@ export type DisputeTransitionEventType =
   | "DUE_DATE_CHANGED"
   | "SUBMISSION_CONFIRMED"
   | "OUTCOME_DETECTED"
-  | "DISPUTE_CLOSED";
+  | "DISPUTE_CLOSED"
+  | "RESPONSE_CYCLE_REOPENED";
 
 export interface DisputeTransitionEvent {
   type: DisputeTransitionEventType;
@@ -173,13 +181,20 @@ export async function applyDisputeSnapshot(
     new_dispute_alert_sent_at: string | null;
     shopify_updated_at: string | null;
     dispute_evidence_gid: string | null;
+    phase?: string | null;
+    evidence_saved_to_shopify_at?: string | null;
+    response_cycle?: number | null;
+    reopened_at?: string | null;
+    escalated_from_inquiry_at?: string | null;
   }
 
   const existingQuery = await sb
     .from("disputes")
     .select(
       "id, status, due_at, submitted_at, final_outcome, submission_state, " +
-        "new_dispute_alert_sent_at, shopify_updated_at, dispute_evidence_gid",
+        "new_dispute_alert_sent_at, shopify_updated_at, dispute_evidence_gid, " +
+        "phase, evidence_saved_to_shopify_at, response_cycle, reopened_at, " +
+        "escalated_from_inquiry_at",
     )
     .eq("shop_id", shopId)
     .eq("dispute_gid", snapshot.disputeGid)
@@ -217,6 +232,19 @@ export async function applyDisputeSnapshot(
     };
   }
 
+  // A new response cycle (Shopify asks for a response again after one was
+  // given). This is the ONE transition allowed to clear `submitted_at`: the
+  // reset happens in `reconcile_response_cycle` below, and the walk-back
+  // guard stays in force for every other evidence_sent_on → null.
+  const opensCycle =
+    existing != null &&
+    !existing.final_outcome &&
+    opensNewResponseCycle({
+      existing,
+      newStatus: snapshot.status ?? null,
+      newDueAt: snapshot.evidenceDueBy,
+    });
+
   // Monotonic guards: evidence_sent_on walk-back + terminal downgrade.
   // These are LOG-AND-PRESERVE: keep the existing value, continue with the
   // rest of the diff. The PR description's reasoning is that monotonic
@@ -226,7 +254,7 @@ export async function applyDisputeSnapshot(
       ? existing.submitted_at // preserve
       : snapshot.evidenceSentOn ?? existing?.submitted_at ?? null;
 
-  if (existing?.submitted_at && !snapshot.evidenceSentOn) {
+  if (existing?.submitted_at && !snapshot.evidenceSentOn && !opensCycle) {
     guardWarnings.push(
       `evidence_sent_on walk-back rejected (existing=${existing.submitted_at}, snapshot=null)`,
     );
@@ -498,9 +526,108 @@ export async function applyDisputeSnapshot(
 
   // Existing dispute — diff against the previous row.
   let anyChange = false;
+  // Shopify's time for this snapshot. Cycle starts and escalations are
+  // recorded at Shopify's time, never at "now", so an artifact built for the
+  // new cycle is always newer than the cycle start.
+  const shopifyAt = snapshot.shopifyUpdatedAt ?? nowIso;
+
+  // Inquiry → chargeback. Recorded once per dispute, whether or not the same
+  // snapshot also opens a new response cycle.
+  const escalatedNow =
+    existing.phase === "inquiry" &&
+    phase === "chargeback" &&
+    !existing.escalated_from_inquiry_at;
+  if (escalatedNow) {
+    anyChange = true;
+    await sb
+      .from("disputes")
+      .update({ escalated_from_inquiry_at: shopifyAt })
+      .eq("id", disputeId)
+      .is("escalated_from_inquiry_at", null);
+    void emitDisputeEvent({
+      disputeId,
+      shopId,
+      eventType: ESCALATED_TO_CHARGEBACK,
+      description: "Inquiry escalated to chargeback",
+      eventAt: shopifyAt,
+      actorType: "shopify",
+      sourceType: sourceTypeForEvent,
+      metadataJson: { old_phase: existing.phase, new_phase: phase },
+      dedupeKey: `${disputeId}:ESCALATED_TO_CHARGEBACK`,
+    });
+  }
+
+  // New response cycle (plan B1). The SQL function does the reset and the
+  // artifact retirement atomically, and only when it added the ledger row.
+  let currentCycle = existing.response_cycle ?? 1;
+  let reopenedAt = existing.reopened_at ?? null;
+  if (opensCycle) {
+    const anchorKey = responseAnchorKey(existing);
+    if (!anchorKey) {
+      guardWarnings.push("new response cycle detected but no prior response to anchor on");
+    } else {
+      const trigger =
+        escalatedNow ||
+        (existing.escalated_from_inquiry_at != null && currentCycle === 1)
+          ? "escalation"
+          : "reopen";
+      try {
+        const cycle = await reconcileResponseCycle(sb, disputeId, {
+          anchorKey,
+          startedAt: shopifyAt,
+          trigger,
+          source: "live",
+        });
+        currentCycle = cycle.cycle;
+        reopenedAt = cycle.reopenedAt;
+        if (cycle.reset) {
+          anyChange = true;
+          const eventKey = `${disputeId}:RESPONSE_CYCLE_REOPENED:${anchorKey}`;
+          void emitDisputeEvent({
+            disputeId,
+            shopId,
+            eventType: RESPONSE_CYCLE_REOPENED,
+            description: `Response cycle ${cycle.cycle} opened (${trigger})`,
+            eventAt: shopifyAt,
+            actorType: "shopify",
+            sourceType: sourceTypeForEvent,
+            metadataJson: {
+              trigger,
+              cycle: cycle.cycle,
+              anchor_key: anchorKey,
+              previous: cycle.previous ?? null,
+              retired_pack_ids: cycle.retiredPackIds,
+              retired_approvals: cycle.retiredApprovals,
+              superseded_defence_package_ids: cycle.supersededDefencePackageIds,
+              old_due_at: existing.due_at,
+              new_due_at: snapshot.evidenceDueBy ?? null,
+            },
+            dedupeKey: eventKey,
+          });
+          events.push({
+            type: "RESPONSE_CYCLE_REOPENED",
+            disputeId,
+            shopId,
+            eventAt: shopifyAt,
+            eventKey,
+            oldStatus: existing.status ?? null,
+            newStatus,
+            context: ctxBase,
+          });
+        }
+      } catch (err) {
+        guardWarnings.push(
+          `reconcileResponseCycle failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+  }
 
   if (existing.status !== newStatus && newStatus) {
     anyChange = true;
+    // Cycle-aware key: a second reopen (under_review → needs_response again)
+    // must not collide with the first and be dropped from the ledger.
+    const statusKey = `${disputeId}:${STATUS_CHANGED}:${existing.status}_${newStatus}:c${currentCycle}`;
     void emitDisputeEvent({
       disputeId,
       shopId,
@@ -512,15 +639,16 @@ export async function applyDisputeSnapshot(
       metadataJson: {
         old_status: existing.status,
         new_status: newStatus,
+        response_cycle: currentCycle,
       },
-      dedupeKey: `${disputeId}:${STATUS_CHANGED}:${existing.status}_${newStatus}`,
+      dedupeKey: statusKey,
     });
     events.push({
       type: "STATUS_CHANGED",
       disputeId,
       shopId,
       eventAt: nowIso,
-      eventKey: `${disputeId}:STATUS_CHANGED:${existing.status}_${newStatus}`,
+      eventKey: `${disputeId}:STATUS_CHANGED:${existing.status}_${newStatus}:c${currentCycle}`,
       oldStatus: existing.status ?? null,
       newStatus,
       context: ctxBase,
@@ -611,10 +739,18 @@ export async function applyDisputeSnapshot(
   }
 
   // Submission confirmation — evidence_sent_on transition null → timestamp.
+  // In a later response cycle, only an evidence_sent_on AFTER the cycle
+  // start confirms it: a stale value left over from the previous cycle must
+  // not flip the new cycle back to "sent".
+  const sentInCurrentCycle =
+    !snapshot.evidenceSentOn ||
+    !reopenedAt ||
+    new Date(snapshot.evidenceSentOn).getTime() > new Date(reopenedAt).getTime();
   if (
     snapshot.evidenceSentOn &&
+    sentInCurrentCycle &&
     existing.submission_state !== "submitted_confirmed" &&
-    !existing.submitted_at
+    (!existing.submitted_at || opensCycle)
   ) {
     anyChange = true;
     await sb

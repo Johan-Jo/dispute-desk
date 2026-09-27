@@ -8,6 +8,11 @@ export const DISPUTE_OPENED = "dispute_opened";
 export const STATUS_CHANGED = "status_changed";
 export const DUE_DATE_CHANGED = "due_date_changed";
 export const DISPUTE_CLOSED = "dispute_closed";
+/** Shopify asked for a new response after one was given (reopen, or an
+ *  answered inquiry escalated to a chargeback). Opens a new response cycle. */
+export const RESPONSE_CYCLE_REOPENED = "response_cycle_reopened";
+/** Shopify moved the dispute from inquiry to chargeback. Once per dispute. */
+export const ESCALATED_TO_CHARGEBACK = "escalated_to_chargeback";
 
 // Evidence pack
 export const PACK_CREATED = "pack_created";

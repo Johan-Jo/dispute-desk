@@ -102,6 +102,8 @@ function setup(opts: {
   completenessScore?: number;
   readiness?: string;
   dueAt?: string;
+  packCycle?: number;
+  disputeCycle?: number;
 }) {
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
   const rpc = vi.fn(async () => ({
@@ -121,6 +123,7 @@ function setup(opts: {
     status: "needs_response",
     normalized_status: "in_progress",
     review_state: null,
+    response_cycle: opts.disputeCycle ?? 1,
   };
 
   const from = vi.fn((table: string) => {
@@ -149,6 +152,7 @@ function setup(opts: {
             submission_readiness: opts.readiness ?? "ready",
             pack_json: opts.packJson ?? HEALTHY_PACK_JSON,
             checklist_v2: [],
+            response_cycle: opts.packCycle ?? 1,
           },
           error: null,
         }),
@@ -203,6 +207,14 @@ describe("deadline submit — a deadline relaxes NOTHING (P-6)", () => {
     expect(body.enqueuedSubmit).toBe(1);
     expect(body.blockedByDecision).toBe(0);
     expect(mockEmail).not.toHaveBeenCalled();
+  });
+
+  it("RESPONSE CYCLE — a pack from before a reopen is never filed at the deadline", async () => {
+    const { rpc } = setup({ packCycle: 1, disputeCycle: 2 });
+    const body = await (await GET(req())).json();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(body.enqueuedSubmit).toBe(0);
+    expect(body.blockedByDecision).toBe(1);
   });
 
   it("COVERAGE — a Shopify-Protect case is not filed at the deadline", async () => {

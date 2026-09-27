@@ -25,7 +25,7 @@ import {
   type FigmaDueStatus,
   type FigmaOutcome,
 } from "./disputeListHelpers";
-import { phaseLabel } from "@/lib/disputes/phaseUtils";
+import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 /** 8-column grid shared by the header + every row. */
@@ -44,11 +44,6 @@ function formatDisputeDate(iso: string | null, locale: string): string {
 }
 
 /** Compact inquiry/chargeback pill. */
-function phasePillColors(phase: DisputePhase | null): { bg: string; color: string } {
-  if (phase === "inquiry") return { bg: "#E0F2FE", color: "#075985" };
-  return { bg: "#FEF3C7", color: "#92400E" }; // chargeback (default)
-}
-
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 interface Props {

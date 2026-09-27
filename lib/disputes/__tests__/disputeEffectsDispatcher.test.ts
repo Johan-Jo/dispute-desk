@@ -515,3 +515,65 @@ describe("dispatchDisputeEffects", () => {
     );
   });
 });
+
+describe("dispatchDisputeEffects — RESPONSE_CYCLE_REOPENED (plan B1, D-3)", () => {
+  const REOPENED_EVENT: DisputeTransitionEvent = {
+    type: "RESPONSE_CYCLE_REOPENED",
+    disputeId: "dispute-1",
+    shopId: "shop-1",
+    eventAt: "2026-09-20T08:00:00Z",
+    eventKey: "dispute-1:RESPONSE_CYCLE_REOPENED:resp:2026-09-05T10:00:00Z",
+    oldStatus: "under_review",
+    newStatus: "needs_response",
+    context: OPENED_EVENT.context,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRunPipeline.mockResolvedValue({ action: "pack_enqueued" } as never);
+  });
+
+  it("runs the automation pipeline for the new cycle and sends no email", async () => {
+    mockEvaluateRules.mockResolvedValue({
+      action: { mode: "auto", pack_template_id: null },
+      packTemplateId: null,
+    } as never);
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+
+    const summary = await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([REOPENED_EVENT]),
+      source: "webhook",
+      client,
+    });
+
+    expect(summary.effectsRan).toBe(1);
+    expect(mockRunPipeline).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "dispute-1", shop_id: "shop-1", phase: "chargeback" }),
+    );
+    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(mockClaimDeferred).not.toHaveBeenCalled();
+  });
+
+  it("a second observer of the same reopen (cron after webhook) does not rebuild again", async () => {
+    mockEvaluateRules.mockResolvedValue({
+      action: { mode: "review", pack_template_id: null },
+      packTemplateId: null,
+    } as never);
+    const { client } = buildClient({
+      auditInsertResolved: { error: { code: "23505", message: "duplicate key" } },
+    });
+    mockGetServiceClient.mockReturnValue(client);
+
+    const summary = await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([REOPENED_EVENT]),
+      source: "cron",
+      client,
+    });
+
+    expect(summary.effectsSkipped).toBe(1);
+    expect(mockRunPipeline).not.toHaveBeenCalled();
+  });
+});

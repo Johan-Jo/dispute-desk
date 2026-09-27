@@ -193,3 +193,38 @@ describe("saveToShopifyJob — Resubmission Window guard A", () => {
     expect(restoreCall?.rebuild_pending).toBe(false);
   });
 });
+
+describe("saveToShopifyJob — response-cycle guard (plan B0)", () => {
+  it("refuses a pack built for an earlier response cycle, before any Shopify call", async () => {
+    makeSupabase({
+      pack: {
+        id: PACK_ID,
+        shop_id: SHOP_ID,
+        dispute_id: DISPUTE_ID,
+        status: "ready",
+        response_cycle: 1,
+      },
+      dispute: {
+        id: DISPUTE_ID,
+        dispute_evidence_gid: "gid://shopify/ShopifyPaymentsDisputeEvidence/1",
+        dispute_gid: "gid://shopify/ShopifyPaymentsDispute/1234",
+        reason: "fraudulent",
+        amount: "10",
+        currency_code: "USD",
+        submission_state: "not_saved",
+        submitted_at: null,
+        response_cycle: 2,
+      },
+    });
+
+    const result = await handleSaveToShopify(makeJob());
+
+    expect(result).toMatchObject({ ok: false, retriable: false });
+    expect((result as { reason?: string }).reason).toContain("stale_response_cycle");
+    expect(mockUploadDisputeFile).not.toHaveBeenCalled();
+    expect(mockGraphQL).not.toHaveBeenCalled();
+    expect(mockLogAuditEvent.mock.calls.map((c) => c[0]?.eventType)).toContain(
+      "save_to_shopify_refused_stale_cycle",
+    );
+  });
+});
