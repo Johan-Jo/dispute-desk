@@ -22,7 +22,8 @@
  */
 
 import React from "react";
-import { Document, Font, Link, Page, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Link, Page, Text, View } from "@react-pdf/renderer";
+import { exhibitCaption, type ProductListingExhibit } from "../productListingExhibit";
 import { COLORS, styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
@@ -105,6 +106,9 @@ export interface DefencePackageMeta {
   addressExhibit?: AddressExhibit | null;
   /** Counsel v2: the customer's later order (DefenceNarrativeOutput.laterOrderExhibit). */
   laterOrderExhibit?: LaterOrderExhibit | null;
+  /** Not-as-described PR 3b: the collected product listings, printed only
+   *  when the letter cites one. Absent → the section does not render. */
+  productListingExhibits?: ProductListingExhibit[];
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -559,6 +563,33 @@ function SupportingEvidenceTable({
  * Each gets a short title and a marker: filled for money and fulfilment,
  * hollow for customer notifications, green for the carrier's own record. */
 
+function ProductListingExhibits({ exhibits }: { exhibits: ProductListingExhibit[] }) {
+  return (
+    <View>
+      {exhibits.map((x, i) => (
+        <View key={i} style={{ marginBottom: i < exhibits.length - 1 ? 18 : 0 }} wrap={false}>
+          <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>{exhibitCaption(x.retrievedOn)}</Text>
+          {x.title ? <Text style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 2 }}>{x.title}</Text> : null}
+          {x.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 6 }}>{x.variantLine}</Text> : null}
+          {x.images.length > 0 ? (
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
+              {x.images.map((src, k) => (
+                <Image key={k} src={src} style={{ width: 150, height: 150, objectFit: "contain" }} />
+              ))}
+            </View>
+          ) : null}
+          {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
+          {x.sourceUrl ? (
+            <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
+              {x.sourceUrl}
+            </Link>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Chronology({ events, shipments }: { events: ChronologyEvent[]; shipments: ReturnType<typeof shipmentsOf> }) {
   return (
     <View>
@@ -760,6 +791,12 @@ export function DefencePackageDocument({
                   <ShipmentCard card={laterOrderCard(meta.laterOrderExhibit)!} wide />
                 </View>
               ) : null}
+            </Section>
+          ) : null}
+
+          {meta.productListingExhibits && meta.productListingExhibits.length > 0 ? (
+            <Section number={num()} title="Product Listing">
+              <ProductListingExhibits exhibits={meta.productListingExhibits} />
             </Section>
           ) : null}
 

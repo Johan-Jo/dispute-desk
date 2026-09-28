@@ -90,6 +90,7 @@ import {
   type PackageProjection,
 } from "@/lib/defence/package";
 import { projectReviewItems } from "@/lib/evidence/model/merchantProjection";
+import { buildProductListingExhibits } from "@/lib/defence/productListingExhibit";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
@@ -1331,6 +1332,14 @@ export async function handleBuildDefencePackage(
       lineItemsFromContext: orderContext.lineItems,
       addressExhibit: narrativeRes.narrative.addressExhibit ?? null,
       laterOrderExhibit: narrativeRes.narrative.laterOrderExhibit ?? null,
+      productListingExhibits: await buildProductListingExhibits({
+        sb,
+        sections: sectionsRaw,
+        // Only when the letter's own facts include a collected listing.
+        listingCited: planFacts.some(
+          (f) => f.category === "product_listing" && (f.value as { collected?: unknown }).collected === true,
+        ),
+      }),
       generatedAt: new Date().toISOString(),
       version: pkg.version,
       packageMode: classification.packageMode,

@@ -107,6 +107,26 @@ function outcomeFor(li: ProductEvidenceLineItem): ListingOutcome {
   return hasText ? "present" : "absent";
 }
 
+/**
+ * Shopify's CDN resizes on request. The originals measured 0.8–1.4 MB (PNG)
+ * on a live Mein Maison listing — over the 1 MB cap, so they would all have
+ * been skipped — while `width=600&format=jpg` returned ~50 KB JPEGs (an image
+ * with transparency stays PNG, ~400 KB). The defence PDF must stay under
+ * Shopify's 2 MB upload ceiling, so the evidence copy is the resized one.
+ */
+export function evidenceImageUrl(url: string): string {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return url;
+  }
+  if (!/(^|\.)shopify\.com$|(^|\.)shopifycdn\.(com|net)$/.test(u.hostname)) return url;
+  u.searchParams.set("width", "600");
+  u.searchParams.set("format", "jpg");
+  return u.toString();
+}
+
 function imageUrls(li: ProductEvidenceLineItem): string[] {
   const urls: string[] = [];
   if (li.variant?.image?.url) urls.push(li.variant.image.url);
@@ -166,7 +186,7 @@ export async function collectProductListings(
       const imagePaths: string[] = [];
       const imageHashes: string[] = [];
       for (const url of imageUrls(li)) {
-        const img = await fetchImage(url).catch(() => null);
+        const img = await fetchImage(evidenceImageUrl(url)).catch(() => null);
         if (!img) continue;
         const hash = sha256(img.bytes);
         const type = (img.contentType ?? "").split(";")[0].trim().toLowerCase();
