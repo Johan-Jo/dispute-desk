@@ -94,23 +94,17 @@ describe("narrativeWriter — validator-feedback retry contract", () => {
     expect(src).toMatch(/previousAttemptErrors/);
   });
 
-  it("build handler retries narrative once on validation failure", async () => {
+  it("the build handler never calls the retired template writer (2026-09-28)", async () => {
+    // The maintainer retired the template writer permanently after it wrote
+    // the Mein Maison #101111 letter. Letters come only from counsel v2; a
+    // failed validation is persisted, never retried through generateNarrative.
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const src = readFileSync(
-      path.resolve(
-        process.cwd(),
-        "lib/jobs/handlers/buildDefencePackageJob.ts",
-      ),
+      path.resolve(process.cwd(), "lib/jobs/handlers/buildDefencePackageJob.ts"),
       "utf8",
     );
-    // Audit event for the retry path exists.
-    expect(src).toMatch(/defence_package_validation_retry/);
-    // The retry call passes validationFeedback derived from the
-    // first attempt's validator errors.
-    expect(src).toMatch(/validationFeedback:\s*feedback/);
-    // The final failure path notes "after one retry" so the merchant
-    // and ops know we attempted the correction.
-    expect(src).toMatch(/after one retry/);
+    expect(src).not.toMatch(/generateNarrative\s*\(/);
+    expect(src).toMatch(/no_counsel_letter/);
   });
 });

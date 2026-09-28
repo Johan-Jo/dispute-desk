@@ -105,6 +105,7 @@ export type EventType =
   | "defence_package_superseded"
   | "defence_package_validation_failed"
   | "defence_package_validation_retry"
+  | "defence_package_no_counsel_letter"
   /** Non-blocking validation findings. Recorded so a rule can be measured on
    *  live traffic before it is allowed to fail a package. */
   | "defence_package_validation_warning"
