@@ -176,6 +176,11 @@ const ALLOWED = new Set([
    * would repeat a failed generation, so it must see `failed` rows — reading
    * past them is the retry loop it prevents. */
   "lib/jobs/handlers/buildDefencePackageJob.ts",
+  /* The failed-package self-heal asks "did the latest BUILD ATTEMPT fail on
+   * infrastructure, and how many attempts in a row have?" — the failed rows
+   * ARE the answer, so it must read them, not past them. It files nothing;
+   * the retry goes through `maybeEnqueueDefencePackage`. */
+  "lib/defence/failedPackageSelfHeal.ts",
   /* The workspace card reports the latest BUILD ATTEMPT for the current pack,
    * failures included, because a merchant whose rebuild failed has to see that
    * it failed. It is not choosing what to file. */

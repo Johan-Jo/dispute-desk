@@ -7000,6 +7000,25 @@ Copy keys `rebuildFailedTitle` / `rebuildFailedBodyFiled` / `rebuildFailedBodyUn
 `disputes.reviewTab.package`, all six locales. A render test asserts the leak set
 (`paymentAuthenticationArgument`, `address_delivery`, `unauthorized_claim`, the raw
 `failure_reason`) never reaches the markup, and that the tone flips with `bankFacing`.
+**Infrastructure failures self-heal once a day (2026-09-28).** The guard ALLOWS a retry of an
+`llm_error` / `daily_cap_reached` row (`markFailed` records no `prompt_version` on those paths, and
+NULL reads as "moved") — but it only answers when something asks, and the only askers are
+`build_pack` completions (evidence moved, a merchant click, or the due day's deadline rebuild).
+Cay #14784 failed twice on `llm_error` on 09-24 (the five-`cache_control`-block API refusal), the
+fix reached prod 09-26, and the case sat on a failed latest package until a human rebuilt it on
+09-28, three days before its deadline. The 06:00 UTC `defence-package-deadline-rebuild` cron now
+runs a second pass, `runFailedPackageSelfHeal` (`lib/defence/failedPackageSelfHeal.ts`), over every
+open, unfiled dispute with a live deadline whose latest package failed with `llm_error` or
+`daily_cap_reached`, and re-asks `maybeEnqueueDefencePackage` (the one owner of versioning; the
+failed row stays in history, the retry is a new version). Bounds: once a day; stops when the newest
+3 versions are all transient failures (`streakExhausted` in the cron summary — a person looks);
+failure must be ≥1h old; a shop with a spent generation budget is deferred; ≤20 enqueues per run;
+disputes the first pass rebuilt are excluded. **`validation_failed` and `pdf_render_failed` are
+never retried by this pass** — a verdict on the letter repeats under the same rules and spends an
+LLM call each time; those stay with the version-change path below and with a human. Audit:
+`auto_build_enqueued` with `trigger: "failed_package_self_heal"`. Regression:
+`tests/unit/failedPackageSelfHealSweep.test.ts` (also pins the guard contract the pass relies on).
+
 **A detector change without a `VALIDATOR_VERSION` bump kills the cases it fixes (2026-08-14).**
 `evaluateGenerationGuard` refuses to regenerate a case whose latest package is `failed` unless
 one of four inputs moved — `prompt_version`, `validator_version`, `composition_version`,
