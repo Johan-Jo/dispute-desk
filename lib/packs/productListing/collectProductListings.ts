@@ -100,6 +100,16 @@ function isAccessDenied(errors: unknown): boolean {
   return /ACCESS_DENIED|access denied|read_products/i.test(s);
 }
 
+/** At most `max` characters, cut at a word boundary with an ellipsis — never
+ *  mid-word (prod canary #100411: "…(USB-betrie"). */
+export function excerptOf(text: string, max: number): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const end = cut.lastIndexOf(" ");
+  return `${(end > max * 0.6 ? cut.slice(0, end) : cut).replace(/[\s,;:(–-]+$/, "")}…`;
+}
+
 function outcomeFor(li: ProductEvidenceLineItem): ListingOutcome {
   if (!li.product && !li.variant) return "custom_item";
   if (!li.product) return "deleted";
@@ -176,6 +186,10 @@ export async function collectProductListings(
   let anyFailed = false;
 
   for (const li of items) {
+    // Not merchandise (shipping insurance, services, gift cards): not what a
+    // not-as-described claim is about, and never an exhibit (prod canary
+    // #100411 showed "Premium-Versandversicherung" as a product listing).
+    if (li.requiresShipping === false) continue;
     const outcome = outcomeFor(li);
     if (outcome !== "present" || !li.product) {
       outcomes.push({ lineItemGid: li.id, outcome });
@@ -257,7 +271,7 @@ export async function collectProductListings(
         title: li.product.title ?? null,
         variantTitle: li.variant?.title ?? null,
         variantOptions,
-        excerpt: descriptionText ? descriptionText.slice(0, LISTING_LIMITS.excerptChars) : null,
+        excerpt: descriptionText ? excerptOf(descriptionText, LISTING_LIMITS.excerptChars) : null,
         sourceUrl: li.product.onlineStoreUrl ?? null,
         fetchedAt: snapshotFetchedAt,
         imagePaths,
