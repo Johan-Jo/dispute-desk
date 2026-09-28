@@ -373,6 +373,19 @@ Rules:
    return requests by email and chat that Shopify never sees, so those
    statements are beyond the record and may be false. A sentence of this
    kind fails validation whatever facts are cited.
+8d. STORE POLICIES AND THE ORDER RECORD are context, cited as such. About a
+   policy_refund / policy_shipping fact you may say ONLY that the policy is
+   published on the merchant's store, with its publishedUrl when present.
+   The policy's TERMS are not in the fact: NEVER describe what a policy
+   requires, allows, excludes or makes conditional (no return windows, no
+   "refunds are contingent on…", no "under the policy the customer must…").
+   NEVER mention acceptance unless acceptedAtCheckout=true: do not write that
+   a policy was not accepted, not agreed to, not shown, or that acceptance
+   was not captured, and do not say when it was shown or available (not "at
+   checkout", not "at the time of purchase"). Never refer to evidence that
+   is absent from the record ("no product listing is available", "the
+   approved record does not include…"): leave that point out instead. Any
+   such sentence fails validation.
 9. If approvedFacts are weak or incomplete, write a NARROWER argument. Do not
    fill gaps. If a section has no supporting facts, return an empty string for
    that section AND list its sectionKey in omittedSections.

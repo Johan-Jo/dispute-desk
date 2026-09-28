@@ -36,10 +36,7 @@ import type {
 import { assessmentFromPackRow } from "@/lib/automation/decision";
 import { derivePlanForCase } from "@/lib/argument/plan";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
-import {
-  resolveReasonCodeModule,
-  resolveReasonCodeModuleForContext,
-} from "@/lib/defence/reasonCodes/registry";
+import { resolveCaseReasonCodeModule } from "@/lib/defence/reasonCodes/registry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import { projectReviewItems } from "@/lib/evidence/model/merchantProjection";
 import type { FileableSelectionContext } from "./loadFileableSelection";
@@ -114,13 +111,18 @@ export function derivePlanIdentityForPack(args: {
   const paymentContext =
     (packJson.payment_context as { family?: string } | undefined) ?? null;
   const isNonCardPayment = isNonCardPaymentFamily(paymentContext?.family ?? null);
-  const reasonCodeModule = isNonCardPayment
-    ? resolveReasonCodeModuleForContext(
-        args.networkReasonCode,
-        args.disputeReason,
-        undefined,
-      )
-    : resolveReasonCodeModule(args.networkReasonCode, undefined);
+  // The reason the build assessed and argued under: the bank's claim's reason
+  // on a GENERAL dispute it re-typed (buildPack persists it), else Shopify's.
+  // Resolved exactly as the build resolves it, or the hash never matches and
+  // every claim-typed letter reads stale at filing (bank-claim plan F2).
+  const caseReason =
+    (packJson.case_assessment_reason as string | null | undefined) ?? args.disputeReason;
+  const reasonCodeModule = resolveCaseReasonCodeModule({
+    networkReasonCode: args.networkReasonCode,
+    shopifyReason: args.disputeReason,
+    caseReason,
+    nonCardPayment: isNonCardPayment,
+  });
 
   // The classifier's facts are needed for `alwaysAdmissible` resolution and the
   // record→fact map, exactly as at build time. Its ELIGIBILITY verdict is not
@@ -153,7 +155,7 @@ export function derivePlanIdentityForPack(args: {
     caseId: args.caseId,
     model: {
       disputeId: args.caseId,
-      reason: args.disputeReason,
+      reason: caseReason,
       packId: args.packId,
       sections,
       evidenceItems: args.evidenceItems,

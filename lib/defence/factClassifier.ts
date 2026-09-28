@@ -549,6 +549,50 @@ export function isCitableShipmentContext(
   return carrier.length > 0 && isParcelIdentifier(carrier, number);
 }
 
+/**
+ * The store's own records: its published policies and the order as placed.
+ * `supporting` by the strength rubric (a policy nobody accepted at checkout
+ * proves nothing on its own), and that stays true — they are never scored.
+ * But a record the argument plan chose must be CITABLE: before this, bank
+ * eligibility was read off strength alone, so the plan included the refund
+ * policy on 133 of 242 prod letters (30 days to 2026-09-28) and not one letter
+ * could cite it, nor the order record (bank-claim plan F1).
+ *
+ * Context never carries a letter by itself: see `hasArgumentBeyondRecordContext`.
+ */
+// `cancellation_policy` is deliberately absent: policySource fills it from the
+// store's TERMS OF SERVICE, and calling that a cancellation policy to an issuer
+// would be inaccurate.
+const RECORD_CONTEXT_FIELDS: ReadonlySet<string> = new Set([
+  "refund_policy",
+  "shipping_policy",
+  "order_confirmation",
+]);
+
+export function isCitableRecordContext(fieldKey: string): boolean {
+  return RECORD_CONTEXT_FIELDS.has(fieldKey);
+}
+
+/** True for a fact that is only there as record context (policy / order). */
+export function isRecordContextFact(fact: {
+  strength: string;
+  value: Record<string, unknown>;
+}): boolean {
+  const fieldKey = typeof fact.value?.fieldKey === "string" ? fact.value.fieldKey : "";
+  return fact.strength === "supporting" && isCitableRecordContext(fieldKey);
+}
+
+/**
+ * A letter needs something to argue besides the store's own records. Policies
+ * and the order record may be cited, but a list holding nothing else is not
+ * an argument — the build skips it exactly as it skipped an empty list.
+ */
+export function hasArgumentBeyondRecordContext(
+  facts: ReadonlyArray<{ strength: string; value: Record<string, unknown> }>,
+): boolean {
+  return facts.some((f) => !isRecordContextFact(f));
+}
+
 function firstTrackingEntry(
   payload: Record<string, unknown>,
 ): { carrier?: unknown; number?: unknown; url?: unknown } | null {
@@ -647,6 +691,13 @@ function communicationItemIds(section: PackSectionLike): string[] {
   // unstable order would change the hash without the evidence changing.
   return [...new Set(ids)].sort();
 }
+
+/** policySource's field ← Shopify policy type (lib/packs/sources/policySource.ts). */
+const POLICY_TYPE_FOR_FIELD: Record<string, string> = {
+  refund_policy: "refunds",
+  shipping_policy: "shipping",
+  cancellation_policy: "terms",
+};
 
 function extractValue(
   fieldKey: string,
@@ -870,12 +921,31 @@ function extractValue(
       };
     case "refund_policy":
     case "shipping_policy":
-    case "cancellation_policy":
+    case "cancellation_policy": {
+      // What the letter may say about a policy: that it is published on the
+      // store, and where. Its TERMS are not in the fact (the text is in the
+      // merchant's language and unread), so the letter must never describe
+      // them. Acceptance appears only when it happened: a `false` here was
+      // written straight into letters as "not accepted at checkout" — an
+      // admission against the merchant (bank-claim plan F1 canary).
+      const policyType = POLICY_TYPE_FOR_FIELD[fieldKey];
+      const published = Array.isArray(p.policies)
+        ? (p.policies as Array<Record<string, unknown>>).find(
+            (x) => x && x.policyType === policyType && typeof x.publishedUrl === "string",
+          )
+        : undefined;
       return {
-        acceptedAtCheckout: p.acceptedAtCheckout === true,
-        acceptanceTimestamp:
-          typeof p.acceptanceTimestamp === "string" ? p.acceptanceTimestamp : null,
+        ...(p.acceptedAtCheckout === true
+          ? {
+              acceptedAtCheckout: true,
+              acceptanceTimestamp:
+                typeof p.acceptanceTimestamp === "string" ? p.acceptanceTimestamp : null,
+            }
+          : {}),
+        publishedOnStore: published !== undefined,
+        publishedUrl: (published?.publishedUrl as string | undefined) ?? null,
       };
+    }
     case "refund_record": {
       // `refundStatus` is the load-bearing key: the refund_processed
       // predicate matches value.refundStatus === "processed". Amount/date
@@ -1179,8 +1249,11 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
 
       // The ONE supporting-but-citable case: a shipment in the carrier's
       // possession, cited as context and never scored (plan §4.1(b)).
+      // And the store's own records (policies, the order), cited as context,
+      // never scored (bank-claim plan F1).
       const citableContext =
-        cat === "supporting" && isCitableShipmentContext(fieldKey, value);
+        cat === "supporting" &&
+        (isCitableShipmentContext(fieldKey, value) || isCitableRecordContext(fieldKey));
 
       const fact: EvidenceFact = {
         id: factId,
@@ -1288,7 +1361,8 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
   // Same rule, same result — the expression was identical here, in the Evidence
   // Basis renderer and in the workspace route, and identical-by-comment is how
   // the LLM payload's weaker copy went unnoticed (C-1).
-  const eligible = approved.some(isBankIncludedFact);
+  // Record context (policies, the order) is citable but never enough alone.
+  const eligible = approved.some((f) => isBankIncludedFact(f) && !isRecordContextFact(f));
   if (!eligible) {
     return {
       approved,

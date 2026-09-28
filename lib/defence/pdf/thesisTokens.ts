@@ -237,13 +237,20 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
 
   policyDisclosureClause: gated({
     name: "policyDisclosureClause",
-    description: "A natural-language clause about which policies were disclosed at checkout. Null when no policy_* facts.",
+    description: "A natural-language clause naming the policies published on the store. Null when no policy_* fact is on record as published.",
     predicateId: "policy_disclosed",
     extract: (facts) => {
+      // Only what the record shows: the policy is published on the store.
+      // Not "at checkout" — the snapshot can post-date the order (bank-claim
+      // plan F1: policies became citable, so this clause started firing).
+      const onStore = (category: "policy_refund" | "policy_shipping") => {
+        const f = findFact(facts, category);
+        const v = f?.value as { publishedOnStore?: unknown; acceptedAtCheckout?: unknown } | undefined;
+        return !!f && (v?.publishedOnStore === true || v?.acceptedAtCheckout === true);
+      };
       const disclosed: string[] = [];
-      if (findFact(facts, "policy_refund")) disclosed.push("refund");
-      if (findFact(facts, "policy_shipping")) disclosed.push("shipping");
-      if (findFact(facts, "policy_cancellation")) disclosed.push("cancellation");
+      if (onStore("policy_refund")) disclosed.push("refund");
+      if (onStore("policy_shipping")) disclosed.push("shipping");
       if (disclosed.length === 0) return null;
       const list =
         disclosed.length === 1
@@ -251,7 +258,7 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
           : disclosed.length === 2
             ? `${disclosed[0]} and ${disclosed[1]}`
             : `${disclosed.slice(0, -1).join(", ")}, and ${disclosed[disclosed.length - 1]}`;
-      return `the merchant's ${list} policies were published and available to the customer at checkout`;
+      return `the merchant's ${list} ${disclosed.length === 1 ? "policy is" : "policies are"} published on its store`;
     },
   }),
 

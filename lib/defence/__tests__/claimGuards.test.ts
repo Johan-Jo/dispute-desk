@@ -612,3 +612,48 @@ describe("claimGuards — return / contact absence claims are banned outright (F
     }
   });
 });
+
+describe("policy and record bans (base prompt rule 8d, bank-claim plan F1)", () => {
+  const ids = (text: string) =>
+    runClaimGuards({ narrativeSections: narrative({ policyArgument: { text } }), approvedFacts: [] }).failures.map(
+      (f) => f.guardId,
+    );
+
+  it.each([
+    "Neither policy was recorded as accepted at checkout for this order.",
+    "The merchant's refund and shipping policies are on record, though acceptance at checkout was not captured for this transaction.",
+    "While the available evidence does not confirm explicit acceptance of these policies at checkout, they are published.",
+  ])("fails a sentence admitting non-acceptance: %s", (text) => {
+    expect(ids(text)).toContain("policy_acceptance_disclaimed");
+  });
+
+  it.each([
+    "Under the merchant's refund policy, any refund is contingent upon the return of the goods.",
+    "The refund policy requires the customer to contact the merchant first.",
+    "The merchant's policy provides that returns are accepted within 30 days.",
+  ])("fails a sentence describing policy terms: %s", (text) => {
+    expect(ids(text)).toContain("policy_terms_beyond_record");
+  });
+
+  it("fails a claim that the policy was available at the time of purchase", () => {
+    expect(ids("The available evidence supports that this policy was accessible to the customer at the time of purchase.")).toContain(
+      "policy_timing_beyond_record",
+    );
+  });
+
+  it("fails narrated absence of evidence", () => {
+    expect(ids("No product listing fact is available in the approved record for this response.")).toContain(
+      "record_absence_narrated",
+    );
+  });
+
+  it.each([
+    "The merchant's refund and shipping policies are published on its store.",
+    "The merchant's refund policy is published at https://shop.example/policies/refund-policy.",
+    "No return has been recorded in Shopify for this order.",
+    "The carrier accepted the parcel on 3 March, and the merchant's shipping policy is published on its store.",
+    "The customer accepted the merchant's refund policy at checkout.",
+  ])("passes what the record supports: %s", (text) => {
+    expect(ids(text)).toEqual([]);
+  });
+});
