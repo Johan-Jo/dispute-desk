@@ -89,6 +89,8 @@ Counsel stance: `feedback_bank_optimized_rebuttal` (maintainer directive 2026-09
 ### PR 4 — Rollout
 develop flag ON → PR 3 replay file → prod deploy flag OFF → prod canary (acceptance #10) → maintainer sign-off recorded in §5 → prod flag ON.
 
+**Letter polish after the sign-off demo (2026-09-28, `fix/letter-layout-polish`):** three defects in the #101111 demo PDF: (1) the "Product Listing" heading orphaned at a page foot → heading and first exhibit now share one unbreakable view; (2) the refund-policy URL ran off the page → `breakableUrls`; (3) the conclusion asked for reversal and the printed request asked again → base prompt rule 10a. Re-rendered and read: all three fixed. Not a scoring or evidence change.
+
 ### PR 5 — Scoring (PLAN ONLY until sign-off)
 Should a collected, item-linked listing count as Axis-1 (leave `supportingOnly`)? Read-only re-score; report tier and auto-save crossings.
 
