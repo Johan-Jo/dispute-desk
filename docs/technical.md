@@ -8134,6 +8134,17 @@ What changed:
 
 **Blast radius.** `packageMode` governs narrative **tone** (firm vs hedged), not whether evidence is filed, and it is not an auto-save gate — nothing in `lib/automation/` reads it. Strength scoring is untouched: `product_description` remains `supportingOnly: true` / `excludedFromStrength: true` in `canonicalEvidence.ts`. The practical effect is that a not-as-described package with no conformity evidence now argues hedged instead of firm, which is the honest rendering of what it actually holds.
 
+#### Not-as-described letters: defend without hedging (2026-09-28)
+
+Superseded in part by `docs/plans/not-as-described-defence-package.plan.md` PR 1 (maintainer decision D5). The hedged voice above was accurate but not counsel: nearly every letter in the family is `narrow` (0 of 308 prod packs carry a listing, measured 2026-09-28), so nearly every letter apologised for its own record. What changed:
+
+- **Family overlay** (`reasonCodes/families/product_not_as_described.ts`, v2): overrides base rule 10's hedged framing for this family only. Narrow mode keeps its other limits (≤4-sentence summary, no declarative reason-code conclusions). It also states what each record can show: the order record shows what was ordered, a listing what was advertised, a delivery record that the parcel arrived — none of them what it contained.
+- **Deterministic bans** in the family's `prohibitedBankPhrases` (validator v16, applied to LLM prose and to the composed PDF): the rule-10 hedge lead-ins ("the available/submitted evidence/records supports/indicates/is consistent with" — bare "consistent with" stays legal); conformity conclusions ("was as described", "matched the listing", "conformed to", "not defective", "free of defects", condition claims); dating the listing to the purchase ("at the time of purchase"); delivery-window claims; payment-authentication signals (IP, AVS, CVV, 3-D Secure). Restating the cardholder's claim stays legal. Other families are unchanged.
+- **Strategies v2**: `listing_as_purchased` no longer tells the model to cite the listing "published at the time" or argue it "matched what was delivered" (selection unchanged: `order_record_present`); `narrow_fallback` no longer says a listing is "always present".
+- **Module v4**: the listing is "as retrieved for this response", never the page shown at checkout.
+- **PDF** (composition v5): a family narrow conclusion, "The merchant respectfully requests reversal of the [amount] chargeback.", replaces "Based on the available evidence … requests review"; the generic transaction-overview line ("internally consistent with cardholder-initiated activity") no longer renders for this family.
+- Prompt version 41. Tests: `lib/defence/__tests__/productNotAsDescribedLetter.test.ts`.
+
 ### Data model
 
 Single migration: `supabase/migrations/20260515220000_defence_packages.sql`.
