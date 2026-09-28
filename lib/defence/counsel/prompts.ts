@@ -207,7 +207,7 @@ export function correctionUserPrompt(caseUser: string, previous: string[], issue
  * the old fact-check: an interval attached to the wrong pair of events is
  * invisible to the per-number grounding check in code.
  */
-export const REVIEW_SYSTEM = `You check the executive summary of a response to a payment dispute (a chargeback, an inquiry, or a PayPal or Klarna dispute) against a claim ledger, the only set of true facts. Check it sentence by sentence.
+export const REVIEW_SYSTEM = `You check the prose (executive summary and, when present, section arguments and conclusion) of a response to a payment dispute (a chargeback, an inquiry, or a PayPal or Klarna dispute) against a claim ledger, the only set of true facts. Check it sentence by sentence.
 
 Put a sentence in "errors" when:
 - a number, date or interval is attached to the wrong event or the wrong pair of events;
@@ -273,7 +273,7 @@ export function reviewUserPrompt(ledger: readonly LedgerClaim[], summary: string
     `EVENTS AND INTERVALS (computed from the records; trust these numbers)\n${timelineBlock(ledger)}`,
     `CLAIM LEDGER\n${ledger.map((c) => `- ${c.id}: ${c.statement}${Object.keys(c.specifics).length ? ` (values: ${JSON.stringify(c.specifics)})` : ""}`).join("\n")}`,
     `CODE-WRITTEN TEXT (already checked; context only)\n${recordText}`,
-    `EXECUTIVE SUMMARY TO CHECK\n${summary.join("\n\n")}`,
+    `TEXT TO CHECK\n${summary.join("\n\n")}`,
   ].join("\n\n");
 }
 

@@ -14,9 +14,9 @@ afterEach(() => {
 });
 
 describe("counsel v2 in the package job", () => {
-  it("runs for item-not-received only, with a kill switch", () => {
+  it("runs for every dispute type (the general brief covers the rest), with a kill switch", () => {
     expect(counselEnabled("inr_product_not_received")).toBe(true);
-    expect(counselEnabled("visa_10_4_fraud")).toBe(false);
+    expect(counselEnabled("visa_10_4_fraud")).toBe(true);
     process.env.DEFENCE_COUNSEL_V2 = "off";
     expect(counselEnabled("inr_product_not_received")).toBe(false);
   });
@@ -67,7 +67,8 @@ describe("counsel v2 in the package job", () => {
     expect(await fetchCustomerOrders("shop", "gid://shopify/Order/1")).toEqual([]);
   });
 
-  it("returns null without a model call when there is no carrier-confirmed delivery", async () => {
+  it("without a carrier-confirmed delivery the general brief still writes (no dispute goes without a letter)", async () => {
+    callClaudeMessages.mockResolvedValue({ raw: null, error: "stub", promptTokens: 0, completionTokens: 0, cachedTokens: 0 });
     makeAuthedRequest.mockResolvedValue({ data: { order: { customer: null } } });
     const res = await runCounsel({
       shopId: "shop",
@@ -83,8 +84,10 @@ describe("counsel v2 in the package job", () => {
       amountDisplay: null,
       cardLast4: null,
       merchantName: "Blume",
-    });
-    expect(res).toBeNull();
-    expect(callClaudeMessages).not.toHaveBeenCalled();
+    }).catch((e: unknown) => e);
+    // The writer was reached (the stubbed model fails), instead of stopping
+    // for want of a delivery.
+    expect(res).toBeInstanceOf(Error);
+    expect(callClaudeMessages).toHaveBeenCalled();
   });
 });

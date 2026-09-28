@@ -352,6 +352,10 @@ function firstNegatedMatch(
 export interface RunClaimGuardsInput {
   narrativeSections: Record<NarrativeSectionKey, { text: string }>;
   approvedFacts: EvidenceFact[];
+  /** The case's refund-policy terms were verified from the policy text and
+   *  the policy prints in full as an exhibit (counsel `return_route_open`,
+   *  letter-structure plan §2.2.1): stating those terms is on the record. */
+  verifiedPolicyTerms?: boolean;
 }
 
 /**
@@ -549,6 +553,7 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
     // Unconditional: policy terms, policy non-acceptance, narrated absence.
     const sentences = text.split(/(?<=[.!?])\s+/);
     for (const ban of POLICY_AND_RECORD_BANS) {
+      if (ban.id === "policy_terms_beyond_record" && input.verifiedPolicyTerms) continue;
       const hit = sentences.find((sn) => ban.scope.test(sn) && ban.pattern.test(sn));
       if (!hit) continue;
       failures.push({

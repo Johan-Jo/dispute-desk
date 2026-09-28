@@ -341,8 +341,10 @@ for (const disputeId of disputeIds) {
       log: (m) => console.log(`[counsel] ${m}`),
     });
     const narrative = counsel?.narrative ?? null;
+    // As the job: counsel's verified policy terms are allowed through the guard.
+    const verifiedPolicyTerms = !!counsel?.ledger?.some((c) => c.id === "return_route_open");
     const narrativeCheck = narrative
-      ? validateNarrative({ narrative, approvedFacts: facts, reasonCodeModule: module, packageMode: classification.packageMode, internalOnlyFactIds: classification.internalOnly.map((f) => f.id), extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
+      ? validateNarrative({ narrative, approvedFacts: facts, reasonCodeModule: module, packageMode: classification.packageMode, internalOnlyFactIds: classification.internalOnly.map((f) => f.id), extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases, internalConstraints: { refundOrCompensationRequested: null, verifiedPolicyTerms } } as never)
       : null;
     const blocks = narrative
       ? composePdfBlocks({
@@ -358,7 +360,7 @@ for (const disputeId of disputeIds) {
     const composedCheck = narrative
       ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
       : null;
-    return { res: { status: counsel ? 200 : 0 }, body: { error: counsel ? null : "counsel wrote no letter" }, raw: "", narrative, narrativeCheck, composedCheck, blocks, frame };
+    return { res: { status: counsel ? 200 : 0 }, body: { error: counsel ? null : "counsel wrote no letter" }, raw: "", narrative, narrativeCheck, composedCheck, blocks, frame, policyExhibit: counsel?.policyExhibit ?? null };
   };
   if (counselMode) {
     const c = await counselAttempt();
@@ -372,7 +374,7 @@ for (const disputeId of disputeIds) {
   const final = firstErrors ? await attempt(firstErrors) : first;
   await renderAndRecord(final as never, firstErrors);
   async function renderAndRecord(
-    final: { res: { status: number }; body: { error?: string | null }; raw: string; narrative: Narrative | null; narrativeCheck: { ok: boolean; errors: unknown[] } | null; composedCheck: { ok: boolean; errors: unknown[] } | null; blocks: unknown[]; frame?: import("../../lib/defence/counsel/frame").DisputeFrame },
+    final: { res: { status: number }; body: { error?: string | null }; raw: string; narrative: Narrative | null; narrativeCheck: { ok: boolean; errors: unknown[] } | null; composedCheck: { ok: boolean; errors: unknown[] } | null; blocks: unknown[]; frame?: import("../../lib/defence/counsel/frame").DisputeFrame; policyExhibit?: unknown },
     firstErrors: string[] | null,
   ) {
   const { res, body, raw, narrative, narrativeCheck, composedCheck, blocks } = final;
@@ -417,7 +419,8 @@ for (const disputeId of disputeIds) {
     const out = await renderDefencePdf({
       meta: {
         packageId: "demo", responseTitle: final.frame ? (await import("../../lib/defence/counsel/frame")).responseTitle(final.frame) : undefined,
-        paymentMethodLabel: final.frame && final.frame.provider !== "card" ? final.frame.providerName : null, disputeGid: d.dispute_gid ?? null, orderName: oc.orderName ?? d.order_name, reasonCode: d.network_reason_code,
+        paymentMethodLabel: final.frame && final.frame.provider !== "card" ? final.frame.providerName : null,
+        policyExhibit: final.policyExhibit ?? null, disputeGid: d.dispute_gid ?? null, orderName: oc.orderName ?? d.order_name, reasonCode: d.network_reason_code,
         reasonCodeDisplay: isNonCardPaymentFamily(family) ? nonCardDisputeCategoryDisplay(family, (packJson.payment_context as { label?: string } | undefined)?.label ?? null, d.reason) : module.displayName, claimType: module.claimType, shopName: merchantDisplayName, merchantName: merchantDisplayName,
         amountDisplay: `${d.currency_code ?? ""} ${d.amount}`.trim(), cardNetwork: oc.cardNetwork, cardLast4: oc.cardLast4,
         paymentGateway: oc.paymentGateway, financialStatus: oc.financialStatus, fulfillmentStatus: oc.fulfillmentStatus,

@@ -162,7 +162,7 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
   {
     // Order creation / placement on the storefront.
     category: "order_placed",
-    patterns: [/\border was placed\b/i, /\bplaced (?:this )?order\b/i, /\border placed\b/i],
+    patterns: [/\border was placed\b/i, /\bplaced (?:this |the )?order\b/i, /\border placed\b/i],
   },
   {
     // Money movement that authenticates the transaction: a payment being

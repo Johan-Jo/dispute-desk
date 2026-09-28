@@ -23,7 +23,7 @@ export interface ListingText {
 
 export type TranslateCall = (system: string, user: string) => Promise<string>;
 
-export const LISTING_TRANSLATION_SYSTEM = `You translate a shop's product listing into English for a payment-dispute file. Translate faithfully and literally: keep every number, unit, size, colour and claim exactly as written; add nothing, drop nothing, soften nothing, and do not improve the marketing. Keep brand and model names as they are. If a field is already English, return it unchanged. A truncated field ends with "…"; keep the ellipsis.
+export const LISTING_TRANSLATION_SYSTEM = `You translate a shop's text (a product listing, an order line or a store policy) into English for a payment-dispute file. Translate faithfully and literally: keep every number, unit, size, colour and claim exactly as written; add nothing, drop nothing, soften nothing, and do not improve the marketing. Keep brand and model names as they are. If a field is already English, return it unchanged. A truncated field ends with "…"; keep the ellipsis.
 Return JSON only: { "title": "…", "variantLine": "…", "excerpt": "…" } with null for a field that is null.`;
 
 /** True when the listing needs no translation. */

@@ -751,6 +751,8 @@ export async function handleBuildDefencePackage(
   // facts_json. A customer reimbursement request refuses a sentence denying it.
   const internalConstraints = {
     ...(await loadInternalNarrativeConstraints(pkg.dispute_id as string)),
+    // Counsel verified the refund policy's terms and prints the policy in full.
+    verifiedPolicyTerms: !!counselRes?.ledger?.some((c) => c.id === "return_route_open"),
     // Delivery after the dispute was opened: no sentence may relate the two
     // (non-receipt plan §6.6 rule 2). Computed from the facts the letter cites.
     deliveryPostDatesDispute: deliveryPostDatesDispute(
@@ -1262,6 +1264,7 @@ export async function handleBuildDefencePackage(
       packageId,
       responseTitle: responseTitle(frame),
       paymentMethodLabel: frame.provider === "card" ? null : frame.providerName,
+      policyExhibit: counselRes?.policyExhibit ?? null,
       disputeGid: dispute?.dispute_gid ?? null,
       orderName: orderContext.orderName,
       reasonCode,

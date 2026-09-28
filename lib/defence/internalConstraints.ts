@@ -30,6 +30,9 @@ export interface InternalNarrativeConstraints {
    *  an order-matched ticket (letter-structure plan §5.2). Withholds the
    *  not-as-described "no return" line. Optional so older callers compile. */
   returnRequested?: boolean;
+  /** The refund policy's terms were verified from its text and the policy is
+   *  printed in full (counsel `return_route_open`); stating them is allowed. */
+  verifiedPolicyTerms?: boolean;
   /** Every cited delivery happened after the dispute was opened
    *  (`deliveryPostDatesDispute`). Optional so older callers compile. */
   deliveryPostDatesDispute?: boolean;

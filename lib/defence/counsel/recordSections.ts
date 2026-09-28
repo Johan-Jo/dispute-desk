@@ -233,6 +233,7 @@ export function recordSectionsText(r: RecordSections): string {
     shipping: "Shipping & Delivery",
     lineItems: "Order Line Items",
     chronology: "Chronology of Events",
+    policy: "Policy Disclosure",
   };
   return [
     ...r.evidenceSections.map((s) => `${titles[s.key]}: ${s.paragraphs.join(" ")}`),
