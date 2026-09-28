@@ -271,9 +271,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       .maybeSingle(),
   ]);
 
+  // The reason this case is argued under. Shopify's own reason, unless the
+  // bank's claim re-typed a GENERAL dispute — buildPack records the reason it
+  // assessed under in pack_json.case_assessment_reason. Every "what kind of
+  // case is this" read below (header, template, family, assessment, freshness
+  // hash) uses it; Shopify's original travels as dispute.shopifyReason.
+  const effectiveReason: string | null =
+    (packRow?.pack_json as { case_assessment_reason?: string | null } | null)
+      ?.case_assessment_reason ?? row.reason ?? null;
+
   // ── 4. Build case type info from argument templates ───────────────
-  const template = getArgumentTemplate(row.reason);
-  const issuerClaimText = getIssuerClaimText(row.reason);
+  const template = getArgumentTemplate(effectiveReason);
+  const issuerClaimText = getIssuerClaimText(effectiveReason);
 
   // ── 5. Build cross-collection ID-keyed maps ───────────────────────
   // Per plan v3 §3.A.5 (NO IMPLICIT UI MAPPING). Computed here so the
@@ -409,7 +418,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
   const dispute = {
     id: row.id,
-    reason: row.reason,
+    reason: effectiveReason,
+    shopifyReason: row.reason ?? null,
     phase: row.phase ?? null,
     amount: row.amount,
     currency: row.currency_code,
@@ -828,11 +838,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ((packRow?.pack_json as { case_assessment?: unknown } | null)
       ?.case_assessment as CaseAssessmentSnapshot | undefined) ?? null;
 
-  // Same reason the writer assessed under: a GENERAL dispute re-typed by the
-  // bank's claim is hashed with the claim's reason (buildPack).
-  const assessedReason =
-    (packRow?.pack_json as { case_assessment_reason?: string | null } | null)
-      ?.case_assessment_reason ?? row.reason ?? null;
+  // Same reason the writer assessed under (effectiveReason, above).
+  const assessedReason = effectiveReason;
 
   const liveModel = packRow
     ? deriveCaseEvidenceModel({
@@ -967,7 +974,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ? buildWorkspaceAssessment({
         disputeId,
         checklist: reconciledChecklistV2,
-        reason: row.reason,
+        reason: effectiveReason,
         payloadSource: caseStrengthPayloadSource,
         snapshot: persistedSnapshot,
         currentInputHash: currentAssessmentHash,
@@ -1070,7 +1077,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         excludedFields: excludedFromOverrides,
         attachmentUploadFailures,
         inclusionOverrides,
-        reasonFamily: resolveReasonFamily(row.reason),
+        reasonFamily: resolveReasonFamily(effectiveReason),
         internalSignalsByField,
         overrideHistoryByField,
         /* CP-B §1 — the plan is the authority on what may be asserted to an

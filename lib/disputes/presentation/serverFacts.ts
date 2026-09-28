@@ -24,6 +24,7 @@ import {
   type PresentationInput,
 } from "./resolvePresentation";
 import type { DisputePresentation } from "./types";
+import { latestCandidate } from "@/lib/defence/candidateVersions";
 
 /** The dispute-row columns the gatherer reads (all present on
  *  `select("*")` rows from the `disputes` table). */
@@ -89,6 +90,30 @@ export async function gatherPresentations(
       checklist: null,
       gorgiasEvidenceStale: false,
     });
+  }
+
+  // ── Latest defence package per dispute: skipped for lack of evidence
+  // means there is no letter to approve (resolveAttention). ────────────
+  const letterSkippedNoEvidence = new Set<string>();
+  {
+    const { data: dpRows } = await sb
+      .from("defence_packages")
+      .select("dispute_id, version, status, failure_code")
+      .in("dispute_id", disputeIds);
+    type DpRow = { dispute_id: string | null; version: number; status: string | null; failure_code: string | null };
+    const byDispute = new Map<string, DpRow[]>();
+    for (const d of (dpRows ?? []) as DpRow[]) {
+      if (!d.dispute_id) continue;
+      const list = byDispute.get(d.dispute_id) ?? [];
+      list.push(d);
+      byDispute.set(d.dispute_id, list);
+    }
+    for (const [id, list] of byDispute) {
+      const { candidate } = latestCandidate(list);
+      if (candidate?.status === "skipped" && candidate.failure_code === "no_bank_eligible_facts") {
+        letterSkippedNoEvidence.add(id);
+      }
+    }
   }
 
   // ── Checklist + stale flag for the latest packs (optional) ──────────
@@ -166,6 +191,7 @@ export async function gatherPresentations(
       gorgiasActionableCount: proposalCount,
       automationMode: mode,
       approvedForSaveAt: pack?.approvedForSaveAt ?? null,
+      letterSkippedNoEvidence: letterSkippedNoEvidence.has(row.id),
       concreteContribution: deriveConcreteContribution(pack?.checklist),
       gorgiasEvidenceStale: pack?.gorgiasEvidenceStale ?? false,
     };

@@ -778,6 +778,21 @@ describe("Blocking-cause labels", () => {
     expect(attentionLabelKey(p)).toBe("presentation.attentionBlocking.approval_gate");
   });
 
+  it("a letter skipped for lack of evidence asks for evidence, not approval", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      automationMode: "review",
+      packStatus: "ready",
+      approvedForSaveAt: null,
+      letterSkippedNoEvidence: true,
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("missing_required_evidence");
+    expect(attentionLabelKey(p)).toBe(
+      "presentation.attentionBlocking.missing_required_evidence",
+    );
+  });
+
   it("billing halts label as billing action", () => {
     const p = resolvePresentation({
       ...basePresentation,

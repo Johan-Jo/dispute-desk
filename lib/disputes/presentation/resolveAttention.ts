@@ -97,6 +97,10 @@ export interface AttentionInput {
    *  mode 'review' AND status 'ready' AND approvedForSaveAt null). */
   packStatus: string | null;
   approvedForSaveAt: string | null;
+  /** The latest defence package was skipped because no letter-eligible
+   *  evidence exists (`no_bank_eligible_facts`). There is then no letter to
+   *  approve: the merchant's lever is adding evidence, not approving. */
+  letterSkippedNoEvidence?: boolean;
   /** Server-side concrete-contribution signal (derived from
    *  pack_json.checklistV2 via the canMerchantUpload predicate —
    *  a specific addable item, never generic improvement copy).
@@ -196,6 +200,12 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
     };
   }
   if (approvalGate) {
+    // Nothing to approve when the letter was skipped for lack of evidence —
+    // "approval required" there sends the merchant to a button that files
+    // nothing (Sura Svenne test dispute, 2026-09-28).
+    if (input.letterSkippedNoEvidence === true) {
+      return { attention: "blocking", blockingReason: "missing_required_evidence", internalIssue };
+    }
     return { attention: "blocking", blockingReason: "approval_gate", internalIssue };
   }
 
