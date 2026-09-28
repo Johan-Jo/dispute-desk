@@ -43,7 +43,13 @@ export interface NarrativeFixture {
  */
 export function narrativeJson(
   sections: Partial<Record<NarrativeSectionKeyFixture, string>> = {},
-  extra: { omittedSections?: Array<{ sectionKey: string; reason: string }>; warnings?: string[] } = {},
+  extra: {
+    omittedSections?: Array<{ sectionKey: string; reason: string }>;
+    warnings?: string[];
+    /** A letter from the retired template writer (no counsel block). Such a
+     *  letter is refused at filing (`retired_template_writer`, 2026-09-28). */
+    template?: boolean;
+  } = {},
 ): NarrativeFixture {
   const out: Record<string, unknown> = {};
   for (const key of NARRATIVE_SECTION_KEYS) {
@@ -51,6 +57,8 @@ export function narrativeJson(
   }
   out.omittedSections = extra.omittedSections ?? [];
   out.warnings = extra.warnings ?? [];
+  // Counsel v2 is the only writer: its letters carry the counsel block.
+  if (!extra.template) out.counsel = { inputHash: "fixture", summary: [] };
   return out as NarrativeFixture;
 }
 

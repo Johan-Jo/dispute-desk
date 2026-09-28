@@ -620,6 +620,7 @@ export function runPhraseAndGuardChecks(
       [sectionKey]: { text },
     } as Record<NarrativeSectionKey, { text: string }>,
     approvedFacts,
+    verifiedPolicyTerms: internalConstraints?.verifiedPolicyTerms === true,
   });
   for (const failure of guardResult.failures) {
     errors.push({

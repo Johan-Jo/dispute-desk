@@ -62,11 +62,13 @@ export interface ChronologyContext {
 }
 
 /**
- * Families whose buyer agrees the parcel arrived and disputes what was in it
- * (maintainer, 2026-09-28): the letter and its timeline leave the parcel's
- * journey out entirely.
+ * Families whose timeline leaves the parcel's journey out. EMPTY since the
+ * evening of 2026-09-28: not-as-described was here that morning, and the
+ * maintainer rejected the result — "You lost the complete sequence. … What
+ * about delivery? What about opening the chargeback?" Every letter carries
+ * the full sequence (docs/plans/defence-letter-structure.plan.md §4).
  */
-const ARRIVAL_NOT_IN_DISPUTE_FAMILIES: ReadonlySet<string> = new Set(["product_not_as_described"]);
+const ARRIVAL_NOT_IN_DISPUTE_FAMILIES: ReadonlySet<string> = new Set<string>();
 
 export function familyOmitsArrival(familyKey: string | null | undefined): boolean {
   return !!familyKey && ARRIVAL_NOT_IN_DISPUTE_FAMILIES.has(familyKey);
@@ -160,7 +162,7 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
   {
     // Order creation / placement on the storefront.
     category: "order_placed",
-    patterns: [/\border was placed\b/i, /\bplaced (?:this )?order\b/i, /\border placed\b/i],
+    patterns: [/\border was placed\b/i, /\bplaced (?:this |the )?order\b/i, /\border placed\b/i],
   },
   {
     // Money movement that authenticates the transaction: a payment being
@@ -222,6 +224,9 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
       /opened a chargeback/i,
       /chargeback was (?:opened|filed|initiated)/i,
       /customer (?:opened|filed|initiated) a (?:chargeback|dispute)/i,
+      // Counsel's own row for an inquiry or a PayPal/Klarna dispute, which
+      // Shopify's events never carry (counsel/run.ts addDisputeOpenedRow).
+      /(?:customer|cardholder) opened an? (?:PayPal |Klarna |payment )?(?:chargeback|dispute|inquiry)\b/i,
     ],
   },
 ];

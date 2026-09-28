@@ -1,12 +1,14 @@
 /**
  * Counsel v2 inside the package job (buildDefencePackageJob.ts).
  *
- * Item-not-received disputes only. Builds the claim ledger from the pack plus
- * a live read of the customer's other orders, writes the letter (generate.ts:
- * code-written sections, one model-written summary, one review call,
- * at most one correction) and returns it as a DefenceNarrativeOutput — or
- * null, in which case the job writes the template letter exactly as before.
- * Nothing here can make a case file less than it did without counsel.
+ * The only letter writer (the template writer is retired, 2026-09-28). One
+ * playbook per claim type (playbooks.ts `playbookForModule`): item not
+ * received and not as described. Card, PayPal and Klarna disputes alike; the
+ * frame (frame.ts) names the proceeding and the request. Builds the claim
+ * ledger from the pack plus a live read of the customer's other orders,
+ * writes the letter (generate.ts: code-written sections, one model-written
+ * summary, one review call, at most one correction) and returns it as a
+ * DefenceNarrativeOutput — or null, and the dispute gets no letter.
  *
  * Reuse: the letter's inputs are hashed. When a previous counsel letter for
  * the dispute has the same hash, its summary is reused and no model is called.
@@ -18,10 +20,19 @@ import { createHash } from "node:crypto";
 import { callClaudeMessages } from "../anthropicClient";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import type { DefenceNarrativeOutput, EvidenceFact } from "../types";
-import { buildItemNotReceivedLedger } from "./claimLedger";
+import { buildItemNotReceivedLedger, longDate } from "./claimLedger";
+import { buildNotAsDescribedLedger, type NotAsDescribedExtras } from "./notAsDescribedLedger";
+import { extractReturnWindow } from "./policyTerms";
+import { translateListing } from "../listingTranslation";
+import { getServiceClient } from "@/lib/supabase/server";
 import { checkDraft, toNarrative, type CheckContext } from "./checks";
-import { composeDraft, writeCounselLetter, type CounselStage, type ModelCall } from "./generate";
-import { ITEM_NOT_RECEIVED } from "./playbooks";
+import { composeDraft, writeLetter, type CounselStage, type ModelCall } from "./generate";
+import { NOT_AS_DESCRIBED, playbookForModule } from "./playbooks";
+import { briefForModule, GENERAL_BRIEF, type Brief } from "./briefs";
+import { CONSTITUTION_VERSION } from "./constitution";
+import { disputeFrame, frameRule, requestLine, type DisputeFrame } from "./frame";
+import { classifyChronologyEvent } from "../chronology";
+import type { InternalNarrativeConstraints } from "../internalConstraints";
 import { COUNSEL_PROMPT_VERSION } from "./prompts";
 import { buildRecordSections } from "./recordSections";
 import type { CounselDraft, CustomerOrderSummary, LedgerClaim, LedgerInput } from "./types";
@@ -37,8 +48,110 @@ export const COUNSEL_REVIEW_MODEL = "claude-sonnet-4-6";
 /** Counsel runs per shop per day (each is 2–4 model calls since the cost refactor). */
 export const COUNSEL_DAILY_RUN_CAP = Number(process.env.DEFENCE_COUNSEL_DAILY_RUN_CAP ?? "25");
 
-export function counselEnabled(moduleKey: string): boolean {
-  return moduleKey === "inr_product_not_received" && process.env.DEFENCE_COUNSEL_V2 !== "off";
+/** The single writer covers every dispute type: a type without its own brief
+ *  gets the general brief (plan rev 8 §2.8). Kill switch: DEFENCE_COUNSEL_V2=off. */
+export function counselEnabled(_moduleKey: string): boolean {
+  return process.env.DEFENCE_COUNSEL_V2 !== "off";
+}
+
+/** The ledger for a brief, from the one set of claim builders
+ *  (plan §2.2). A type whose own claims are missing falls to the general
+ *  brief, never to another type's (plan §5). */
+export function ledgerForBrief(
+  brief: Brief,
+  input: LedgerInput,
+  constraints: InternalNarrativeConstraints | null,
+  extras: Omit<NotAsDescribedExtras, "constraints"> = {},
+): { brief: Brief; ledger: LedgerClaim[] } | null {
+  const general = (): { brief: Brief; ledger: LedgerClaim[] } | null => {
+    const base = buildNotAsDescribedLedger(input, { constraints }) ?? [];
+    const neutral = base.filter((c) => GENERAL_BRIEF.claims.includes(c.id));
+    const ledger: LedgerClaim[] = [
+      {
+        id: "claim_stated",
+        statement: "The customer disputes the transaction.",
+        specifics: {},
+        weight: "core",
+        sources: ["dispute.reason"],
+        mustNot: [],
+      },
+      ...neutral,
+    ];
+    return { brief: GENERAL_BRIEF, ledger };
+  };
+  const within = (l: LedgerClaim[] | null, b: Brief) => {
+    if (!l) return null;
+    const kept = l.filter((c) => b.claims.includes(c.id));
+    const ids = new Set(kept.map((c) => c.id));
+    return b.minimumClaims.every((id) => ids.has(id)) ? { brief: b, ledger: kept } : null;
+  };
+  if (brief.type === "item_not_received") return within(buildItemNotReceivedLedger(input), brief) ?? general();
+  if (brief.type === "product_not_as_described") return within(buildNotAsDescribedLedger(input, { constraints, ...extras }), brief) ?? general();
+  return general();
+}
+
+/**
+ * The dispute's opening as a timeline row, when Shopify's own events carry
+ * none (every inquiry, every PayPal dispute: #101111 had no row for it). Added
+ * to the ledger claim that dates the dispute, so it prints once.
+ */
+/**
+ * The order's placement as a timeline row, when Shopify's events carry none
+ * (#98483 started at the payment row). From the order record's own date.
+ */
+export function addOrderPlacedRow(ledger: LedgerClaim[], sections: LedgerInput["packSections"]): void {
+  const order = sections.find((s) => s?.type === "order" && (s.data as Record<string, unknown> | null)?.orderName)?.data as
+    | Record<string, unknown>
+    | undefined;
+  const createdAt = typeof order?.createdAt === "string" ? order.createdAt : null;
+  if (!createdAt || !longDate(createdAt)) return;
+  const timeline = ((sections.find((s) => s?.type === "access_log")?.data as { timelineEvents?: unknown[] } | undefined)?.timelineEvents ?? [])
+    .map((e) => (e && typeof e === "object" ? (e as Record<string, unknown>) : null))
+    .filter((e): e is Record<string, unknown> => !!e && typeof e.message === "string");
+  if (timeline.some((e) => classifyChronologyEvent(e.message as string) === "order_placed")) return;
+  ledger.push({
+    id: "order_placed",
+    statement: `The order was placed on ${longDate(createdAt)}.`,
+    specifics: { orderPlacedOn: longDate(createdAt)! },
+    weight: "supporting",
+    sources: ["pack.order.createdAt"],
+    mustNot: [],
+    timelineEvent: { at: createdAt, text: "The customer placed the order on the online store." },
+  });
+}
+
+export function addDisputeOpenedRow(
+  ledger: LedgerClaim[],
+  sections: LedgerInput["packSections"],
+  openedAt: string | null,
+  frame: DisputeFrame,
+): void {
+  if (!openedAt || !longDate(openedAt)) return;
+  const timeline = ((sections.find((s) => s?.type === "access_log")?.data as { timelineEvents?: unknown[] } | undefined)?.timelineEvents ?? [])
+    .map((e) => (e && typeof e === "object" ? (e as Record<string, unknown>) : null))
+    .filter((e): e is Record<string, unknown> => !!e && typeof e.message === "string");
+  if (timeline.some((e) => classifyChronologyEvent(e.message as string) === "chargeback")) return;
+  const text =
+    frame.provider !== "card"
+      ? `The customer opened a ${frame.providerName ?? "payment"} dispute.`
+      : frame.stage === "inquiry"
+        ? "The cardholder opened an inquiry."
+        : "The cardholder opened a chargeback.";
+  const row = { at: openedAt, text };
+  const holder = ledger.find((c) => c.id === "dispute_after_delivery" || c.id === "delivered_after_dispute_opened");
+  if (holder) {
+    holder.timelineEvent = holder.timelineEvent ?? row;
+    return;
+  }
+  ledger.push({
+    id: "dispute_opened",
+    statement: `The dispute was opened on ${longDate(openedAt)}.`,
+    specifics: { disputeOpenedOn: longDate(openedAt)! },
+    weight: "supporting",
+    sources: ["dispute.initiated_at"],
+    mustNot: [],
+    timelineEvent: row,
+  });
 }
 
 type Obj = Record<string, unknown>;
@@ -137,6 +250,74 @@ export interface CounselRunResult {
   durationMs: number;
   /** True when a previous letter was reused and no model was called. */
   reused: boolean;
+  /** The refund policy the letter argues from, printed in full (original +
+   *  English), when the ledger holds `return_route_open` (plan §2.2.1). */
+  policyExhibit?: PolicyExhibit | null;
+}
+
+/** The refund policy as the letter shows it (maintainer, 2026-09-28): its key
+ *  term in a few words, from the verified extraction, and a link to the
+ *  published policy — never the full text. */
+export interface PolicyExhibit {
+  summary: string;
+  url: string | null;
+  updatedOn: string | null;
+}
+
+type Obj2 = Record<string, unknown>;
+
+/** Not-as-described inputs that need a record read or a model call: the
+ *  ordered items in English (order record), and the verified return window
+ *  with the policy text behind it. */
+async function prepareNotAsDescribed(
+  packSections: LedgerInput["packSections"],
+  allowReturnRoute: boolean,
+  model: (system: string, user: string, maxTokens: number) => Promise<string>,
+): Promise<{ extras: Omit<NotAsDescribedExtras, "constraints">; policy: { text: string; updatedAt: string | null; capturedAt: string | null; url: string | null; windowDays: number | null } | null }> {
+  const order = packSections.find((s) => s?.type === "order" && (s.data as Obj2 | null)?.orderName)?.data as Obj2 | undefined;
+  const lineItems = ((order?.lineItems as unknown[]) ?? []).map((li) => (li && typeof li === "object" ? (li as Obj2) : {}));
+  const described = lineItems
+    .map((li) => [li.title, li.variant].filter((x): x is string => typeof x === "string" && !!x.trim()).join(" — "))
+    .filter(Boolean);
+  const english = await Promise.all(
+    described.map((t) =>
+      translateListing({ title: t, variantLine: null, excerpt: null }, (s, u) => model(s, u, 400))
+        .then((x) => x?.title ?? null)
+        .catch(() => null),
+    ),
+  );
+  const orderItemsEnglish = english.every((x): x is string => !!x) ? english : [];
+
+  let policy: { text: string; updatedAt: string | null; capturedAt: string | null; url: string | null; windowDays: number | null } | null = null;
+  let returnWindow: NotAsDescribedExtras["returnWindow"] = null;
+  if (allowReturnRoute) {
+    const refunds = ((packSections.find((s) => s?.source === "policy_snapshots")?.data as Obj2 | undefined)?.policies as unknown[] | undefined ?? [])
+      .map((p) => (p && typeof p === "object" ? (p as Obj2) : {}))
+      .find((p) => p.policyType === "refunds" && typeof p.policySnapshotId === "string");
+    if (refunds) {
+      const { data } = await getServiceClient()
+        .from("policy_snapshots")
+        .select("extracted_text, policy_updated_at, captured_at")
+        .eq("id", refunds.policySnapshotId as string)
+        .maybeSingle();
+      const text = typeof data?.extracted_text === "string" ? data.extracted_text : null;
+      if (text) {
+        policy = {
+          text,
+          updatedAt: (data?.policy_updated_at as string | null) ?? null,
+          capturedAt: (data?.captured_at as string | null) ?? null,
+          url: typeof refunds.publishedUrl === "string" ? refunds.publishedUrl : null,
+          windowDays: null,
+        };
+        const w = await extractReturnWindow(text, (s, u) => model(s, u, 600)).catch(() => null);
+        if (w) {
+          returnWindow = { windowDays: w.windowDays, policyUpdatedAt: policy.updatedAt };
+          policy.windowDays = w.windowDays;
+        }
+      }
+    }
+  }
+  return { extras: { orderItemsEnglish, returnWindow, returnRouteAllowed: allowReturnRoute }, policy };
 }
 
 /**
@@ -190,6 +371,12 @@ export async function runCounsel(args: {
   amountDisplay: string | null;
   cardLast4: string | null;
   merchantName: string;
+  /** Payment family (paymentContext) and dispute phase: the frame. */
+  paymentFamily?: string | null;
+  paymentLabel?: string | null;
+  phase?: string | null;
+  /** Stored-message constraints: withhold the not-as-described return line. */
+  constraints?: InternalNarrativeConstraints | null;
   log?: (m: string) => void;
   /** The summary of a previous counsel letter for this dispute with this
    *  input hash, or null. Reuse makes no model call. */
@@ -207,9 +394,10 @@ export async function runCounsel(args: {
 }): Promise<CounselRunResult | null> {
   if (!counselEnabled(args.moduleKey)) return null;
   const started = Date.now();
+  const frame = disputeFrame({ paymentFamily: args.paymentFamily, paymentLabel: args.paymentLabel, phase: args.phase });
 
   const customerOrders = args.orderGid ? await fetchCustomerOrders(args.shopId, args.orderGid) : [];
-  const ledger = buildItemNotReceivedLedger({
+  const ledgerInput: LedgerInput = {
     moduleKey: args.moduleKey,
     facts: args.facts,
     packSections: args.packSections,
@@ -218,11 +406,34 @@ export async function runCounsel(args: {
     disputeAmount: args.disputeAmount,
     disputeCurrency: args.disputeCurrency,
     customerOrders,
-  });
-  if (!ledger) {
-    console.info(`[counsel] no ledger for ${args.orderName ?? "?"} (not a single carrier-confirmed delivery); template writer`);
+  };
+  const plainModel = async (system: string, user: string, maxTokens: number) => {
+    const r = await callClaudeMessages({
+      model: process.env.DEFENCE_COUNSEL_MODEL ?? COUNSEL_DEFAULT_MODEL,
+      system: [{ type: "text", text: system }],
+      messages: [{ role: "user", content: user }],
+      temperature: 0,
+      maxTokens,
+    });
+    if (!r.raw) throw new Error(r.error ?? "empty model reply");
+    return r.raw;
+  };
+  const startBrief = briefForModule(args.moduleKey);
+  const nad =
+    startBrief.type === "product_not_as_described"
+      ? await prepareNotAsDescribed(args.packSections, frame.provider === "card" || frame.provider === "paypal", plainModel)
+      : null;
+  const chosen = ledgerForBrief(startBrief, ledgerInput, args.constraints ?? null, nad?.extras ?? {});
+  if (!chosen) {
+    console.info(`[counsel] no ledger for ${args.orderName ?? "?"}; no letter`);
     return null;
   }
+  const { brief, ledger } = chosen;
+  const notAsDescribed = brief.type === "product_not_as_described";
+  // The legacy playbook shape the shared checks still read for section keys.
+  const playbook = playbookForModule(args.moduleKey) ?? NOT_AS_DESCRIBED;
+  addDisputeOpenedRow(ledger, args.packSections, args.disputeOpenedAt, frame);
+  addOrderPlacedRow(ledger, args.packSections);
 
   const delivery = args.facts.find(
     (f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && str(obj(f.value)?.trackingNumber),
@@ -243,23 +454,42 @@ export async function runCounsel(args: {
   const multi = parcels.length > 1;
   const hasAddresses = ledger.some((c) => c.addressExhibit);
   const hasLater = ledger.some((c) => c.laterOrderExhibit);
+  const orderSection = args.packSections.find((s) => s?.type === "order" && (s.data as { orderName?: unknown } | null)?.orderName);
+  const lineItemTitles = (((orderSection?.data as { lineItems?: unknown[] } | null)?.lineItems ?? []) as Array<{ title?: unknown }>)
+    .map((li) => str(li?.title))
+    .filter((x): x is string => !!x);
+  const listingTitles = (((args.packSections.find((s) => s?.source === "shopify_product")?.data as { listings?: unknown[] } | null)?.listings ??
+    []) as Array<{ title?: unknown }>)
+    .map((l) => str(l?.title))
+    .filter((x): x is string => !!x);
   const pageContext = [
     `Header: ${[disputeNumber && `Dispute ${disputeNumber}`, args.orderName && `Order ${args.orderName}`, args.amountDisplay].filter(Boolean).join(" · ")} · submitted on behalf of ${args.merchantName}.`,
-    `Case details table: merchant, card network${args.cardLast4 ? `, card ending ${args.cardLast4}` : ""}, transaction date, order number, disputed amount.`,
-    multi
+    frame.provider === "card"
+      ? `Case details table: merchant, card network${args.cardLast4 ? `, card ending ${args.cardLast4}` : ""}, transaction date, order number, disputed amount.`
+      : `Case details table: merchant, payment method (${frame.providerName ?? "non-card"}), transaction date, order number, disputed amount.`,
+    notAsDescribed && listingTitles.length
+      ? "Product listing exhibit below the line items: the store's photographs and text, with an English translation."
+      : null,
+    notAsDescribed && !trackingNumber
+      ? null
+      : multi
       ? "Parcel cards, one per parcel: its products, carrier, tracking number or shipping reference, shipped date, delivery date where the carrier recorded one, and the tracking link where one exists."
       : `Shipment card: carrier, tracking number, shipped and delivered dates. Tracking link printed below the shipping section.`,
     hasAddresses ? "Order addresses card under the shipment card: shipping and billing address side by side, stated identical." : null,
     `Line-items table: products, adjustments, total.${hasLater ? " Under it, a card for the same customer's later order (order number, date, amount, card ending, wallet)." : ""}`,
-    "Timeline: the order's events (order, payment, shipping, delivery, notifications) and the chargeback, with dates.",
-    'Request line after the conclusion: "The merchant respectfully requests reversal of the chargeback."',
+    `Timeline: the order's events (order, payment, shipping, delivery, notifications) and the opening of the ${frame.provider === "card" ? (frame.stage === "inquiry" ? "inquiry" : "chargeback") : "dispute"}, with dates.`,
+    `Request line after the conclusion: "${requestLine(frame)}"`,
   ]
     .filter(Boolean)
     .join("\n");
 
   const check: CheckContext = {
     ledger,
-    playbook: ITEM_NOT_RECEIVED,
+    playbook,
+    brief,
+    frame,
+    // English only, never the product's store name, for every type.
+    forbiddenTitles: [...lineItemTitles, ...listingTitles],
     facts: args.facts,
     disputeOpenedAt: args.disputeOpenedAt,
     merchantName: args.merchantName,
@@ -278,7 +508,7 @@ export async function runCounsel(args: {
   };
   const model = process.env.DEFENCE_COUNSEL_MODEL ?? COUNSEL_DEFAULT_MODEL;
   const reviewModel = process.env.DEFENCE_COUNSEL_REVIEW_MODEL ?? COUNSEL_REVIEW_MODEL;
-  const inputHash = counselInputHash({ ledger, pageContext, merchantName: args.merchantName, check, writeModel: model, reviewModel });
+  const inputHash = counselInputHash({ ledger, pageContext: `${pageContext}\n${frameRule(frame)}`, merchantName: args.merchantName, check, writeModel: model, reviewModel });
   // Multi-parcel: each card prints its own link.
   const trackingLine = trackingUrl && !multi ? `Carrier tracking record: ${trackingUrl}` : null;
   const factIds = args.facts.map((f) => f.id);
@@ -288,7 +518,17 @@ export async function runCounsel(args: {
   });
   const tokens = { prompt: 0, completion: 0, cached: 0 };
   const stages: CounselStageUsage[] = [];
+  // The policy the letter argues from: its key term, verified, and a link.
+  let policyExhibit: PolicyExhibit | null = null;
+  if (nad?.policy?.windowDays && ledger.some((c) => c.id === "return_route_open")) {
+    policyExhibit = {
+      summary: `Refund on an item returned within ${nad.policy.windowDays} days of delivery`,
+      url: nad.policy.url,
+      updatedOn: nad.policy.updatedAt,
+    };
+  }
   const result = (draft: CounselDraft, reused: boolean): CounselRunResult => ({
+    policyExhibit,
     narrative: finish(draft),
     ledger,
     modelUsed: model,
@@ -299,16 +539,11 @@ export async function runCounsel(args: {
     reused,
   });
 
-  // Reuse (§3.6): same inputs → the same letter, no model call. The stored
-  // summary still has to pass today's code checks against today's ledger.
-  const previous = args.findReusable ? await args.findReusable(inputHash).catch(() => null) : null;
-  if (previous?.length) {
-    const draft = composeDraft({ paragraphs: previous, claimIds: [] }, buildRecordSections(ledger));
-    if (checkDraft(draft, check).length === 0) {
-      await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: true, reused: true });
-      return result(draft, true);
-    }
-  }
+  // Reuse is off for the single writer until it stores and re-checks every
+  // part of the letter, not only the summary (plan §2.7).
+  void args.findReusable;
+  void composeDraft;
+  void buildRecordSections;
 
   const call: ModelCall = async ({ stage, system, user, temperature, maxTokens }) => {
     const m = stage === "review" ? reviewModel : model;
@@ -330,9 +565,9 @@ export async function runCounsel(args: {
     return r.raw;
   };
 
-  let written: Awaited<ReturnType<typeof writeCounselLetter>>;
+  let written: Awaited<ReturnType<typeof writeLetter>>;
   try {
-    written = await writeCounselLetter({ ledger, playbook: ITEM_NOT_RECEIVED, merchantName: args.merchantName, pageContext, call, log: args.log, check });
+    written = await writeLetter({ ledger, brief, frame, merchantName: args.merchantName, pageContext, call, log: args.log, check });
   } catch (err) {
     // A model error is still spend: record it before the job falls back.
     await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: false, reused: false });
@@ -340,10 +575,11 @@ export async function runCounsel(args: {
   }
   await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: written.ok, reused: false });
   if (!written.ok) {
-    // Visible in the logs: why the template writer took over.
+    // Visible in the logs: why there is no letter.
     console.warn(
-      `[counsel] summary failed for ${args.orderName ?? "?"} after ${written.corrected ? "one correction" : "the first draft"}: ` +
-        written.issues.join(" | ").slice(0, 800),
+      `[counsel] summary failed for ${args.orderName ?? "?"} after ${written.corrected ? "the corrections" : "the first draft"}: ` +
+        written.issues.join(" | ").slice(0, 800) +
+        ` || last summary: ${written.draft.summary.paragraphs.join(" ").slice(0, 900)}`,
     );
     return null;
   }

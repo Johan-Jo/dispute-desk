@@ -13,6 +13,7 @@
  */
 
 import type { CounselSection, EvidenceSectionKey, LedgerClaim, Playbook } from "./types";
+export type { Playbook };
 
 export interface Theory {
   name: string;
@@ -42,7 +43,8 @@ export interface RecordSections {
   conclusion: CounselSection;
 }
 
-export function buildRecordSections(ledger: readonly LedgerClaim[]): RecordSections {
+export function buildRecordSections(ledger: readonly LedgerClaim[], playbook?: Playbook): RecordSections {
+  if (playbook?.familyKey === "product_not_as_described") return buildNotAsDescribedSections(ledger);
   if (ledger.some((c) => c.parcel)) return buildMultiParcelSections(ledger);
   const byId = new Map(ledger.map((c) => [c.id, c]));
   const has = (id: string) => byId.has(id);
@@ -174,12 +176,64 @@ function buildMultiParcelSections(ledger: readonly LedgerClaim[]): RecordSection
 }
 
 
+/**
+ * Not as described (plan §5.2). "What was sold" sits under the line items,
+ * above the listing exhibit; "Delivery and return" carries the one return
+ * sentence, which the summary may not touch. No product name, no features,
+ * nothing about what the listing proves beyond that it was published.
+ */
+function buildNotAsDescribedSections(ledger: readonly LedgerClaim[]): RecordSections {
+  const has = (id: string) => ledger.some((c) => c.id === id);
+  const sections: RecordSections["evidenceSections"] = [];
+  if (has("listing_published")) {
+    sections.push({
+      key: "lineItems",
+      paragraphs: [
+        "The item was sold under the store listing reproduced below, as retrieved from the store.",
+      ],
+      claimIds: ["listing_published"],
+    });
+  }
+  const delivery: string[] = [];
+  const deliveryIds: string[] = [];
+  if (has("carrier_delivered")) {
+    delivery.push("The delivery shown on the card above is the carrier's own scan.");
+    deliveryIds.push("carrier_delivered");
+  }
+  if (has("no_return_recorded")) {
+    delivery.push("No return has been recorded in Shopify for this order.");
+    deliveryIds.push("no_return_recorded");
+  }
+  if (delivery.length) sections.push({ key: "shipping", paragraphs: [delivery.join(" ")], claimIds: deliveryIds });
+
+  const conclusion = [
+    has("listing_published") && has("carrier_delivered")
+      ? "The item was sold under a published listing, and the carrier recorded delivery of the order."
+      : has("listing_published")
+        ? "The item was sold under a published listing."
+        : has("carrier_delivered")
+          ? "The carrier recorded delivery of the order."
+          : null,
+    has("no_return_recorded") ? "No return has been recorded for it." : null,
+    "The not-as-described claim is not supported by the record.",
+  ].filter((x): x is string => !!x);
+
+  return {
+    evidenceSections: sections,
+    conclusion: {
+      paragraphs: [conclusion.join(" ")],
+      claimIds: ["claim_is_not_as_described", ...["listing_published", "carrier_delivered", "no_return_recorded"].filter(has)],
+    },
+  };
+}
+
 /** The code-written text as the summary writer and the reviewer see it. */
 export function recordSectionsText(r: RecordSections): string {
   const titles: Record<EvidenceSectionKey, string> = {
     shipping: "Shipping & Delivery",
     lineItems: "Order Line Items",
     chronology: "Chronology of Events",
+    policy: "Policy Disclosure",
   };
   return [
     ...r.evidenceSections.map((s) => `${titles[s.key]}: ${s.paragraphs.join(" ")}`),

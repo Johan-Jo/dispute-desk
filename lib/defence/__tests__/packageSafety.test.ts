@@ -350,13 +350,27 @@ describe("narrative schema — all eleven keys, every section exact", () => {
   });
 
   it("rejects a narrative MISSING any required section", () => {
-    for (const drop of Object.keys(narrativeJson())) {
+    // `counsel` is optional in the schema; its absence is the retired-writer
+    // case, pinned separately below.
+    for (const drop of Object.keys(narrativeJson()).filter((k) => k !== "counsel")) {
       const partial = narrativeJson() as Record<string, unknown>;
       delete partial[drop];
       const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: partial });
       expect(v.safe, `missing ${drop} must fail closed`).toBe(false);
       expect(v.reasons).toContain("unreadable_narrative_json");
     }
+  });
+
+  it("refuses a letter from the retired template writer (no counsel block), 2026-09-28", () => {
+    const v = assessPackageCandidateSafety({
+      factsJson: CLEAN_FACTS,
+      narrativeJson: narrativeJson({}, { template: true }),
+    });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toEqual(["retired_template_writer"]);
+    expect(packageBlockSummary(v)).toMatch(/retired/);
+    // The same letter with the counsel block is fileable.
+    expect(assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: narrativeJson() }).safe).toBe(true);
   });
 
   it("rejects a section MISSING usedFactIds — the shape the old tests blessed", () => {

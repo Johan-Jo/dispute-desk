@@ -13,6 +13,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PRODUCT_LISTING_BUCKET } from "@/lib/packs/productListingStorage";
+import { isEnglishListing, type ListingText } from "./listingTranslation";
 
 export interface ProductListingExhibit {
   title: string | null;
@@ -26,6 +27,10 @@ export interface ProductListingExhibit {
   retrievedOn: string | null;
   /** data: URIs (JPEG/PNG only — the PDF renderer reads nothing else). */
   images: string[];
+  /** English translation printed beneath a non-English original (Visa DMG
+   *  p. 9; maintainer D3, 2026-09-28). Null when the original is English or
+   *  no translation passed its checks. */
+  translation?: ListingText | null;
 }
 
 export const EXHIBIT_LIMITS = {
@@ -40,6 +45,7 @@ interface SectionLike {
 }
 
 type Listing = {
+  snapshotId?: unknown;
   title?: unknown;
   variantOptions?: unknown;
   variantTitle?: unknown;
@@ -106,6 +112,8 @@ export async function buildProductListingExhibits(args: {
   /** The letter cites a collected listing (the fact made the plan's cut). */
   listingCited: boolean;
   download?: (path: string) => Promise<Uint8Array | null>;
+  /** English translation for a non-English listing (cached per snapshot). */
+  translate?: (snapshotId: string | null, original: ListingText) => Promise<ListingText | null>;
 }): Promise<ProductListingExhibit[]> {
   if (!args.listingCited) return [];
   const section = args.sections.find((s) => s.source === "shopify_product");
@@ -140,14 +148,18 @@ export async function buildProductListingExhibits(args: {
       images.push(`data:${mime};base64,${Buffer.from(bytes).toString("base64")}`);
     }
     const fetched = str(l.fetchedAt);
+    const original: ListingText = { title: printable(l.title), variantLine: variantLine(l), excerpt: printable(l.excerpt) };
+    const translation =
+      args.translate && !isEnglishListing(original)
+        ? await args.translate(str(l.snapshotId), original).catch(() => null)
+        : null;
     exhibits.push({
-      title: printable(l.title),
-      variantLine: variantLine(l),
-      excerpt: printable(l.excerpt),
+      ...original,
       sourceUrl: str(l.sourceUrl),
       sourceUrlDisplay: displayUrl(str(l.sourceUrl)),
       retrievedOn: fetched ? fetched.slice(0, 10) : null,
       images,
+      translation,
     });
   }
   return exhibits;

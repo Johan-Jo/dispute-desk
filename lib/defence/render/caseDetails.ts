@@ -38,6 +38,10 @@ import { formatMoneyDisplay, reasonCodeForNetwork } from "./formatting";
  * `DisputeContextLike` it receives as a prop.
  */
 export interface CaseDetailsInput {
+  /** A non-card dispute's provider ("PayPal", "Klarna"): the table says
+   *  "Payment method" and "Customer name" and prints no card rows
+   *  (counsel/frame.ts; #101111, 2026-09-28). Absent = a card dispute. */
+  paymentMethodLabel?: string | null;
   disputeIdShort?: string | null;
   merchantName?: string | null;
   cardNetwork?: string | null;
@@ -132,5 +136,15 @@ export function buildCaseDetailsRows(
     ["Fulfillment status", dash(input.fulfillmentStatus)],
   ];
 
-  return allRows.filter(([label]) => !deny.has(label));
+  const nonCard = !!input.paymentMethodLabel;
+  return allRows
+    .filter(([label]) => !deny.has(label))
+    .filter(([label]) => !(nonCard && label === "Card (last 4)"))
+    .map(([label, value]): CaseDetailsRow =>
+      nonCard && label === "Card network"
+        ? ["Payment method", input.paymentMethodLabel!]
+        : nonCard && label === "Cardholder name"
+          ? ["Customer name", value]
+          : [label, value],
+    );
 }
