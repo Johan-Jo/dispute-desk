@@ -28,7 +28,7 @@ import type {
 } from "@/lib/defence/types";
 import { isSectionShown } from "@/lib/defence/sectionVisibility";
 import { disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
-import { buildChronologyEvents, type ChronologyEvent } from "@/lib/defence/chronology";
+import { buildChronologyEvents, familyOmitsArrival, type ChronologyEvent } from "@/lib/defence/chronology";
 import {
   SECTION_ORDER,
   SECTION_TITLES,
@@ -220,10 +220,12 @@ function chronologyEvents(
   facts: EvidenceFact[],
   orderTotalDisplay: string | null = null,
   additions: ReadonlyArray<{ at: string; text: string }> = [],
+  omitArrivalEvents = false,
 ): ChronologyEvent[] {
   return buildChronologyEvents(
     {
       orderTotalDisplay,
+      omitArrivalEvents,
       timelineEvents: additions.length ? [...(dispute?.timelineEvents ?? []), ...additions] : (dispute?.timelineEvents ?? null),
       transactionDate: dispute?.transactionDate ?? null,
       orderName: dispute?.orderName ?? null,
@@ -493,7 +495,13 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const reasonModule = moduleKey ? ALL_REASON_CODE_MODULES.find((m) => m.key === moduleKey) ?? null : null;
 
   const lineItems: LineItem[] = buildLineItems(facts);
-  const chrono = chronologyEvents(dispute, facts, lineItemsTotal(lineItems)?.amount ?? null, narrative.timelineAdditions ?? []);
+  const chrono = chronologyEvents(
+    dispute,
+    facts,
+    lineItemsTotal(lineItems)?.amount ?? null,
+    narrative.timelineAdditions ?? [],
+    familyOmitsArrival(moduleKey ? familyKeyForModule(moduleKey as ReasonCodeModuleKey) : null),
+  );
   const total = lineItemsTotal(lineItems);
   const shipments = shipmentsOf(facts);
   const multiParcel = shipments.length > 1;

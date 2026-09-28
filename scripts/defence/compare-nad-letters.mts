@@ -4,8 +4,11 @@
  * composed-document validators. Run it once in a develop checkout and once on
  * the PR branch, then compare the two output files.
  *
- * READ-ONLY against the database. Inputs are rebuilt from each dispute's latest
- * stored defence package (its approved facts and package mode). The model call
+ * READ-ONLY against the database. Facts are re-derived from each dispute's
+ * current evidence pack with this checkout's classifier (`classifyFacts`), then
+ * narrowed the way the argument plan narrows them: the reason module's
+ * allowed categories and the bank-inclusion predicate. Pass `--stored-facts` to
+ * use the facts stored on the latest package instead. The model call
  * goes through the staging pilot route (the local Anthropic key is unusable),
  * with the production model and temperature, so only the prompts differ.
  *
@@ -40,6 +43,10 @@ const { evaluateAllPredicates } = await import("../../lib/defence/factPredicates
 const { validateNarrative, validateComposedDocument, VALIDATOR_VERSION } = await import("../../lib/defence/validateNarrative");
 const { composePdfBlocks } = await import("../../lib/defence/pdf/composePdfBlocks");
 const { disputedAmountDisplay } = await import("../../lib/defence/shipmentRecordSections");
+const { classifyFacts, hasArgumentBeyondRecordContext } = await import("../../lib/defence/factClassifier");
+const { bankIncludedFacts } = await import("../../lib/defence/bankInclusion");
+const { alwaysAdmissibleCategories } = await import("../../lib/defence/alwaysAdmissible");
+const storedFacts = process.argv.includes("--stored-facts");
 type Facts = import("../../lib/defence/types").EvidenceFact[];
 type Narrative = import("../../lib/defence/types").DefenceNarrativeOutput;
 
@@ -88,12 +95,39 @@ for (const disputeId of disputeIds) {
     .order("version", { ascending: false })
     .limit(1)
     .single();
-  const { data: pack } = await sb.from("evidence_packs").select("pack_json").eq("id", pkg!.source_pack_id).single();
-  const facts = (pkg!.facts_json ?? []) as Facts;
-  const packageMode = pkg!.package_mode as "full" | "narrow";
-  const family = (pack!.pack_json as { payment_context?: { family?: string } })?.payment_context?.family ?? null;
-
+  const { data: pack } = await sb.from("evidence_packs").select("id, pack_json, checklist_v2").eq("id", pkg!.source_pack_id).single();
+  const packJson = (pack!.pack_json ?? {}) as Record<string, unknown>;
+  const family = (packJson as { payment_context?: { family?: string } })?.payment_context?.family ?? null;
   const module = resolveReasonCodeModule(d!.network_reason_code ?? "13.3");
+
+  let facts = (pkg!.facts_json ?? []) as Facts;
+  let packageMode = pkg!.package_mode as "full" | "narrow";
+  let skipped = false;
+  if (!storedFacts) {
+    const { data: items } = await sb.from("evidence_items").select("id, payload, source").eq("pack_id", pack!.id);
+    const sections = ((packJson.sections ?? []) as Array<Record<string, unknown>>).map((sec) => ({
+      type: sec.type as string, label: sec.label as string, source: sec.source as string,
+      data: (sec.data ?? {}) as Record<string, unknown>, fieldsProvided: (sec.fieldsProvided ?? []) as string[],
+    }));
+    const c = classifyFacts({
+      packageId: pkg!.id,
+      sections,
+      evidenceItems: (items ?? []).map((it) => ({ id: it.id, payload: it.payload, source: it.source ?? null })),
+      checklist: ((pack!.checklist_v2 ?? []) as Array<{ field: string; status: string }>).map((x) => ({ field: x.field, status: x.status })),
+      coverage: { state: (packJson.coverage as { state?: string } | undefined)?.state === "covered_shopify" ? "covered_shopify" : "not_covered" },
+      fatalLoss: { triggered: (packJson.fatal_loss as { triggered?: boolean } | undefined)?.triggered === true, reason: null },
+      caseStrength: "moderate",
+      manualRows: [],
+      reasonCodeModule: module,
+    } as never);
+    const allowed = new Set<string>([
+      ...module.allowedFactCategories,
+      ...alwaysAdmissibleCategories(c.approved, familyForModule(module.key).key),
+    ]);
+    facts = bankIncludedFacts(c.approved.filter((f: { category: string }) => allowed.has(f.category)));
+    packageMode = c.packageMode;
+    skipped = facts.length === 0 || !hasArgumentBeyondRecordContext(facts);
+  }
   const fam = familyForModule(module.key);
   const strategies = rankStrategies({ familyKey: fam.key, predicateEvaluations: evaluateAllPredicates(facts), packageMode });
   const { overlay: paymentOverlay, prohibitedPhrases } = paymentOverlayFor(family, { shopifyReason: d!.reason, subProduct: null });
@@ -143,6 +177,7 @@ for (const disputeId of disputeIds) {
     ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
     : null;
   results.push({
+    skipped, factCategories: facts.map((f) => f.category),
     disputeId, order: d!.order_name, outcome: d!.final_outcome, paymentFamily: family, packageMode,
     strategies: strategies.map((s) => s.key), status: res.status, error: body.error ?? null, usage: body.usage ?? null,
     narrative: narrative ? Object.fromEntries(SECTIONS.map((k) => [k, (narrative as never as Record<string, { text: string }>)[k].text])) : raw.slice(0, 2000),
