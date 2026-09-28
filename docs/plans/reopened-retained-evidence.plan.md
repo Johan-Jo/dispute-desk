@@ -1,6 +1,6 @@
 # What Shopify already holds when we file: retained evidence on reopened disputes
 
-**Status:** rev 5 (external review adopted: D5 conditional, D6 narrowed, D7 yes; live clearing not yet approved) · **Date:** 2026-09-28 · **Related:** `bank-claim-capture.plan.md` (F4), `mein-maison-status-and-no-return.plan.md`
+**Status:** rev 5.1 (external review adopted; critic fixes applied; live clearing not yet approved) · **Date:** 2026-09-28 · **Related:** `bank-claim-capture.plan.md` (F4), `mein-maison-status-and-no-return.plan.md`
 
 ## Problem
 
@@ -62,9 +62,19 @@ What we file is everything Shopify sends, not only our PDF. Our working judgment
 
 **1. Snapshots and the round-1 reference.**
 - **The read.** A separate per-dispute `readEvidenceRecord`, for open disputes only, reads the six text fields and, for each file slot, the upload's `id`, name, type and size. It is not added to `DISPUTE_LIST_QUERY`: that query has no status filter, and `redactPII` would copy the text into `raw_snapshot`.
-- **The table.** A row goes into `shopify_evidence_snapshots` on any change, and on every sync while a dispute is `under_review`. Columns: `dispute_id`, `cycle`, the raw fields, the file-slot metadata, one hash per clearable field, and `read_at`.
-- **What counts as round-1 content.** The reference is **the last snapshot taken in the previous round while the dispute was `under_review`**: the state Shopify held after round 1 was submitted, before the reopen. It is not the first snapshot after the reopen. Text that still equals that reference is provably round-1 content. Anything else was added after round 1 closed, possibly in the minutes after the reopen, and is kept.
-- **No reference** (a dispute reopened before snapshots shipped, or never seen `under_review`): nothing is provably round-1. We **keep everything, file the letter, and alert** (`retained_text_unverified`). No clearing without proof.
+- **The table.** `shopify_evidence_snapshots` has these columns: `dispute_id`, `cycle`, **`observed_status`** (the dispute status at read time), the raw fields, the file-slot metadata, one hash per clearable field, `read_at` and `last_confirmed_at`.
+  - A new row is written only when the status or the content hash changes. Otherwise `last_confirmed_at` is updated.
+  - Reads happen when a dispute enters `under_review` or `needs_response`, and once a day while it is open. Text is frozen while a dispute is `under_review`, so extra rows would add nothing.
+  - Within a sync, snapshots are written **after** `reconcile_response_cycle`, so a row is never tagged with the previous cycle after a reopen.
+- **What counts as round-1 content.** The reference is the last snapshot that meets all three conditions:
+  1. `observed_status = 'under_review'`;
+  2. `read_at` is **after** the previous cycle's response anchor (`responseAnchorKey`: `evidence_sent_on`, our save, or the responded transition), so an inquiry's `under_review` flip before any response doesn't count;
+  3. `read_at` is **before** the new cycle's `reopened_at` in the cycle ledger.
+
+  That is the state Shopify held after round 1 was submitted and before the reopen. Text that still equals it is provably round-1 content. Anything else, including text written minutes after the reopen, is kept.
+  - A dispute that was already `under_review` when snapshots ship gets a valid reference from its first snapshot, because text is frozen in that state.
+- **No reference** (a dispute reopened before snapshots shipped, or never seen `under_review` after its response): nothing is provably round-1. We **keep everything and file the letter**. We raise `retained_text_unverified` only if a clearable field is non-empty. No clearing without proof.
+- **Escalations** (inquiry → chargeback, `ResponseCycleTrigger = "escalation"`) are observe-only until Rollout 2 shows whether inquiry evidence carries over.
 - **PII.** The table goes into `scrubCustomerData.ts`, the shop-redact route, `customers-data-request` and `retention-cleanup`. Snapshots never gate a save.
 
 **2. Text in scope.** Three free-text fields: `uncategorizedText`, `refundRefusalExplanation` and `cancellationRebuttal`. Together they form the `ClearableTextField` union.
@@ -80,16 +90,21 @@ What we file is everything Shopify sends, not only our PDF. Our working judgment
   6. **Mismatch handling.** Shopify has no conditional update, so there are two cases:
      - A pre-read already different from the reference means that field is not cleared (step 3).
      - If the post-read shows a value that is neither empty nor the pre-read, the merchant wrote during the call. We audit it and alert, and we never write again in that job.
-  7. **Every clear stores the exact before value** in the audit row (`retained_text_cleared`: field, before, after, `read_at`), so any clear can be restored from the page with one click ("Put it back", `submitEvidence: false` while unfiled).
-  8. The window left between the pre-read and the call is the length of one API request. It can't be closed without a conditional update, and the stored before value covers it.
+  7. **Every clear stores the exact before value** in the audit row (`retained_text_cleared`: field, before, after, `read_at`).
+     - In **(a)** the clear is part of the filing mutation (`submitEvidence: true`), so it can't be undone. There the before value is a record only.
+     - The real safeguard for (a) is the time before filing. A cycle-2 dispute is held for the bank's claim until D7 releases it, and during that time the card shows exactly what will be cleared, with "Keep".
+     - "Put it back" exists only for **(b)** clears, which file nothing.
+  8. The window left between the pre-read and the call is the length of one API request. It can't be closed without a conditional update. It is recorded in the audit, not repaired.
 - **(b) Standalone clear when we cannot file (D5, conditional).** It runs only when **all** of these hold:
   - the test-store check (Rollout 2) showed that a `submitEvidence: false` clear persists and leaves `status`, `evidenceSentOn` and our submission state unchanged;
   - the dispute is cycle ≥ 2, with a round-1 reference, and at least one field provably equals it;
-  - it is **deadline minus 24 h** and the pack is still not fileable (not `ready`/`saving`, or `bankClaimBlocksFiling()`, or no free file slot per §4). Running late leaves the filing path the full time to succeed first.
+  - it is the **last deadline-cron run before the deadline** (`defence-package-deadline-submit`, daily at 08:00 UTC, window now to now + 26 h), and, **after** that run has applied the D7 claim fallback (§9), the pack is still not fileable. Not fileable means: not `ready`/`saving`; `bankClaimBlocksFiling()` is true; no free file slot per §4; or **parked in review and not approved** (the deadline cron excludes those).
+
+  Running in that last run leaves the filing path the whole time until then. For disputes due at 03:00 UTC, that run is about 19 h before the deadline.
 
   The job then:
   - follows the same pre-read → mutate → post-read steps and stores the before values;
-  - verifies by the post-read that the field is empty;
+  - verifies by the post-read that the field is empty. If it isn't (for example, Shopify ignores `""`), it audits, alerts and does not retry;
   - audits the result.
 
   **The merchant sees:** "We couldn't file DisputeDesk's letter before the deadline, and removed text sent in the previous round so it wouldn't be repeated. Shopify will submit what the dispute holds." This appears on the dispute page, with a "Put it back" link while the dispute is still unfiled, plus an email that informs and asks for nothing. The admin gets the no-file alert. The outcome is recorded as **not a defence**: it is a lesser harm, not a filed response.
@@ -99,11 +114,12 @@ What we file is everything Shopify sends, not only our PDF. Our working judgment
 | What `uncategorizedFile` holds at save time | Action |
 |---|---|
 | Empty | Our letter goes there |
-| Our own earlier upload (`isDisputeDeskFile`), superseded | Our letter replaces it. **This is the only automatic replacement.** |
+| Our own earlier upload (its upload `id` matches the one we recorded at our last save; the `Defence-` filename is only a fallback for saves made before ids were stored) | Our letter replaces it. **This is the only automatic replacement.** |
 | Any other file (in the round-1 reference, added since, id changed, or unreadable) | **Kept.** Our letter goes into the first free, verified slot |
-| Slot unreadable after 3 retries | Treated as "any other file": our letter goes into a second slot |
+| Evidence record unreadable after 3 retries | **Nothing is written.** We retry, then flag a collision (alert + card). We never write blind into any slot |
 
-- **The second slot.** We try `serviceDocumentationFile`, then `customerCommunicationFile`, then `shippingDocumentationFile`, and use the first one that is empty at the pre-mutation read. The policy slots are never used. A slot counts as usable only once Rollout 2 shows that a PDF there is submitted to the issuer.
+- **Recording our upload id.** The save stores the Shopify upload `id` of our PDF (a new column on the pack or audit row), so "ours" is known by id.
+- **The second slot.** A second slot is used only if that slot read back as **empty** at the pre-mutation read. We try `serviceDocumentationFile`, then `customerCommunicationFile`, then `shippingDocumentationFile`, and use the first one that is empty at the pre-mutation read. The policy slots are never used. A slot counts as usable only once Rollout 2 shows that a PDF there is submitted to the issuer.
 - **No free usable slot: the one no-file case.** We flag a collision:
   - the admin gets an alert;
   - the card shows the slot and offers "Replace <file name> with DisputeDesk's letter" (in the app, while unfiled);
@@ -141,9 +157,16 @@ What we file is everything Shopify sends, not only our PDF. Our working judgment
 **8. Cycle 1: observe only.** We write snapshots (they become the next round's reference) and change nothing.
 
 **9. D7: the bank's claim becomes optional.** `needsBankClaim()` no longer blocks filing forever.
-- Without a pasted claim, we file a claim-neutral letter from the current reason code at **deadline minus 2 days**, before §3b's 24 h mark.
-- A claim pasted before then still shapes the letter. The card stays.
-- `bankClaimBlocksFiling()` returns false once that time has passed. The deadline cron and the save worker read the same predicate.
+- **When.** In the last deadline-cron run before the deadline, `bankClaimBlocksFiling(now)` returns false. It takes an injected `now` and is the one predicate shared by the cron, the save worker and the approve route. The cron then enqueues the claim-neutral letter first, and §3b is considered only after that.
+  - No new cron is added. Filing the fallback earlier than that would need an hourly job. That is recorded as an option, not built.
+- **The claim-neutral letter, GENERAL case.** For `GENERAL` without a network reason code (cycle-1 GENERAL, or a reopen whose reason changed to GENERAL, like #99142), the letter:
+  - uses the generic module;
+  - argues only from the order record, fulfilment/delivery and customer facts;
+  - **never carries the "Unmapped chargeback claim" heading** (`docs/technical.md:937`).
+
+  A test pins that no filed letter contains that fallback.
+- A claim pasted before that run still shapes the letter. The card stays.
+- **Review mode is not overridden.** A review-mode dispute that was never approved is not filed by D7. For those, §3b is the deadline path, because it covers packs "parked in review and not approved".
 
 ## Decisions
 
@@ -153,13 +176,16 @@ What we file is everything Shopify sends, not only our PDF. Our working judgment
 | D2 | Mein Maison: nothing erased before you have seen it | Yes (user). You have seen the text. The one-off is below |
 | D3 | Shopify's activity log | Untouched (user) |
 | D4 | Read the files first | Superseded: files can't be read |
-| D5 | Standalone clear when we can't file | **Conditional yes** (review): only after the test passes, at deadline minus 24 h, verified, and shown to the merchant (§3b) |
+| D5 | Standalone clear when we can't file | **Conditional yes** (review): only after the test passes, in the last deadline-cron run after D7, verified, and shown to the merchant (§3b) |
 | D6 | Replace a round-1 file by default | **No** (review). Replaced by §4: keep foreign files, letter in a second slot, auto-replace only our own superseded upload |
-| D7 | Bank's claim optional, with a deadline fallback | **Yes** (review, §9) |
+| D7 | Bank's claim optional, with a deadline fallback | **Yes** (review, §9). Fallback in the last deadline-cron run; review mode not overridden |
 
 ## Mein Maison one-off (#99142 due 10-01, #94866 due 10-02)
 
-**Text only. The PDFs are not touched.** The full build can't ship by these dates. The one-off runs only if Rollout 2 has shown that an empty-field update with `submitEvidence: false` persists and changes neither `status` nor `evidenceSentOn`.
+**Text only. The PDFs are not touched.** The full build can't ship by these dates. The one-off runs only if Rollout 2 has shown that an empty-field update with `submitEvidence: false`:
+- persists;
+- changes neither `status` nor `evidenceSentOn`;
+- leaves our reopen detection untouched.
 
 1. `scripts/shopify/clear-retained-text.mjs --dry-run` prints the exact before values.
 2. With your go, run it on #99142:
@@ -167,6 +193,7 @@ What we file is everything Shopify sends, not only our PDF. Our working judgment
    - record the before and after values and the status check here.
 3. Show the result. With your go, do the same on #94866.
 4. If the test or your go misses a date, that dispute goes out the way Shopify holds it, and that is recorded here.
+5. **What goes out afterwards, expected.** Both disputes are cycle 2, held for the bank's claim, and hold `AdditionalEvidence.pdf`. The current F4 guard refuses our save (`merchant_file_present`). So unless a claim is pasted **and** §4 has shipped, Shopify files the merchant's PDF plus whatever remains, and nothing of ours. The one-off only stops the old text being repeated.
 
 ## Shopify question
 
@@ -182,7 +209,8 @@ A follow-up on the Hanad thread asks whether an app can download a readable copy
    - Is a PDF in `serviceDocumentationFile`, `customerCommunicationFile` or `shippingDocumentationFile` submitted, and how is it labelled?
    - Does replacing `uncategorizedFile` detach the old upload?
    - Does an upload keep its `id` across a reopen?
-3. **Observe-only snapshots (approved):** develop, then prod. They start building round-1 references now.
+   - Does inquiry evidence survive an escalation to a chargeback?
+3. **Observe-only snapshots (approved):** develop, then prod, with the rev 5.1 table (`observed_status`, `last_confirmed_at`). They start building round-1 references now.
 4. The Mein Maison one-off (above), per your go.
 5. **Live clearing (§3), the file rules (§4), D7 (§9), annex removal and the card.** Not approved yet. Develop first, then prod with per-change approval once the test results are recorded.
 
@@ -195,9 +223,11 @@ A follow-up on the Hanad thread asks whether an app can download a readable copy
 - **Race.**
   - A pre-read that differs from the reference means no clear.
   - A post-read that shows a new value means an audit and an alert.
-  - Every clear stores its before value, and "Put it back" restores it.
+  - Every clear stores its before value. "Put it back" exists only for §3b clears.
 - **Standalone clear (§3b).**
-  - Runs only when the test flag is set, and only at deadline minus 24 h.
+  - Runs only when the test flag is set, and only in the last deadline-cron run, after the D7 decision.
+  - Includes review-mode packs that were never approved.
+  - A post-read that isn't empty means an audit and an alert, with no retry.
   - Runs only on unfileable cycle ≥ 2 packs with a reference.
   - Is verified by the post-read.
   - Never stamps `evidence_saved_to_shopify_at` or `submitted_at`, and never opens a cycle.
@@ -206,12 +236,19 @@ A follow-up on the Hanad thread asks whether an app can download a readable copy
   - A foreign file is never replaced; our letter goes into the first free, verified slot.
   - Only our own superseded upload is replaced.
   - With no free slot, a collision is flagged and nothing is replaced.
-  - An unreadable slot after 3 retries uses a second slot.
+  - A second slot is used only when it read back empty.
+  - "Ours" is matched by the recorded upload id.
   - No code path downloads file contents.
 - **D7.**
-  - Before deadline minus 2 days, filing is held for the claim.
-  - After that, a claim-neutral letter is filed.
-  - The cron and the worker use the same predicate.
+  - Before the last deadline-cron run, filing is held for the claim. In that run, `bankClaimBlocksFiling(now)` is false and a claim-neutral letter is enqueued before §3b is considered.
+  - One predicate is used by the cron, the worker and the approve route.
+  - A never-approved review-mode dispute is not filed by D7.
+  - No filed letter contains "Unmapped chargeback claim".
+- **Reference.**
+  - An `under_review` snapshot taken before the response anchor is not a reference.
+  - A snapshot tagged with the old cycle after a reopen can't exist (snapshots are written after reconcile).
+  - Escalation cycles clear nothing.
+- **Unreadable record.** Nothing is written; a collision is flagged.
 - **Card.** Interactive only while unfiled; read-only afterwards.
 - **Payload.** Only `ClearableTextField` keys are ever cleared (type test).
 - **Privacy.** `raw_snapshot` never contains evidence text, and the letter writer never receives snapshot content.
