@@ -54,7 +54,10 @@ export type PackageUnsafeReason =
   /** `facts_json` is null, malformed, or in a shape we do not recognise. */
   | "unreadable_facts_json"
   /** `narrative_json` is null, malformed, or in a shape we do not recognise. */
-  | "unreadable_narrative_json";
+  | "unreadable_narrative_json"
+  /** The letter was written by the retired template writer (no counsel
+   *  block). Retired permanently 2026-09-28: such a letter is never filed. */
+  | "retired_template_writer";
 
 export interface PackageSafetyVerdict {
   safe: boolean;
@@ -433,6 +436,13 @@ export function assessPackageCandidateSafety(
       if (verdict === "affirmative") reasons.add("affirmative_address_delivery_claim");
       else if (verdict === "ambiguous") reasons.add("ambiguous_address_delivery_claim");
     }
+    /* THE TEMPLATE WRITER IS RETIRED (maintainer, 2026-09-28). Retiring it in
+     * the build job is not enough: the filing selectors skip `failed` rows, so
+     * a template letter built earlier would still be filed at its deadline.
+     * Every filing path runs this check, so a letter without the counsel block
+     * is refused here, once, for all of them. */
+    const counsel = (input.narrativeJson as { counsel?: unknown }).counsel;
+    if (!counsel || typeof counsel !== "object") reasons.add("retired_template_writer");
   }
 
   return {
@@ -453,6 +463,12 @@ export function packageBlockSummary(verdict: PackageSafetyVerdict): string {
     return (
       "This defence package cannot be reviewed automatically, so it will not be " +
       "filed. Regenerate the package to produce a version that can be submitted."
+    );
+  }
+  if (verdict.reasons.includes("retired_template_writer")) {
+    return (
+      "This defence letter was written by a letter writer DisputeDesk has retired, " +
+      "so it will not be filed. A new letter is required before this dispute can be filed."
     );
   }
   return (

@@ -598,16 +598,18 @@ export async function handleBuildDefencePackage(
     });
 
   /* ── Counsel v2 (lib/defence/counsel/run.ts) ─────────────────────────
-   * Item-not-received letters are written by the counsel pipeline first. A
-   * null result — no carrier-confirmed single delivery, no draft passing its
-   * checks, a model error — falls through to the template writer below,
-   * unchanged. Its letter still passes every validator this job runs; if it
-   * fails one, the existing retry regenerates with the template writer. */
+   * The only letter writer (the template writer is retired, below). A null
+   * result means no letter. Why it was null decides whether the build is
+   * retried: a spent budget or a model/transport error is transient and
+   * retriable; "counsel has no playbook or no theory for this case" is not. */
   let usedCounsel = false;
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
+  let counselTransient: { code: "daily_cap_reached" | "llm_error"; reason: string } | null = null;
   if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment && !bankClaim?.text) {
     const cap = await checkDailyCap(sb, pkg.shop_id);
-    if (!cap.capReached && cap.counselRuns < COUNSEL_DAILY_RUN_CAP) {
+    if (cap.capReached || cap.counselRuns >= COUNSEL_DAILY_RUN_CAP) {
+      counselTransient = { code: "daily_cap_reached", reason: "counsel daily run cap reached" };
+    } else {
       try {
         const orderCtx = deriveOrderContext(
           sectionsRaw.map((s) => ({ type: s.type, label: s.label, source: s.source, data: s.data ?? {}, fieldsProvided: s.fieldsProvided ?? [] })),
@@ -668,11 +670,10 @@ export async function handleBuildDefencePackage(
           },
         });
       } catch (err) {
-        console.warn(
-          `[buildDefencePackage] counsel v2 failed for ${pkg.dispute_id}, using the template writer: ` +
-            (err instanceof Error ? err.message : String(err)),
-        );
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[buildDefencePackage] counsel v2 failed for ${pkg.dispute_id}: ${message}`);
         counselRes = null;
+        counselTransient = { code: "llm_error", reason: `counsel v2 error: ${message}` };
       }
     }
   }
@@ -685,6 +686,9 @@ export async function handleBuildDefencePackage(
    * not write for gets NO letter — a failed package the merchant and admin
    * can see — until its family has a counsel playbook
    * (docs/plans/defence-letter-structure.plan.md). Never re-add a fallback. */
+  if (!counselRes && counselTransient) {
+    return await markFailed(sb, pkg, counselTransient.reason, counselTransient.code, true);
+  }
   if (!counselRes) {
     await logAuditEvent({
       shopId: pkg.shop_id,
