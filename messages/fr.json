@@ -2315,7 +2315,9 @@
       "savedSummaryText": "{count, plural, =1 {Texte collé · # caractère} other {Texte collé · # caractères}}",
       "savedDue": "Réponse avant le {date}",
       "cancel": "Annuler",
-      "editClaim": "Modifier la réclamation"
+      "editClaim": "Modifier la réclamation",
+      "portalBody": "DisputeDesk n'enverra pas de réponse pour ce litige tant que la réclamation de la banque n'est pas ajoutée. Elle n'est visible que dans Shopify et s'ajoute dans l'application DisputeDesk de l'administration Shopify.",
+      "portalCta": "L'ajouter dans Shopify"
     }
   },
   "disputeReasons": {
