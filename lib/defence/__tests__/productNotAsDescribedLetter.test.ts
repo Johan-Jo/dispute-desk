@@ -63,6 +63,13 @@ describe("not-as-described: conclusions the records cannot carry are refused", (
     "The transaction passed AVS and CVV checks.",
     "The IP address matches the billing region.",
     "The payment was authenticated with 3-D Secure.",
+    // From the PR 1 comparison letters (#100411, 2026-09-28).
+    "No product listing or customer communication evidence has been submitted to support the buyer's assertion that the goods differed from what was advertised.",
+    "The buyer has not, on the available record, engaged a return or resolution process with the merchant.",
+    "This delivery record is corroborated by two fulfillment entries in the merchant's system.",
+    "The customer did not contact the merchant before opening the dispute.",
+    "The claim is an unsupported assertion.",
+    "In the absence of any return, the claim should fail.",
   ])("refuses: %s", (text) => {
     expect(refusals(text).length).toBeGreaterThan(0);
   });
@@ -76,6 +83,8 @@ describe("not-as-described: confident, true sentences pass", () => {
     "The merchant's listing describes the shirt as 100% linen, retrieved on 28 September 2026.",
     "The merchant fulfilled the order on 3 September 2026.",
     "The merchant respectfully requests reversal of the chargeback.",
+    "The carrier confirmed delivery on 5 September 2026 (YunExpress, tracking YT2623000704678286).",
+    "The merchant requests that this dispute be resolved in its favour on the basis of the delivery record and the absence of any recorded return.",
   ])("passes: %s", (text) => {
     expect(refusals(text)).toEqual([]);
   });
