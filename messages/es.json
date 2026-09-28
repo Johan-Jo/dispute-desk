@@ -3600,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "La lista de verificación de evidencia explicada",
-        "body": "La lista muestra evidencia recopilada y faltante.\n\nMarcas:\n- Recopilado (marca verde): evidencia encontrada.\n- Obligatorio pero faltante (rojo): bloqueo.\n- Recomendado (amarillo): no obligatorio pero útil.\n\nLa lista se adapta al motivo de la disputa."
+        "body": "La lista muestra evidencia recopilada y faltante.\n\nMarcas:\n- Recopilado (marca verde): evidencia encontrada.\n- Obligatorio pero faltante (rojo): bloqueo.\n- Recomendado (amarillo): no obligatorio pero útil.\n\nLa lista se adapta al motivo de la disputa.\n\nNo es como se describe: DisputeDesk toma automáticamente la ficha del producto de tu tienda (el título, la descripción, hasta tres imágenes y la variante elegida) y la añade a la defensa. Es tu ficha tal como está hoy; Shopify no guarda cómo era cuando se hizo el pedido. Si no se puede obtener (por ejemplo, porque el producto se eliminó), la lista de comprobación indica el motivo."
       },
       "defenseLetterRebuttal": {
         "title": "Carta de defensa y réplica automática",
