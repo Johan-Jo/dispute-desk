@@ -30,6 +30,13 @@ import {
   ShopifyAuthInvalidError,
 } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
+import { readUncategorizedFile } from "@/lib/shopify/merchantEvidenceFile";
+import { guardMerchantFileSlot } from "@/lib/defence/merchantFileGuard";
+import {
+  appendMerchantFile,
+  hasMerchantFileApproval,
+  merchantFileAnnexEnabled,
+} from "@/lib/defence/merchantFileAnnex";
 import {
   uploadDisputeFile,
   MAX_FILE_SIZE_BYTES,
@@ -450,6 +457,42 @@ export async function handleSaveToShopify(
   const session = await getShopBackgroundSession(pack.shop_id);
   const accessToken = session.accessToken;
   const shopDomain = session.shopDomain;
+
+  /* ── 5b. Never replace the merchant's own file (bank-claim plan F4) ──
+   *
+   * Our PDF goes into Shopify's uncategorized slot. On a reopened dispute that
+   * slot can hold the merchant's round-one upload, and writing ours replaces
+   * it. Refused unless the merchant approved appending it to our PDF for this
+   * cycle AND the annex is switched on — neither is the case today. Fails
+   * closed: if the slot cannot be read, nothing is written. */
+  const cycle = (dispute.response_cycle as number | null | undefined) ?? 1;
+  const slotGuard = await guardMerchantFileSlot(pdfBytes, {
+    readSlot: () =>
+      readUncategorizedFile({
+        shopDomain,
+        accessToken,
+        disputeEvidenceGid: dispute.dispute_evidence_gid as string,
+        correlationId: `save-slot-${job.id}`,
+      }),
+    annexEnabled: merchantFileAnnexEnabled,
+    hasApproval: () => hasMerchantFileApproval(sb, pack.dispute_id as string, cycle),
+    fetchFile: async (url) => new Uint8Array(await (await fetch(url)).arrayBuffer()),
+    append: appendMerchantFile,
+    audit: (eventType, payload) =>
+      logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType,
+        eventPayload: { jobId: job.id, cycle, ...payload },
+      }),
+    maxBytes: MAX_FILE_SIZE_BYTES,
+  });
+  if (slotGuard.action === "refuse") {
+    return { ok: false, retriable: slotGuard.retriable, reason: slotGuard.reason };
+  }
+  pdfBytes = slotGuard.pdfBytes;
 
   /* ── 6. Upload PDF to Shopify → fileGid ── */
 
