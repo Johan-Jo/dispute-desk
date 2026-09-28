@@ -114,6 +114,18 @@ This plan adds no wait of its own. The bank-claim card still holds every cycle-2
 
 ## Decisions for the user
 
+### Decided 2026-09-28 (user)
+
+- **D1: yes.** Clear baseline free text on cycle ≥ 2 by default, with an override.
+- **D2: nothing is erased until the user has seen it firsthand.** No clear-only write, operator script or save that clears text runs on #99142 or #94866 until the user has looked at the evidence in Shopify Admin and said go:
+  - #99142: https://admin.shopify.com/store/6a8848-dd/payments/dispute_evidences/14550761806
+  - #94866: https://admin.shopify.com/store/6a8848-dd/payments/dispute_evidences/14349173070
+- **D3: leave untouched for now.** `accessActivityLog` is never changed in v1.
+- **D4: yes, read the files first.** Attempted 2026-09-28: `uncategorizedFile.url` returns an encrypted JSON envelope (`{"encrypted_key": …}`), not the PDF. **Round-1 files cannot be read through the API.** Only a person viewing Shopify Admin can say what they are, so this folds into D2.
+- **D5: open.** Re-explained in plain terms; waiting for an answer.
+
+Original options, kept for the record:
+
 - **D1. Default on cycle 2+:** clear baseline free text, with an override (§3, §5). *Recommended.* Keeping by default would file text like #94866's admission next to our letter. The case for keeping ("don't delete their words") is already met by the snapshot, the page and the override.
 - **D2. Mein Maison now** (#99142 due 10-01, #94866 due 10-02).
   - *Recommendation:* in the reply we owe them, name both sentences, say they were sent in round 1, and say we will remove them from this round unless they object. Ask about the round-1 file there too (D4).
