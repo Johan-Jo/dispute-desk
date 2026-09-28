@@ -1708,7 +1708,9 @@
         "reviewRequiredTitle": "Granskning krävs innan paketet kan skickas in",
         "reviewRequiredBody": "DisputeDesk kan inte skicka in det här försvarspaketet som det är byggt. Generera om det för att skapa en version som kan skickas in. Förhandsgranska och Generera om är fortfarande tillgängliga; Slutför och Skicka in är otillgängliga tills en omgenererad version klarar granskningen.",
         "notEnoughEvidenceReturnedTitle": "Det finns inget att argumentera för förrän du berättar varför paketet kom tillbaka",
-        "notEnoughEvidenceReturnedBody": "Transportören returnerade paketet till dig, så det finns ingen leverans att argumentera kring och det kan aldrig finnas någon leveransbekräftelse för den här ordern. Att vänta ändrar inte det — inget mer kommer att samlas in. Det enda som fortfarande kan hjälpa finns på fliken Bevis: berätta om kunden vägrade ta emot leveransen eller aldrig hämtade ut den. Inget av det räknas som en giltig retur, och det tar vi med i ditt svar."
+        "notEnoughEvidenceReturnedBody": "Transportören returnerade paketet till dig, så det finns ingen leverans att argumentera kring och det kan aldrig finnas någon leveransbekräftelse för den här ordern. Att vänta ändrar inte det — inget mer kommer att samlas in. Det enda som fortfarande kan hjälpa finns på fliken Bevis: berätta om kunden vägrade ta emot leveransen eller aldrig hämtade ut den. Inget av det räknas som en giltig retur, och det tar vi med i ditt svar.",
+        "notEnoughEvidenceClaimTitle": "Inget i underlaget besvarar bankens anspråk ännu",
+        "notEnoughEvidenceClaimBody": "Du har lagt till bankens anspråk, så brevet besvarar just det anspråket och inget annat. Inget av det underlag som samlats in hittills tar upp det, så inget brev skrevs – ett tomt brev skulle förlora ärendet. Lägg till det som checklistan på fliken Bevis efterfrågar, så byggs brevet om automatiskt."
       },
       "sections": {
         "status": {

@@ -124,6 +124,10 @@ interface Props {
    *  nothing further will ever be collected, because the parcel came back.
    *  Read from the same gate every other surface reads, never re-derived. */
   returnedToSender?: boolean;
+  /** The merchant gave the bank's claim (not "no claim shown"). The letter
+   *  then answers only that claim, so "nothing to argue" means nothing on
+   *  file answers IT — the fix is the claim-driven checklist, not waiting. */
+  answeredBankClaim?: boolean;
   /** Shopify's `evidenceSentOn` — the moment Shopify forwarded the
    *  evidence to the card network. Persisted as `disputes.submitted_at`.
    *  Drives the outcome-expected countdown. Optional. */
@@ -255,6 +259,7 @@ export function CompleteDefencePackageCard({
   shopifyAdminUrl,
   presentationStatus,
   returnedToSender,
+  answeredBankClaim,
   evidenceSentOn,
   onSubmitted,
   defencePackage,
@@ -1002,13 +1007,17 @@ export function CompleteDefencePackageCard({
               title={
                 returnedToSender
                   ? tPkg("notEnoughEvidenceReturnedTitle")
-                  : t("notEnoughEvidenceTitle")
+                  : answeredBankClaim
+                    ? tPkg("notEnoughEvidenceClaimTitle")
+                    : t("notEnoughEvidenceTitle")
               }
             >
               <p>
                 {returnedToSender
                   ? tPkg("notEnoughEvidenceReturnedBody")
-                  : tPkg("notEnoughEvidenceBody")}
+                  : answeredBankClaim
+                    ? tPkg("notEnoughEvidenceClaimBody")
+                    : tPkg("notEnoughEvidenceBody")}
               </p>
             </Banner>
           )}

@@ -1829,7 +1829,9 @@
         "reviewRequiredTitle": "Review required before this package can be filed",
         "reviewRequiredBody": "DisputeDesk cannot file this defence package as built. Regenerate it to produce a version that can be submitted. Preview and Regenerate are still available; Finalize and Submit are unavailable until a regenerated version passes review.",
         "notEnoughEvidenceReturnedTitle": "There is nothing to argue until you tell us why the parcel came back",
-        "notEnoughEvidenceReturnedBody": "The carrier returned this parcel to you, so there is no delivery to argue and no proof of delivery can ever exist for this order. Waiting will not change that — nothing further will be collected. The one thing that can still help is on the Evidence tab: tell us whether the customer refused the delivery or never collected it. Neither counts as a valid return, and we will say so in your response."
+        "notEnoughEvidenceReturnedBody": "The carrier returned this parcel to you, so there is no delivery to argue and no proof of delivery can ever exist for this order. Waiting will not change that — nothing further will be collected. The one thing that can still help is on the Evidence tab: tell us whether the customer refused the delivery or never collected it. Neither counts as a valid return, and we will say so in your response.",
+        "notEnoughEvidenceClaimTitle": "Nothing on file answers the bank's claim yet",
+        "notEnoughEvidenceClaimBody": "You added the bank's claim, so the letter answers that claim and nothing else. None of the evidence collected so far speaks to it, so no letter was written — sending an empty one would lose the case. Add what the checklist on the Evidence tab asks for, and the letter is rebuilt automatically."
       },
       "inclusion": {
         "title": "Inclusion review",
