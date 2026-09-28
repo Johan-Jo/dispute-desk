@@ -631,7 +631,17 @@
       "hideFullDefenseLetter": "Verteidigungsschreiben ausblenden",
       "defenseSectionSummary": "Zusammenfassung",
       "defenseSectionConclusion": "Schluss",
-      "defenseSectionArgument": "Argument"
+      "defenseSectionArgument": "Argument",
+      "productListing": {
+        "present": "Aus Ihrem Shop übernommen am {date}: {title}",
+        "currentListingOnly": "Das ist Ihre Produktinformation in der heutigen Fassung. Shopify speichert nicht, wie sie bei der Bestellung aussah.",
+        "absent": "Das Produkt dieser Bestellung hat in Ihrem Shop keine Beschreibung, daher gibt es keine Produktinformation zum Anhängen.",
+        "deleted": "Das Produkt dieser Bestellung wurde aus Ihrem Shop gelöscht, daher kann seine Produktinformation nicht angehängt werden.",
+        "customItem": "Diese Bestellung enthält einen individuellen Artikel ohne Produktinformation in Ihrem Shop.",
+        "failed": "Wir konnten die Produktinformation nicht von Shopify lesen. Wir versuchen es automatisch noch einmal.",
+        "inaccessible": "DisputeDesk kann Ihre Produkte nicht lesen. Öffnen Sie DisputeDesk im Shopify-Admin und bestätigen Sie den angefragten Produktzugriff.",
+        "reconnectForProducts": "Produktzugriff bestätigen"
+      }
     },
     "facts": {
       "title": "Falldetails",
@@ -2382,7 +2392,8 @@
         "comms": "Kommunikation",
         "other": "Zusätzliche Belege",
         "access_log": "Aktivitätsprotokoll"
-      }
+      },
+      "productListings": "Produktinformationen ({count})"
     },
     "title": "Bewispakete",
     "subtitle": "Bewispakete anzeigen und verwalten",

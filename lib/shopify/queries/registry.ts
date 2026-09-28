@@ -32,6 +32,8 @@ import { ORDERS_FOR_SNAPSHOT_QUERY } from "./ordersForSnapshot";
 import { APP_CHARGE_STATUS_QUERY } from "./appChargeStatus";
 import { ACTIVE_SUBSCRIPTIONS_QUERY } from "./activeSubscriptions";
 import { SHOP_POLICIES_QUERY } from "./shopPolicies";
+import { PRODUCT_EVIDENCE_QUERY } from "./productEvidence";
+import { UNCATEGORIZED_FILE_QUERY } from "../merchantEvidenceFile";
 import {
   DISPUTE_LIST_QUERY,
   DISPUTE_DETAIL_QUERY,
@@ -66,6 +68,7 @@ const STUB = {
   disputeGid: "gid://shopify/ShopifyPaymentsDispute/0",
   orderGid: "gid://shopify/Order/0",
   customerGid: "gid://shopify/Customer/0",
+  disputeEvidenceGid: "gid://shopify/ShopifyPaymentsDisputeEvidence/0",
   appSubscriptionGid: "gid://shopify/AppSubscription/0",
 };
 
@@ -97,6 +100,22 @@ export const PRODUCTION_GRAPHQL: ProductionGraphQL[] = [
     type: "query",
     body: ORDER_DETAIL_QUERY,
     stubVariables: { id: STUB.orderGid },
+    dryRun: true,
+  },
+  {
+    // Not-as-described plan PR 3 — product listing evidence.
+    name: "PRODUCT_EVIDENCE_QUERY",
+    type: "query",
+    body: PRODUCT_EVIDENCE_QUERY,
+    stubVariables: { id: STUB.orderGid, after: null },
+    dryRun: true,
+  },
+  {
+    // Bank-claim plan F4 — the save worker's read of the uncategorized slot.
+    name: "UNCATEGORIZED_FILE_QUERY",
+    type: "query",
+    body: UNCATEGORIZED_FILE_QUERY,
+    stubVariables: { id: STUB.disputeEvidenceGid },
     dryRun: true,
   },
   {

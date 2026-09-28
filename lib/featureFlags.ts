@@ -57,3 +57,16 @@ export function isFileEvidenceAttachmentsEnabled(): boolean {
 export function isDefencePackageBuilderEnabled(): boolean {
   return isEnvFlagOn("ENABLE_DEFENCE_PACKAGE_BUILDER");
 }
+
+/**
+ * Product-listing evidence (not-as-described plan PR 3).
+ *
+ * When ON, a not-as-described case's pack build fetches each ordered
+ * product's current listing (title, description, up to 3 images, variant)
+ * from Shopify, stores an immutable snapshot (`product_listing_snapshots`)
+ * and adds it to the evidence. When OFF (default) the collector is not
+ * invoked at all, so every pack, letter and score is byte-identical.
+ */
+export function isProductListingEvidenceEnabled(): boolean {
+  return isEnvFlagOn("PRODUCT_LISTING_EVIDENCE_ENABLED");
+}

@@ -569,6 +569,16 @@ const RECORD_CONTEXT_FIELDS: ReadonlySet<string> = new Set([
   "order_confirmation",
 ]);
 
+/**
+ * A product listing DisputeDesk collected from Shopify (not-as-described
+ * PR 3) is citable: supporting (never scored, plan D4) but the core of a
+ * not-as-described letter. A merchant upload keeps its current handling.
+ * Not record context: a listing is an argument, not just the store's paper.
+ */
+export function isCitableCollectedListing(fieldKey: string, value: Record<string, unknown>): boolean {
+  return fieldKey === "product_description" && value.collected === true;
+}
+
 export function isCitableRecordContext(fieldKey: string): boolean {
   return RECORD_CONTEXT_FIELDS.has(fieldKey);
 }
@@ -1089,10 +1099,37 @@ function extractValue(
         channel,
       };
     }
-    case "product_description":
+    case "product_description": {
+      // A collected listing (not-as-described PR 3) carries its own copy;
+      // the representative is the first (highest-value line item). Merchant
+      // uploads keep the legacy shape.
+      const listings = Array.isArray(section.data?.listings)
+        ? (section.data.listings as Array<Record<string, unknown>>)
+        : [];
+      const l = listings[0];
+      if (l) {
+        const s = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+        // Shopify's placeholder for a product without variants — never a
+        // real option, never printed (canary #100373: "variant: Default Title").
+        const isDefault = (v: unknown) => typeof v === "string" && /^default title$/i.test(v.trim());
+        return {
+          hasListing: true,
+          collected: true,
+          title: s(l.title),
+          variantTitle: isDefault(l.variantTitle) ? null : s(l.variantTitle),
+          variantOptions: Array.isArray(l.variantOptions)
+            ? (l.variantOptions as Array<{ value?: unknown }>).filter((o) => !isDefault(o?.value))
+            : [],
+          excerpt: s(l.excerpt),
+          sourceUrl: s(l.sourceUrl),
+          retrievedAt: s(l.fetchedAt),
+          listingCount: listings.length,
+        };
+      }
       return {
         hasListing: section.data?.title !== undefined || section.data?.productTitle !== undefined,
       };
+    }
     case "duplicate_explanation":
       return {
         distinct: p.distinct === true,
@@ -1253,7 +1290,9 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
       // never scored (bank-claim plan F1).
       const citableContext =
         cat === "supporting" &&
-        (isCitableShipmentContext(fieldKey, value) || isCitableRecordContext(fieldKey));
+        (isCitableShipmentContext(fieldKey, value) ||
+          isCitableRecordContext(fieldKey) ||
+          isCitableCollectedListing(fieldKey, value));
 
       const fact: EvidenceFact = {
         id: factId,
