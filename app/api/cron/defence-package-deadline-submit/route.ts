@@ -39,6 +39,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
+import { sendDeadlineNoFileAdminAlert } from "@/lib/email/sendDeadlineNoFileAdminAlert";
 import { decideForPack, selectForDeadline } from "@/lib/automation/decision";
 import {
   buildFileableSelectionContext,
@@ -162,7 +163,7 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state, response_cycle, closed_at, final_outcome",
+      "id, shop_id, dispute_gid, order_name, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state, response_cycle, closed_at, final_outcome",
     )
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
@@ -202,6 +203,38 @@ export async function GET(req: NextRequest) {
   });
   const settingsByShop = new Map<string, Awaited<ReturnType<typeof getShopSettings>>>();
 
+  /* Every exit below that files nothing ALSO tells the admin (2026-09-28).
+   * The merchant email alone let blume-box #353605 go to Shopify's own scrape
+   * with nobody at DisputeDesk noticing for six weeks. */
+  const shopDomains = new Map<string, string | null>();
+  async function alertAdminNoFile(
+    d: NonNullable<typeof disputes>[number],
+    refusal: string,
+    detail?: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      const shopId = d.shop_id as string;
+      if (!shopDomains.has(shopId)) {
+        const { data: shop } = await sb.from("shops").select("shop_domain").eq("id", shopId).maybeSingle();
+        shopDomains.set(shopId, (shop?.shop_domain as string | undefined) ?? null);
+      }
+      await sendDeadlineNoFileAdminAlert({
+        shopDomain: shopDomains.get(shopId) ?? null,
+        orderName: (d.order_name as string | null) ?? null,
+        disputeId: d.id as string,
+        reason: (d.reason as string | null) ?? null,
+        amount: d.amount != null ? Number(d.amount) : null,
+        currencyCode: (d.currency_code as string | null) ?? null,
+        dueAt: (d.due_at as string | null) ?? null,
+        refusal,
+        detail,
+      });
+    } catch (err) {
+      // An alert must never cost the next dispute its submission.
+      console.error("[deadline cron] admin no-file alert failed", err);
+    }
+  }
+
   for (const d of disputes) {
     try {
       // Merchant explicitly conceded this dispute ("do not defend").
@@ -228,6 +261,7 @@ export async function GET(req: NextRequest) {
       if (!pack) {
         // No pack at all — can't auto-submit anything. Skip; merchant will
         // see the dispute on dashboards.
+        await alertAdminNoFile(d, "no_pack");
         continue;
       }
 
@@ -247,6 +281,10 @@ export async function GET(req: NextRequest) {
             disputeCycle: d.response_cycle ?? null,
           },
         });
+        await alertAdminNoFile(d, "stale_response_cycle", {
+          packCycle: pack.response_cycle ?? null,
+          disputeCycle: d.response_cycle ?? null,
+        });
         continue;
       }
 
@@ -265,6 +303,7 @@ export async function GET(req: NextRequest) {
             eventType: "deadline_submit_refused_bank_claim_missing",
             eventPayload: { trigger: bankClaimTrigger(claimInput), cycle: d.response_cycle ?? 1 },
           });
+          await alertAdminNoFile(d, "bank_claim_missing", { trigger: bankClaimTrigger(claimInput) });
           continue;
         }
       }
@@ -401,6 +440,15 @@ export async function GET(req: NextRequest) {
           unsafeReasons: unsafeContent ? selector.unsafeReasonsFor(d.id as string) : undefined,
         });
         if (emailResult.ok) summary.emailed += 1;
+        await alertAdminNoFile(d, fallbackReason, {
+          selectionReason:
+            outcome.selection.outcome === "none" ? outcome.selection.reason : "ambiguous",
+          decisionAction: decision.action,
+          decisionReasonCodes: decision.reasonCodes,
+          packageId: dpkg?.packageId ?? null,
+          version: dpkg?.version ?? null,
+          unsafeReasons: unsafeContent ? selector.unsafeReasonsFor(d.id as string) : undefined,
+        });
         continue;
       }
 
@@ -423,6 +471,7 @@ export async function GET(req: NextRequest) {
         const finalRevision = dpkg!.contentRevision;
         if (!finalRevision) {
           summary.finalizeRefused += 1;
+          await alertAdminNoFile(d, "enqueue_refused", { error: "final package has no content_revision" });
           continue;
         }
 
@@ -434,6 +483,7 @@ export async function GET(req: NextRequest) {
           console.error("[deadline cron] enqueue_defence_package_save failed", enqErr);
           summary.errors.push({ disputeId: d.id, error: enqErr.message });
           summary.finalizeRefused += 1;
+          await alertAdminNoFile(d, "enqueue_refused", { error: enqErr.message });
           continue;
         }
 
@@ -444,6 +494,9 @@ export async function GET(req: NextRequest) {
             enq.kind === "conflict" ? enq.reason : enq.detail,
           );
           summary.finalizeRefused += 1;
+          await alertAdminNoFile(d, "enqueue_refused", {
+            error: enq.kind === "conflict" ? enq.reason : enq.detail,
+          });
           continue;
         }
 
@@ -472,6 +525,7 @@ export async function GET(req: NextRequest) {
         const revision = dpkg!.contentRevision;
         if (!revision) {
           summary.finalizeRefused += 1;
+          await alertAdminNoFile(d, "finalize_refused", { error: "package has no content_revision" });
           continue;
         }
 
@@ -485,6 +539,7 @@ export async function GET(req: NextRequest) {
         if (rpcErr) {
           console.error("[deadline cron] finalize_defence_package failed", rpcErr);
           summary.finalizeRefused += 1;
+          await alertAdminNoFile(d, "finalize_refused", { error: rpcErr.message });
           continue;
         }
 
@@ -500,6 +555,9 @@ export async function GET(req: NextRequest) {
             finalizeResult.kind === "conflict" ? finalizeResult.reason : finalizeResult.detail,
           );
           summary.finalizeRefused += 1;
+          await alertAdminNoFile(d, "finalize_refused", {
+            error: finalizeResult.kind === "conflict" ? finalizeResult.reason : finalizeResult.detail,
+          });
           continue;
         }
 
@@ -559,7 +617,11 @@ export async function GET(req: NextRequest) {
         fallbackReason: "validation_failed",
       });
       if (emailResult.ok) summary.emailed += 1;
+      await alertAdminNoFile(d, "validation_failed", { error: "fail-closed arm" });
     } catch (err) {
+      await alertAdminNoFile(d, "exception", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       summary.errors.push({
         disputeId: d.id,
         error: err instanceof Error ? err.message : String(err),
