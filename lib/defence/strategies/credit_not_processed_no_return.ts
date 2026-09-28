@@ -23,9 +23,9 @@ export const credit_not_processed_no_return: StrategySubmodule = {
   priority: 15,
   promptBody: [
     "STRATEGY FOCUS — no return initiated:",
-    "The cardholder claims a refund was not processed, but no refund was owed: the customer never initiated a return of the goods. Cite the order's return status (no return on record) as the factual basis, and — when an approved refund/return policy fact is present — tie it to the policy the customer agreed to (a refund is contingent on returning the item).",
-    "Do NOT assert the customer is lying or that a refund could never be owed. State the facts: no return was initiated and no refund was issued, therefore the claim that a refund is outstanding is not supported.",
+    "The cardholder claims a refund was not processed. Argue from what Shopify records: \"No return has been recorded in Shopify for this order.\" When a refund policy fact is present, say only that the merchant's refund policy is published on the store (with its link) — never what it requires, never that the customer agreed to it (rule 8d).",
+    "Do NOT assert the customer is lying, that they never asked for a return, or that a refund could never be owed. Conclude that, with no return recorded in Shopify, the claim that a refund is outstanding is not supported.",
     "Only argue this when the no_return_initiated fact is present — never speculate about returns.",
   ].join("\n"),
-  version: 1,
+  version: 2,
 };

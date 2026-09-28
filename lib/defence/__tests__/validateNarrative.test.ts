@@ -63,7 +63,7 @@ describe("validateNarrative", () => {
     const result = validateNarrative({
       narrative: narrative({
         executiveSummary: {
-          text: "The available records support that the transaction was authorised.",
+          text: "The records support that the transaction was authorised.",
           usedFactIds: ["f0"],
         },
       }),

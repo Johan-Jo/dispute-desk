@@ -146,7 +146,7 @@ describe("not-as-described: PDF thesis lines", () => {
 
   it("other families keep their narrow conclusion", () => {
     const text = renderThesis({ ...base, sectionKey: "conclusion", familyKey: "credit_not_processed", packageMode: "narrow" } as never);
-    expect(text).toBe("Based on the available evidence, the merchant respectfully requests review of this chargeback.");
+    expect(text).toBe("On the records set out above, the merchant requests that this chargeback be reversed in its favour.");
   });
 
   it("the transaction overview no longer argues cardholder-initiated activity", () => {

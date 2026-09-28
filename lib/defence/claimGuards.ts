@@ -427,7 +427,8 @@ export const POLICY_AND_RECORD_BANS: ReadonlyArray<{ id: string; scope: RegExp; 
   {
     // "a refund is contingent on the return of goods" · "the policy requires"
     id: "policy_terms_beyond_record",
-    scope: /\bpolic(?:y|ies)\b/i,
+    // "under the merchant's published terms" is the same claim without the word.
+    scope: /\bpolic(?:y|ies)\b|\b(?:published|merchant's|store's|standard)\s+terms\b|\bterms\s+(?:and|&)\s+conditions\b/i,
     pattern:
       /\b(?:contingent|conditional|condition(?:s|ed)?|requires?|required|stipulat\w*|entitle\w*|obligat\w*|only\s+(?:if|when|after)|within\s+\d+\s+days|states?\s+that|provides?\s+that)\b/i,
   },
@@ -447,6 +448,24 @@ export const POLICY_AND_RECORD_BANS: ReadonlyArray<{ id: string; scope: RegExp; 
       /\b(?:no|not|without)\b[^.!?;\n]{0,40}\b(?:fact|listing|record)\b[^.!?;\n]{0,40}\b(?:available|present|included|provided)\b/i,
   },
 ];
+
+/**
+ * The merchant's own case, run down in its own letter (base prompt rule 10).
+ * Measured 2026-09-28: 176 of 235 letters in 30 days qualified the merchant's
+ * records ("the available evidence supports…"), and some said "the merchant
+ * acknowledges…" or "the evidence is limited". Unconditional: no fact makes
+ * underselling the merchant's case acceptable.
+ */
+export const UNDERSELL_BANS: ReadonlyArray<{ id: string; pattern: RegExp }> = [
+  { id: "undersells_case", pattern: /\bthe\s+merchant\s+acknowledges\b/i },
+  { id: "undersells_case", pattern: /\b(?:evidence|records?|documentation)\b[^.!?;\n]{0,40}\bis\s+(?:limited|thin|sparse|incomplete)\b/i },
+  { id: "undersells_case", pattern: /\b(?:limited|thin|sparse)\s+(?:evidence|records?|documentation)\b/i },
+  { id: "undersells_case", pattern: /\bframed\s+accordingly\b|\bthis\s+response\s+presents\b/i },
+  { id: "undersells_case", pattern: /\bthe\s+available\s+(?:evidence|records?)\b/i },
+];
+
+const UNDERSELL_REQUIRED =
+  "none — the letter argues for the merchant: state what each record shows, never qualify the merchant's own records or describe the evidence as limited.";
 
 const POLICY_AND_RECORD_REQUIRED =
   "none — a policy may only be said to be published on the store (with its link). Its terms, when it was shown, its acceptance (unless accepted at checkout) and evidence absent from the record are never described.";
@@ -502,6 +521,20 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
         requiredFact: RETURN_ABSENCE_REQUIRED,
         checkedFactIds: factIds,
       });
+    }
+
+    // Unconditional: never run the merchant's case down (rule 10).
+    for (const ban of UNDERSELL_BANS) {
+      const m = text.match(ban.pattern);
+      if (!m) continue;
+      failures.push({
+        guardId: ban.id,
+        section: sectionKey,
+        matchedText: m[0],
+        requiredFact: UNDERSELL_REQUIRED,
+        checkedFactIds: factIds,
+      });
+      break;
     }
 
     // Unconditional: policy terms, policy non-acceptance, narrated absence.
