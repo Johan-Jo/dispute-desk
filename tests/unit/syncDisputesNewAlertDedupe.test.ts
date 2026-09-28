@@ -182,6 +182,8 @@ function buildFakeClient(opts: {
           const updateChain: Record<string, unknown> = {
             eq: vi.fn().mockReturnThis(),
             is: vi.fn().mockReturnThis(),
+            // update().eq().or() — syncNeedsReview (bank-claim plan F5).
+            or: vi.fn().mockResolvedValue({ error: null }),
             select: vi.fn().mockResolvedValue({
               data: opts.alertAlreadySent ? [] : [{ id: "dispute-1" }],
               error: null,
