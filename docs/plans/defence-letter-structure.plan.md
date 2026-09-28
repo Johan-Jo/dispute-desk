@@ -1,6 +1,6 @@
 # The defence writer — single source of truth
 
-**Status:** rev 7, 2026-09-28. Critic rounds 1–3 (REVISE → REVISE narrow → REVISE narrow); rev 7 answers round 3; §13. Open maintainer decision: D9.
+**Status:** rev 8, 2026-09-28. Critic rounds 1–4: REVISE → REVISE narrow → REVISE narrow → ACCEPT-WITH-RESERVATIONS; rev 8 writes in the round-4 reservations (§13). Open maintainer decision: D9.
 **Maintainer, 2026-09-28:** *"lift this up to a higher level now so that we work with one single source of truth when it comes to the writer, because we want advocacy and we want our writer to be independent of what type of dispute it is. … now that we slid it over from 'not delivered' to 'a faulty product', you lost it all, but it can't be like that. … It shall affect all dispute types."*
 
 **This document is the single source of truth for how every defence letter is written: every dispute type, payment method (card, PayPal, Klarna), stage (chargeback, inquiry), and case shape (single parcel, several parcels, bank-claim text supplied, thin evidence).** Code that writes letters implements this document and nothing else. A change to how letters are written is a change to this document first.
@@ -103,6 +103,7 @@ Why model-written sections, not code sentences: code sentences report a record a
   - **Dating:** the policy has the listing's problem. The claim says "the store's published policy" only; it is argued as the policy in force at the sale only when its content is known to predate the order (an earlier snapshot with the same content hash, or `ShopPolicy.updatedAt` before the order once verified reliable — open question §12).
   - Unit tests cover extraction on policy fixtures in all six locales.
   - **Whole or none.** The merchant-counsel stance (`merchant-counsel-stance.plan.md` rules 2 and 4) is binding: material that helps the customer never enters any bank artifact. A policy is judged per case, whole: if **any** clause helps the customer on these facts, neither the policy claim nor the policy exhibit appears (omission, never redaction). If none does, the claim may be used and the full text prints. A policy is never partly quoted.
+  - **The helps/hurts judgement is deterministic:** rules over the extracted policy fields and the case facts (provider, stage, window open or closed at the dispute date), recorded as the claim's build condition. It is never a model's opinion.
   - **Not as described: D9 decides** whether a return-conditioned "refund for any reason" policy helps or hurts. The stance's table lists "policy clauses granting refunds for defects or 'not as described'" as harmful; until the maintainer rules otherwise, such a policy is **not used** in not-as-described letters.
   - Prose states the policy's effect only as far as it holds with its conditions: "offers a refund on a return made within 14 days of delivery", never "refunds any purchase".
   - The claim is not built when the window had closed at the dispute date.
@@ -126,6 +127,7 @@ Some strong facts are the merchant's own acts. A `merchant` claim:
 | `question` | per provider: `{ card, paypal, klarna }`, each with its reference (Visa DMG section, PayPal SNAD/INR, Klarna category) |
 | `claims` | claim ids this type may use |
 | `theories` | ordered `{ name, claimIds[] }`; no verbs |
+| `ceilingClaims` | the claims that lift this type above its evidence ceiling (not as described: complaint text, an order-time listing, a merchant act with evidence). A case is ceiling-limited only when its ledger holds none of them. |
 | `minimumClaims` | the claims without which this brief does not apply; below it the **general** brief's strongest theory is used, never another type's (critic M9) |
 | `sections` | ordered `{ slot, title, exhibit, claimIds, question, exhibitOnly? }` — `question` is what the section answers, not an instruction; `exhibitOnly` prints the exhibit with its caption and no prose when no ledger claim for it can be argued (e.g. a listing not known to predate the order) |
 | `limits` | short truth rules (what may not be claimed), sent to the model as data and compiled into checks. A limit may only forbid a statement, including scoping phrased as a prohibition ("never 'delivered' of a parcel without a delivery record"); a limit that orders, leads or frames ("lead with…", "open by…", "emphasise…") fails the brief test. Positive truth scoping lives only in canonical sentences (§2.1.7). `question` and `title` are limited to 12 words and checked the same way. |
@@ -212,6 +214,8 @@ Thesis boxes are suppressed for every writer-written section (`thesisTemplates.t
 
 The general brief has no specific claim to contrast against, so its summary cannot carry the claim-versus-record punchline; its ceiling is lower still, and that is accepted.
 
+Whole-or-none (§2.2.1) will drop most refund policies from most not-as-described and credit letters, because nearly every refund policy grants the customer something. That is the merchant-counsel stance working as intended, not a defect.
+
 ## 6. The gate
 
 1. **Unit tests.**
@@ -224,7 +228,8 @@ The general brief has no specific claim to contrast against, so its summary cann
    - Item not received: #352543, #360980 (Blume, card), #103052 (Mein Maison, PayPal).
    - Not as described: #101111, #99445, #93670 (Mein Maison).
    - Bank claim: one constructed case on dev (production holds no bank-claim text today), in the step-1 gate.
-   - Credit, fraud, subscription and general: named in step 3.
+   - Credit not processed: Cay #14619 (Klarna) — needed in step 1 for the method-transfer test.
+   - Fraud, subscription and general: named in step 3.
 3. **Judge, pinned.** Model `claude-opus-5-5`, one rubric, persona from the frame's decider, 5 runs per case. Scores: the five rubric scores summed (5–25) and the decision after the summary. A judge model change re-measures every baseline before any comparison.
 4. **Baselines first.** #352543 v13 and #360980 are measured under this judge before step 1 changes anything; those medians are the bar.
 5. **Pass rules.**
@@ -232,7 +237,9 @@ The general brief has no specific claim to contrast against, so its summary cann
    - **Baselines must pass first:** #352543 v13 and #360980 must get "merchant" in at least 4 of 5 runs under the pinned judge; if not, the judge is recalibrated before step 1 starts.
    - **Standard pass:** summary-only "merchant" in at least 4 of 5 runs, and the median within tolerance of the baseline (or ≥ 18 where there is none).
    - **Ceiling-limited pass** (types the §5 ceiling applies to, e.g. not-as-described without complaint text): the letter's median beats its negative control **on the same case** by at least 3 points, with zero truth-diff failures and zero red flags. The maintainer's sign-off stays mandatory.
-   - **Negative controls** (the rejected #101111 test print, rev-4 example E) are scored on their own case only; they never serve as positive references.
+   - **Minimal-response pass** (merchant-counsel stance §4.3, the minimal verified response): when a case's ledger holds no claim beyond delivery, timing and the neutral listing, the letter passes on zero truth-diff failures, zero red flags, no conduct implication, and the maintainer's sign-off. No score-gap requirement.
+   - **Negative controls** (the rejected #101111 test print, rev-4 example E) are scored on their own case only; they never serve as positive references. Every ceiling-limited reference case has a pinned negative control on the same case: its current record-only letter, generated once and frozen.
+   - **Recalibration guard:** recalibrating the judge is a rubric change the maintainer approves, never tuning to pass a particular letter; the negative controls are re-verified after every recalibration.
    - The rubric adds: "any sentence that implies what the customer did or chose".
    - Truth diff: zero claims the ledger does not hold.
 6. **Type independence, tested directly.**
@@ -268,7 +275,7 @@ Rollback: the current counsel path stays behind a flag until step 1 passes the g
 - **D5 — release precondition:** no release while any open dispute's type lacks a brief. The general brief closes this on day one.
 - **D6 — the listing:** caption "retrieved {date}" only; neutral wording; argued as the description the item was sold under only when known to predate the order (§2.2.1); order-time snapshots added to the evidence plans. Recommended: yes.
 - **D7 — merchant-declared acts** (e.g. "the merchant offered a return on 20 September"): allow them from an in-app confirmation with evidence, stating only the merchant's own act (§2.2.2)? Recommended: yes, as a later step.
-- **D9 — a "refund for any reason, on return" policy in a not-as-described letter: helps or hurts?** Helps: the remedy the store offers is a return, it was open when the dispute came, and Shopify records no return. Hurts: it tells the decider the buyer is entitled to a refund, which is PayPal's default SNAD outcome; the merchant-counsel stance lists such clauses as harmful. Until decided: **hurts** (not used). With "hurts", #101111's honest letter is the minimal one — delivered, disputed eight days later, listing reproduced — until an order-time listing, the complaint text or a merchant act with evidence exists.
+- **D9 — a "refund for any reason, on return" policy in a not-as-described letter: helps or hurts?** *Critic recommendation (round 4): decide by provider.* Card chargebacks: **helps** — Visa 13.3 and Mastercard 4853 treat the cardholder's return as part of the claim, so an open, unused return route answers the network's own question. PayPal and Klarna: **hurts** — their default not-as-described resolution is refund on return, so the clause hands the decider the remedy and undercuts the single request (D8). Either way the absence stays in the record's words, once. Original framing: Helps: the remedy the store offers is a return, it was open when the dispute came, and Shopify records no return. Hurts: it tells the decider the buyer is entitled to a refund, which is PayPal's default SNAD outcome; the merchant-counsel stance lists such clauses as harmful. Until decided: **hurts** (not used). With "hurts", #101111's honest letter is the minimal one — delivered, disputed eight days later, listing reproduced — until an order-time listing, the complaint text or a merchant act with evidence exists.
 - **D8 — PayPal not-as-described request.** *Decided (maintainer, 2026-09-28): keep the single request* — "close this dispute in the merchant's favour"; no fallback line offering a refund on return.
 
 Decided today and in force:
@@ -367,6 +374,17 @@ Production: nothing ships before step 1 passes the gate and the maintainer appro
 
 **Acceptance tests the build carries (critic round 3):**
 T1 constitution names no type/provider/stage outside examples · T2 brief test (no imperatives; limits only forbid; ≤ 12-word question/title) · T3 CI `familyKey` invariant over `counsel/**`, `pdf/**` · T4 no imports left of the retired sources · T5 listing caption never contains `updatedAt`; neutral wording unless it predates the order · T6 policy extraction on six-locale fixtures (source sentence, numbers inside it, ambiguity = no claim) · T7 a policy with any helping clause = no claim and no exhibit; a built claim prints the full text · T8 absence/conduct lint and once-per-letter rule · T9 no 3-D Secure claim without `tdsVerified` · T10 bank-claim case: no bank-claim text in the writer's input · T11 reuse re-checks every part; hash changes with any versioned input · T12 baselines measured twice, tolerance from their spread · T13 negative controls ≥ 3 points below positives on the same case · T14 method transfer passes; ablation holds · T15 cost per letter ≤ D4 · T16 one maintainer test print per (type × provider).
+
+**Round 4 (rev 7): ACCEPT-WITH-RESERVATIONS.** D-1 to D-6 all met.
+
+| # | Reservation | Rev 8 |
+|---|---|---|
+| R1 | With D9 = hurts, #101111's minimal letter could never pass the score-gap rule | §6.5 minimal-response pass |
+| R2 | "Ceiling-limited" undefined; two cases without negative controls | §2.3 `ceilingClaims`; §6.5 pinned negative control per case |
+| R3 | Credit reference case needed in step 1 but named in step 3 | §6.2 Cay #14619 |
+| notes | Recalibration guard; whole-or-none drops most policies; deterministic helps/hurts | §6.5; §5; §2.2.1 |
+
+Added acceptance tests: **T17** a delivery-timing-listing-only ledger passes the minimal-response rule with zero truth-diff and conduct-lint hits · **T18** ceiling-limited only when no `ceilingClaims`; every such case has a pinned negative control · **T19** the credit reference case exists before step 1 and the method-transfer test runs on it · **T20** the policy helps/hurts decision is deterministic: same fields, same decision.
 
 **Letter E findings, fixed in E2:**
 - "sold under the description on file" (the listing was edited after the order);
