@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import { removeProductListingObjects } from "@/lib/packs/productListingStorage";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,24 @@ export async function GET(req: NextRequest) {
     archived += packIds.length;
   }
 
+  // Product-listing snapshots past the shop's retention period
+  // (not-as-described plan PR 2). The RPC deletes the rows under the purge
+  // flag and returns their image paths; the objects are removed here.
+  let productSnapshotImagesDeleted = 0;
+  const { data: expiredImages, error: purgeErr } = await sb.rpc("purge_expired_product_snapshots");
+  if (purgeErr) {
+    console.error("[retention-cleanup] product snapshot purge failed", purgeErr.message);
+  } else {
+    const paths = ((expiredImages ?? []) as unknown[]).filter((p): p is string => typeof p === "string");
+    if (paths.length) {
+      try {
+        productSnapshotImagesDeleted = await removeProductListingObjects(sb, paths);
+      } catch (err) {
+        console.error("[retention-cleanup] product snapshot image removal failed", err);
+      }
+    }
+  }
+
   // Prune terminal jobs older than 30 days. Job rows are operational telemetry,
   // not audit data — retaining them indefinitely inflates the failed/succeeded
   // counts and blocks the dashboard from showing recent health.
@@ -77,5 +96,6 @@ export async function GET(req: NextRequest) {
     pdfsDeleted,
     shopsProcessed: allShops.length,
     jobsDeleted: jobsDeleted ?? 0,
+    productSnapshotImagesDeleted,
   });
 }

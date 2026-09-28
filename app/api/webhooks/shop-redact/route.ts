@@ -28,6 +28,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
 import { getServiceClient } from "@/lib/supabase/server";
+import { removeShopProductListings } from "@/lib/packs/productListingStorage";
 
 export const runtime = "nodejs";
 
@@ -81,6 +82,20 @@ export async function POST(req: NextRequest) {
   );
 
   const { data, error } = await db.rpc("admin_purge_shop", { p_shop_id: shopId });
+
+  // Product-listing images (not-as-described plan PR 2) are storage objects,
+  // which the SQL purge cannot reach. Removed whatever the purge returned:
+  // a failed purge is retried by Shopify, and the images must not outlive it.
+  try {
+    const removed = await removeShopProductListings(db, shopId);
+    if (removed) console.log(`[shop/redact] removed ${removed} product-listing images`);
+  } catch (err) {
+    console.error("[shop/redact] product-listing image removal failed", {
+      shopDomain,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json({ error: "Redaction failed" }, { status: 500 });
+  }
 
   if (error) {
     // Surface the failure: Shopify retries a non-2xx, and a silent 200 here

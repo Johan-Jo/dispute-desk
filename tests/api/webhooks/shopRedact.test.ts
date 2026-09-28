@@ -32,14 +32,18 @@ const mockVerify = vi.mocked(verifyShopifyWebhook);
 
 interface Spies {
   rpcCalls: Array<{ fn: string; args: unknown }>;
+  removed: string[][];
 }
 
 function setupSupabase(opts: {
   shopRow?: { id: string } | null;
   /** Simulate the purge function itself failing. */
   rpcError?: string;
+  /** Product-listing images in storage, by folder (not-as-described PR 2). */
+  storage?: Record<string, Array<{ name: string; id: string | null }>>;
 }): Spies {
   const rpcCalls: Spies["rpcCalls"] = [];
+  const removed: string[][] = [];
 
   mockGetServiceClient.mockReturnValue({
     from: () => ({
@@ -50,6 +54,15 @@ function setupSupabase(opts: {
         }),
       }),
     }),
+    storage: {
+      from: () => ({
+        list: (folder: string) => Promise.resolve({ data: opts.storage?.[folder] ?? [], error: null }),
+        remove: (paths: string[]) => {
+          removed.push(paths);
+          return Promise.resolve({ data: paths.map((name) => ({ name })), error: null });
+        },
+      }),
+    },
     rpc: (fn: string, args: unknown) => {
       rpcCalls.push({ fn, args });
       return Promise.resolve(
@@ -60,7 +73,7 @@ function setupSupabase(opts: {
     },
   } as never);
 
-  return { rpcCalls };
+  return { rpcCalls, removed };
 }
 
 const PAYLOAD = JSON.stringify({
@@ -148,5 +161,31 @@ describe("POST /api/webhooks/shop/redact", () => {
 
     expect(res.status).toBe(500);
     expect((await res.json()).ok).toBeUndefined();
+  });
+});
+
+describe("POST /api/webhooks/shop/redact — product-listing images (not-as-described PR 2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockVerify.mockReturnValue(true);
+  });
+
+  it("removes every image under {shop_id}/product-listings/ alongside the SQL purge", async () => {
+    const spies = setupSupabase({
+      shopRow: { id: "shop-uuid" },
+      storage: {
+        "shop-uuid/product-listings": [{ name: "dispute-1", id: null }],
+        "shop-uuid/product-listings/dispute-1": [
+          { name: "a.jpg", id: "1" },
+          { name: "b.png", id: "2" },
+        ],
+      },
+    });
+    const res = await POST(makeReq({ body: PAYLOAD, hmac: "x", shopHeader: "demo.myshopify.com" }));
+    expect(res.status).toBe(200);
+    expect(spies.removed.flat()).toEqual([
+      "shop-uuid/product-listings/dispute-1/a.jpg",
+      "shop-uuid/product-listings/dispute-1/b.png",
+    ]);
   });
 });

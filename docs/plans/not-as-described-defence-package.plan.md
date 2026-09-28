@@ -1,6 +1,6 @@
 # Not-as-described defence package — consensus plan
 
-**Status: APPROVED for PR 0 + PR 1 (maintainer, 2026-09-28); PR 2–5 not yet approved.** Consensus plan ralplan v5.1 (Architect APPROVE, Critic APPROVE, 2026-09-27). Source: the maintainer's external plan of 2026-09-23. Citations are `origin/develop`.
+**Status: APPROVED for PR 0 + PR 1 (maintainer, 2026-09-28); PR 2–4 approved 2026-09-28 (in chat: "continue with three to four"); PR 5 not approved.** Consensus plan ralplan v5.1 (Architect APPROVE, Critic APPROVE, 2026-09-27). Source: the maintainer's external plan of 2026-09-23. Citations are `origin/develop`.
 
 **Decided by the maintainer 2026-09-27:** D5 — remove the hedged ("narrow") framing for not-as-described letters. Overclaim guards stay: confident voice, claims limited to what the evidence proves.
 
@@ -114,6 +114,7 @@ Order-time capture (`orders/create`), counsel-v2 playbook for this family, `bank
 - **D4 scoring measurement:** run now, read-only; any scoring change stays in PR 5. **Result** (`not-as-described-defence-package/pr0-measurements.md` §4): counting the listing as Axis-1 would make 66 of 71 packs Strong; decided would-be-Strong cases won 25 of 45. Recommendation: keep the listing `supportingOnly` — no PR 5 scoring change.
 - **D5 hedging:** confirmed — defend without apologetic hedging, but never assert an unsupported reason-code conclusion, and never claim the delivered product matched the listing unless item-specific evidence establishes that link.
 - **PR 1 release gate:** compare the three decided-case letters and run the composed-document validation before opening the production release for separate approval.
+- **PR 2–4 go-ahead** (maintainer, in chat, 2026-09-28). PR 2 built: migration `20260928120000_product_listing_snapshots` (applied on dev, verified: UPDATE/DELETE refused, duplicate content skipped, retention RPC returns image paths and removes the row), `lib/packs/productListingStorage.ts`, retention cron + shop-redact storage cleanup.
 - Flag-ON sign-off (PR 4): _(pending)_
 
 ## ADR
