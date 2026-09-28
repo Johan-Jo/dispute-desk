@@ -631,7 +631,17 @@
       "hideFullDefenseLetter": "Masquer la lettre de défense",
       "defenseSectionSummary": "Résumé",
       "defenseSectionConclusion": "Conclusion",
-      "defenseSectionArgument": "Argument"
+      "defenseSectionArgument": "Argument",
+      "productListing": {
+        "present": "Récupérée dans votre boutique le {date} : {title}",
+        "currentListingOnly": "C'est votre fiche produit telle qu'elle est aujourd'hui. Shopify ne conserve pas son état au moment de la commande.",
+        "absent": "Le produit de cette commande n'a pas de description dans votre boutique : il n'y a pas de fiche à joindre.",
+        "deleted": "Le produit de cette commande a été supprimé de votre boutique : sa fiche ne peut pas être jointe.",
+        "customItem": "Cette commande contient un article personnalisé sans fiche produit dans votre boutique.",
+        "failed": "Nous n'avons pas pu lire la fiche produit dans Shopify. Nous réessaierons automatiquement une fois.",
+        "inaccessible": "DisputeDesk ne peut pas lire vos produits. Ouvrez DisputeDesk depuis l'administration Shopify et approuvez l'accès aux produits demandé.",
+        "reconnectForProducts": "Approuver l'accès aux produits"
+      }
     },
     "facts": {
       "title": "Détails du cas",

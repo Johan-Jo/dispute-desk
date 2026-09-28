@@ -632,7 +632,17 @@
       "hideFullDefenseLetter": "Hide full defense letter",
       "defenseSectionSummary": "Summary",
       "defenseSectionConclusion": "Conclusion",
-      "defenseSectionArgument": "Argument"
+      "defenseSectionArgument": "Argument",
+      "productListing": {
+        "present": "Collected from your store on {date}: {title}",
+        "currentListingOnly": "This is your listing as it is today. Shopify doesn't keep how it looked when the order was placed.",
+        "absent": "The product in this order has no description in your store, so there is no listing to include.",
+        "deleted": "The product in this order has been deleted from your store, so its listing can't be included.",
+        "customItem": "This order contains a custom item that has no product listing in your store.",
+        "failed": "We couldn't read the product listing from Shopify. We'll try once more automatically.",
+        "inaccessible": "DisputeDesk can't read your products. Open DisputeDesk from Shopify Admin and approve the product access it asks for.",
+        "reconnectForProducts": "Approve product access"
+      }
     },
     "kpiNeedsAction": "Merchant action required",
     "kpiNeedsActionUrgent": "{count} urgent",
