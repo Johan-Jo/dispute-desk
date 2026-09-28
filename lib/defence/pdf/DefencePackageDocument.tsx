@@ -261,6 +261,7 @@ function Section({
   thesis,
   keepTogether = false,
   breakBefore = false,
+  lead,
   children,
 }: {
   number: string;
@@ -268,6 +269,11 @@ function Section({
   thesis?: string;
   keepTogether?: boolean;
   breakBefore?: boolean;
+  /** A first block that must sit on the heading's page. minPresenceAhead did
+   *  not hold against an unbreakable exhibit: the heading was left alone at
+   *  the page foot (demo letter #101111, 2026-09-28). Rendered inside the
+   *  heading's own unbreakable view instead. */
+  lead?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -284,16 +290,30 @@ function Section({
             <Text style={styles.thesisText}>{thesis}</Text>
           </View>
         ) : null}
+        {lead}
       </View>
       {children}
     </View>
   );
 }
 
+/**
+ * A long URL is one unbreakable word, and it ran off the page (demo letter
+ * #101111, 2026-09-28). A zero-width space after each separator lets the
+ * renderer wrap it without adding a hyphen or changing the text.
+ */
+export function breakableUrls(text: string): string {
+  // Only after "/" in the path: the fewest break points that still let the
+  // longest policy URL wrap, so copy-paste gains the fewest stray gaps.
+  return text.replace(/(https?:\/\/[^/\s]+)(\/\S{30,})/g, (_m, host: string, path: string) =>
+    host + path.replace(/\/(?=\S)/g, "/​"),
+  );
+}
+
 /** Prose with the order's product names set in bold (the design's executive
  *  summary). Paragraphs split on blank lines and stay whole across pages. */
 function Prose({ text, emphasise = [] }: { text: string; emphasise?: string[] }) {
-  const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const parts = breakableUrls(text).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
     <>
       {parts.map((p, i) => (
@@ -563,29 +583,25 @@ function SupportingEvidenceTable({
  * Each gets a short title and a marker: filled for money and fulfilment,
  * hollow for customer notifications, green for the carrier's own record. */
 
-function ProductListingExhibits({ exhibits }: { exhibits: ProductListingExhibit[] }) {
+function ProductListingCard({ x, last }: { x: ProductListingExhibit; last: boolean }) {
   return (
-    <View>
-      {exhibits.map((x, i) => (
-        <View key={i} style={{ marginBottom: i < exhibits.length - 1 ? 18 : 0 }} wrap={false}>
-          <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>{exhibitCaption(x.retrievedOn)}</Text>
-          {x.title ? <Text style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 2 }}>{x.title}</Text> : null}
-          {x.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 6 }}>{x.variantLine}</Text> : null}
-          {x.images.length > 0 ? (
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
-              {x.images.map((src, k) => (
-                <Image key={k} src={src} style={{ width: 150, height: 150, objectFit: "contain" }} />
-              ))}
-            </View>
-          ) : null}
-          {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
-          {x.sourceUrl ? (
-            <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
-              {x.sourceUrlDisplay ?? x.sourceUrl}
-            </Link>
-          ) : null}
+    <View style={{ marginBottom: last ? 0 : 18 }} wrap={false}>
+      <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>{exhibitCaption(x.retrievedOn)}</Text>
+      {x.title ? <Text style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 2 }}>{x.title}</Text> : null}
+      {x.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 6 }}>{x.variantLine}</Text> : null}
+      {x.images.length > 0 ? (
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
+          {x.images.map((src, k) => (
+            <Image key={k} src={src} style={{ width: 150, height: 150, objectFit: "contain" }} />
+          ))}
         </View>
-      ))}
+      ) : null}
+      {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
+      {x.sourceUrl ? (
+        <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
+          {x.sourceUrlDisplay ?? x.sourceUrl}
+        </Link>
+      ) : null}
     </View>
   );
 }
@@ -795,8 +811,19 @@ export function DefencePackageDocument({
           ) : null}
 
           {meta.productListingExhibits && meta.productListingExhibits.length > 0 ? (
-            <Section number={num()} title="Product Listing">
-              <ProductListingExhibits exhibits={meta.productListingExhibits} />
+            <Section
+              number={num()}
+              title="Product Listing"
+              lead={
+                <ProductListingCard
+                  x={meta.productListingExhibits[0]}
+                  last={meta.productListingExhibits.length === 1}
+                />
+              }
+            >
+              {meta.productListingExhibits.slice(1).map((x, i, rest) => (
+                <ProductListingCard key={i} x={x} last={i === rest.length - 1} />
+              ))}
             </Section>
           ) : null}
 
