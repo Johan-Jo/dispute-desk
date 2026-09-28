@@ -185,3 +185,34 @@ export function familyKeyForModule(
 // Re-export the family-level resolver so the public surface of this
 // module covers both layers.
 export { resolveReasonCodeFamily };
+
+/**
+ * THE module a case is argued under — one answer for the letter build and the
+ * filing-time plan check.
+ *
+ * `caseReason` is the reason the case is assessed under: the bank's claim's
+ * reason on a GENERAL dispute it re-typed (`effectiveReasonForClaim`, persisted
+ * by buildPack as `pack_json.case_assessment_reason`), otherwise Shopify's.
+ * The module's `allowedFactCategories` feed `plan_input_hash`, so a build and a
+ * filing check that resolve the module differently can never agree: every
+ * claim-typed letter would read stale at filing (bank-claim plan F2).
+ *
+ * `dbOverride` applies only when the module is NOT taken from the claim: it
+ * was looked up for the enqueued key, not the claim's module.
+ */
+export function resolveCaseReasonCodeModule(args: {
+  networkReasonCode: string | null | undefined;
+  shopifyReason: string | null | undefined;
+  caseReason: string | null | undefined;
+  nonCardPayment: boolean;
+  dbOverride?: ReasonCodeModuleOverride | null;
+}): ReasonCodeGuidance {
+  const { networkReasonCode, shopifyReason, caseReason, nonCardPayment, dbOverride } = args;
+  if (!networkReasonCode && caseReason && caseReason !== (shopifyReason ?? null)) {
+    const fromClaim = resolveReasonCodeModuleForContext(null, caseReason, undefined);
+    if (fromClaim.key !== "generic_fallback") return fromClaim;
+  }
+  return nonCardPayment
+    ? resolveReasonCodeModuleForContext(networkReasonCode, shopifyReason ?? null, dbOverride)
+    : resolveReasonCodeModule(networkReasonCode, dbOverride);
+}

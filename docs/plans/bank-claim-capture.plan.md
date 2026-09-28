@@ -1,6 +1,6 @@
 # Capture the bank's claim before answering reopened and "general" disputes
 
-**Status:** v1 SHIPPED to prod (#863→#883); follow-up work below IN PROGRESS · **Date:** 2026-09-27, status trued up 2026-09-28 · **Related:** `mein-maison-status-and-no-return.plan.md` (Step 1 shipped as #861)
+**Status:** v1 SHIPPED to prod (#863→#883); follow-up F1–F2 on develop, F3–F6 in progress · **Date:** 2026-09-27, status trued up 2026-09-28 · **Related:** `mein-maison-status-and-no-return.plan.md` (Step 1 shipped as #861)
 
 ## Status as of 2026-09-28 (audit)
 
@@ -26,10 +26,13 @@ What shipped, against the scope below:
 ## Follow-up (2026-09-28): what the audit found, and the fixes
 
 **F1 — Policies and the order record never reach any letter.** `factClassifier` makes a fact bank-citable only when its *strength* is strong or moderate. A published refund/shipping policy is `supporting` unless the customer accepted it at checkout, and the order record is always `supporting`. So `bankIncludedFacts` drops them after the argument plan has included them. Prod, last 30 days: 242 letters; the plan included the refund policy in 133; **0** cite it; **0** cite the order record. On the Sura Svenne test (#1084, "not as described", return requested) this is why no letter could be written.
-*Fix:* a citability rule separate from strength. Published policies (refund, shipping, cancellation) and the order record are **citable context**: they may be cited when the plan includes them, and they are still never scored (strength, completeness and the "safe argument" test are unchanged). Same mechanism as the existing carrier-shipment context. Reason modules that forbid policy (e.g. fraud) keep forbidding it: the plan decides relevance; this only stops the classifier from vetoing what the plan chose. Canary: three real letters rebuilt in memory before anything reaches prod.
+*Fix (DONE, PR below):* `isCitableRecordContext` — the published refund and shipping policies and the order record are citable context, still never scored. Context alone is never an argument (`hasArgumentBeyondRecordContext`): a case left with only those is still skipped, so this is NOT "always write a letter". `cancellation_policy` stays out: policySource fills it from the terms of service.
+*What the canary found and the fix now includes:* the first canary letters said "neither policy was recorded as accepted at checkout" (the fact carried `acceptedAtCheckout: false`) and one invented terms ("a refund is contingent on the return of goods"). So a policy fact now carries `{ publishedOnStore, publishedUrl }` and acceptance only when true; base prompt rule 8d plus four unconditional validator bans (`policy_acceptance_disclaimed`, `policy_terms_beyond_record`, `policy_timing_beyond_record`, `record_absence_narrated`). The PDF thesis clause no longer says policies were "available to the customer at checkout".
+*Canary (`scripts/defence/canary-record-context.mts`, read-only, 2026-09-28):* 7 prod disputes, one per module (#93254 NAD, #15979 credit-not-processed, #351820 fraud, #99348 recurring, #353605 general, #100537 INR) + test #1060. All 7 pass with the job's one feedback retry (4 retried; 2 of those on the new record-absence ban catching an older habit). Policy paragraphs read only "published on the store at <link>".
 
-**F2 — The argument plan and automation rules use Shopify's reason, not the claim's.** `buildDefencePackageJob` passes `dispute.reason` (GENERAL) to `derivePlanForCase` and `evaluateRules`, while the module, checklist and page use the claim's reason.
-*Fix:* both receive `claimReason` (`effectiveReasonForClaim`).
+**F2 — The argument plan and automation rules use Shopify's reason, not the claim's.** `buildDefencePackageJob` passed `dispute.reason` (GENERAL) to `derivePlanForCase` and `evaluateRules`, while the module, checklist and page use the claim's reason.
+*Found while fixing it — a filing blocker:* the filing-time plan check (`derivePlanIdentityForPack`) resolved the module from Shopify's reason while the build used the claim's. The module's allowed categories feed `plan_input_hash`, so every claim-typed letter read stale and could not be filed. Verified on prod: test #1060's stored hash ≠ the filing check's. No real merchant hit it yet (only the two test disputes have a claim).
+*Fix (DONE, same PR):* `resolveCaseReasonCodeModule` is the one resolver for the build and the filing check; the filing check reads `pack_json.case_assessment_reason`. Plan and rules get the claim's reason.
 
 **F3 — No test that the letter never quotes the claim.** *Fix:* a validator guard that fails a letter containing a long verbatim run of the claim text, plus the plan's truth-table / cycle tests where missing.
 
