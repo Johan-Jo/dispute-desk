@@ -1,6 +1,6 @@
 # The defence writer — single source of truth
 
-**Status:** rev 5, 2026-09-28. Rev 4 → rev 5 after critic round 1 (verdict REVISE; §13). For maintainer review.
+**Status:** rev 6, 2026-09-28. Rev 4 → 5 after critic round 1 (REVISE), rev 5 → 6 after round 2 (REVISE, narrow); §13. For maintainer review.
 **Maintainer, 2026-09-28:** *"lift this up to a higher level now so that we work with one single source of truth when it comes to the writer, because we want advocacy and we want our writer to be independent of what type of dispute it is. … now that we slid it over from 'not delivered' to 'a faulty product', you lost it all, but it can't be like that. … It shall affect all dispute types."*
 
 **This document is the single source of truth for how every defence letter is written: every dispute type, payment method (card, PayPal, Klarna), stage (chargeback, inquiry), and case shape (single parcel, several parcels, bank-claim text supplied, thin evidence).** Code that writes letters implements this document and nothing else. A change to how letters are written is a change to this document first.
@@ -70,9 +70,9 @@ One system prompt, `lib/defence/counsel/constitution.ts`, static and cached. Out
 4. **Register.** Plain literal English, short sentences for the blows, no metaphor, throat-clearing, adjective-for-evidence or disclaimer.
 5. **Truth.** Only ledger claims, inside each claim's limits, the brief's limits and the universal limits (§4).
 6. **Copy.** Each fact once in the whole document (summary, sections, conclusion counted together); never a printed identifier; never a carrier or product name in prose.
-7. **Canonical sentences.** A claim may carry pinned wording (e.g. the approved multi-parcel scoping). The writer uses pinned wording verbatim where it states that claim, and argues around it.
-8. **Output.** Summary (≤ 80 words, ends with the frame's request), one argument per brief section (1–3 sentences), conclusion (the theory in one sentence), each part with the claim ids it rests on.
-9. **Examples.** Three invented letters from three dispute types and two providers, so the method is learned as a method.
+7. **Canonical sentences, capped.** Only a claim whose wording scopes or limits truth may carry pinned wording (the approved multi-parcel scope, the whole-order statement): at most five in the library, each added in its own PR. When the writer cites such a claim, its canonical sentence must appear as a substring (code check). Pinned wording never argues; the writer argues around it.
+8. **Output.** Summary (≤ 80 words, ends with the frame's request), for each brief section either an argument (1–3 sentences) or nothing when the section is marked exhibit-only, and the conclusion (the theory in one sentence), each part with the claim ids it rests on.
+9. **Examples.** Three invented letters from three dispute types and two providers, so the method is learned as a method. Their influence is tested (§6: held-out type and ablation), because examples carry method more strongly than rules.
 
 Why model-written sections, not code sentences: code sentences report a record and cannot argue (the #101111 test print). Truth-critical wording stays pinned per claim (7), so the approved INR sentences survive where they state a fact.
 
@@ -93,16 +93,27 @@ Why model-written sections, not code sentences: code sentences report a record a
 
 #### 2.2.1 Claims that need specifying (critic M5)
 
-- **Listing** (`listing_on_file`). Flags `editedAfterOrder` and `retrievedAfterDispute` from `product_listing_snapshots.product_updated_at` / `fetched_at`. Permitted wording: "the store's listing for the item, reproduced here". Never "the description it was sold under" or "what the customer saw". The exhibit caption gains "last edited {date}" when `editedAfterOrder`. Decision D6 below.
-- **Refund-policy terms** (`return_route`, `return_window_days`). Extracted once per policy snapshot by a model call into a fixed schema (`{ returnsOffered, windowDays, windowStartsAt: delivery|order, refundAfterReceiptDays, noticeRequired, returnPostage: buyer|merchant|unstated, restockingFee }`). Every extracted number must appear in the source text or the claim is not built. Cached per snapshot.
-  - **Adverse terms are never claims** and never printed in prose: notice requirement, buyer-paid postage, fees.
+- **Listing** (`listing_on_file`). The caption says "Product listing as published in the store, retrieved {date}" and nothing more. `Product.updatedAt` is never printed or called an edit: Shopify moves it for reasons other than edits (e.g. inventory adjustments), so it proves nothing about the content.
+  - Default wording: neutral only — "the store's listing for the item is reproduced here". The listing is **never argued as the standard the claim is measured against**.
+  - It may be argued as the description the item was sold under only when its content is known to predate the order: an order-time snapshot, or an earlier snapshot of the same product with the same `content_hash` taken before the order.
+  - **Order-time listing snapshots** (captured at orders ingest) are added to the evidence plans. They are what lifts not-as-described letters above today's ceiling.
+- **Refund-policy terms** (`return_route`, `return_window_days`). Extracted once per policy snapshot by a model call into a fixed schema (`{ returnsOffered, windowDays, windowStartsAt: delivery|order, refundAfterReceiptDays, noticeRequired, returnPostage: buyer|merchant|unstated, restockingFee }`). Cached per snapshot; the extraction prompt is versioned inside the §2.7 hash.
+  - **Every field carries the source sentence it came from**, and code confirms that sentence is in the policy text. Every number must appear in that sentence.
+  - `windowStartsAt` is cross-checked with a keyword test in the policy's language (delivery: "Lieferung", "livraison", "entrega", "leverans", "delivery", "receipt of the goods"…). When a field is ambiguous, the claim is not built.
+  - **Dating:** the policy has the listing's problem. The claim says "the store's published policy" only; it is argued as the policy in force at the sale only when its content is known to predate the order (an earlier snapshot with the same content hash, or `ShopPolicy.updatedAt` before the order once verified reliable — open question §12).
+  - Unit tests cover extraction on policy fixtures in all six locales.
+  - **Adverse terms are never claims** and never printed in prose: notice requirement, buyer-paid postage, fees. **Exhibits always print the full policy text, adverse terms included.** Prose buries; exhibits never redact — redacting a document the letter relies on would be a misrepresentation.
+  - Prose states the policy's effect only as far as it holds with its conditions: "offers a refund on a return made within 14 days of delivery", never "refunds any purchase".
   - The claim is not built when the window had closed at the dispute date.
   - **A policy exhibit** (text plus English translation) prints whenever a policy claim is used. The letter never argues from a document the reader cannot see.
 - **Recorded absences** (`no_return_recorded`, `no_refund_request_on_record`): see §4.1.
 
 #### 2.2.2 Merchant-declared claims (open question → D7)
 
-Some of the strongest facts are the merchant's, not a record's ("the return was offered and not taken up"). A `merchant` claim is built only from a merchant confirmation in the app, is worded as the merchant's statement, and is never mixed with a record claim in one sentence.
+Some strong facts are the merchant's own acts. A `merchant` claim:
+- states only something the merchant did ("The merchant offered the customer a return on 20 September"), never anything about the customer's response or choice (§4);
+- is built only from a merchant confirmation in the app **with its evidence** (e.g. the sent email), and prints that evidence as an exhibit, or is not used;
+- is never combined with a record claim in one sentence.
 
 ### 2.3 The brief — data only
 
@@ -115,8 +126,8 @@ Some of the strongest facts are the merchant's, not a record's ("the return was 
 | `claims` | claim ids this type may use |
 | `theories` | ordered `{ name, claimIds[] }`; no verbs |
 | `minimumClaims` | the claims without which this brief does not apply; below it the **general** brief's strongest theory is used, never another type's (critic M9) |
-| `sections` | ordered `{ slot, title, exhibit, claimIds, question }` — `question` is what the section answers ("What was the item described as?"), not an instruction |
-| `limits` | short truth rules, sent to the model as data and compiled into checks |
+| `sections` | ordered `{ slot, title, exhibit, claimIds, question, exhibitOnly? }` — `question` is what the section answers, not an instruction; `exhibitOnly` prints the exhibit with its caption and no prose when no ledger claim for it can be argued (e.g. a listing not known to predate the order) |
+| `limits` | short truth rules (what may not be claimed), sent to the model as data and compiled into checks. A limit may only forbid a statement; a limit that orders, leads or frames ("lead with…", "open by…", "emphasise…") fails the brief test like any other field. `question` and `title` are limited to 12 words and checked the same way. |
 | `references` | the network or provider guidance |
 
 Section slots map onto the PDF's existing narrative slots; titles come from the brief, not `SECTION_TITLES`.
@@ -144,7 +155,7 @@ Thesis boxes are suppressed for every writer-written section (`thesisTemplates.t
 
 ### 2.8 Every dispute reaches the writer
 
-- **Bank-claim text is a claim** (`bank_claim_stated`, scoped with `scopeFactsToBankClaim`). It narrows the brief's question to the issuer's own words. The two-layer non-disclosure (payload redaction and the never-quote rule) becomes a universal limit. The `!bankClaim?.text` bypass (`buildDefencePackageJob.ts:599`) is removed (critic B1).
+- **Bank-claim cases reach the writer** (critic B1). The writer never receives the claim text. It receives the code classification from `bankClaimAnalysis` (the issue category and the facts it scoped with `scopeFactsToBankClaim`) as the claim `bank_claim_issue`, which selects the brief's question and theory. The never-quote, never-paraphrase rule stays a universal limit. The `!bankClaim?.text` bypass (`buildDefencePackageJob.ts:599`) is removed **in step 1**, gated by the constructed bank-claim reference case.
 - **Every type has a brief from day one.** The `general` brief ships with the constitution in step 1: the strongest theory the ledger supports, for any type without its own brief (critic B2).
 
 ## 3. The letter — one shape
@@ -190,12 +201,15 @@ Thesis boxes are suppressed for every writer-written section (`thesisTemplates.t
 | Fraud / unauthorized | Did the cardholder authorise and receive it? | 3-D Secure authenticated; returning customer with same payment details + delivered; AVS/CVV match + delivered |
 | Subscription cancelled | Was the charge inside the agreed terms? | terms accepted + charge before cancellation on record; service used after |
 | Duplicate / incorrect amount | Charged once, at the agreed price? | distinct orders; amount matches order |
-| General / any without a brief | What does the record show about this sale? | the strongest tuple the ledger supports |
+| General / any without a brief | What does the record show about this sale? | only type-neutral tuples: timing, the customer's later order, payment facts (3-D Secure, AVS), the order record. Never a tuple that answers another type's question (never lead a not-as-described case with delivery). |
 
 **Evidence ceiling, stated plainly.** A not-as-described case without the complaint text and without a positive contradicting fact cannot reach the bar that a delivered-then-reordered non-receipt case reaches. The writer makes the strongest true case; it cannot manufacture a winning one. The claims that raise that ceiling are:
 - the bank-claim text (answer the actual complaint);
-- merchant-declared resolution (D7);
-- customer messages.
+- merchant-declared acts with evidence (D7);
+- customer messages;
+- order-time listing and policy snapshots.
+
+The general brief has no specific claim to contrast against, so its summary cannot carry the claim-versus-record punchline; its ceiling is lower still, and that is accepted.
 
 ## 6. The gate
 
@@ -205,14 +219,22 @@ Thesis boxes are suppressed for every writer-written section (`thesisTemplates.t
    - The "no type named outside examples" test.
    - The brief "no instructions" test.
    - The CI `familyKey` invariant.
-2. **Reference cases.** Named now, 3 per type, spanning providers. They are open or closed; outcomes are recorded when known.
-   - Item not received: #352543, #360980, one PayPal case.
-   - Not as described: #101111, #99445, #93670.
+2. **Reference cases.** 3 per type, spanning providers; open or closed, outcomes recorded when known.
+   - Item not received: #352543, #360980 (Blume, card), #103052 (Mein Maison, PayPal).
+   - Not as described: #101111, #99445, #93670 (Mein Maison).
+   - Bank claim: one constructed case on dev (production holds no bank-claim text today), in the step-1 gate.
    - Credit, fraud, subscription and general: named in step 3.
-3. **Negative controls.** The rejected #101111 test print and rev-4 example E must be judged "not merchant" or flagged. This proves the judge can fail a list.
-4. **Judge.** One rubric; persona from the frame; N ≥ 5 runs per case at a fixed temperature; the median compared with a stated tolerance. The rubric adds: "any sentence that implies what the customer did or chose".
-5. **Regression rule.** No type's median may drop more than the tolerance. #352543 and #360980 must reach at least v13's median, with zero new claims (truth diff).
-6. **One test print per (type × provider)** to the maintainer, through the job path. "This is excellent counsel" is the only sign-off.
+3. **Judge, pinned.** Model `claude-opus-5-5`, one rubric, persona from the frame's decider, 5 runs per case. Scores: the five rubric scores summed (5–25) and the decision after the summary. A judge model change re-measures every baseline before any comparison.
+4. **Baselines first.** #352543 v13 and #360980 are measured under this judge before step 1 changes anything; those medians are the bar.
+5. **Pass rules.**
+   - A case passes when the summary-only decision is "merchant" in at least 4 of 5 runs and the median score is within 1 point of its baseline (or ≥ 18 where there is no baseline).
+   - **Negative controls** (the rejected #101111 test print, rev-4 example E) must get "merchant" in at most 1 of 5 runs.
+   - The rubric adds: "any sentence that implies what the customer did or chose".
+   - Truth diff: zero claims the ledger does not hold.
+6. **Type independence, tested directly.**
+   - **Held-out type:** a reference case of a type with no brief and no example (a credit case in step 1) runs through the general brief and must meet the pass rule.
+   - **Ablation:** removing any one example from the constitution must not lower any type's median by more than 1 point.
+7. **One test print per (type × provider)** to the maintainer, through the job path. "This is excellent counsel" is the only sign-off.
 
 ## 7. What retires
 
@@ -225,7 +247,10 @@ Thesis boxes are suppressed for every writer-written section (`thesisTemplates.t
 | Thesis boxes on writer-written sections | nothing |
 | `SECTION_TITLES` for writer sections | brief `sections[].title` |
 | `defence_prompt_modules` as a live source | the brief in code; the table becomes read-only history (D3) |
-| The bank-claim bypass | `bank_claim_stated` claim |
+| The bank-claim bypass | `bank_claim_issue` claim |
+| `counsel/playbooks.ts` | briefs |
+| `paymentOverlays.ts` | the frame (names, refused words) and brief `limits` |
+| Family `prohibitedBankPhrases` / `guardedBankPhrases` | sorted, phrase by phrase: truth content becomes universal limits or claim limits; type wording goes with its brief; nothing is dropped without a home |
 
 Rollback: the current counsel path stays behind a flag until step 1 passes the gate.
 
@@ -234,10 +259,11 @@ Rollback: the current counsel path stays behind a flag until step 1 passes the g
 - **D1 — absence rule** as §4.1. Recommended: yes.
 - **D2 — model.** Sonnet 4.6 vs Opus 5.5 on the reference cases: choose the higher judge median unless the cost per letter exceeds the ceiling below.
 - **D3 — retire the database overrides.** Recommended: yes.
-- **D4 — cost ceiling:** at most $0.05 per letter, including policy extraction and translation (counsel today about $0.016).
+- **D4 — cost ceiling:** measured on the step-1 reference cases before it is fixed; proposed at most $0.05 per letter on Sonnet, including policy extraction and translation (counsel today about $0.016). Opus 5.5 with a correction round likely exceeds it, so D2 may be settled by D4.
 - **D5 — release precondition:** no release while any open dispute's type lacks a brief. The general brief closes this on day one.
-- **D6 — a listing edited after the order:** print it with "last edited {date}" in the caption and the neutral wording "the store's listing for the item"? Or omit it? Recommended: print, with the caption.
-- **D7 — merchant-declared claims** (e.g. "a return was offered to the customer"): allow them, from an in-app confirmation, worded as the merchant's statement? Recommended: yes, as a later step.
+- **D6 — the listing:** caption "retrieved {date}" only; neutral wording; argued as the description the item was sold under only when known to predate the order (§2.2.1); order-time snapshots added to the evidence plans. Recommended: yes.
+- **D7 — merchant-declared acts** (e.g. "the merchant offered a return on 20 September"): allow them from an in-app confirmation with evidence, stating only the merchant's own act (§2.2.2)? Recommended: yes, as a later step.
+- **D8 — PayPal not-as-described request.** PayPal's usual resolution is a refund on return. Keep the one request ("close this dispute in the merchant's favour"), or allow a fallback request ("any refund to follow the return of the item under the store's policy")? The fallback matches PayPal's practice but concedes a path; the merchant-counsel stance says never concede. Recommended: keep the one request.
 
 Decided today and in force:
 - the template writer stays retired;
@@ -246,9 +272,9 @@ Decided today and in force:
 
 ## 9. Build order
 
-1. **Constitution, claim library, family-free validator, whole-letter review, versioned hash; briefs for item not received and general.**
-   - Pass criteria: the §6.5 regression on #352543 and #360980, and the negative controls fail as they should.
-   - Then the bank-claim claim and removal of the bypass.
+1. **Constitution, claim library, family-free validator, whole-letter review, versioned hash; briefs for item not received and general; the bank-claim claim and removal of the bypass.**
+   - First: baselines under the pinned judge (§6.4).
+   - Pass: §6.5 on #352543, #360980, #103052 and the bank-claim case; negative controls fail; the held-out credit case passes through the general brief; the ablation holds.
 2. **Not-as-described brief:** listing date flags, policy extraction and policy exhibit. Reference cases pass; one test print per provider (PayPal first: #101111).
 3. **Credit not processed** (Cay, Klarna), **fraud**, **subscription**, **duplicate** — each: brief → reference cases → test print → release with per-change approval → that type's open disputes, deadline-first.
 4. **Retire the old sources** (§7) as each type moves; then remove the rollback flag.
@@ -282,6 +308,8 @@ Production: nothing ships before step 1 passes the gate and the maintainer appro
 
 - Does PayPal expose the buyer's complaint text on any API? If not, the not-as-described question is answered generically; if so, it becomes a claim.
 - For cross-border shipments with an unstated return address or postage, does `return_route` need merchant confirmation (D7) before it is argued?
+- Does `ShopPolicy.updatedAt` reliably date policy content (§2.2.1)?
+- What changed on the #101111 product on 28 September? (Only relevant if order-time snapshots are not yet available when its letter is regenerated.)
 
 ## 13. Critic review record
 
@@ -301,6 +329,24 @@ Production: nothing ships before step 1 passes the gate and the maintainer appro
 | M8 | The frame lacked the provider's decision rule | §2.4 decider; §2.3 per-provider question |
 | M9 | Thin evidence undefined | §2.3 `minimumClaims`; §5 evidence ceiling |
 | m1–m6 | Test scoping; return/refund row; D2 metric; count source; rollback; double request | §2.1, §3, D2/D4, §1.2, §7, §3 |
+
+**Round 2 (rev 5): REVISE, narrow; letter E2: REVISE (E3 given).**
+
+| # | Finding | Rev 6 |
+|---|---|---|
+| N1 | General brief and typed examples are back doors for type method; nothing tests independence | §5 type-neutral tuples only; §6.6 held-out type and ablation |
+| N2 | D6 would print a likely-false "last edited" caption from `Product.updatedAt` | §2.2.1: never printed; neutral wording; order-time snapshots; D6 rewritten |
+| N3 | Policy extraction checked on numbers only | §2.2.1: source sentence per field, language keyword cross-check, ambiguity = no claim, versioned, six-locale tests |
+| N4 | Policy dating; exhibit redaction risk | §2.2.1: dating flags; exhibits print full text |
+| N5 | Canonical sentences could recreate code listing | §2.1.7: scoping/limiting only, cap 5, substring check |
+| N6 | Cost ceiling realism | D4 measured first; D2 may be settled by it |
+| N7 | Merchant claims conflicted with the choice ban | §2.2.2: merchant's own acts only, with evidence |
+| N8 | Unnamed PayPal INR case; no bank-claim case; general brief punchline | §6.2 names #103052 and a constructed bank-claim case; §5 ceiling note |
+| B1 rest | Bank claim sequenced after the gate; text vs category unclear | §2.8: category only; in step 1 |
+| M1 rest | `limits`, `question`, `title` could carry method | §2.3: limits may only forbid; length and wording tests |
+| M2 rest | `playbooks.ts`, `paymentOverlays.ts`, bank-phrase lists without a home | §7 rows |
+| M3 rest | No tolerance; baseline unmeasured; judge unpinned; "or flagged" | §6.3–6.5: numbers, pinned judge, baselines first |
+| Letter | Section-level exhibit-only | §2.3 `exhibitOnly`; §2.1.8 |
 
 **Letter E findings, fixed in E2:**
 - "sold under the description on file" (the listing was edited after the order);
