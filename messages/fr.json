@@ -3600,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "La liste de contrôle des preuves expliquée",
-        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige."
+        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige.\n\nNon conforme à la description : DisputeDesk récupère automatiquement la fiche produit dans votre boutique (le titre, la description, jusqu'à trois images et la variante choisie) et l'ajoute à la défense. C'est votre fiche telle qu'elle est aujourd'hui ; Shopify ne conserve pas son état au moment de la commande. Si elle ne peut pas être récupérée (par exemple parce que le produit a été supprimé), la liste de contrôle en indique la raison."
       },
       "defenseLetterRebuttal": {
         "title": "Lettre de défense et texte de réponse automatique",

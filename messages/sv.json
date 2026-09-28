@@ -3600,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "Bevischecklistan förklarad",
-        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod."
+        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod.\n\nInte som beskrivet: DisputeDesk hämtar produktinformationen automatiskt från din butik (titel, beskrivning, upp till tre bilder och den valda varianten) och lägger till den i försvaret. Det är din produktinformation som den ser ut i dag; Shopify sparar inte hur den såg ut när beställningen gjordes. Om den inte kan hämtas (till exempel för att produkten har tagits bort) anger checklistan varför."
       },
       "defenseLetterRebuttal": {
         "title": "Försvarsbreve och automatisk motsvarotext",

@@ -3600,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "Die Beweischeckliste erklärt",
-        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten."
+        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten.\n\nNicht wie beschrieben: DisputeDesk übernimmt die Produktinformation automatisch aus Ihrem Shop (Titel, Beschreibung, bis zu drei Bilder und die gewählte Variante) und fügt sie der Verteidigung hinzu. Es ist Ihre Produktinformation in der heutigen Fassung; Shopify speichert nicht, wie sie bei der Bestellung aussah. Kann sie nicht übernommen werden (etwa weil das Produkt gelöscht wurde), nennt die Checkliste den Grund."
       },
       "defenseLetterRebuttal": {
         "title": "Verteidigungsschreiben und automatischer Widerredestext",
