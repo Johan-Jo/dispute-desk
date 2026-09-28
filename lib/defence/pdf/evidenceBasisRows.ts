@@ -243,7 +243,8 @@ function renderValue(fact: EvidenceFact): string | null {
     case "policy_shipping":
     case "policy_cancellation":
     case "policy_acceptance":
-      return v?.acceptedAtCheckout === true ? "Accepted at checkout" : "On record";
+      if (v?.acceptedAtCheckout === true) return "Accepted at checkout";
+      return v?.publishedOnStore === true ? "Published on the store" : "On record";
     case "order_record":
       // Do NOT echo the raw Shopify fulfillmentStatus (UNFULFILLED /
       // FULFILLED / PARTIAL) — same rule the LLM narrative obeys
