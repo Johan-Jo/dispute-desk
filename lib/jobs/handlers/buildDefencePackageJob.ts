@@ -827,6 +827,7 @@ export async function handleBuildDefencePackage(
     extraHardPhrases: hardPhrases,
     internalConstraints,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+    bankClaimText: bankClaim?.text ?? null,
   });
   // Non-blocking findings are recorded whether or not the package passes.
   // Without this the rule is invisible on live traffic, and "detect first,
@@ -942,6 +943,7 @@ export async function handleBuildDefencePackage(
         extraHardPhrases: hardPhrases,
         internalConstraints,
         guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+        bankClaimText: bankClaim?.text ?? null,
       });
       // Reassign so the rest of the pipeline uses the better output.
       // We track token totals on the original `narrativeRes` for ops

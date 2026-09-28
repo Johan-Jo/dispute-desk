@@ -264,6 +264,31 @@ export interface ValidateNarrativeInput {
   /** Validator-only knowledge derived from stored messages (v5). Never shown
    *  to the generator. See lib/defence/internalConstraints.ts. */
   internalConstraints?: InternalNarrativeConstraints | null;
+  /** The bank's claim text. Context the letter answers, never text it may
+   *  repeat: a run of CLAIM_QUOTE_WORDS consecutive words from it fails. */
+  bankClaimText?: string | null;
+}
+
+/** Words in a row that count as quoting the bank's claim. Long enough that
+ *  ordinary shared wording ("the order was placed on") never trips it. */
+export const CLAIM_QUOTE_WORDS = 8;
+
+const words = (t: string): string[] =>
+  t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+
+/** The first run of `CLAIM_QUOTE_WORDS` words the text shares with the claim, or null. */
+export function findQuotedClaimRun(text: string, claim: string | null | undefined): string | null {
+  if (!claim) return null;
+  const c = words(claim);
+  if (c.length < CLAIM_QUOTE_WORDS) return null;
+  const grams = new Set<string>();
+  for (let i = 0; i + CLAIM_QUOTE_WORDS <= c.length; i++) grams.add(c.slice(i, i + CLAIM_QUOTE_WORDS).join(" "));
+  const w = words(text);
+  for (let i = 0; i + CLAIM_QUOTE_WORDS <= w.length; i++) {
+    const g = w.slice(i, i + CLAIM_QUOTE_WORDS).join(" ");
+    if (grams.has(g)) return g;
+  }
+  return null;
 }
 
 /** Shared phrase + guard check for any single piece of prose. The layer
@@ -662,6 +687,20 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
         internalConstraints: input.internalConstraints,
       }),
     );
+  }
+
+  // 2b. The bank's claim is context to answer, never text to quote back.
+  for (const sectionKey of SECTION_KEYS) {
+    const run = findQuotedClaimRun(input.narrative[sectionKey].text, input.bankClaimText);
+    if (run) {
+      errors.push({
+        section: sectionKey,
+        rule: "bank_claim_quoted",
+        message: `${sectionKey} repeats the bank's claim word for word ("${run}"). Answer the claim in your own words; never quote it.`,
+        evidenceText: run,
+        layer: "narrative",
+      });
+    }
   }
 
   // 3. usedFactIds referential integrity + no internal-only references.
