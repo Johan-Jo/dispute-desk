@@ -8161,6 +8161,26 @@ What changed:
 
 **Blast radius.** `packageMode` governs narrative **tone** (firm vs hedged), not whether evidence is filed, and it is not an auto-save gate — nothing in `lib/automation/` reads it. Strength scoring is untouched: `product_description` remains `supportingOnly: true` / `excludedFromStrength: true` in `canonicalEvidence.ts`. The practical effect is that a not-as-described package with no conformity evidence now argues hedged instead of firm, which is the honest rendering of what it actually holds.
 
+#### Not-as-described letters: defend without hedging (2026-09-28)
+
+Superseded in part by `docs/plans/not-as-described-defence-package.plan.md` PR 1 (maintainer decision D5). The hedged voice above was accurate but not counsel: nearly every letter in the family is `narrow` (0 of 308 prod packs carry a listing, measured 2026-09-28), so nearly every letter apologised for its own record. What changed:
+
+- **Family overlay** (`reasonCodes/families/product_not_as_described.ts`, v2): overrides base rule 10's hedged framing for this family only. Narrow mode keeps its other limits (≤4-sentence summary, no declarative reason-code conclusions). It also states what each record can show: the order record shows what was ordered, a listing what was advertised, a delivery record that the parcel arrived — none of them what it contained.
+- **Deterministic bans** in the family's `prohibitedBankPhrases` (validator v16, applied to LLM prose and to the composed PDF): the rule-10 hedge lead-ins ("the available/submitted evidence/records supports/indicates/is consistent with" — bare "consistent with" stays legal); conformity conclusions ("was as described", "matched the listing", "conformed to", "not defective", "free of defects", condition claims); dating the listing to the purchase ("at the time of purchase"); delivery-window claims; what the buyer did not do or submit ("the buyer has not…", "no … evidence has been submitted", "unsupported claim", "absence of any return" — "absence of any recorded return" stays legal); and calling two records of one carrier event corroborating or independent. Restating the cardholder's claim stays legal. The last two groups came from the release-gate comparison (`docs/plans/not-as-described-defence-package/pr1-letter-comparison.md`). Other families are unchanged.
+- **Strategies v2**: `listing_as_purchased` no longer tells the model to cite the listing "published at the time" or argue it "matched what was delivered" (selection unchanged: `order_record_present`); `narrow_fallback` no longer says a listing is "always present".
+- **Module v4**: the listing is "as retrieved for this response", never the page shown at checkout.
+- **PDF** (composition v5): a family narrow conclusion, "The merchant respectfully requests reversal of the [amount] chargeback.", replaces "Based on the available evidence … requests review"; the generic transaction-overview line ("internally consistent with cardholder-initiated activity") no longer renders for this family.
+- Prompt version 41. Tests: `lib/defence/__tests__/productNotAsDescribedLetter.test.ts`.
+
+**Arrival is not in dispute (2026-09-28, maintainer, PR 1b).** The buyer of a not-as-described claim agrees the parcel arrived, so delivery is left out of these letters entirely. Before this, packages held only delivery, tracking and no-return facts, so letters were built around a delivery nobody disputed.
+- `product_unacceptable` v5: `delivery_proof`, `shipping_tracking` and `policy_shipping` leave `prioritize` and `allowedFactCategories` (and join `avoid`). This removes them from the argument plan, the prose and the PDF's shipment cards. **Prod reads this module from `defence_prompt_modules`** — after release run `npx tsx scripts/reconcile-defence-prompt-modules.mts --env-file .env.production.local --apply`, or v3 keeps serving.
+- The PayPal not-as-described overlay drops "listing as it appeared at the time of purchase" and says arrival is not in dispute.
+- The writer is not shown the order record's `fulfillmentStatus` for this family (`buildLlmFactPayload`, `withoutArrivalFields`); claim guards still read it. The instruction alone did not hold.
+- The PDF hides the fulfilment section for the family (`SECTION_DENY_BY_FAMILY`, which also suppresses its "marks the order as shipped" fallback), and the timeline drops fulfilment, shipping-confirmation and delivery events (`familyOmitsArrival` in `lib/defence/chronology.ts`, PDF and HTML view).
+- Family bans (validator v17): carrier/tracking wording, "delivered on", "confirmed delivery", "shipped on", "in transit", "was fulfilled", "left the merchant", and "as listed/advertised" (the restated claim "not as advertised" stays legal).
+- **Reverted from PR 1:** the ban on payment-authentication wording (IP, AVS, CVV, 3-D Secure). Banks mislabel fraud disputes as not as described, and a liability-shifted 3-D Secure result must stay citable (blume-box #352552, `alwaysAdmissible.ts`).
+- Prompt version 42. Measured on prod (`scripts/sql/product-no-delivery-exposure.sql`): of 20 open not-as-described packages, 17 keep only "no return recorded" plus record context, and 1 keeps nothing and would be skipped by the build.
+
 ### Data model
 
 Single migration: `supabase/migrations/20260515220000_defence_packages.sql`.

@@ -56,6 +56,10 @@ const SECTION_DENY_BY_MODULE: Record<string, NarrativeSectionKey[]> = {
  */
 const SECTION_DENY_BY_FAMILY: Partial<Record<ReasonCodeFamilyKey, NarrativeSectionKey[]>> = {
   item_not_received: ["transactionOverviewArgument", "chronologyArgument"],
+  // Not as described (maintainer, 2026-09-28): arrival is not in dispute, so
+  // the fulfilment section — and its deterministic "marks the order as
+  // shipped" fallback — has nothing to answer.
+  product_not_as_described: ["fulfillmentArgument"],
 };
 
 /**
