@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { classifyFacts, type ClassifyFactsInput, type PackSectionLike } from "../factClassifier";
+import {
+  classifyFacts,
+  hasArgumentBeyondRecordContext,
+  type ClassifyFactsInput,
+  type PackSectionLike,
+} from "../factClassifier";
 import {
   resolveReasonCodeModule,
   resolveReasonCodeModuleForContext,
@@ -481,5 +486,94 @@ describe("classifyFacts", () => {
       }),
     );
     expect(result.approved.every((f) => !f.submissionRisk)).toBe(true);
+  });
+});
+
+describe("classifyFacts — the store's own records are citable context (bank-claim plan F1)", () => {
+  const nad = () => resolveReasonCodeModuleForContext(null, "PRODUCT_UNACCEPTABLE");
+  const policy = (fieldKey: string) =>
+    section({
+      type: "policy",
+      fieldsProvided: [fieldKey],
+      data: {
+        policies: [
+          { policyType: "refunds", publishedUrl: "https://shop.example/policies/refund-policy" },
+          { policyType: "shipping", publishedUrl: "https://shop.example/policies/shipping-policy" },
+        ],
+      },
+    });
+  const order = () => section({ fieldsProvided: ["order_confirmation"], data: { confirmationSent: true } });
+
+  it("a published refund policy nobody accepted at checkout stays supporting but is citable", () => {
+    const result = classifyFacts(baseInput({ reasonCodeModule: nad(), sections: [policy("refund_policy")] }));
+    const f = result.approved.find((x) => x.value.fieldKey === "refund_policy");
+    expect(f?.strength).toBe("supporting");
+    expect(f?.bankEligible).toBe(true);
+    expect(f?.includeInBankNarrative).toBe(true);
+    // What the letter may say: published, and where. Never a false acceptance.
+    expect(f?.value.publishedOnStore).toBe(true);
+    expect(f?.value.publishedUrl).toBe("https://shop.example/policies/refund-policy");
+    expect("acceptedAtCheckout" in (f?.value ?? {})).toBe(false);
+  });
+
+  it("the terms of service (filed as cancellation_policy) are not citable context", () => {
+    const result = classifyFacts(baseInput({ reasonCodeModule: nad(), sections: [policy("cancellation_policy")] }));
+    const f = result.approved.find((x) => x.value.fieldKey === "cancellation_policy");
+    expect(f?.bankEligible).toBe(false);
+  });
+
+  it("the shipping policy and the order record are citable too", () => {
+    const result = classifyFacts(
+      baseInput({ reasonCodeModule: nad(), sections: [policy("shipping_policy"), order()] }),
+    );
+    for (const key of ["shipping_policy", "order_confirmation"]) {
+      const f = result.approved.find((x) => x.value.fieldKey === key);
+      expect(f?.bankEligible, key).toBe(true);
+      expect(f?.strength, key).toBe("supporting");
+    }
+  });
+
+  it("records alone are not an argument: the package is ineligible", () => {
+    const result = classifyFacts(
+      baseInput({ reasonCodeModule: nad(), sections: [policy("refund_policy"), order()] }),
+    );
+    expect(result.eligible).toBe(false);
+    expect(result.ineligibilityReason).toBe("no_bank_eligible_facts");
+    expect(hasArgumentBeyondRecordContext(result.approved)).toBe(false);
+  });
+
+  it("records ride along with a real argument", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: nad(),
+        sections: [
+          policy("refund_policy"),
+          section({
+            fieldsProvided: ["delivery_proof"],
+            data: { proofType: "signature_confirmed", carrier: "UPS", deliveredToVerifiedAddress: true },
+          }),
+        ],
+      }),
+    );
+    expect(result.eligible).toBe(true);
+    expect(hasArgumentBeyondRecordContext(result.approved)).toBe(true);
+  });
+
+  it("a policy the customer accepted at checkout is still strong, not context", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: nad(),
+        sections: [
+          section({
+            type: "policy",
+            fieldsProvided: ["refund_policy"],
+            data: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-05-01T10:00:00Z" },
+          }),
+        ],
+      }),
+    );
+    const f = result.approved.find((x) => x.value.fieldKey === "refund_policy");
+    expect(f?.strength).toBe("strong");
+    expect(result.eligible).toBe(true);
   });
 });

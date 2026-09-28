@@ -548,6 +548,8 @@ export type ValidationErrorRule =
   | "unauthorized_claim"
   | "unknown_fact_id"
   | "omitted_section_inconsistent"
+  /** The letter repeats the bank's claim word for word (bank-claim plan F3). */
+  | "bank_claim_quoted"
   | "narrow_mode_aggressive_conclusion"
   | "internal_only_fact_referenced"
   /** Every fact the section declares as support is one the Evidence Basis will

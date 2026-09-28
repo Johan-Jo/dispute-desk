@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
 import { useDemoMode, useDemoData } from "@/lib/demo-mode";
 import { phaseBadgeTone } from "@/lib/disputes/phaseUtils";
+import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 interface Dispute {
@@ -27,6 +28,8 @@ interface Dispute {
   initiated_at: string | null;
   due_at: string | null;
   last_synced_at: string | null;
+  attention_reason?: string | null;
+  shops?: { shop_domain: string | null } | null;
 }
 
 interface ProfileAddress {
@@ -505,6 +508,23 @@ export default function DisputeDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* The bank's claim is captured in the embedded app's card (bank-claim
+          plan F6). The portal says what is needed and links straight to it. */}
+      {dispute.attention_reason === "bank_claim_needed" && (
+        <div className="mb-6" data-testid="portal-bank-claim-banner">
+          <InfoBanner variant="warning" title={t("bankClaim.title")}>
+            <p>{t("bankClaim.portalBody")}</p>
+            <a
+              href={getEmbeddedAppUrl(dispute.shops?.shop_domain ?? null, `disputes/${dispute.id}?section=bank-claim`)}
+              target="_top"
+              className="inline-block mt-2 font-medium underline"
+            >
+              {t("bankClaim.portalCta")}
+            </a>
+          </InfoBanner>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
