@@ -56,7 +56,28 @@ export interface ChronologyContext {
   orderName?: string | null;
   cardNetwork?: string | null;
   cardLast4?: string | null;
+  /** Drop fulfilment, shipping-notification and delivery events. Set for
+   *  families where arrival is not in dispute (`familyOmitsArrival`). */
+  omitArrivalEvents?: boolean;
 }
+
+/**
+ * Families whose buyer agrees the parcel arrived and disputes what was in it
+ * (maintainer, 2026-09-28): the letter and its timeline leave the parcel's
+ * journey out entirely.
+ */
+const ARRIVAL_NOT_IN_DISPUTE_FAMILIES: ReadonlySet<string> = new Set(["product_not_as_described"]);
+
+export function familyOmitsArrival(familyKey: string | null | undefined): boolean {
+  return !!familyKey && ARRIVAL_NOT_IN_DISPUTE_FAMILIES.has(familyKey);
+}
+
+const ARRIVAL_CATEGORIES: ReadonlySet<ChronologyCategory> = new Set([
+  "fulfillment_shipment",
+  "shipping_confirmation",
+  "delivery_notification",
+  "carrier_delivery",
+]);
 
 /**
  * Build the chronology bullets for one defence package.
@@ -298,7 +319,11 @@ export function buildChronologyEvents(
     // drops everything that isn't a recognized category. This is the single
     // wiring point both renderers share (PDF + HTML view), so the filter
     // can never be silently skipped by one surface.
-    const { kept, droppedUnknown } = partitionChronologyEvents(normalized);
+    const partitioned = partitionChronologyEvents(normalized);
+    const { droppedUnknown } = partitioned;
+    const kept = context.omitArrivalEvents
+      ? partitioned.kept.filter((e) => !ARRIVAL_CATEGORIES.has(classifyChronologyEvent(e.text) as ChronologyCategory))
+      : partitioned.kept;
     if (droppedUnknown.length > 0) {
       // Log the excluded tail (numbers collapsed so identical shapes
       // dedupe) — review it to promote genuinely useful new event types

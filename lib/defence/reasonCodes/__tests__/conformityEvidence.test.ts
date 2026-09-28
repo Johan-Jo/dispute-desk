@@ -71,18 +71,20 @@ describe("product_unacceptable — conformity leads, delivery does not", () => {
     expect(product_unacceptable.prioritize[0]).toBe("product_listing");
   });
 
-  it("ranks delivery below both conformity and the buyer's own complaint", () => {
-    expect(rank("delivery_proof")).toBeGreaterThan(rank("product_listing"));
-    expect(rank("delivery_proof")).toBeGreaterThan(rank("customer_communication"));
-    expect(rank("shipping_tracking")).toBeGreaterThan(rank("product_listing"));
+  it("does not argue delivery at all: arrival is not in dispute (v5, 2026-09-28)", () => {
+    expect(rank("delivery_proof")).toBe(-1);
+    expect(rank("shipping_tracking")).toBe(-1);
+    expect(product_unacceptable.allowedFactCategories).not.toContain("delivery_proof");
+    expect(product_unacceptable.allowedFactCategories).not.toContain("shipping_tracking");
+    expect(product_unacceptable.avoid).toEqual(expect.arrayContaining(["delivery_proof", "shipping_tracking"]));
   });
 
   it("rests its theory on the listing rather than the order confirmation", () => {
     expect(product_unacceptable.criticalCategories).toEqual(["product_listing"]);
   });
 
-  it("tells the writer in words that delivery is not conformity", () => {
-    expect(product_unacceptable.promptBody).toContain("DELIVERY IS NOT CONFORMITY");
+  it("tells the writer in words that arrival is not in dispute", () => {
+    expect(product_unacceptable.promptBody).toContain("ARRIVAL IS NOT IN DISPUTE");
   });
 });
 
