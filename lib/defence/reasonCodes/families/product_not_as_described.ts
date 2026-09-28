@@ -32,9 +32,11 @@ export const product_not_as_described: ReasonCodeFamily = {
     "",
     "OVERRIDE OF RULE 10 FOR THIS FAMILY. When packageMode is \"narrow\", do NOT use hedged framing. No qualifying lead-ins about what the evidence or the records support, indicate or are consistent with, and no apologetic or tentative wording. State each supported fact plainly, in the merchant's favour. Everything else rule 10 says about \"narrow\" still applies: an executive summary of at most 4 sentences, and no declarative reason-code conclusions.",
     "",
-    "WHAT THE RECORDS CAN AND CANNOT SHOW. The order record shows what the customer ordered: the items, the variants and the price. A product listing shows what the merchant advertised, not what arrived. A delivery record shows that the parcel arrived, not what it contained or its condition. So never assert that the delivered item agreed with the listing or its description, lacked defects, or arrived in a particular condition, and never date the listing to the purchase: the listing on record is the one retrieved when this response was prepared.",
+    "ARRIVAL IS NOT IN DISPUTE. The buyer agrees the parcel arrived and disputes what was in it. Leave the parcel's journey out of every section: no shipping details, no arrival dates, and nothing about whether or when the order was sent. This overrides rule 8b for this family. From the order record, use only what was ordered and how it was placed.",
     "",
-    "STAY ON THE RECORD. Never describe the buyer's conduct by what it lacks (a return, contact with the merchant, evidence given to the bank): Shopify records only returns made through Shopify, and the bank's file is not in front of you. The only sentence about returns remains the one rule 8c permits. Never label the claim as lacking support. Two records of one carrier event are one record; never present them as confirming each other.",
+    "WHAT THE RECORDS CAN AND CANNOT SHOW. The order record shows what the customer ordered: the items, the variants and the price. A product listing shows what the merchant advertised, not what arrived. So never assert that the delivered item agreed with the listing or its description, lacked defects, or arrived in a particular condition, and never date the listing to the purchase: the listing on record is the one retrieved when this response was prepared.",
+    "",
+    "STAY ON THE RECORD. Never describe the buyer's conduct by what it lacks (a return, contact with the merchant, evidence given to the bank): Shopify records only returns made through Shopify, and the bank's file is not in front of you. The only sentence about returns remains the one rule 8c permits. Never label the claim as lacking support.",
     "",
     "The reason code names the cardholder's claim category. You may restate that claim (\"the cardholder states the item was not as described\"); never adopt it or concede it.",
   ].join("\n"),
@@ -55,9 +57,10 @@ export const product_not_as_described: ReasonCodeFamily = {
     /\bat\s+the\s+time\s+of\s+(?:purchase|order|checkout|sale)\b/i,
     // 4. Delivery promises with no delivery-promise fact on record.
     /\bwithin\s+the\s+(?:expected|estimated|promised|advertised|stated)\s+(?:delivery\s+)?(?:timeframe|time\s*frame|window|period)\b/i,
-    // 5. Payment-authentication signals answer who paid, not what arrived.
-    //    Excluded structurally by the module's allow-list; this is the net.
-    /\b(?:IP\s+address|AVS|CVV2?|CVC|3-?D\s*Secure|address\s+verification)\b/i,
+    // 5. (Removed 2026-09-28.) Payment-authentication wording was banned here
+    //    in PR 1. It must stay citable: banks mislabel fraud disputes as not
+    //    as described, and a liability-shifted 3-D Secure result is then the
+    //    strongest fact on file (blume-box #352552, `alwaysAdmissible.ts`).
     // 6. What the buyer did not do or submit. Shopify records only Shopify
     //    returns, and the issuer's file is not ours to see, so these are beyond
     //    the record. Found in the PR 1 comparison letters (#100411): "no
@@ -67,11 +70,22 @@ export const product_not_as_described: ReasonCodeFamily = {
     /\b(?:buyer|cardholder|customer|purchaser)\s+(?:has|have|had|did|does)\s*(?:not\b|n['’]t\b)/i,
     /\bno\s+[^.;]{0,80}?\b(?:evidence|documentation|communication|listing|proof)\b[^.;]{0,40}?\b(?:has|have|was|were|is|are)\s+(?:been\s+)?(?:submitted|provided|presented|produced|offered)\b/i,
     /\b(?:unsupported|unsubstantiated)\s+(?:claim|assertion|allegation)\b|\bwithout\s+(?:any\s+)?(?:evidence|substantiation)\b/i,
-    /\babsence\s+of\s+(?:any\s+)?(?!recorded\b)(?:return|complaint|contact|communication|evidence)\b/i,
+    /\babsence\s+of\s+(?:any\s+)?(?!recorded\b)(?:return|complaint|contact|communication|evidence)\b(?!\s+(?:has\s+been\s+)?recorded\b)/i,
     // 7. One carrier event is one record: two fulfilment rows carrying the same
     //    tracking number do not corroborate each other (as item_not_received v9).
     /\bcorroborat\w*\b/i,
     /\bindependent(?:ly)?\s+(?:confirm\w*|support\w*|establish\w*|record\w*)\b/i,
+    // 8. Arrival is not in dispute (maintainer, 2026-09-28): the parcel's
+    //    journey stays out of the letter. Delivery and tracking facts are no
+    //    longer allowed for this module; this is the net for the prose.
+    /\b(?:carrier|tracking|courier|postal\s+service)\b/i,
+    /\b(?:was|were|been|confirmed|recorded|marked)\s+(?:as\s+)?delivered\b|\bdelivered\s+(?:on|to)\b|\bconfirmed\s+delivery\b|\bdelivery\s+(?:confirmation|date|record|scan|event)\b/i,
+    /\b(?:shipped|dispatched)\s+(?:on|via|with|by)\b|\bin\s+transit\b/i,
+    /\b(?:was|were|been|confirms?|confirmed|shows?|marked)\s+(?:as\s+)?fulfil+ed\b|\bfulfil+ed\s+(?:on|by|via)\b/i,
+    /\bleft\s+the\s+merchant\b|\b(?:sent|posted|handed\s+over)\s+to\s+the\s+(?:buyer|customer|cardholder)\b/i,
+    // "the item as listed / as advertised" reads as a conformity claim; the
+    // claim restated ("not as described") stays legal.
+    /(?<!\bnot\s)\bas\s+(?:listed|advertised|pictured|shown\s+in\s+the\s+listing)\b/i,
   ],
   guardedBankPhrases: [],
   version: 2,

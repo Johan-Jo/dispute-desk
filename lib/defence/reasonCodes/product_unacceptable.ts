@@ -17,26 +17,34 @@ export const product_unacceptable: ReasonCodeGuidance = {
     "You are writing a bank-facing response to a NOT-AS-DESCRIBED / DEFECTIVE CLAIM (cardholder alleges the goods/service differed from the listing or were defective). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise: the items and variant the customer ordered, the product listing as retrieved for this response (never presented as the page shown at checkout), customer communications about the complaint, refund/return policy disclosure, and merchant resolution attempts.",
     "Do NOT argue 'the item was acceptable' as a conclusion — argue from the listing-as-purchased and any documented resolution attempts.",
-    "Do NOT cite policy as a defence unless an approved policy fact (acceptedAtCheckout=true, or a policy_refund/policy_shipping fact) is present.",
-    "DELIVERY IS NOT CONFORMITY. A delivery scan proves the parcel reached the buyer; it says nothing about whether its contents agreed with the listing. Delivery may appear as chronology, but it must never be the principal rebuttal and must never be offered as evidence of conformity with the listing.",
+    "Do NOT cite policy as a defence unless an approved policy fact (acceptedAtCheckout=true, or a policy_refund fact) is present.",
+    "ARRIVAL IS NOT IN DISPUTE. The buyer agrees the parcel arrived and disputes what was in it, so the parcel's journey answers nothing they raised. Do not mention it at all: no shipping details and no arrival dates.",
   ].join("\n"),
   // Conformity evidence leads. `delivery_proof` sat second in this list
   // until 2026-09-01, which put possession above conformity in the one
   // family where possession is not in dispute — the buyer agrees the parcel
   // arrived and says its contents were wrong.
+  //
+  // v5 (2026-09-28, maintainer): delivery and tracking leave this module
+  // entirely — neither prioritised nor allowed. With no listing collected
+  // yet, the letters argued from the only facts they held, the carrier
+  // record, and so answered a question the buyer never asked. Removing the
+  // categories here removes them from the argument plan, the prose and the
+  // PDF's shipment cards in one place. The shipping policy goes with them:
+  // it governs delivery times, which the buyer does not dispute either.
   prioritize: [
     "product_listing",
     "customer_communication",
     "policy_refund",
-    "policy_shipping",
     "order_record",
-    "delivery_proof",
-    "shipping_tracking",
   ],
   avoid: [
     "ip_location",
     "device_session",
     "fraud_screening",
+    "delivery_proof",
+    "shipping_tracking",
+    "policy_shipping",
   ],
   mustNotClaim: [
     "the product was definitively acceptable",
@@ -54,14 +62,11 @@ export const product_unacceptable: ReasonCodeGuidance = {
   allowedFactCategories: [
     "product_listing",
     "order_record",
-    "delivery_proof",
-    "shipping_tracking",
     "customer_communication",
     "communication",
     "policy_refund",
-    "policy_shipping",
     "policy_acceptance",
     "manual_evidence",
   ],
-  version: 4,
+  version: 5,
 };
