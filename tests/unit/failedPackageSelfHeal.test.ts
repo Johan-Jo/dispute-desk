@@ -285,8 +285,11 @@ describe("the versions are real, not placeholders", () => {
      * evidence.plan.md §4.1(c)). Drafts built under 4 must regenerate.
      *
      * 5 → 6 on 2026-09-23: the delivery-after-dispute timing constraint — a
-     * false "prior to the dispute" sentence reached a scheduled letter. */
-    expect(VALIDATOR_VERSION).toBe(15);
+     * false "prior to the dispute" sentence reached a scheduled letter.
+     *
+     * 15 → 16 on 2026-09-28: not-as-described family bans hedge lead-ins and
+     * conformity conclusions (not-as-described plan PR 1, D5). */
+    expect(VALIDATOR_VERSION).toBe(16);
   });
 
   it("unblocks the row that proved the pin is not decorative", () => {

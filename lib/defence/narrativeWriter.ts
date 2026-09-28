@@ -216,7 +216,11 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // v40 (2026-09-25) — item-not-received family names its forbidden words in the
 // prompt (no negated delivery, no denial framing): an in-transit
 // letter wrote "the order was not undelivered" twice and was refused (#102193).
-const PROMPT_VERSION = 40;
+// v41 (2026-09-28) — not-as-described family overlay overrides rule 10's
+// hedged framing for narrow packages and states what a listing / delivery
+// record can and cannot show; both family strategies and the module prompt
+// no longer date the listing to the purchase (plan PR 1, D5).
+const PROMPT_VERSION = 41;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

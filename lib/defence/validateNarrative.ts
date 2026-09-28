@@ -171,8 +171,13 @@ import type {
  * v15 (2026-09-24) — item_not_received v9: records of one carrier event may
  *      not be called independent or corroborating, and the letter may not
  *      characterise who initiated the transaction (#352543).
+ * v16 (2026-09-28) — product_not_as_described v2 bans the rule-10 hedge
+ *      lead-ins, conformity conclusions ("was as described", "matched the
+ *      listing", "not defective", condition claims), dating the listing to the
+ *      purchase, unsupported delivery-window claims and payment-authentication
+ *      signals (not-as-described plan PR 1).
  */
-export const VALIDATOR_VERSION = 15;
+export const VALIDATOR_VERSION = 16;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
