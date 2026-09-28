@@ -22,9 +22,9 @@ export const unauthorized_fraud_narrow_fallback: StrategySubmodule = {
   priority: 0,
   promptBody: [
     "STRATEGY FOCUS — narrow fallback:",
-    "Use this framing when the approved evidence is thin. Keep the executiveSummary to one paragraph of ≤4 sentences. Use hedged phrasing throughout: 'The available records support…', 'The available evidence is consistent with…', 'The submitted records indicate…'.",
+    "Use this framing when the approved evidence is thin. Keep the executiveSummary to one paragraph of ≤4 sentences. State what each record shows plainly; for authorisation use 'these records support a cardholder-authorized transaction', never an absolute ('proves'). Never qualify the merchant's own records ('the available evidence…') or describe the evidence as limited.",
     "Cite only the facts that are actually in approvedFacts; never fill gaps.",
-    "Do not draw declarative reason-code conclusions. Do not assert the dispute is invalid. The bank decides — your job is to present what's on record clearly.",
+    "Do not draw declarative reason-code conclusions. Do not assert the dispute is invalid. Argue the merchant's position from what is on record, firmly.",
   ].join("\n"),
   version: 1,
 };

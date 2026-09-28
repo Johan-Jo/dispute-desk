@@ -47,7 +47,7 @@ describe("validateComposedDocument", () => {
       blocks: [
         block({
           thesisText: "The approved evidence supporting the merchant's position is summarised below.",
-          llmText: "The available records support the cardholder-initiated transaction.",
+          llmText: "The records support the cardholder-initiated transaction.",
         }),
       ],
       approvedFacts: [fact()],
