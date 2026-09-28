@@ -1,6 +1,6 @@
 # The defence writer — single source of truth
 
-**Status:** rev 7, 2026-09-28. Critic rounds 1–3 (REVISE → REVISE narrow → REVISE narrow); rev 7 answers round 3; §13. Open maintainer decisions: D8, D9.
+**Status:** rev 7, 2026-09-28. Critic rounds 1–3 (REVISE → REVISE narrow → REVISE narrow); rev 7 answers round 3; §13. Open maintainer decision: D9.
 **Maintainer, 2026-09-28:** *"lift this up to a higher level now so that we work with one single source of truth when it comes to the writer, because we want advocacy and we want our writer to be independent of what type of dispute it is. … now that we slid it over from 'not delivered' to 'a faulty product', you lost it all, but it can't be like that. … It shall affect all dispute types."*
 
 **This document is the single source of truth for how every defence letter is written: every dispute type, payment method (card, PayPal, Klarna), stage (chargeback, inquiry), and case shape (single parcel, several parcels, bank-claim text supplied, thin evidence).** Code that writes letters implements this document and nothing else. A change to how letters are written is a change to this document first.
@@ -269,7 +269,7 @@ Rollback: the current counsel path stays behind a flag until step 1 passes the g
 - **D6 — the listing:** caption "retrieved {date}" only; neutral wording; argued as the description the item was sold under only when known to predate the order (§2.2.1); order-time snapshots added to the evidence plans. Recommended: yes.
 - **D7 — merchant-declared acts** (e.g. "the merchant offered a return on 20 September"): allow them from an in-app confirmation with evidence, stating only the merchant's own act (§2.2.2)? Recommended: yes, as a later step.
 - **D9 — a "refund for any reason, on return" policy in a not-as-described letter: helps or hurts?** Helps: the remedy the store offers is a return, it was open when the dispute came, and Shopify records no return. Hurts: it tells the decider the buyer is entitled to a refund, which is PayPal's default SNAD outcome; the merchant-counsel stance lists such clauses as harmful. Until decided: **hurts** (not used). With "hurts", #101111's honest letter is the minimal one — delivered, disputed eight days later, listing reproduced — until an order-time listing, the complaint text or a merchant act with evidence exists.
-- **D8 — PayPal not-as-described request.** PayPal's usual resolution is a refund on return. Keep the one request ("close this dispute in the merchant's favour"), or allow a fallback request ("any refund to follow the return of the item under the store's policy")? The fallback matches PayPal's practice but concedes a path; the merchant-counsel stance says never concede. Recommended: keep the one request.
+- **D8 — PayPal not-as-described request.** *Decided (maintainer, 2026-09-28): keep the single request* — "close this dispute in the merchant's favour"; no fallback line offering a refund on return.
 
 Decided today and in force:
 - the template writer stays retired;
