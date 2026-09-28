@@ -171,6 +171,9 @@ export type EventType =
   // `{ packageId, claimReason, removed: [{ id, category, why }] }`.
   | "defence_facts_scoped_to_bank_claim"
   | "save_to_shopify_refused_bank_claim_missing"
+  /** Bank-claim plan F4: the merchant's own file holds the evidence slot. */
+  | "save_to_shopify_refused_merchant_file_present"
+  | "save_to_shopify_merchant_file_annexed"
   | "deadline_submit_refused_bank_claim_missing"
   // Merchant review lifecycle — POST /api/disputes/:id/review
   // (lib/disputes/reviewState.ts). actorType "merchant". Payload
