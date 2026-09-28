@@ -406,6 +406,15 @@ export const RETURN_ABSENCE_BANS: ReadonlyArray<{ id: string; pattern: RegExp }>
     id: "contact_claim_beyond_record",
     pattern: /\bthrough\s+any\s+channel\b|\binconsistent\s+with\s+a\s+genuine\b[^.!?;\n]{0,40}\bcomplaint\b/i,
   },
+  {
+    // "not supported by any return or documented complaint in the merchant's
+    // records" · "no documented complaint" · "without any complaint" — an
+    // absence of complaint is beyond the record (merchants take complaints by
+    // email and chat that Shopify never sees). Canary #101111, 2026-09-28.
+    id: "contact_claim_beyond_record",
+    pattern:
+      /\b(?:no|any|without)\b[^.!?;\n]{0,40}\b(?:documented\s+|recorded\s+|prior\s+)?(?:complaints?|contact|correspondence)\b[^.!?;\n]{0,40}\b(?:in|on)\s+(?:the\s+)?(?:merchant'?s\s+)?records?\b|\bno\s+(?:documented|recorded|prior)\s+(?:complaints?|contact)\b|\bwithout\s+(?:any\s+)?(?:complaints?|contact)\b/i,
+  },
 ];
 
 /**

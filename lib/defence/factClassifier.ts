@@ -1109,12 +1109,17 @@ function extractValue(
       const l = listings[0];
       if (l) {
         const s = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+        // Shopify's placeholder for a product without variants — never a
+        // real option, never printed (canary #100373: "variant: Default Title").
+        const isDefault = (v: unknown) => typeof v === "string" && /^default title$/i.test(v.trim());
         return {
           hasListing: true,
           collected: true,
           title: s(l.title),
-          variantTitle: s(l.variantTitle),
-          variantOptions: Array.isArray(l.variantOptions) ? l.variantOptions : [],
+          variantTitle: isDefault(l.variantTitle) ? null : s(l.variantTitle),
+          variantOptions: Array.isArray(l.variantOptions)
+            ? (l.variantOptions as Array<{ value?: unknown }>).filter((o) => !isDefault(o?.value))
+            : [],
           excerpt: s(l.excerpt),
           sourceUrl: s(l.sourceUrl),
           retrievedAt: s(l.fetchedAt),

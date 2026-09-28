@@ -28,6 +28,7 @@ const tokenFile = arg("token-file");
 const out = arg("out");
 const disputeIds = args("dispute");
 const parityIds = args("parity");
+const withListing = process.argv.includes("--with-listing");
 if (!envFile || !out || (disputeIds.length > 0 && !tokenFile)) {
   console.error("usage: --env-file <f> --out <f.json> [--token-file <f> --dispute <uuid> ...] [--parity <uuid> ...]");
   process.exit(1);
@@ -82,10 +83,42 @@ function parse(raw: string): Narrative | null {
 
 const sb = getServiceClient();
 
+async function liveListingSection(shopId: string, orderGid: string) {
+  const crypto = await import("node:crypto");
+  const { PRODUCT_EVIDENCE_QUERY } = await import("../../lib/shopify/queries/productEvidence");
+  const { data: shop } = await sb.from("shops").select("shop_domain").eq("id", shopId).single();
+  const { data: sess } = await sb.from("shop_sessions").select("access_token_encrypted").eq("shop_id", shopId)
+    .eq("session_type", "offline").is("user_id", null).order("created_at", { ascending: false }).limit(1).single();
+  const [v, iv, tag, c] = String(sess!.access_token_encrypted).split(":");
+  const key = process.env[`TOKEN_ENCRYPTION_KEY_V${v.replace(/^v/, "")}`] || process.env.TOKEN_ENCRYPTION_KEY!;
+  const dec = crypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "hex"), Buffer.from(iv, "hex"));
+  dec.setAuthTag(Buffer.from(tag, "hex"));
+  const token = dec.update(Buffer.from(c, "hex"), undefined, "utf8") + dec.final("utf8");
+  const r = await fetch(`https://${shop!.shop_domain}/admin/api/${process.env.SHOPIFY_API_VERSION || "2026-01"}/graphql.json`, {
+    method: "POST",
+    headers: { "X-Shopify-Access-Token": token, "content-type": "application/json" },
+    body: JSON.stringify({ query: PRODUCT_EVIDENCE_QUERY, variables: { id: orderGid, after: null } }),
+  });
+  const j = (await r.json()) as { data?: { order?: { lineItems?: { nodes: Array<Record<string, any>> } } } };
+  const listings = (j.data?.order?.lineItems?.nodes ?? [])
+    .filter((li) => li.product && (li.product.title || li.product.description))
+    .map((li) => ({
+      snapshotId: "canary", lineItemGid: li.id, contentHash: "canary", productGid: li.product.id,
+      title: li.product.title, variantTitle: li.variant?.title ?? null,
+      variantOptions: li.variant?.selectedOptions ?? [],
+      excerpt: li.product.description ? String(li.product.description).slice(0, 600) : null,
+      sourceUrl: li.product.onlineStoreUrl ?? null, fetchedAt: new Date().toISOString(), imagePaths: [],
+      lineTotal: Number(li.originalTotalSet?.shopMoney?.amount) || null,
+    }))
+    .sort((a, b) => (b.lineTotal ?? 0) - (a.lineTotal ?? 0));
+  if (!listings.length) return null;
+  return { type: "other", label: "Product listings", source: "shopify_product", data: { listings, outcomes: [] }, fieldsProvided: ["product_description"] };
+}
+
 async function load(disputeId: string) {
   const { data: d } = await sb
     .from("disputes")
-    .select("id, order_name, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle")
+    .select("id, shop_id, order_gid, order_name, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle")
     .eq("id", disputeId)
     .single();
   const { data: pkg } = await sb
@@ -126,9 +159,15 @@ const results: unknown[] = [];
 for (const disputeId of disputeIds) {
   const { d, pkg, pack, items, checklist, claimRow } = await load(disputeId);
   const packJson = (pack.pack_json ?? {}) as Record<string, unknown>;
-  const sections = (packJson.sections as Array<{
+  const sections = [...((packJson.sections as Array<{
     type: string; label: string; source: string; data: Record<string, unknown>; fieldsProvided: string[];
-  }>) ?? [];
+  }>) ?? [])];
+  // --with-listing: what the product-listing collector (not-as-described
+  // PR 3) would add — read live from Shopify, READ-ONLY (nothing stored).
+  if (withListing && d.order_gid) {
+    const section = await liveListingSection(d.shop_id as string, d.order_gid as string);
+    if (section) sections.push(section);
+  }
   const family = (packJson.payment_context as { family?: string } | undefined)?.family ?? null;
   const analysis = (claimRow?.analysis ?? null) as Parameters<typeof scopeFactsToBankClaim>[1] & { reason?: string } | null;
   const claimReason = effectiveReasonForClaim(d.reason, analysis as never);
