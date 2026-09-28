@@ -57,6 +57,12 @@ vi.mock("@/lib/defence/narrativeWriter", () => ({
   // Read by the worker's defensive guard re-check.
   CURRENT_PROMPT_VERSION: 13,
 }));
+// Real by default; one test turns it into a passthrough so the PREFLIGHT gate
+// can still be pinned against a narrative that reaches it unsafe.
+vi.mock("@/lib/defence/stripAddressDeliveryClaims", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/defence/stripAddressDeliveryClaims")>();
+  return { stripAddressDeliveryClaims: vi.fn(actual.stripAddressDeliveryClaims) };
+});
 vi.mock("@/lib/defence/factClassifier", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, classifyFacts: vi.fn() };
@@ -67,6 +73,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { generateNarrative } from "@/lib/defence/narrativeWriter";
 import { classifyFacts } from "@/lib/defence/factClassifier";
+import { stripAddressDeliveryClaims } from "@/lib/defence/stripAddressDeliveryClaims";
 import { handleBuildDefencePackage } from "../buildDefencePackageJob";
 import type { ClaimedJob } from "../../claimJobs";
 import {
@@ -402,7 +409,27 @@ describe("buildDefencePackageJob — nothing is finalized before the preflight p
     expect(disputeUpdates.some((u) => u.attention_reason !== undefined)).toBe(false);
   });
 
+  it("an address claim the model left in is REMOVED by code and the package files", async () => {
+    mockNarrative.mockResolvedValue({
+      narrative: UNSAFE_NARRATIVE,
+      modelUsed: "test-model",
+      promptFamily: "test-family",
+      promptVersion: 10,
+      tokens: { prompt: 1, completion: 1, cached: 0 },
+      durationMs: 1,
+    } as never);
+    mockSb();
+
+    const result = await handleBuildDefencePackage(job());
+
+    expect(result).toEqual({ ok: true });
+    expect(auditsOfType("defence_package_address_claim_removed")).toHaveLength(1);
+    expect(auditsOfType("defence_package_blocked_unsafe_claim")).toHaveLength(0);
+  });
+
   it("an UNSAFE narrative leaves a review-required draft and does not fail the build", async () => {
+    // Pins the preflight on its own: bypass the strip so the unsafe prose reaches it.
+    vi.mocked(stripAddressDeliveryClaims).mockImplementationOnce((n) => ({ narrative: n, removed: [] }));
     mockNarrative.mockResolvedValue({
       narrative: UNSAFE_NARRATIVE,
       modelUsed: "test-model",
