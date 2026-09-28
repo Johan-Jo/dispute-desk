@@ -93,12 +93,12 @@ do not claim delivery.`,
 
   not_as_described: `FOR THIS CLAIM (not as described) the question is whether what was supplied
 matched what was promised, and whether the complaint was handled. Lead with
-the listing as it appeared at the time of purchase, the variant the buyer
-selected, and any documented resolution offered — repair, replacement, return
-or refund — together with the buyer's communications.
-DELIVERY IS NOT CONFORMITY. The buyer does not dispute that the parcel
-arrived; they dispute its contents. A delivery scan may appear as chronology
-and must never be the principal rebuttal.`,
+what the buyer ordered and the variant they selected, the merchant's listing
+for it (as retrieved for this response), and any documented resolution
+offered — repair, replacement, return or refund — together with the buyer's
+communications.
+ARRIVAL IS NOT IN DISPUTE. The buyer does not dispute that the parcel
+arrived; they dispute its contents. Leave the parcel's journey out entirely.`,
 
   refund_not_processed: `FOR THIS CLAIM (refund not processed) the question is whether a promised
 credit actually reached the buyer. Lead with the refund record: amount,

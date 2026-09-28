@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildChronologyEvents,
+  familyOmitsArrival,
   classifyChronologyEvent,
   formatChronologyTimestamp,
   normalizeChronologyText,
@@ -81,6 +82,27 @@ describe("buildChronologyEvents — rich timeline normalization + bank hygiene",
     expect(events.map((e) => e.text)).toEqual([
       "A 628.00 SEK payment was processed on Klarna.",
     ]);
+  });
+});
+
+describe("buildChronologyEvents — arrival left out where it is not in dispute", () => {
+  const timelineEvents = [
+    { at: "2026-09-01T10:00:00Z", text: "Robert Wilson placed this order on Online Store (checkout #44331777523905)." },
+    { at: "2026-09-02T09:00:00Z", text: "Deposco Fulfillment marked 2 items as fulfilled from Verde Fulfillment - Deposco." },
+    { at: "2026-09-02T09:05:00Z", text: "Deposco Fulfillment sent a shipping confirmation email to Robert Wilson (a@b.com)." },
+    { at: "2026-09-05T12:00:00Z", text: "Carrier confirmed delivery of the shipment to the recipient." },
+    { at: "2026-09-20T08:00:00Z", text: "The customer opened a chargeback totaling $125.89." },
+  ];
+
+  it("drops fulfilment, shipping and delivery events for the not-as-described family", () => {
+    const texts = buildChronologyEvents({ timelineEvents, omitArrivalEvents: familyOmitsArrival("product_not_as_described") }).map((e) => e.text);
+    expect(texts).toHaveLength(2);
+    expect(texts.join(" ")).not.toMatch(/fulfilled|shipping confirmation|delivery|delivered/i);
+  });
+
+  it("keeps them for every other family", () => {
+    expect(familyOmitsArrival("item_not_received")).toBe(false);
+    expect(buildChronologyEvents({ timelineEvents, omitArrivalEvents: familyOmitsArrival("item_not_received") })).toHaveLength(5);
   });
 });
 

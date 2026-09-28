@@ -26,7 +26,7 @@ import { Document, Font, Link, Page, Text, View } from "@react-pdf/renderer";
 import { COLORS, styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
-import { buildChronologyEvents, type ChronologyEvent } from "../chronology";
+import { buildChronologyEvents, familyOmitsArrival, type ChronologyEvent } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
 import { buildLineItems, type LineItem } from "../render/lineItems";
 import { formatMoneyDisplay, reasonCodeForNetwork } from "../render/formatting";
@@ -600,7 +600,11 @@ export function DefencePackageDocument({
   const issuerSafe = data.issuerSafeSupportingIndex === true;
   const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
   const chronology = buildChronologyEvents(
-    { ...meta, orderTotalDisplay: lineItemsTotal(lineItems)?.amount ?? null },
+    {
+      ...meta,
+      orderTotalDisplay: lineItemsTotal(lineItems)?.amount ?? null,
+      omitArrivalEvents: familyOmitsArrival(meta.reasonCodeFamilyKey),
+    },
     approvedFacts,
   );
   const shipments = shipmentsOf(approvedFacts);
