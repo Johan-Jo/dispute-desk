@@ -817,6 +817,48 @@ function deriveInternalOnlySignals(
 
 /* ── Hook ── */
 
+/**
+ * What the Evidence tab says about the collected product listing
+ * (not-as-described PR 3c). Reads the collector's section
+ * (source `shopify_product`): the listing it collected, or why none was.
+ * Merchant-facing only — the limitation ("as it is today") never reaches
+ * the bank (plan C1).
+ */
+const LISTING_OUTCOME_PRIORITY = ["inaccessible", "failed", "deleted", "absent", "custom_item"] as const;
+const LISTING_OUTCOME_KEY: Record<(typeof LISTING_OUTCOME_PRIORITY)[number], string> = {
+  inaccessible: "evidence.productListing.inaccessible",
+  failed: "evidence.productListing.failed",
+  deleted: "evidence.productListing.deleted",
+  absent: "evidence.productListing.absent",
+  custom_item: "evidence.productListing.customItem",
+};
+
+export function productListingNote(
+  items: ReadonlyArray<{ source?: string | null; payload?: Record<string, unknown> | null }>,
+  t: Translate,
+): { present: string | null; missing: string | null; needsAccess: boolean } {
+  const item = items.find((i) => i.source === "shopify_product");
+  const payload = (item?.payload ?? {}) as { listings?: unknown; outcomes?: unknown };
+  const listings = Array.isArray(payload.listings) ? (payload.listings as Array<Record<string, unknown>>) : [];
+  const outcomes = Array.isArray(payload.outcomes)
+    ? (payload.outcomes as Array<{ outcome?: unknown }>).map((o) => o.outcome)
+    : [];
+  const first = listings[0];
+  const present =
+    first && typeof first.title === "string"
+      ? `${t("evidence.productListing.present", {
+          date: typeof first.fetchedAt === "string" ? first.fetchedAt.slice(0, 10) : "",
+          title: first.title,
+        })} ${t("evidence.productListing.currentListingOnly")}`
+      : null;
+  const worst = LISTING_OUTCOME_PRIORITY.find((o) => outcomes.includes(o));
+  return {
+    present,
+    missing: !present && worst ? t(LISTING_OUTCOME_KEY[worst]) : null,
+    needsAccess: worst === "inaccessible",
+  };
+}
+
 export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewModel {
   const { data, derived, clientState } = workspace;
   const tInternal = useTranslations("disputes");
@@ -935,6 +977,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // never rendered, and would have read `not_included` for evidence that does
   // reach the bank inside the defence PDF.
   const usedInDefense: EvidenceRowViewModel[] = [];
+  const listingNote = productListingNote(data.pack?.evidenceItems ?? [], tInternal as Translate);
 
   function buildRow(
     idPrefix: string,
@@ -948,7 +991,8 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
       field,
       title: label,
       strength,
-      whyThisMatters: whyThisMatters(field, label),
+      whyThisMatters:
+        (field === "product_description" ? listingNote.present : null) ?? whyThisMatters(field, label),
       source: inferSource(field),
     };
   }
@@ -1009,14 +1053,20 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // lib/automation/completeness.ts so all three tabs agree.
   const missingOrWeak: MissingItemViewModel[] = derived.missingItems
     .filter((m) => !MERCHANT_UI_HIDDEN_FIELDS.has(m.field))
-    .map((m) => ({
-      id: `missing:${m.field}`,
-      field: m.field,
-      title: m.label,
-      whyItMatters: m.impact,
-      required: m.priority === "critical",
-      actionInstruction: m.ctaLabel || null,
-    }));
+    .map((m) => {
+      const isListing = m.field === "product_description";
+      return {
+        id: `missing:${m.field}`,
+        field: m.field,
+        title: m.label,
+        whyItMatters: (isListing ? listingNote.missing : null) ?? m.impact,
+        required: m.priority === "critical",
+        actionInstruction:
+          isListing && listingNote.needsAccess
+            ? tInternal("evidence.productListing.reconnectForProducts")
+            : m.ctaLabel || null,
+      };
+    });
 
   // ── Internal-only signals ──
   // Minimal classifier reading existing payloads. Surfaces AVS/CVV
