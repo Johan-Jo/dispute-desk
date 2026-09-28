@@ -18,6 +18,11 @@
  *   - dispute not eligible for auto-action    → skip
  *   - otherwise                               → enqueue `build_pack`
  *
+ * Second pass (2026-09-28): every open, unfiled dispute with a live
+ * deadline whose latest defence package failed on an infrastructure
+ * error (`llm_error`, `daily_cap_reached`) gets one bounded retry a day —
+ * see `lib/defence/failedPackageSelfHeal.ts`.
+ *
  * The 6h floor is a safety against churn: if the merchant already
  * regenerated this morning, we don't double up.
  *
@@ -41,6 +46,10 @@ import {
   deadlineWindow,
   REBUILD_WINDOW_MARGIN_MS,
 } from "@/lib/cron/deadlineWindow";
+import {
+  runFailedPackageSelfHeal,
+  type SelfHealSummary,
+} from "@/lib/defence/failedPackageSelfHeal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,6 +68,8 @@ interface Summary {
   skippedAlreadySaved: number;
   skippedNoPack: number;
   errors: Array<{ disputeId: string; error: string }>;
+  /** Second pass: packages that failed on an infrastructure error. */
+  selfHeal?: SelfHealSummary | { error: string };
 }
 
 export async function GET(req: NextRequest) {
@@ -121,13 +132,11 @@ export async function GET(req: NextRequest) {
   }
 
   summary.scanned = disputes?.length ?? 0;
-  if (!disputes?.length) {
-    return NextResponse.json(summary);
-  }
+  const rebuiltDisputeIds = new Set<string>();
 
   const freshnessCutoffISO = new Date(now.getTime() - FRESHNESS_FLOOR_MS).toISOString();
 
-  for (const d of disputes) {
+  for (const d of disputes ?? []) {
     try {
       // Find the latest pack for this dispute (matches the submit cron's
       // lookup so the same artifact gets refreshed).
@@ -193,6 +202,7 @@ export async function GET(req: NextRequest) {
       }
 
       summary.enqueuedRebuild += 1;
+      rebuiltDisputeIds.add(d.id as string);
       await logAuditEvent({
         shopId: d.shop_id,
         disputeId: d.id,
@@ -211,6 +221,18 @@ export async function GET(req: NextRequest) {
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  }
+
+  /* SECOND PASS — a package that failed on an infrastructure error
+   * (`llm_error`, `daily_cap_reached`) gets one retry a day, bounded, on any
+   * open dispute with a live deadline, not just the ones due today. Without
+   * it such a case waits for its due day or a human (Cay #14784, 2026-09-24
+   * → 09-28). Disputes rebuilt above are excluded: their `build_pack` chains
+   * the same enqueue. See `lib/defence/failedPackageSelfHeal.ts`. */
+  try {
+    summary.selfHeal = await runFailedPackageSelfHeal(sb, now, rebuiltDisputeIds);
+  } catch (err) {
+    summary.selfHeal = { error: err instanceof Error ? err.message : String(err) };
   }
 
   return NextResponse.json(summary);
