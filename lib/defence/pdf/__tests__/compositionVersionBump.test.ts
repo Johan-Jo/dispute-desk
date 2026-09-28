@@ -28,7 +28,7 @@ import { COMPOSITION_VERSION, THESIS_TEMPLATES } from "@/lib/defence/pdf/thesisT
 
 describe("COMPOSITION_VERSION", () => {
   it("is the value the guard and the persisted rows agree on", () => {
-    expect(COMPOSITION_VERSION).toBe(5);
+    expect(COMPOSITION_VERSION).toBe(6);
   });
 
   it("is a positive integer — 0 would be indistinguishable from unset", () => {

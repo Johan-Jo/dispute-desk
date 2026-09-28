@@ -31,7 +31,7 @@ describe("renderThesis", () => {
         approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
       expect(text).toContain("AVS and CVV match");
-      expect(text).toContain("consistent with a cardholder-authorized transaction");
+      expect(text).toContain("These records support a cardholder-authorized transaction");
     });
 
     it("renders with 3-D Secure when threeDS=true", () => {
@@ -95,8 +95,8 @@ describe("renderThesis", () => {
         packageMode: "narrow",
         approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
-      // narrow-mode template uses "available records" phrasing
-      expect(text).toContain("available records");
+      // narrow-mode template states the records without a qualifier (rule 10)
+      expect(text).toContain("The records on this chargeback are set out below");
     });
 
     it("falls back to (family, any) when (family, mode) is absent", () => {
