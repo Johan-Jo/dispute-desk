@@ -634,11 +634,37 @@ export function calculateCaseStrength(
   const demoteToCorroboration = (signalId: SignalId): boolean =>
     family === "fraud" && signalId === "account_history";
 
+  /* Qualified final delivery (non-receipt plan §6.1.1–§6.1.3, P1b). On the
+   * item-not-received family ONLY, a carrier-confirmed delivery
+   * (`delivered_confirmed`, moderate) whose collector marked it a qualified
+   * final delivery — our own carrier lookup, a dated terminal event, the
+   * disputed order's parcel, the qualifying shipments covering every ordered
+   * unit, no contradiction (`resolveFinalDeliveryVerified`) — is rated STRONG.
+   * Applied at row-build time like the fraud demotion above, so the counts,
+   * the contribution list and the strength reason agree. The categorizer is
+   * untouched: categories stay family-independent, and no other family's
+   * rollup (fraud in particular) can be lifted by it. */
+  const qfdPayload =
+    family === "delivery"
+      ? (payloadFor(payloadSource, "delivery_proof") ??
+        payloadFor(payloadSource, "shipping_tracking"))
+      : undefined;
+  const qualifiedFinalDelivery =
+    qfdPayload?.finalDeliveryVerified === true &&
+    qfdPayload?.proofType === "delivered_confirmed" &&
+    qfdPayload?.deliveryCoverage === "complete";
+  const elevateToFinalDelivery = (signalId: SignalId, category: EvidenceCategory): boolean =>
+    qualifiedFinalDelivery && signalId === "delivery" && category === "moderate";
+  let deliveryElevatedByQfd = false;
+
   const strongRows: ContributionRow[] = [];
   const moderateRows: ContributionRow[] = [];
   for (const [signalId, acc] of bestBySignalDetailed) {
-    const effective =
-      acc.category === "strong" && demoteToCorroboration(signalId)
+    const elevated = elevateToFinalDelivery(signalId, acc.category);
+    if (elevated) deliveryElevatedByQfd = true;
+    const effective = elevated
+      ? "strong"
+      : acc.category === "strong" && demoteToCorroboration(signalId)
         ? "moderate"
         : acc.category;
     if (effective === "strong") {
@@ -777,7 +803,11 @@ export function calculateCaseStrength(
      * (complete | partial | none | unknown). Only `complete` lets a signal
      * lift the case to strong: a signature on a parcel carrying part of the
      * order does not answer the claim for the rest. Two strong signals still
-     * reach strong, as before. */
+     * reach strong, as before.
+     *
+     * P1b (§6.1.1): a qualified final delivery arrives here already rated
+     * strong (row-build elevation above), so it takes the
+     * `hasStrongDelivery && coverageComplete` rung without a signature. */
     const hasStrongDelivery = strongSignalIds.has("delivery");
     const hasConfirmedDelivery = moderateSignalIds.has("delivery");
     const deliveryPayload =
@@ -790,11 +820,17 @@ export function calculateCaseStrength(
     else if (hasStrongDelivery || hasConfirmedDelivery) overall = "moderate";
     else overall = "weak";
 
-    // Today's rollup over today's grades (§6.1.4 step 2). No signal grade
-    // changed in this revision, so the counts above ARE today's grades.
-    if (strongCount >= 2) priorDeliveryOverall = "strong";
-    else if (strongCount === 1 && moderateCount >= 1) priorDeliveryOverall = "moderate";
-    else if (hasStrongDelivery) priorDeliveryOverall = "moderate";
+    // The rating before rev 5 (§6.1.4): FIRST re-grade the signals under the
+    // old mapping — a qualified final delivery was a plain carrier-confirmed
+    // delivery, moderate — THEN run the old rollup. Running the old rollup
+    // over the new grades would let a QFD plus one other strong signal read
+    // as "already strong" and bypass the timing hold.
+    const priorStrong = strongCount - (deliveryElevatedByQfd ? 1 : 0);
+    const priorModerate = moderateCount + (deliveryElevatedByQfd ? 1 : 0);
+    const priorStrongDelivery = hasStrongDelivery && !deliveryElevatedByQfd;
+    if (priorStrong >= 2) priorDeliveryOverall = "strong";
+    else if (priorStrong === 1 && priorModerate >= 1) priorDeliveryOverall = "moderate";
+    else if (priorStrongDelivery) priorDeliveryOverall = "moderate";
     else priorDeliveryOverall = "weak";
   } else if (family === "refund") {
     // Credit-not-processed family ("you owed me a refund and didn't issue

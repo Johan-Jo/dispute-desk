@@ -3784,6 +3784,48 @@ no longer recommends billing/IP signals, which are on the module's `avoid` list.
 a merchant can actually add: a carrier delivery photo or signature, or a customer message
 acknowledging receipt.
 
+### Non-receipt P1b — qualified final delivery (2026-09-28)
+
+Plan §6.1.1–§6.1.3. A carrier-recorded final delivery or completed collection can make an
+item-not-received case `strong` without a signature, when all five conditions hold
+(`resolveFinalDeliveryVerified`, `lib/packs/sources/fulfillmentSource.ts`):
+
+1. **Corroborated carrier provenance** — the terminal event came from our own carrier lookup
+   (`carrier_api_*`; DHL is the only adapter today). A `shopify_native` event never qualifies on
+   its own: carrier-style text on a Shopify fulfillment event can be written by any app. A
+   tracking-app source (`tracking_app_*`) does not qualify either until its carrier-origin
+   contract is verified (plan §11 Q-8).
+2. **An event timestamp** from the carrier event, never a read time.
+3. **Association** — a shipment on the disputed order whose tracking number passes
+   `isParcelIdentifier`.
+4. **Coverage** — the qualifying shipments alone carry every ordered unit. No line items →
+   never.
+5. **No contradiction** — the reconciled state agrees with the carrier, no shipment has a
+   source conflict, and no shipment on the order was returned.
+
+Availability for collection (`DeliveredToPickup`) is never a final delivery. When all five
+hold, the shipping section's payload carries `finalDeliveryVerified: true` (written only when
+true, so no other pack's payload or hash moves). The rollup elevates the delivery row from
+moderate to strong **for the delivery family only**, at row-build time (the same pattern as the
+fraud `account_history` demotion), so the counts, the contribution list and the strength
+reason agree. `categorizeEvidenceField` is unchanged, so no other family — fraud in
+particular — can be lifted by it. `overallBeforeRev5` re-grades the QFD back to moderate
+before running the old rollup, so a QFD plus one other strong signal still reads as newly
+strong and the P1a timing hold (`strength_upgraded_timing_held`) keeps the filing date until
+§11 Q-7.
+
+**Deliberate deviation from the plan:** a payload flag on `delivered_confirmed`, not a new
+`DeliveryProofType` member `delivered_final_verified`. `delivered_confirmed` is compared by
+equality at 60+ sites (letter, PDF, validator, presentation); a new member would silently miss
+each of them. A QFD licenses nothing new in the letter — the carrier's record is cited exactly
+as before — so only the rating needed to change.
+
+`SCORING_POLICY_VERSION` is **not** bumped: no existing snapshot carries the key, so the same
+inputs produce the same `overall`; a pack that gains the key has changed payloads, which moves
+its assessment input hash. Cay #14784 (Case B, PostNord, `shopify_native`, no adapter) stays
+`moderate` — a source-verification limit, not a finding about the parcel. Regression:
+`lib/argument/__tests__/qualifiedFinalDelivery.test.ts`, `fulfillmentSourceCarrier.test.ts`.
+
 ### Negative-polarity claim guards (2026-08-20)
 
 `ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).
