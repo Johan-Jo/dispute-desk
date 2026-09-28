@@ -63,6 +63,13 @@ function signalLabelKey(signalId: SignalId): string {
   return `disputes.signalLabel.${signalId}`;
 }
 
+/** Delivery-presentation tiers that mean "shipped, carrier has not recorded
+ *  delivery": the carrier's in-transit state and the unconfirmed tier. */
+const IN_TRANSIT_STATE_LABEL_KEYS: ReadonlySet<string> = new Set([
+  buildDeliveryPresentation({ proofType: "in_transit" }).labelKey,
+  buildDeliveryPresentation({ proofType: "delivered_unverified" }).labelKey,
+]);
+
 /* ── strengthReason token composition ──
  *
  * Lib emits structured `I18nToken`s only — never English. The hero
@@ -199,6 +206,19 @@ function composeStrengthReasonI18n(args: {
   }
 
   // overall === "weak"
+  // Item-not-received: the parcel's state IS the answer to the claim, so the
+  // in-transit sentence wins over an unrelated moderate/strong fact (D4).
+  // Pre-fix it was reachable only at strong=0 && moderate=0, so e.g. a
+  // consistent device session replaced it with "Device session provides
+  // partial support".
+  if (deliveryInTransit && family === "delivery") {
+    return {
+      key: "disputes.strengthReason.weak.deliveryInTransit",
+      params: {
+        decisive: { type: "i18n-key", key: `disputes.decisiveFamilies.${family}` },
+      },
+    };
+  }
   if (strong.length === 1 && moderate.length === 0) {
     return {
       key: "disputes.strengthReason.weak.strongAlone",
@@ -539,10 +559,14 @@ export function calculateCaseStrength(
       // Detect the shipped-but-in-transit delivery state (tracking exists,
       // carrier hasn't confirmed delivery) so the strength reason can be
       // specific rather than the generic "no delivery evidence".
+      // Keyed on the shipment's STATE (non-receipt plan §6.2, D4): the
+      // carrier's `in_transit` as well as the unconfirmed tier. Pre-fix only
+      // `delivered_unverified` matched, so once P0(b) gave in-transit
+      // parcels their own proofType the honest sentence stopped firing.
       if (spec.signalId === "delivery") {
         const dp = buildDeliveryPresentation(payload);
         if (
-          dp.labelKey === "disputes.deliveryProof.shippedUnconfirmed" &&
+          IN_TRANSIT_STATE_LABEL_KEYS.has(dp.labelKey) &&
           dp.trackingLinks.some((t) => t.number || t.url)
         ) {
           deliveryInTransit = true;
@@ -675,6 +699,9 @@ export function calculateCaseStrength(
   }
   const strongCount = strongRows.length;
   const moderateCount = moderateRows.length;
+  // A delivery row that scores (carrier-confirmed or signed) means the
+  // parcel is not in transit, whatever a sibling row still says.
+  if (bestBySignalDetailed.has("delivery")) deliveryInTransit = false;
 
   // Supporting count — informational; not used by the scorer.
   let supportingCount = 0;
