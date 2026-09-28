@@ -581,7 +581,7 @@ function ProductListingExhibits({ exhibits }: { exhibits: ProductListingExhibit[
           {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
           {x.sourceUrl ? (
             <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
-              {x.sourceUrl}
+              {x.sourceUrlDisplay ?? x.sourceUrl}
             </Link>
           ) : null}
         </View>

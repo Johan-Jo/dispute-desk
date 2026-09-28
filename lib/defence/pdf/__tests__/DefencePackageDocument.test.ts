@@ -381,6 +381,7 @@ describe("product-listing exhibit (not-as-described PR 3b)", () => {
               variantLine: "Colour: Stone grey",
               excerpt: "40 × 40 cm, stone grey, 100% linen.",
               sourceUrl: "https://shop.example/products/cover",
+              sourceUrlDisplay: "shop.example/products/cover",
               retrievedOn: "2026-09-28",
               images: [PNG],
             },
