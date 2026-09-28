@@ -62,9 +62,13 @@ for (const d of rows ?? []) {
   const mode = normalizeMode(res.action.mode);
   counts[mode] += 1;
   console.log(
-    [d.order_name, d.id, d.reason, `due ${String(d.due_at).slice(0, 10)}`, `ns=${d.normalized_status}`, `review_state=${d.review_state ?? "-"}`, `mode=${mode}`].join("  "),
+    [d.order_name, d.id, d.reason, `due ${String(d.due_at).slice(0, 10)}`, `ns=${d.normalized_status}`, `review_state=${d.review_state ?? "-"}`, `mode=${mode}`, mode === "auto" && d.normalized_status === "needs_review" && d.review_state !== "conceded" ? "WOULD_CLEAR" : ""].join("  "),
   );
-  if (apply && mode === "auto") {
+  // Only rows the flag actually holds back: shown as needs_review, and not a
+  // merchant's own concession. A row already past review (e.g. sent through
+  // Shopify) keeps its status — recomputing it here could move it backwards.
+  const heldByFlag = d.normalized_status === "needs_review" && d.review_state !== "conceded";
+  if (apply && mode === "auto" && heldByFlag) {
     const { error: upErr } = await sb
       .from("disputes")
       .update({ needs_review: false, updated_at: new Date().toISOString() })
