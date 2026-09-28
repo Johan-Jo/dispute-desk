@@ -29,6 +29,7 @@ const out = arg("out");
 const disputeIds = args("dispute");
 const parityIds = args("parity");
 const withListing = process.argv.includes("--with-listing");
+const pdfDir = arg("pdf"); // --pdf <dir>: also render the full letter PDF (never stored or sent)
 if (!envFile || !out || (disputeIds.length > 0 && !tokenFile)) {
   console.error("usage: --env-file <f> --out <f.json> [--token-file <f> --dispute <uuid> ...] [--parity <uuid> ...]");
   process.exit(1);
@@ -86,6 +87,7 @@ const sb = getServiceClient();
 async function liveListingSection(shopId: string, orderGid: string) {
   const crypto = await import("node:crypto");
   const { PRODUCT_EVIDENCE_QUERY } = await import("../../lib/shopify/queries/productEvidence");
+  const { excerptOf } = await import("../../lib/packs/productListing/collectProductListings");
   const { data: shop } = await sb.from("shops").select("shop_domain").eq("id", shopId).single();
   const { data: sess } = await sb.from("shop_sessions").select("access_token_encrypted").eq("shop_id", shopId)
     .eq("session_type", "offline").is("user_id", null).order("created_at", { ascending: false }).limit(1).single();
@@ -106,8 +108,9 @@ async function liveListingSection(shopId: string, orderGid: string) {
       snapshotId: "canary", lineItemGid: li.id, contentHash: "canary", productGid: li.product.id,
       title: li.product.title, variantTitle: li.variant?.title ?? null,
       variantOptions: li.variant?.selectedOptions ?? [],
-      excerpt: li.product.description ? String(li.product.description).slice(0, 600) : null,
+      excerpt: li.product.description ? excerptOf(String(li.product.description), 600) : null,
       sourceUrl: li.product.onlineStoreUrl ?? null, fetchedAt: new Date().toISOString(), imagePaths: [],
+      imageUrls: [li.variant?.image?.url, ...((li.product.media?.nodes ?? []).map((m: any) => m.image?.url))].filter(Boolean).slice(0, 3),
       lineTotal: Number(li.originalTotalSet?.shopMoney?.amount) || null,
     }))
     .sort((a, b) => (b.lineTotal ?? 0) - (a.lineTotal ?? 0));
@@ -118,7 +121,7 @@ async function liveListingSection(shopId: string, orderGid: string) {
 async function load(disputeId: string) {
   const { data: d } = await sb
     .from("disputes")
-    .select("id, shop_id, order_gid, order_name, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle")
+    .select("id, shop_id, order_gid, order_name, dispute_gid, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle")
     .eq("id", disputeId)
     .single();
   const { data: pkg } = await sb
@@ -277,14 +280,57 @@ for (const disputeId of disputeIds) {
     const composedCheck = narrative
       ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
       : null;
-    return { res, body, raw, narrative, narrativeCheck, composedCheck };
+    return { res, body, raw, narrative, narrativeCheck, composedCheck, blocks };
   };
   const first = await attempt(null);
   const firstErrors = first.narrativeCheck && !first.narrativeCheck.ok
     ? first.narrativeCheck.errors.map((e: { section?: string; message?: string }) => `${e.section ?? "narrative"}: ${e.message ?? "validation failed"}`)
     : null;
   const final = firstErrors ? await attempt(firstErrors) : first;
-  const { res, body, raw, narrative, narrativeCheck, composedCheck } = final;
+  const { res, body, raw, narrative, narrativeCheck, composedCheck, blocks } = final;
+  if (pdfDir && narrative && narrativeCheck?.ok && composedCheck?.ok) {
+    const { renderDefencePdf } = await import("../../lib/defence/renderDefencePdf");
+    const { deriveOrderContext } = await import("../../lib/defence/orderContext");
+    const { printable, displayUrl, EXHIBIT_LIMITS } = await import("../../lib/defence/productListingExhibit");
+    const { evidenceImageUrl } = await import("../../lib/packs/productListing/collectProductListings");
+    const oc = deriveOrderContext(sections as never);
+    const listingSection = sections.find((x) => x.source === "shopify_product");
+    let budget = EXHIBIT_LIMITS.imagesPerPdf;
+    const exhibits = [];
+    for (const l of ((listingSection?.data?.listings ?? []) as Array<Record<string, any>>)) {
+      const images: string[] = [];
+      for (const u of (l.imageUrls ?? []) as string[]) {
+        if (budget <= 0) break;
+        const r = await fetch(evidenceImageUrl(u));
+        if (!r.ok) continue;
+        const b = new Uint8Array(await r.arrayBuffer());
+        const mime = b[0] === 0xff ? "image/jpeg" : b[0] === 0x89 ? "image/png" : null;
+        if (!mime) continue;
+        images.push(`data:${mime};base64,${Buffer.from(b).toString("base64")}`);
+        budget--;
+      }
+      exhibits.push({
+        title: printable(l.title), variantLine: (l.variantOptions ?? []).filter((o: any) => !/^title$/i.test(o.name)).map((o: any) => `${o.name}: ${o.value}`).join(" · ") || null,
+        excerpt: printable(l.excerpt), sourceUrl: l.sourceUrl ?? null, sourceUrlDisplay: displayUrl(l.sourceUrl ?? null),
+        retrievedOn: String(l.fetchedAt).slice(0, 10), images,
+      });
+    }
+    const out = await renderDefencePdf({
+      meta: {
+        packageId: "demo", disputeGid: d.dispute_gid ?? null, orderName: oc.orderName ?? d.order_name, reasonCode: d.network_reason_code,
+        reasonCodeDisplay: module.displayName, claimType: module.claimType, shopName: "Mein Maison", merchantName: "Mein Maison",
+        amountDisplay: `${d.currency_code ?? ""} ${d.amount}`.trim(), cardNetwork: oc.cardNetwork, cardLast4: oc.cardLast4,
+        paymentGateway: oc.paymentGateway, financialStatus: oc.financialStatus, fulfillmentStatus: oc.fulfillmentStatus,
+        cardholderName: oc.cardholderName, transactionDate: oc.transactionDate, timelineEvents: oc.timelineEvents,
+        lineItemsFromContext: oc.lineItems, productListingExhibits: exhibits, generatedAt: new Date().toISOString(),
+        version: 0, packageMode: classification.packageMode, promptVersion: 0, modelUsed: "claude-sonnet-4-6",
+        reasonCodeModuleKey: module.key, reasonCodeFamilyKey: fam.key,
+      } as never,
+      composedBlocks: blocks as never, approvedFacts: facts as never, manualEvidence: [],
+    });
+    fs.writeFileSync(`${pdfDir}/demo-${String(d.order_name).replace("#", "")}.pdf`, out.buffer);
+    console.log(`pdf written (${out.buffer.length} bytes)`);
+  }
   const citedRecordFacts = narrative
     ? SECTIONS.flatMap((k) => (narrative as never as Record<string, { usedFactIds: string[] }>)[k].usedFactIds)
         .map((id) => facts.find((f) => f.id === id)?.category)

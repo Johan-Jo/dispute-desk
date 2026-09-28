@@ -419,6 +419,10 @@ Rules:
     cardholder says (a carrier-confirmed delivery contradicts non-receipt;
     a parcel in transit does not). Never state what the merchant's terms
     say or require.
+10a. The conclusion states what the records establish. It does NOT ask for a
+    ruling: the document prints the merchant's request directly after it, so a
+    request in your text ("respectfully requests that the dispute be resolved
+    in its favour") would appear twice.
 11. Return valid JSON only. No markdown. No code fences. No prose outside JSON.
 12. Schema of the JSON output:
 
