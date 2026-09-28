@@ -94,10 +94,9 @@ describe("buildChronologyEvents — arrival left out where it is not in dispute"
     { at: "2026-09-20T08:00:00Z", text: "The customer opened a chargeback totaling $125.89." },
   ];
 
-  it("drops fulfilment, shipping and delivery events for the not-as-described family", () => {
-    const texts = buildChronologyEvents({ timelineEvents, omitArrivalEvents: familyOmitsArrival("product_not_as_described") }).map((e) => e.text);
-    expect(texts).toHaveLength(2);
-    expect(texts.join(" ")).not.toMatch(/fulfilled|shipping confirmation|delivery|delivered/i);
+  it("keeps the full sequence for not-as-described too (maintainer, 2026-09-28 evening)", () => {
+    expect(familyOmitsArrival("product_not_as_described")).toBe(false);
+    expect(buildChronologyEvents({ timelineEvents, omitArrivalEvents: familyOmitsArrival("product_not_as_described") })).toHaveLength(5);
   });
 
   it("keeps them for every other family", () => {

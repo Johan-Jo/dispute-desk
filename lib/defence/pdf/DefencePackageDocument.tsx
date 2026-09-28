@@ -64,6 +64,14 @@ import type {
 
 export interface DefencePackageMeta {
   packageId: string;
+  /** "Chargeback response", "Inquiry response" or "Dispute response"
+   *  (counsel/frame.ts). Absent = "Chargeback response". */
+  responseTitle?: string;
+  /** A non-card dispute's provider ("PayPal"): no card rows in Case Details. */
+  paymentMethodLabel?: string | null;
+  /** The refund policy the letter argues from: its key term and a link to
+   *  the published policy (counsel run.ts `policyExhibit`). */
+  policyExhibit?: { summary: string; url: string | null; updatedOn: string | null } | null;
   disputeGid: string | null;
   orderName: string | null;
   reasonCode: string | null;
@@ -244,7 +252,7 @@ function RunningHeader({ meta }: { meta: DefencePackageMeta }) {
         // shows no stray rule.
         pageNumber === 1 ? null : (
           <View style={styles.runningHeader}>
-            <Text style={styles.runningLeft}>Chargeback response</Text>
+            <Text style={styles.runningLeft}>{meta.responseTitle ?? "Chargeback response"}</Text>
             <Text style={styles.runningRight}>{caseRef(meta)}</Text>
           </View>
         )
@@ -261,6 +269,7 @@ function Section({
   thesis,
   keepTogether = false,
   breakBefore = false,
+  lead,
   children,
 }: {
   number: string;
@@ -268,6 +277,11 @@ function Section({
   thesis?: string;
   keepTogether?: boolean;
   breakBefore?: boolean;
+  /** A first block that must sit on the heading's page. minPresenceAhead did
+   *  not hold against an unbreakable exhibit: the heading was left alone at
+   *  the page foot (demo letter #101111, 2026-09-28). Rendered inside the
+   *  heading's own unbreakable view instead. */
+  lead?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -284,16 +298,41 @@ function Section({
             <Text style={styles.thesisText}>{thesis}</Text>
           </View>
         ) : null}
+        {lead}
       </View>
       {children}
     </View>
   );
 }
 
+/**
+ * A long URL is one unbreakable word, and it ran off the page (demo letter
+ * #101111, 2026-09-28). A zero-width space after each separator lets the
+ * renderer wrap it without adding a hyphen or changing the text.
+ */
+/** Link text for the store's published policy: host and path, shortened. */
+function displayPolicyUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const t = `${u.host}${u.pathname}`;
+    return t.length > 80 ? `${t.slice(0, 79)}…` : t;
+  } catch {
+    return url;
+  }
+}
+
+export function breakableUrls(text: string): string {
+  // Only after "/" in the path: the fewest break points that still let the
+  // longest policy URL wrap, so copy-paste gains the fewest stray gaps.
+  return text.replace(/(https?:\/\/[^/\s]+)(\/\S{30,})/g, (_m, host: string, path: string) =>
+    host + path.replace(/\/(?=\S)/g, "/​"),
+  );
+}
+
 /** Prose with the order's product names set in bold (the design's executive
  *  summary). Paragraphs split on blank lines and stay whole across pages. */
 function Prose({ text, emphasise = [] }: { text: string; emphasise?: string[] }) {
-  const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const parts = breakableUrls(text).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
     <>
       {parts.map((p, i) => (
@@ -322,6 +361,7 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
   // Row builder is shared with the embedded HTML view via
   // `lib/defence/render/caseDetails.ts` — same fields, same order, same "—".
   const rows = buildCaseDetailsRows({
+    paymentMethodLabel: meta.paymentMethodLabel ?? null,
     disputeIdShort: disputeIdShort(meta.disputeGid),
     merchantName: merchant,
     cardNetwork: meta.cardNetwork,
@@ -354,7 +394,7 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
   return (
     <View>
       <View style={styles.metaRow}>
-        <Text style={styles.eyebrow}>Chargeback response</Text>
+        <Text style={styles.eyebrow}>{meta.responseTitle ?? "Chargeback response"}</Text>
         <Text style={styles.metaRight}>{fmtIsoDate(meta.generatedAt)}</Text>
       </View>
       <Text style={styles.title}>Dispute {disputeIdShort(meta.disputeGid)}</Text>
@@ -563,29 +603,33 @@ function SupportingEvidenceTable({
  * Each gets a short title and a marker: filled for money and fulfilment,
  * hollow for customer notifications, green for the carrier's own record. */
 
-function ProductListingExhibits({ exhibits }: { exhibits: ProductListingExhibit[] }) {
+function ProductListingCard({ x, last }: { x: ProductListingExhibit; last: boolean }) {
   return (
-    <View>
-      {exhibits.map((x, i) => (
-        <View key={i} style={{ marginBottom: i < exhibits.length - 1 ? 18 : 0 }} wrap={false}>
-          <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>{exhibitCaption(x.retrievedOn)}</Text>
-          {x.title ? <Text style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 2 }}>{x.title}</Text> : null}
-          {x.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 6 }}>{x.variantLine}</Text> : null}
-          {x.images.length > 0 ? (
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
-              {x.images.map((src, k) => (
-                <Image key={k} src={src} style={{ width: 150, height: 150, objectFit: "contain" }} />
-              ))}
-            </View>
-          ) : null}
-          {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
-          {x.sourceUrl ? (
-            <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
-              {x.sourceUrlDisplay ?? x.sourceUrl}
-            </Link>
-          ) : null}
+    <View style={{ marginBottom: last ? 0 : 18 }} wrap={false}>
+      <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>{exhibitCaption(x.retrievedOn)}</Text>
+      {x.title ? <Text style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 2 }}>{x.title}</Text> : null}
+      {x.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 6 }}>{x.variantLine}</Text> : null}
+      {x.images.length > 0 ? (
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
+          {x.images.map((src, k) => (
+            <Image key={k} src={src} style={{ width: 150, height: 150, objectFit: "contain" }} />
+          ))}
         </View>
-      ))}
+      ) : null}
+      {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
+      {x.translation ? (
+        <View style={{ marginTop: 6, marginBottom: 6, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: COLORS.muted }}>
+          <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 3 }}>English translation (machine-translated)</Text>
+          {x.translation.title ? <Text style={{ fontSize: 10, fontWeight: 700, marginBottom: 2 }}>{x.translation.title}</Text> : null}
+          {x.translation.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 3 }}>{x.translation.variantLine}</Text> : null}
+          {x.translation.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4 }}>{x.translation.excerpt}</Text> : null}
+        </View>
+      ) : null}
+      {x.sourceUrl ? (
+        <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
+          {x.sourceUrlDisplay ?? x.sourceUrl}
+        </Link>
+      ) : null}
     </View>
   );
 }
@@ -755,7 +799,26 @@ export function DefencePackageDocument({
           )}
 
           {prose("communicationArgument")}
-          {prose("policyArgument")}
+          {meta.policyExhibit && findBlock(composedBlocks, "policyArgument") ? (
+            <Section number={num()} title={findBlock(composedBlocks, "policyArgument")!.heading}>
+              {blockBody(findBlock(composedBlocks, "policyArgument")) ? (
+                <View style={{ marginBottom: 12 }}>
+                  <Prose text={blockBody(findBlock(composedBlocks, "policyArgument"))!} />
+                </View>
+              ) : null}
+              <Text style={{ fontSize: 9.5, marginBottom: 2 }}>
+                {`Store refund policy: ${meta.policyExhibit.summary}`}
+                {meta.policyExhibit.updatedOn ? ` (last updated by the store ${meta.policyExhibit.updatedOn.slice(0, 10)}).` : "."}
+              </Text>
+              {meta.policyExhibit.url ? (
+                <Link src={meta.policyExhibit.url} style={{ fontSize: 8.5, color: COLORS.muted }}>
+                  {displayPolicyUrl(meta.policyExhibit.url)}
+                </Link>
+              ) : null}
+            </Section>
+          ) : (
+            prose("policyArgument")
+          )}
 
           {!multiParcel && evidenceRows.length > 0 ? (
             <Section number={num()} title="Evidence Basis" keepTogether={evidenceRows.length <= 8}>
@@ -795,8 +858,19 @@ export function DefencePackageDocument({
           ) : null}
 
           {meta.productListingExhibits && meta.productListingExhibits.length > 0 ? (
-            <Section number={num()} title="Product Listing">
-              <ProductListingExhibits exhibits={meta.productListingExhibits} />
+            <Section
+              number={num()}
+              title="Product Listing"
+              lead={
+                <ProductListingCard
+                  x={meta.productListingExhibits[0]}
+                  last={meta.productListingExhibits.length === 1}
+                />
+              }
+            >
+              {meta.productListingExhibits.slice(1).map((x, i, rest) => (
+                <ProductListingCard key={i} x={x} last={i === rest.length - 1} />
+              ))}
             </Section>
           ) : null}
 

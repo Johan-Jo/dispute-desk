@@ -14,6 +14,11 @@
  *
  *   npx tsx scripts/defence/canary-record-context.mts --env-file .env.production.local \
  *     --token-file <pilot.token> --out <file.json> --dispute <uuid> [--parity <uuid>]
+ *
+ * `--counsel`: write the letter with counsel v2 (runCounsel, the only writer
+ * since 2026-09-28) instead of the retired template prompt. Its model calls go
+ * through the staging pilot route; nothing is written to the database (no
+ * run log, no reuse lookup, no translation cache).
  */
 import fs from "node:fs";
 import { config } from "dotenv";
@@ -29,6 +34,8 @@ const out = arg("out");
 const disputeIds = args("dispute");
 const parityIds = args("parity");
 const withListing = process.argv.includes("--with-listing");
+const pdfDir = arg("pdf"); // --pdf <dir>: also render the full letter PDF (never stored or sent)
+const counselMode = process.argv.includes("--counsel");
 if (!envFile || !out || (disputeIds.length > 0 && !tokenFile)) {
   console.error("usage: --env-file <f> --out <f.json> [--token-file <f> --dispute <uuid> ...] [--parity <uuid> ...]");
   process.exit(1);
@@ -83,9 +90,37 @@ function parse(raw: string): Narrative | null {
 
 const sb = getServiceClient();
 
+/** Counsel's Anthropic calls, sent through the staging pilot route. */
+function proxyAnthropicThroughPilot() {
+  const original = globalThis.fetch;
+  process.env.ANTHROPIC_API_KEY ||= "via-pilot-route";
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (!url.startsWith("https://api.anthropic.com/")) return original(input as never, init);
+    const body = JSON.parse(String(init?.body ?? "{}")) as {
+      model?: string; system?: string | Array<{ text?: string }>; temperature?: number; max_tokens?: number;
+      messages?: Array<{ content: string | Array<{ text?: string }> }>;
+    };
+    const text = (v: unknown) => (typeof v === "string" ? v : Array.isArray(v) ? v.map((b) => (b as { text?: string }).text ?? "").join("\n\n") : "");
+    return original(ROUTE, {
+      method: "POST",
+      headers: { "x-pilot-token": fs.readFileSync(tokenFile!, "utf8").trim(), "content-type": "application/json" },
+      body: JSON.stringify({
+        system: text(body.system),
+        user: text(body.messages?.[0]?.content),
+        model: body.model ?? "claude-sonnet-4-6",
+        temperature: body.temperature,
+        maxTokens: body.max_tokens,
+      }),
+    });
+  }) as typeof fetch;
+}
+if (counselMode) proxyAnthropicThroughPilot();
+
 async function liveListingSection(shopId: string, orderGid: string) {
   const crypto = await import("node:crypto");
   const { PRODUCT_EVIDENCE_QUERY } = await import("../../lib/shopify/queries/productEvidence");
+  const { excerptOf } = await import("../../lib/packs/productListing/collectProductListings");
   const { data: shop } = await sb.from("shops").select("shop_domain").eq("id", shopId).single();
   const { data: sess } = await sb.from("shop_sessions").select("access_token_encrypted").eq("shop_id", shopId)
     .eq("session_type", "offline").is("user_id", null).order("created_at", { ascending: false }).limit(1).single();
@@ -106,8 +141,9 @@ async function liveListingSection(shopId: string, orderGid: string) {
       snapshotId: "canary", lineItemGid: li.id, contentHash: "canary", productGid: li.product.id,
       title: li.product.title, variantTitle: li.variant?.title ?? null,
       variantOptions: li.variant?.selectedOptions ?? [],
-      excerpt: li.product.description ? String(li.product.description).slice(0, 600) : null,
+      excerpt: li.product.description ? excerptOf(String(li.product.description), 600) : null,
       sourceUrl: li.product.onlineStoreUrl ?? null, fetchedAt: new Date().toISOString(), imagePaths: [],
+      imageUrls: [li.variant?.image?.url, ...((li.product.media?.nodes ?? []).map((m: any) => m.image?.url))].filter(Boolean).slice(0, 3),
       lineTotal: Number(li.originalTotalSet?.shopMoney?.amount) || null,
     }))
     .sort((a, b) => (b.lineTotal ?? 0) - (a.lineTotal ?? 0));
@@ -118,7 +154,7 @@ async function liveListingSection(shopId: string, orderGid: string) {
 async function load(disputeId: string) {
   const { data: d } = await sb
     .from("disputes")
-    .select("id, shop_id, order_gid, order_name, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle")
+    .select("id, shop_id, order_gid, order_name, dispute_gid, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle, customer_display_name, phase")
     .eq("id", disputeId)
     .single();
   const { data: pkg } = await sb
@@ -164,7 +200,10 @@ for (const disputeId of disputeIds) {
   }>) ?? [])];
   // --with-listing: what the product-listing collector (not-as-described
   // PR 3) would add — read live from Shopify, READ-ONLY (nothing stored).
-  if (withListing && d.order_gid) {
+  // A pack the collector already ran on carries its stored listing; use it,
+  // exactly as the job does.
+  const storedListing = sections.some((x) => x.source === "shopify_product");
+  if (withListing && d.order_gid && !storedListing) {
     const section = await liveListingSection(d.shop_id as string, d.order_gid as string);
     if (section) sections.push(section);
   }
@@ -275,16 +314,147 @@ for (const disputeId of disputeIds) {
         } as never)
       : [];
     const composedCheck = narrative
-      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
+      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases, internalConstraints: { refundOrCompensationRequested: null, verifiedPolicyTerms } } as never)
       : null;
-    return { res, body, raw, narrative, narrativeCheck, composedCheck };
+    return { res, body, raw, narrative, narrativeCheck, composedCheck, blocks };
   };
+  const counselAttempt = async () => {
+    const { runCounsel } = await import("../../lib/defence/counsel/run");
+    const { deriveOrderContext } = await import("../../lib/defence/orderContext");
+    const { disputeFrame, requestLine } = await import("../../lib/defence/counsel/frame");
+    const { displayShopDomain } = await import("../../lib/shopify/domainHost");
+    const { loadInternalNarrativeConstraints } = await import("../../lib/integrations/gorgias/internalNarrativeConstraints");
+    const { data: shopRow } = await sb.from("shops").select("shop_domain, primary_domain, shop_name").eq("id", d.shop_id).single();
+    const oc = deriveOrderContext(sections as never);
+    const pc = (packJson.payment_context as { family?: string; label?: string } | undefined) ?? null;
+    const counsel = await runCounsel({
+      shopId: d.shop_id as string, moduleKey: module.key, facts: facts as never,
+      packSections: sections.map((s) => ({ type: s.type, source: s.source, data: s.data ?? {} })),
+      orderName: oc.orderName ?? d.order_name, orderGid: d.order_gid ?? null, disputeGid: d.dispute_gid ?? null,
+      disputeOpenedAt: d.initiated_at ?? null, paymentFamily: pc?.family ?? null, paymentLabel: pc?.label ?? null,
+      phase: (d as { phase?: string | null }).phase ?? null,
+      constraints: await loadInternalNarrativeConstraints(disputeId),
+      disputeAmount: Number(d.amount), disputeCurrency: d.currency_code ?? null,
+      amountDisplay: `${d.currency_code ?? ""} ${d.amount}`.trim(), cardLast4: oc.cardLast4 ?? null,
+      merchantName: (shopRow?.shop_name as string | null)?.trim() ||
+        (shopRow?.shop_domain ? displayShopDomain({ shop_domain: shopRow.shop_domain as string, primary_domain: (shopRow.primary_domain as string | null) ?? null }) : "The merchant"),
+      log: (m) => console.log(`[counsel] ${m}`),
+    });
+    const narrative = counsel?.narrative ?? null;
+    // As the job: counsel's verified policy terms are allowed through the guard.
+    const verifiedPolicyTerms = !!counsel?.ledger?.some((c) => c.id === "return_route_open");
+    const narrativeCheck = narrative
+      ? validateNarrative({ narrative, approvedFacts: facts, reasonCodeModule: module, packageMode: classification.packageMode, internalOnlyFactIds: classification.internalOnly.map((f) => f.id), extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases, internalConstraints: { refundOrCompensationRequested: null, verifiedPolicyTerms } } as never)
+      : null;
+    const blocks = narrative
+      ? composePdfBlocks({
+          narrative, approvedFacts: facts, packageMode: classification.packageMode, familyKey: fam.key, moduleKey: module.key,
+          fulfillmentStatus: oc.fulfillmentStatus,
+          caseContext: { orderName: d.order_name, disputeOpenedAt: d.initiated_at, disputedAmount: disputedAmountDisplay(Number(d.amount), d.currency_code) },
+        } as never)
+      : [];
+    const frame = disputeFrame({ paymentFamily: pc?.family ?? null, paymentLabel: pc?.label ?? null, phase: (d as { phase?: string | null }).phase ?? null });
+    if (!(frame.provider === "card" && frame.stage === "chargeback")) {
+      for (const b of blocks as Array<{ sectionKey: string; thesisText: string }>) if (b.sectionKey === "conclusion") b.thesisText = requestLine(frame);
+    }
+    const composedCheck = narrative
+      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases, internalConstraints: { refundOrCompensationRequested: null, verifiedPolicyTerms } } as never)
+      : null;
+    return { res: { status: counsel ? 200 : 0 }, body: { error: counsel ? null : "counsel wrote no letter" }, raw: "", narrative, narrativeCheck, composedCheck, blocks, frame, policyExhibit: counsel?.policyExhibit ?? null };
+  };
+  if (counselMode) {
+    const c = await counselAttempt();
+    await renderAndRecord(c as never, null);
+    continue;
+  }
   const first = await attempt(null);
   const firstErrors = first.narrativeCheck && !first.narrativeCheck.ok
     ? first.narrativeCheck.errors.map((e: { section?: string; message?: string }) => `${e.section ?? "narrative"}: ${e.message ?? "validation failed"}`)
     : null;
   const final = firstErrors ? await attempt(firstErrors) : first;
-  const { res, body, raw, narrative, narrativeCheck, composedCheck } = final;
+  await renderAndRecord(final as never, firstErrors);
+  async function renderAndRecord(
+    final: { res: { status: number }; body: { error?: string | null }; raw: string; narrative: Narrative | null; narrativeCheck: { ok: boolean; errors: unknown[] } | null; composedCheck: { ok: boolean; errors: unknown[] } | null; blocks: unknown[]; frame?: import("../../lib/defence/counsel/frame").DisputeFrame; policyExhibit?: unknown },
+    firstErrors: string[] | null,
+  ) {
+  const { res, body, raw, narrative, narrativeCheck, composedCheck, blocks } = final;
+  if (counselMode) {
+    console.log(JSON.stringify({ narrativeErrors: narrativeCheck?.errors ?? null, composedErrors: composedCheck?.errors ?? null }, null, 1).slice(0, 3000));
+  }
+  if (pdfDir && narrative && narrativeCheck?.ok && composedCheck?.ok) {
+    const { renderDefencePdf } = await import("../../lib/defence/renderDefencePdf");
+    // Mirror buildDefencePackageJob's header fields, so the preview matches
+    // what the job will print.
+    const { nonCardDisputeCategoryDisplay } = await import("../../lib/defence/klarnaDisputeCategory");
+    const { displayShopDomain } = await import("../../lib/shopify/domainHost");
+    const { data: shopRow } = await sb.from("shops").select("shop_domain, primary_domain").eq("id", d.shop_id).single();
+    const merchantDisplayName = shopRow?.shop_domain
+      ? displayShopDomain({ shop_domain: shopRow.shop_domain as string, primary_domain: (shopRow.primary_domain as string | null) ?? null })
+      : "Merchant";
+    const { deriveOrderContext } = await import("../../lib/defence/orderContext");
+    const { printable, displayUrl, EXHIBIT_LIMITS, buildProductListingExhibits } = await import("../../lib/defence/productListingExhibit");
+    const { evidenceImageUrl } = await import("../../lib/packs/productListing/collectProductListings");
+    const oc = deriveOrderContext(sections as never);
+    const listingSection = sections.find((x) => x.source === "shopify_product");
+    let budget = EXHIBIT_LIMITS.imagesPerPdf;
+    const exhibits = [];
+    for (const l of ((listingSection?.data?.listings ?? []) as Array<Record<string, any>>)) {
+      const images: string[] = [];
+      for (const u of (l.imageUrls ?? []) as string[]) {
+        if (budget <= 0) break;
+        const r = await fetch(evidenceImageUrl(u));
+        if (!r.ok) continue;
+        const b = new Uint8Array(await r.arrayBuffer());
+        const mime = b[0] === 0xff ? "image/jpeg" : b[0] === 0x89 ? "image/png" : null;
+        if (!mime) continue;
+        images.push(`data:${mime};base64,${Buffer.from(b).toString("base64")}`);
+        budget--;
+      }
+      exhibits.push({
+        title: printable(l.title), variantLine: (l.variantOptions ?? []).filter((o: any) => !/^title$/i.test(o.name)).map((o: any) => `${o.name}: ${o.value}`).join(" · ") || null,
+        excerpt: printable(l.excerpt), sourceUrl: l.sourceUrl ?? null, sourceUrlDisplay: displayUrl(l.sourceUrl ?? null),
+        retrievedOn: String(l.fetchedAt).slice(0, 10), images,
+      });
+    }
+    const out = await renderDefencePdf({
+      meta: {
+        packageId: "demo", responseTitle: final.frame ? (await import("../../lib/defence/counsel/frame")).responseTitle(final.frame) : undefined,
+        paymentMethodLabel: final.frame && final.frame.provider !== "card" ? final.frame.providerName : null,
+        policyExhibit: final.policyExhibit ?? null, disputeGid: d.dispute_gid ?? null, orderName: oc.orderName ?? d.order_name, reasonCode: d.network_reason_code,
+        reasonCodeDisplay: isNonCardPaymentFamily(family) ? nonCardDisputeCategoryDisplay(family, (packJson.payment_context as { label?: string } | undefined)?.label ?? null, d.reason) : module.displayName, claimType: module.claimType, shopName: merchantDisplayName, merchantName: merchantDisplayName,
+        amountDisplay: `${d.currency_code ?? ""} ${d.amount}`.trim(), cardNetwork: oc.cardNetwork, cardLast4: oc.cardLast4,
+        paymentGateway: oc.paymentGateway, financialStatus: oc.financialStatus, fulfillmentStatus: oc.fulfillmentStatus,
+        cardholderName: oc.cardholderName ?? (d.customer_display_name as string | null) ?? null, transactionDate: oc.transactionDate,
+        // As the job: the letter's own rows (later order, dispute opened) join the timeline.
+        timelineEvents: [...(oc.timelineEvents ?? []), ...((narrative as { timelineAdditions?: Array<{ at: string; text: string }> } | null)?.timelineAdditions ?? [])],
+        lineItemsFromContext: oc.lineItems, productListingExhibits: storedListing
+          ? await buildProductListingExhibits({
+              sb,
+              sections: sections as never,
+              listingCited: (facts as Array<{ category?: string; value?: { collected?: unknown } }>).some(
+                (f) => f.category === "product_listing" && f.value?.collected === true,
+              ),
+              // Translate without the cache: the preview writes nothing.
+              translate: counselMode
+                ? async (_id, original) => {
+                    const { translateListing } = await import("../../lib/defence/listingTranslation");
+                    const { callClaudeMessages } = await import("../../lib/defence/anthropicClient");
+                    return translateListing(original, async (system, user) => {
+                      const r = await callClaudeMessages({ model: "claude-sonnet-4-6", system: [{ type: "text", text: system }], messages: [{ role: "user", content: user }], temperature: 0, maxTokens: 1500 });
+                      return r.raw ?? "";
+                    });
+                  }
+                : undefined,
+            })
+          : exhibits, generatedAt: new Date().toISOString(),
+        version: 0, packageMode: classification.packageMode, promptVersion: 0, modelUsed: "claude-sonnet-4-6",
+        reasonCodeModuleKey: module.key, reasonCodeFamilyKey: fam.key,
+      } as never,
+      composedBlocks: blocks as never, approvedFacts: facts as never, manualEvidence: [],
+    });
+    fs.writeFileSync(`${pdfDir}/demo-${String(d.order_name).replace("#", "")}.pdf`, out.buffer);
+    console.log(`pdf written (${out.buffer.length} bytes)`);
+  }
   const citedRecordFacts = narrative
     ? SECTIONS.flatMap((k) => (narrative as never as Record<string, { usedFactIds: string[] }>)[k].usedFactIds)
         .map((id) => facts.find((f) => f.id === id)?.category)
@@ -298,6 +468,7 @@ for (const disputeId of disputeIds) {
     composedValidation: composedCheck ? { ok: composedCheck.ok, errors: composedCheck.errors } : null,
   });
   console.log(`${d.order_name}: http ${res.status} retried=${!!firstErrors} narrative=${narrativeCheck?.ok} composed=${composedCheck?.ok} cites=${citedRecordFacts.join(",")}`);
+  }
 }
 
 for (const disputeId of parityIds) {

@@ -37,11 +37,13 @@ import {
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
-import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
+import { nonCardDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
-import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
+import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
+import { disputeFrame, requestLine, responseTitle } from "@/lib/defence/counsel/frame";
+import { cachedListingTranslator } from "@/lib/defence/listingTranslationCache";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
@@ -53,7 +55,6 @@ import {
 } from "@/lib/defence/validateNarrative";
 import { stripAddressDeliveryClaims } from "@/lib/defence/stripAddressDeliveryClaims";
 import { suppressUnsupportedSections } from "@/lib/defence/suppressUnsupportedSections";
-import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
 import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
@@ -313,9 +314,6 @@ export async function handleBuildDefencePackage(
     dispute && needsBankClaim(bankClaimInputFromRow(dispute as unknown as Record<string, unknown>))
       ? await loadBankClaimAnswer(sb, pkg.dispute_id, claimCycle)
       : null;
-  const bankClaimInput = bankClaim
-    ? { text: bankClaim.text, noClaimShown: bankClaim.noClaimShown }
-    : null;
   const claimAnalysis = bankClaim?.text
     ? await ensureBankClaimAnalysis(sb, pkg.dispute_id, claimCycle).catch(() => null)
     : null;
@@ -327,7 +325,7 @@ export async function handleBuildDefencePackage(
   // route the module off the Shopify reason enum so they reuse the right
   // reason module instead of generic_fallback. Card path is unchanged.
   const paymentContext =
-    (packJson.payment_context as { family?: string } | undefined) ?? null;
+    (packJson.payment_context as { family?: string; label?: string } | undefined) ?? null;
   const isNonCardPayment = isNonCardPaymentFamily(paymentContext?.family ?? null);
   const { data: moduleOverride } = await sb
     .from("defence_prompt_modules")
@@ -574,15 +572,6 @@ export async function handleBuildDefencePackage(
     }
   }
 
-  // Phase 3 — rank strategy submodules for this dispute. Empty result
-  // (family has no strategies yet) is fine; the narrative writer
-  // simply doesn't emit the 4th cached system block.
-  const strategies = rankStrategies({
-    familyKey: reasonCodeFamily.key,
-    predicateEvaluations: classification.predicateEvaluations,
-    packageMode: classification.packageMode,
-  });
-
   // Payment-method overlay (BNPL / Klarna / Affirm). Non-null only for
   // non-card disputes; reframes the narrative to the actual method and
   // supplies the card-term phrases that validateNarrative hard-rejects.
@@ -591,23 +580,27 @@ export async function handleBuildDefencePackage(
   const klarnaSubProduct =
     (packJson.payment_context as { klarnaSubProduct?: KlarnaSubProduct | null } | undefined)
       ?.klarnaSubProduct ?? null;
-  const { overlay: paymentOverlay, prohibitedPhrases: paymentProhibited } =
+  const { prohibitedPhrases: paymentProhibited } =
     paymentOverlayFor(paymentContext?.family ?? null, {
       shopifyReason: dispute?.reason ?? null,
       subProduct: klarnaSubProduct,
     });
 
   /* ── Counsel v2 (lib/defence/counsel/run.ts) ─────────────────────────
-   * Item-not-received letters are written by the counsel pipeline first. A
-   * null result — no carrier-confirmed single delivery, no draft passing its
-   * checks, a model error — falls through to the template writer below,
-   * unchanged. Its letter still passes every validator this job runs; if it
-   * fails one, the existing retry regenerates with the template writer. */
+   * The only letter writer (the template writer is retired, below). A null
+   * result means no letter. Why it was null decides whether the build is
+   * retried: a spent budget or a model/transport error is transient and
+   * retriable; "counsel has no playbook or no theory for this case" is not. */
   let usedCounsel = false;
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
-  if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment && !bankClaim?.text) {
+  let counselTransient: { code: "daily_cap_reached" | "llm_error"; reason: string } | null = null;
+  // PayPal and Klarna disputes are counsel's too (plan §5.1): 50 of 60 open
+  // disputes on 2026-09-28. A captured bank claim still skips counsel (§6).
+  if (counselEnabled(reasonCodeModule.key) && !bankClaim?.text) {
     const cap = await checkDailyCap(sb, pkg.shop_id);
-    if (!cap.capReached && cap.counselRuns < COUNSEL_DAILY_RUN_CAP) {
+    if (cap.capReached || cap.counselRuns >= COUNSEL_DAILY_RUN_CAP) {
+      counselTransient = { code: "daily_cap_reached", reason: "counsel daily run cap reached" };
+    } else {
       try {
         const orderCtx = deriveOrderContext(
           sectionsRaw.map((s) => ({ type: s.type, label: s.label, source: s.source, data: s.data ?? {}, fieldsProvided: s.fieldsProvided ?? [] })),
@@ -621,6 +614,10 @@ export async function handleBuildDefencePackage(
           orderGid: (dispute as { order_gid?: string | null } | null)?.order_gid ?? null,
           disputeGid: dispute?.dispute_gid ?? null,
           disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+          paymentFamily: paymentContext?.family ?? null,
+          paymentLabel: paymentContext?.label ?? null,
+          phase: (dispute as { phase?: string | null } | null)?.phase ?? null,
+          constraints: await loadInternalNarrativeConstraints(pkg.dispute_id as string),
           disputeAmount: Number.isFinite(Number(dispute?.amount)) ? Number(dispute?.amount) : null,
           disputeCurrency: dispute?.currency_code ?? null,
           amountDisplay: dispute?.amount != null ? `${dispute.currency_code ?? ""} ${dispute.amount}`.trim() : null,
@@ -668,50 +665,52 @@ export async function handleBuildDefencePackage(
           },
         });
       } catch (err) {
-        console.warn(
-          `[buildDefencePackage] counsel v2 failed for ${pkg.dispute_id}, using the template writer: ` +
-            (err instanceof Error ? err.message : String(err)),
-        );
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[buildDefencePackage] counsel v2 failed for ${pkg.dispute_id}: ${message}`);
         counselRes = null;
+        counselTransient = { code: "llm_error", reason: `counsel v2 error: ${message}` };
       }
     }
   }
 
-  // Generate the narrative (template writer) unless counsel wrote it.
-  const narrativeRes = counselRes
-    ? {
-        narrative: counselRes.narrative,
-        modelUsed: counselRes.modelUsed,
-        promptVersion: counselRes.promptVersion,
-        promptFamily: counselRes.promptFamily,
-        tokens: counselRes.tokens,
-        durationMs: counselRes.durationMs,
-        capReached: false,
-        error: null as string | null,
-      }
-    : await generateNarrative(
-    {
-      packageId,
-      disputeId: pkg.dispute_id,
-      reasonCode,
-      reasonCodeModule,
-      familyOverlay: reasonCodeFamily.overlayPromptBody || null,
-      paymentOverlay,
-      strategies,
-      packageMode: classification.packageMode,
-      caseStrength: "moderate",
-      approvedFacts: planFacts,
-      manualEvidence: classification.manual,
-      internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-      missingEvidence: classification.missing,
-      bankClaim: bankClaimInput,
-    },
-    {
+  /* THE TEMPLATE WRITER IS RETIRED (maintainer, 2026-09-28: "permanently
+   * deactivate the older writer, should not happen again"). It wrote the
+   * not-as-described letter for Mein Maison #101111 that led with a German
+   * product title and dropped shipping, delivery and the dispute's opening
+   * from the sequence. Only counsel v2 writes letters now. A dispute it does
+   * not write for gets NO letter — a failed package the merchant and admin
+   * can see — until its family has a counsel playbook
+   * (docs/plans/defence-letter-structure.plan.md). Never re-add a fallback. */
+  if (!counselRes && counselTransient) {
+    return await markFailed(sb, pkg, counselTransient.reason, counselTransient.code, true);
+  }
+  if (!counselRes) {
+    await logAuditEvent({
       shopId: pkg.shop_id,
-      packageId,
-      modelOverride: moduleOverride?.model ?? null,
-    },
-  );
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_no_counsel_letter",
+      eventPayload: { packageId, version: pkg.version, moduleKey: reasonCodeModule.key },
+    });
+    return await markFailed(
+      sb,
+      pkg,
+      `No letter: the template writer is retired and counsel v2 wrote none for ${reasonCodeModule.key}.`,
+      "no_counsel_letter",
+      false,
+    );
+  }
+  const narrativeRes = {
+    narrative: counselRes.narrative,
+    modelUsed: counselRes.modelUsed,
+    promptVersion: counselRes.promptVersion,
+    promptFamily: counselRes.promptFamily,
+    tokens: counselRes.tokens,
+    durationMs: counselRes.durationMs,
+    capReached: false,
+    error: null as string | null,
+  };
   usedCounsel = !!counselRes;
 
   if (narrativeRes.capReached) {
@@ -752,6 +751,8 @@ export async function handleBuildDefencePackage(
   // facts_json. A customer reimbursement request refuses a sentence denying it.
   const internalConstraints = {
     ...(await loadInternalNarrativeConstraints(pkg.dispute_id as string)),
+    // Counsel verified the refund policy's terms and links the published policy.
+    verifiedPolicyTerms: !!counselRes?.ledger?.some((c) => c.id === "return_route_open"),
     // Delivery after the dispute was opened: no sentence may relate the two
     // (non-receipt plan §6.6 rule 2). Computed from the facts the letter cites.
     deliveryPostDatesDispute: deliveryPostDatesDispute(
@@ -870,100 +871,8 @@ export async function handleBuildDefencePackage(
     });
   }
 
-  if (!validation.ok) {
-    const feedback = validation.errors.map(
-      (e) =>
-        `${e.section ?? "narrative"}: ${e.message ?? "validation failed"}`,
-    );
-    await logAuditEvent({
-      shopId: pkg.shop_id,
-      disputeId: pkg.dispute_id,
-      packId: pkg.source_pack_id,
-      actorType: "system",
-      eventType: "defence_package_validation_retry",
-      eventPayload: {
-        packageId,
-        version: pkg.version,
-        attemptNumber: 2,
-        validationErrors: validation.errors,
-      },
-    });
-    const retryRes = await generateNarrative(
-      {
-        packageId,
-        disputeId: pkg.dispute_id,
-        reasonCode,
-        reasonCodeModule,
-        familyOverlay: reasonCodeFamily.overlayPromptBody || null,
-        paymentOverlay,
-        strategies,
-        packageMode: classification.packageMode,
-        caseStrength: "moderate",
-        approvedFacts: planFacts,
-        manualEvidence: classification.manual,
-        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-        missingEvidence: classification.missing,
-        bankClaim: bankClaimInput,
-      },
-      {
-        shopId: pkg.shop_id,
-        packageId,
-        modelOverride: moduleOverride?.model ?? null,
-        validationFeedback: feedback,
-      },
-    );
-    if (retryRes.capReached) {
-      return await markFailed(sb, pkg, retryRes.error ?? "daily cap reached", "daily_cap_reached", true);
-    }
-    if (!retryRes.narrative || retryRes.error) {
-      // Retry attempt errored or returned no narrative. Fall through
-      // with the original validation failure — that's what the
-      // merchant needs to act on.
-    } else {
-      // Re-validate the retry output. If it still fails, persist the
-      // retry result (closer to correct than the first attempt) along
-      // with its errors.
-      // The retry output needs the same treatment; without this a retried
-      // package keeps the unsupported section the first pass had removed.
-      retryRes.narrative = omitDeniedSections(retryRes.narrative, reasonCodeModule.key);
-      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts, recordContext);
-      const retrySuppression = suppressUnsupportedSections({
-        narrative: retryRes.narrative,
-        approvedFacts: planFacts,
-        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-      });
-      retryRes.narrative = retrySuppression.narrative;
-      suppression.suppressed = retrySuppression.suppressed;
-      suppression.declinedToEmptyLetter = retrySuppression.declinedToEmptyLetter;
-
-      const retryValidation = validateNarrative({
-        narrative: retryRes.narrative,
-        approvedFacts: planFacts,
-        reasonCodeModule,
-        packageMode: classification.packageMode,
-        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-        extraHardPhrases: hardPhrases,
-        internalConstraints,
-        guardedPhrases: reasonCodeFamily.guardedBankPhrases,
-        bankClaimText: bankClaim?.text ?? null,
-      });
-      // Reassign so the rest of the pipeline uses the better output.
-      // We track token totals on the original `narrativeRes` for ops
-      // visibility, but the narrative + validation we act on is the
-      // retry's.
-      narrativeRes.narrative = retryRes.narrative;
-      narrativeRes.modelUsed = retryRes.modelUsed;
-      // The retry is the template writer's letter, whoever wrote the first.
-      narrativeRes.promptVersion = retryRes.promptVersion;
-      narrativeRes.promptFamily = retryRes.promptFamily;
-      usedCounsel = false;
-      narrativeRes.tokens.prompt += retryRes.tokens.prompt;
-      narrativeRes.tokens.completion += retryRes.tokens.completion;
-      narrativeRes.tokens.cached += retryRes.tokens.cached;
-      narrativeRes.durationMs += retryRes.durationMs;
-      validation = retryValidation;
-    }
-  }
+  /* No retry through the template writer (retired 2026-09-28): a counsel
+   * letter that fails validation is persisted as failed below. */
 
   /* Address-delivery claims the model left in after its retry are deleted by
    * code — the exact edit the retry feedback asked for — then the narrative is
@@ -1202,6 +1111,18 @@ export async function handleBuildDefencePackage(
       caseContext: thesisContext,
     });
 
+  /* The request names the proceeding (letter-structure plan §4): a PayPal or
+   * Klarna dispute, or an inquiry, is not asked to "reverse the chargeback"
+   * (Mein Maison #101111, 2026-09-28). Before validation, so it is checked. */
+  const frame = disputeFrame({
+    paymentFamily: paymentContext?.family ?? null,
+    paymentLabel: paymentContext?.label ?? null,
+    phase: (dispute as { phase?: string | null } | null)?.phase ?? null,
+  });
+  if (!(frame.provider === "card" && frame.stage === "chargeback")) {
+    for (const b of composedBlocks) if (b.sectionKey === "conclusion") b.thesisText = requestLine(frame);
+  }
+
   /* F2's second half — DETERMINISTIC document validation, run after
    * composition and covering what only exists once the plan is in the picture:
    * orphaned claims, plan/fact mismatch, an empty document, a retired delivery
@@ -1341,6 +1262,9 @@ export async function handleBuildDefencePackage(
   const docData: DefencePackageDocumentData = {
     meta: {
       packageId,
+      responseTitle: responseTitle(frame),
+      paymentMethodLabel: frame.provider === "card" ? null : frame.providerName,
+      policyExhibit: counselRes?.policyExhibit ?? null,
       disputeGid: dispute?.dispute_gid ?? null,
       orderName: orderContext.orderName,
       reasonCode,
@@ -1350,7 +1274,7 @@ export async function handleBuildDefencePackage(
       // instead (derived from the Shopify reason enum). Card disputes keep
       // the module's network reference label unchanged.
       reasonCodeDisplay: isNonCardPayment
-        ? klarnaDisputeCategoryDisplay(dispute?.reason ?? null)
+        ? nonCardDisputeCategoryDisplay(paymentContext?.family ?? null, paymentContext?.label ?? null, dispute?.reason ?? null)
         : reasonCodeModule.displayName,
       claimType: reasonCodeModule.claimType,
       shopName: merchantDisplayName,
@@ -1377,6 +1301,8 @@ export async function handleBuildDefencePackage(
         listingCited: planFacts.some(
           (f) => f.category === "product_listing" && (f.value as { collected?: unknown }).collected === true,
         ),
+        // English beneath a non-English original (Visa DMG p. 9; D3).
+        translate: cachedListingTranslator(sb, pkg.shop_id as string),
       }),
       generatedAt: new Date().toISOString(),
       version: pkg.version,

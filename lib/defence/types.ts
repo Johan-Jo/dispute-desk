@@ -38,7 +38,9 @@ export type DefencePackageFailureCode =
   | "validation_failed"
   | "llm_error"
   | "pdf_render_failed"
-  | "daily_cap_reached";
+  | "daily_cap_reached"
+  /** Counsel v2 wrote no letter; the template writer is retired (2026-09-28). */
+  | "no_counsel_letter";
 
 /** Wire shape of a `defence_packages` row. Matches the migration column-for-column. */
 export interface DefencePackage {

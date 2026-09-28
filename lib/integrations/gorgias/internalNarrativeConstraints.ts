@@ -50,6 +50,20 @@ const REFUND_REQUEST_TEXT: readonly RegExp[] = [
   /(?:återbetal|pengarna\s+tillbaka|ersättning)/i,
 ];
 
+/** Requests to return or send back the goods, in the same six locales. */
+const RETURN_REQUEST_TEXT: readonly RegExp[] = [
+  /\b(?:return(?:ing)?\s+(?:it|them|the|this|my)|send\s+(?:it|them)\s+back|sending\s+(?:it|them)\s+back|return\s+label|return\s+request)/i,
+  /(?:rücksend|zurücksend|zurückschick|zurückgeb|retoure|retournier)/i,
+  /(?:devol(?:ver|uci[oó]n)\s+(?:el|la|los|las|del)\s+(?:producto|art[ií]culo|pedido)|devolverlo|devolverla|etiqueta\s+de\s+devoluci)/i,
+  /(?:renvoy|retourner\s+(?:le|la|les|l')|étiquette\s+de\s+retour|demande\s+de\s+retour)/i,
+  /(?:returnera|skicka\s+tillbaka|returetikett|retur\s+av)/i,
+  /(?:devolver\s+o\s+produto|devolução\s+do\s+produto|etiqueta\s+de\s+devolução)/i,
+];
+
+function asksToReturn(m: StoredMessageForConstraints): boolean {
+  return RETURN_REQUEST_TEXT.some((re) => re.test(m.messageText ?? ""));
+}
+
 function isOrderMatched(m: StoredMessageForConstraints): boolean {
   if (m.ticketMatchStatus === "confirmed_match") return true;
   return m.ticketMatchStatus === "proposed_match" && m.ticketConfidence === "high";
@@ -68,7 +82,10 @@ export function deriveInternalNarrativeConstraints(
   const requests = messages.filter(
     (m) => m.senderType === "customer" && isOrderMatched(m) && asksForMoneyBack(m),
   );
-  if (requests.length === 0) return NO_INTERNAL_CONSTRAINTS;
+  const returnRequested = messages.some(
+    (m) => m.senderType === "customer" && isOrderMatched(m) && asksToReturn(m),
+  );
+  if (requests.length === 0) return returnRequested ? { ...NO_INTERNAL_CONSTRAINTS, returnRequested } : NO_INTERNAL_CONSTRAINTS;
   const dates = requests
     .map((m) => m.sentAt)
     .filter((d): d is string => typeof d === "string")
@@ -78,6 +95,7 @@ export function deriveInternalNarrativeConstraints(
       messageIds: requests.map((m) => m.id).sort(),
       firstSentAt: dates[0] ?? null,
     },
+    returnRequested,
   };
 }
 

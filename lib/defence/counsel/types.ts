@@ -66,7 +66,7 @@ export interface LedgerInput {
 }
 
 /** The evidence sections a letter can carry between summary and conclusion. */
-export type EvidenceSectionKey = "shipping" | "lineItems" | "chronology";
+export type EvidenceSectionKey = "shipping" | "lineItems" | "chronology" | "policy";
 
 export interface PlaybookSection {
   key: EvidenceSectionKey;

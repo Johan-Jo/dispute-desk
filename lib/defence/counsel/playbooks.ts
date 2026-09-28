@@ -74,6 +74,78 @@ export const ITEM_NOT_RECEIVED: Playbook = {
   ],
 };
 
+/**
+ * Not as described (docs/plans/defence-letter-structure.plan.md §5.2). The
+ * listing shows what was sold; delivery and the dispute's opening date the
+ * sequence; the store's record shows no return. Returns are code-written only:
+ * the summary never mentions them.
+ */
+export const NOT_AS_DESCRIBED: Playbook = {
+  familyKey: "product_not_as_described",
+  analystQuestion: "Did the merchant deliver what it advertised, and is there any return?",
+  theories: [
+    {
+      name: "delivered_then_reordered",
+      requiresClaims: ["listing_published", "carrier_delivered", "later_order"],
+      shape:
+        "The item was sold under a published listing, the carrier recorded delivery, and afterwards the same customer ordered again; only then was the item disputed. Lead with that sequence against the claim.",
+    },
+    {
+      name: "listing_then_delivery",
+      requiresClaims: ["listing_published", "carrier_delivered", "dispute_after_delivery"],
+      shape:
+        "The item was sold under a published listing with photographs and a written description; the carrier recorded delivery; the dispute came days later. Lead with the published listing, then the delivery and the interval.",
+    },
+    {
+      name: "listing_on_record",
+      requiresClaims: ["listing_published"],
+      shape: "The item was sold under a published listing, reproduced in the letter. Lead with the listing against the claim.",
+    },
+    {
+      name: "sequence_on_record",
+      requiresClaims: ["claim_is_not_as_described"],
+      shape: "State the order's sequence from the record: sold, delivered, disputed.",
+    },
+  ],
+  sections: [
+    {
+      key: "lineItems",
+      exhibit: "the product listing below the line items: photographs, the written description and an English translation",
+      mustProve: "what the merchant published for the item it sold",
+      includeWhen: ["listing_published"],
+    },
+    {
+      key: "shipping",
+      exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates)",
+      mustProve: "that the carrier recorded delivery, and that Shopify records no return",
+      includeWhen: ["carrier_delivered", "no_return_recorded"],
+    },
+    {
+      key: "chronology",
+      exhibit: "the dated timeline: order, payment, shipping, delivery, dispute opened",
+      mustProve: "nothing in prose; the timeline shows the sequence",
+      includeWhen: [],
+    },
+  ],
+  leaveOut: ["payment authentication (3-D Secure, AVS, CVV)", "IP address and device", "shipping times and delivery promises"],
+  never: [
+    "That the item matched, conformed to or was as described in its listing; what the product is, does or measures.",
+    "That the listing is what the customer saw at purchase or at checkout.",
+    "The product's store name, or any words of the listing.",
+    "Returns of any kind (code writes the one return sentence).",
+    "That the customer received, kept, has or used the goods; where the parcel was delivered.",
+    "Anything about the customer's honesty, motive, intent or state of mind.",
+  ],
+};
+
 export const PLAYBOOKS: Record<string, Playbook> = {
   item_not_received: ITEM_NOT_RECEIVED,
+  product_not_as_described: NOT_AS_DESCRIBED,
 };
+
+/** The counsel playbook for a reason-code module, or null (no letter). */
+export function playbookForModule(moduleKey: string): Playbook | null {
+  if (moduleKey === "inr_product_not_received") return ITEM_NOT_RECEIVED;
+  if (moduleKey === "product_unacceptable") return NOT_AS_DESCRIBED;
+  return null;
+}

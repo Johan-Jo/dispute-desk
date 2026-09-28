@@ -30,6 +30,24 @@ vi.mock("@/lib/defence/narrativeWriter", () => ({
   }),
   // Read by the worker's defensive guard re-check.
   CURRENT_PROMPT_VERSION: 13,
+  checkDailyCap: vi.fn().mockResolvedValue({ capReached: false, counselRuns: 0 }),
+  writeRun: vi.fn().mockResolvedValue(undefined),
+  COUNSEL_REUSED_STRATEGY_KEY: "counsel_v2_reused",
+}));
+// The template writer is retired (2026-09-28): letters come only from counsel
+// v2. Counsel is stubbed to hand back whatever this file's generateNarrative
+// mock returns, so each test still controls the letter.
+vi.mock("@/lib/defence/counsel/run", () => ({
+  COUNSEL_DAILY_RUN_CAP: 1000,
+  COUNSEL_PROMPT_FAMILY: "counsel_v2",
+  counselEnabled: () => true,
+  runCounsel: vi.fn(async (args: unknown) => {
+    const { generateNarrative } = await import("@/lib/defence/narrativeWriter");
+    const r = (await (generateNarrative as unknown as (a: unknown) => Promise<unknown>)({ ...(args as object), approvedFacts: (args as { facts?: unknown }).facts })) as
+      | { narrative?: unknown; capReached?: boolean; error?: string | null }
+      | undefined;
+    return r && r.narrative && !r.error && !r.capReached ? r : null;
+  }),
 }));
 vi.mock("@/lib/defence/validateNarrative", () => ({
   validateNarrative: vi.fn().mockReturnValue({ ok: true, errors: [] }),

@@ -51,6 +51,8 @@ function narrative(
   for (const k of SECTION_KEYS) n[k] = { text: sectionText, usedFactIds: [] };
   n.omittedSections = [];
   n.warnings = [];
+  // A counsel v2 letter: the template writer is retired (2026-09-28).
+  n.counsel = { inputHash: "fixture", summary: [] };
   return { ...n, ...overrides };
 }
 
