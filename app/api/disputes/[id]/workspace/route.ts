@@ -828,10 +828,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ((packRow?.pack_json as { case_assessment?: unknown } | null)
       ?.case_assessment as CaseAssessmentSnapshot | undefined) ?? null;
 
+  // Same reason the writer assessed under: a GENERAL dispute re-typed by the
+  // bank's claim is hashed with the claim's reason (buildPack).
+  const assessedReason =
+    (packRow?.pack_json as { case_assessment_reason?: string | null } | null)
+      ?.case_assessment_reason ?? row.reason ?? null;
+
   const liveModel = packRow
     ? deriveCaseEvidenceModel({
         disputeId,
-        reason: row.reason ?? null,
+        reason: assessedReason,
         packId: packRow.id as string,
         sections: packJsonSections.map((sec) => ({
           source: (sec as { source?: string }).source ?? null,
@@ -1254,7 +1260,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
        * offer a Submit button that will 422. Merchant-safe copy only —
        * `reasons` are machine codes for support, not merchant prose.
        */
-      safety: defencePackageLatest
+      // A skipped row holds no letter by design (nothing to argue, or
+      // Shopify Protect), so it is not a filing candidate: read as
+      // "unreadable" it would show "cannot be reviewed — regenerate" over
+      // a card whose own banner explains why there is no letter.
+      safety:
+        defencePackageLatest &&
+        (defencePackageLatest as { status?: string }).status !== "skipped"
         ? (() => {
             const verdict = assessPackageCandidateSafety({
               factsJson: (defencePackageLatest as { facts_json?: unknown }).facts_json,
