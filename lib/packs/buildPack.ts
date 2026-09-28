@@ -45,6 +45,9 @@ import {
   type CoverageSummary,
 } from "./sources/coverageSource";
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
+import { collectProductEvidence } from "./sources/productSource";
+import { effectiveFamilyForDispute } from "@/lib/defence/reasonCodes/registry";
+import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import {
   buildCaseGateAssessment,
@@ -189,11 +192,13 @@ export async function buildPack(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at, response_cycle",
+      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at, response_cycle, network_reason_code",
     )
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
+  // Shopify's own reason, before the bank's claim may re-type this build.
+  const shopifyReason = (dispute.reason as string | null) ?? null;
 
   // The bank's claim decides what this dispute is about when Shopify's own
   // reason is GENERAL (lib/disputes/bankClaimAnalysis.ts): the evidence
@@ -450,6 +455,19 @@ export async function buildPack(
     }
   }
 
+  // The family this case is argued as — the letter build's resolver, fed the
+  // same inputs (network code, Shopify's reason, the claim's reason, payment
+  // method). productSource runs only for product_not_as_described.
+  ctx.caseFamily = effectiveFamilyForDispute({
+    // As the letter build reads it: the stored code, which enrichment above
+    // has just refreshed when it could.
+    networkReasonCode:
+      resolvedNetworkCode ?? ((dispute as { network_reason_code?: string | null }).network_reason_code ?? null),
+    shopifyReason,
+    caseReason: (dispute.reason as string | null) ?? null,
+    nonCardPayment: isNonCardPaymentFamily(paymentContext.family),
+  });
+
   // Run all collectors concurrently
   const results = await Promise.allSettled([
     collectOrderEvidence(ctx),
@@ -463,6 +481,7 @@ export async function buildPack(
     collectFraudRiskEvidence(ctx),
     collectCoverageEvidence(ctx),
     collectDeviceLocationEvidence(ctx),
+    collectProductEvidence(ctx),
   ]);
 
   const allSections: EvidenceSection[] = [];

@@ -212,9 +212,19 @@ function instanceKey(payload: EvidencePayload | null, index: number): string {
         if (c?.conversationId) return c.conversationId;
         break;
       }
-      case "supporting_documents":
-      case "product_description": {
+      case "supporting_documents": {
         const u = payload.uploads[index];
+        if (u?.evidenceItemId) return u.evidenceItemId;
+        if (u?.storagePath) return u.storagePath;
+        break;
+      }
+      case "product_description": {
+        // Collected listings first (highest-value line item first — the
+        // representative on a collectedAt tie), then merchant uploads.
+        const listings = payload.listings ?? [];
+        const l = listings[index];
+        if (l) return l.lineItemGid ?? l.snapshotId ?? String(index);
+        const u = payload.uploads[index - listings.length];
         if (u?.evidenceItemId) return u.evidenceItemId;
         if (u?.storagePath) return u.storagePath;
         break;
@@ -289,8 +299,13 @@ function perInstanceSourceId(
     case "customer_communication":
       return payload.conversations[index]?.conversationId ?? null;
     case "supporting_documents":
-    case "product_description":
       return payload.uploads[index]?.storagePath ?? null;
+    case "product_description": {
+      const listings = payload.listings ?? [];
+      const l = listings[index];
+      if (l) return l.snapshotId;
+      return payload.uploads[index - listings.length]?.storagePath ?? null;
+    }
     default:
       return null;
   }
