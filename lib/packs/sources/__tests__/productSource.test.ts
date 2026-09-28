@@ -118,3 +118,17 @@ describe("the evidence model reads collected listings", () => {
     expect(f?.value).toMatchObject({ collected: true, title: "Linen cushion cover", variantTitle: "Stone grey" });
   });
 });
+
+describe("Shopify's placeholder variant never reaches the letter", () => {
+  it("drops 'Default Title' from the listing fact", () => {
+    const result = classifyFacts({
+      packageId: "pkg",
+      sections: [{ type: "other", label: "", source: "shopify_product", data: { listings: [{ ...LISTING, variantTitle: "Default Title", variantOptions: [{ name: "Title", value: "Default Title" }] }], outcomes: [] }, fieldsProvided: ["product_description"] }],
+      evidenceItems: [], checklist: [], coverage: { state: "not_covered" }, fatalLoss: { triggered: false, reason: null },
+      caseStrength: "moderate", manualRows: [], reasonCodeModule: resolveReasonCodeModuleForContext(null, "PRODUCT_UNACCEPTABLE"),
+    });
+    const f = result.approved.find((x) => x.category === "product_listing");
+    expect(f?.value.variantTitle).toBeNull();
+    expect(f?.value.variantOptions).toEqual([]);
+  });
+});

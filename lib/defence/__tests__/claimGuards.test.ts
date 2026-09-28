@@ -696,3 +696,18 @@ describe("policy terms described without the word 'policy'", () => {
     expect(failures).toContain("policy_terms_beyond_record");
   });
 });
+
+describe("complaint absence in any wording is beyond the record (canary #101111)", () => {
+  const ids = (text: string) =>
+    runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [] }).failures.map((f) => f.guardId);
+  it.each([
+    "The cardholder's claim is not supported by any return or documented complaint in the merchant's records.",
+    "There is no documented complaint about the item.",
+    "The order completed without any complaint.",
+  ])("fails: %s", (text) => {
+    expect(ids(text)).toContain("contact_claim_beyond_record");
+  });
+  it("passes a sentence that merely names the cardholder's complaint", () => {
+    expect(ids("The cardholder's complaint concerns the colour of the item.")).not.toContain("contact_claim_beyond_record");
+  });
+});
