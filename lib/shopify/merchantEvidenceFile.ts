@@ -20,7 +20,7 @@ export interface EvidenceSlotFile {
   url: string | null;
 }
 
-const UNCATEGORIZED_FILE_QUERY = `query DisputeUncategorizedFile($id: ID!) {
+export const UNCATEGORIZED_FILE_QUERY = `query DisputeUncategorizedFile($id: ID!) {
   node(id: $id) {
     ... on ShopifyPaymentsDisputeEvidence {
       uncategorizedFile { originalFileName fileType url }

@@ -1,3 +1,4 @@
+import { isProductListingEvidenceEnabled } from "@/lib/featureFlags";
 /**
  * Completeness scorer — context-aware evidence engine.
  *
@@ -338,12 +339,13 @@ export function evaluateCompleteness(
           const mode: RequirementMode =
             t.requirement_mode ?? (t.required ? "required_always" : "optional");
           const resolved = resolveRequirement(mode, ctx);
+          const collectorKey = templateCollectorKey(t);
           const present =
-            t.collector_key != null
-              ? presentFields.has(t.collector_key)
+            collectorKey != null
+              ? presentFields.has(collectorKey)
               : presentFields.has(MANUAL_UPLOAD_FIELD);
           return {
-            field: t.collector_key ?? t.key,
+            field: collectorKey ?? t.key,
             label: t.label,
             required: resolved.required,
             present,
@@ -554,8 +556,33 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
 
 function getTemplateV2(reason: string | null | undefined): TemplateFieldV2[] {
   const key = canonicalReasonCode(reason);
-  if (!key) return REASON_TEMPLATES_V2.GENERAL;
-  return REASON_TEMPLATES_V2[key] ?? REASON_TEMPLATES_V2.GENERAL;
+  const template = (key ? REASON_TEMPLATES_V2[key] : undefined) ?? REASON_TEMPLATES_V2.GENERAL;
+  if (!isProductListingEvidenceEnabled()) return template;
+  // Not-as-described PR 3, flag ON only: the product description is
+  // collected from Shopify, not uploaded.
+  return template.map((t) =>
+    t.field === "product_description"
+      ? { ...t, expectedSource: "auto_shopify" as const, collectionType: "auto" as const }
+      : t,
+  );
+}
+
+/**
+ * The collector key a template item is scored against. Templates b…0004 and
+ * b…0013 map `product_description` → `order_confirmation` (the order summary
+ * stood in for the listing). With the product-listing collector ON the item is
+ * satisfied by the collected listing instead; OFF, unchanged — so the repoint
+ * is resolved here, not by a migration (plan §3 PR 3, Completeness).
+ */
+export function templateCollectorKey(t: Pick<TemplateChecklistItem, "key" | "collector_key">): string | null {
+  if (
+    t.key === "product_description" &&
+    t.collector_key === "order_confirmation" &&
+    isProductListingEvidenceEnabled()
+  ) {
+    return "product_description";
+  }
+  return t.collector_key;
 }
 
 /** Score weight by priority. */
@@ -674,10 +701,11 @@ export function evaluateCompletenessV2(
       ? templateItems.map((t) => {
           const mode: RequirementMode =
             t.requirement_mode ?? (t.required ? "required_always" : "optional");
-          const field = t.collector_key ?? t.key;
+          const collectorKey = templateCollectorKey(t);
+          const field = collectorKey ?? t.key;
           const isPresent =
-            t.collector_key != null
-              ? presentFields.has(t.collector_key)
+            collectorKey != null
+              ? presentFields.has(collectorKey)
               : presentFields.has(MANUAL_UPLOAD_FIELD);
           const waivedItem = waiveMap.get(field);
           const resolved = resolveItemStatus(mode, ctx, isPresent, waivedItem, field);

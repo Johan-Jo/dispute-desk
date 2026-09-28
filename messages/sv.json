@@ -2382,7 +2382,8 @@
         "comms": "Kommunikation",
         "other": "Ytterligare bevis",
         "access_log": "Aktivitetslogg"
-      }
+      },
+      "productListings": "Produktinformation ({count})"
     },
     "title": "Bevispaket",
     "subtitle": "Visa och hantera bevispaket",

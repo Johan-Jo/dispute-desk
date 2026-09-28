@@ -2382,7 +2382,8 @@
         "comms": "Comunicação",
         "other": "Evidências adicionais",
         "access_log": "Registro de atividade"
-      }
+      },
+      "productListings": "Fichas de produto ({count})"
     },
     "title": "Pacotes de Evidências",
     "subtitle": "Visualize e gerencie pacotes de evidências",
