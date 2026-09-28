@@ -157,3 +157,14 @@ describe("collectProductListings", () => {
     expect(r.listings.map((l) => l.lineItemGid)).toEqual(["dear", "cheap"]);
   });
 });
+
+describe("evidenceImageUrl", () => {
+  it("asks Shopify's CDN for a 600px JPEG, keeps other hosts untouched", async () => {
+    const { evidenceImageUrl } = await import("../collectProductListings");
+    const u = new URL(evidenceImageUrl("https://cdn.shopify.com/s/files/1/x.png?v=123"));
+    expect(u.searchParams.get("width")).toBe("600");
+    expect(u.searchParams.get("format")).toBe("jpg");
+    expect(u.searchParams.get("v")).toBe("123");
+    expect(evidenceImageUrl("https://images.example.com/x.png")).toBe("https://images.example.com/x.png");
+  });
+});
