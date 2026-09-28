@@ -2316,7 +2316,7 @@
       "savedDue": "Response due {date}",
       "cancel": "Cancel",
       "editClaim": "Edit claim",
-      "portalBody": "Nothing is sent for this dispute until the bank's claim is added. The claim is only visible in Shopify, and it is added in the DisputeDesk app in Shopify Admin.",
+      "portalBody": "DisputeDesk won't send a response for this dispute until the bank's claim is added. The claim is only visible in Shopify, and you add it in the DisputeDesk app in Shopify Admin.",
       "portalCta": "Add it in Shopify"
     }
   },
