@@ -31,6 +31,8 @@ export interface PresentationInput extends LifecycleInput {
   gorgiasActionableCount: number;
   automationMode: "auto" | "review" | null;
   approvedForSaveAt: string | null;
+  /** See AttentionInput.letterSkippedNoEvidence. */
+  letterSkippedNoEvidence?: boolean;
   concreteContribution: "recommended" | "optional" | null;
   gorgiasEvidenceStale: boolean;
 }
@@ -52,6 +54,7 @@ export function resolvePresentation(
     automationMode: input.automationMode,
     packStatus: input.packStatus,
     approvedForSaveAt: input.approvedForSaveAt,
+    letterSkippedNoEvidence: input.letterSkippedNoEvidence === true,
     concreteContribution: input.concreteContribution,
     packFailed: input.packStatus === "failed" || input.packStatus === "save_failed",
     gorgiasEvidenceStale: input.gorgiasEvidenceStale,
