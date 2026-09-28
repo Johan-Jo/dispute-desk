@@ -1,6 +1,6 @@
 # What Shopify already holds when we file: retained evidence on reopened disputes
 
-**Status:** rev 3.1 (after three critic reviews; round 3 ACCEPT-WITH-RESERVATIONS, its fixes applied) · **Date:** 2026-09-28 · **Related:** `bank-claim-capture.plan.md` (F4), `mein-maison-status-and-no-return.plan.md`
+**Status:** rev 4.1 (restrictions: no out-of-app merchant contact; files unreadable; critic fixes applied) · **Date:** 2026-09-28 · **Related:** `bank-claim-capture.plan.md` (F4), `mein-maison-status-and-no-return.plan.md`
 
 ## Problem
 
@@ -35,149 +35,163 @@ Holding does not help. If nothing is saved by the deadline, Shopify submits what
 - **Whether `""` or `null` clears a field**, and whether Shopify returns a `userError` for blank.
 - **Whether an unchanged field is re-submitted** with `submitEvidence: true`, or only what changed.
 - **What PayPal receives.** About 98% of Mein Maison's disputes are PayPal wallet. We don't know whether Shopify forwards these fields verbatim, compiles them into one document, or drops them.
-- **Whether the merchant can edit the retained text in Shopify Admin** on a reopened PayPal dispute. Unverified. We do not ask them to until it is.
+- **The contents of any dispute file.** `…File.url` is a signed Google Cloud Storage link that returns `200 application/pdf`, but the body is an envelope: `{"encrypted_key","encrypted_iv","data"}`. The key and IV are RSA-2048-wrapped, and the data is AES-encrypted. **Our own `Defence-…pdf` uploads come back the same way** (three checked on blume-box). This is Shopify's at-rest encryption; the key is Shopify's, and no key of ours opens it. REST gives file ids only, and `dispute_file_uploads/{id}.json` is 404. We can read a file's name, type and size, never what it says.
+
+## Constraints (user, 2026-09-28)
+
+- **Everything has to work at scale, without anyone contacting a merchant outside the app.** No emails asking for PDFs, no store access, no manual collection. The merchant may *review and decide inside DisputeDesk*, on our dispute page, with the existing "Open in Shopify Admin" link to look at their own evidence. That is the only human step, and it is optional: every path must also finish when the merchant does nothing.
+- A file is judged only by where it came from (its name), never by what it says, because nobody at DisputeDesk can read it.
 
 ## Principle
 
-Our filing is everything Shopify sends, not just our PDF. Round-1 content was **already sent** to the issuer in round 1. Clearing it removes it only from this round's packet, and our records keep a copy. On a reopened dispute we therefore act as counsel by default:
+Our filing is everything Shopify sends, not just our PDF. Round-1 content was **already sent** to the issuer in round 1, so leaving it out of round 2 removes nothing from the record. On a reopened dispute, we act as counsel by default:
 
 - We clear free text that was on the dispute when it reopened, and keep anything written after the reopen.
-- We never embed unreviewed content in our own PDF.
+- We never merge anything into our own PDF that we cannot read.
 - We never add a gate that blocks filing.
-- The merchant can override.
-
-This plan adds no wait of its own. The bank-claim card still holds every cycle-2+ dispute until the merchant answers it (`bankClaim.ts:46`, cron check `route.ts:295-307`). That hold is separate and unchanged here, and it is why §3b exists.
+- The merchant can change any default in the app, and nothing waits for them to.
 
 ## Scope
 
-**1. Snapshots, for the UI and baselines.** The hourly sync already reads `disputeEvidence` (`lib/shopify/queries/disputes.ts:27-42`).
-- Do **not** add the text fields to `DISPUTE_LIST_QUERY`. It has no status filter (`queries/disputes.ts:13-14`), and `redactPII` (`syncDisputes.ts:106-118`) copies the whole node into `disputes.raw_snapshot`, so the text would reach every dispute's raw snapshot.
-- Instead, after the page loop, run a separate per-dispute `readEvidenceRecord` for open disputes only. Measure the cost on Mein Maison (24 open).
-- Write a row to `shopify_evidence_snapshots` whenever any field changes: `dispute_id`, `cycle`, raw fields, one hash per `ClearableTextField` (normalised, sentinel stripped), and `read_at`.
-- **The first snapshot of a cycle is its baseline.** When the reopen is detected, the reopen branch of `applyDisputeSnapshot` enqueues a `snapshot_evidence` job. This matters most when the webhook detects the reopen, because the webhook payload carries no evidence text (`handleDisputeWebhook.ts:172-187`). The baseline therefore lands within minutes, not at the next sync.
-  - **Remaining window:** text written between the reopen and that job counts as baseline. That window is minutes long and accepted.
-- PII: add the table to `scrubCustomerData.ts`, the shop-redact route, `customers-data-request` (GDPR export) and `retention-cleanup`.
-- Snapshots never gate a save (§3).
+**1. Snapshots, for the page and for baselines.**
+- **How we read.** We run a separate per-dispute `readEvidenceRecord` for open disputes only: the six text fields plus, for each of the six file slots, the upload's `id`, name, type and size. It is not added to `DISPUTE_LIST_QUERY`, for two reasons: that query has no status filter, and `redactPII` (`syncDisputes.ts:106-118`) would copy the text into `disputes.raw_snapshot`. Measure the cost on Mein Maison first (24 open).
+- **What we store.** A row in `shopify_evidence_snapshots` whenever anything changes: `dispute_id`, `cycle`, the raw text fields, the file-slot metadata (upload ids), one hash per clearable field, and `read_at`. The baseline records which upload ids were present at the reopen.
+- **The baseline.** The first snapshot of a cycle is its baseline. The reopen branch of `applyDisputeSnapshot` enqueues a `snapshot_evidence` job, so the baseline lands within minutes, even when the reopen arrives by webhook (webhook payloads carry no evidence text; see `handleDisputeWebhook.ts:172-187`). Text written in those minutes counts as baseline; we accept that.
+- **PII.** The table is added to `scrubCustomerData.ts`, the shop-redact route, `customers-data-request` and `retention-cleanup`.
+- Snapshots never gate a save.
 
-**2. What v1 acts on.** Only the three free-text fields: `uncategorizedText`, `refundRefusalExplanation` and `cancellationRebuttal`. This set is the `ClearableTextField` type union, and nothing outside it can be cleared.
-- **Shown but never changed:**
-  - `refundPolicyDisclosure` and `cancellationPolicyDisclosure`: these are the store's policy, not round-1 argument. Whether to cite or bury a policy is a per-case call, and the measured count is 0.
-  - `accessActivityLog`: this is Shopify's record (D3).
-  - Files in other slots.
-- **Out of scope:** `productDescription` (not writable, `disputeEvidenceUpdate.ts:16`) and the customer fields.
-- `DISPUTEDESK_CLEAR_SENTINEL`, exported next to `isDisputeDeskFile`, never counts as retained content.
+**2. Text: what v1 acts on.** Three free-text fields: `uncategorizedText`, `refundRefusalExplanation` and `cancellationRebuttal`. They form the `ClearableTextField` type union, and nothing else can be cleared.
+- **Shown on the page, never changed:** the two policy-disclosure fields (the store's policy, not a round-1 argument; measured count 0), `accessActivityLog` (Shopify's own record, D3), `productDescription` (not writable) and the customer fields.
+- `DISPUTEDESK_CLEAR_SENTINEL` never counts as retained content.
 
-**3. Default on cycle 2+: clear the baseline, decided from a live read.**
-- **(a) In the save.** At Guard B (step 7b), just before the mutation, the worker reads the live record. That read decides, not the snapshot.
-  - A `ClearableTextField` whose live value hashes to the cycle's baseline is cleared, unless a `keep` override exists for that field hash.
-  - A value that differs from the baseline was written after the reopen. It is kept and shown.
-  - No baseline yet: the live value is the baseline.
-  - The save never refuses on any of this.
-- **(b) Clear-only write, independent of the other gates.**
-  - **When:** the sync sees baseline free text on a cycle-2+ dispute and the pack is not fileable. That means any of: its status is not `ready`/`saving`; `bankClaimBlocksFiling()` is true (the same check the cron uses, `route.ts:296`; not `needsBankClaim()`, which is true for every cycle-2+ dispute); or the last save in this cycle was refused by F4 (a `save_to_shopify_refused_merchant_file_present` audit). A fileable pack is left to (a), so in review mode the approve click can still offer "Keep it instead" before anything is cleared.
-  - **What:** a `clear_retained_text` job, not an inline write in the sync loop. The job sends one `disputeEvidenceUpdate` with only the fields to clear and `submitEvidence: false`, audits `retained_text_cleared`, and runs at most once per field hash.
-  - **Why:** it keeps the round-1 text out of what Shopify files at the deadline, even if our letter never goes. This is the only part of the plan that helps #99142 and #94866 before the file question is settled (D5).
-  - **Must be proven first:**
-    - that the write has no side effect on Shopify's `status` or `evidenceSentOn`;
-    - that it does not trip `opensNewResponseCycle` or change our `submission_state`. The write goes through a separate code path from `saveToShopifyJob` and never touches pack or submission state.
-  - **Race with a `keep` override:** there is no advisory lock in the codebase, and one taken through PostgREST could not span the Shopify call anyway. Serialise instead: the 3b clear and the keep write-back are both jobs on the same single-flight key (`dispute_id`) through `claim_jobs`. The clear job re-checks for an override before writing. A `keep` recorded after a clear writes the value back from the snapshot (`submitEvidence: false`).
-- **How a field is cleared:**
-  - If the dev-store test shows `""` (or `null`) clears it, send that.
-  - Otherwise, (a) writes the sentinel "Please see the enclosed response document." into `uncategorizedText` only, because a document is enclosed. (b) writes nothing, because none is. In that case the field is left and shown.
-  - The type union is fixed; the runtime clear set follows the test result.
+**3. Text default on cycle ≥ 2: clear the baseline, decided from a live read.**
+- **(a) In the save.** At Guard B (step 7b), right before the mutation, the worker reads the live record, and that read decides.
+  - A clearable field whose value hashes to the baseline is cleared, unless the merchant chose "Keep" for that field hash.
+  - A value that differs from the baseline was written after the reopen, so it is kept.
+  - With no baseline yet, the live value is treated as the baseline.
+  - The save never refuses over any of this.
+- **(b) When we cannot file, clear anyway (D5).**
+  - **When it applies:** the pack is not fileable, meaning any of:
+    - its status is not `ready` or `saving`;
+    - `bankClaimBlocksFiling()` is true;
+    - the file rule in §4 holds it.
+  - **What it does:** a `clear_retained_text` job sends only the fields to clear, with `submitEvidence: false`, once per field hash, audited as `retained_text_cleared`. This keeps round-1 text out of what Shopify files at the deadline even when our letter can't go.
+  - **Preconditions** (dev-store test first):
+    - it must not change Shopify's `status` or `evidenceSentOn`;
+    - it must not open a new cycle;
+    - it must not stamp `evidence_saved_to_shopify_at`/`submitted_at` or change `submission_state`.
+  - **Race with "Keep":** the clear and a "Keep" write-back share one single-flight job key (`dispute_id`, via `claim_jobs`). The clear re-checks for a "Keep" before writing. A "Keep" chosen after a clear writes the value back from the snapshot.
+  - A fileable pack is left to (a), so in review mode the merchant sees "Keep it instead" before anything is cleared.
+- **How a field is cleared.** If the dev-store test shows `""` (or `null`) clears it, we send that. Otherwise:
+  - (a) writes the sentinel "Please see the enclosed response document." into `uncategorizedText` only;
+  - (b) writes nothing, because no document is enclosed. The round-1 text then still goes out at the deadline. This is an accepted leftover until the test result is in.
 
-**4. Cycle 1: observe only.** We measured 0 cycle-1 disputes with free text not written by Shopify. Write snapshots and a `retained_text_detected` audit, and change nothing. Revisit if that count stops being 0.
+**4. Files: judged by origin and baseline, and we always file.** Our PDF normally goes into `uncategorizedFile`. What happens depends on what is already there:
 
-**5. Merchant override, never a precondition.**
-- **How the merchant sees it:**
-  - *Review mode:* the approve click says "Approving also removes the text below, which was sent in the previous round. [Keep it instead]".
-  - *Auto mode and path 3b:* we act first, then email what was removed and where to see it.
-  - The dispute page shows removed text as "Sent in the previous round, not re-sent", with the reason code at the time.
-- **Storage:** `retained_text_overrides` (`dispute_id`, `cycle`, `field`, `field_hash`, `decision='keep'`, `decided_by_user_id`, `surface`, `decided_at`), per field hash, with history kept. It is separate from F4's `merchant_file_approvals`.
-- **Route:** embedded and portal auth. It re-enqueues the save. It resets a `blocked` pack to `ready` only when the block's reason is one the override resolves. An F4 block stays blocked, so there is no blocked → ready → blocked loop with a fresh alert each time.
+| What `uncategorizedFile` holds | Default | "Keep it" (in the app, before filing) |
+|---|---|---|
+| Nothing, or our own file (`isDisputeDeskFile`) | Our letter goes there, as today | — |
+| A file that is not ours, **in the cycle's baseline** (so it was sent in round 1) | **Replace it with our letter** (D6) | Their file stays; our letter goes into an empty slot |
+| A file that is not ours, **not in the baseline** (added this round, or on cycle 1) | Their file stays; **our letter goes into an empty slot** | — (their file is already kept) |
 
-**6. Files.** F4's decision stands: the merchant's file is not replaced without their approval. The annex never merges a merchant file without a per-case check that it helps; #90906's file ("offered a 50% refund") shows why. See D4.
+- **The empty slot.** We use the first empty one of Shopify's six file slots (`disputeEvidenceUpdate.ts:63-68`), in a fixed order: `serviceDocumentationFile`, then `customerCommunicationFile`, then `shippingDocumentationFile`. The two policy slots are never used.
+  - If no slot is free, the baseline rule applies. A round-1 file is replaced. A current-round file is kept and we do not file. That is the only no-file case, and it is alerted like every other.
+  - Rollout step 2 checks that a PDF in a second slot reaches the issuer.
+- **So a silent merchant never ends up without a letter because of a file.** "Keep" never means "don't file".
+- **The other five slots** keep what they hold and are listed on the page. Round-1 files in those slots are still re-sent. This is an accepted leftover unless Rollout step 2 shows a slot can be cleared.
+- **Choices** are stored in `retained_evidence_choices`: `dispute_id`, `cycle`, `item` (a field name or file slot), `item_hash` (the text hash, or the upload `id`), `choice` (`keep` | `replace`), `decided_by_user_id`, `surface`, `decided_at`. History is kept, and a changed item gets the default again.
+- **Slot read failure.** Up to 3 retries. Then we file our letter into `uncategorizedFile` only if that slot was empty or ours at the last successful read; otherwise we use the empty-slot rule. The only risk left is a mislabelled slot, and nothing is withheld.
+- **The F4 annex is removed.** It downloads the merchant's file first, and that download only ever returns the encrypted envelope.
+  - A new migration drops `merchant_file_approvals` (no rows); the create file stays in history. Apply it to dev and prod.
+  - Delete `merchantFileAnnex.ts` and `MERCHANT_FILE_ANNEX_ENABLED`.
+  - Rewrite `merchantFileGuard.ts` and its test as the §4 table.
+  - Update `docs/technical.md:941`.
+  - Keep `save_to_shopify_refused_merchant_file_present` in the `logEvent.ts` union, because historical rows use it.
 
-**7. Save worker and contracts.**
-- `readEvidenceRecord` replaces `readUncategorizedFile`, and the F4 guard is adapted to it.
-- `composeShopifyMutationPayload` gains `clearFields: ClearableTextField[]`. Its "no text fields" contract (`:13-16`, `saveToShopify.contract.test.ts`) is amended to "no text fields except `clearFields`, each empty or the sentinel".
-- `diffVerificationReadback` treats a cleared key as confirmed iff the readback is empty or the sentinel.
-- **Refusals become visible:**
-  - A non-retriable refusal (F4's today) sets the pack to the existing `blocked` status (`lib/types/packStatus.ts:28`, set by nothing today), not `saving`. It also stores a `blocked_reason`, and the page uses reason-aware copy, because `normalizeStatus.ts:103-110` would otherwise say "Evidence pack has blockers".
-  - It raises an attention reason; `bank_claim_needed` takes precedence.
-  - It calls the no-file admin alert, moved from the cron closure (`route.ts:210`) into `lib/`.
-  - `blocked` becomes re-enterable at the three gates: `saveToShopifyJob.ts:77`, `lib/defence/enqueue.ts:83` and `app/api/packs/[packId]/approve/route.ts:62`.
-  - This also fixes F4's existing stuck-in-`saving` bug.
-- Fix the false comment at `disputeEvidenceUpdate.ts:21`: the IP is not appended to `accessActivityLog`.
+**5. Merchant review, inside the app only.**
+- An "Already in Shopify" card on the dispute page (embedded, portal, mobile) lists the retained text and files and what will happen to each, with the "Open in Shopify Admin" link.
+- **The card is interactive only while the dispute is unfiled:** in review mode, where it rides the approve click, or while only §3b has acted. Each item offers "Keep" or "Replace". The choice route re-enqueues the save. A "Keep" after a §3b clear writes the text back.
+- **Once we have filed** (`submitEvidence: true`), the card becomes a read-only record: "Replaced", "Sent in the previous round, not re-sent" (with the reason code at the time), or "Kept". It offers no control, because submitted evidence can't be changed.
+- In auto mode, an email tells the merchant where to see the record. It informs; it doesn't ask.
 
-**8. Our letter never sees snapshot content.** It is never passed to the writer.
+**6. Save worker and contracts.**
+- `readEvidenceRecord` replaces `readUncategorizedFile`.
+- `composeShopifyMutationPayload` gains `clearFields: ClearableTextField[]`. The "no text fields" contract (`:13-16`, `saveToShopify.contract.test.ts`) is amended to "no text fields except `clearFields`, each empty or the sentinel".
+- `diffVerificationReadback` confirms a cleared key iff the readback is empty or the sentinel. For our file it confirms by slot name and size only, since contents can't be read back.
+- **A non-retriable refusal:**
+  - sets the pack to `blocked` (`lib/types/packStatus.ts:28`, which nothing sets today) with a `blocked_reason` and reason-aware copy;
+  - raises an attention reason and calls the no-file admin alert, moved from the cron closure (`route.ts:210`) into `lib/`.
+  - `blocked` is made re-enterable at `saveToShopifyJob.ts:77`, `lib/defence/enqueue.ts:83` and `app/api/packs/[packId]/approve/route.ts:62`.
+  - The choice route resets to `ready` only for a reason the choice resolves.
+- Fix the false comment at `disputeEvidenceUpdate.ts:21`.
 
-## Decisions for the user
+**7. Our letter never sees snapshot content.** It is never passed to the writer.
 
-### Decided 2026-09-28 (user)
+**8. Cycle 1: text observed only.** We measured 0 cases of free text not written by Shopify. We write a `retained_text_detected` audit and change no text. Files on cycle 1 follow the §4 table: never replaced, and our letter goes into an empty slot.
 
-- **D1: yes.** Clear baseline free text on cycle ≥ 2 by default, with an override.
-- **D2: nothing is erased until the user has seen it firsthand.** No clear-only write, operator script or save that clears text runs on #99142 or #94866 until the user has looked at the evidence in Shopify Admin and said go:
-  - #99142: https://admin.shopify.com/store/6a8848-dd/payments/dispute_evidences/14550761806
-  - #94866: https://admin.shopify.com/store/6a8848-dd/payments/dispute_evidences/14349173070
-- **D3: leave untouched for now.** `accessActivityLog` is never changed in v1.
-- **D4: yes, read the files first.** Tried on 2026-09-28; it cannot be done through the API. `uncategorizedFile.url` is a signed Google Cloud Storage URL that answers `200 application/pdf`, but the body is an envelope, `{"encrypted_key", "encrypted_iv", "data"}`: a 350-character base64 key and IV, i.e. RSA-2048-wrapped, around AES-encrypted data. **The same holds for our own uploads.** Three `Defence-…pdf` files we saved on blume-box come back in the same envelope. So this is Shopify's at-rest encryption of dispute file uploads, and the private key is Shopify's. No DisputeDesk key opens it. The REST `dispute_evidences.json` gives only file ids, and `dispute_file_uploads/{id}.json` returns 404. So the ways left to see a file are:
-  1. the merchant sends it (for #99142 / #94866: in the reply we owe them);
-  2. in the product, the merchant opens it themselves via the existing "open in Shopify Admin" link (`getShopifyDisputeUrl`) from our dispute page;
-  3. ask Shopify Developer Support whether an app-readable download exists (question added to the Hanad thread).
+## Decisions
 
-  §6's "per-case check that the file helps" therefore can only be done by the merchant, never by us.
-- **D5: open.** Re-explained in plain terms; waiting for an answer.
+- **D1 — yes (user).** Clear baseline free text on cycle ≥ 2 by default.
+- **D3 — untouched for now (user).** `accessActivityLog` is never changed in v1.
+- **D2 — Mein Maison #99142 / #94866 (user: nothing erased before you have seen it).** You have seen the text:
+  - #99142: "The purchase was made by the rightful cardholder"
+  - #94866: "The customer has returned the item, but it has not yet arrived at our warehouse for inspection. The chargeback is therefore premature and invalid until the returned item is received and inspected by the merchant."
 
-Original options, kept for the record:
+  - The files can't be seen by anyone at DisputeDesk, so they follow the §4 rule like every other dispute.
+  - **Timing.** #99142 is due 10-01 and #94866 10-02. §3–§4 can't ship by then.
+  - **Canary path.** A one-off §3b clear-only script (text only), run once the dev-store test shows a clear works. It runs on #99142 first, reads back, then #94866, each after your go.
+  - If the test or your go misses a date, that dispute goes out as Shopify holds it, and this is recorded here.
+- **D4 — superseded.** "Read the files first" is impossible (see above). Files are judged by origin (§4).
+- **D5 — open. When we can't file, may we still remove the old text?** Plain version: on #94866 our letter is held (the bank's claim is missing and a round-1 file sits in the slot). If we do nothing, Shopify sends the round-1 text to the bank at the deadline. With D5, we remove only that text, without filing, and show it on the page. *Recommendation: yes.*
+- **D6 — open. Should a round-1 file (one in the baseline) on a reopened dispute be replaced with our letter by default?**
+  - This reverses F4's "never without the merchant's approval". Approval is still possible in the app, but it can no longer be required, because a silent merchant would otherwise always get the round-1 package re-sent.
+  - A file added this round is never replaced; our letter goes into another slot.
+  - *Recommendation: yes.*
+- **D7 — open, and it blocks the file work. The bank-claim hold waits on the merchant.**
+  - `needsBankClaim()` is true for every reopened dispute, and the save worker refuses until the claim is pasted (`saveToShopifyJob.ts:178-198`).
+  - So for a merchant who does nothing, §3a and §4 never run; only §3b does. That breaks constraint (1).
+  - *Recommendation:* make the claim optional input. Without it, we file a claim-neutral letter at deadline minus 2 days, based on the current reason code, as the letter did before the card existed. The card stays, and a claim pasted before then still shapes the letter.
+  - Until D7 is decided, §4 reaches only merchants who paste the claim.
 
-- **D1. Default on cycle 2+:** clear baseline free text, with an override (§3, §5). *Recommended.* Keeping by default would file text like #94866's admission next to our letter. The case for keeping ("don't delete their words") is already met by the snapshot, the page and the override.
-- **D2. Mein Maison now** (#99142 due 10-01, #94866 due 10-02).
-  - *Recommendation:* in the reply we owe them, name both sentences, say they were sent in round 1, and say we will remove them from this round unless they object. Ask about the round-1 file there too (D4).
-  - Run the dev-store test now. If a clear-only write works, run path 3b for the two as a one-off operator script, `scripts/shopify/clear-retained-text.mjs`:
-    1. Dry run first.
-    2. #99142 first, read it back, then #94866.
-    3. This needs your per-change approval, because it writes to a merchant's live dispute.
-  - If they object or nobody approves, record that Shopify filed its record.
-- **D3. Shopify's own activity-log lines.** "Prior disputes… resolved for the merchant" helps us. "A successful refund of €22.46 was issued" hurts us, and Shopify wrote it (#99296). *Recommendation:* leave the field untouched in v1 and show it to the merchant. Whether we ever remove a Shopify-authored line is a separate decision.
-- **D4. The round-1 file** (#99142, #94866: `AdditionalEvidence.pdf`). F4 decided approval is required. *Recommendation:* keep that rule, but first download and read the two files (read-only).
-  - If a file is Shopify's own auto-compiled order summary rather than the merchant's work, treat it as round-1 content like the text and replace it by default.
-  - Otherwise, ask the merchant in the D2 reply.
-  - Until then these two cannot carry our letter; only 3b protects them.
-- **D5. The clear-only write (§3b)** changes a merchant's Shopify evidence without filing and without asking first. *Recommendation:* yes, on cycle-2+ baseline free text only, with email and override. It is the only path that stops Shopify re-filing the round-1 admission when we can't file.
+## Shopify question
+
+The follow-up to Developer Support (the Hanad thread) asks whether an app can download a readable copy of a dispute file upload. If it can, §4 can judge files by content and verification can read back our own PDF. Until then, the plan does not depend on it.
 
 ## Rollout
 
 1. ✅ Read-only measurement (above).
 2. Dev-store write test on a test dispute. Record the results here:
    - Set text, then `""`, then `null`, reading back each time.
-   - A `submitEvidence: false` clear-only write persists, and leaves `status` and `evidenceSentOn` unchanged.
-   - Shopify's deadline auto-file uses the record as it stands.
-   - Whether an unchanged field is re-submitted.
-3. Read the two round-1 files (D4), read-only.
-4. Sync snapshot and observe-only audit (§1, §4) on develop, then prod with approval. No behaviour change.
-5. The rest, develop first, rendered on #94866-shaped fixtures, then prod with per-change approval:
-   - the clear-only path (§3b);
-   - save-worker clearing, the verifier and visible refusals (§3, §7);
-   - the override and the card (§5).
+   - Check that a `submitEvidence: false` write persists and leaves `status` and `evidenceSentOn` unchanged.
+   - Check whether the deadline auto-file uses the record as it stands.
+   - Check whether an unchanged field is re-submitted.
+   - Check whether replacing `uncategorizedFile` detaches the old upload.
+   - Check that a PDF uploaded to `serviceDocumentationFile` (a second slot) is submitted, and how it is labelled.
+   - Check whether a file slot can be cleared.
+   - Check that a retained upload keeps its `id` across a reopen.
+3. Sync snapshot + observe-only audit (§1, §8) on develop, then prod with approval. No behaviour change.
+4. Clear-only (§3b), save-worker clearing, the file rule (§4), removing the annex, visible refusals (§6), and the card (§5). Develop first, rendered on #94866-shaped fixtures. Prod with per-change approval, then the D2 canary.
 
 ## Tests
 
-- **Baseline:** it is the first snapshot of the cycle, and the reopen path writes it. Live value equal to the baseline is cleared; a different live value is kept.
-- **Missing or stale snapshot:** the live read decides. A save is never refused because of retained text.
-- **Overrides:**
-  - A `keep` on a field hash means that field is not cleared.
-  - A regenerated `accessActivityLog` or a file change does not touch overrides, because the hashes cover the clearable fields only.
-- **Clear-only write (3b):**
-  - Fires once per field hash, only on cycle 2+, and only when the pack is not fileable (the §3b definition).
-  - Never writes the sentinel.
-  - Never changes pack status or `submission_state`, never stamps `evidence_saved_to_shopify_at` or `submitted_at` (these drive `responseAnchorKey`), and does not open a new cycle (`responseCycle.ts:83`).
-  - Fires only when `bankClaimBlocksFiling()` or F4 holds the dispute, or it isn't `ready`. A `ready`, answered pack is left to (a).
-  - Serialised with the override through the single-flight job key.
-- **Payload:** only `ClearableTextField` keys are cleared. Policy fields, `accessActivityLog`, `productDescription` and the customer fields never are (type test).
-- **Verifier:** a cleared key is confirmed. A non-empty readback of a cleared key means unverified.
-- **Refusals:** a non-retriable refusal sets the pack to `blocked` with a reason, raises attention and sends the admin alert. The override route resets to `ready` only for a reason it resolves; an F4 block stays blocked.
-- **PII:** `raw_snapshot` never contains evidence text fields.
-- **Letter:** the writer never receives snapshot content.
-- **Parser:** the "Prior disputes…" and "Refunds on disputed transaction…" blocks are recognised.
-- **Copy:** 6 locales, plus a help article, "What DisputeDesk does with evidence already in Shopify", which says round-1 content was already sent.
+- **Baseline.** A live value equal to the baseline is cleared; a changed value is kept. With no snapshot, the live read decides, and a save is never refused because of retained content.
+- **Choices.**
+  - "Keep" on an item hash protects that item.
+  - A changed item gets the default again.
+  - A regenerated `accessActivityLog` doesn't disturb choices.
+- **Clear-only (3b).**
+  - Fires once per hash, only on cycle ≥ 2, and only when the pack isn't fileable.
+  - Never writes the sentinel, never stamps `evidence_saved_to_shopify_at`/`submitted_at`, and never opens a cycle.
+  - Serialised with "Keep".
+- **Files** (the §4 table, row by row):
+  - A foreign file in the baseline is replaced; with "Keep", our letter goes into the empty slot.
+  - A foreign file not in the baseline, or on cycle 1, is never replaced; our letter goes into the empty slot.
+  - With no free slot, the rule in §4 applies.
+  - A slot read failure files after 3 retries.
+  - No code path downloads a file's contents.
+- **Card.** Interactive only while unfiled; read-only after `submitEvidence: true`.
+- **Payload.** Only `ClearableTextField` keys are cleared; the other fields never are (type test).
+- **Verifier.** Cleared keys are confirmed; our file is confirmed by name and size.
+- **Refusals.** A refusal sets `blocked` with a reason, raises attention and sends the alert.
+- **PII and the letter.** `raw_snapshot` never contains evidence text, and the writer never receives snapshot content.
+- **Copy.** 6 locales, plus the help article "What DisputeDesk does with evidence already in Shopify".
