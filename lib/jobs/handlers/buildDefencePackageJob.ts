@@ -560,6 +560,13 @@ export async function handleBuildDefencePackage(
           removed: scoped.removed,
         },
       });
+      // Nothing left that answers the claim: no letter. An all-omitted draft
+      // (Sura Svenne test, 2026-09-27) could otherwise be filed at the
+      // deadline as a blank response. Same honest exit the canonical plan
+      // takes; the merchant's checklist now asks for the claim's evidence.
+      if (planFacts.length === 0) {
+        return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+      }
     }
   }
 
