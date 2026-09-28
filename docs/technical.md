@@ -4178,6 +4178,7 @@ Two exceptions that genuinely never submit, and are the only places absolute lan
 
 - **Shopify Protect** — `lib/defence/enqueue.ts:136-145` returns a `skipped` row with no `pdf_path`, so the finalize branch can never match it.
 - **Review mode / the high-value safeguard** — the safeguard forces `mode:"review"` (`storeAutomation.ts:268-279`), so `needs_review=true` keeps the dispute outside the cron's filter entirely.
+- **`needs_review` follows the CURRENT mode** (bank-claim plan F5, 2026-09-28) — `syncNeedsReview` in `disputeEffectsDispatcher.ts` writes `needs_review = (mode === "review")` on every rule evaluation, both ways. It used to be set on review and never cleared on auto, so a shop that moved to auto-pilot kept the flag and the cron skipped those disputes (16 Mein Maison disputes on 2026-09-28). A merchant's explicit choice lives in `review_state` and is untouched. One-off repair: `scripts/reconcile-needs-review.mts` (dry run by default; `--apply` clears the flag where the rules now resolve to auto and recomputes `normalized_status`).
 
 **The copy contract.** Merchant-facing copy about Auto-pilot said the opposite of all this — *"Everything else waits for your review"* — across ~13 keys. The vocabulary is now fixed, three moves, no synonyms:
 

@@ -58,6 +58,8 @@ import type {
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockRunPipeline = vi.mocked(runAutomationPipeline);
 const mockEvaluateRules = vi.mocked(evaluateRules);
+/** needs_review values written by syncNeedsReview, in order (F5). */
+const needsReviewWrites: boolean[] = [];
 const mockSendAlert = vi.mocked(sendNewDisputeAlert);
 const mockClaimDeferred = vi.mocked(claimAndSendDeferredNewDisputeAlert);
 const mockSendOutcome = vi.mocked(sendOutcomePostedAlert);
@@ -82,14 +84,18 @@ function buildClient(setup: ClientSetup) {
     }
     if (table === "disputes") {
       return {
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            is: vi.fn().mockReturnValue({
-              select: vi.fn().mockResolvedValue({ data: claimRows, error: null }),
+        update: vi.fn((values: Record<string, unknown>) => {
+          if ("needs_review" in values) needsReviewWrites.push(values.needs_review as boolean);
+          return {
+            eq: vi.fn().mockReturnValue({
+              is: vi.fn().mockReturnValue({
+                select: vi.fn().mockResolvedValue({ data: claimRows, error: null }),
+              }),
+              // .update().eq().or() — syncNeedsReview (bank-claim plan F5).
+              or: vi.fn().mockResolvedValue({ error: null }),
+              then: undefined,
             }),
-            // .update().eq() (needs_review path) — no further chaining needed.
-            then: undefined,
-          }),
+          };
         }),
       };
     }
@@ -153,6 +159,7 @@ function appliedResult(
 describe("dispatchDisputeEffects", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    needsReviewWrites.length = 0;
     mockEvaluateRules.mockResolvedValue({
       action: { mode: "review", pack_template_id: null },
       packTemplateId: null,
@@ -185,6 +192,21 @@ describe("dispatchDisputeEffects", () => {
         reason: "fraudulent",
       }),
     );
+  });
+
+  it("needs_review follows the current mode both ways (F5)", async () => {
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+    await dispatchDisputeEffects({ shopId: "shop-1", result: appliedResult([OPENED_EVENT]), source: "webhook", client });
+    mockEvaluateRules.mockResolvedValue({ action: { mode: "auto", pack_template_id: null }, packTemplateId: null } as never);
+    await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([{ ...OPENED_EVENT, eventKey: "dispute-1:DISPUTE_OPENED:2" }]),
+      source: "webhook",
+      client,
+    });
+    // review → true, then auto → false: a stale review flag is cleared.
+    expect(needsReviewWrites).toEqual([true, false]);
   });
 
   it("DISPUTE_OPENED with pipeline pack_enqueued → defers email (NO sendNewDisputeAlert)", async () => {
