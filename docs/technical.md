@@ -9638,6 +9638,8 @@ would discard the navigation sequence the table exists to capture.
 
 ### Retention
 
+**Product-listing snapshots (not-as-described PR 2, 2026-09-28).** Table `product_listing_snapshots` (append-only: UPDATE always refused, DELETE only under `app.allow_append_only_delete`; unique `(dispute_id, line_item_gid, content_hash)`), images in `evidence-packs/{shop_id}/product-listings/{dispute_id}/`. Retention: `purge_expired_product_snapshots()` (SECURITY DEFINER) deletes rows older than the shop's `retention_days` (default 365) and returns their image paths; the `retention-cleanup` cron removes those objects (`productSnapshotImagesDeleted`). GDPR `shop/redact` removes the shop's whole `product-listings/` prefix alongside `admin_purge_shop` (which covers the table via its `shops` FK). Inert until PR 3's collector (behind `PRODUCT_LISTING_EVIDENCE_ENABLED`) writes rows.
+
 90 days, swept daily by `/api/cron/cleanup-page-views` (03:30 UTC, `cronEnvGate`
 first per the cron rule). Batched at 5000 rows/run so the job stays bounded as
 the customer base grows. Measured volume today is tens of rows a day
