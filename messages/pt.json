@@ -2316,7 +2316,7 @@
       "savedDue": "Prazo da resposta: {date}",
       "cancel": "Cancelar",
       "editClaim": "Editar reclamação",
-      "portalBody": "Nada é enviado para esta disputa até que a reclamação do banco seja adicionada. Ela só aparece na Shopify e é adicionada no app DisputeDesk, no painel da Shopify.",
+      "portalBody": "A DisputeDesk não enviará uma resposta para esta disputa até que a reclamação do banco seja adicionada. Ela só aparece na Shopify e é adicionada no app DisputeDesk, no painel da Shopify.",
       "portalCta": "Adicionar na Shopify"
     }
   },

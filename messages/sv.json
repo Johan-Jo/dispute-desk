@@ -2316,7 +2316,7 @@
       "savedDue": "Svar senast {date}",
       "cancel": "Avbryt",
       "editClaim": "Redigera anspråk",
-      "portalBody": "Inget skickas för den här tvisten förrän bankens anspråk har lagts till. Anspråket syns bara i Shopify och läggs till i DisputeDesk-appen i Shopify Admin.",
+      "portalBody": "DisputeDesk skickar inget svar för den här tvisten förrän bankens anspråk har lagts till. Anspråket syns bara i Shopify och läggs till i DisputeDesk-appen i Shopify Admin.",
       "portalCta": "Lägg till det i Shopify"
     }
   },

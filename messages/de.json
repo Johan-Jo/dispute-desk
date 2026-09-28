@@ -2316,7 +2316,7 @@
       "savedDue": "Antwort fällig am {date}",
       "cancel": "Abbrechen",
       "editClaim": "Begründung bearbeiten",
-      "portalBody": "Für diese Rückbuchung wird nichts gesendet, bis die Begründung der Bank hinzugefügt ist. Sie ist nur in Shopify sichtbar und wird in der DisputeDesk-App im Shopify-Admin hinzugefügt.",
+      "portalBody": "DisputeDesk reicht für diese Rückbuchung keine Antwort ein, bis die Begründung der Bank hinzugefügt ist. Sie ist nur in Shopify sichtbar und wird in der DisputeDesk-App im Shopify-Admin hinzugefügt.",
       "portalCta": "In Shopify hinzufügen"
     }
   },
