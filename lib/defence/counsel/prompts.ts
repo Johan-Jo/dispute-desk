@@ -218,7 +218,7 @@ Put a sentence in "errors" when:
 - it repeats, in the same or other words, a point made earlier in the summary or in the code-written text shown to you.
 Not repetition: the summary's closing sentence tying the facts to the claim, and its closing request (to reverse the chargeback or to close the dispute), even though the Conclusion restates the strongest facts; "the complete order" in the summary next to the item count in the Shipping text.
 
-Before putting a sentence in "errors", check each number and date in it against EVENTS AND INTERVALS, which are computed from the records: do not do date arithmetic yourself. If they match the events the sentence attaches them to, it is NOT an error: do not list a correct sentence. Intervals the ledger gives separately (e.g. delivery → later order, later order → dispute) may be told in sequence ("Sixty-one days later …, and fourteen days after that …"); that is correct and clear.
+Before putting a sentence in "errors", check each number and date in it against EVENTS AND INTERVALS, which are computed from the records: do not do date arithmetic yourself. If they match the events the sentence attaches them to, it is NOT an error: do not list a correct sentence. Intervals the ledger gives separately (e.g. delivery → later order, later order → dispute) may be told in sequence ("Sixty-one days later …, and fourteen days after that …"); that is correct and clear. An interval may be told from either end: "A, N days before B" and "B, N days after A" state the same fact and are both correct.
 
 Put a sentence in "unclear" only when a busy analyst would have to read it twice, when its literal meaning could be taken the wrong way, or when it uses a metaphor, idiom or legal flourish instead of the plain fact.
 
@@ -260,7 +260,8 @@ export function timelineBlock(ledger: readonly LedgerClaim[]): string {
   if (opened) {
     const gaps = [
       later?.daysBeforeDisputeWord && `${later.daysBeforeDisputeWord} days after the later order`,
-      after?.daysAfterDeliveryWord && `${after.daysAfterDeliveryWord} days after the delivery`,
+      after?.daysAfterDeliveryWord &&
+        `${after.daysAfterDeliveryWord} days after the delivery (equally: the delivery was ${after.daysAfterDeliveryWord} days before the dispute)`,
       before && "before the delivery",
     ].filter(Boolean);
     rows.push(`- Dispute opened: ${opened}${gaps.length ? ` — ${gaps.join(", ")}` : ""}.`);

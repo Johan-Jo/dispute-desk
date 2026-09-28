@@ -255,10 +255,12 @@ export interface CounselRunResult {
   policyExhibit?: PolicyExhibit | null;
 }
 
+/** The refund policy as the letter shows it (maintainer, 2026-09-28): its key
+ *  term in a few words, from the verified extraction, and a link to the
+ *  published policy — never the full text. */
 export interface PolicyExhibit {
-  original: string;
-  english: string | null;
-  retrievedOn: string | null;
+  summary: string;
+  url: string | null;
   updatedOn: string | null;
 }
 
@@ -271,7 +273,7 @@ async function prepareNotAsDescribed(
   packSections: LedgerInput["packSections"],
   allowReturnRoute: boolean,
   model: (system: string, user: string, maxTokens: number) => Promise<string>,
-): Promise<{ extras: Omit<NotAsDescribedExtras, "constraints">; policy: { text: string; updatedAt: string | null; capturedAt: string | null } | null }> {
+): Promise<{ extras: Omit<NotAsDescribedExtras, "constraints">; policy: { text: string; updatedAt: string | null; capturedAt: string | null; url: string | null; windowDays: number | null } | null }> {
   const order = packSections.find((s) => s?.type === "order" && (s.data as Obj2 | null)?.orderName)?.data as Obj2 | undefined;
   const lineItems = ((order?.lineItems as unknown[]) ?? []).map((li) => (li && typeof li === "object" ? (li as Obj2) : {}));
   const described = lineItems
@@ -286,7 +288,7 @@ async function prepareNotAsDescribed(
   );
   const orderItemsEnglish = english.every((x): x is string => !!x) ? english : [];
 
-  let policy: { text: string; updatedAt: string | null; capturedAt: string | null } | null = null;
+  let policy: { text: string; updatedAt: string | null; capturedAt: string | null; url: string | null; windowDays: number | null } | null = null;
   let returnWindow: NotAsDescribedExtras["returnWindow"] = null;
   if (allowReturnRoute) {
     const refunds = ((packSections.find((s) => s?.source === "policy_snapshots")?.data as Obj2 | undefined)?.policies as unknown[] | undefined ?? [])
@@ -300,9 +302,18 @@ async function prepareNotAsDescribed(
         .maybeSingle();
       const text = typeof data?.extracted_text === "string" ? data.extracted_text : null;
       if (text) {
-        policy = { text, updatedAt: (data?.policy_updated_at as string | null) ?? null, capturedAt: (data?.captured_at as string | null) ?? null };
+        policy = {
+          text,
+          updatedAt: (data?.policy_updated_at as string | null) ?? null,
+          capturedAt: (data?.captured_at as string | null) ?? null,
+          url: typeof refunds.publishedUrl === "string" ? refunds.publishedUrl : null,
+          windowDays: null,
+        };
         const w = await extractReturnWindow(text, (s, u) => model(s, u, 600)).catch(() => null);
-        if (w) returnWindow = { windowDays: w.windowDays, policyUpdatedAt: policy.updatedAt };
+        if (w) {
+          returnWindow = { windowDays: w.windowDays, policyUpdatedAt: policy.updatedAt };
+          policy.windowDays = w.windowDays;
+        }
       }
     }
   }
@@ -507,17 +518,12 @@ export async function runCounsel(args: {
   });
   const tokens = { prompt: 0, completion: 0, cached: 0 };
   const stages: CounselStageUsage[] = [];
-  // The policy the letter argues from prints in full, with its translation.
+  // The policy the letter argues from: its key term, verified, and a link.
   let policyExhibit: PolicyExhibit | null = null;
-  if (nad?.policy && ledger.some((c) => c.id === "return_route_open")) {
-    const english = await translateListing(
-      { title: null, variantLine: null, excerpt: nad.policy.text.replace(/\s+/g, " ").trim() },
-      (s, u) => plainModel(s, u, 4000),
-    ).catch(() => null);
+  if (nad?.policy?.windowDays && ledger.some((c) => c.id === "return_route_open")) {
     policyExhibit = {
-      original: nad.policy.text,
-      english: english?.excerpt ?? null,
-      retrievedOn: nad.policy.capturedAt,
+      summary: `Refund on an item returned within ${nad.policy.windowDays} days of delivery`,
+      url: nad.policy.url,
       updatedOn: nad.policy.updatedAt,
     };
   }
@@ -571,8 +577,9 @@ export async function runCounsel(args: {
   if (!written.ok) {
     // Visible in the logs: why there is no letter.
     console.warn(
-      `[counsel] summary failed for ${args.orderName ?? "?"} after ${written.corrected ? "one correction" : "the first draft"}: ` +
-        written.issues.join(" | ").slice(0, 800),
+      `[counsel] summary failed for ${args.orderName ?? "?"} after ${written.corrected ? "the corrections" : "the first draft"}: ` +
+        written.issues.join(" | ").slice(0, 800) +
+        ` || last summary: ${written.draft.summary.paragraphs.join(" ").slice(0, 900)}`,
     );
     return null;
   }

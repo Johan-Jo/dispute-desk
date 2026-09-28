@@ -205,9 +205,10 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const summaryLimit = ctx.brief && (d.evidenceSections?.length ?? 0) >= 3 ? 90 : 80;
   if (words(summaryText) > summaryLimit) {
     issues.push(
-      `summary: ${words(summaryText)} words, the limit is ${summaryLimit} — cut at least ${words(summaryText) - summaryLimit + 5} words. ` +
-        "Drop a supporting detail (a delivery notification, dispatch timing, a date that repeats an interval) or a clause that restates another; keep the claim, " +
-        "the delivery, the later order, the sentence tying them to the claim, and the request.",
+      `summary: ${words(summaryText)} words, the limit is ${summaryLimit} — rewrite it to about ${summaryLimit - 15} words. ` +
+        "Name the item in a few words (its kind, and colour or size only when they matter; the table below carries the full description); " +
+        "drop a supporting detail (a notification, dispatch timing, a date that repeats an interval) or a clause that restates another; " +
+        "keep the claim, each reason, and the request.",
     );
   }
   if (!(ctx.frame ? requestPattern(ctx.frame) : /\brevers/i).test(summaryText)) {
