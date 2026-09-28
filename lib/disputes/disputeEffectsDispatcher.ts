@@ -231,16 +231,7 @@ async function dispatchDisputeOpened(
         null;
       if (!args.skipAutomation && evalResult) {
         try {
-          if (resolvedMode === "review") {
-            const sb = args.client ?? getServiceClient();
-            await sb
-              .from("disputes")
-              .update({
-                needs_review: true,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", event.disputeId);
-          }
+          await syncNeedsReview(args.client ?? getServiceClient(), event.disputeId, resolvedMode);
 
           pipelineResult = await runAutomationPipeline({
             id: event.disputeId,
@@ -343,13 +334,11 @@ async function dispatchResponseCycleReopened(
       }
 
       try {
-        if (normalizeMode(evalResult.action.mode) === "review") {
-          const sb = args.client ?? getServiceClient();
-          await sb
-            .from("disputes")
-            .update({ needs_review: true, updated_at: new Date().toISOString() })
-            .eq("id", event.disputeId);
-        }
+        await syncNeedsReview(
+          args.client ?? getServiceClient(),
+          event.disputeId,
+          normalizeMode(evalResult.action.mode),
+        );
         await runAutomationPipeline({
           id: event.disputeId,
           shop_id: args.shopId,
@@ -368,6 +357,26 @@ async function dispatchResponseCycleReopened(
 
   if (dedup.ran) summary.effectsRan++;
   else summary.effectsSkipped++;
+}
+
+/**
+ * `needs_review` follows the CURRENT rule mode, both ways. It used to be set
+ * on review and never cleared on auto, so a shop that moved to auto-pilot
+ * kept the flag; `normalized_status` then read `needs_review` and the
+ * deadline cron skipped the dispute, so it was never filed (bank-claim plan
+ * F5: 16 Mein Maison disputes on 2026-09-28). A merchant's explicit decision
+ * lives in `review_state`, not here, so clearing this never overrides one.
+ */
+export async function syncNeedsReview(
+  sb: SupabaseClient,
+  disputeId: string,
+  mode: AutomationMode,
+): Promise<void> {
+  await sb
+    .from("disputes")
+    .update({ needs_review: mode === "review", updated_at: new Date().toISOString() })
+    .eq("id", disputeId)
+    .or(`needs_review.is.null,needs_review.neq.${mode === "review"}`);
 }
 
 /**
