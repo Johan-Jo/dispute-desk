@@ -1,197 +1,214 @@
-# Defence letter structure — one frame, a playbook per claim
+# Defence letters that argue — one frame, a counsel playbook per claim
 
-**Status:** rev 2, 2026-09-28 — revised after the critic review (§10). For maintainer review.
-**Owner:** defence letters (`lib/defence/counsel/`).
-**Writer:** counsel v2 only. The template writer (`generateNarrative`) is retired permanently (maintainer, 2026-09-28) — see §7.
+**Status:** rev 3, 2026-09-28 (evening). Rewritten after the maintainer rejected the rev-2 test print:
+*"What happened to the advocacy to argue? You're just stating facts here. … I see no argumentation at all."*
+**Standard:** `docs/plans/defence-counsel/02-counsel-standard.md` (approved 2026-09-25) is binding for every letter. A letter that does not meet it is not done, however many checks it passes.
+**Writer:** counsel v2 only. The template writer is retired permanently (maintainer, 2026-09-28).
 
 ---
 
-## 0. Why this plan exists
+## 0. Two rejections, one cause
 
-The maintainer rejected the not-as-described letter for Mein Maison #101111 (2026-09-28):
-
-> "Starting with the executive summary, why are you mixing in German and product details? There's nothing to do with it, nor in the transaction overview. Also the order got only two points. What happened there? You lost the complete sequence. … What about delivery? What about opening the chargeback?"
-
-And, the same day: *"Please permanently deactivate the older writer, should not happen again"* and *"Do not mix German into the dispute letter as we use English there."*
-
-The record for #101111 held the whole story. The letter used two rows of it:
-
-| Date (2026) | Event | In the letter? |
+| Letter | Maintainer | What was wrong |
 |---|---|---|
-| 6 Sep | Order placed and paid (PayPal wallet, via Shopify Payments) | yes — the only two timeline rows |
-| 7 Sep | Shipped, one tracked parcel | **no** |
-| 18 Sep | Carrier recorded delivery | **no** |
-| 26 Sep | Dispute opened (a PayPal *inquiry*), 8 days after delivery | **no** |
-| — | No return in the store's returns system | one sentence |
-| — | Listing with photos; refund policy published | yes — but the prose restated German product specs |
+| #101111, template writer (morning) | "why are you mixing in German and product details? … You lost the complete sequence. What about delivery? What about opening the chargeback?" | Wrong writer; German specs in the prose; two timeline rows |
+| #101111, counsel test print (evening) | "You're just stating facts here. … I see no argumentation at all." | Right facts, right frame, no argument |
 
-## 1. Diagnosis — root causes (verified against the code)
+The second letter fixed the facts and lost the advocacy. It had the sequence, English, PayPal wording and a full timeline. But it read as a list: "The item was sold under a published listing… The carrier recorded delivery… The record shows a completed sale under a published listing and a delivered order." None of that answers the claim that the item was not as described.
 
-1. **The wrong writer wrote it, and would have for almost every dispute.** Counsel v2 runs only when `counselEnabled(moduleKey)` (`lib/defence/counsel/run.ts:40`: `inr_product_not_received` only) AND the payment is a card AND no bank claim was captured (`buildDefencePackageJob.ts`, the `counselEnabled(…) && !isNonCardPayment && !bankClaim?.text` gate). PayPal and Klarna are in `NON_CARD_FAMILIES` (`lib/disputes/paymentContext.ts`). On prod today, of 60 open disputes, **50 are PayPal or Klarna** and only **2** have a counsel letter (both Blume, card).
-2. **I removed delivery from not-as-described letters on a misreading.** Not-as-described PR 1b hid fulfilment, delivery and the timeline's arrival rows after the maintainer asked "why even touch upon delivery?". That meant *don't lead with delivery as if non-receipt were claimed*. Delivery is still part of the sequence: it starts the return window and dates the dispute. The switch is in six places: `familyOmitsArrival` (`lib/defence/chronology.ts:71`), `sectionVisibility.ts:59-61`, `pdf/DefencePackageDocument.tsx:653`, `DefencePackageHtmlView.tsx:503`, `narrativeWriter.ts:826`, plus `chronology.test.ts:98` and `docs/technical.md` § not-as-described.
-3. **The dispute's opening enters the timeline only as Shopify's own "opened a chargeback" event** (`chronology.ts:215-226`). An inquiry — like #101111 — has no such event, so the row was never there.
-4. **The listing was pasted into the prose.** The writer received the German title and description and restated them. Specs answer nothing: the analyst has no claim text to compare them with (Shopify does not expose it).
-5. **The frame ignored the phase.** #101111 is a PayPal inquiry; the letter said "chargeback" and asked for a "reversal of the chargeback".
-6. **A batch ran before one letter was approved.** Now a standing rule: ONE letter, approved, then the batch.
+## 1. Why the test print did not argue (verified against the code)
 
-## 2. What the networks say a response must contain
+1. **The model was given a transcriber's brief.** `SUMMARY_SYSTEM_NOT_AS_DESCRIBED` told it to state the claim, list the sequence, add "one sentence that says what the record establishes" (example: *"a completed sale under a published listing and a delivered order"*), then make the request. There was no theory, no contrast, and no "narrow the question, then answer it".
+2. **Code wrote every other word.** "What was sold", "Delivery and return" and the conclusion are fixed sentences (`recordSections.ts`). They report a record and never say what it proves, so no section has a persuasive job. This is the pattern the 25 September advocacy diagnosis named: *"This fixed the symptom (untrue sentences) by removing the advocacy."*
+3. **The bans removed the argument's levers.** The writer could not mention returns, could not say what the listing shows, and could not name the item. What it had left was a sequence of dates.
+4. **The checks tested truth, never persuasion.** They passed on the first draft. Nothing asked whether the analyst would decide for the merchant.
+5. **Root causes carried over from rev 2** (still true, still in scope):
+   - the template writer wrote 58 of 60 prod letters;
+   - counsel skipped PayPal and Klarna;
+   - delivery was removed from not-as-described letters;
+   - an inquiry had no "dispute opened" row;
+   - the letter said "chargeback" on a PayPal inquiry.
+   All of these are fixed on develop (§11).
 
-**Visa — Dispute Management Guidelines for Visa Merchants (June 2024), Condition 13.3, "How should I respond?"** (pp. 40–41, primary source):
-- "The merchandise or services received by the customer were as described. Provide specific information or documentation … to refute the cardholder's claims. … It is recommended that you address each point that the cardholder has made."
-- "Returned merchandise was not received … Advise that you have not received the returned merchandise and the cardholder never attempted to return … However, double check your incoming shipping records to verify prior to response."
+## 2. What arguing means here
 
-**Visa — same guide, p. 9:** "Evidence must be legible (good scan copy) and in English or accompanied by an English translation."
+The counsel standard, applied to every letter:
 
-**Visa — return-before-dispute rule for 13.3, effective 19 Oct 2024:** reported by secondary sources (Chargebacks911, Chargeflow). **Unverified against the Visa Core Rules** — to be checked before any letter relies on it. Even if true, "no return in the store's system" does not disprove an *attempt* to return, so no letter may claim the cardholder never tried.
+1. **A theory of the case, told as a story.** Before writing, decide the one account the evidence makes true and that defeats the claim. Every section serves it.
+2. **A punchline first.** The first sentence sets the claim against the record, with one concrete specific.
+3. **Narrow the question, then answer it.** Say what this claim type turns on, then answer it from the record.
+4. **Every section has a persuasive job.** Under its exhibit, each section says what the exhibit proves for *this* claim. The test: delete a section's prose and the letter gets weaker.
+5. **Contrast, and third parties as the subject.** "The customer says … The carrier recorded …"
+6. **Let facts imply what may not be said.** An interval implies what we may not assert.
+7. **Truth limits are unchanged** (standard §3): no address, no personal receipt, no bad faith, no lateness under network rules, no printed weakness, no "independent", no red-flag adjectives. The one change is D4 (§9).
 
-**Mastercard 4853:** one code for many sub-types; the response must match the sub-type. For not-as-described: the description and images as advertised, delivery confirmation, communications (Chargeflow and Chargeback Gurus summaries of the Mastercard Chargeback Guide; primary guide not yet read).
+## 3. Architecture: the model argues, code bounds it
 
-**PayPal — Significantly Not As Described (SNAD):** excluded from Seller Protection; won on the archived listing, photos and the communication record (PayPal help: "How do I respond to 'Item Not Received' and 'Significantly Not As Described' disputes?"). **PayPal is not a card network:** no Visa/Mastercard codes, no "issuer", no "chargeback" unless the dispute is one.
-
-**What we cannot do:** "address each point the cardholder has made" from the Shopify API — it does not expose the claim text. We can when the merchant has supplied the claim (`bankClaim.ts`), which today *excludes* the dispute from counsel (§6).
-
-## 3. What our other letters show (prod, last 5 days)
-
-| Writer | Letters | Pattern |
+| Part | Today (rev 2) | Rev 3 |
 |---|---|---|
-| template | 11 of 12 | "The available evidence supports…" hedge in 4; carrier name and tracking number inside the summary in 6 (breaks each-fact-once); no dispute-opening date; summaries that describe instead of argue |
-| counsel v2 | 1 (Blume #360980) | claim → record → one tie-back → request, ~60 words, no identifiers, theory chosen by code |
+| Claim ledger | Code, from records | Unchanged: code, from records. Each claim has an id, a true sentence, allowed specifics and private limits. |
+| Theory | Code picks one | Unchanged: code picks it, and it now carries the **story** and the **argument per section** (§5) |
+| Summary | Model, ~60 words, a list | Model: punchline, the reasons in order of force, the request |
+| Evidence sections | Code, fixed sentences | **Model**: 1–3 sentences each, the argument the playbook gives that section, grounded in ledger claims |
+| Conclusion | Code | **Model**: the theory in one sentence, then the frame's request |
+| Truth check | Code checks + review | **Whitelist validation.** Every sentence must cite ledger claim ids; a sentence the checker cannot map to a permitted claim is refused. The existing bans, English checks, frame checks and copy checks stay. |
+| Persuasion check | None | **Issuer-analyst judge** in the eval gate (§8): decides for the merchant from the summary alone, and names the section whose deletion would weaken the letter |
 
-The fix is not a better template prompt. It is counsel for every claim, every payment method.
+Code-owned sentences survive only where the wording is a legal limit: the return line (§5.3) and the translation caption.
 
-## 4. The letter frame (every claim type)
+The model is Sonnet 4.6 now. D5 (§9) runs the Opus 5.5 comparison on the eval set, as the 25 September plan proposed. That plan estimated the cost difference at cents per letter.
 
-Only the middle changes per claim. *code* = written by code from the ledger; *model* = the one generated part.
+## 4. The frame (every claim type) — built
 
-1. **Header and case table** (*code*). Provider-correct label (PR #913). Title and wording follow `disputes.phase`: "Chargeback response" / "Inquiry response".
-2. **Executive summary** (*model*, ≤ 80 words, English). The claim in plain words → the deciding facts, strongest first → one sentence tying them to the claim → the request. No product titles or specs, no identifiers, no carrier names, no amounts.
-3. **Evidence sections** (*code* where possible), per playbook, in order of force.
-4. **Chronology** (*code*), complete for every claim type: ordered → paid → shipped → delivered → dispute opened (with the interval since delivery) → return state. A row is omitted only when the record lacks it. The opening row comes from `disputes.initiated_at` as a ledger `timelineEvent`, deduplicated against Shopify's own "opened a chargeback" row.
-5. **Conclusion** (*code*), one request matched to the phase: chargeback → "requests that the chargeback be reversed"; inquiry → "asks that the claim be closed in the merchant's favour".
+- **Header and case table (code).**
+  - Provider-correct label and page title ("Chargeback response", "Inquiry response", "Dispute response").
+  - A non-card case table shows "Payment method" and "Customer name" and no card rows.
+- **Executive summary (model, ≤ 80 words, English).**
+- **Evidence sections (model, playbook order).**
+- **Chronology (code), complete for every claim type:** ordered → paid → shipped → delivered → dispute opened → return state. The opening row is added when Shopify has none.
+- **Conclusion (model) and one request (code, from the frame).**
+- **English only.**
+  - The model-written text may not contain store titles, non-English letters or non-English function words.
+  - Tables and cards keep the store title as a record identifier (D2, yes).
+  - A non-English listing exhibit prints a checked machine translation (D3, yes).
 
-**English rule — deterministic, not a language detector:**
-- Prose never contains a store product title. Code check: no line-item or listing title (or any 4+-word substring of one) may appear in model-written text.
-- A stopword check (common German/Swedish/French/Spanish/Portuguese function words) runs on model-written text only, with the ledger's names (merchant, customer, carrier) allow-listed. Measure its false-positive rate on every current letter before it gates.
-- The product is named by an English noun from Shopify's standard product taxonomy category; fallback "the item".
-- Tables and cards (line items, shipment card) are record exhibits and keep the store's title, as a record identifier — the maintainer to confirm (§8, D2).
-- A non-English listing exhibit prints the original with an English translation beneath it, captioned "English translation (machine-translated)". Code check: every number and unit in the original survives in the translation. Stored once per snapshot and reused; its cost counts in §9.
+## 5. The not-as-described playbook, as an argument
 
-## 5. First playbooks: PayPal and Klarna, then not-as-described
+**Analyst question:** "Was the item different from what was advertised?"
 
-The order follows the prod numbers (§7): lifting the non-card exclusion reaches 50 of 60 open disputes; a not-as-described playbook alone reaches none of Mein Maison's (all PayPal).
+**What we can and cannot see.**
+- Shopify does not give us the customer's complaint, so we cannot rebut its specifics.
+- We can show what was advertised, that it was delivered, when the dispute came, and what the store's return route is and whether it was used.
+- The argument is built from those.
 
-### 5.1 Non-card counsel (PayPal, Klarna)
-- Remove `!isNonCardPayment` from the counsel gate; pass the payment family into the ledger and prompts.
-- Provider wording: PayPal "dispute"/"inquiry"/"claim", "PayPal's review"; Klarna "dispute", Klarna's own categories. Never "issuer", "cardholder", "chargeback" or a network code on these.
-- Existing INR playbook runs unchanged in substance; only the frame words change.
+### 5.1 Theory of the case (the story the letter makes true)
 
-### 5.2 Not-as-described playbook
-**Analyst question:** "Did the merchant deliver what it advertised, and is there any return?"
+> The customer bought the item from a published listing, with photographs and a written description, that is on file in this response. The carrier delivered it on 18 September. The store offers a return route for goods a buyer is not satisfied with, and Shopify records no return. Eight days after delivery, the customer opened a dispute with PayPal instead.
 
-**Ledger claims (code-built):**
+The analyst should conclude, without being told, that the advertisement is on the table and that the store's own remedy for "not what I expected" was never used.
 
-| Claim id | Fixed sentence | Source and guard |
+### 5.2 Section jobs
+
+| Section (exhibit) | Its argument | Example shape (invented case; the model copies the shape, never the words) |
 |---|---|---|
-| `carrier_delivered` | The carrier recorded delivery on {date}. | fulfilment + carrier |
-| `dispute_after_delivery` | The dispute was opened {n} days after delivery. | `disputes.initiated_at` |
-| `no_return_in_store_system` | The order shows no return in the store's returns system. | `Order.returnStatus = NO_RETURN`. Suppressed when the shop has no messages integration, or a stored message shows return or refund intent (constraint regexes extended to return intent — "return", "send back", "Rücksendung", "zurückschicken", … in all 6 locales). "…and none was received" only with merchant confirmation. |
-| `listing_published` | The item was sold under a published listing with photographs and a written description (exhibit). | `product_listing_snapshots`, only when `product_updated_at ≤ order.created_at`; otherwise the exhibit is omitted |
-| `return_path_published` | The store's published refund policy offers returns. | policy snapshot; suppressed when the window has expired or return shipping is at the buyer's cost (the adverse-policy rule of the merchant-counsel stance) |
-| `later_order` | The same customer ordered again on {date}. | customer orders (INR reuse) |
+| **Summary** | Punchline: the claim against what is on file. Then the reasons in order of force: the listing, delivery, the return route, the interval. Then the request. | "The customer says the lamp was not as described. What was described is on file: the listing the lamp was sold under, with its photographs and text. The carrier delivered it on 4 March; the store offers returns, and Shopify records none. Fifteen days after delivery the customer opened a dispute instead. The merchant requests …" |
+| **What was sold** (listing exhibit + translation) | The question a not-as-described claim turns on is answered by the advertisement, and here it is, as published. | "A not-as-described claim turns on what the item was described as. That description is below, as published in the store, with its photographs and an English translation." |
+| **Delivery and return** (shipment card) | The goods reached the buyer, and the store's return route shows nothing coming back. | "The carrier's own scan records delivery. The store's published refund policy offers returns; no return has been recorded in Shopify for this order." |
+| **Chronology** (timeline) | No prose: the timeline carries the sequence, and the summary has already given the interval. | — |
+| **Conclusion** | The theory in one line, then the request. | "The item was sold under the listing on file, delivered, and never returned through the store's return route; the not-as-described claim is not supported by the record." |
 
-**Code-owned absence.** The return claim is written ONLY by code, in the "Delivery and return" paragraph. The model summary may not mention returns; the existing absence checks (`counsel/checks.ts:82`, prompts "never argue from absence") keep blocking model-written phrasing. This is the one bounded exception, and it lives in code.
+### 5.3 Ledger claims (code-built; the only facts the writer may use)
 
-**Theories, in order of force:** `delivered_then_reordered` (delivered, later order, no return) → `delivered_no_return` (delivered; dispute {n} days later; no return in the store system) → `listing_and_no_return` (no carrier delivery: listing + no return).
-
-**Sections:** "What was sold" (listing exhibit, photos, English translation) → "Delivery and return" (code-written) → Chronology.
-
-**Never:** that the item matched or conformed to the listing; that the listing is what the customer saw at checkout; features in prose; that the cardholder kept, has or used the goods; the cardholder's state of mind; leading with delivery as if non-receipt were claimed.
-
-**Prerequisites:** `PRODUCT_LISTING_EVIDENCE_ENABLED` is ON in prod (done 2026-09-28, #905); PR 1b's arrival switches (§1.2) are reverted for this family.
-
-## 6. The remaining families (order of build)
-
-| # | Scope | Open on prod now |
+| Claim id | True sentence | Source and guard |
 |---|---|---|
-| 1 | Non-card counsel (§5.1) | 50 (40 PayPal, 10 Klarna) |
-| 2 | Not-as-described (§5.2) | 16 |
-| 3 | Item not received — cases counsel returns null for (in transit, no carrier delivery) | part of 27 |
-| 4 | Credit not processed (mostly Klarna, Cay) | 10 |
-| 5 | Counsel takes a captured bank claim (translated) | 0 today; every reopened dispute |
-| 6 | Fraud, subscription, general, incorrect account details | 7 |
+| `claim_is_not_as_described` | The claim is that the item was not as described. | dispute reason |
+| `listing_published` | The item was sold under a published store listing with photographs and a written description, reproduced in the letter as retrieved from the store. | `product_listing_snapshots`. Never "what the customer saw at purchase". |
+| `shipped` / `carrier_delivered` / `dispute_after_delivery` | Shipped {date}; the carrier recorded delivery on {date}; dispute opened {n} days later. | fulfilment + carrier record, `disputes.initiated_at` |
+| `return_route_published` | The store's published refund policy offers returns. | Policy snapshot. Suppressed when the policy is adverse to this case (window expired at dispute time, or return postage at the buyer's cost) — merchant-counsel stance. |
+| `no_return_recorded` | No return has been recorded in Shopify for this order. | `Order.returnStatus = NO_RETURN`. Withheld when a stored message shows return or refund intent. |
+| `later_order` | The same customer ordered again on {date}. | customer orders |
 
-## 7. The retirement and production — decision needed (D1)
+### 5.4 Never (truth limits, unchanged)
 
-**Done on develop (not in production):**
-- The build job never calls the template writer. No counsel letter → failed package `no_counsel_letter` (not retried). A spent counsel budget or a counsel error → `daily_cap_reached` / `llm_error`, retried by the self-heal pass. Pinned by tests.
-- **Filing gate:** the shared safety check (`assessPackageCandidateSafety`, run by every filing path — save job, deadline cron, canonical selector, finalize/submit routes, workspace) refuses a letter without the counsel block (`retired_template_writer`). Without it, template letters built earlier would still have been filed at their deadline, because the selectors skip failed rows.
+- That the item matched, conformed to or was as described.
+- That the listing is what the customer saw at checkout.
+- The product's store name, its features or specs, or listing quotes in prose. The exhibit shows them.
+- That the customer did not return it, did not try to, or never asked. Only "no return has been recorded in Shopify".
+- That anyone received, kept or used the goods.
+- Intent or bad faith.
+- Leading with delivery as if non-receipt were claimed.
 
-**What that means in production today (60 open disputes):**
+## 6. Other claim types
 
-| Now | Count | After the retirement ships |
-|---|---|---|
-| Counsel letter | 2 | filed as today |
-| Template letter | 30 | **refused at filing** (merchant sees "written by a retired writer") |
-| No letter | 28 | stays without a letter |
+The same architecture, one playbook each, in this order (open prod disputes, 2026-09-28):
 
-Three disputes are due **today** with no letter at all, independent of this change: Mein Maison #101582, Cay #13638, #14287.
+| # | Scope | Open | Argument in one line |
+|---|---|---|---|
+| 1 | Not as described (card, PayPal, Klarna) | 16 | §5 |
+| 2 | Item not received: model-written sections, and the in-transit and no-carrier-delivery theories | 27 | The existing counsel INR letter keeps its theory; its sections gain model-written jobs |
+| 3 | Credit not processed (mostly Cay, Klarna) | 10 | The refund the customer says was due — against the store's policy and what was returned |
+| 4 | Counsel takes a captured bank claim (translated) | reopened disputes | Answer the issuer's own words point by point (Visa: "address each point") |
+| 5 | Fraud, subscription, general, incorrect account details | 7 | Per network compelling-evidence lists |
 
-When DisputeDesk files nothing, Shopify files its own automatic response at the deadline (not verified for PayPal inquiries). Packs are billed at build.
+## 7. The retirement in production (D1 = A, decided)
 
-**Options:**
-- **A — ship now, as instructed.** No template letter is ever filed again. ~58 disputes file nothing from DisputeDesk until §5.1/§5.2 ship. Merchant copy and email for the state required first (see below).
-- **B — hold the retirement in develop; hold every template letter for review in prod** until §5.1 ships, then ship both together.
-- **C — ship now with an interim code-only counsel letter** for every family: the code-written sections and complete chronology, a fixed code-written summary (no model), provider-correct frame. Satisfies "only counsel writes", files something true for every dispute, and each family's model summary replaces it as its playbook ships. **Recommended.**
+- **On develop, not in production:**
+  - The template writer never runs.
+  - The shared filing check refuses any template letter.
+  - A spent counsel budget or a model error is retried.
+- **Consequence under A:** open disputes whose claim type has no playbook get no DisputeDesk letter until one ships (§6).
+- **Needed before A ships:**
+  - merchant copy and email for "no letter yet", in 6 locales;
+  - billing treatment for disputes that file nothing;
+  - `defence_prompt_modules` reconciled in prod — prod serves module allow-lists from the database, and not-as-described v6 re-allows delivery facts.
 
-**Needed before A or C ships:** merchant UI copy and email for "no letter yet" in 6 locales; billing treatment for disputes that file nothing; the stale-comment and doc fixes.
+## 8. The gate: nothing reaches the maintainer until it argues
 
-## 8. Decisions for the maintainer
+1. **Unit tests.**
+   - Ledger claims from the #101111 fixture.
+   - Whitelist validation: an unmapped sentence is refused.
+   - English checks, frame checks, chronology completeness.
+2. **Offline eval** (`scripts/counsel/eval-counsel.mts`, issuer-analyst judge), on 5 real not-as-described cases including #101111. Passes only when:
+   - the judge decides **for the merchant after the summary alone**;
+   - its **theory of the case** matches §5.1;
+   - it finds **no sentence the ledger does not back**;
+   - its section-deletion answer names no section as removable;
+   - zero red flags.
+3. **The #101111 acceptance.**
+   - The first sentence sets the claim against what is on file.
+   - Each of the two evidence sections says what its exhibit proves.
+   - No product name or spec in the prose.
+   - Six timeline rows.
+   - PayPal wording.
+   - One request.
+4. **ONE test print to the maintainer**, through the job path. The maintainer's "this is excellent counsel" is the only sign-off.
+5. **Release** with per-change approval → reconcile modules → regenerate #101111 in prod and compare → the family's open disputes, deadline-first (#98483 is due 30 September).
+6. **Cost:** measure against counsel's ≈ $0.016 per package. Model-written sections add one write and a larger review; the ceiling is 2× unless D5 says otherwise.
 
-- **D1** — A, B or C (§7).
-- **D2** — may the line-items table and shipment card keep the store's (German) product title as a record identifier, or must they show the English noun too?
-- **D3** — machine translation of a non-English listing exhibit, captioned as machine-translated: acceptable?
+## 9. Decisions for the maintainer
 
-## 9. Acceptance and rollout (per playbook)
+- **D1** — A, after a test print. *Decided.*
+- **D2** — the store title may stay in tables and cards. *Decided: yes.*
+- **D3** — machine translation of a non-English listing, captioned. *Decided: yes.*
+- **D4 (new)** — **may a not-as-described letter argue from the return route?** The wording would be "the store offers returns; no return has been recorded in Shopify", placed next to "the customer opened a dispute instead".
+  - For: Visa's 13.3 guidance names "the cardholder never attempted to return" as a response. It is the strongest truthful lever we hold.
+  - Against: the counsel standard bans absence arguments. The recommended wording asserts only what Shopify records, never that the customer did not try.
+  - Recommendation: **yes, with that exact wording, code-checked.**
+- **D5 (new)** — the letter model: keep Sonnet 4.6, or move to Opus 5.5 if it scores better on the eval set at an acceptable cost.
 
-1. Unit tests: ledger claims from fixtures (#101111 is the not-as-described fixture); theory selection; English checks; chronology completeness.
-2. **#101111 acceptance:** no product title or spec in the summary or any prose section; timeline ≥ 5 rows (placed, paid, shipped, delivered, opened); PayPal/inquiry wording; one request.
-3. Offline eval (`scripts/counsel/eval-counsel.mts`), 5 real cases per family: the judge decides for the merchant after the summary alone AND finds zero sentences the ledger does not back.
-4. **ONE letter to the maintainer**, rendered through the job path (preview = job, PR #914), PDF and HTML view. No batch before approval.
-5. Release with per-change approval → regenerate the approved case in prod and compare → the family's open disputes deadline-first, paced under the counsel daily cap (25/shop/day).
-6. Cost: counsel ≈ $0.016/package measured; a playbook plus translation must stay within 2×.
+## 10. References
 
-## 9a. Status — 2026-09-28 evening (maintainer: D1 = A after a test print; D2 yes; D3 yes)
+- **Visa — Dispute Management Guidelines for Visa Merchants (June 2024), Condition 13.3** (pp. 40–41): "Provide specific information or documentation … to refute the cardholder's claims … address each point that the cardholder has made"; "Advise that you have not received the returned merchandise and the cardholder never attempted to return … double check your incoming shipping records"; p. 9: evidence "in English or accompanied by an English translation".
+- **Visa — return-before-dispute rule for 13.3 (19 Oct 2024):** secondary sources only (Chargebacks911, Chargeflow). Unverified against the Core Rules; no letter relies on it.
+- **Mastercard 4853:** tailor the response to the sub-type; for not-as-described, the description and images as advertised, delivery confirmation and communications (summaries of the Chargeback Guide).
+- **PayPal — Significantly Not As Described:** excluded from Seller Protection; won on the archived listing, photos and the communication record.
 
-Built on `fix/retire-template-writer` (PR #915), develop only:
-- §5.1 non-card counsel and §5.2 the not-as-described playbook, frame, English checks, dispute-opened row, non-card
-  Case Details, listing translation with cache (`product_listing_translations`, applied to dev and prod).
-- Test print: Mein Maison #101111 rendered through counsel from prod data (read-only; `canary-record-context.mts
-  --counsel`): passed every check on the first draft; timeline six rows (placed, paid, shipped, confirmation, delivered,
-  dispute opened); PayPal wording; English summary; listing with translation.
+## 11. Built on develop (PR #915) and what rev 3 changes in it
 
-Two deviations from §5.2, decided while building:
-- **Listing edited after the order is NOT omitted.** `product.updatedAt` moves on any edit (apps, sync); #101111's was
-  edited the day of the test print. Omitting would drop nearly every exhibit. The caption stays "as published in the
-  store, retrieved {date}", and the ledger forbids calling it what the customer saw.
-- **The return line does NOT require a messages integration.** It is the wording letters already carried ("No return
-  has been recorded in Shopify for this order.") — true of the record whatever was emailed — withheld when a stored
-  message shows return or refund intent.
+- **Built:**
+  - template writer retired, plus the filing gate;
+  - non-card counsel; the frame; the dispute-opened row;
+  - non-card case table; English checks;
+  - listing translation with cache (`product_listing_translations`, applied to dev and prod);
+  - delivery back in not-as-described (module v6, empty `familyOmitsArrival`);
+  - return-intent constraint in six locales;
+  - `canary-record-context.mts --counsel` preview.
+- **Rev 3 replaces:**
+  - `SUMMARY_SYSTEM_NOT_AS_DESCRIBED` (the transcriber brief);
+  - `buildNotAsDescribedSections` (fixed sentences);
+  - the theory shapes.
+  In their place: model-written, whitelist-validated sections and the §5 theory.
+- **Rev 3 adds:** the `return_route_published` claim (D4), whitelist validation, and the eval gate.
 
-## 10. Critic review (rev 1 → rev 2)
+Two deviations decided while building rev 2 stand:
+- A listing edited after the order is kept, with the retrieval-date caption, because `product.updatedAt` moves on any app edit.
+- The return line does not require a messages integration, because the Shopify record is what it states.
 
-Verdict on rev 1: **REVISE**. Every finding and what rev 2 did:
+## 12. Critic review record (rev 1 → rev 2)
 
-| # | Finding | Rev 2 |
-|---|---|---|
-| B1 | Retiring the writer in the build job would not stop template letters being filed: selectors skip failed rows | Filing gate added in the shared safety check; §7 recounted |
-| B2 | The not-as-described playbook could not run for #101111: PayPal is non-card and counsel skips non-card | §5.1 non-card counsel is now first; counts split by payment family |
-| B3 | "No return" broader than the record (no `read_returns`; `returnStatus` only; constraints miss return intent; conflicts with the absence ban) | Claim reworded to the store's returns system, guarded, code-owned only |
-| M1 | `kept_and_reordered` implies the cardholder kept the goods | Renamed; "kept, has or used" added to never |
-| M2 | Listing retrieved today, maybe edited after the order; flag prerequisite | `product_updated_at ≤ order.created_at` guard; prerequisite listed |
-| M3 | Language detector unreliable; titles reach the page through code | Deterministic checks; D2 on tables and cards |
-| M4 | Machine translation unguarded | Caption, number/unit check, stored once, costed; D3 |
-| M5 | Cap and errors became permanent failures | Retriable codes (done on develop) |
-| M6 | No merchant copy, billing, or third option | §7 prerequisites; option C |
-| M7 | A captured bank claim now means no letter | §6 row 5 |
-| M8 | Chronology fix incomplete (inquiries; six switch sites) | §1.2 lists the sites; §4 opening row with dedupe |
-| m1–m6 | Secondary Visa source; parcel wording; adverse-policy rule unnamed; judge truthfulness; #101111 acceptance; Shopify fallback unverified for PayPal | All addressed in §2, §5.2, §9, §7 |
+Rev 1 got **REVISE**, with three blockers:
+- **B1:** retiring the writer alone would still have filed template letters. → Filing gate.
+- **B2:** PayPal cases could not reach counsel. → Non-card counsel.
+- **B3:** "no return" claimed more than the record shows. → Worded to the Shopify record; withheld on return intent.
+
+All three are fixed on develop. Majors M1–M8 were addressed in rev 2 (see git history of this file). Rev 3 has not yet been through a critic pass.
