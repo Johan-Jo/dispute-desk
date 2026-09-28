@@ -47,3 +47,35 @@ export function klarnaDisputeCategoryDisplay(
   const category = key ? SHOPIFY_REASON_TO_KLARNA_CATEGORY[key] : undefined;
   return category ? `Klarna dispute — ${category}` : "Klarna dispute";
 }
+
+/** Provider-neutral category names, for non-card disputes that are not
+ *  Klarna (PayPal, Affirm, other BNPL and local methods). */
+const SHOPIFY_REASON_TO_NEUTRAL_CATEGORY: Record<string, string> = {
+  PRODUCT_NOT_RECEIVED: "Item not received",
+  PRODUCT_UNACCEPTABLE: "Not as described",
+  CREDIT_NOT_PROCESSED: "Refund not processed",
+  DUPLICATE: "Incorrect amount",
+  SUBSCRIPTION_CANCELLED: "Cancellation",
+  FRAUDULENT: "Unauthorized purchase",
+  UNRECOGNIZED: "Unauthorized purchase",
+};
+
+/**
+ * The PDF `reasonCodeDisplay` for any non-card dispute, named after the
+ * provider that actually carries it. Every non-card family used to get the
+ * Klarna label, so a PayPal dispute printed "Klarna dispute — Faulty or not
+ * as described" above a letter about PayPal (Mein Maison #101111,
+ * 2026-09-28). Klarna keeps its own taxonomy; every other family gets its
+ * payment-context label and a neutral category — never a card network code.
+ */
+export function nonCardDisputeCategoryDisplay(
+  family: string | null | undefined,
+  providerLabel: string | null | undefined,
+  shopifyReason: string | null | undefined,
+): string {
+  if (family === "klarna") return klarnaDisputeCategoryDisplay(shopifyReason);
+  const key = canonicalReasonCode(shopifyReason);
+  const category = key ? SHOPIFY_REASON_TO_NEUTRAL_CATEGORY[key] : undefined;
+  const provider = providerLabel?.trim() || "Payment provider";
+  return category ? `${provider} dispute — ${category}` : `${provider} dispute`;
+}

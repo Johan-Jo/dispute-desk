@@ -37,7 +37,7 @@ import {
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
-import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
+import { nonCardDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
@@ -327,7 +327,7 @@ export async function handleBuildDefencePackage(
   // route the module off the Shopify reason enum so they reuse the right
   // reason module instead of generic_fallback. Card path is unchanged.
   const paymentContext =
-    (packJson.payment_context as { family?: string } | undefined) ?? null;
+    (packJson.payment_context as { family?: string; label?: string } | undefined) ?? null;
   const isNonCardPayment = isNonCardPaymentFamily(paymentContext?.family ?? null);
   const { data: moduleOverride } = await sb
     .from("defence_prompt_modules")
@@ -1350,7 +1350,7 @@ export async function handleBuildDefencePackage(
       // instead (derived from the Shopify reason enum). Card disputes keep
       // the module's network reference label unchanged.
       reasonCodeDisplay: isNonCardPayment
-        ? klarnaDisputeCategoryDisplay(dispute?.reason ?? null)
+        ? nonCardDisputeCategoryDisplay(paymentContext?.family ?? null, paymentContext?.label ?? null, dispute?.reason ?? null)
         : reasonCodeModule.displayName,
       claimType: reasonCodeModule.claimType,
       shopName: merchantDisplayName,

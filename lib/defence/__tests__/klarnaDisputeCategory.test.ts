@@ -49,3 +49,28 @@ describe("klarnaDisputeCategoryDisplay", () => {
     expect(klarnaDisputeCategoryDisplay("WAT")).toBe("Klarna dispute");
   });
 });
+
+describe("nonCardDisputeCategoryDisplay", async () => {
+  const { nonCardDisputeCategoryDisplay } = await import("@/lib/defence/klarnaDisputeCategory");
+
+  it("names a PayPal dispute after PayPal, never Klarna (Mein Maison #101111)", () => {
+    const label = nonCardDisputeCategoryDisplay("paypal", "PayPal", "PRODUCT_UNACCEPTABLE");
+    expect(label).toBe("PayPal dispute — Not as described");
+    expect(label).not.toMatch(/klarna/i);
+  });
+
+  it("keeps Klarna's own taxonomy for Klarna", () => {
+    expect(nonCardDisputeCategoryDisplay("klarna", "Klarna", "PRODUCT_UNACCEPTABLE")).toBe(
+      "Klarna dispute — Faulty or not as described",
+    );
+  });
+
+  it("falls back to a neutral provider name and never a card network code", () => {
+    expect(nonCardDisputeCategoryDisplay("affirm", null, "PRODUCT_NOT_RECEIVED")).toBe(
+      "Payment provider dispute — Item not received",
+    );
+    for (const r of ["PRODUCT_NOT_RECEIVED", "FRAUDULENT", "GENERAL", null]) {
+      expect(nonCardDisputeCategoryDisplay("paypal", "PayPal", r)).not.toMatch(/visa|mastercard|klarna/i);
+    }
+  });
+});
