@@ -383,3 +383,44 @@ describe("multi-shipment coverage (§5.6)", () => {
     expect("deliveredToVerifiedAddress" in data).toBe(false); // PR-C1: key retired
   });
 });
+
+describe("qualified final delivery flag (non-receipt plan §6.1.1, P1b)", () => {
+  const deliveredResponse = () =>
+    new Response(
+      JSON.stringify({
+        shipments: [
+          {
+            status: { timestamp: "2026-06-04T14:31:00Z", statusCode: "delivered" },
+            events: [{ timestamp: "2026-06-04T14:31:00Z", statusCode: "delivered", description: "Delivered to recipient" }],
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+  it("our own DHL lookup confirming delivery of every ordered unit writes finalDeliveryVerified", async () => {
+    fetchMock.mockResolvedValue(deliveredResponse());
+    const data = await sectionData(ctx({ fulfillments: [fulfillment()], lineItems: lineItems(1) }));
+    expect(data.proofType).toBe("delivered_confirmed");
+    expect(data.deliveryCoverage).toBe("complete");
+    expect(data.finalDeliveryVerified).toBe(true);
+  });
+
+  it("Case B shape: PostNord (no adapter), Shopify-native DELIVERED only → no flag", async () => {
+    const f = fulfillment({
+      trackingInfo: [{ number: "00573132901924649740", url: null, company: "PostNord SE" }],
+      events: NATIVE_DELIVERED,
+    });
+    const data = await sectionData(ctx({ fulfillments: [f], lineItems: lineItems(1) }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(data.proofType).toBe("delivered_confirmed");
+    expect(data.deliveryCoverage).toBe("complete");
+    expect("finalDeliveryVerified" in data).toBe(false);
+  });
+
+  it("partial coverage never writes the flag", async () => {
+    fetchMock.mockResolvedValue(deliveredResponse());
+    const data = await sectionData(ctx({ fulfillments: [fulfillment()], lineItems: lineItems(2) }));
+    expect("finalDeliveryVerified" in data).toBe(false);
+  });
+});

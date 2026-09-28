@@ -3274,7 +3274,7 @@ remained once "no return" was denied.
   deviation from the plan's one-fact-per-shipment wording: the renderers (Evidence
   Basis pair-collapse, provenance, post-outcome analysis) assume one fact per field.
   The association guarantee is met without touching them.
-- **Never undersell the merchant's case** (2026-09-28) — base prompt rule 10 used to REQUIRE hedged framing for narrow packages ("The available evidence supports…"); 176 of 235 letters in 30 days qualified the merchant's own records that way, and some said "the merchant acknowledges…" / "the evidence is limited". Now narrow means fewer points stated as firmly as full; firm never means claiming more than the record shows (an in-transit record does not "contradict" non-receipt). `UNDERSELL_BANS` (`claimGuards.ts`, unconditional, id `undersells_case`) fails "the available evidence/records", "the merchant acknowledges", "evidence is limited", "limited evidence", "framed accordingly", "this response presents". The hedge instructions in `generic_fallback` and the three narrow-fallback strategies were rewritten; `credit_not_processed_no_return` v2 no longer tells the model to claim the customer agreed to a return-conditional refund policy. PDF thesis (COMPOSITION_VERSION 6): the narrow conclusion now asks for the chargeback to be reversed instead of "respectfully requests review". `policy_terms_beyond_record` also scopes "published terms" / "terms and conditions".
+- **Never undersell the merchant's case** (2026-09-28) — base prompt rule 10 used to REQUIRE hedged framing for narrow packages ("The available evidence supports…"); 176 of 235 letters in 30 days qualified the merchant's own records that way, and some said "the merchant acknowledges…" / "the evidence is limited". Now narrow means fewer points stated as firmly as full; firm never means claiming more than the record shows (an in-transit record does not "contradict" non-receipt). `UNDERSELL_BANS` (`claimGuards.ts`, unconditional, id `undersells_case`) fails "the available evidence/records", "the merchant acknowledges", "evidence is limited", "limited evidence", "framed accordingly", "this response presents". The hedge instructions in `generic_fallback` and the three narrow-fallback strategies were rewritten; `credit_not_processed_no_return` v2 no longer tells the model to claim the customer agreed to a return-conditional refund policy. PDF thesis (COMPOSITION_VERSION 6): the narrow conclusion now asks for the chargeback to be reversed instead of "respectfully requests review". `policy_terms_beyond_record` also scopes "published terms" / "terms and conditions". Base prompt rule 10a (2026-09-28): the conclusion states what the records establish and does NOT ask for a ruling — the PDF prints the merchant's request directly after it, and the demo letter asked twice.
 - **Supporting-but-citable: the store's own records** (bank-claim plan F1, 2026-09-28).
   `isCitableRecordContext`: the published refund and shipping policies and the order
   record (`order_confirmation`) get `bankEligible` / `includeInBankNarrative` with strength
@@ -3744,6 +3744,48 @@ non-receipt case a customer message acknowledging receipt is the decisive signal
 locales. Class test: `tests/unit/deliveryCopyNamesNoActor.test.ts` bans actor nouns and
 identity-check words across every `disputes.deliveryProof` string in every locale
 (returned-to-sender keys excepted: they describe a parcel that came back).
+
+### Non-receipt P1b — qualified final delivery (2026-09-28)
+
+Plan §6.1.1–§6.1.3. A carrier-recorded final delivery or completed collection can make an
+item-not-received case `strong` without a signature, when all five conditions hold
+(`resolveFinalDeliveryVerified`, `lib/packs/sources/fulfillmentSource.ts`):
+
+1. **Corroborated carrier provenance** — the terminal event came from our own carrier lookup
+   (`carrier_api_*`; DHL is the only adapter today). A `shopify_native` event never qualifies on
+   its own: carrier-style text on a Shopify fulfillment event can be written by any app. A
+   tracking-app source (`tracking_app_*`) does not qualify either until its carrier-origin
+   contract is verified (plan §11 Q-8).
+2. **An event timestamp** from the carrier event, never a read time.
+3. **Association** — a shipment on the disputed order whose tracking number passes
+   `isParcelIdentifier`.
+4. **Coverage** — the qualifying shipments alone carry every ordered unit. No line items →
+   never.
+5. **No contradiction** — the reconciled state agrees with the carrier, no shipment has a
+   source conflict, and no shipment on the order was returned.
+
+Availability for collection (`DeliveredToPickup`) is never a final delivery. When all five
+hold, the shipping section's payload carries `finalDeliveryVerified: true` (written only when
+true, so no other pack's payload or hash moves). The rollup elevates the delivery row from
+moderate to strong **for the delivery family only**, at row-build time (the same pattern as the
+fraud `account_history` demotion), so the counts, the contribution list and the strength
+reason agree. `categorizeEvidenceField` is unchanged, so no other family — fraud in
+particular — can be lifted by it. `overallBeforeRev5` re-grades the QFD back to moderate
+before running the old rollup, so a QFD plus one other strong signal still reads as newly
+strong and the P1a timing hold (`strength_upgraded_timing_held`) keeps the filing date until
+§11 Q-7.
+
+**Deliberate deviation from the plan:** a payload flag on `delivered_confirmed`, not a new
+`DeliveryProofType` member `delivered_final_verified`. `delivered_confirmed` is compared by
+equality at 60+ sites (letter, PDF, validator, presentation); a new member would silently miss
+each of them. A QFD licenses nothing new in the letter — the carrier's record is cited exactly
+as before — so only the rating needed to change.
+
+`SCORING_POLICY_VERSION` is **not** bumped: no existing snapshot carries the key, so the same
+inputs produce the same `overall`; a pack that gains the key has changed payloads, which moves
+its assessment input hash. Cay #14784 (Case B, PostNord, `shopify_native`, no adapter) stays
+`moderate` — a source-verification limit, not a finding about the parcel. Regression:
+`lib/argument/__tests__/qualifiedFinalDelivery.test.ts`, `fulfillmentSourceCarrier.test.ts`.
 
 ### Negative-polarity claim guards (2026-08-20)
 
@@ -7012,6 +7054,25 @@ Copy keys `rebuildFailedTitle` / `rebuildFailedBodyFiled` / `rebuildFailedBodyUn
 `disputes.reviewTab.package`, all six locales. A render test asserts the leak set
 (`paymentAuthenticationArgument`, `address_delivery`, `unauthorized_claim`, the raw
 `failure_reason`) never reaches the markup, and that the tone flips with `bankFacing`.
+**Infrastructure failures self-heal once a day (2026-09-28).** The guard ALLOWS a retry of an
+`llm_error` / `daily_cap_reached` row (`markFailed` records no `prompt_version` on those paths, and
+NULL reads as "moved") — but it only answers when something asks, and the only askers are
+`build_pack` completions (evidence moved, a merchant click, or the due day's deadline rebuild).
+Cay #14784 failed twice on `llm_error` on 09-24 (the five-`cache_control`-block API refusal), the
+fix reached prod 09-26, and the case sat on a failed latest package until a human rebuilt it on
+09-28, three days before its deadline. The 06:00 UTC `defence-package-deadline-rebuild` cron now
+runs a second pass, `runFailedPackageSelfHeal` (`lib/defence/failedPackageSelfHeal.ts`), over every
+open, unfiled dispute with a live deadline whose latest package failed with `llm_error` or
+`daily_cap_reached`, and re-asks `maybeEnqueueDefencePackage` (the one owner of versioning; the
+failed row stays in history, the retry is a new version). Bounds: once a day; stops when the newest
+3 versions are all transient failures (`streakExhausted` in the cron summary — a person looks);
+failure must be ≥1h old; a shop with a spent generation budget is deferred; ≤20 enqueues per run;
+disputes the first pass rebuilt are excluded. **`validation_failed` and `pdf_render_failed` are
+never retried by this pass** — a verdict on the letter repeats under the same rules and spends an
+LLM call each time; those stay with the version-change path below and with a human. Audit:
+`auto_build_enqueued` with `trigger: "failed_package_self_heal"`. Regression:
+`tests/unit/failedPackageSelfHealSweep.test.ts` (also pins the guard contract the pass relies on).
+
 **A detector change without a `VALIDATOR_VERSION` bump kills the cases it fixes (2026-08-14).**
 `evaluateGenerationGuard` refuses to regenerate a case whose latest package is `failed` unless
 one of four inputs moved — `prompt_version`, `validator_version`, `composition_version`,
@@ -9100,6 +9161,30 @@ response body gains a `blockedByDecision` counter, distinct from
 `finalizeRefused`: a P-6 refusal is the gate working, not a retriable
 transaction failure.
 
+**Admin alert on every no-file exit (2026-09-28).** Every path through this route
+that ends with nothing submitted for a scanned dispute — P-6 refusal, stale
+response cycle, missing bank claim, finalize/enqueue refused, no pack, the
+fail-closed arm, or an exception — also calls `sendDeadlineNoFileAdminAlert`
+(`lib/email/sendDeadlineNoFileAdminAlert.ts`) to `ADMIN_NOTIFY_EMAIL`, subject
+*"Deadline today — DisputeDesk filed nothing: <shop> <order>"*, naming the refusal
+and package. The merchant email alone let blume-box #353605 (2026-08-11) go to
+Shopify's own scrape unnoticed. The dark `legacyRoute.ts` is not wired.
+
+### Address-claim sentences are removed, not left to fail the package
+
+`address_delivery` is a capability no case holds, so a sentence saying *where* the
+parcel went fails `validateNarrative` and the selection-time
+`assessPackageCandidateSafety`. When the model's retry still contains one, the
+build job used to mark the package `failed`, and the dispute filed nothing at the
+deadline. `buildDefencePackageJob` now runs `stripAddressDeliveryClaims`
+(`lib/defence/stripAddressDeliveryClaims.ts`) on the final narrative — every
+section, the headline, timeline additions and the counsel summary — deleting only
+the sentences `classifyAddressDeliveryClaim` rates affirmative/ambiguous (the same
+deletion the retry feedback asks the model for), then re-validates. Carrier,
+tracking and delivery-date sentences are untouched. An emptied section is added to
+`omittedSections`. Removals are audited as `defence_package_address_claim_removed`
+with the removed sentences and `validationOkAfter`.
+
 ### Branch boundary
 
 Automation decides what to DO; the argument decides what to SAY. Nothing under
@@ -9661,7 +9746,7 @@ would discard the navigation sequence the table exists to capture.
 
 **Product-listing collector (not-as-described PR 3a, behind `PRODUCT_LISTING_EVIDENCE_ENABLED`, default OFF).** `lib/packs/sources/productSource.ts` runs in `buildPack`'s fan-out only when the flag is ON **and** `ctx.caseFamily === "product_not_as_described"` (`effectiveFamilyForDispute`, the same resolver the letter build uses — network code, Shopify's reason, the bank claim's reason, payment family). `collectProductListings` (`lib/packs/productListing/`) runs `PRODUCT_EVIDENCE_QUERY` (≤ 2 pages of 50 line items, 8 s timeout, registered for the drift dry-run), stores ≤ 3 images per line item (≤ 1 MB, content-addressed under `{shop}/product-listings/{dispute}/`) and inserts a `product_listing_snapshots` row (identical content reuses the existing row). Outcomes per line item: `present | absent | inaccessible | failed | custom_item | deleted`; never throws. The pack section (`packs.section.productListings`, source `shopify_product`) carries `listings[]` (snapshot id + hash + title, variant, ≤ 600-char excerpt, URL, retrieval date, image paths; highest-value line item first = the model's representative) and `outcomes[]`; `fieldsProvided` = `product_description` only when a listing was collected. A collected listing is `supporting` (never scored, D4) but citable (`isCitableCollectedListing`); merchant uploads are unchanged. On `failed`, exactly one retry: `collect_product_evidence` with the permanent dedupe key `collect-product:<pack>:retry1` (`enqueueJob(…, { onDuplicate: "return" })`); the retry re-runs only the query + snapshot and, if no letter is final/submitted and no save is pending, enqueues a normal rebuild (no pack credit: `consumePack` is idempotent per dispute). Checklist, flag ON only: `templateCollectorKey` scores templated `product_description` rows (b…0004/b…0013) against the collected listing instead of `order_confirmation`, and the built-in template's row becomes `auto_shopify`/`auto`. With the flag OFF nothing is called and payloads are byte-identical (`listings` is absent, not empty).
 
-**Product-listing PDF exhibit (not-as-described PR 3b).** When the letter's facts include a collected, bank-included listing, the defence PDF prints a "Product Listing" section after the line items (`buildProductListingExhibits`, `lib/defence/productListingExhibit.ts`): per line item the caption "Product listing as published in the store, retrieved {date}" (plan C2 — provenance, never "what the customer saw" or "may differ"), title, variant options, the ≤ 600-char excerpt, images and the store URL. Images: JPEG/PNG only (react-pdf reads nothing else), content-addressed dedupe, ≤ 6 per PDF and ≤ 900 KB total so the PDF stays under Shopify's 2 MB upload ceiling. The collector now requests Shopify's resized copy (`evidenceImageUrl`: `width=600&format=jpg`): live originals were 0.8–1.4 MB PNGs (over the 1 MB cap, so they would all have been skipped); the resized copies measured ~50 KB (JPEG) / ~400 KB (a transparent PNG). Absent section → nothing renders, so packs built with the collector OFF are unchanged. Presentation (prod canary 2026-09-28): text runs through `printable` (emoji/pictographs the PDF font cannot draw are stripped), the excerpt is cut at a word boundary (`excerptOf`), Shopify's implicit "Title" option is never printed, and the link text is shortened (`displayUrl`; the target stays the full URL). The collector skips line items with `requiresShipping = false` (shipping insurance, services, gift cards).
+**Product-listing PDF exhibit (not-as-described PR 3b).** When the letter's facts include a collected, bank-included listing, the defence PDF prints a "Product Listing" section after the line items (`buildProductListingExhibits`, `lib/defence/productListingExhibit.ts`): per line item the caption "Product listing as published in the store, retrieved {date}" (plan C2 — provenance, never "what the customer saw" or "may differ"), title, variant options, the ≤ 600-char excerpt, images and the store URL. Images: JPEG/PNG only (react-pdf reads nothing else), content-addressed dedupe, ≤ 6 per PDF and ≤ 900 KB total so the PDF stays under Shopify's 2 MB upload ceiling. The collector now requests Shopify's resized copy (`evidenceImageUrl`: `width=600&format=jpg`): live originals were 0.8–1.4 MB PNGs (over the 1 MB cap, so they would all have been skipped); the resized copies measured ~50 KB (JPEG) / ~400 KB (a transparent PNG). Absent section → nothing renders, so packs built with the collector OFF are unchanged. Presentation (prod canary 2026-09-28): text runs through `printable` (emoji/pictographs the PDF font cannot draw are stripped), the excerpt is cut at a word boundary (`excerptOf`), Shopify's implicit "Title" option is never printed, and the link text is shortened (`displayUrl`; the target stays the full URL). The collector skips line items with `requiresShipping = false` (shipping insurance, services, gift cards). Layout (demo letter #101111, 2026-09-28): the section heading renders in the same unbreakable view as the first exhibit (`Section` `lead` prop) — `minPresenceAhead` did not hold against an unbreakable exhibit and left the heading alone at the page foot; letter prose passes through `breakableUrls`, which puts a zero-width space after each path `/` of a URL whose path is ≥ 30 characters so a long policy URL wraps instead of running off the page. The PDF renders from `scripts/pdf-worker/defence-package-document.bundle.mjs` — run `node scripts/build-pdf-worker.mjs` before rendering a local PDF, or edits to `DefencePackageDocument.tsx` do not show.
 
 **Product listing on the Evidence tab (not-as-described PR 3c).** `productListingNote` (`useEvidenceSections.ts`) reads the collector's section (`source: shopify_product`). Collected → the Product description row reads "Collected from your store on {date}: {title}" plus the merchant-only limitation "This is your listing as it is today…" (never bank-facing, plan C1). Not collected → the missing row explains why, in priority `inaccessible > failed > deleted > absent > custom_item` (`disputes.evidence.productListing.*`, 6 locales); `inaccessible` sets the action to "Approve product access". No collector section (flag OFF) → the tab is unchanged. The help article (`evidence-checklist`) is updated when the flag goes ON (PR 4), not before, so it never describes a feature merchants cannot see.
 

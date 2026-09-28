@@ -91,6 +91,15 @@ import type { RelevanceLevel } from "./vocabulary";
  * constant's own definition, so every v3 snapshot is invalidated and an
  * unsubmitted pack shows "not yet assessed" until its next rebuild. The
  * categorization snapshot is unchanged; only its version moved.
+ *
+ * ── not bumped for P1b (2026-09-28): qualified final delivery ─────────
+ *
+ * The rollup now also rates an item-not-received case `strong` on a
+ * `finalDeliveryVerified` delivery payload. No existing snapshot carries that
+ * key (the collector starts writing it with this change, and only when true),
+ * so every existing input still produces the same `overall`. A pack that gains
+ * the key has changed INPUTS, which moves its hash on the rebuild that adds
+ * it. Same inputs, same result: not a policy change by the definition above.
  */
 export const SCORING_POLICY_VERSION = 4;
 

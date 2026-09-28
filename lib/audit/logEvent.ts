@@ -111,6 +111,9 @@ export type EventType =
   /** An argument section was dropped because every fact it cited was withheld
    *  from the Evidence Basis. Content removed from a filed document. */
   | "defence_package_section_suppressed"
+  /** Address-delivery claim sentences the model kept writing after its retry,
+   *  deleted by code (stripAddressDeliveryClaims). Content removed from a filed document. */
+  | "defence_package_address_claim_removed"
   /** Evidence saved to the platform with no forwarding confirmation, past the
    *  grace window. Reported by the daily deadline cron. */
   | "defence_package_forwarding_unconfirmed"
