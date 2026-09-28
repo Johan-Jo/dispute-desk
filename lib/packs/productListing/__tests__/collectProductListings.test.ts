@@ -168,3 +168,24 @@ describe("evidenceImageUrl", () => {
     expect(evidenceImageUrl("https://images.example.com/x.png")).toBe("https://images.example.com/x.png");
   });
 });
+
+describe("excerptOf and non-merchandise (prod canary #100411)", () => {
+  it("cuts at a word boundary with an ellipsis, never mid-word", async () => {
+    const { excerptOf } = await import("../collectProductListings");
+    const e = excerptOf("Schließe einfach eine Powerbank an und genieße wohlige Wärme (USB-betrieben)", 60);
+    expect(e.endsWith("…")).toBe(true);
+    expect(e).not.toMatch(/USB-betrie…$/);
+    expect(e.length).toBeLessThanOrEqual(61);
+  });
+
+  it("skips line items that do not ship (shipping insurance, services)", async () => {
+    const { sb } = fakeSb();
+    const r = await collectProductListings(ARGS, {
+      sb,
+      query: query([lineItem({ id: "vest" }), lineItem({ id: "insurance", requiresShipping: false })]),
+      fetchImage: image,
+    });
+    expect(r.listings.map((l) => l.lineItemGid)).toEqual(["vest"]);
+    expect(r.outcomes.map((o) => o.lineItemGid)).toEqual(["vest"]);
+  });
+});
