@@ -26,6 +26,10 @@ export interface InternalNarrativeConstraints {
     messageIds: string[];
     firstSentAt: string | null;
   } | null;
+  /** A customer asked to return or send back the goods in a stored message on
+   *  an order-matched ticket (letter-structure plan §5.2). Withholds the
+   *  not-as-described "no return" line. Optional so older callers compile. */
+  returnRequested?: boolean;
   /** Every cited delivery happened after the dispute was opened
    *  (`deliveryPostDatesDispute`). Optional so older callers compile. */
   deliveryPostDatesDispute?: boolean;
@@ -36,6 +40,7 @@ export interface InternalNarrativeConstraints {
 
 export const NO_INTERNAL_CONSTRAINTS: InternalNarrativeConstraints = {
   refundOrCompensationRequested: null,
+  returnRequested: false,
   deliveryPostDatesDispute: false,
   carrierPossessionUndated: false,
 };

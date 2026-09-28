@@ -160,6 +160,23 @@ When DisputeDesk files nothing, Shopify files its own automatic response at the 
 5. Release with per-change approval → regenerate the approved case in prod and compare → the family's open disputes deadline-first, paced under the counsel daily cap (25/shop/day).
 6. Cost: counsel ≈ $0.016/package measured; a playbook plus translation must stay within 2×.
 
+## 9a. Status — 2026-09-28 evening (maintainer: D1 = A after a test print; D2 yes; D3 yes)
+
+Built on `fix/retire-template-writer` (PR #915), develop only:
+- §5.1 non-card counsel and §5.2 the not-as-described playbook, frame, English checks, dispute-opened row, non-card
+  Case Details, listing translation with cache (`product_listing_translations`, applied to dev and prod).
+- Test print: Mein Maison #101111 rendered through counsel from prod data (read-only; `canary-record-context.mts
+  --counsel`): passed every check on the first draft; timeline six rows (placed, paid, shipped, confirmation, delivered,
+  dispute opened); PayPal wording; English summary; listing with translation.
+
+Two deviations from §5.2, decided while building:
+- **Listing edited after the order is NOT omitted.** `product.updatedAt` moves on any edit (apps, sync); #101111's was
+  edited the day of the test print. Omitting would drop nearly every exhibit. The caption stays "as published in the
+  store, retrieved {date}", and the ledger forbids calling it what the customer saw.
+- **The return line does NOT require a messages integration.** It is the wording letters already carried ("No return
+  has been recorded in Shopify for this order.") — true of the record whatever was emailed — withheld when a stored
+  message shows return or refund intent.
+
 ## 10. Critic review (rev 1 → rev 2)
 
 Verdict on rev 1: **REVISE**. Every finding and what rev 2 did:

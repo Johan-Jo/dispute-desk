@@ -285,7 +285,7 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
  * `deliveredAt` is the delivery of the WHOLE disputed order: the claim says
  * the customer came back after the order was delivered.
  */
-function addLaterOrder(
+export function addLaterOrder(
   claims: LedgerClaim[],
   input: LedgerInput,
   d: { deliveredAt: string; carrier: string | null; orderCreatedAt: string | null; shippedAt: string | null },

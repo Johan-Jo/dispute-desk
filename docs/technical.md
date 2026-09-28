@@ -3563,6 +3563,24 @@ code-built claim ledger.
   still be filed at its deadline. Until a family has a counsel playbook, its disputes get no
   letter; the per-family playbooks are planned in `docs/plans/defence-letter-structure.plan.md`. The admin
   prompt-module dry-run route still calls `generateNarrative`; it never produces a filed letter.
+- **Not as described, PayPal and Klarna (2026-09-28, letter-structure plan §5).** `playbookForModule` routes
+  `product_unacceptable` to the `NOT_AS_DESCRIBED` playbook (`counsel/playbooks.ts`) with its own ledger
+  (`counsel/notAsDescribedLedger.ts`: `listing_published`, `shipped`, `carrier_delivered`, `dispute_after_delivery`,
+  `no_return_recorded`, `later_order`), code-written sections ("What was sold" under the line items; "Delivery and
+  return", which alone may state the return line) and `SUMMARY_SYSTEM_NOT_AS_DESCRIBED`. Non-card payments now reach
+  counsel (the `!isNonCardPayment` gate is gone). `counsel/frame.ts` names the proceeding from the payment family and
+  `disputes.phase`: page title ("Chargeback response" / "Inquiry response" / "Dispute response"), the request line
+  (a PayPal inquiry asks PayPal to "close this dispute in the merchant's favour", never "reversal of the chargeback"),
+  words the checks refuse (`chargeback`, `cardholder`, `issuer`, network names on a PayPal/Klarna dispute), and
+  Case Details for non-card ("Payment method", "Customer name", no card rows). `addDisputeOpenedRow` adds the
+  dispute's opening to the timeline when Shopify's events carry none (every inquiry and PayPal dispute).
+  **English only:** `englishOnlyIssues` (`counsel/checks.ts`) refuses the store title, non-ASCII letters and
+  function words of the other five locales in the model-written summary. A non-English listing exhibit prints an
+  English translation beneath the original, captioned "English translation (machine-translated)"
+  (`listingTranslation.ts`: every number in the original must survive, or none is printed), made once per snapshot
+  and cached in `product_listing_translations` (migration `20260928180000`). Not-as-described v6 re-allows delivery
+  facts and drops the delivery-word bans; `familyOmitsArrival` is empty — every letter carries the full sequence.
+  The stored-message constraint gained `returnRequested` (return intent, six locales), which withholds the return line.
 - **In the job.** `buildDefencePackageJob` calls `runCounsel` (`counsel/run.ts`) for
   `inr_product_not_received` card disputes. It reads the customer's other orders live (Admin API, `makeAuthedRequest`)
   and builds the ledger. A null result (no single carrier-confirmed delivery, no passing summary, any error) means no

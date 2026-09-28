@@ -42,6 +42,8 @@ import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
+import { disputeFrame, requestLine, responseTitle } from "@/lib/defence/counsel/frame";
+import { cachedListingTranslator } from "@/lib/defence/listingTranslationCache";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
@@ -53,7 +55,6 @@ import {
 } from "@/lib/defence/validateNarrative";
 import { stripAddressDeliveryClaims } from "@/lib/defence/stripAddressDeliveryClaims";
 import { suppressUnsupportedSections } from "@/lib/defence/suppressUnsupportedSections";
-import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
 import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
@@ -313,9 +314,6 @@ export async function handleBuildDefencePackage(
     dispute && needsBankClaim(bankClaimInputFromRow(dispute as unknown as Record<string, unknown>))
       ? await loadBankClaimAnswer(sb, pkg.dispute_id, claimCycle)
       : null;
-  const bankClaimInput = bankClaim
-    ? { text: bankClaim.text, noClaimShown: bankClaim.noClaimShown }
-    : null;
   const claimAnalysis = bankClaim?.text
     ? await ensureBankClaimAnalysis(sb, pkg.dispute_id, claimCycle).catch(() => null)
     : null;
@@ -574,15 +572,6 @@ export async function handleBuildDefencePackage(
     }
   }
 
-  // Phase 3 — rank strategy submodules for this dispute. Empty result
-  // (family has no strategies yet) is fine; the narrative writer
-  // simply doesn't emit the 4th cached system block.
-  const strategies = rankStrategies({
-    familyKey: reasonCodeFamily.key,
-    predicateEvaluations: classification.predicateEvaluations,
-    packageMode: classification.packageMode,
-  });
-
   // Payment-method overlay (BNPL / Klarna / Affirm). Non-null only for
   // non-card disputes; reframes the narrative to the actual method and
   // supplies the card-term phrases that validateNarrative hard-rejects.
@@ -591,7 +580,7 @@ export async function handleBuildDefencePackage(
   const klarnaSubProduct =
     (packJson.payment_context as { klarnaSubProduct?: KlarnaSubProduct | null } | undefined)
       ?.klarnaSubProduct ?? null;
-  const { overlay: paymentOverlay, prohibitedPhrases: paymentProhibited } =
+  const { prohibitedPhrases: paymentProhibited } =
     paymentOverlayFor(paymentContext?.family ?? null, {
       shopifyReason: dispute?.reason ?? null,
       subProduct: klarnaSubProduct,
@@ -605,7 +594,9 @@ export async function handleBuildDefencePackage(
   let usedCounsel = false;
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
   let counselTransient: { code: "daily_cap_reached" | "llm_error"; reason: string } | null = null;
-  if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment && !bankClaim?.text) {
+  // PayPal and Klarna disputes are counsel's too (plan §5.1): 50 of 60 open
+  // disputes on 2026-09-28. A captured bank claim still skips counsel (§6).
+  if (counselEnabled(reasonCodeModule.key) && !bankClaim?.text) {
     const cap = await checkDailyCap(sb, pkg.shop_id);
     if (cap.capReached || cap.counselRuns >= COUNSEL_DAILY_RUN_CAP) {
       counselTransient = { code: "daily_cap_reached", reason: "counsel daily run cap reached" };
@@ -623,6 +614,10 @@ export async function handleBuildDefencePackage(
           orderGid: (dispute as { order_gid?: string | null } | null)?.order_gid ?? null,
           disputeGid: dispute?.dispute_gid ?? null,
           disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+          paymentFamily: paymentContext?.family ?? null,
+          paymentLabel: paymentContext?.label ?? null,
+          phase: (dispute as { phase?: string | null } | null)?.phase ?? null,
+          constraints: await loadInternalNarrativeConstraints(pkg.dispute_id as string),
           disputeAmount: Number.isFinite(Number(dispute?.amount)) ? Number(dispute?.amount) : null,
           disputeCurrency: dispute?.currency_code ?? null,
           amountDisplay: dispute?.amount != null ? `${dispute.currency_code ?? ""} ${dispute.amount}`.trim() : null,
@@ -1114,6 +1109,18 @@ export async function handleBuildDefencePackage(
       caseContext: thesisContext,
     });
 
+  /* The request names the proceeding (letter-structure plan §4): a PayPal or
+   * Klarna dispute, or an inquiry, is not asked to "reverse the chargeback"
+   * (Mein Maison #101111, 2026-09-28). Before validation, so it is checked. */
+  const frame = disputeFrame({
+    paymentFamily: paymentContext?.family ?? null,
+    paymentLabel: paymentContext?.label ?? null,
+    phase: (dispute as { phase?: string | null } | null)?.phase ?? null,
+  });
+  if (!(frame.provider === "card" && frame.stage === "chargeback")) {
+    for (const b of composedBlocks) if (b.sectionKey === "conclusion") b.thesisText = requestLine(frame);
+  }
+
   /* F2's second half — DETERMINISTIC document validation, run after
    * composition and covering what only exists once the plan is in the picture:
    * orphaned claims, plan/fact mismatch, an empty document, a retired delivery
@@ -1253,6 +1260,8 @@ export async function handleBuildDefencePackage(
   const docData: DefencePackageDocumentData = {
     meta: {
       packageId,
+      responseTitle: responseTitle(frame),
+      paymentMethodLabel: frame.provider === "card" ? null : frame.providerName,
       disputeGid: dispute?.dispute_gid ?? null,
       orderName: orderContext.orderName,
       reasonCode,
@@ -1289,6 +1298,8 @@ export async function handleBuildDefencePackage(
         listingCited: planFacts.some(
           (f) => f.category === "product_listing" && (f.value as { collected?: unknown }).collected === true,
         ),
+        // English beneath a non-English original (Visa DMG p. 9; D3).
+        translate: cachedListingTranslator(sb, pkg.shop_id as string),
       }),
       generatedAt: new Date().toISOString(),
       version: pkg.version,

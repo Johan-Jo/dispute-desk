@@ -13,7 +13,14 @@
  */
 
 import { checkDraft, type CheckContext } from "./checks";
-import { correctionUserPrompt, REVIEW_SYSTEM, reviewUserPrompt, SUMMARY_SYSTEM, summaryUserPrompt } from "./prompts";
+import {
+  correctionUserPrompt,
+  REVIEW_SYSTEM,
+  reviewUserPrompt,
+  SUMMARY_SYSTEM,
+  SUMMARY_SYSTEM_NOT_AS_DESCRIBED,
+  summaryUserPrompt,
+} from "./prompts";
 import { buildRecordSections, pickTheory, recordSectionsText, type Theory } from "./recordSections";
 import type { CounselDraft, LedgerClaim, Playbook } from "./types";
 
@@ -105,18 +112,23 @@ export async function writeCounselLetter(args: {
   pageContext: string;
   check: CheckContext;
   call: ModelCall;
+  /** frame.ts `frameRule`: the words for the proceeding and the request. */
+  frameRule?: string;
   log?: (msg: string) => void;
 }): Promise<CounselResult> {
   const log = args.log ?? (() => {});
   const theory = pickTheory(args.ledger, args.playbook);
-  const record = buildRecordSections(args.ledger);
+  const record = buildRecordSections(args.ledger, args.playbook);
   const recordText = recordSectionsText(record);
+  const system = args.playbook.familyKey === "product_not_as_described" ? SUMMARY_SYSTEM_NOT_AS_DESCRIBED : SUMMARY_SYSTEM;
   const caseUser = summaryUserPrompt({
     ledger: args.ledger,
     theory,
     recordText,
     pageContext: args.pageContext,
     merchantName: args.merchantName,
+    frameRule: args.frameRule,
+    familyKey: args.playbook.familyKey,
   });
   log(`theory: ${theory.name}`);
 
@@ -143,7 +155,7 @@ export async function writeCounselLetter(args: {
   };
 
   const first = summaryFrom(
-    await args.call({ stage: "write", system: SUMMARY_SYSTEM, user: caseUser, temperature: 0.4, maxTokens: 600 }),
+    await args.call({ stage: "write", system, user: caseUser, temperature: 0.4, maxTokens: 600 }),
   );
   let draft = composeDraft(first, record);
   const firstIssues = await issuesOf(draft);
@@ -156,7 +168,7 @@ export async function writeCounselLetter(args: {
     const fixed = summaryFrom(
       await args.call({
         stage: "correction",
-        system: SUMMARY_SYSTEM,
+        system,
         user: correctionUserPrompt(caseUser, first.paragraphs, issues),
         temperature: 0.2,
         maxTokens: 800,

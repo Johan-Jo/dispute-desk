@@ -1,12 +1,14 @@
 /**
  * Counsel v2 inside the package job (buildDefencePackageJob.ts).
  *
- * Item-not-received disputes only. Builds the claim ledger from the pack plus
- * a live read of the customer's other orders, writes the letter (generate.ts:
- * code-written sections, one model-written summary, one review call,
- * at most one correction) and returns it as a DefenceNarrativeOutput — or
- * null, in which case the job writes the template letter exactly as before.
- * Nothing here can make a case file less than it did without counsel.
+ * The only letter writer (the template writer is retired, 2026-09-28). One
+ * playbook per claim type (playbooks.ts `playbookForModule`): item not
+ * received and not as described. Card, PayPal and Klarna disputes alike; the
+ * frame (frame.ts) names the proceeding and the request. Builds the claim
+ * ledger from the pack plus a live read of the customer's other orders,
+ * writes the letter (generate.ts: code-written sections, one model-written
+ * summary, one review call, at most one correction) and returns it as a
+ * DefenceNarrativeOutput — or null, and the dispute gets no letter.
  *
  * Reuse: the letter's inputs are hashed. When a previous counsel letter for
  * the dispute has the same hash, its summary is reused and no model is called.
@@ -18,10 +20,14 @@ import { createHash } from "node:crypto";
 import { callClaudeMessages } from "../anthropicClient";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import type { DefenceNarrativeOutput, EvidenceFact } from "../types";
-import { buildItemNotReceivedLedger } from "./claimLedger";
+import { buildItemNotReceivedLedger, longDate } from "./claimLedger";
+import { buildNotAsDescribedLedger } from "./notAsDescribedLedger";
 import { checkDraft, toNarrative, type CheckContext } from "./checks";
 import { composeDraft, writeCounselLetter, type CounselStage, type ModelCall } from "./generate";
-import { ITEM_NOT_RECEIVED } from "./playbooks";
+import { playbookForModule } from "./playbooks";
+import { disputeFrame, frameRule, requestLine, type DisputeFrame } from "./frame";
+import { classifyChronologyEvent } from "../chronology";
+import type { InternalNarrativeConstraints } from "../internalConstraints";
 import { COUNSEL_PROMPT_VERSION } from "./prompts";
 import { buildRecordSections } from "./recordSections";
 import type { CounselDraft, CustomerOrderSummary, LedgerClaim, LedgerInput } from "./types";
@@ -38,7 +44,46 @@ export const COUNSEL_REVIEW_MODEL = "claude-sonnet-4-6";
 export const COUNSEL_DAILY_RUN_CAP = Number(process.env.DEFENCE_COUNSEL_DAILY_RUN_CAP ?? "25");
 
 export function counselEnabled(moduleKey: string): boolean {
-  return moduleKey === "inr_product_not_received" && process.env.DEFENCE_COUNSEL_V2 !== "off";
+  return playbookForModule(moduleKey) !== null && process.env.DEFENCE_COUNSEL_V2 !== "off";
+}
+
+/**
+ * The dispute's opening as a timeline row, when Shopify's own events carry
+ * none (every inquiry, every PayPal dispute: #101111 had no row for it). Added
+ * to the ledger claim that dates the dispute, so it prints once.
+ */
+export function addDisputeOpenedRow(
+  ledger: LedgerClaim[],
+  sections: LedgerInput["packSections"],
+  openedAt: string | null,
+  frame: DisputeFrame,
+): void {
+  if (!openedAt || !longDate(openedAt)) return;
+  const timeline = ((sections.find((s) => s?.type === "access_log")?.data as { timelineEvents?: unknown[] } | undefined)?.timelineEvents ?? [])
+    .map((e) => (e && typeof e === "object" ? (e as Record<string, unknown>) : null))
+    .filter((e): e is Record<string, unknown> => !!e && typeof e.message === "string");
+  if (timeline.some((e) => classifyChronologyEvent(e.message as string) === "chargeback")) return;
+  const text =
+    frame.provider !== "card"
+      ? `The customer opened a ${frame.providerName ?? "payment"} dispute.`
+      : frame.stage === "inquiry"
+        ? "The cardholder opened an inquiry."
+        : "The cardholder opened a chargeback.";
+  const row = { at: openedAt, text };
+  const holder = ledger.find((c) => c.id === "dispute_after_delivery" || c.id === "delivered_after_dispute_opened");
+  if (holder) {
+    holder.timelineEvent = holder.timelineEvent ?? row;
+    return;
+  }
+  ledger.push({
+    id: "dispute_opened",
+    statement: `The dispute was opened on ${longDate(openedAt)}.`,
+    specifics: { disputeOpenedOn: longDate(openedAt)! },
+    weight: "supporting",
+    sources: ["dispute.initiated_at"],
+    mustNot: [],
+    timelineEvent: row,
+  });
 }
 
 type Obj = Record<string, unknown>;
@@ -190,6 +235,12 @@ export async function runCounsel(args: {
   amountDisplay: string | null;
   cardLast4: string | null;
   merchantName: string;
+  /** Payment family (paymentContext) and dispute phase: the frame. */
+  paymentFamily?: string | null;
+  paymentLabel?: string | null;
+  phase?: string | null;
+  /** Stored-message constraints: withhold the not-as-described return line. */
+  constraints?: InternalNarrativeConstraints | null;
   log?: (m: string) => void;
   /** The summary of a previous counsel letter for this dispute with this
    *  input hash, or null. Reuse makes no model call. */
@@ -205,11 +256,14 @@ export async function runCounsel(args: {
     reused: boolean;
   }) => Promise<void>;
 }): Promise<CounselRunResult | null> {
-  if (!counselEnabled(args.moduleKey)) return null;
+  const playbook = playbookForModule(args.moduleKey);
+  if (!playbook || !counselEnabled(args.moduleKey)) return null;
   const started = Date.now();
+  const frame = disputeFrame({ paymentFamily: args.paymentFamily, paymentLabel: args.paymentLabel, phase: args.phase });
+  const notAsDescribed = playbook.familyKey === "product_not_as_described";
 
   const customerOrders = args.orderGid ? await fetchCustomerOrders(args.shopId, args.orderGid) : [];
-  const ledger = buildItemNotReceivedLedger({
+  const ledgerInput: LedgerInput = {
     moduleKey: args.moduleKey,
     facts: args.facts,
     packSections: args.packSections,
@@ -218,11 +272,15 @@ export async function runCounsel(args: {
     disputeAmount: args.disputeAmount,
     disputeCurrency: args.disputeCurrency,
     customerOrders,
-  });
+  };
+  const ledger = notAsDescribed
+    ? buildNotAsDescribedLedger(ledgerInput, { constraints: args.constraints ?? null })
+    : buildItemNotReceivedLedger(ledgerInput);
   if (!ledger) {
-    console.info(`[counsel] no ledger for ${args.orderName ?? "?"} (not a single carrier-confirmed delivery); template writer`);
+    console.info(`[counsel] no ledger for ${args.orderName ?? "?"} (${playbook.familyKey}); no letter`);
     return null;
   }
+  addDisputeOpenedRow(ledger, args.packSections, args.disputeOpenedAt, frame);
 
   const delivery = args.facts.find(
     (f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && str(obj(f.value)?.trackingNumber),
@@ -243,23 +301,40 @@ export async function runCounsel(args: {
   const multi = parcels.length > 1;
   const hasAddresses = ledger.some((c) => c.addressExhibit);
   const hasLater = ledger.some((c) => c.laterOrderExhibit);
+  const orderSection = args.packSections.find((s) => s?.type === "order" && (s.data as { orderName?: unknown } | null)?.orderName);
+  const lineItemTitles = (((orderSection?.data as { lineItems?: unknown[] } | null)?.lineItems ?? []) as Array<{ title?: unknown }>)
+    .map((li) => str(li?.title))
+    .filter((x): x is string => !!x);
+  const listingTitles = (((args.packSections.find((s) => s?.source === "shopify_product")?.data as { listings?: unknown[] } | null)?.listings ??
+    []) as Array<{ title?: unknown }>)
+    .map((l) => str(l?.title))
+    .filter((x): x is string => !!x);
   const pageContext = [
     `Header: ${[disputeNumber && `Dispute ${disputeNumber}`, args.orderName && `Order ${args.orderName}`, args.amountDisplay].filter(Boolean).join(" · ")} · submitted on behalf of ${args.merchantName}.`,
-    `Case details table: merchant, card network${args.cardLast4 ? `, card ending ${args.cardLast4}` : ""}, transaction date, order number, disputed amount.`,
-    multi
+    frame.provider === "card"
+      ? `Case details table: merchant, card network${args.cardLast4 ? `, card ending ${args.cardLast4}` : ""}, transaction date, order number, disputed amount.`
+      : `Case details table: merchant, payment method (${frame.providerName ?? "non-card"}), transaction date, order number, disputed amount.`,
+    notAsDescribed && listingTitles.length
+      ? "Product listing exhibit below the line items: the store's photographs and text, with an English translation."
+      : null,
+    notAsDescribed && !trackingNumber
+      ? null
+      : multi
       ? "Parcel cards, one per parcel: its products, carrier, tracking number or shipping reference, shipped date, delivery date where the carrier recorded one, and the tracking link where one exists."
       : `Shipment card: carrier, tracking number, shipped and delivered dates. Tracking link printed below the shipping section.`,
     hasAddresses ? "Order addresses card under the shipment card: shipping and billing address side by side, stated identical." : null,
     `Line-items table: products, adjustments, total.${hasLater ? " Under it, a card for the same customer's later order (order number, date, amount, card ending, wallet)." : ""}`,
-    "Timeline: the order's events (order, payment, shipping, delivery, notifications) and the chargeback, with dates.",
-    'Request line after the conclusion: "The merchant respectfully requests reversal of the chargeback."',
+    `Timeline: the order's events (order, payment, shipping, delivery, notifications) and the opening of the ${frame.provider === "card" ? (frame.stage === "inquiry" ? "inquiry" : "chargeback") : "dispute"}, with dates.`,
+    `Request line after the conclusion: "${requestLine(frame)}"`,
   ]
     .filter(Boolean)
     .join("\n");
 
   const check: CheckContext = {
     ledger,
-    playbook: ITEM_NOT_RECEIVED,
+    playbook,
+    frame,
+    forbiddenTitles: notAsDescribed ? [...lineItemTitles, ...listingTitles] : [],
     facts: args.facts,
     disputeOpenedAt: args.disputeOpenedAt,
     merchantName: args.merchantName,
@@ -278,7 +353,7 @@ export async function runCounsel(args: {
   };
   const model = process.env.DEFENCE_COUNSEL_MODEL ?? COUNSEL_DEFAULT_MODEL;
   const reviewModel = process.env.DEFENCE_COUNSEL_REVIEW_MODEL ?? COUNSEL_REVIEW_MODEL;
-  const inputHash = counselInputHash({ ledger, pageContext, merchantName: args.merchantName, check, writeModel: model, reviewModel });
+  const inputHash = counselInputHash({ ledger, pageContext: `${pageContext}\n${frameRule(frame)}`, merchantName: args.merchantName, check, writeModel: model, reviewModel });
   // Multi-parcel: each card prints its own link.
   const trackingLine = trackingUrl && !multi ? `Carrier tracking record: ${trackingUrl}` : null;
   const factIds = args.facts.map((f) => f.id);
@@ -303,7 +378,7 @@ export async function runCounsel(args: {
   // summary still has to pass today's code checks against today's ledger.
   const previous = args.findReusable ? await args.findReusable(inputHash).catch(() => null) : null;
   if (previous?.length) {
-    const draft = composeDraft({ paragraphs: previous, claimIds: [] }, buildRecordSections(ledger));
+    const draft = composeDraft({ paragraphs: previous, claimIds: [] }, buildRecordSections(ledger, playbook));
     if (checkDraft(draft, check).length === 0) {
       await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: true, reused: true });
       return result(draft, true);
@@ -332,7 +407,7 @@ export async function runCounsel(args: {
 
   let written: Awaited<ReturnType<typeof writeCounselLetter>>;
   try {
-    written = await writeCounselLetter({ ledger, playbook: ITEM_NOT_RECEIVED, merchantName: args.merchantName, pageContext, call, log: args.log, check });
+    written = await writeCounselLetter({ ledger, playbook, merchantName: args.merchantName, pageContext, call, log: args.log, check, frameRule: frameRule(frame) });
   } catch (err) {
     // A model error is still spend: record it before the job falls back.
     await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: false, reused: false });
@@ -340,7 +415,7 @@ export async function runCounsel(args: {
   }
   await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: written.ok, reused: false });
   if (!written.ok) {
-    // Visible in the logs: why the template writer took over.
+    // Visible in the logs: why there is no letter.
     console.warn(
       `[counsel] summary failed for ${args.orderName ?? "?"} after ${written.corrected ? "one correction" : "the first draft"}: ` +
         written.issues.join(" | ").slice(0, 800),

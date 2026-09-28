@@ -64,6 +64,11 @@ import type {
 
 export interface DefencePackageMeta {
   packageId: string;
+  /** "Chargeback response", "Inquiry response" or "Dispute response"
+   *  (counsel/frame.ts). Absent = "Chargeback response". */
+  responseTitle?: string;
+  /** A non-card dispute's provider ("PayPal"): no card rows in Case Details. */
+  paymentMethodLabel?: string | null;
   disputeGid: string | null;
   orderName: string | null;
   reasonCode: string | null;
@@ -244,7 +249,7 @@ function RunningHeader({ meta }: { meta: DefencePackageMeta }) {
         // shows no stray rule.
         pageNumber === 1 ? null : (
           <View style={styles.runningHeader}>
-            <Text style={styles.runningLeft}>Chargeback response</Text>
+            <Text style={styles.runningLeft}>{meta.responseTitle ?? "Chargeback response"}</Text>
             <Text style={styles.runningRight}>{caseRef(meta)}</Text>
           </View>
         )
@@ -342,6 +347,7 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
   // Row builder is shared with the embedded HTML view via
   // `lib/defence/render/caseDetails.ts` — same fields, same order, same "—".
   const rows = buildCaseDetailsRows({
+    paymentMethodLabel: meta.paymentMethodLabel ?? null,
     disputeIdShort: disputeIdShort(meta.disputeGid),
     merchantName: merchant,
     cardNetwork: meta.cardNetwork,
@@ -374,7 +380,7 @@ function FirstPage({ meta }: { meta: DefencePackageMeta }) {
   return (
     <View>
       <View style={styles.metaRow}>
-        <Text style={styles.eyebrow}>Chargeback response</Text>
+        <Text style={styles.eyebrow}>{meta.responseTitle ?? "Chargeback response"}</Text>
         <Text style={styles.metaRight}>{fmtIsoDate(meta.generatedAt)}</Text>
       </View>
       <Text style={styles.title}>Dispute {disputeIdShort(meta.disputeGid)}</Text>
@@ -597,6 +603,14 @@ function ProductListingCard({ x, last }: { x: ProductListingExhibit; last: boole
         </View>
       ) : null}
       {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
+      {x.translation ? (
+        <View style={{ marginTop: 6, marginBottom: 6, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: COLORS.muted }}>
+          <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 3 }}>English translation (machine-translated)</Text>
+          {x.translation.title ? <Text style={{ fontSize: 10, fontWeight: 700, marginBottom: 2 }}>{x.translation.title}</Text> : null}
+          {x.translation.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 3 }}>{x.translation.variantLine}</Text> : null}
+          {x.translation.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4 }}>{x.translation.excerpt}</Text> : null}
+        </View>
+      ) : null}
       {x.sourceUrl ? (
         <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
           {x.sourceUrlDisplay ?? x.sourceUrl}

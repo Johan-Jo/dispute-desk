@@ -18,7 +18,7 @@ export const product_unacceptable: ReasonCodeGuidance = {
     "Prioritise: the items and variant the customer ordered, the product listing as retrieved for this response (never presented as the page shown at checkout), customer communications about the complaint, refund/return policy disclosure, and merchant resolution attempts.",
     "Do NOT argue 'the item was acceptable' as a conclusion — argue from the listing-as-purchased and any documented resolution attempts.",
     "Do NOT cite policy as a defence unless an approved policy fact (acceptedAtCheckout=true, or a policy_refund fact) is present.",
-    "ARRIVAL IS NOT IN DISPUTE. The buyer agrees the parcel arrived and disputes what was in it, so the parcel's journey answers nothing they raised. Do not mention it at all: no shipping details and no arrival dates.",
+    "Delivery is part of the sequence, not the argument: state once that the carrier recorded delivery; never lead with it and never argue non-receipt.",
   ].join("\n"),
   // Conformity evidence leads. `delivery_proof` sat second in this list
   // until 2026-09-01, which put possession above conformity in the one
@@ -42,8 +42,6 @@ export const product_unacceptable: ReasonCodeGuidance = {
     "ip_location",
     "device_session",
     "fraud_screening",
-    "delivery_proof",
-    "shipping_tracking",
     "policy_shipping",
   ],
   mustNotClaim: [
@@ -67,6 +65,9 @@ export const product_unacceptable: ReasonCodeGuidance = {
     "policy_refund",
     "policy_acceptance",
     "manual_evidence",
+    // v6 (2026-09-28, evening): back — the sequence needs the delivery.
+    "delivery_proof",
+    "shipping_tracking",
   ],
-  version: 5,
+  version: 6,
 };

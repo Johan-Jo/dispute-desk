@@ -298,7 +298,16 @@ export function describeChronologyEvent(
         ? { title: "Returned by carrier", marker: "filled" }
         : { title: "Delivered by carrier", marker: "green" };
     case "chargeback":
-      return { title: "Chargeback opened", marker: "filled" };
+      // The row names its own proceeding: an inquiry or a PayPal/Klarna
+      // dispute is not a chargeback (#101111, 2026-09-28).
+      return {
+        title: /\binquiry\b/i.test(e.text)
+          ? "Inquiry opened"
+          : /\b(?:PayPal|Klarna|payment) dispute\b/i.test(e.text)
+            ? "Dispute opened"
+            : "Chargeback opened",
+        marker: "filled",
+      };
     default:
       return { title: "Event", marker: "filled" };
   }

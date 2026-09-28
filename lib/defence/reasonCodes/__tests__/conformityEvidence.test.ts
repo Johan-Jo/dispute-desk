@@ -71,20 +71,19 @@ describe("product_unacceptable — conformity leads, delivery does not", () => {
     expect(product_unacceptable.prioritize[0]).toBe("product_listing");
   });
 
-  it("does not argue delivery at all: arrival is not in dispute (v5, 2026-09-28)", () => {
+  it("carries delivery in the sequence but never leads with it (v6, 2026-09-28 evening)", () => {
     expect(rank("delivery_proof")).toBe(-1);
     expect(rank("shipping_tracking")).toBe(-1);
-    expect(product_unacceptable.allowedFactCategories).not.toContain("delivery_proof");
-    expect(product_unacceptable.allowedFactCategories).not.toContain("shipping_tracking");
-    expect(product_unacceptable.avoid).toEqual(expect.arrayContaining(["delivery_proof", "shipping_tracking"]));
+    expect(product_unacceptable.allowedFactCategories).toEqual(expect.arrayContaining(["delivery_proof", "shipping_tracking"]));
+    expect(product_unacceptable.avoid).not.toContain("delivery_proof");
   });
 
   it("rests its theory on the listing rather than the order confirmation", () => {
     expect(product_unacceptable.criticalCategories).toEqual(["product_listing"]);
   });
 
-  it("tells the writer in words that arrival is not in dispute", () => {
-    expect(product_unacceptable.promptBody).toContain("ARRIVAL IS NOT IN DISPUTE");
+  it("tells the writer delivery is sequence, not argument", () => {
+    expect(product_unacceptable.promptBody).toContain("Delivery is part of the sequence, not the argument");
   });
 });
 
