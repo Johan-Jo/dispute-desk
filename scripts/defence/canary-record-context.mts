@@ -314,7 +314,7 @@ for (const disputeId of disputeIds) {
         } as never)
       : [];
     const composedCheck = narrative
-      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
+      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases, internalConstraints: { refundOrCompensationRequested: null, verifiedPolicyTerms } } as never)
       : null;
     return { res, body, raw, narrative, narrativeCheck, composedCheck, blocks };
   };
@@ -358,7 +358,7 @@ for (const disputeId of disputeIds) {
       for (const b of blocks as Array<{ sectionKey: string; thesisText: string }>) if (b.sectionKey === "conclusion") b.thesisText = requestLine(frame);
     }
     const composedCheck = narrative
-      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases } as never)
+      ? validateComposedDocument({ blocks, approvedFacts: facts, packageMode: classification.packageMode, extraHardPhrases: hard, guardedPhrases: fam.guardedBankPhrases, internalConstraints: { refundOrCompensationRequested: null, verifiedPolicyTerms } } as never)
       : null;
     return { res: { status: counsel ? 200 : 0 }, body: { error: counsel ? null : "counsel wrote no letter" }, raw: "", narrative, narrativeCheck, composedCheck, blocks, frame, policyExhibit: counsel?.policyExhibit ?? null };
   };

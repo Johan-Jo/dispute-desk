@@ -69,9 +69,9 @@ export interface DefencePackageMeta {
   responseTitle?: string;
   /** A non-card dispute's provider ("PayPal"): no card rows in Case Details. */
   paymentMethodLabel?: string | null;
-  /** The refund policy the letter argues from, printed in full with its
-   *  English translation (counsel run.ts `policyExhibit`). */
-  policyExhibit?: { original: string; english: string | null; retrievedOn: string | null; updatedOn: string | null } | null;
+  /** The refund policy the letter argues from: its key term and a link to
+   *  the published policy (counsel run.ts `policyExhibit`). */
+  policyExhibit?: { summary: string; url: string | null; updatedOn: string | null } | null;
   disputeGid: string | null;
   orderName: string | null;
   reasonCode: string | null;
@@ -310,6 +310,17 @@ function Section({
  * #101111, 2026-09-28). A zero-width space after each separator lets the
  * renderer wrap it without adding a hyphen or changing the text.
  */
+/** Link text for the store's published policy: host and path, shortened. */
+function displayPolicyUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const t = `${u.host}${u.pathname}`;
+    return t.length > 80 ? `${t.slice(0, 79)}…` : t;
+  } catch {
+    return url;
+  }
+}
+
 export function breakableUrls(text: string): string {
   // Only after "/" in the path: the fewest break points that still let the
   // longest policy URL wrap, so copy-paste gains the fewest stray gaps.
@@ -795,15 +806,14 @@ export function DefencePackageDocument({
                   <Prose text={blockBody(findBlock(composedBlocks, "policyArgument"))!} />
                 </View>
               ) : null}
-              <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>
-                {`Refund policy as published in the store${meta.policyExhibit.retrievedOn ? `, retrieved ${meta.policyExhibit.retrievedOn.slice(0, 10)}` : ""}${meta.policyExhibit.updatedOn ? `; last updated by the store ${meta.policyExhibit.updatedOn.slice(0, 10)}` : ""}`}
+              <Text style={{ fontSize: 9.5, marginBottom: 2 }}>
+                {`Store refund policy: ${meta.policyExhibit.summary}`}
+                {meta.policyExhibit.updatedOn ? ` (last updated by the store ${meta.policyExhibit.updatedOn.slice(0, 10)}).` : "."}
               </Text>
-              <Text style={{ fontSize: 8.5, lineHeight: 1.35, marginBottom: 6 }}>{meta.policyExhibit.original.replace(/\n{3,}/g, "\n\n")}</Text>
-              {meta.policyExhibit.english ? (
-                <View style={{ marginTop: 4, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: COLORS.muted }}>
-                  <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 3 }}>English translation (machine-translated)</Text>
-                  <Text style={{ fontSize: 8.5, lineHeight: 1.35 }}>{meta.policyExhibit.english}</Text>
-                </View>
+              {meta.policyExhibit.url ? (
+                <Link src={meta.policyExhibit.url} style={{ fontSize: 8.5, color: COLORS.muted }}>
+                  {displayPolicyUrl(meta.policyExhibit.url)}
+                </Link>
               ) : null}
             </Section>
           ) : (

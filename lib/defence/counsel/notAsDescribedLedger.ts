@@ -219,7 +219,7 @@ export function buildNotAsDescribedLedger(input: LedgerInput, extras: NotAsDescr
         sources: ["policy_snapshots.extracted_text", "dispute.initiated_at", "pack.shipping.fulfillments.deliveredAt"],
         mustNot: [
           "Never say the customer chose not to return, ignored, skipped or bypassed the return route, or went to the provider instead.",
-          "Never state the policy's conditions (notice, postage, fees); the policy is printed in full as an exhibit.",
+          "Never state the policy's conditions (notice, postage, fees); the letter links to the published policy.",
           "Never say the refund is automatic or unconditional; say the policy offers a refund on a return.",
         ],
       });

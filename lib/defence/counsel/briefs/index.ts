@@ -127,7 +127,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
     {
       key: "policy",
       title: "Return Route",
-      exhibit: "the store's refund policy, printed in full with an English translation",
+      exhibit: "a one-line summary of the store's refund policy with a link to the published policy",
       question: "What remedy did the store offer, and was it open at the dispute?",
       claimIds: ["return_route_open", "no_return_recorded"],
     },

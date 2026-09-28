@@ -3564,8 +3564,9 @@ code-built claim ledger.
   Not-as-described adds `order_specified` (the order's own item description, translated), `shipped_as_ordered`
   (fulfilment covers every line item) and `return_route_open` (return window verified from the refund policy by
   `counsel/policyTerms.ts`; policy in force at delivery via `policy_snapshots.policy_updated_at`; card and PayPal,
-  not Klarna — D9; used with the full policy printed even when it carries customer-favourable clauses — D10). The
-  policy prints in full with an English translation under the Policy Disclosure section (`meta.policyExhibit`);
+  not Klarna — D9; return-period argument approved — D10). The policy is NOT printed: the Policy Disclosure
+  section shows a one-line summary built in code from the verified window ("Refund on an item returned within N
+  days of delivery") and a link to the published policy (`meta.policyExhibit = {summary, url, updatedOn}`, D11);
   `verifiedPolicyTerms` lets the stated window through the `policy_terms_beyond_record` guard. Timeline rows for
   order placed and dispute opened are added from the order and dispute records when Shopify's events lack them.
   Reuse of stored summaries is off until reuse stores every part.
