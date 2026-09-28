@@ -87,4 +87,61 @@ describe("delivery in-transit strength reason", () => {
     const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.deliveryInTransit).toBeFalsy();
   });
+
+  /* Non-receipt plan §6.2 (D4): the sentence is keyed on the shipment's
+   * state, not on "no strong and no moderate fact at all". */
+  describe("keyed on shipment state (D4)", () => {
+    const tracked = (proofType: string) => ({
+      proofType,
+      fulfillments: [
+        { tracking: [{ carrier: "PostNord SE", number: "00573132901924649740", url: "https://tracking.postnord.com/se/?id=00573132901924649740" }] },
+      ],
+    });
+    const deviceModerate = { consistent: true };
+
+    it("flags the carrier's in_transit state (P0(b) proofType), not only delivered_unverified", () => {
+      const r = calculateCaseStrength(
+        [available("shipping_tracking")],
+        "PRODUCT_NOT_RECEIVED",
+        byField({ shipping_tracking: tracked("in_transit") }),
+        NO_GATES,
+      );
+      expect(r.overall).toBe("weak");
+      expect(r.deliveryInTransit).toBe(true);
+      expect(r.strengthReasonI18n.key).toBe("disputes.strengthReason.weak.deliveryInTransit");
+    });
+
+    it("survives an unrelated moderate fact on an item-not-received case", () => {
+      const r = calculateCaseStrength(
+        [available("shipping_tracking"), available("device_session_consistency")],
+        "PRODUCT_NOT_RECEIVED",
+        byField({ shipping_tracking: tracked("in_transit"), device_session_consistency: deviceModerate }),
+        NO_GATES,
+      );
+      expect(r.overall).toBe("weak");
+      expect(r.moderateCount).toBe(1);
+      expect(r.strengthReasonI18n.key).toBe("disputes.strengthReason.weak.deliveryInTransit");
+    });
+
+    it("leaves other families' weak reasons as they were", () => {
+      const r = calculateCaseStrength(
+        [available("shipping_tracking"), available("device_session_consistency")],
+        "FRAUDULENT",
+        byField({ shipping_tracking: tracked("in_transit"), device_session_consistency: deviceModerate }),
+        NO_GATES,
+      );
+      expect(r.strengthReasonI18n.key).not.toBe("disputes.strengthReason.weak.deliveryInTransit");
+    });
+
+    it("is not in transit when a sibling delivery row is carrier-confirmed", () => {
+      const r = calculateCaseStrength(
+        [available("shipping_tracking"), available("delivery_proof")],
+        "PRODUCT_NOT_RECEIVED",
+        byField({ shipping_tracking: tracked("in_transit"), delivery_proof: tracked("delivered_confirmed") }),
+        NO_GATES,
+      );
+      expect(r.deliveryInTransit).toBeFalsy();
+      expect(r.overall).toBe("moderate");
+    });
+  });
 });
