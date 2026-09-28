@@ -69,6 +69,9 @@ export interface DefencePackageMeta {
   responseTitle?: string;
   /** A non-card dispute's provider ("PayPal"): no card rows in Case Details. */
   paymentMethodLabel?: string | null;
+  /** The refund policy the letter argues from, printed in full with its
+   *  English translation (counsel run.ts `policyExhibit`). */
+  policyExhibit?: { original: string; english: string | null; retrievedOn: string | null; updatedOn: string | null } | null;
   disputeGid: string | null;
   orderName: string | null;
   reasonCode: string | null;
@@ -785,7 +788,27 @@ export function DefencePackageDocument({
           )}
 
           {prose("communicationArgument")}
-          {prose("policyArgument")}
+          {meta.policyExhibit && findBlock(composedBlocks, "policyArgument") ? (
+            <Section number={num()} title={findBlock(composedBlocks, "policyArgument")!.heading}>
+              {blockBody(findBlock(composedBlocks, "policyArgument")) ? (
+                <View style={{ marginBottom: 12 }}>
+                  <Prose text={blockBody(findBlock(composedBlocks, "policyArgument"))!} />
+                </View>
+              ) : null}
+              <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>
+                {`Refund policy as published in the store${meta.policyExhibit.retrievedOn ? `, retrieved ${meta.policyExhibit.retrievedOn.slice(0, 10)}` : ""}${meta.policyExhibit.updatedOn ? `; last updated by the store ${meta.policyExhibit.updatedOn.slice(0, 10)}` : ""}`}
+              </Text>
+              <Text style={{ fontSize: 8.5, lineHeight: 1.35, marginBottom: 6 }}>{meta.policyExhibit.original.replace(/\n{3,}/g, "\n\n")}</Text>
+              {meta.policyExhibit.english ? (
+                <View style={{ marginTop: 4, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: COLORS.muted }}>
+                  <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 3 }}>English translation (machine-translated)</Text>
+                  <Text style={{ fontSize: 8.5, lineHeight: 1.35 }}>{meta.policyExhibit.english}</Text>
+                </View>
+              ) : null}
+            </Section>
+          ) : (
+            prose("policyArgument")
+          )}
 
           {!multiParcel && evidenceRows.length > 0 ? (
             <Section number={num()} title="Evidence Basis" keepTogether={evidenceRows.length <= 8}>

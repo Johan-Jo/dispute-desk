@@ -3550,6 +3550,25 @@ quoting the banned word (`familyRegistry.test.ts` forbids that). `PROMPT_VERSION
 `lib/defence/counsel/` (plans in `docs/plans/defence-counsel/`) writes item-not-received letters from a
 code-built claim ledger.
 
+- **The single writer (2026-09-28, `docs/plans/defence-letter-structure.plan.md` rev 8).** One constitution
+  (`counsel/constitution.ts`, `WRITER_SYSTEM`) writes every letter for every dispute type: it names no type, provider
+  or stage outside its examples (pinned by `singleSourceOfTruth.test.ts`). A dispute type contributes a brief —
+  data only (`counsel/briefs/index.ts`: claim, per-provider question, claim tuples as theories, sections with the
+  question each answers, prohibition-only limits). The model writes the summary, one argument per brief section
+  and the conclusion in one call (`generate.ts` `writeLetter`); code checks run on every part, one review covers
+  the whole letter, up to two corrections; a reviewer clarity note alone does not block after them. Rules the
+  checks enforce for every letter: reasons before the request; English only; each date or number once, or twice
+  when the second use is in the section that owns it; numbers inside the ordered item's description exempt;
+  summary ≤ 80 words (≤ 90 when three or more sections argue); no page positions. `counselEnabled` is true for
+  every module; a type without its own brief, or whose minimum claims are missing, gets the general brief.
+  Not-as-described adds `order_specified` (the order's own item description, translated), `shipped_as_ordered`
+  (fulfilment covers every line item) and `return_route_open` (return window verified from the refund policy by
+  `counsel/policyTerms.ts`; policy in force at delivery via `policy_snapshots.policy_updated_at`; card and PayPal,
+  not Klarna — D9; used with the full policy printed even when it carries customer-favourable clauses — D10). The
+  policy prints in full with an English translation under the Policy Disclosure section (`meta.policyExhibit`);
+  `verifiedPolicyTerms` lets the stated window through the `policy_terms_beyond_record` guard. Timeline rows for
+  order placed and dispute opened are added from the order and dispute records when Shopify's events lack them.
+  Reuse of stored summaries is off until reuse stores every part.
 - **The template writer is retired (2026-09-28).** The maintainer switched it off permanently after it wrote the
   Mein Maison #101111 not-as-described letter (German product title in the summary; shipping, delivery and the
   dispute's opening dropped from the sequence). `buildDefencePackageJob` no longer calls `generateNarrative`: when

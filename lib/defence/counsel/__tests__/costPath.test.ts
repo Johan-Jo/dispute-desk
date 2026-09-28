@@ -17,7 +17,7 @@ vi.mock("../claimLedger", async (orig) => ({
 import { COUNSEL_COST_BUDGET_USD, quantile, runCostUsd } from "../cost";
 import { writeCounselLetter, type ModelCall } from "../generate";
 import { ITEM_NOT_RECEIVED } from "../playbooks";
-import { SUMMARY_SYSTEM } from "../prompts";
+import { WRITER_SYSTEM } from "../constitution";
 import { COUNSEL_REVIEW_MODEL, runCounsel } from "../run";
 import { CHECK, FACTS, LEDGER, V12_SUMMARY } from "./fixture352543";
 
@@ -31,7 +31,15 @@ const reply = (raw: string, usage: Partial<{ promptTokens: number; completionTok
   error: null,
   ...usage,
 });
-const summaryJson = (s: string) => JSON.stringify({ summary: [s], claimIds: ["carrier_delivered"] });
+// The single writer returns the whole argument; the shipping section here is
+// the approved #352543 sentence.
+const summaryJson = (s: string) =>
+  JSON.stringify({
+    summary: [s],
+    summaryClaimIds: ["carrier_delivered"],
+    sections: { shipping: { text: "The delivery on the card above is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
+    conclusion: { text: "The carrier recorded delivery of the order. The non-receipt claim is not supported by the record.", claimIds: ["carrier_delivered"] },
+  });
 const CLEAN = JSON.stringify({ errors: [], unclear: [] });
 const LONG = `${V12_SUMMARY} The carrier's own scan shows the complete order arrived on time and that everything was in order for the customer.`;
 
@@ -98,7 +106,7 @@ const runArgs = {
 };
 
 describe("runCounsel", () => {
-  it("caches the static summary prompt, reviews on the review model, and records per-call usage", async () => {
+  it("caches the static constitution, reviews on the review model, and records per-call usage", async () => {
     callClaudeMessages
       .mockResolvedValueOnce(reply(summaryJson(V12_SUMMARY), { promptTokens: 1400, cacheWriteTokens: 1200 }))
       .mockResolvedValueOnce(reply(CLEAN, { promptTokens: 900, completionTokens: 20 }));
@@ -106,13 +114,13 @@ describe("runCounsel", () => {
     const res = await runCounsel({ ...runArgs, onSpend });
     expect(res?.reused).toBe(false);
     const [writeReq, reviewReq] = callClaudeMessages.mock.calls.map((c) => c[0]);
-    expect(writeReq.system).toEqual([{ type: "text", text: SUMMARY_SYSTEM, cache_control: { type: "ephemeral" } }]);
+    expect(writeReq.system).toEqual([{ type: "text", text: WRITER_SYSTEM, cache_control: { type: "ephemeral" } }]);
     expect(writeReq.model).toBe("claude-sonnet-4-6");
     expect(reviewReq.model).toBe(COUNSEL_REVIEW_MODEL);
     expect(reviewReq.system[0].cache_control).toBeUndefined();
     // The case is in the user message, never in the cached block.
     expect(writeReq.messages[0].content).toContain("sixty-one");
-    expect(SUMMARY_SYSTEM).not.toContain("Blume");
+    expect(WRITER_SYSTEM).not.toContain("Blume");
 
     const spend = (onSpend.mock.calls[0] as unknown[])[0] as { stages: Array<{ stage: string; model: string }>; reused: boolean };
     expect(spend.reused).toBe(false);
@@ -122,22 +130,18 @@ describe("runCounsel", () => {
     expect(res?.narrative.fulfillmentArgument.text).toMatch(/\n\nCarrier tracking record: https:\/\/track\.northwind\.example\/NW123456789$/);
   });
 
-  it("reuses the previous letter when the inputs are unchanged: no model call", async () => {
+  it("does not reuse a stored summary: the single writer writes every part (plan §2.7)", async () => {
     callClaudeMessages
+      .mockResolvedValueOnce(reply(summaryJson(V12_SUMMARY)))
+      .mockResolvedValueOnce(reply(CLEAN))
       .mockResolvedValueOnce(reply(summaryJson(V12_SUMMARY)))
       .mockResolvedValueOnce(reply(CLEAN));
     const first = await runCounsel(runArgs);
-    const hash = first!.narrative.counsel!.inputHash;
-    callClaudeMessages.mockReset();
-
-    const findReusable = vi.fn(async (h: string) => (h === hash ? first!.narrative.counsel!.summary : null));
-    const onSpend = vi.fn(async () => {});
-    const again = await runCounsel({ ...runArgs, findReusable, onSpend });
-    expect(callClaudeMessages).not.toHaveBeenCalled();
-    expect(again?.reused).toBe(true);
-    expect(again?.narrative.executiveSummary.text).toBe(V12_SUMMARY);
-    expect(again?.narrative.counsel?.inputHash).toBe(hash);
-    expect((onSpend.mock.calls[0] as unknown[])[0]).toMatchObject({ reused: true, stages: [] });
+    const findReusable = vi.fn(async () => first!.narrative.counsel!.summary);
+    const again = await runCounsel({ ...runArgs, findReusable });
+    expect(findReusable).not.toHaveBeenCalled();
+    expect(again?.reused).toBe(false);
+    expect(callClaudeMessages).toHaveBeenCalledTimes(4);
   });
 
   it("writes a new letter when anything the letter depends on changed", async () => {

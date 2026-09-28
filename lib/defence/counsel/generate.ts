@@ -180,3 +180,114 @@ export async function writeCounselLetter(args: {
   log(`first ${firstIssues.length} issue(s)${corrected ? `, after correction ${issues.length}` : ""}`);
   return { theory, draft, firstIssues, issues, corrected, ok: issues.length === 0 };
 }
+
+/* ── The single writer (plan rev 8 §2): one call writes the whole argument ── */
+
+import { WRITER_SYSTEM, writerUserPrompt, correctionPrompt } from "./constitution";
+import type { Brief } from "./briefs";
+import type { DisputeFrame } from "./frame";
+
+/** The theory: the first brief tuple whose claims are all in the ledger. */
+export function pickBriefTheory(ledger: readonly LedgerClaim[], brief: Brief): Theory {
+  const ids = new Set(ledger.map((c) => c.id));
+  const t = brief.theories.find((x) => x.claimIds.every((id) => ids.has(id))) ?? brief.theories[brief.theories.length - 1];
+  const parcels = ledger.filter((c) => c.parcel).map((c) => c.id);
+  return { name: t.name, shape: "", claims: [...t.claimIds.filter((id) => ids.has(id)), ...parcels] };
+}
+
+/** The writer's JSON as a draft, sections in the brief's order. */
+export function draftFromWriter(raw: string, argued: Brief["sections"]): CounselDraft {
+  const r = parseJson<{
+    summary?: unknown;
+    summaryClaimIds?: unknown;
+    sections?: Record<string, { text?: unknown; claimIds?: unknown }>;
+    conclusion?: { text?: unknown; claimIds?: unknown };
+  }>(raw);
+  const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  const paras = (v: unknown) =>
+    (Array.isArray(v) ? v : typeof v === "string" ? [v] : []).filter((p): p is string => typeof p === "string").map((p) => p.trim()).filter(Boolean);
+  return {
+    summary: { paragraphs: paras(r.summary), claimIds: strs(r.summaryClaimIds) },
+    evidenceSections: argued
+      .map((s) => ({ key: s.key, paragraphs: paras(r.sections?.[s.key]?.text), claimIds: strs(r.sections?.[s.key]?.claimIds) }))
+      .filter((s) => s.paragraphs.length > 0),
+    conclusion: { paragraphs: paras(r.conclusion?.text), claimIds: strs(r.conclusion?.claimIds) },
+  };
+}
+
+/** The whole letter's prose, for the review call. */
+function letterProse(d: CounselDraft, brief: Brief): string {
+  const title = (k: string) => brief.sections.find((s) => s.key === k)?.title ?? k;
+  return [
+    `EXECUTIVE SUMMARY\n${d.summary.paragraphs.join("\n\n")}`,
+    ...d.evidenceSections.map((s) => `${title(s.key).toUpperCase()}\n${s.paragraphs.join("\n\n")}`),
+    `CONCLUSION\n${d.conclusion.paragraphs.join("\n\n")}`,
+  ].join("\n\n");
+}
+
+export async function writeLetter(args: {
+  ledger: readonly LedgerClaim[];
+  brief: Brief;
+  frame: DisputeFrame;
+  merchantName: string;
+  pageContext: string;
+  check: CheckContext;
+  call: ModelCall;
+  log?: (msg: string) => void;
+}): Promise<CounselResult> {
+  const log = args.log ?? (() => {});
+  const theory = pickBriefTheory(args.ledger, args.brief);
+  const inLedger = new Set(args.ledger.map((c) => c.id));
+  const argued = args.brief.sections.filter((s) => !s.exhibitOnly && s.claimIds.some((id) => inLedger.has(id)));
+  const exhibitOnly = args.brief.sections.filter((s) => s.exhibitOnly && s.claimIds.some((id) => inLedger.has(id)));
+  const caseUser = writerUserPrompt({
+    brief: args.brief, frame: args.frame, theory, ledger: args.ledger, pageContext: args.pageContext,
+    merchantName: args.merchantName, argued, exhibitOnly,
+  });
+  log(`theory: ${theory.name}; argued: ${argued.map((s) => s.key).join(", ") || "none"}`);
+
+  const issuesOf = async (draft: CounselDraft): Promise<string[]> => {
+    const code = checkDraft(draft, args.check);
+    if (code.length) return code;
+    const res = parseJson<{
+      errors?: Array<{ sentence?: string; problem?: string }>;
+      unclear?: Array<{ sentence?: string; problem?: string }>;
+    }>(
+      await args.call({
+        stage: "review",
+        system: REVIEW_SYSTEM,
+        user: reviewUserPrompt(args.ledger, [letterProse(draft, args.brief)], ""),
+        temperature: 0,
+        maxTokens: 1000,
+      }),
+    );
+    return [
+      ...(res.errors ?? []).map((e) => `fact-check: "${e.sentence ?? ""}" — ${e.problem ?? ""}`),
+      ...(res.unclear ?? []).map((e) => `unclear: "${e.sentence ?? ""}" — ${e.problem ?? "rewrite it plainly"}`),
+    ];
+  };
+
+  const firstRaw = await args.call({ stage: "write", system: WRITER_SYSTEM, user: caseUser, temperature: 0.4, maxTokens: 1500 });
+  let draft = draftFromWriter(firstRaw, argued);
+  const firstIssues = await issuesOf(draft);
+  let issues = firstIssues;
+  let corrected = false;
+  // Up to two corrections: each gets the exact findings of the draft before it.
+  let lastRaw = firstRaw;
+  for (let round = 0; round < 2 && issues.length; round++) {
+    corrected = true;
+    lastRaw = await args.call({
+      stage: "correction",
+      system: WRITER_SYSTEM,
+      user: correctionPrompt(caseUser, lastRaw.slice(lastRaw.indexOf("{")), issues),
+      temperature: 0.2,
+      maxTokens: 1500,
+    });
+    draft = draftFromWriter(lastRaw, argued);
+    issues = await issuesOf(draft);
+  }
+  log(`first ${firstIssues.length} issue(s)${corrected ? `, after correction ${issues.length}` : ""}`);
+  // After the corrections, a reviewer clarity note alone does not cost the
+  // dispute its letter: code checks and fact-check errors still block.
+  return { theory, draft, firstIssues, issues, corrected, ok: issues.filter((i) => !i.startsWith("unclear:")).length === 0 };
+}

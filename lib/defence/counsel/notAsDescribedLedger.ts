@@ -15,6 +15,7 @@
  */
 
 import { addLaterOrder, calendarDays, longDate, numberWord } from "./claimLedger";
+import { fulfilmentCoverage } from "../fulfilmentCoverage";
 import type { InternalNarrativeConstraints } from "../internalConstraints";
 import type { LedgerClaim, LedgerInput } from "./types";
 
@@ -30,6 +31,15 @@ const NO_CONFORMITY =
 export interface NotAsDescribedExtras {
   /** Stored-message constraints (Gorgias); `returnRequested` withholds the return line. */
   constraints?: Pick<InternalNarrativeConstraints, "returnRequested" | "refundOrCompensationRequested"> | null;
+  /** The order's item descriptions in English, from the ORDER record (title +
+   *  variant, as bought), translated. Order-time facts, unlike the listing. */
+  orderItemsEnglish?: string[];
+  /** The store's return window, verified from its refund policy (policyTerms.ts),
+   *  with the date Shopify last updated that policy. */
+  returnWindow?: { windowDays: number; policyUpdatedAt: string | null } | null;
+  /** D9 (maintainer, 2026-09-28): the return route may be argued for card and
+   *  PayPal disputes; not for Klarna until its terms are verified. */
+  returnRouteAllowed?: boolean;
 }
 
 /** The delivered fulfilment, read from the pack's own record. */
@@ -78,9 +88,11 @@ export function buildNotAsDescribedLedger(input: LedgerInput, extras: NotAsDescr
     const withPhotos = listings.some((l) => Array.isArray(l.imagePaths) && (l.imagePaths as unknown[]).length > 0);
     add({
       id: "listing_published",
+      // Neutral: the listing was retrieved for this response, so it is never
+      // "the description the item was sold under" (plan §2.2.1).
       statement:
-        `The item was sold under a published store listing with ${withPhotos ? "photographs and " : ""}a written description. ` +
-        `The listing, as retrieved from the store${retrieved ? ` on ${retrieved}` : ""}, is reproduced in the letter with an English translation.`,
+        `The store's listing for the item, with ${withPhotos ? "photographs and " : ""}a written description, is reproduced in the letter ` +
+        `as retrieved from the store${retrieved ? ` on ${retrieved}` : ""}, with an English translation.`,
       specifics: retrieved ? { listingRetrievedOn: retrieved } : {},
       weight: "core",
       sources: ["product_listing_snapshots"],
@@ -90,6 +102,44 @@ export function buildNotAsDescribedLedger(input: LedgerInput, extras: NotAsDescr
         "Never use the product's store name or quote the listing; call it \"the item\".",
       ],
     });
+  }
+
+  // ── What was ordered, from the order record (order-time, English) ──
+  const items = (extras.orderItemsEnglish ?? []).filter(Boolean);
+  if (items.length > 0) {
+    const numbers = [...new Set(items.join(" ").match(/\d+(?:[.,]\d+)?/g) ?? [])].join(" ");
+    add({
+      id: "order_specified",
+      statement: `The order was for ${items.length === 1 ? "one item" : `${numberWord(items.length)} items`}, described on the order as: ${items.join("; ")}.`,
+      specifics: { orderedAs: items.join("; "), ...(numbers ? { itemNumbers: numbers } : {}) },
+      weight: "strong",
+      sources: ["pack.order.lineItems"],
+      mustNot: [
+        "Describe the item only in these words, in English; never features taken from the listing.",
+        "Never say the item delivered matched or conformed to this description.",
+      ],
+    });
+  }
+
+  // ── What was shipped: the fulfilment record, item by item ──
+  {
+    const shipping = obj(sections.find((s) => s?.type === "shipping")?.data) ?? {};
+    const tracking = ((shipping.fulfillments as unknown[]) ?? [])
+      .map(obj)
+      .flatMap((x) => ((x?.tracking as unknown[]) ?? []).map(obj))
+      .map((t) => str(t?.number))
+      .find(Boolean);
+    const coverage = tracking ? fulfilmentCoverage(sections as never, tracking) : null;
+    if (coverage?.kind === "verified") {
+      add({
+        id: "shipped_as_ordered",
+        statement: "The fulfilment record shows every item on the order, in the variant and quantity ordered, in the one tracked shipment.",
+        specifics: {},
+        weight: "strong",
+        sources: ["pack.order.lineItems", "pack.shipping.fulfillments.items"],
+        mustNot: ["This is the merchant's fulfilment record of what was packed, not an inspection of the goods; never say the goods were checked, inspected or free of defects."],
+      });
+    }
   }
 
   // ── The sequence: shipped, delivered, dispute opened ──
@@ -147,10 +197,33 @@ export function buildNotAsDescribedLedger(input: LedgerInput, extras: NotAsDescr
       weight: "strong",
       sources: ["pack.order.returnStatus"],
       mustNot: [
-        "Written by code in the Delivery and return section. The summary must NOT mention returns at all.",
+        "State it once in the whole letter, in the delivery section, as a sentence of its own. Never in the summary or the conclusion.",
         "Never say the customer did not return, did not try to return or never asked to return.",
       ],
     });
+  }
+
+  // ── The store's return route, open when the dispute came (D9) ──
+  const w = extras.returnWindow;
+  if (f && opened && w && extras.returnRouteAllowed && !returnAsked) {
+    const inForceAtDelivery = !w.policyUpdatedAt || Date.parse(w.policyUpdatedAt) <= Date.parse(f.deliveredAt);
+    const dayOfDispute = calendarDays(f.deliveredAt, opened);
+    if (inForceAtDelivery && dayOfDispute >= 0 && dayOfDispute <= w.windowDays) {
+      add({
+        id: "return_route_open",
+        statement:
+          `The store's published refund policy, in force when the order was delivered, offers a refund on an item returned within ${w.windowDays} days of delivery. ` +
+          `The dispute was opened ${numberWord(dayOfDispute)} days after delivery, inside that period.`,
+        specifics: { windowDays: String(w.windowDays), windowDaysWord: numberWord(w.windowDays), dayOfDispute: String(dayOfDispute), dayOfDisputeWord: numberWord(dayOfDispute) },
+        weight: "strong",
+        sources: ["policy_snapshots.extracted_text", "dispute.initiated_at", "pack.shipping.fulfillments.deliveredAt"],
+        mustNot: [
+          "Never say the customer chose not to return, ignored, skipped or bypassed the return route, or went to the provider instead.",
+          "Never state the policy's conditions (notice, postage, fees); the policy is printed in full as an exhibit.",
+          "Never say the refund is automatic or unconditional; say the policy offers a refund on a return.",
+        ],
+      });
+    }
   }
 
   if (f) {
