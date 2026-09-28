@@ -51,6 +51,7 @@ import {
   summariseComposedErrors,
   VALIDATOR_VERSION,
 } from "@/lib/defence/validateNarrative";
+import { stripAddressDeliveryClaims } from "@/lib/defence/stripAddressDeliveryClaims";
 import { suppressUnsupportedSections } from "@/lib/defence/suppressUnsupportedSections";
 import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
@@ -961,6 +962,43 @@ export async function handleBuildDefencePackage(
       narrativeRes.tokens.cached += retryRes.tokens.cached;
       narrativeRes.durationMs += retryRes.durationMs;
       validation = retryValidation;
+    }
+  }
+
+  /* Address-delivery claims the model left in after its retry are deleted by
+   * code — the exact edit the retry feedback asked for — then the narrative is
+   * validated again. Unconditional, not only on failure: the selection-time
+   * safety check also reads the headline, timeline rows and counsel summary,
+   * which `validateNarrative` does not, and a claim there would pass here and
+   * then be unfileable at the deadline (blume-box #353605, 2026-08-11). */
+  {
+    const stripped = stripAddressDeliveryClaims(narrativeRes.narrative);
+    if (stripped.removed.length > 0) {
+      narrativeRes.narrative = stripped.narrative;
+      validation = validateNarrative({
+        narrative: narrativeRes.narrative,
+        approvedFacts: planFacts,
+        reasonCodeModule,
+        packageMode: classification.packageMode,
+        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+        extraHardPhrases: hardPhrases,
+        internalConstraints,
+        guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+        bankClaimText: bankClaim?.text ?? null,
+      });
+      await logAuditEvent({
+        shopId: pkg.shop_id,
+        disputeId: pkg.dispute_id,
+        packId: pkg.source_pack_id,
+        actorType: "system",
+        eventType: "defence_package_address_claim_removed",
+        eventPayload: {
+          packageId,
+          version: pkg.version,
+          removed: stripped.removed,
+          validationOkAfter: validation.ok,
+        },
+      });
     }
   }
 
