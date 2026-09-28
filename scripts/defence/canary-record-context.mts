@@ -121,7 +121,7 @@ async function liveListingSection(shopId: string, orderGid: string) {
 async function load(disputeId: string) {
   const { data: d } = await sb
     .from("disputes")
-    .select("id, shop_id, order_gid, order_name, dispute_gid, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle")
+    .select("id, shop_id, order_gid, order_name, dispute_gid, reason, network_reason_code, amount, currency_code, initiated_at, response_cycle, customer_display_name")
     .eq("id", disputeId)
     .single();
   const { data: pkg } = await sb
@@ -167,7 +167,10 @@ for (const disputeId of disputeIds) {
   }>) ?? [])];
   // --with-listing: what the product-listing collector (not-as-described
   // PR 3) would add — read live from Shopify, READ-ONLY (nothing stored).
-  if (withListing && d.order_gid) {
+  // A pack the collector already ran on carries its stored listing; use it,
+  // exactly as the job does.
+  const storedListing = sections.some((x) => x.source === "shopify_product");
+  if (withListing && d.order_gid && !storedListing) {
     const section = await liveListingSection(d.shop_id as string, d.order_gid as string);
     if (section) sections.push(section);
   }
@@ -290,8 +293,16 @@ for (const disputeId of disputeIds) {
   const { res, body, raw, narrative, narrativeCheck, composedCheck, blocks } = final;
   if (pdfDir && narrative && narrativeCheck?.ok && composedCheck?.ok) {
     const { renderDefencePdf } = await import("../../lib/defence/renderDefencePdf");
+    // Mirror buildDefencePackageJob's header fields, so the preview matches
+    // what the job will print.
+    const { nonCardDisputeCategoryDisplay } = await import("../../lib/defence/klarnaDisputeCategory");
+    const { displayShopDomain } = await import("../../lib/shopify/domainHost");
+    const { data: shopRow } = await sb.from("shops").select("shop_domain, primary_domain").eq("id", d.shop_id).single();
+    const merchantDisplayName = shopRow?.shop_domain
+      ? displayShopDomain({ shop_domain: shopRow.shop_domain as string, primary_domain: (shopRow.primary_domain as string | null) ?? null })
+      : "Merchant";
     const { deriveOrderContext } = await import("../../lib/defence/orderContext");
-    const { printable, displayUrl, EXHIBIT_LIMITS } = await import("../../lib/defence/productListingExhibit");
+    const { printable, displayUrl, EXHIBIT_LIMITS, buildProductListingExhibits } = await import("../../lib/defence/productListingExhibit");
     const { evidenceImageUrl } = await import("../../lib/packs/productListing/collectProductListings");
     const oc = deriveOrderContext(sections as never);
     const listingSection = sections.find((x) => x.source === "shopify_product");
@@ -318,11 +329,19 @@ for (const disputeId of disputeIds) {
     const out = await renderDefencePdf({
       meta: {
         packageId: "demo", disputeGid: d.dispute_gid ?? null, orderName: oc.orderName ?? d.order_name, reasonCode: d.network_reason_code,
-        reasonCodeDisplay: module.displayName, claimType: module.claimType, shopName: "Mein Maison", merchantName: "Mein Maison",
+        reasonCodeDisplay: isNonCardPaymentFamily(family) ? nonCardDisputeCategoryDisplay(family, (packJson.payment_context as { label?: string } | undefined)?.label ?? null, d.reason) : module.displayName, claimType: module.claimType, shopName: merchantDisplayName, merchantName: merchantDisplayName,
         amountDisplay: `${d.currency_code ?? ""} ${d.amount}`.trim(), cardNetwork: oc.cardNetwork, cardLast4: oc.cardLast4,
         paymentGateway: oc.paymentGateway, financialStatus: oc.financialStatus, fulfillmentStatus: oc.fulfillmentStatus,
-        cardholderName: oc.cardholderName, transactionDate: oc.transactionDate, timelineEvents: oc.timelineEvents,
-        lineItemsFromContext: oc.lineItems, productListingExhibits: exhibits, generatedAt: new Date().toISOString(),
+        cardholderName: oc.cardholderName ?? (d.customer_display_name as string | null) ?? null, transactionDate: oc.transactionDate, timelineEvents: oc.timelineEvents,
+        lineItemsFromContext: oc.lineItems, productListingExhibits: storedListing
+          ? await buildProductListingExhibits({
+              sb,
+              sections: sections as never,
+              listingCited: (facts as Array<{ category?: string; value?: { collected?: unknown } }>).some(
+                (f) => f.category === "product_listing" && f.value?.collected === true,
+              ),
+            })
+          : exhibits, generatedAt: new Date().toISOString(),
         version: 0, packageMode: classification.packageMode, promptVersion: 0, modelUsed: "claude-sonnet-4-6",
         reasonCodeModuleKey: module.key, reasonCodeFamilyKey: fam.key,
       } as never,
