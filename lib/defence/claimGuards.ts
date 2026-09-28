@@ -408,6 +408,49 @@ export const RETURN_ABSENCE_BANS: ReadonlyArray<{ id: string; pattern: RegExp }>
   },
 ];
 
+/**
+ * Store policies and missing evidence (base prompt rule 8d). Unconditional,
+ * like the return bans: a policy fact carries no terms and, unless accepted at
+ * checkout, no acceptance — so no fact can support a sentence describing
+ * either. Each pattern is scoped to a sentence that names a policy / the
+ * record, so "the carrier accepted the parcel" never matches.
+ */
+export const POLICY_AND_RECORD_BANS: ReadonlyArray<{ id: string; scope: RegExp; pattern: RegExp }> = [
+  {
+    // "neither policy was recorded as accepted at checkout" · "acceptance
+    // was not captured" · "does not confirm explicit acceptance"
+    id: "policy_acceptance_disclaimed",
+    scope: /\b(?:polic(?:y|ies)|terms|checkout)\b/i,
+    pattern:
+      /\b(?:not|never|neither|nor|no|without)\b[^.!?;\n]{0,60}\baccept(?:ed|ance)\b|\baccept(?:ed|ance)\b[^.!?;\n]{0,40}\b(?:not|never)\b/i,
+  },
+  {
+    // "a refund is contingent on the return of goods" · "the policy requires"
+    id: "policy_terms_beyond_record",
+    scope: /\bpolic(?:y|ies)\b/i,
+    pattern:
+      /\b(?:contingent|conditional|condition(?:s|ed)?|requires?|required|stipulat\w*|entitle\w*|obligat\w*|only\s+(?:if|when|after)|within\s+\d+\s+days|states?\s+that|provides?\s+that)\b/i,
+  },
+  {
+    // "the policy was accessible to the customer at the time of purchase" —
+    // the snapshot can post-date the order; only "published on the store".
+    id: "policy_timing_beyond_record",
+    scope: /\bpolic(?:y|ies)\b/i,
+    pattern:
+      /\b(?:available|accessible|visible|displayed|shown|presented|disclosed)\b[^.!?;\n]{0,60}\b(?:at\s+the\s+time\s+of\s+(?:purchase|the\s+order|ordering|sale)|at\s+checkout|during\s+checkout|before\s+(?:the\s+)?(?:purchase|order)|when\s+(?:the\s+(?:customer|cardholder|buyer)\s+)?(?:ordered|purchased|placed))\b/i,
+  },
+  {
+    // "no product listing fact is available in the approved record"
+    id: "record_absence_narrated",
+    scope: /\b(?:record|fact)\b/i,
+    pattern:
+      /\b(?:no|not|without)\b[^.!?;\n]{0,40}\b(?:fact|listing|record)\b[^.!?;\n]{0,40}\b(?:available|present|included|provided)\b/i,
+  },
+];
+
+const POLICY_AND_RECORD_REQUIRED =
+  "none — a policy may only be said to be published on the store (with its link). Its terms, when it was shown, its acceptance (unless accepted at checkout) and evidence absent from the record are never described.";
+
 const RETURN_ABSENCE_REQUIRED =
   'none — absence and contact-history claims are banned outright. The only permitted sentence is "No return has been recorded in Shopify for this order."';
 
@@ -457,6 +500,20 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
         section: sectionKey,
         matchedText: m[0],
         requiredFact: RETURN_ABSENCE_REQUIRED,
+        checkedFactIds: factIds,
+      });
+    }
+
+    // Unconditional: policy terms, policy non-acceptance, narrated absence.
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    for (const ban of POLICY_AND_RECORD_BANS) {
+      const hit = sentences.find((sn) => ban.scope.test(sn) && ban.pattern.test(sn));
+      if (!hit) continue;
+      failures.push({
+        guardId: ban.id,
+        section: sectionKey,
+        matchedText: hit.match(ban.pattern)?.[0] ?? hit,
+        requiredFact: POLICY_AND_RECORD_REQUIRED,
         checkedFactIds: factIds,
       });
     }

@@ -20,15 +20,18 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
-import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
+import {
+  classifyFacts,
+  hasArgumentBeyondRecordContext,
+  type ChecklistItemLike,
+} from "@/lib/defence/factClassifier";
 import { loadInternalNarrativeConstraints } from "@/lib/integrations/gorgias/internalNarrativeConstraints";
 import {
   carrierPossessionUndated,
   deliveryPostDatesDispute,
 } from "@/lib/defence/internalConstraints";
 import {
-  resolveReasonCodeModule,
-  resolveReasonCodeModuleForContext,
+  resolveCaseReasonCodeModule,
   familyKeyForModule,
 } from "@/lib/defence/reasonCodes/registry";
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
@@ -341,19 +344,15 @@ export async function handleBuildDefencePackage(
       }
     : undefined;
   // A GENERAL dispute whose bank's claim names a specific category is
-  // written from that category's module. The DB override was looked up for
-  // the ENQUEUED module key (generic_fallback), so it must not be layered
-  // onto the claim's module.
-  const moduleFromClaim =
-    !reasonCode && claimReason && claimReason !== (dispute?.reason ?? null)
-      ? resolveReasonCodeModuleForContext(null, claimReason, undefined)
-      : null;
-  const reasonCodeModule =
-    moduleFromClaim && moduleFromClaim.key !== "generic_fallback"
-      ? moduleFromClaim
-      : isNonCardPayment
-        ? resolveReasonCodeModuleForContext(reasonCode, dispute?.reason ?? null, moduleOverrideInput)
-        : resolveReasonCodeModule(reasonCode, moduleOverrideInput);
+  // written from that category's module — the SAME resolver the filing-time
+  // plan check uses, or the stored plan hash could never match.
+  const reasonCodeModule = resolveCaseReasonCodeModule({
+    networkReasonCode: reasonCode,
+    shopifyReason: (dispute?.reason as string | null) ?? null,
+    caseReason: claimReason,
+    nonCardPayment: isNonCardPayment,
+    dbOverride: moduleOverrideInput,
+  });
 
   // Resolve the family (Phase 1). One family per module today; the
   // family's overlayPromptBody fills in cross-cutting rules that span
@@ -452,7 +451,9 @@ export async function handleBuildDefencePackage(
       caseId: pkg.dispute_id as string,
       model: {
         disputeId: pkg.dispute_id as string,
-        reason: (dispute?.reason as string | null) ?? null,
+        // The claim's reason on a GENERAL dispute the bank's claim re-typed,
+        // like the module and the checklist (bank-claim plan F2).
+        reason: claimReason,
         packId: pack.id as string,
         sections: sectionsRaw,
         evidenceItems: items,
@@ -533,9 +534,10 @@ export async function handleBuildDefencePackage(
       selectPlanFacts(activePlan.plan, activePlan.factsByRecordId).includedFacts,
     );
 
-    // Everything the plan authorised was bank-ineligible. Same honest answer:
-    // no document, no draft, no candidate.
-    if (planFacts.length === 0) {
+    // Everything the plan authorised was bank-ineligible, or only the store's
+    // own records (policies, the order) survived — context, not an argument.
+    // Same honest answer: no document, no draft, no candidate.
+    if (!hasArgumentBeyondRecordContext(planFacts)) {
       return await markSkipped(sb, pkg, "no_bank_eligible_facts");
     }
   }
@@ -564,7 +566,7 @@ export async function handleBuildDefencePackage(
       // (Sura Svenne test, 2026-09-27) could otherwise be filed at the
       // deadline as a blank response. Same honest exit the canonical plan
       // takes; the merchant's checklist now asks for the claim's evidence.
-      if (planFacts.length === 0) {
+      if (!hasArgumentBeyondRecordContext(planFacts)) {
         return await markSkipped(sb, pkg, "no_bank_eligible_facts");
       }
     }
@@ -1415,7 +1417,8 @@ export async function handleBuildDefencePackage(
       const ruleResult = await evaluateRules({
         id: pkg.dispute_id,
         shop_id: pkg.shop_id,
-        reason: (dispute.reason as string | null) ?? null,
+        // Per-reason rules follow the type the case is argued as (F2).
+        reason: claimReason,
         status: (dispute.status as string | null) ?? null,
         amount: (dispute.amount as number | null) ?? null,
         phase: (dispute.phase as "inquiry" | "chargeback" | null | undefined) ?? null,
