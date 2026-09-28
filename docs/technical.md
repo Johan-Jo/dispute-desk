@@ -944,8 +944,10 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 - **The claim steers the letter (2026-09-27, after the Sura Svenne test letter argued card authorisation the claim said was undisputed and asserted "no return" the claim contradicted).** `analyzeBankClaim` (`lib/disputes/bankClaimAnalysis.ts`, claude-haiku-4-5, stored in `dispute_bank_claims.analysis`, migration `20260927230000`; run at save time, or lazily by `ensureBankClaimAnalysis`) returns `{ reason, authorizationDisputed, returnOrRefundRequested }`. Then:
   1. **Template + checklist** — when Shopify's reason is `GENERAL`/missing and the claim names a category, `effectiveReasonForClaim` gives the reason the letter module (`buildDefencePackageJob`, via `resolveReasonCodeModuleForContext`; the enqueued module's DB override is NOT layered on) and the pack's evidence checklist/strength (`buildPack`, this build only) follow. `disputes.reason` stays Shopify's. The letter's "Claim type" line shows the chosen module, and the merchant's "Missing or weak evidence" list asks for that category's evidence.
   2. **Facts scoped, deterministically** — `scopeFactsToBankClaim` removes `payment_authentication`/`billing_match` when `authorizationDisputed === false` and `no_return_initiated` when `returnOrRefundRequested === true`, from the ONE list the writer, validator and PDF read (audit `defence_facts_scoped_to_bank_claim`). A sentence built on a removed fact cannot pass validation.
-  3. **The claim is a system block** in `generateNarrative` (answer it; never assert what it contradicts; never cite or quote it), in addition to the payload context.
+  3. **The claim is a system block** in `generateNarrative` (answer it; never assert what it contradicts; never cite or quote it), in addition to the payload context. **Quoting is enforced** (F3): `validateNarrative` gets `bankClaimText` and fails any section sharing a run of `CLAIM_QUOTE_WORDS` (8) consecutive words with the claim (`bank_claim_quoted`, `findQuotedClaimRun`), on the first attempt and the retry.
   4. **Nothing left to argue → no letter** — if scoping leaves no letter-eligible fact, the package is `skipped` (`no_bank_eligible_facts`) instead of an all-omitted draft. The Review tab then shows `notEnoughEvidenceClaim*` ("Nothing on file answers the bank's claim yet" → add what the checklist asks for) rather than the generic "wait for the next sync" copy.
+  - **The argument follows the claim's type too** (F2) — `buildDefencePackageJob` passes the claim's reason (`effectiveReasonForClaim`) to `derivePlanForCase` and to `evaluateRules`, not `disputes.reason`: the plan picks facts, and per-reason automation rules apply, as for the claim's type.
+  - **Build and filing resolve the same module** — `resolveCaseReasonCodeModule` (`reasonCodes/registry.ts`) is the one answer for both the letter build and the filing-time plan check (`derivePlanIdentityForPack`, which reads `pack_json.case_assessment_reason`). The module's `allowedFactCategories` feed `plan_input_hash`; before this the filing check used Shopify's reason, so every claim-typed letter read stale and could not be filed (verified on the Sura Svenne test package, 2026-09-28).
   - **The page follows the claim's type** — the workspace sends `dispute.reason` = the reason the pack was assessed under (`shopifyReason` = Shopify's own), so the header, case type, family and assessment read "Product not received" / "Not as described" instead of "General" once the claim-driven rebuild has run.
   - **Assessment reason persisted** — `buildPack` writes `pack_json.case_assessment_reason` (the reason it assessed under, i.e. the claim's reason on a re-typed GENERAL dispute); the workspace re-derives the freshness hash from it, not from `disputes.reason`. Without it every claim-typed case read "Assessed under an earlier version" right after its rebuild.
   - **Skipped packages are not filing candidates** — the workspace `defencePackage.safety` is not evaluated for a `skipped` row (it holds no narrative by design, which the safety check would read as "unreadable" and show "cannot be reviewed automatically — regenerate").
@@ -3271,7 +3273,29 @@ remained once "no return" was denied.
   deviation from the plan's one-fact-per-shipment wording: the renderers (Evidence
   Basis pair-collapse, provenance, post-outcome analysis) assume one fact per field.
   The association guarantee is met without touching them.
-- **The one supporting-but-citable case.** `isCitableShipmentContext`: an `in_transit`
+- **Supporting-but-citable: the store's own records** (bank-claim plan F1, 2026-09-28).
+  `isCitableRecordContext`: the published refund and shipping policies and the order
+  record (`order_confirmation`) get `bankEligible` / `includeInBankNarrative` with strength
+  still `supporting` (never scored). `cancellation_policy` is excluded: policySource fills
+  it from the store's terms of service. A policy fact's value is `{ publishedOnStore,
+  publishedUrl }` (+ `acceptedAtCheckout: true` only when it happened — a `false` was
+  written into letters as "not accepted at checkout"). Base prompt rule 8d and
+  `POLICY_AND_RECORD_BANS` (`claimGuards.ts`, unconditional) let a letter say only that a
+  policy is published on the store, with its link: describing its terms
+  (`policy_terms_beyond_record`), its acceptance (`policy_acceptance_disclaimed`), when it
+  was shown (`policy_timing_beyond_record`), or narrating absent evidence
+  (`record_absence_narrated`) fails validation. The PDF thesis clause reads "the
+  merchant's refund and shipping policies are published on its store" (was "…available to
+  the customer at checkout"); the Evidence Basis row reads "Published on the store".
+  Canary: `scripts/defence/canary-record-context.mts` (read-only; 7 prod disputes across all
+  modules passed with the job's one feedback retry). Before this, eligibility was read off
+  strength alone: the argument plan included the refund policy on 133 of 242 prod letters
+  (30 days) and none could cite it. Relevance stays with the plan (`allowedFactCategories`;
+  fraud modules still exclude policies). **Context alone is never an argument:** the
+  classifier's eligibility and the build's skip checks use `hasArgumentBeyondRecordContext`,
+  so a case left with only policies and the order record is still `skipped`
+  (`no_bank_eligible_facts`).
+- **Supporting-but-citable: shipment context.** `isCitableShipmentContext`: an `in_transit`
   cited shipment with a named carrier and a parcel identifier gets `bankEligible` /
   `includeInBankNarrative`, with strength still `supporting`.
   `isParcelIdentifier(carrier, number)` (`lib/carriers/trackingLinkUrl.ts`) combines
