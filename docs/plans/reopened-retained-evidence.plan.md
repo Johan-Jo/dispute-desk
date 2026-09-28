@@ -121,7 +121,12 @@ This plan adds no wait of its own. The bank-claim card still holds every cycle-2
   - #99142: https://admin.shopify.com/store/6a8848-dd/payments/dispute_evidences/14550761806
   - #94866: https://admin.shopify.com/store/6a8848-dd/payments/dispute_evidences/14349173070
 - **D3: leave untouched for now.** `accessActivityLog` is never changed in v1.
-- **D4: yes, read the files first.** Attempted 2026-09-28: `uncategorizedFile.url` returns an encrypted JSON envelope (`{"encrypted_key": …}`), not the PDF. **Round-1 files cannot be read through the API.** Only a person viewing Shopify Admin can say what they are, so this folds into D2.
+- **D4: yes, read the files first.** Tried on 2026-09-28; it cannot be done through the API. `uncategorizedFile.url` is a signed Google Cloud Storage URL that answers `200 application/pdf`, but the body is an envelope, `{"encrypted_key", "encrypted_iv", "data"}`: a 350-character base64 key and IV, i.e. RSA-2048-wrapped, around AES-encrypted data. **The same holds for our own uploads.** Three `Defence-…pdf` files we saved on blume-box come back in the same envelope. So this is Shopify's at-rest encryption of dispute file uploads, and the private key is Shopify's. No DisputeDesk key opens it. The REST `dispute_evidences.json` gives only file ids, and `dispute_file_uploads/{id}.json` returns 404. Collaborator access is ruled out (user). So the ways left to see a file are:
+  1. the merchant sends it (for #99142 / #94866: in the reply we owe them);
+  2. in the product, the merchant opens it themselves via the existing "open in Shopify Admin" link (`getShopifyDisputeUrl`) from our dispute page;
+  3. ask Shopify Developer Support whether an app-readable download exists (question added to the Hanad thread).
+
+  §6's "per-case check that the file helps" therefore can only be done by the merchant, never by us.
 - **D5: open.** Re-explained in plain terms; waiting for an answer.
 
 Original options, kept for the record:
