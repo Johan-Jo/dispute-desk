@@ -2382,7 +2382,8 @@
         "comms": "Comunicación",
         "other": "Pruebas adicionales",
         "access_log": "Registro de actividad"
-      }
+      },
+      "productListings": "Fichas de producto ({count})"
     },
     "title": "Paquetes de evidencia",
     "subtitle": "Ver y gestionar paquetes de evidencia",

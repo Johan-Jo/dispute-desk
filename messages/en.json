@@ -2382,7 +2382,8 @@
         "comms": "Communication",
         "other": "Additional evidence",
         "access_log": "Activity log"
-      }
+      },
+      "productListings": "Product listings ({count})"
     },
     "title": "Packs",
     "subtitle": "Evidence packs generated for your disputes",

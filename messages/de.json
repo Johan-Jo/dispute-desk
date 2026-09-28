@@ -2382,7 +2382,8 @@
         "comms": "Kommunikation",
         "other": "Zusätzliche Belege",
         "access_log": "Aktivitätsprotokoll"
-      }
+      },
+      "productListings": "Produktinformationen ({count})"
     },
     "title": "Bewispakete",
     "subtitle": "Bewispakete anzeigen und verwalten",

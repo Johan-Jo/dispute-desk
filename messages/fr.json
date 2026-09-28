@@ -2382,7 +2382,8 @@
         "comms": "Communication",
         "other": "Preuves supplémentaires",
         "access_log": "Journal d'activité"
-      }
+      },
+      "productListings": "Fiches produit ({count})"
     },
     "title": "Dossiers de preuves",
     "subtitle": "Afficher et gérer les dossiers",

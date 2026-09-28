@@ -216,3 +216,17 @@ export function resolveCaseReasonCodeModule(args: {
     ? resolveReasonCodeModuleForContext(networkReasonCode, shopifyReason ?? null, dbOverride)
     : resolveReasonCodeModule(networkReasonCode, dbOverride);
 }
+
+/**
+ * THE family a case is argued as. The pack build (which decides whether the
+ * product-listing collector runs) and the letter build must never disagree,
+ * so both derive it from the one module resolver above.
+ */
+export function effectiveFamilyForDispute(args: {
+  networkReasonCode: string | null | undefined;
+  shopifyReason: string | null | undefined;
+  caseReason: string | null | undefined;
+  nonCardPayment: boolean;
+}): ReasonCodeFamilyKey {
+  return familyKeyForModule(resolveCaseReasonCodeModule(args).key);
+}

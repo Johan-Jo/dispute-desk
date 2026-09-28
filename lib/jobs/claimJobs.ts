@@ -136,7 +136,23 @@ export async function enqueueJob(params: {
    *  index over non-null values, so passing the same key twice raises
    *  23505 — callers that treat a duplicate as benign must catch it. */
   dedupeKey?: string;
-}): Promise<string> {
+}): Promise<string>;
+/** Opt-in: a duplicate `dedupeKey` (23505) returns `{ duplicate: true }`
+ *  instead of throwing. The default overload is unchanged for every caller. */
+export async function enqueueJob(
+  params: { shopId: string; jobType: string; entityId?: string; priority?: number; dedupeKey?: string },
+  opts: { onDuplicate: "return" },
+): Promise<{ id: string; duplicate: false } | { id: null; duplicate: true }>;
+export async function enqueueJob(
+  params: {
+    shopId: string;
+    jobType: string;
+    entityId?: string;
+    priority?: number;
+    dedupeKey?: string;
+  },
+  opts?: { onDuplicate: "return" },
+): Promise<string | { id: string; duplicate: false } | { id: null; duplicate: true }> {
   const db = getServiceClient();
 
   const { data, error } = await db
@@ -152,8 +168,11 @@ export async function enqueueJob(params: {
     .select("id")
     .single();
 
+  if (opts?.onDuplicate === "return" && error?.code === "23505") {
+    return { id: null, duplicate: true };
+  }
   if (error || !data) {
     throw new Error(`Failed to enqueue job: ${error?.message}`);
   }
-  return data.id;
+  return opts?.onDuplicate === "return" ? { id: data.id as string, duplicate: false } : data.id;
 }
