@@ -1,6 +1,6 @@
 # Capture the bank's claim before answering reopened and "general" disputes
 
-**Status:** v1 SHIPPED to prod (#863→#883); follow-up F1–F2 on develop, F3–F6 in progress · **Date:** 2026-09-27, status trued up 2026-09-28 · **Related:** `mein-maison-status-and-no-return.plan.md` (Step 1 shipped as #861)
+**Status:** v1 SHIPPED to prod (#863→#883); follow-up F1–F3, F5, F6 on develop; F4 decision open · **Date:** 2026-09-27, status trued up 2026-09-28 · **Related:** `mein-maison-status-and-no-return.plan.md` (Step 1 shipped as #861)
 
 ## Status as of 2026-09-28 (audit)
 
@@ -34,9 +34,11 @@ What shipped, against the scope below:
 *Found while fixing it — a filing blocker:* the filing-time plan check (`derivePlanIdentityForPack`) resolved the module from Shopify's reason while the build used the claim's. The module's allowed categories feed `plan_input_hash`, so every claim-typed letter read stale and could not be filed. Verified on prod: test #1060's stored hash ≠ the filing check's. No real merchant hit it yet (only the two test disputes have a claim).
 *Fix (DONE, same PR):* `resolveCaseReasonCodeModule` is the one resolver for the build and the filing check; the filing check reads `pack_json.case_assessment_reason`. Plan and rules get the claim's reason.
 
-**F3 — No test that the letter never quotes the claim.** *Fix:* a validator guard that fails a letter containing a long verbatim run of the claim text, plus the plan's truth-table / cycle tests where missing.
+**F3 — No test that the letter never quotes the claim.** *Fix (DONE):* `bank_claim_quoted` in `validateNarrative` fails a section sharing 8 consecutive words with the claim. The plan's other listed tests already existed (`bankClaim.test.ts` truth table + current-cycle read; deadline cron P6 and save-worker window guards refuse without the claim).
 
-**F4 — Reopened disputes: merchant evidence.** `composeShopifyMutationPayload` sets only `uncategorizedFile` + customer fields; omitted fields are left as Shopify has them. *Fix:* verify on a live reopened dispute which fields hold merchant files, and record the result here; guard only if `uncategorizedFile` held a merchant file.
+**F4 — Reopened disputes: merchant evidence.** `composeShopifyMutationPayload` sets only `uncategorizedFile` + customer fields; omitted fields are left as Shopify has them (API update semantics, not tested live: testing would mean a write).
+*Measured 2026-09-28 (read-only, `scripts/shopify/probe-reopened-evidence.mjs` + `probe-evidence-file-names.mjs`):* 8 open reopened disputes. On 6 the uncategorized slot holds the **merchant's own round-one file** ("AdditionalEvidence.pdf", "Mein Maison · Orders · #90906 · Additional_Evidence 2.pdf"; ours is named `Defence-<id>-…pdf`), and DisputeDesk has no record of saving round one. Customer-communication, service and shipping files sit in other slots and are not touched.
+**Our cycle-2 save REPLACES that merchant file.** Today it is held back only because reopened disputes need the bank's claim first. *Open, decision needed:* e.g. append the merchant's file to our PDF as an annex (needs a PDF merge library), or another approach.
 
 **F5 — Stale `needs_review`.** The dispatcher sets `needs_review = true` when the rule mode is review and never clears it when the mode is auto, so the deadline cron skips auto-pilot disputes. *Fix:* the dispatcher writes `needs_review = (mode === "review")`, plus a one-off re-evaluation of open disputes (dry run first, prod counts recorded here).
 
