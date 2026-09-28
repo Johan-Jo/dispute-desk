@@ -1,12 +1,12 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** IN IMPLEMENTATION. P0 and P1a are in prod; P1b is next (on `develop` only). Plan text below is
+**Status:** IN IMPLEMENTATION. P0 and P1a are in prod; P1b is complete on `develop` (#909, #910, D4 PR) and awaits a prod release. Plan text below is
 **v5.2, 2026-09-23**, unchanged except for this status section. The §0 live exposures are resolved or on
 schedule (see the table).
 
 ## Status as of 2026-09-28
 
-Checked against `gh pr view` and the code on `develop` @ `606ca7be`. "Prod" = merged to `master`.
+Checked against `gh pr view` and the code on `develop` @ `606ca7be`, rows for P1b re-checked @ `9f382227` (late 09-28). "Prod" = merged to `master`.
 
 | Plan item | State | Where |
 |---|---|---|
@@ -21,12 +21,12 @@ Checked against `gh pr view` and the code on `develop` @ `606ca7be`. "Prod" = me
 | P1a: `delivered_confirmed` → moderate; signature covering all goods → strong; partial/unknown coverage → moderate at most | Done, prod (`SCORING_POLICY_VERSION` 4) | #785 → #787 |
 | P1a: timing safeguard `strength_upgraded_timing_held` + `overallBeforeRev5` (persisted) | Done, prod. Was inert until #791 persisted `overallBeforeRev5` into `pack_json.case_strength` | #785 → #787; #791 → #790 |
 | D4 hint: `decisiveHint.delivery` drops billing/IP; `moderateOnly` agrees in number | Done, prod | #785 → #787 |
-| D4 `weak.deliveryInTransit` re-keyed on shipment state | **Not done** | P1b |
-| D5 cardholder-acknowledgement subtitle says "for fraud disputes" on every family | **Not done** | P1b |
-| D6 `titleCollected` / `titleCollectedOn` ("Collected by customer") and `factsCollected` ("— ID required at collection") | **Not done** in merchant copy (bank prose is already guarded by P0 (c)) | P1b |
-| QFD → `delivered_final_verified` → strong (§6.1.1–§6.1.3) with corroborated provenance (Q-8) | **Not done.** No `delivered_final_verified` member exists yet (only the §6.6 enum-ban regex names it) | P1b |
+| D4 `weak.deliveryInTransit` re-keyed on shipment state | Done, `develop` only. Flag now fires on `in_transit` as well as `delivered_unverified` (P0(b)'s new proofType had silently switched it off), clears when a delivery row scores, and wins over unrelated facts on the INR family | `feat/nr-p1b` (not in prod) |
+| D5 cardholder-acknowledgement subtitle says "for fraud disputes" on every family | Done, `develop` only (subtitle no longer names a family) | #910 (not in prod) |
+| D6 `titleCollected` / `titleCollectedOn` ("Collected by customer") and `factsCollected` ("— ID required at collection") | Done, `develop` only, all six locales; class test `deliveryCopyNamesNoActor.test.ts` bans actor/ID words across every `deliveryProof` string | #910 (not in prod) |
+| QFD → strong (§6.1.1–§6.1.3) with corroborated provenance (Q-8) | Done, `develop` only. **Deviation:** a `finalDeliveryVerified` payload flag on `delivered_confirmed` instead of a new `delivered_final_verified` member (the enum is compared by equality at 60+ sites). Provenance = `carrier_api_*` only; `shopify_native` never qualifies, so Case B stays moderate. Measured 09-28: 5 of 513,486 tracking rows carry carrier-API provenance, none on an open unsaved INR dispute, so no rating or filing date moves | #909 (not in prod) |
 | Letter quality for INR (not a plan phase; found on the live cases) | Done, prod: per-parcel carrier-record scoping (#777, #779, #781, #783, #775), "shipped" vs "delivered" wording (#805), record-built multi-parcel sections (#792, #794, #810, #817, #819/#820, #822/#823, #825), no negated delivery (#837), counsel v2 (#832–#851) | as listed |
-| Failed letters never retried after an infrastructure fix (Cay #14784 sat on `llm_error` 09-24 → 09-28) | Fix on `develop`: daily bounded self-heal for `llm_error` / `daily_cap_reached` in the deadline-rebuild cron | #908 (not in prod) |
+| Failed letters never retried after an infrastructure fix (Cay #14784 sat on `llm_error` 09-24 → 09-28) | Fix on `develop` (merged 09-28 15:20): daily bounded self-heal for `llm_error` / `daily_cap_reached` in the deadline-rebuild cron. Not in the #917 release | #908 (not in prod) |
 | P2 communications classification (§7, D7) | Not started | — |
 | P3 delivery-commitment resolver (§8) | Not started. Q-5 (fulfillment-order scopes) open | — |
 | P4 evidence monitoring + event history (§9, D8) | Not started; depends on `tracking-app-delivery-signals.plan.md` phases 2–4 | — |
