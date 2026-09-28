@@ -20,6 +20,8 @@ export interface ProductListingExhibit {
   variantLine: string | null;
   excerpt: string | null;
   sourceUrl: string | null;
+  /** Shortened link text for `sourceUrl`. */
+  sourceUrlDisplay: string | null;
   /** YYYY-MM-DD, the retrieval date the caption states. */
   retrievedOn: string | null;
   /** data: URIs (JPEG/PNG only — the PDF renderer reads nothing else). */
@@ -49,14 +51,46 @@ type Listing = {
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+/**
+ * Only what the PDF font can draw. Store descriptions carry emoji and
+ * pictographs, which the renderer printed as garbage ("=Ì", prod canary
+ * #100411). Removed, then whitespace collapsed.
+ */
+export function printable(v: unknown): string | null {
+  const s = str(v);
+  if (!s) return null;
+  const clean = s
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E000}-\u{F8FF}]/gu, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean || null;
+}
+
+/** The link text: host + path, shortened — a full product URL ran off the
+ *  page. The link target stays the full URL. */
+export function displayUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const text = `${u.host}${u.pathname}`;
+    return text.length > 70 ? `${text.slice(0, 69)}…` : text;
+  } catch {
+    return url.length > 70 ? `${url.slice(0, 69)}…` : url;
+  }
+}
+
 function variantLine(l: Listing): string | null {
   const opts = Array.isArray(l.variantOptions)
     ? (l.variantOptions as Array<{ name?: unknown; value?: unknown }>)
-        .map((o) => (str(o.name) && str(o.value) ? `${str(o.name)}: ${str(o.value)}` : null))
-        .filter((x): x is string => !!x && !/^Title: Default Title$/i.test(x))
+        // "Title" is Shopify's name for the single implicit option — never
+        // a real one (prod canary #100411 printed "Title: *3.95").
+        .filter((o) => !/^title$/i.test(String(o.name ?? "").trim()))
+        .map((o) => (printable(o.name) && printable(o.value) ? `${printable(o.name)}: ${printable(o.value)}` : null))
+        .filter((x): x is string => !!x && !/default title/i.test(x))
     : [];
   if (opts.length) return opts.join(" · ");
-  const t = str(l.variantTitle);
+  const t = printable(l.variantTitle);
   return t && !/^Default Title$/i.test(t) ? t : null;
 }
 
@@ -107,10 +141,11 @@ export async function buildProductListingExhibits(args: {
     }
     const fetched = str(l.fetchedAt);
     exhibits.push({
-      title: str(l.title),
+      title: printable(l.title),
       variantLine: variantLine(l),
-      excerpt: str(l.excerpt),
+      excerpt: printable(l.excerpt),
       sourceUrl: str(l.sourceUrl),
+      sourceUrlDisplay: displayUrl(str(l.sourceUrl)),
       retrievedOn: fetched ? fetched.slice(0, 10) : null,
       images,
     });

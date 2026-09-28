@@ -18,6 +18,7 @@ export const PRODUCT_EVIDENCE_QUERY = `query ProductEvidence($id: ID!, $after: S
         id
         name
         quantity
+        requiresShipping
         originalTotalSet { shopMoney { amount currencyCode } }
         customAttributes { key value }
         product {
@@ -53,6 +54,8 @@ export interface ProductEvidenceLineItem {
   id: string;
   name: string | null;
   quantity: number | null;
+  /** False for shipping insurance, gift cards, services — not merchandise. */
+  requiresShipping: boolean | null;
   originalTotalSet: { shopMoney: { amount: string; currencyCode: string } } | null;
   customAttributes: Array<{ key: string; value: string | null }> | null;
   product: {

@@ -47,3 +47,24 @@ describe("buildProductListingExhibits", () => {
     expect(exhibitCaption("2026-09-28")).not.toMatch(/may differ|at the time of purchase|customer saw/i);
   });
 });
+
+describe("exhibit presentation (prod canary #100411)", () => {
+  it("strips emoji the PDF font cannot draw, and Shopify's 'Title' option", async () => {
+    const { printable } = await import("../productListingExhibit");
+    expect(printable("Wärme auf Knopfdruck 🔥✨: sofort")).toBe("Wärme auf Knopfdruck : sofort");
+    const r = await buildProductListingExhibits({
+      sb: {} as never,
+      sections: section([listing([], { variantOptions: [{ name: "Title", value: "*3.95" }], variantTitle: "*3.95" })]),
+      listingCited: true,
+      download: async () => null,
+    });
+    expect(r[0].variantLine).toBe("*3.95");
+  });
+
+  it("shortens the printed URL, keeps the link target", async () => {
+    const { displayUrl } = await import("../productListingExhibit");
+    const long = "https://meinmaison.de/products/thermabelle-damen-heizweste-usb-beheizte-weste-mit-infrarot-technologie-warmeregulierend";
+    expect(displayUrl(long)!.length).toBeLessThanOrEqual(70);
+    expect(displayUrl(long)!.startsWith("meinmaison.de/products/")).toBe(true);
+  });
+});
