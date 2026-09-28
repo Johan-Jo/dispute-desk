@@ -631,7 +631,17 @@
       "hideFullDefenseLetter": "Ocultar carta de defesa",
       "defenseSectionSummary": "Resumo",
       "defenseSectionConclusion": "Conclusão",
-      "defenseSectionArgument": "Argumento"
+      "defenseSectionArgument": "Argumento",
+      "productListing": {
+        "present": "Obtida da sua loja em {date}: {title}",
+        "currentListingOnly": "Esta é a ficha do produto como está hoje. A Shopify não guarda como era quando o pedido foi feito.",
+        "absent": "O produto deste pedido não tem descrição na sua loja, por isso não há ficha para incluir.",
+        "deleted": "O produto deste pedido foi excluído da sua loja, por isso a ficha não pode ser incluída.",
+        "customItem": "Este pedido contém um item personalizado sem ficha de produto na sua loja.",
+        "failed": "Não conseguimos ler a ficha do produto na Shopify. Tentaremos mais uma vez automaticamente.",
+        "inaccessible": "A DisputeDesk não consegue ler seus produtos. Abra a DisputeDesk pelo painel da Shopify e aprove o acesso a produtos solicitado.",
+        "reconnectForProducts": "Aprovar acesso a produtos"
+      }
     },
     "facts": {
       "title": "Detalhes do caso",
