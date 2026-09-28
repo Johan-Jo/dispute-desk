@@ -39,7 +39,7 @@ import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { nonCardDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
-import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
+import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
@@ -677,41 +677,41 @@ export async function handleBuildDefencePackage(
     }
   }
 
-  // Generate the narrative (template writer) unless counsel wrote it.
-  const narrativeRes = counselRes
-    ? {
-        narrative: counselRes.narrative,
-        modelUsed: counselRes.modelUsed,
-        promptVersion: counselRes.promptVersion,
-        promptFamily: counselRes.promptFamily,
-        tokens: counselRes.tokens,
-        durationMs: counselRes.durationMs,
-        capReached: false,
-        error: null as string | null,
-      }
-    : await generateNarrative(
-    {
-      packageId,
-      disputeId: pkg.dispute_id,
-      reasonCode,
-      reasonCodeModule,
-      familyOverlay: reasonCodeFamily.overlayPromptBody || null,
-      paymentOverlay,
-      strategies,
-      packageMode: classification.packageMode,
-      caseStrength: "moderate",
-      approvedFacts: planFacts,
-      manualEvidence: classification.manual,
-      internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-      missingEvidence: classification.missing,
-      bankClaim: bankClaimInput,
-    },
-    {
+  /* THE TEMPLATE WRITER IS RETIRED (maintainer, 2026-09-28: "permanently
+   * deactivate the older writer, should not happen again"). It wrote the
+   * not-as-described letter for Mein Maison #101111 that led with a German
+   * product title and dropped shipping, delivery and the dispute's opening
+   * from the sequence. Only counsel v2 writes letters now. A dispute it does
+   * not write for gets NO letter — a failed package the merchant and admin
+   * can see — until its family has a counsel playbook
+   * (docs/plans/defence-letter-structure.plan.md). Never re-add a fallback. */
+  if (!counselRes) {
+    await logAuditEvent({
       shopId: pkg.shop_id,
-      packageId,
-      modelOverride: moduleOverride?.model ?? null,
-    },
-  );
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_no_counsel_letter",
+      eventPayload: { packageId, version: pkg.version, moduleKey: reasonCodeModule.key },
+    });
+    return await markFailed(
+      sb,
+      pkg,
+      `No letter: the template writer is retired and counsel v2 wrote none for ${reasonCodeModule.key}.`,
+      "no_counsel_letter",
+      false,
+    );
+  }
+  const narrativeRes = {
+    narrative: counselRes.narrative,
+    modelUsed: counselRes.modelUsed,
+    promptVersion: counselRes.promptVersion,
+    promptFamily: counselRes.promptFamily,
+    tokens: counselRes.tokens,
+    durationMs: counselRes.durationMs,
+    capReached: false,
+    error: null as string | null,
+  };
   usedCounsel = !!counselRes;
 
   if (narrativeRes.capReached) {
@@ -870,100 +870,8 @@ export async function handleBuildDefencePackage(
     });
   }
 
-  if (!validation.ok) {
-    const feedback = validation.errors.map(
-      (e) =>
-        `${e.section ?? "narrative"}: ${e.message ?? "validation failed"}`,
-    );
-    await logAuditEvent({
-      shopId: pkg.shop_id,
-      disputeId: pkg.dispute_id,
-      packId: pkg.source_pack_id,
-      actorType: "system",
-      eventType: "defence_package_validation_retry",
-      eventPayload: {
-        packageId,
-        version: pkg.version,
-        attemptNumber: 2,
-        validationErrors: validation.errors,
-      },
-    });
-    const retryRes = await generateNarrative(
-      {
-        packageId,
-        disputeId: pkg.dispute_id,
-        reasonCode,
-        reasonCodeModule,
-        familyOverlay: reasonCodeFamily.overlayPromptBody || null,
-        paymentOverlay,
-        strategies,
-        packageMode: classification.packageMode,
-        caseStrength: "moderate",
-        approvedFacts: planFacts,
-        manualEvidence: classification.manual,
-        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-        missingEvidence: classification.missing,
-        bankClaim: bankClaimInput,
-      },
-      {
-        shopId: pkg.shop_id,
-        packageId,
-        modelOverride: moduleOverride?.model ?? null,
-        validationFeedback: feedback,
-      },
-    );
-    if (retryRes.capReached) {
-      return await markFailed(sb, pkg, retryRes.error ?? "daily cap reached", "daily_cap_reached", true);
-    }
-    if (!retryRes.narrative || retryRes.error) {
-      // Retry attempt errored or returned no narrative. Fall through
-      // with the original validation failure — that's what the
-      // merchant needs to act on.
-    } else {
-      // Re-validate the retry output. If it still fails, persist the
-      // retry result (closer to correct than the first attempt) along
-      // with its errors.
-      // The retry output needs the same treatment; without this a retried
-      // package keeps the unsupported section the first pass had removed.
-      retryRes.narrative = omitDeniedSections(retryRes.narrative, reasonCodeModule.key);
-      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts, recordContext);
-      const retrySuppression = suppressUnsupportedSections({
-        narrative: retryRes.narrative,
-        approvedFacts: planFacts,
-        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-      });
-      retryRes.narrative = retrySuppression.narrative;
-      suppression.suppressed = retrySuppression.suppressed;
-      suppression.declinedToEmptyLetter = retrySuppression.declinedToEmptyLetter;
-
-      const retryValidation = validateNarrative({
-        narrative: retryRes.narrative,
-        approvedFacts: planFacts,
-        reasonCodeModule,
-        packageMode: classification.packageMode,
-        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-        extraHardPhrases: hardPhrases,
-        internalConstraints,
-        guardedPhrases: reasonCodeFamily.guardedBankPhrases,
-        bankClaimText: bankClaim?.text ?? null,
-      });
-      // Reassign so the rest of the pipeline uses the better output.
-      // We track token totals on the original `narrativeRes` for ops
-      // visibility, but the narrative + validation we act on is the
-      // retry's.
-      narrativeRes.narrative = retryRes.narrative;
-      narrativeRes.modelUsed = retryRes.modelUsed;
-      // The retry is the template writer's letter, whoever wrote the first.
-      narrativeRes.promptVersion = retryRes.promptVersion;
-      narrativeRes.promptFamily = retryRes.promptFamily;
-      usedCounsel = false;
-      narrativeRes.tokens.prompt += retryRes.tokens.prompt;
-      narrativeRes.tokens.completion += retryRes.tokens.completion;
-      narrativeRes.tokens.cached += retryRes.tokens.cached;
-      narrativeRes.durationMs += retryRes.durationMs;
-      validation = retryValidation;
-    }
-  }
+  /* No retry through the template writer (retired 2026-09-28): a counsel
+   * letter that fails validation is persisted as failed below. */
 
   /* Address-delivery claims the model left in after its retry are deleted by
    * code — the exact edit the retry feedback asked for — then the narrative is
