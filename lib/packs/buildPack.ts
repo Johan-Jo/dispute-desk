@@ -1112,6 +1112,13 @@ export async function buildPack(
      * the thing it can actually see. */
     case_assessment_gates: persistableGateFingerprint(gateAssessment),
 
+    /* The dispute reason this build assessed under. It differs from
+     * `disputes.reason` when the bank's claim re-typed a GENERAL dispute
+     * (see the override above). The reader derives its model from the same
+     * reason or its hash can never match — which showed "assessed under an
+     * earlier version" on every claim-typed case right after its rebuild. */
+    case_assessment_reason: (dispute.reason as string | null) ?? null,
+
     /* DIAGNOSTIC ONLY — the three input-hash terms as they were at write time.
      *
      * `freshness.inputHash` is one equality over model + gates + payloads, so a
