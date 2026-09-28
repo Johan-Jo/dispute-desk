@@ -64,8 +64,12 @@ import type { ThesisTemplate } from "../types";
  *      and the dispute date; its fulfilment-section repeat removed.
  *   3  (2026-09-25) item-not-received request line names the disputed amount.
  *   4  (2026-09-25) opening line says "this order", not the order number.
+ *   5  (2026-09-28) not-as-described gets its own transaction-overview line
+ *      (the generic one argued cardholder-initiated activity, a fraud frame)
+ *      and a narrow conclusion without the "available evidence" hedge
+ *      (not-as-described plan PR 1, D5).
  */
-export const COMPOSITION_VERSION = 4;
+export const COMPOSITION_VERSION = 5;
 
 export const THESIS_TEMPLATES: ThesisTemplate[] = [
   // ── executiveSummary ─────────────────────────────────────────────
@@ -158,6 +162,20 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "item_not_received",
     packageMode: "any",
     template: "The transaction is set out in the case details.",
+    requiredTokens: [],
+    optionalTokens: [],
+  },
+  // Not as described: the claim is about what arrived, not who paid, so the
+  // generic "cardholder-initiated activity" line below is off-point and a
+  // hedge. This entry states no fact, so `renderThesis` renders nothing for
+  // the section — which is the point: it stops the fallback chain reaching
+  // `transactionOverviewArgument:any:any` for this family.
+  {
+    key: "transactionOverviewArgument:product_not_as_described:any",
+    sectionKey: "transactionOverviewArgument",
+    familyKey: "product_not_as_described",
+    packageMode: "any",
+    template: "The order record sets out the items and variants the customer ordered.",
     requiredTokens: [],
     optionalTokens: [],
   },
@@ -265,6 +283,17 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     sectionKey: "conclusion",
     familyKey: "item_not_received",
     packageMode: "full",
+    template: "The merchant respectfully requests reversal of the[[ {{disputedAmount}}]] chargeback.",
+    requiredTokens: [],
+    optionalTokens: ["disputedAmount"],
+  },
+  // Not as described, narrow (D5): the merchant's counsel requests reversal
+  // on the record it filed; it does not apologise for the record's extent.
+  {
+    key: "conclusion:product_not_as_described:narrow",
+    sectionKey: "conclusion",
+    familyKey: "product_not_as_described",
+    packageMode: "narrow",
     template: "The merchant respectfully requests reversal of the[[ {{disputedAmount}}]] chargeback.",
     requiredTokens: [],
     optionalTokens: ["disputedAmount"],
