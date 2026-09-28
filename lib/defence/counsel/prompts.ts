@@ -25,7 +25,7 @@ import type { Theory } from "./recordSections";
 
 /** Bump on any change to a prompt OR to recordSections.ts wording: it is part
  *  of the reuse hash, so a bump makes every rebuild write a fresh letter. */
-export const COUNSEL_PROMPT_VERSION = 2;
+export const COUNSEL_PROMPT_VERSION = 3;
 
 export const SUMMARY_SYSTEM = `You are the merchant's chargeback counsel. You write the executive summary of a response to an item-not-received chargeback. Third person. Your job is to win the case.
 
@@ -70,6 +70,53 @@ OUTPUT
 JSON only: { "summary": ["paragraph", …], "claimIds": ["every ledger claim the summary relies on"] }
 Usually one paragraph.`;
 
+/**
+ * Not as described (docs/plans/defence-letter-structure.plan.md §5.2). Static,
+ * so it caches like SUMMARY_SYSTEM. The case's frame (card chargeback, card
+ * inquiry, PayPal or Klarna dispute) arrives in the user message and decides
+ * the words for the proceeding and the request.
+ */
+export const SUMMARY_SYSTEM_NOT_AS_DESCRIBED = `You are the merchant's counsel in a payment dispute. You write the executive summary of the merchant's response to a not-as-described claim. Third person, English only. Your job is to win the case.
+
+WHO READS IT
+A dispute analyst who reads dozens of responses a day and gives each about two minutes. They read the summary properly and skim the rest. An analyst who reads only the summary must have the complete defence.
+
+WHAT THE SUMMARY IS
+1. It opens with the claim in plain words ("The customer says the item was not as described.").
+2. Then the sequence that answers it, following the theory of the case you are given: the item was sold under a published listing (reproduced in the letter), the carrier recorded delivery, and the dispute came later. Use concrete specifics chosen for effect: the delivery date, "eight days later". Each date or interval appears once.
+3. Then ONE plain sentence that says what the record establishes ("The record shows a completed sale under a published listing and a delivered order.").
+4. It ends with the request given in the case's FRAME, word for word.
+Aim for about 60 words; never more than 80. Short sentences.
+
+NEVER
+- Name the product, use its store title, quote or paraphrase the listing, or describe what the product is, does, measures or includes. Call it "the item" or "the order". The listing exhibit shows it.
+- Say or imply the item matched, conformed to, or was as described in the listing, or that the listing is what the customer saw at purchase or checkout. The listing was retrieved for this response.
+- Mention returns in any way. Code writes the one sentence about returns elsewhere in the letter.
+- Say where the parcel was delivered, or that anyone received, kept, has or used the goods. Delivery dates the sequence; it is not the argument, and non-receipt is not claimed.
+- Say what the customer thought, knew or intended, suggest bad faith, argue from silence, or say the claim is late.
+- Write a word in any language other than English.
+
+WHAT THE REST OF THE LETTER ALREADY SAYS
+Code writes the "What was sold" and "Delivery and return" sections and the Conclusion; you are shown them. Do not restate them. The page header, case table, shipment card, line-items table, listing exhibit and timeline already print the order number, amount, tracking number, carrier, product and dates of the order: never write the identifiers, the product or the carrier's name. Write "the carrier".
+
+REGISTER
+- Make the third party the subject: "The carrier recorded delivery…".
+- Plain, literal English, understood on the first read. No metaphors, legal flourishes, adjectives in place of evidence ("decisive", "compelling"), meta-talk or disclaimers.
+- Every sentence adds something new.
+- Use only facts in the claim ledger. A claim's PRIVATE LIMITS are instructions to you; never print them.
+
+EXAMPLE (an invented card chargeback; copy the shape, never the words)
+Case: Lindqvist Home. A lamp sold under a published listing with photographs. The carrier recorded delivery on 4 March. The not-as-described chargeback was opened on 19 March.
+Summary: "The cardholder says the item was not as described. The item was sold under a published listing with photographs and a written description, reproduced in this response. The carrier recorded delivery on 4 March, and the chargeback was opened fifteen days later. The record shows a completed sale under a published listing and a delivered order. The merchant respectfully requests reversal of the chargeback."
+
+SECOND EXAMPLE (an invented PayPal dispute)
+Case: Harbour Tea Co. A tea set sold under a published listing. The carrier recorded delivery on 15 May; the dispute was opened on 23 May.
+Summary: "The customer says the item was not as described. The item was sold under a published listing, reproduced in this response with its photographs. The carrier recorded delivery on 15 May, and the dispute was opened eight days later. The record shows a completed sale under a published listing and a delivered order. The merchant respectfully requests that PayPal close this dispute in the merchant's favour."
+
+OUTPUT
+JSON only: { "summary": ["paragraph", …], "claimIds": ["every ledger claim the summary relies on"] }
+Usually one paragraph.`;
+
 /** The address rule follows the ledger: an address statement is allowed
  *  only when claimLedger.ts built the claim (addresses identical, and shown
  *  on the record-built address card). */
@@ -101,8 +148,25 @@ export function summaryUserPrompt(args: {
   recordText: string;
   pageContext: string;
   merchantName: string;
+  /** The frame rule (frame.ts `frameRule`): words for the proceeding and the request. */
+  frameRule?: string;
+  /** The playbook's family; not-as-described has its own must-carry line. */
+  familyKey?: string;
 }): string {
+  if (args.familyKey === "product_not_as_described") {
+    return [
+      `FRAME (overrides any wording in the instructions): ${args.frameRule ?? ""}`,
+      `MERCHANT: "${args.merchantName}" (name it at most once).`,
+      `ADDRESSES: ${addressRule(args.ledger)}`,
+      `THEORY OF THE CASE: ${args.theory.name}: ${args.theory.shape}`,
+      `THE SUMMARY MUST CARRY: ${args.theory.claims.join(", ")}. Never no_return_recorded (code writes it).`,
+      `PRINTED ON THE PAGE AROUND THE LETTER (do not repeat):\n${args.pageContext}`,
+      `WRITTEN BY CODE BELOW THE SUMMARY (do not restate):\n${args.recordText}`,
+      `CLAIM LEDGER (the only facts you may use):\n${ledgerBlock(args.ledger.filter((c) => c.id !== "no_return_recorded"))}`,
+    ].join("\n\n");
+  }
   return [
+    ...(args.frameRule ? [`FRAME (overrides any wording in the instructions): ${args.frameRule}`] : []),
     `MERCHANT: "${args.merchantName}" (name it at most once).`,
     `ADDRESSES: ${addressRule(args.ledger)}`,
     args.ledger.some((c) => c.id === "whole_order_in_shipment" || c.id === "all_parcels_delivered")
@@ -143,7 +207,7 @@ export function correctionUserPrompt(caseUser: string, previous: string[], issue
  * the old fact-check: an interval attached to the wrong pair of events is
  * invisible to the per-number grounding check in code.
  */
-export const REVIEW_SYSTEM = `You check the executive summary of a chargeback response against a claim ledger, the only set of true facts. Check it sentence by sentence.
+export const REVIEW_SYSTEM = `You check the executive summary of a response to a payment dispute (a chargeback, an inquiry, or a PayPal or Klarna dispute) against a claim ledger, the only set of true facts. Check it sentence by sentence.
 
 Put a sentence in "errors" when:
 - a number, date or interval is attached to the wrong event or the wrong pair of events;
@@ -152,7 +216,7 @@ Put a sentence in "errors" when:
 - it says or implies what the cardholder thought, knew, intended or would have done;
 - it says where a parcel was delivered, or that anyone personally received it;
 - it repeats, in the same or other words, a point made earlier in the summary or in the code-written text shown to you.
-Not repetition: the summary's closing sentence tying the facts to the claim, and its request to reverse the chargeback, even though the Conclusion restates the strongest facts; "the complete order" in the summary next to the item count in the Shipping text.
+Not repetition: the summary's closing sentence tying the facts to the claim, and its closing request (to reverse the chargeback or to close the dispute), even though the Conclusion restates the strongest facts; "the complete order" in the summary next to the item count in the Shipping text.
 
 Before putting a sentence in "errors", check each number and date in it against EVENTS AND INTERVALS, which are computed from the records: do not do date arithmetic yourself. If they match the events the sentence attaches them to, it is NOT an error: do not list a correct sentence. Intervals the ledger gives separately (e.g. delivery → later order, later order → dispute) may be told in sequence ("Sixty-one days later …, and fourteen days after that …"); that is correct and clear.
 
@@ -170,7 +234,7 @@ Return JSON only: { "errors": [ { "sentence": "…", "problem": "…" } ], "uncl
 export function timelineBlock(ledger: readonly LedgerClaim[]): string {
   const by = new Map(ledger.map((c) => [c.id, c.specifics]));
   const rows: string[] = [];
-  const ship = by.get("shipped_promptly");
+  const ship = by.get("shipped_promptly") ?? by.get("shipped");
   if (ship?.orderPlacedOn) rows.push(`- Order placed: ${ship.orderPlacedOn}.`);
   if (ship?.shippedOn) rows.push(`- Shipped: ${ship.shippedOn} (${ship.shipInterval}).`);
   const delivered = by.get("carrier_delivered");

@@ -17,6 +17,8 @@
 import { validateNarrative } from "../validateNarrative";
 import { resolveReasonCodeModuleForContext } from "../reasonCodes/registry";
 import { item_not_received } from "../reasonCodes/families/item_not_received";
+import { product_not_as_described } from "../reasonCodes/families/product_not_as_described";
+import { requestLine, requestPattern, wrongFrameWords, type DisputeFrame } from "./frame";
 import { deliveryPostDatesDispute, NO_INTERNAL_CONSTRAINTS } from "../internalConstraints";
 import type { DefenceNarrativeOutput, EvidenceFact, NarrativeSection } from "../types";
 import type { CounselDraft, EvidenceSectionKey, LedgerClaim, Playbook } from "./types";
@@ -36,6 +38,46 @@ export interface CheckContext {
   /** Product names the prose may quote: masked before the number, copy and
    *  style checks ("Sunburst Mineral SPF 50 Sunscreen" is not a number 50). */
   productNames?: string[];
+  /** Who decides the dispute and at what stage: the request and the words
+   *  for the proceeding (frame.ts). Absent = a card chargeback. */
+  frame?: DisputeFrame;
+  /** Store titles the summary may NOT use (not-as-described: English only,
+   *  never the product's store name — maintainer, 2026-09-28). */
+  forbiddenTitles?: string[];
+  /** Names the English check allows (merchant, customer). */
+  allowedNames?: string[];
+}
+
+/** Function words of the other five active locales. One is enough to fail:
+ *  "Do not mix German into the dispute letter" (maintainer, 2026-09-28). */
+const NON_ENGLISH_WORDS = new Set([
+  "und", "mit", "für", "der", "das", "ist", "nicht", "oder", "auf", "eine", "einer", "wird", "zur", "vom",
+  "och", "för", "att", "det", "som", "inte", "eller", "med",
+  "avec", "pour", "les", "une", "dans", "sur", "pas", "est",
+  "con", "para", "los", "las", "una", "por", "del", "que",
+  "com", "uma", "não", "dos", "das",
+]);
+
+/** English-only issues in model-written text (exported for tests). */
+export function englishOnlyIssues(text: string, forbiddenTitles: readonly string[] = [], allowedNames: readonly string[] = []): string[] {
+  const issues: string[] = [];
+  let t = text;
+  for (const n of allowedNames.filter(Boolean)) t = t.split(n).join(" ");
+  const lower = t.toLowerCase();
+  for (const title of forbiddenTitles) {
+    for (const seg of title.split(/[|,;()–—]+|\s-\s/).map((x) => x.trim()).filter((x) => x.length >= 6 && /\p{L}/u.test(x))) {
+      if (lower.includes(seg.toLowerCase())) issues.push(`english: the product's store title ("${seg}") — call it "the item"`);
+    }
+  }
+  const foreignLetters = t.match(/[^\x00-\x7F‘’“”–—… ]/g);
+  if (foreignLetters) issues.push(`english: non-English characters (${[...new Set(foreignLetters)].join(" ")})`);
+  for (const w of t.toLowerCase().match(/\p{L}+/gu) ?? []) {
+    if (NON_ENGLISH_WORDS.has(w)) {
+      issues.push(`english: non-English word "${w}"`);
+      break;
+    }
+  }
+  return [...new Set(issues)];
 }
 
 const MONTH = "(?:January|February|March|April|May|June|July|August|September|October|November|December)";
@@ -156,7 +198,25 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
         "the delivery, the later order, the sentence tying them to the claim, and the request.",
     );
   }
-  if (!/\brevers/i.test(summaryText)) issues.push("summary: must end with the request to reverse the chargeback");
+  if (!(ctx.frame ? requestPattern(ctx.frame) : /\brevers/i).test(summaryText)) {
+    issues.push(`summary: must end with the request: "${ctx.frame ? requestLine(ctx.frame) : "The merchant respectfully requests reversal of the chargeback."}"`);
+  }
+  // The proceeding's name (a PayPal inquiry is not a chargeback; #101111).
+  const wrong = ctx.frame ? wrongFrameWords(ctx.frame) : null;
+  if (wrong) {
+    for (const p of P) {
+      const m = p.text.match(wrong);
+      if (m) issues.push(`${p.where}: "${m[0]}" misnames this proceeding; ${ctx.frame!.provider === "card" ? 'call it "the inquiry"' : 'call it "the dispute" and the person "the customer"'}`);
+    }
+  }
+  // English only, and never the product's store name (maintainer, 2026-09-28).
+  for (const i of englishOnlyIssues(summaryText, ctx.forbiddenTitles ?? [], [ctx.merchantName, ...(ctx.allowedNames ?? [])])) {
+    issues.push(`summary: ${i}`);
+  }
+  const notAsDescribed = ctx.playbook.familyKey === "product_not_as_described";
+  if (notAsDescribed && /\breturn/i.test(summaryText)) {
+    issues.push("summary: returns are written by code in the Delivery and return section; remove every mention of returns from the summary");
+  }
   // "The complete order" is a claim: only the item-by-item fulfilment check
   // (whole_order_in_shipment) proves it (eval, #350764).
   const wholeOrder = summaryText.match(/\b(?:complete|entire|whole|full)\s+order\b|\ball (?:of )?the (?:items|goods|products)\b/i);
@@ -200,14 +260,15 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
 
   // 5. truth: the production validator, unchanged
   const n = toNarrative(d, ctx.facts.map((f) => f.id));
+  const family = notAsDescribed ? product_not_as_described : item_not_received;
   const res = validateNarrative({
     narrative: n,
     approvedFacts: ctx.facts as EvidenceFact[],
-    reasonCodeModule: resolveReasonCodeModuleForContext(null, "PRODUCT_NOT_RECEIVED"),
+    reasonCodeModule: resolveReasonCodeModuleForContext(null, notAsDescribed ? "PRODUCT_UNACCEPTABLE" : "PRODUCT_NOT_RECEIVED"),
     packageMode: "full",
     internalOnlyFactIds: [],
-    extraHardPhrases: item_not_received.prohibitedBankPhrases,
-    guardedPhrases: item_not_received.guardedBankPhrases,
+    extraHardPhrases: family.prohibitedBankPhrases,
+    guardedPhrases: family.guardedBankPhrases,
     internalConstraints: {
       ...NO_INTERNAL_CONSTRAINTS,
       deliveryPostDatesDispute: deliveryPostDatesDispute(ctx.facts as EvidenceFact[], ctx.disputeOpenedAt),

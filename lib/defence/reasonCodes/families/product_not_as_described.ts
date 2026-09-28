@@ -75,14 +75,12 @@ export const product_not_as_described: ReasonCodeFamily = {
     //    tracking number do not corroborate each other (as item_not_received v9).
     /\bcorroborat\w*\b/i,
     /\bindependent(?:ly)?\s+(?:confirm\w*|support\w*|establish\w*|record\w*)\b/i,
-    // 8. Arrival is not in dispute (maintainer, 2026-09-28): the parcel's
-    //    journey stays out of the letter. Delivery and tracking facts are no
-    //    longer allowed for this module; this is the net for the prose.
-    /\b(?:carrier|tracking|courier|postal\s+service)\b/i,
-    /\b(?:was|were|been|confirmed|recorded|marked)\s+(?:as\s+)?delivered\b|\bdelivered\s+(?:on|to)\b|\bconfirmed\s+delivery\b|\bdelivery\s+(?:confirmation|date|record|scan|event)\b/i,
-    /\b(?:shipped|dispatched)\s+(?:on|via|with|by)\b|\bin\s+transit\b/i,
-    /\b(?:was|were|been|confirms?|confirmed|shows?|marked)\s+(?:as\s+)?fulfil+ed\b|\bfulfil+ed\s+(?:on|by|via)\b/i,
-    /\bleft\s+the\s+merchant\b|\b(?:sent|posted|handed\s+over)\s+to\s+the\s+(?:buyer|customer|cardholder)\b/i,
+    // 8. (Removed 2026-09-28, evening.) Delivery words were banned here that
+    //    morning on a misreading of the maintainer ("why even touch upon
+    //    delivery?" meant: don't LEAD with it). The maintainer then rejected a
+    //    letter for losing the sequence: "What about delivery? What about
+    //    opening the chargeback?" Delivery is stated once, as part of the
+    //    sequence (docs/plans/defence-letter-structure.plan.md §1.2).
     // "the item as listed / as advertised" reads as a conformity claim; the
     // claim restated ("not as described") stays legal.
     /(?<!\bnot\s)\bas\s+(?:listed|advertised|pictured|shown\s+in\s+the\s+listing)\b/i,

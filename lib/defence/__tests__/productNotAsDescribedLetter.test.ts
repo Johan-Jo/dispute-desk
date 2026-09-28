@@ -69,17 +69,18 @@ describe("not-as-described: conclusions the records cannot carry are refused", (
     "The customer did not contact the merchant before opening the dispute.",
     "The claim is an unsupported assertion.",
     "In the absence of any return, the claim should fail.",
-    // Arrival is not in dispute (maintainer, 2026-09-28).
-    "The carrier confirmed delivery on 15 September 2026.",
-    "YunExpress recorded delivery confirmation for this shipment (tracking number [tracking]).",
-    "The order was delivered on 5 September 2026.",
-    "The parcel was shipped on 2 September via DHL.",
-    "The shipment is in transit.",
-    "The order record confirms it was fulfilled.",
-    "The order record further shows the goods left the merchant.",
     "The buyer selected and paid for the item as listed.",
   ])("refuses: %s", (text) => {
     expect(refusals(text).length).toBeGreaterThan(0);
+  });
+
+  // The morning of 2026-09-28 banned the parcel's journey; the maintainer
+  // rejected the resulting letter for losing the sequence the same evening.
+  it.each([
+    "The carrier recorded delivery on 15 September 2026.",
+    "The dispute was opened eight days after the carrier recorded delivery.",
+  ])("allows the sequence: %s", (text) => {
+    expect(refusals(text)).toEqual([]);
   });
 });
 
@@ -183,8 +184,8 @@ describe("not-as-described: the writer is not shown the fulfilment status", () =
       manualEvidence: [], internalOnlyFactIds: [], missingEvidence: [], strategies: [],
     } as never) as { approvedFacts: Array<{ value: Record<string, unknown> }> };
 
-  it("drops fulfillmentStatus for not-as-described", () => {
-    expect(payloadFor("13.3").approvedFacts[0].value).not.toHaveProperty("fulfillmentStatus");
+  it("keeps fulfillmentStatus for not-as-described (the sequence, 2026-09-28 evening)", () => {
+    expect(payloadFor("13.3").approvedFacts[0].value).toHaveProperty("fulfillmentStatus", "FULFILLED");
     expect(payloadFor("13.3").approvedFacts[0].value).toHaveProperty("channel", "web");
   });
 
