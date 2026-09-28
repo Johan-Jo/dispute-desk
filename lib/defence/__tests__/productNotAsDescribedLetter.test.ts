@@ -14,6 +14,8 @@ import { product_not_as_described_listing_as_purchased } from "../strategies/pro
 import { product_not_as_described_narrow_fallback } from "../strategies/product_not_as_described_narrow_fallback";
 import { product_unacceptable } from "../reasonCodes/product_unacceptable";
 import { NO_INTERNAL_CONSTRAINTS } from "../internalConstraints";
+import { buildLlmFactPayload } from "../narrativeWriter";
+import { resolveReasonCodeModule } from "../reasonCodes/registry";
 
 function refusals(text: string, family = product_not_as_described, packageMode: "full" | "narrow" = "narrow") {
   return runPhraseAndGuardChecks({
@@ -60,9 +62,6 @@ describe("not-as-described: conclusions the records cannot carry are refused", (
     "The order arrived in perfect condition.",
     "The listing shown is the listing at the time of purchase.",
     "The order was delivered within the expected timeframe.",
-    "The transaction passed AVS and CVV checks.",
-    "The IP address matches the billing region.",
-    "The payment was authenticated with 3-D Secure.",
     // From the PR 1 comparison letters (#100411, 2026-09-28).
     "No product listing or customer communication evidence has been submitted to support the buyer's assertion that the goods differed from what was advertised.",
     "The buyer has not, on the available record, engaged a return or resolution process with the merchant.",
@@ -70,6 +69,15 @@ describe("not-as-described: conclusions the records cannot carry are refused", (
     "The customer did not contact the merchant before opening the dispute.",
     "The claim is an unsupported assertion.",
     "In the absence of any return, the claim should fail.",
+    // Arrival is not in dispute (maintainer, 2026-09-28).
+    "The carrier confirmed delivery on 15 September 2026.",
+    "YunExpress recorded delivery confirmation for this shipment (tracking number [tracking]).",
+    "The order was delivered on 5 September 2026.",
+    "The parcel was shipped on 2 September via DHL.",
+    "The shipment is in transit.",
+    "The order record confirms it was fulfilled.",
+    "The order record further shows the goods left the merchant.",
+    "The buyer selected and paid for the item as listed.",
   ])("refuses: %s", (text) => {
     expect(refusals(text).length).toBeGreaterThan(0);
   });
@@ -81,12 +89,18 @@ describe("not-as-described: confident, true sentences pass", () => {
     "The customer ordered the Linen Shirt in size M, blue, for 49.00 EUR.",
     "No return has been recorded in Shopify for this order.",
     "The merchant's listing describes the shirt as 100% linen, retrieved on 28 September 2026.",
-    "The merchant fulfilled the order on 3 September 2026.",
+    "The cardholder states the goods were not as advertised.",
+    "The merchant relies on the absence of any return recorded in Shopify.",
     "The merchant respectfully requests reversal of the chargeback.",
-    "The carrier confirmed delivery on 5 September 2026 (YunExpress, tracking YT2623000704678286).",
-    "The merchant requests that this dispute be resolved in its favour on the basis of the delivery record and the absence of any recorded return.",
+    "The merchant requests that this dispute be resolved in its favour given the absence of any recorded return.",
   ])("passes: %s", (text) => {
     expect(refusals(text)).toEqual([]);
+  });
+});
+
+describe("not-as-described: payment authentication stays citable (blume-box #352552)", () => {
+  it("a liability-shifted 3-D Secure sentence passes", () => {
+    expect(refusals("The cardholder was authenticated by the issuer with 3-D Secure.")).toEqual([]);
   });
 });
 
@@ -143,5 +157,38 @@ describe("not-as-described: PDF thesis lines", () => {
       packageMode: "narrow",
     } as never);
     expect(text).not.toMatch(/cardholder-initiated/);
+  });
+});
+
+describe("not-as-described: the writer is not shown the fulfilment status", () => {
+  const orderFact = {
+    id: "order_confirmation#0",
+    category: "order_record",
+    label: "Order record",
+    value: { fieldKey: "order_confirmation", fulfillmentStatus: "FULFILLED", channel: "web", confirmationSent: true },
+    source: "shopify_order",
+    sourceRef: null,
+    strength: "supporting",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+  };
+  const payloadFor = (code: string) =>
+    buildLlmFactPayload({
+      packageId: "p", disputeId: "d", reasonCode: code, packageMode: "narrow", caseStrength: "moderate",
+      reasonCodeModule: resolveReasonCodeModule(code), approvedFacts: [orderFact],
+      manualEvidence: [], internalOnlyFactIds: [], missingEvidence: [], strategies: [],
+    } as never) as { approvedFacts: Array<{ value: Record<string, unknown> }> };
+
+  it("drops fulfillmentStatus for not-as-described", () => {
+    expect(payloadFor("13.3").approvedFacts[0].value).not.toHaveProperty("fulfillmentStatus");
+    expect(payloadFor("13.3").approvedFacts[0].value).toHaveProperty("channel", "web");
+  });
+
+  it("keeps it for item-not-received", () => {
+    expect(payloadFor("13.1").approvedFacts[0].value).toHaveProperty("fulfillmentStatus", "FULFILLED");
   });
 });

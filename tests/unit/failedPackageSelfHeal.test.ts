@@ -288,8 +288,11 @@ describe("the versions are real, not placeholders", () => {
      * false "prior to the dispute" sentence reached a scheduled letter.
      *
      * 15 → 16 on 2026-09-28: not-as-described family bans hedge lead-ins and
-     * conformity conclusions (not-as-described plan PR 1, D5). */
-    expect(VALIDATOR_VERSION).toBe(16);
+     * conformity conclusions (not-as-described plan PR 1, D5).
+     *
+     * 16 → 17 on 2026-09-28: not-as-described letters may not mention the
+     * parcel's journey — arrival is not in dispute. */
+    expect(VALIDATOR_VERSION).toBe(17);
   });
 
   it("unblocks the row that proved the pin is not decorative", () => {

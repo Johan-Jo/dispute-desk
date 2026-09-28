@@ -176,8 +176,11 @@ import type {
  *      listing", "not defective", condition claims), dating the listing to the
  *      purchase, unsupported delivery-window claims and payment-authentication
  *      signals (not-as-described plan PR 1).
+ * v17 (2026-09-28) — product_not_as_described bans carrier / tracking /
+ *      delivered-on / shipped-on / in-transit wording: arrival is not in
+ *      dispute for this family (maintainer).
  */
-export const VALIDATOR_VERSION = 16;
+export const VALIDATOR_VERSION = 17;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,

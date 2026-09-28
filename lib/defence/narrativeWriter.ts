@@ -24,6 +24,7 @@
 
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
 import { familyKeyForModule } from "./reasonCodes/familyRegistry";
+import { familyOmitsArrival } from "./chronology";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
 import {
@@ -220,7 +221,10 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // hedged framing for narrow packages and states what a listing / delivery
 // record can and cannot show; both family strategies and the module prompt
 // no longer date the listing to the purchase (plan PR 1, D5).
-const PROMPT_VERSION = 41;
+// v42 (2026-09-28) — not-as-described letters leave delivery out entirely:
+// arrival is not in dispute (module v5 drops delivery/tracking; PayPal overlay
+// and family overlay say so).
+const PROMPT_VERSION = 42;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -788,7 +792,25 @@ export function stripDeliveryHashInputs<T>(value: T): T {
   return out as T;
 }
 
+/**
+ * Arrival is not in dispute for these families (maintainer, 2026-09-28): the
+ * letter leaves the parcel's journey out. The order record's fulfilment status
+ * is withheld from the WRITER only — claim guards still read the full fact.
+ * An instruction alone did not hold: shown `fulfillmentStatus: FULFILLED`, the
+ * model wrote "the order record confirms it was fulfilled" on every draft.
+ */
+function withoutArrivalFields(
+  value: unknown,
+  category: string,
+  familyKey: string | null,
+): unknown {
+  if (!value || typeof value !== "object" || category !== "order_record" || !familyOmitsArrival(familyKey)) return value;
+  const { fulfillmentStatus: _fulfillmentStatus, ...rest } = value as Record<string, unknown>;
+  return rest;
+}
+
 export function buildLlmFactPayload(input: NarrativeInput): Record<string, unknown> {
+  const payloadFamily = familyKeyForModule(input.reasonCodeModule.key);
   // Filter: never expose submission-risk facts unless includeInBankNarrative
   // override. Delegated to `lib/defence/bankInclusion.ts`, which owns the rule
   // AND names this call site's divergence from it (C-1): the payload filter is
@@ -821,12 +843,16 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       // used to survive here even though the codes and the summary were
       // withheld, and the model wrote an address-verification assertion from
       // the bare boolean. See `projectPaymentVerificationValueForBank`.
-      value: stripDeliveryHashInputs(
-        projectPaymentVerificationValueForBank(
-          projectScreeningValueForBank(f.value),
-          f.bankEligible === true,
-          f.category,
+      value: withoutArrivalFields(
+        stripDeliveryHashInputs(
+          projectPaymentVerificationValueForBank(
+            projectScreeningValueForBank(f.value),
+            f.bankEligible === true,
+            f.category,
+          ),
         ),
+        f.category,
+        payloadFamily,
       ),
     }))
     .filter((f) => f.value !== null);
