@@ -76,6 +76,21 @@ export function computeEvidenceHash(input: {
       facts,
       manual,
     },
-    { dropKeys: VOLATILE_TIMESTAMP_KEYS },
+    { dropKeys: EVIDENCE_HASH_DROP_KEYS },
   );
 }
+
+/**
+ * This caller's drop set: the shared volatile timestamps plus the ONE reserved
+ * observation key the fulfillment collector writes, `carrierStatusObservedAt`
+ * — when a build READ a carrier status, never when the parcel moved. Without
+ * it every unchanged re-read rotated the hash and staled every in-transit
+ * draft (non-receipt plan §5.3). Kept here, not in the shared canonicaliser,
+ * so the post-outcome snapshot hasher (DROP_NOTHING) is untouched. The generic
+ * `observedAt` is NOT usable: lib/liabilityShift/sessions/ingest.ts writes
+ * `consentSignals.observedAt`, and the drop applies at every depth.
+ */
+export const EVIDENCE_HASH_DROP_KEYS: ReadonlySet<string> = new Set([
+  ...VOLATILE_TIMESTAMP_KEYS,
+  "carrierStatusObservedAt",
+]);

@@ -45,6 +45,9 @@ export type AutomationReasonCode =
   | "hard_block"
   | "below_completeness_threshold"
   | "strength_insufficient"
+  /** Non-receipt plan rev 5 §6.1.4: strong under the revised delivery rollup,
+   *  not under the previous one. Held for the deadline until §11 Q-7. */
+  | "strength_upgraded_timing_held"
   | "review_required_present"
   | "assessment_stale"
   | "automation_disabled"

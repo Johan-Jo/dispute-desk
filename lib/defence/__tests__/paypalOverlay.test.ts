@@ -65,16 +65,17 @@ describe("paypalCategoryForReason", () => {
 });
 
 describe("buildPaypalOverlay — the reason decides what leads", () => {
-  it("tells the writer delivery is not conformity on a not-as-described claim", () => {
+  it("keeps arrival out of a not-as-described claim and never dates the listing to the purchase", () => {
     const overlay = buildPaypalOverlay({ shopifyReason: "PRODUCT_UNACCEPTABLE" });
-    expect(overlay).toContain("DELIVERY IS NOT CONFORMITY");
-    expect(overlay).toContain("listing as it appeared at the time of purchase");
+    expect(overlay).toContain("ARRIVAL IS NOT IN DISPUTE");
+    expect(overlay).toContain("Leave the parcel's journey out entirely");
+    expect(overlay).not.toMatch(/at the time of purchase/i);
   });
 
   it("leads with delivery on an item-not-received claim", () => {
     const overlay = buildPaypalOverlay({ shopifyReason: "PRODUCT_NOT_RECEIVED" });
     expect(overlay).toContain("delivery\nscan");
-    expect(overlay).not.toContain("DELIVERY IS NOT CONFORMITY");
+    expect(overlay).not.toContain("ARRIVAL IS NOT IN DISPUTE");
   });
 
   it("refuses to let a successful payment stand as authorization proof", () => {

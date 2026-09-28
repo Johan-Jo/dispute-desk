@@ -25,10 +25,11 @@ import type {
 } from "@/lib/pipeline/contracts";
 import { RETIRED_PAYLOAD_KEYS } from "@/lib/evidence/model/retiredKeys";
 import { validateComposedDocument } from "../validateNarrative";
+import type { InternalNarrativeConstraints } from "../internalConstraints";
 import type {
   ComposedDocumentBlock,
   EvidenceFact,
-  FactPredicateId,
+  GuardedBankPhrase,
   PackageMode,
 } from "../types";
 import type { OrphanedClaim } from "./projectFromPlan";
@@ -70,7 +71,9 @@ export interface ValidatePackageDocumentInput {
   missingRecordIds: readonly string[];
   packageMode: PackageMode;
   extraHardPhrases?: readonly RegExp[];
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (validator v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 /** Any prose at all in a block — thesis, body or fallback. */
@@ -134,6 +137,7 @@ export function validatePackageDocument(
     packageMode: input.packageMode,
     extraHardPhrases: input.extraHardPhrases,
     guardedPhrases: input.guardedPhrases,
+    internalConstraints: input.internalConstraints,
   });
   for (const error of composed.errors) codes.add(error.rule as DocumentFailureCode);
 

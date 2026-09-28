@@ -30,7 +30,7 @@ import {
   isRetiredFieldKey,
   stripRetiredPayloadKeys,
 } from "@/lib/evidence/model/retiredKeys";
-import { trackingLinkUrl } from "@/lib/carriers/trackingLinkUrl";
+import { isParcelIdentifier, trackingLinkUrl } from "@/lib/carriers/trackingLinkUrl";
 import { isBankIncludedFact } from "./bankInclusion";
 import { evaluateAllPredicates } from "./factPredicates";
 import type {
@@ -306,6 +306,303 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
  * number at all (Shopify records a tracking row with only a URL sometimes)
  * are skipped so a URL-only row can't shadow a real number.
  */
+type TrackingRow = { carrier?: unknown; number?: unknown; url?: unknown };
+
+interface CitedShipment {
+  instanceKey: string;
+  proofType: string;
+  tracking: TrackingRow | null;
+  deliveredAt: string | null;
+  observedAt: string | null;
+  inTransitSince: string | null;
+}
+
+const PROOF_RANK_FOR_CITATION: Record<string, number> = {
+  signature_confirmed: 5,
+  delivered_confirmed: 4,
+  delivered_unverified: 3,
+  in_transit: 2,
+  returned_to_sender: 1,
+  label_created: 0,
+};
+
+function trackingRowsOf(f: Record<string, unknown>): TrackingRow[] {
+  return Array.isArray(f.tracking)
+    ? (f.tracking as unknown[]).filter(
+        (r): r is TrackingRow => !!r && typeof r === "object",
+      )
+    : [];
+}
+
+/** The shipment's citable tracking row: a parcel identifier first, then any
+ *  numbered row, then a url/carrier-only row. */
+function bestTrackingRow(f: Record<string, unknown>): TrackingRow | null {
+  const rows = trackingRowsOf(f);
+  const numbered = rows.filter(
+    (r) => typeof r.number === "string" && r.number.trim().length > 0,
+  );
+  return (
+    numbered.find((r) =>
+      isParcelIdentifier(
+        typeof r.carrier === "string" ? r.carrier : null,
+        r.number as string,
+      ),
+    ) ??
+    numbered[0] ??
+    rows.find((r) => r.url || r.carrier) ??
+    null
+  );
+}
+
+function shipmentKey(f: Record<string, unknown>, index: number): string {
+  if (typeof f.fulfillmentId === "string" && f.fulfillmentId) return f.fulfillmentId;
+  const n = bestTrackingRow(f)?.number;
+  return typeof n === "string" && n ? n : `#${index}`;
+}
+
+/** A shipment whose own record an issuer may be shown: a carrier-confirmed
+ *  tier, or a named-carrier parcel in transit (§4.1(b)). `delivered_unverified`
+ *  is NOT — it is a Shopify fulfilment status with no carrier event behind it. */
+function isBankCitableShipment(c: {
+  proofType: string;
+  tracking: TrackingRow | null;
+  parcel: boolean;
+}): boolean {
+  if (c.proofType === "signature_confirmed" || c.proofType === "delivered_confirmed") return true;
+  const carrier = typeof c.tracking?.carrier === "string" ? c.tracking.carrier.trim() : "";
+  return c.proofType === "in_transit" && c.parcel && carrier.length > 0;
+}
+
+/**
+ * The ONE shipment a delivery fact cites (non-receipt plan §4.1(f)): a
+ * bank-citable shipment first, then the best-evidenced by its OWN tier,
+ * preferring a parcel identifier over a batch reference at equal tier, ties
+ * broken by shipment key — never by array position, so reversing
+ * `fulfillments[]` cites the same parcel. Null when the payload carries no
+ * per-shipment tiers (older packs, manual uploads).
+ *
+ * Citability outranks tier because `delivered_unverified` (3) outranks
+ * `in_transit` (2): blume-box #360980's USPS batch reference is a SUCCESS
+ * fulfilment, so it resolves `delivered_unverified`, won the sort, and left
+ * the case with nothing an issuer could be shown while the real GOFO parcel
+ * was in transit.
+ */
+function citedShipment(payload: Record<string, unknown>): CitedShipment | null {
+  const fulfillments = Array.isArray(payload.fulfillments)
+    ? (payload.fulfillments as unknown[]).filter(
+        (f): f is Record<string, unknown> => !!f && typeof f === "object",
+      )
+    : [];
+  const candidates = fulfillments
+    .map((f, i) => {
+      const proofType = typeof f.shipmentProofType === "string" ? f.shipmentProofType : null;
+      if (!proofType) return null;
+      const tracking = bestTrackingRow(f);
+      const parcel = isParcelIdentifier(
+        typeof tracking?.carrier === "string" ? tracking.carrier : null,
+        typeof tracking?.number === "string" ? tracking.number : null,
+      );
+      return {
+        instanceKey: shipmentKey(f, i),
+        proofType,
+        tracking,
+        parcel,
+        deliveredAt: typeof f.deliveredAt === "string" ? f.deliveredAt : null,
+        observedAt:
+          typeof f.carrierStatusObservedAt === "string" ? f.carrierStatusObservedAt : null,
+        inTransitSince: typeof f.inTransitSince === "string" ? f.inTransitSince : null,
+      };
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null);
+  if (candidates.length === 0) return null;
+  candidates.sort(
+    (a, b) =>
+      Number(isBankCitableShipment(b)) - Number(isBankCitableShipment(a)) ||
+      (PROOF_RANK_FOR_CITATION[b.proofType] ?? -1) - (PROOF_RANK_FOR_CITATION[a.proofType] ?? -1) ||
+      Number(b.parcel) - Number(a.parcel) ||
+      a.instanceKey.localeCompare(b.instanceKey),
+  );
+  const { parcel: _parcel, ...best } = candidates[0];
+  return best;
+}
+
+/**
+ * Every shipment on a multi-shipment order, as the letter may describe it
+ * (blume-box #360980: two products in two parcels, and the letter named one).
+ * An issuer reads a letter about one parcel as an account of half the order.
+ *
+ * Each entry carries only what ITS OWN record supports:
+ *   - the products in it and the date the merchant fulfilled it;
+ *   - `reference` with `referenceIsTrackingNumber` — a batch or shipping-app
+ *     reference is never presented as a tracking number, and gets no link;
+ *   - `deliveredAt` only on a carrier-confirmed tier;
+ *   - `carrierStatusObservedAt` only in transit (hash-exempt at every depth).
+ * A returned parcel is left out: the letter never volunteers it.
+ * Sorted by shipment key, so array order never changes the value or the hash.
+ * Null for a single shipment — the fact itself already describes it.
+ */
+function shipmentsForLetter(payload: Record<string, unknown>): Array<Record<string, unknown>> | null {
+  const fulfillments = Array.isArray(payload.fulfillments)
+    ? (payload.fulfillments as unknown[]).filter(
+        (f): f is Record<string, unknown> => !!f && typeof f === "object",
+      )
+    : [];
+  if (fulfillments.length <= 1) return null;
+  const str = (v: unknown): string | null =>
+    typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+  const out = fulfillments
+    .map((f, i) => {
+      const proofType = str(f.shipmentProofType);
+      if (!proofType || proofType === "returned_to_sender") return null;
+      const row = bestTrackingRow(f);
+      const carrier = str(row?.carrier);
+      const reference = str(row?.number);
+      const isTracking = reference !== null && isParcelIdentifier(carrier, reference);
+      const confirmed = proofType === "delivered_confirmed" || proofType === "signature_confirmed";
+      const items = Array.isArray(f.items)
+        ? (f.items as unknown[])
+            .filter((it): it is Record<string, unknown> => !!it && typeof it === "object")
+            .map((it) => ({
+              title: str(it.title),
+              quantity: typeof it.quantity === "number" ? it.quantity : null,
+            }))
+            .filter((it) => it.title !== null)
+        : [];
+      return {
+        key: shipmentKey(f, i),
+        entry: {
+          carrier,
+          reference,
+          referenceIsTrackingNumber: isTracking,
+          trackingUrl: isTracking
+            ? trackingLinkUrl({ company: carrier, number: reference, url: str(row?.url) })
+            : null,
+          items,
+          // The merchant's own "marked as shipped" date — not proof of
+          // dispatch. Carried only for a parcel with NO carrier record, where
+          // it is the whole account; beside a carrier record it adds nothing
+          // and can expose a late shipment (#360980, prompt v22).
+          fulfilledAt:
+            confirmed || proofType === "in_transit" ? null : str(f.createdAt),
+          // Timeline-only: matches Shopify's "marked 1 item as fulfilled" event
+          // to its product. Stripped from the model payload
+          // (`stripDeliveryHashInputs`).
+          fulfillmentEventAt: str(f.createdAt),
+          proofType,
+          deliveredAt: confirmed ? str(f.deliveredAt) : null,
+          ...(proofType === "in_transit" && str(f.carrierStatusObservedAt) && !str(f.inTransitSince)
+            ? { carrierStatusObservedAt: str(f.carrierStatusObservedAt) }
+            : {}),
+          ...(proofType === "in_transit" && str(f.inTransitSince)
+            ? { inTransitSince: str(f.inTransitSince) }
+            : {}),
+        },
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((x) => x.entry);
+  return out.length > 1 ? out : null;
+}
+
+/** Every shipment's identity and own tier, sorted by key — the shipment-scoped
+ *  validator checks a sentence naming a shipment against THAT shipment. */
+function shipmentIndexOf(payload: Record<string, unknown>): Array<{
+  instanceKey: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  proofType: string | null;
+}> {
+  const fulfillments = Array.isArray(payload.fulfillments)
+    ? (payload.fulfillments as unknown[]).filter(
+        (f): f is Record<string, unknown> => !!f && typeof f === "object",
+      )
+    : [];
+  return fulfillments
+    .map((f, i) => {
+      const row = bestTrackingRow(f);
+      return {
+        instanceKey: shipmentKey(f, i),
+        carrier: typeof row?.carrier === "string" ? row.carrier : null,
+        trackingNumber: typeof row?.number === "string" ? row.number : null,
+        proofType: typeof f.shipmentProofType === "string" ? f.shipmentProofType : null,
+      };
+    })
+    .sort((a, b) => a.instanceKey.localeCompare(b.instanceKey));
+}
+
+/**
+ * Supporting evidence is not bank-citable — with ONE narrow exception
+ * (non-receipt plan §4.1(b)). A shipment in the carrier's possession is
+ * shipment CONTEXT: it may be cited, never scored. Only when the cited
+ * shipment itself is `in_transit`, with a named carrier and a parcel
+ * identifier (not a batch reference). A printed label never qualifies.
+ */
+export function isCitableShipmentContext(
+  fieldKey: string,
+  value: Record<string, unknown>,
+): boolean {
+  if (fieldKey !== "delivery_proof" && fieldKey !== "shipping_tracking") return false;
+  if (value.proofType !== "in_transit") return false;
+  const carrier = typeof value.carrier === "string" ? value.carrier.trim() : "";
+  const number = typeof value.trackingNumber === "string" ? value.trackingNumber : null;
+  return carrier.length > 0 && isParcelIdentifier(carrier, number);
+}
+
+/**
+ * The store's own records: its published policies and the order as placed.
+ * `supporting` by the strength rubric (a policy nobody accepted at checkout
+ * proves nothing on its own), and that stays true — they are never scored.
+ * But a record the argument plan chose must be CITABLE: before this, bank
+ * eligibility was read off strength alone, so the plan included the refund
+ * policy on 133 of 242 prod letters (30 days to 2026-09-28) and not one letter
+ * could cite it, nor the order record (bank-claim plan F1).
+ *
+ * Context never carries a letter by itself: see `hasArgumentBeyondRecordContext`.
+ */
+// `cancellation_policy` is deliberately absent: policySource fills it from the
+// store's TERMS OF SERVICE, and calling that a cancellation policy to an issuer
+// would be inaccurate.
+const RECORD_CONTEXT_FIELDS: ReadonlySet<string> = new Set([
+  "refund_policy",
+  "shipping_policy",
+  "order_confirmation",
+]);
+
+/**
+ * A product listing DisputeDesk collected from Shopify (not-as-described
+ * PR 3) is citable: supporting (never scored, plan D4) but the core of a
+ * not-as-described letter. A merchant upload keeps its current handling.
+ * Not record context: a listing is an argument, not just the store's paper.
+ */
+export function isCitableCollectedListing(fieldKey: string, value: Record<string, unknown>): boolean {
+  return fieldKey === "product_description" && value.collected === true;
+}
+
+export function isCitableRecordContext(fieldKey: string): boolean {
+  return RECORD_CONTEXT_FIELDS.has(fieldKey);
+}
+
+/** True for a fact that is only there as record context (policy / order). */
+export function isRecordContextFact(fact: {
+  strength: string;
+  value: Record<string, unknown>;
+}): boolean {
+  const fieldKey = typeof fact.value?.fieldKey === "string" ? fact.value.fieldKey : "";
+  return fact.strength === "supporting" && isCitableRecordContext(fieldKey);
+}
+
+/**
+ * A letter needs something to argue besides the store's own records. Policies
+ * and the order record may be cited, but a list holding nothing else is not
+ * an argument — the build skips it exactly as it skipped an empty list.
+ */
+export function hasArgumentBeyondRecordContext(
+  facts: ReadonlyArray<{ strength: string; value: Record<string, unknown> }>,
+): boolean {
+  return facts.some((f) => !isRecordContextFact(f));
+}
+
 function firstTrackingEntry(
   payload: Record<string, unknown>,
 ): { carrier?: unknown; number?: unknown; url?: unknown } | null {
@@ -405,6 +702,13 @@ function communicationItemIds(section: PackSectionLike): string[] {
   return [...new Set(ids)].sort();
 }
 
+/** policySource's field ← Shopify policy type (lib/packs/sources/policySource.ts). */
+const POLICY_TYPE_FOR_FIELD: Record<string, string> = {
+  refund_policy: "refunds",
+  shipping_policy: "shipping",
+  cancellation_policy: "terms",
+};
+
 function extractValue(
   fieldKey: string,
   payload: Record<string, unknown> | null,
@@ -488,13 +792,26 @@ function extractValue(
       //
       // Flat-payload fallbacks are kept: not every collector nests, and a
       // manual upload may set the fields directly.
-      const tracking = firstTrackingEntry(p);
+      // ONE coherent shipment (non-receipt plan §4.1(f)). When the collector
+      // wrote per-shipment tiers, cite the best-evidenced shipment and take its
+      // carrier, number, status and dates TOGETHER — never the first tracking
+      // row paired with a section-wide tier from a different parcel (blume-box
+      // #360980: a USPS batch reference first, the real GOFO parcel second).
+      // Older packs without per-shipment tiers keep the previous behaviour.
+      const cited = citedShipment(p);
+      const tracking = cited?.tracking ?? firstTrackingEntry(p);
       const str = (v: unknown): string | null =>
         typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
       const carrier = str(tracking?.carrier) ?? str(p.carrier);
       const trackingNumber = str(tracking?.number) ?? str(p.trackingNumber);
+      const singleShipment =
+        !Array.isArray(p.fulfillments) || (p.fulfillments as unknown[]).length <= 1;
       return {
-        proofType: typeof p.proofType === "string" ? p.proofType : null,
+        proofType: cited
+          ? cited.proofType
+          : typeof p.proofType === "string"
+            ? p.proofType
+            : null,
         carrier,
         trackingNumber,
         // The LLM is instructed to cite this URL verbatim, so whatever is
@@ -509,7 +826,15 @@ function extractValue(
           number: trackingNumber,
           url: str(tracking?.url) ?? str(p.trackingUrl),
         }),
-        deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
+        // The cited shipment's own date. The section-level `deliveredAt` is
+        // the earliest confirmed date across ALL shipments, so it is used only
+        // when there is one shipment (it is then the same parcel).
+        deliveredAt: cited
+          ? (cited.deliveredAt ??
+            (singleShipment && typeof p.deliveredAt === "string" ? p.deliveredAt : null))
+          : typeof p.deliveredAt === "string"
+            ? p.deliveredAt
+            : null,
         signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
         // Reconciled per-shipment delivery state, hashed under its own name so
         // `evidence_hash` moves on ANY status change — including a return on
@@ -518,6 +843,31 @@ function extractValue(
         // hash/staleness inputs; the narrative cites `proofType`, the carrier
         // and the tracking number, never these fields directly.
         ...deliveryStatusesOf(p),
+        // When the cited status was READ (never when the parcel moved) and the
+        // per-shipment index the shipment-scoped validator checks sentences
+        // against. Both are hash-exempt / LLM-stripped as appropriate:
+        // `carrierStatusObservedAt` is dropped from evidence_hash
+        // (computeEvidenceHash) and `shipmentIndex` from the LLM payload
+        // (stripDeliveryHashInputs).
+        // Only for an IN-TRANSIT citation, where it is the only date we hold.
+        // On a delivered shipment the carrier's own date is the evidence, and
+        // a retrieval date there was written up as "observed and confirmed on
+        // 23 September, corroborating the delivery" (cay-collective #14784).
+        // Only when no dated event exists: beside `inTransitSince` a retrieval
+        // time adds nothing and was written up as "status was retrieved on 23
+        // September" next to the real date (#360980, prompt v23).
+        ...(cited?.observedAt && cited.proofType === "in_transit" && !cited.inTransitSince
+          ? { carrierStatusObservedAt: cited.observedAt }
+          : {}),
+        // The dated event that first recorded the parcel in the carrier's
+        // hands. Unlike the retrieval time it IS a movement date, and it is
+        // what lets the letter say "in transit since 17 September".
+        ...(cited?.inTransitSince && cited.proofType === "in_transit"
+          ? { inTransitSince: cited.inTransitSince }
+          : {}),
+        ...(cited ? { shipmentIndex: shipmentIndexOf(p) } : {}),
+        // Every shipment on the order, for the letter (see shipmentsForLetter).
+        ...(cited && shipmentsForLetter(p) ? { shipments: shipmentsForLetter(p) } : {}),
         // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It
         // was the licence the LLM read for "delivered to the verified
         // address", and its input was a billing-vs-shipping city comparison.
@@ -581,12 +931,31 @@ function extractValue(
       };
     case "refund_policy":
     case "shipping_policy":
-    case "cancellation_policy":
+    case "cancellation_policy": {
+      // What the letter may say about a policy: that it is published on the
+      // store, and where. Its TERMS are not in the fact (the text is in the
+      // merchant's language and unread), so the letter must never describe
+      // them. Acceptance appears only when it happened: a `false` here was
+      // written straight into letters as "not accepted at checkout" — an
+      // admission against the merchant (bank-claim plan F1 canary).
+      const policyType = POLICY_TYPE_FOR_FIELD[fieldKey];
+      const published = Array.isArray(p.policies)
+        ? (p.policies as Array<Record<string, unknown>>).find(
+            (x) => x && x.policyType === policyType && typeof x.publishedUrl === "string",
+          )
+        : undefined;
       return {
-        acceptedAtCheckout: p.acceptedAtCheckout === true,
-        acceptanceTimestamp:
-          typeof p.acceptanceTimestamp === "string" ? p.acceptanceTimestamp : null,
+        ...(p.acceptedAtCheckout === true
+          ? {
+              acceptedAtCheckout: true,
+              acceptanceTimestamp:
+                typeof p.acceptanceTimestamp === "string" ? p.acceptanceTimestamp : null,
+            }
+          : {}),
+        publishedOnStore: published !== undefined,
+        publishedUrl: (published?.publishedUrl as string | undefined) ?? null,
       };
+    }
     case "refund_record": {
       // `refundStatus` is the load-bearing key: the refund_processed
       // predicate matches value.refundStatus === "processed". Amount/date
@@ -730,10 +1099,37 @@ function extractValue(
         channel,
       };
     }
-    case "product_description":
+    case "product_description": {
+      // A collected listing (not-as-described PR 3) carries its own copy;
+      // the representative is the first (highest-value line item). Merchant
+      // uploads keep the legacy shape.
+      const listings = Array.isArray(section.data?.listings)
+        ? (section.data.listings as Array<Record<string, unknown>>)
+        : [];
+      const l = listings[0];
+      if (l) {
+        const s = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+        // Shopify's placeholder for a product without variants — never a
+        // real option, never printed (canary #100373: "variant: Default Title").
+        const isDefault = (v: unknown) => typeof v === "string" && /^default title$/i.test(v.trim());
+        return {
+          hasListing: true,
+          collected: true,
+          title: s(l.title),
+          variantTitle: isDefault(l.variantTitle) ? null : s(l.variantTitle),
+          variantOptions: Array.isArray(l.variantOptions)
+            ? (l.variantOptions as Array<{ value?: unknown }>).filter((o) => !isDefault(o?.value))
+            : [],
+          excerpt: s(l.excerpt),
+          sourceUrl: s(l.sourceUrl),
+          retrievedAt: s(l.fetchedAt),
+          listingCount: listings.length,
+        };
+      }
       return {
         hasListing: section.data?.title !== undefined || section.data?.productTitle !== undefined,
       };
+    }
     case "duplicate_explanation":
       return {
         distinct: p.distinct === true,
@@ -888,6 +1284,16 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
         section.data,
       );
 
+      // The ONE supporting-but-citable case: a shipment in the carrier's
+      // possession, cited as context and never scored (plan §4.1(b)).
+      // And the store's own records (policies, the order), cited as context,
+      // never scored (bank-claim plan F1).
+      const citableContext =
+        cat === "supporting" &&
+        (isCitableShipmentContext(fieldKey, value) ||
+          isCitableRecordContext(fieldKey) ||
+          isCitableCollectedListing(fieldKey, value));
+
       const fact: EvidenceFact = {
         id: factId,
         category,
@@ -900,7 +1306,7 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
           !isInternalOnly &&
           !isUnciteableThreeDs &&
           !isUnciteableVerification &&
-          (cat === "strong" || cat === "moderate"),
+          (cat === "strong" || cat === "moderate" || citableContext),
         merchantVisible: true,
         internalOnly: isInternalOnly,
         includeInBankNarrative:
@@ -908,7 +1314,7 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
           !isSubmissionRisk &&
           !isUnciteableThreeDs &&
           !isUnciteableVerification &&
-          (cat === "strong" || cat === "moderate"),
+          (cat === "strong" || cat === "moderate" || citableContext),
         submissionRisk: isSubmissionRisk,
         confidence: null,
       };
@@ -994,7 +1400,8 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
   // Same rule, same result — the expression was identical here, in the Evidence
   // Basis renderer and in the workspace route, and identical-by-comment is how
   // the LLM payload's weaker copy went unnoticed (C-1).
-  const eligible = approved.some(isBankIncludedFact);
+  // Record context (policies, the order) is citable but never enough alone.
+  const eligible = approved.some((f) => isBankIncludedFact(f) && !isRecordContextFact(f));
   if (!eligible) {
     return {
       approved,

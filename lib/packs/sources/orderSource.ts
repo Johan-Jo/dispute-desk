@@ -71,7 +71,10 @@ function fulfillmentChronologyEvents(
     out.push({ message: "Recipient collected the shipment at the pickup point (identification required at collection).", createdAt: latest.collected_at_pickup });
   }
   if (latest.delivered) {
-    out.push({ message: "Carrier confirmed delivery of the shipment to the recipient.", createdAt: latest.delivered });
+    // "to the recipient" claimed more than the record holds: a delivery
+    // status says the parcel was delivered, not who took it (review of
+    // #352543, 2026-09-24).
+    out.push({ message: "Carrier recorded the shipment as delivered.", createdAt: latest.delivered });
   }
   return out;
 }
@@ -93,11 +96,14 @@ export async function collectOrderEvidence(
   if (!order) return [];
 
   const lineItems = order.lineItems.edges.map((e) => ({
+    lineItemId: e.node.id ?? null,
     title: e.node.title,
     variant: e.node.variantTitle,
     quantity: e.node.quantity,
     total: e.node.originalTotalSet.shopMoney.amount,
     currency: e.node.originalTotalSet.shopMoney.currencyCode,
+    presentmentTotal: e.node.originalTotalSet.presentmentMoney?.amount ?? null,
+    presentmentCurrency: e.node.originalTotalSet.presentmentMoney?.currencyCode ?? null,
     sku: e.node.sku,
   }));
 
@@ -116,6 +122,24 @@ export async function collectOrderEvidence(
   // is involved. Address verification belongs to `avs_cvv_match`, which reads
   // the issuer's own response (PR-C2 + PR-C3). The key is retired at every
   // derivation boundary — `lib/evidence/model/retiredKeys.ts`.
+  // Full addresses, kept for the defence package (maintainer, 2026-09-25):
+  // an address claim ("shipped to the billing address", "the carrier's
+  // delivery location matches") is only made with the addresses shown as an
+  // exhibit, so they must be stored. Scrubbed by customers/redact
+  // (lib/webhooks/scrubCustomerData.ts, ADDRESS_KEYS).
+  const fullAddress = (a: typeof order.billingAddress | null | undefined) =>
+    a
+      ? {
+          address1: a.address1 ?? null,
+          address2: a.address2 ?? null,
+          city: a.city ?? null,
+          province: a.province ?? null,
+          provinceCode: a.provinceCode ?? null,
+          zip: (a as { zip?: string | null }).zip ?? null,
+          country: a.country ?? null,
+          countryCode: a.countryCode ?? null,
+        }
+      : null;
   const billingRedacted = redactAddress(order.billingAddress);
   const shippingRedacted = redactAddress(order.shippingAddress);
 
@@ -131,6 +155,10 @@ export async function collectOrderEvidence(
       data: {
         orderId: order.id,
         orderName: order.name,
+        // The order's email address — so a letter can say the shipment
+        // updates in the order history went to it (the history lines name
+        // the address already).
+        email: order.email ?? null,
         createdAt: order.createdAt,
         financialStatus: order.displayFinancialStatus,
         fulfillmentStatus: order.displayFulfillmentStatus,
@@ -143,9 +171,23 @@ export async function collectOrderEvidence(
           total: order.totalPriceSet.shopMoney.amount,
           refunded: order.totalRefundedSet.shopMoney.amount,
           currency: order.totalPriceSet.shopMoney.currencyCode,
+          // The same totals in the customer's currency — what the card was
+          // charged, and so what the dispute is denominated in.
+          presentment: order.totalPriceSet.presentmentMoney
+            ? {
+                subtotal: order.subtotalPriceSet.presentmentMoney?.amount ?? null,
+                shipping: order.totalShippingPriceSet.presentmentMoney?.amount ?? null,
+                tax: order.totalTaxSet.presentmentMoney?.amount ?? null,
+                discounts: order.totalDiscountsSet.presentmentMoney?.amount ?? null,
+                total: order.totalPriceSet.presentmentMoney.amount,
+                currency: order.totalPriceSet.presentmentMoney.currencyCode,
+              }
+            : null,
         },
         billingAddress: billingRedacted,
         shippingAddress: shippingRedacted,
+        billingAddressFull: fullAddress(order.billingAddress),
+        shippingAddressFull: fullAddress(order.shippingAddress),
         customerTenure: order.customer
           ? {
               totalOrders: order.customer.numberOfOrders,

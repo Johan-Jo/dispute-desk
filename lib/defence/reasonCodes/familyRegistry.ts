@@ -130,6 +130,17 @@ export function familyForModule(
   return FAMILIES[familyKey];
 }
 
+/** Non-throwing module → family-key lookup, for callers that must degrade
+ *  rather than fail when a module is unknown (synthetic test modules, a
+ *  module added without family wiring). Unknown → null, and the caller then
+ *  applies no family-specific rule. `familyForModule` stays the strict path. */
+export function familyKeyForModule(
+  moduleKey: string | null | undefined,
+): ReasonCodeFamilyKey | null {
+  if (!moduleKey) return null;
+  return MODULE_TO_FAMILY.get(moduleKey as ReasonCodeModuleKey) ?? null;
+}
+
 /** Resolve a family from either a reason code or an already-resolved
  *  module. Prefers the module's family (since the module routing rule
  *  is the authoritative path) and falls back to the code-only lookup

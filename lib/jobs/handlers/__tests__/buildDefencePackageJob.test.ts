@@ -249,4 +249,53 @@ describe("handleBuildDefencePackage", () => {
     );
     expect(skippedUpdate?.values.failure_code).toBe("no_bank_eligible_facts");
   });
+
+  it("still skips when only the store's own records (policy, order) are citable", async () => {
+    // Bank-claim plan F1: policies and the order record became citable
+    // context. Context alone is not an argument, so no letter is written.
+    const sb = mockSb({
+      pkg: {
+        id: "pkg-1",
+        dispute_id: "disp-1",
+        shop_id: "shop-1",
+        source_pack_id: "pack-1",
+        version: 1,
+        status: "draft",
+        generated_by: "system",
+        evidence_hash: "h",
+        reason_code_module: "product_unacceptable",
+      },
+      pack: {
+        id: "pack-1",
+        shop_id: "shop-1",
+        dispute_id: "disp-1",
+        pack_json: {
+          coverage: { state: "not_covered" },
+          fatal_loss: { triggered: false, reason: null },
+          sections: [
+            { type: "policy", label: "Refund", source: "shop_policy", data: {}, fieldsProvided: ["refund_policy"] },
+            { type: "order", label: "Order", source: "shopify_order", data: { confirmationSent: true }, fieldsProvided: ["order_confirmation"] },
+          ],
+        },
+        checklist_v2: [],
+      },
+      dispute: {
+        id: "disp-1",
+        dispute_gid: "gid://shopify/Dispute/1",
+        reason: "PRODUCT_UNACCEPTABLE",
+        network_reason_code: null,
+        amount: "99.00",
+        currency_code: "USD",
+      },
+      moduleOverride: null,
+    });
+    mockGetServiceClient.mockReturnValue(sb as never);
+
+    const result = await handleBuildDefencePackage(makeJob());
+    expect(result.ok).toBe(true);
+    const skippedUpdate = sb.updates.find(
+      (u) => u.table === "defence_packages" && u.values.status === "skipped",
+    );
+    expect(skippedUpdate?.values.failure_code).toBe("no_bank_eligible_facts");
+  });
 });

@@ -207,6 +207,14 @@ export async function middleware(req: NextRequest) {
       // Without this exemption the middleware returns 401 before the
       // route runs, which is why pixel events never landed before today.
       pathname === "/api/sessions/ingest" ||
+      // "View PDF" opens the defence-package preview in a NEW top-level tab,
+      // outside the partitioned cookie jar of Shopify Admin's iframe, so no
+      // session reaches it. With a signed `t` token (minted by the
+      // session-authenticated workspace API) the ROUTE verifies it against the
+      // package and shop — that is the auth gate here, not the cookie.
+      // Without `t` the request falls through to the normal session gate.
+      (/^\/api\/defence-packages\/[^/]+\/preview$/.test(pathname) &&
+        req.nextUrl.searchParams.has("t")) ||
       (process.env.DD_DEBUG_AGENT_LOG === "1" &&
         pathname === "/api/debug/agent-log") ||
       // TEMP: read-only cay-collective dispute reconcile diagnostic. Self-gates

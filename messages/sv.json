@@ -631,7 +631,17 @@
       "hideFullDefenseLetter": "Dölj försvarsbreve",
       "defenseSectionSummary": "Sammanfattning",
       "defenseSectionConclusion": "Slutsats",
-      "defenseSectionArgument": "Argument"
+      "defenseSectionArgument": "Argument",
+      "productListing": {
+        "present": "Hämtad från din butik {date}: {title}",
+        "currentListingOnly": "Det här är din produktinformation som den ser ut i dag. Shopify sparar inte hur den såg ut när beställningen gjordes.",
+        "absent": "Produkten i den här beställningen saknar beskrivning i din butik, så det finns ingen produktinformation att ta med.",
+        "deleted": "Produkten i den här beställningen har tagits bort från din butik, så dess produktinformation kan inte tas med.",
+        "customItem": "Den här beställningen innehåller en specialartikel utan produktinformation i din butik.",
+        "failed": "Vi kunde inte läsa produktinformationen från Shopify. Vi försöker automatiskt en gång till.",
+        "inaccessible": "DisputeDesk kan inte läsa dina produkter. Öppna DisputeDesk från Shopify Admin och godkänn den produktåtkomst som efterfrågas.",
+        "reconnectForProducts": "Godkänn produktåtkomst"
+      }
     },
     "facts": {
       "title": "Ärendedetaljer",
@@ -734,7 +744,7 @@
     },
     "decisiveHint": {
       "fraud": "leveransbekräftelse, signatur, eller enhets-/sessionskonsistens",
-      "delivery": "leveranssignatur eller matchande fakturerings-/IP-signaler",
+      "delivery": "ett leveransfoto eller en signatur från transportören, eller ett meddelande där kunden bekräftar mottagandet",
       "product": "produktinformation som annonserad och din chargebackpolicy",
       "refund": "dokumenterad chargeback eller kundkommunikation",
       "subscription": "avbokningspolicy och kommunikationstidslinje",
@@ -837,7 +847,6 @@
         "lost": "Vi skickade in dina bevis den {date}. Banken beslutade ändå till kortinnehavarens fördel.",
         "won": "Vi skickade in dina bevis den {date}, och banken beslutade till din fördel."
       },
-      "notDefendedByUs": "Den här tvisten avgjordes innan DisputeDesk skickade in några bevis för den.",
       "factor": {
         "avs_mismatch": "Kortets faktureringsadress stämde inte med adressen på ordern",
         "cardholder_name_mismatch": "Namnet som var registrerat på kortet skilde sig från köparens namn",
@@ -855,6 +864,247 @@
         "title": "Det som sannolikt försvagade ärendet",
         "caveat": "Kortutgivaren delar inte sin exakta motivering. Detta är de starkaste risksignalerna i den fullständiga bedömningen, inklusive signaler som inte skickades till banken.",
         "fraudRecommendation": "Rekommendation: granska eller avbryt framtida högriskordrar manuellt när betalningskontrollen misslyckas eller kortinnehavarens och köparens namn skiljer sig, särskilt om kontot har en tidigare kortreklamation."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Den här tvisten avgjordes innan DisputeDesk installerades.",
+      "sentBeforeInstall": "Ett svar skickades via Shopify den {date}, innan DisputeDesk installerades.",
+      "shopifySent": "Ett svar skickades via Shopify den {date}.",
+      "shopifySentNoDate": "Ett svar skickades via Shopify.",
+      "noneBeforeDeadline": "Banken beslutade den {date}, före svarsfristen och innan något svar hade skickats in.",
+      "noneFiled": "Inget svar skickades in.",
+      "holdReason": {
+        "merchant_conceded": "Du valde att inte bestrida det här ärendet.",
+        "not_shipped": "DisputeDesk höll inne ärendet: ordern skickades aldrig, så det fanns ingen leverans som vi sanningsenligt kunde visa banken.",
+        "refunded": "DisputeDesk höll inne ärendet: ordern hade redan återbetalats.",
+        "covered": "DisputeDesk höll inne ärendet: Shopify Protect täckte den här ordern.",
+        "plan_limit": "DisputeDesk kunde inte ta fram bevis i ärendet: gränsen för din plan var nådd.",
+        "auto_build_off": "DisputeDesk tog inte fram bevis i ärendet: automatisk framtagning var avstängd för din butik.",
+        "awaiting_review": "DisputeDesk höll inne ärendet: det väntade på din granskning innan det skickades in.",
+        "thin_evidence": "DisputeDesk höll inne ärendet: bevisen som fanns var för tunna att argumentera med."
+      }
+    },
+    "decidedView": {
+      "header": {
+        "decided": "Avgjord:"
+      },
+      "hero": {
+        "chipLost": "Slutgiltigt · inget kvar att skicka in",
+        "chipWon": "Slutgiltigt · pengarna är dina"
+      },
+      "outcome": {
+        "titleLost": "Tvisten förlorad",
+        "titleWon": "Tvisten vunnen",
+        "amountLost": "Förlorat belopp",
+        "amountRecovered": "Återvunnet"
+      },
+      "product": {
+        "one": "{title} ({count, plural, one {# artikel} other {# artiklar}})",
+        "many": "{title} och {others} till ({count, plural, one {# artikel} other {# artiklar}})"
+      },
+      "claim": {
+        "FRAUDULENT": "Kunden säger att hen inte gjorde köpet",
+        "UNRECOGNIZED": "Kunden känner inte igen debiteringen",
+        "PRODUCT_NOT_RECEIVED": "Produkten har inte mottagits",
+        "PRODUCT_UNACCEPTABLE": "Produkten stämmer inte med beskrivningen",
+        "SUBSCRIPTION_CANCELLED": "Kunden säger att hen sagt upp prenumerationen",
+        "DUPLICATE": "Kunden säger att hen debiterats två gånger",
+        "CREDIT_NOT_PROCESSED": "Kunden säger att återbetalningen aldrig genomfördes",
+        "GENERAL": "Allmän tvist"
+      },
+      "who": {
+        "label": "Vem som svarade:",
+        "weFiled": "DisputeDesk skickade in dina bevis den {date}."
+      },
+      "summary": {
+        "claim": {
+          "FRAUDULENT": "Kunden sa till sin bank att hen inte gjorde köpet.",
+          "UNRECOGNIZED": "Kunden sa till sin bank att hen inte kände igen debiteringen.",
+          "PRODUCT_NOT_RECEIVED": "Kunden sa till sin bank att ordern aldrig kom fram.",
+          "PRODUCT_UNACCEPTABLE": "Kunden sa till sin bank att produkten inte stämde med beskrivningen.",
+          "SUBSCRIPTION_CANCELLED": "Kunden sa till sin bank att hen redan hade sagt upp prenumerationen.",
+          "DUPLICATE": "Kunden sa till sin bank att hen debiterats två gånger.",
+          "CREDIT_NOT_PROCESSED": "Kunden sa till sin bank att en återbetalning aldrig genomfördes.",
+          "GENERAL": "Kunden bestred debiteringen hos sin bank."
+        },
+        "evidence": "{clauses}.",
+        "evidenceHeld": "{clauses}, så det fanns inget ärligt ärende att lägga fram.",
+        "response": {
+          "weFiledWon": "DisputeDesk skickade in bevisen den {date}, och banken beslutade till din fördel.",
+          "weFiledWonNoFacts": "DisputeDesk skickade in dina bevis den {date}, och banken beslutade till din fördel.",
+          "weFiledLost": "DisputeDesk skickade in bevisen den {date}, och banken gav ändå kunden rätt.",
+          "shopifyWon": "Ett svar skickades via Shopify, och banken beslutade till din fördel.",
+          "shopifyLost": "Ett svar skickades via Shopify, och banken gav kunden rätt.",
+          "noneWon": "Banken beslutade till din fördel.",
+          "noneLost": "Inget svar skickades in, och banken gav kunden rätt.",
+          "beforeInstallWon": "Banken beslutade till din fördel innan DisputeDesk installerades.",
+          "beforeInstallLost": "Banken gav kunden rätt innan DisputeDesk installerades."
+        },
+        "closingWon": "De {amount} stannar hos dig.",
+        "closingNotShipped": "Att skicka eller återbetala ordrar som fastnat är det säkraste sättet att undvika det här nästa gång.",
+        "closingLost": "Stegen nedan är de mest användbara ändringarna till nästa gång.",
+        "clause": {
+          "neverShipped": "den skickades aldrig",
+          "shippedAfterDispute": "den skickades först efter att tvisten öppnats",
+          "noDelivery": "inget i underlaget visade en leverans",
+          "avs_mismatch": "kortets faktureringsadress stämde inte med ordern",
+          "cardholder_name_mismatch": "namnet på kortet skilde sig från köparens",
+          "prior_chargebacks": "kunden hade bestridit en debitering tidigare",
+          "ip_country_mismatch": "ordern lades från ett annat land",
+          "ip_high_risk": "köpet kom från ett högriskigt nätverk",
+          "no_signature_on_fraud": "ingen signerade leveransen",
+          "weak_identity_signals": "bara kundens land kunde bekräftas",
+          "avs_match": "faktureringsadressen stämde med kortet",
+          "signature_confirmed": "leveransen signerades",
+          "delivery_confirmed": "transportören bekräftade leveransen",
+          "priorUndisputed": "{count, plural, one {kunden hade handlat av dig en gång tidigare utan problem} other {kunden hade handlat av dig # gånger tidigare utan problem}}",
+          "threeDs": "betalningen klarade 3-D Secure"
+        }
+      },
+      "facts": {
+        "titleLost": "Det vi såg i underlaget",
+        "titleWon": "Det som bar ärendet",
+        "subLost": "Fakta från ordern och vårt underlag. Det här är inte bankens motivering.",
+        "subWon": "Bevis i svaret som DisputeDesk skickade in",
+        "subRecord": "Fakta från ordern och vårt underlag",
+        "weightPill": "Banker väger detta tungt",
+        "noteNotReceived": "Vid ett ej-mottaget-krav ställer banken en fråga: levererades det? Ingenting i underlaget sa ja.",
+        "title": {
+          "neverShipped": "Ordern skickades aldrig",
+          "shippedAfterDispute": "Ordern skickades först efter att tvisten öppnats",
+          "noTracking": "Det fanns varken spårningsnummer eller leveransbekräftelse",
+          "priorUndisputed": "{count, plural, one {# tidigare order från kunden bestreds aldrig} other {# tidigare ordrar från kunden bestreds aldrig}}",
+          "threeDs": "Betalningen klarade 3-D Secure"
+        },
+        "source": {
+          "order": "Från Shopifys orderdata",
+          "payment": "Från Shopifys betalningsdata",
+          "customer": "Från Shopifys kunddata",
+          "ip": "Från IP-adressen vid köpet",
+          "carrier": "Från transportörens spårning",
+          "unfulfilled": "Leveransstatus: ej skickad · Från Shopifys orderdata",
+          "shipped": "Skickad {date} · Från Shopifys orderdata"
+        }
+      },
+      "checklist": {
+        "title": "Det som vinner den här typen av tvist",
+        "thisCase": "Det här ärendet",
+        "item": {
+          "tracking": "Transportörens spårning till kundens adress",
+          "deliveryConfirmation": "Leveransbekräftelse (signatur över din gräns)",
+          "promisedDelivery": "Leveransdatum som utlovades i kassan",
+          "communication": "Underlag för kundkommunikation",
+          "addressMatch": "Faktureringsadress och säkerhetskod stämmer",
+          "deliveryToBilling": "Leverans till faktureringsadressen",
+          "priorOrders": "Tidigare obestridda ordrar från samma kund",
+          "threeDs": "3-D Secure-autentisering",
+          "productDescription": "Produktbeskrivning som stämmer med det som skickades",
+          "refundPolicy": "Retur- och återbetalningspolicy som visades i kassan",
+          "refundRecord": "Underlag för återbetalning, eller varför ingen skulle ske",
+          "noReturn": "Ingen retur har tagits emot",
+          "cancellationPolicy": "Uppsägningsvillkor som visades vid registrering",
+          "activityAfterCancel": "Kundaktivitet efter uppsägningsdatumet",
+          "duplicateExplanation": "Förklaring att debiteringarna var separata köp",
+          "orderConfirmation": "Orderbekräftelse",
+          "storePolicies": "Butikens policyer"
+        },
+        "state": {
+          "had": "Finns",
+          "policy": "I policyn",
+          "missing": "Saknas",
+          "none": "Inget",
+          "notUsed": "Används inte",
+          "notChecked": "Ej kontrollerad"
+        },
+        "coverage": "av det bankerna tittar efter fanns i underlaget för ärendet"
+      },
+      "next": {
+        "title": "Nästa gång",
+        "shipOrCancel": {
+          "title": "Skicka, eller avbryt och återbetala, innan kunden bestrider",
+          "detail": {
+            "chargeback": "Ordern låg oskickad i {days, plural, one {# dag} other {# dagar}} innan återbetalningskravet kom.",
+            "inquiry": "Ordern låg oskickad i {days, plural, one {# dag} other {# dagar}} innan förfrågan kom."
+          },
+          "detailLate": "Den skickades först efter att kunden hade bestridit den."
+        },
+        "shareTracking": {
+          "title": "Dela spårningen med kunden när ordern skickas",
+          "detail": "Ordern hade inget spårningsnummer."
+        },
+        "holdHighRisk": {
+          "title": "Håll inne ordrar som Shopify flaggar som hög risk",
+          "detail": "Shopify flaggade ordern innan den skickades."
+        },
+        "threeDs": {
+          "title": "Aktivera 3-D Secure för riskfyllda ordrar",
+          "detail": "Autentiserade betalningar flyttar ansvaret för bedrägerikrav till kortutgivaren."
+        },
+        "selfServeCancel": {
+          "title": "Låt kunder säga upp själva och bekräfta det via e-post",
+          "detail": "Kunder som enkelt kan säga upp går sällan till banken i stället."
+        },
+        "describeProduct": {
+          "title": "Beskriv produkterna exakt och visa vad som skickas",
+          "detail": "Krav om att produkten inte stämmer avgörs av om annonsen motsvarade det som kom fram."
+        },
+        "confirmRefunds": {
+          "title": "Återbetala snabbt och mejla en daterad bekräftelse",
+          "detail": "En återbetalningsbekräftelse besvarar direkt ett krav om uteblivet återbetalning."
+        },
+        "sub": "Steg du kan ta för framtida ordrar, utifrån det här ärendet"
+      },
+      "timeline": {
+        "title": "Vad som hände",
+        "opened": "Tvisten öppnades",
+        "openedDetail": "{claim}. Svar senast {due}.",
+        "openedDetailNoDue": "{claim}.",
+        "gathered": "Bevis samlades in",
+        "gatheredNoDelivery": "Ingen spårning eller leveransbekräftelse på ordern.",
+        "held": {
+          "not_shipped": {
+            "title": "Hölls inne: ordern skickades inte",
+            "detail": "Inget i underlaget visade leverans, så vi skickade inte in något."
+          },
+          "refunded": {
+            "title": "Hölls inne: redan återbetald",
+            "detail": "Vi skickade inte in något, eftersom ordern redan hade återbetalats."
+          },
+          "covered": {
+            "title": "Hölls inne: täckt av Shopify Protect",
+            "detail": "Vi skickade inte in något, eftersom Shopify Protect täcker ordern."
+          },
+          "thin_evidence": {
+            "title": "Hölls inne: för tunna bevis",
+            "detail": "Vi skickade inte in något, eftersom bevisen var för tunna att argumentera med."
+          },
+          "awaiting_review": {
+            "title": "Hölls inne: väntar på din granskning",
+            "detail": "Butikens regler skickar inte in något utan ditt godkännande."
+          },
+          "plan_limit": {
+            "title": "Inte framtaget: plangränsen nådd",
+            "detail": "Din plans gräns för paket var nådd."
+          },
+          "auto_build_off": {
+            "title": "Inte framtaget: automatisk framtagning av",
+            "detail": "Automatisk framtagning av bevis var avstängd för din butik."
+          },
+          "merchant_conceded": {
+            "title": "Du valde att inte bestrida"
+          }
+        },
+        "emailed": "Du fick ett mejl",
+        "emailedFatalLoss": "Vi förklarade varför ärendet inte kunde försvaras sanningsenligt.",
+        "emailedPlanLimit": "Vi meddelade att gränsen för din plan var nådd.",
+        "weFiled": "DisputeDesk skickade in dina bevis",
+        "weFiledDetail": "Sparade i Shopify och vidareskickade till banken.",
+        "shopifySent": "Svar skickat via Shopify",
+        "cancelled": "Du avbröt ordern",
+        "lost": "Förlorad",
+        "lostDetail": "{amount} återbetalades inte.",
+        "won": "Vunnen",
+        "wonDetail": "{amount} återvunnet."
       }
     },
     "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
@@ -1468,7 +1718,9 @@
         "reviewRequiredTitle": "Granskning krävs innan paketet kan skickas in",
         "reviewRequiredBody": "DisputeDesk kan inte skicka in det här försvarspaketet som det är byggt. Generera om det för att skapa en version som kan skickas in. Förhandsgranska och Generera om är fortfarande tillgängliga; Slutför och Skicka in är otillgängliga tills en omgenererad version klarar granskningen.",
         "notEnoughEvidenceReturnedTitle": "Det finns inget att argumentera för förrän du berättar varför paketet kom tillbaka",
-        "notEnoughEvidenceReturnedBody": "Transportören returnerade paketet till dig, så det finns ingen leverans att argumentera kring och det kan aldrig finnas någon leveransbekräftelse för den här ordern. Att vänta ändrar inte det — inget mer kommer att samlas in. Det enda som fortfarande kan hjälpa finns på fliken Bevis: berätta om kunden vägrade ta emot leveransen eller aldrig hämtade ut den. Inget av det räknas som en giltig retur, och det tar vi med i ditt svar."
+        "notEnoughEvidenceReturnedBody": "Transportören returnerade paketet till dig, så det finns ingen leverans att argumentera kring och det kan aldrig finnas någon leveransbekräftelse för den här ordern. Att vänta ändrar inte det — inget mer kommer att samlas in. Det enda som fortfarande kan hjälpa finns på fliken Bevis: berätta om kunden vägrade ta emot leveransen eller aldrig hämtade ut den. Inget av det räknas som en giltig retur, och det tar vi med i ditt svar.",
+        "notEnoughEvidenceClaimTitle": "Inget i underlaget besvarar bankens anspråk ännu",
+        "notEnoughEvidenceClaimBody": "Du har lagt till bankens anspråk, så brevet besvarar just det anspråket och inget annat. Inget av det underlag som samlats in hittills tar upp det, så inget brev skrevs – ett tomt brev skulle förlora ärendet. Lägg till det som checklistan på fliken Bevis efterfrågar, så byggs brevet om automatiskt."
       },
       "sections": {
         "status": {
@@ -2024,7 +2276,59 @@
         "generic": "Den här uppgiften behöver din bekräftelse innan den kan användas."
       }
     },
-    "multipleOnOrder": "{index} av {total} på denna order"
+    "multipleOnOrder": "{index} av {total} på denna order",
+    "bankClaim": {
+      "badge": "Åtgärd krävs",
+      "subReopened": "Tvisten öppnades igen av Shopify",
+      "subGeneral": "Inget specifikt skäl från banken",
+      "title": "Lägg till bankens anspråk",
+      "introReopened": "Banken begär ett nytt svar. Skälet syns bara i Shopify – klistra in det här så att svaret bemöter exakt det som frågades.",
+      "introGeneral": "Banken angav inget specifikt skäl för den här tvisten. Skälet syns bara i Shopify – klistra in det här så att svaret bemöter exakt det som frågades.",
+      "dueLabel": "Svar senast",
+      "dueToday": "Förfaller i dag",
+      "step1Title": "Hitta anspråket i Shopify",
+      "step1Path": "Order {order} → Återkravsdetaljer → Utfärdarens anspråk",
+      "openInShopify": "Öppna tvisten i Shopify ↗",
+      "step2Title": "Ladda upp anspråksfilen eller klistra in texten",
+      "step2Body": "Ladda ner anspråket från Shopify (oftast en PDF) och släpp den nedan. Visas inget anspråk? Kryssa i rutan i stället.",
+      "textLabel": "Bankens anspråk",
+      "countRequired": "Obligatoriskt",
+      "countChars": "{count, plural, =1 {# tecken} other {# tecken}}",
+      "countNotNeeded": "Behövs inte",
+      "textPlaceholder": "t.ex. Kortinnehavaren uppger att varan inte mottagits och spårningen visar ingen leverans…",
+      "privacyNote": "Används bara för att forma svaret. Citeras aldrig och skickas aldrig tillbaka till banken.",
+      "noClaimShown": "Shopify visar inget anspråk för den här tvisten",
+      "noClaimShownHelp": "Banker lämnar inte alltid ett. DisputeDesk bygger svaret utifrån orsakskoden.",
+      "statusHold": "Svaret är pausat tills anspråket har lagts till.",
+      "statusReady": "Klart att spara.",
+      "statusSaved": "Sparat – DisputeDesk bygger om svaret.",
+      "save": "Spara anspråk",
+      "saved": "Sparat",
+      "errorWindowClosed": "Shopify har redan vidarebefordrat bevisen för den här tvisten, så anspråket kan inte längre läggas till.",
+      "errorGeneric": "Anspråket kunde inte sparas ({code}). Försök igen.",
+      "daysCount": "{count, plural, =1 {# dag} other {# dagar}}",
+      "tabUpload": "Ladda upp fil",
+      "tabPaste": "Klistra in text",
+      "countFile": "1 fil",
+      "dropTitle": "Släpp anspråksfilen här, eller <browse>bläddra</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML eller bild · upp till 10 MB",
+      "fileMetaReady": "{size} · Klar att spara",
+      "fileMetaUploaded": "{size} · Uppladdad",
+      "replace": "Ersätt",
+      "remove": "Ta bort",
+      "statusSaving": "Sparar…",
+      "errorFileType": "Ladda upp en PDF-, TXT-, DOC-, DOCX-, RTF-, EML- eller bildfil.",
+      "errorFileSize": "Filen är större än 10 MB.",
+      "savedTitle": "Bankens anspråk mottaget – svaret byggs om",
+      "savedTitleDone": "Bankens anspråk mottaget – svaret uppdaterat",
+      "savedSummaryNoClaim": "Inget anspråk i Shopify – orsakskoden används",
+      "savedSummaryText": "{count, plural, =1 {Inklistrad text · # tecken} other {Inklistrad text · # tecken}}",
+      "savedDue": "Svar senast {date}",
+      "cancel": "Avbryt",
+      "editClaim": "Redigera anspråk",
+      "portalBody": "DisputeDesk skickar inget svar för den här tvisten förrän bankens anspråk har lagts till. Anspråket syns bara i Shopify och läggs till i DisputeDesk-appen i Shopify Admin.",
+      "portalCta": "Lägg till det i Shopify"
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
@@ -2088,7 +2392,8 @@
         "comms": "Kommunikation",
         "other": "Ytterligare bevis",
         "access_log": "Aktivitetslogg"
-      }
+      },
+      "productListings": "Produktinformation ({count})"
     },
     "title": "Bevispaket",
     "subtitle": "Visa och hantera bevispaket",
@@ -3295,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "Bevischecklistan förklarad",
-        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod."
+        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod.\n\nInte som beskrivet: DisputeDesk hämtar produktinformationen automatiskt från din butik (titel, beskrivning, upp till tre bilder och den valda varianten) och lägger till den i försvaret. Det är din produktinformation som den ser ut i dag; Shopify sparar inte hur den såg ut när beställningen gjordes. Om den inte kan hämtas (till exempel för att produkten har tagits bort) anger checklistan varför."
       },
       "defenseLetterRebuttal": {
         "title": "Försvarsbreve och automatisk motsvarotext",
@@ -3440,6 +3745,10 @@
       "returnedToSenderParcels": {
         "title": "När ett paket returneras till avsändaren",
         "body": "Ibland kan en transportör inte slutföra en leverans och lämnar tillbaka paketet till dig. Kunden fick aldrig sin order — och om de senare bestrider betalningen förändrar det vad ärendet kan och inte kan handla om.\n\n**Vad DisputeDesk gör automatiskt**\n\nNär vi läser av en returhändelse från transportören gör vi följande:\n\n1. Visar leveransraden som \"Returnerad till avsändaren\" med transportörens eget datum, i stället för att behandla den som en oskannad etikett.\n2. Tar bort alla argument som bygger på att kunden aldrig skickat tillbaka varorna. Shopify kan fortfarande visa returstatusen som \"ingen retur\", eftersom ingen returbegäran öppnades — men varorna finns hos dig, och ett argument byggt på motsatsen vore osant.\n3. Markerar ärendet som svagt och stoppar automatisk inlämning, även på deadline. Ett returnerat paket kan aldrig ha någon leveransbekräftelse, och utan en sådan avgör banken normalt till kundens fördel.\n\n**Vad vi behöver från dig**\n\nEn enda sak, och det är det vi inte kan se: **varför paketet kom tillbaka.** Frågan hittar du på fliken Bevis.\n\n- **Kunden vägrade ta emot leveransen** eller **hämtade aldrig ut den på utlämningsstället** — det är värt att argumentera för. Enligt EU:s konsumentregler är det ingen giltig retur och ingen giltig ångerrätt att bara låta bli att ta emot ett paket. Vi tar med det i svaret åt dig.\n- **Adressen gick inte att leverera till** — vi noterar det, men tar inte med det i svaret. Det hjälper inte ärendet, och att lyfta det bjuder in till en fråga ingen ställt.\n\nVi frågar också vad som hände med varorna när de kom tillbaka. Det svaret är för din och vår dokumentation; det tas aldrig med i svaret som skickas för din räkning.\n\n**Om du behållit både varorna och betalningen**\n\nDet ärliga svaret är oftast att återbetala. Kunden har betalat, aldrig fått sin order, och varorna är tillbaka hos dig. Att driva ärendet lyckas sällan och kan dessutom kosta dig tvisteavgiften. Om du ska återbetala är ditt beslut — DisputeDesk gör det inte åt dig — men bedömningen du ser speglar de verkliga oddsen, inte en optimistisk gissning.\n\n**En notering om tid**\n\nOm du svarar att du går med på att justera betalningen förväntar sig vissa betalleverantörer att återbetalningen sker inom kort tid (Klarna drar till exempel tillbaka betalningen automatiskt om återbetalningen inte kommer i tid). Gör återbetalningen snarast efter att du åtagit dig den."
+      },
+      "bankClaim": {
+        "title": "Varför DisputeDesk ber om bankens anspråk",
+        "body": "För de flesta tvister talar orsakskoden om för DisputeDesk vad kunden bestrider, och svaret byggs utifrån den. Två sorters tvister är annorlunda:\n\n• Återöppnade tvister: Shopify har satt en tvist som du redan besvarat tillbaka till \"behöver svar\". Banken begär ett nytt svar, och ditt tidigare svar avgör den inte längre.\n• \"Allmänna\" tvister utan nätverkets orsakskod: banken angav inte vilken sorts tvist det är.\n\nI båda fallen är bankens anspråk (Shopify kallar det utfärdarens anspråk) det enda som säger vad banken vill ha besvarat. Shopify visar det i återkravsdetaljerna på ordersidan i din Shopify-admin, men delar det inte med appar, så DisputeDesk kan inte läsa det själv.\n\nSå gör du:\n1. Öppna tvisten i DisputeDesk och använd \"Öppna ordern i Shopify\".\n2. Hitta bankens anspråk i återkravsdetaljerna och ladda ner det (oftast en PDF) eller kopiera texten.\n3. Ladda upp filen eller klistra in texten i kortet \"Lägg till bankens anspråk\" och spara. Om Shopify inte visar något anspråk, kryssa i \"Shopify visar inget anspråk för den här tvisten\" i stället – banker lämnar inte alltid ett.\n\nDisputeDesk bygger sedan om svaret så att det bemöter anspråket. Anspråket används bara för att avgöra vad svaret måste ta upp; det citeras aldrig och skickas aldrig tillbaka till banken.\n\nTills anspråket har lagts till skickar DisputeDesk inget svar för den tvisten, inte heller vid tidsfristen. Vi mejlar dig också när en tvist börjar behöva det."
       }
     },
     "embedded": {
@@ -4703,7 +5012,9 @@
       "support_note_added": "Anteckning tillagd",
       "admin_override": "Supportjustering",
       "admin_override_cleared": "Supportjustering återställd",
-      "dispute_resynced": "Tvist uppdaterad från Shopify"
+      "dispute_resynced": "Tvist uppdaterad från Shopify",
+      "response_cycle_reopened": "Återöppnad – nytt svar behövs",
+      "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav"
     },
     "actors": {
       "merchant_user": "Du",
@@ -6055,7 +6366,8 @@
       "feature_blocked": "Faktureringsåtgärd krävs",
       "subscription_expired": "Faktureringsåtgärd krävs",
       "payment_failed": "Faktureringsåtgärd krävs",
-      "auto_build_off": "Automatisering pausad"
+      "auto_build_off": "Automatisering pausad",
+      "bank_claim_needed": "Bankens anspråk behövs"
     },
     "attentionBlockingSub": {
       "approval_gate": "DisputeDesk väntar på ditt godkännande för att spara bevispaketet",
@@ -6064,7 +6376,8 @@
       "feature_blocked": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
       "subscription_expired": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
       "payment_failed": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
-      "auto_build_off": "Automatisk bevisinsamling är avstängd i dina inställningar"
+      "auto_build_off": "Automatisk bevisinsamling är avstängd i dina inställningar",
+      "bank_claim_needed": "Kopiera bankens anspråk från Shopify – DisputeDesk skickar inget svar förrän det har lagts till"
     },
     "outcomeCard": {
       "title": "Utfall",

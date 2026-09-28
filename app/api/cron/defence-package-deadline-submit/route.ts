@@ -64,6 +64,8 @@ import {
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { runDeadlineSubmitLegacy } from "./legacyRoute";
+import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import { bankClaimBlocksFiling, bankClaimInputFromRow, bankClaimTrigger } from "@/lib/disputes/bankClaim";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -160,7 +162,7 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state",
+      "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state, response_cycle, closed_at, final_outcome",
     )
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
@@ -216,7 +218,7 @@ export async function GET(req: NextRequest) {
       const { data: pack } = await sb
         .from("evidence_packs")
         .select(
-          "id, status, completeness_score, blockers, submission_readiness, pack_json",
+          "id, status, completeness_score, blockers, submission_readiness, pack_json, response_cycle",
         )
         .eq("dispute_id", d.id)
         .order("created_at", { ascending: false })
@@ -227,6 +229,44 @@ export async function GET(req: NextRequest) {
         // No pack at all — can't auto-submit anything. Skip; merchant will
         // see the dispute on dashboards.
         continue;
+      }
+
+      // Response-cycle guard: the latest pack was built for an earlier round
+      // (reopen, or inquiry → chargeback) and would answer a request Shopify
+      // has replaced. Never file it; the new cycle's build files instead.
+      if (isStaleCycle(pack.response_cycle as number | null, d.response_cycle as number | null)) {
+        summary.blockedByDecision++;
+        await logAuditEvent({
+          shopId: d.shop_id as string,
+          disputeId: d.id as string,
+          packId: pack.id as string,
+          actorType: "system",
+          eventType: "deadline_submit_refused_stale_cycle",
+          eventPayload: {
+            packCycle: pack.response_cycle ?? null,
+            disputeCycle: d.response_cycle ?? null,
+          },
+        });
+        continue;
+      }
+
+      // Bank's claim guard: a reopened or `general`-without-code dispute is
+      // never filed at the deadline without the claim the merchant copies
+      // from Shopify Admin. The dispute already shows "Action required".
+      {
+        const claimInput = bankClaimInputFromRow(d as Record<string, unknown>);
+        if (await bankClaimBlocksFiling(sb, d.id as string, claimInput)) {
+          summary.blockedByDecision++;
+          await logAuditEvent({
+            shopId: d.shop_id as string,
+            disputeId: d.id as string,
+            packId: pack.id as string,
+            actorType: "system",
+            eventType: "deadline_submit_refused_bank_claim_missing",
+            eventPayload: { trigger: bankClaimTrigger(claimInput), cycle: d.response_cycle ?? 1 },
+          });
+          continue;
+        }
       }
 
       let settings = settingsByShop.get(d.shop_id as string);

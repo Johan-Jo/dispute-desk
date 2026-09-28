@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
+import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
@@ -12,6 +14,7 @@ import {
   merchantSuppliedAcknowledgementFromItems,
   resolveHeldState,
 } from "@/lib/disputes/heldState";
+import { loadDecidedViewInputs, type DecidedViewDisputeRow } from "@/lib/disputes/loadDecidedResponse";
 import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
@@ -29,6 +32,11 @@ import {
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import {
+  bankClaimInputFromRow,
+  bankClaimTrigger,
+  loadBankClaimAnswer,
+} from "@/lib/disputes/bankClaim";
 /*
  * `calculateCaseStrength` and `computeContributions` are deliberately NOT
  * imported here any more. Both now arrive through `buildWorkspaceAssessment`,
@@ -159,7 +167,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // ── 1. Load dispute with shop_domain ──────────────────────────────
   const { data: row, error: disputeErr } = await sb
     .from("disputes")
-    .select("*, shops(shop_domain)")
+    .select("*, shops(shop_domain, primary_domain)")
     .eq("id", disputeId)
     .eq("shop_id", shopId)
     .single();
@@ -171,6 +179,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const shop = Array.isArray(row.shops) ? row.shops[0] : row.shops;
   const shopDomain =
     (shop as { shop_domain?: string } | null)?.shop_domain ?? null;
+  // The merchant's real storefront domain for the defence document ("blume.com"),
+  // falling back to the alias only when none is on record. `shopDomain` stays
+  // the myshopify alias: it builds Shopify Admin links.
+  const merchantDomain = shopDomain
+    ? displayShopDomain({
+        shop_domain: shopDomain,
+        primary_domain: (shop as { primary_domain?: string | null } | null)?.primary_domain ?? null,
+      })
+    : null;
 
   // ── 2. Load latest evidence pack ──────────────────────────────────
   const { data: packRow } = await sb
@@ -254,9 +271,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       .maybeSingle(),
   ]);
 
+  // The reason this case is argued under. Shopify's own reason, unless the
+  // bank's claim re-typed a GENERAL dispute — buildPack records the reason it
+  // assessed under in pack_json.case_assessment_reason. Every "what kind of
+  // case is this" read below (header, template, family, assessment, freshness
+  // hash) uses it; Shopify's original travels as dispute.shopifyReason.
+  const effectiveReason: string | null =
+    (packRow?.pack_json as { case_assessment_reason?: string | null } | null)
+      ?.case_assessment_reason ?? row.reason ?? null;
+
   // ── 4. Build case type info from argument templates ───────────────
-  const template = getArgumentTemplate(row.reason);
-  const issuerClaimText = getIssuerClaimText(row.reason);
+  const template = getArgumentTemplate(effectiveReason);
+  const issuerClaimText = getIssuerClaimText(effectiveReason);
 
   // ── 5. Build cross-collection ID-keyed maps ───────────────────────
   // Per plan v3 §3.A.5 (NO IMPLICIT UI MAPPING). Computed here so the
@@ -392,7 +418,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
   const dispute = {
     id: row.id,
-    reason: row.reason,
+    reason: effectiveReason,
+    shopifyReason: row.reason ?? null,
     phase: row.phase ?? null,
     amount: row.amount,
     currency: row.currency_code,
@@ -401,6 +428,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     customerName: row.customer_display_name ?? null,
     shopId: row.shop_id,
     shopDomain,
+    merchantDomain,
     disputeGid: row.dispute_gid,
     disputeEvidenceGid: row.dispute_evidence_gid ?? null,
     dueAt: row.due_at ?? null,
@@ -460,6 +488,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // synthetic 2-event path. Capped to 20 events upstream in
     // `lib/packs/sources/orderSource.ts`.
     timelineEvents: orderContext.timelineEvents,
+    // Response cycles + the bank's claim (lib/disputes/bankClaim.ts). The
+    // card asks for the claim when `bankClaim.trigger` is set and it has
+    // not been answered for this cycle.
+    responseCycle: (row.response_cycle as number | null) ?? 1,
+    reopenedAt: row.reopened_at ?? null,
+    escalatedFromInquiryAt: row.escalated_from_inquiry_at ?? null,
+  };
+
+  const bankClaimCycle = (row.response_cycle as number | null) ?? 1;
+  const bankClaim = {
+    trigger: bankClaimTrigger(bankClaimInputFromRow(row as Record<string, unknown>)),
+    answer: await loadBankClaimAnswer(sb, disputeId, bankClaimCycle),
   };
 
   // Reconcile persisted checklist_v2 against fields actually carried by
@@ -709,6 +749,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ]);
     defencePackageLatest = (latestRes.data as Record<string, unknown> | null) ?? null;
     defencePackageBankFacing = (bankFacingRes.data as Record<string, unknown> | null) ?? null;
+    // A signed link per PDF: "View PDF" opens in a new tab with no session
+    // (lib/security/previewLink.ts).
+    for (const r of [defencePackageLatest, defencePackageBankFacing]) {
+      if (r?.pdf_path && typeof r.id === "string") {
+        r.preview_url = previewPath(r.id, row.shop_id as string, signPreviewToken(r.id, row.shop_id as string));
+      }
+    }
   }
   // Reuse the latest row's facts_json for the line-item derivation
   // below. When absent (no defence package built yet), facts is empty —
@@ -791,10 +838,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ((packRow?.pack_json as { case_assessment?: unknown } | null)
       ?.case_assessment as CaseAssessmentSnapshot | undefined) ?? null;
 
+  // Same reason the writer assessed under (effectiveReason, above).
+  const assessedReason = effectiveReason;
+
   const liveModel = packRow
     ? deriveCaseEvidenceModel({
         disputeId,
-        reason: row.reason ?? null,
+        reason: assessedReason,
         packId: packRow.id as string,
         sections: packJsonSections.map((sec) => ({
           source: (sec as { source?: string }).source ?? null,
@@ -924,7 +974,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ? buildWorkspaceAssessment({
         disputeId,
         checklist: reconciledChecklistV2,
-        reason: row.reason,
+        reason: effectiveReason,
         payloadSource: caseStrengthPayloadSource,
         snapshot: persistedSnapshot,
         currentInputHash: currentAssessmentHash,
@@ -1027,7 +1077,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         excludedFields: excludedFromOverrides,
         attachmentUploadFailures,
         inclusionOverrides,
-        reasonFamily: resolveReasonFamily(row.reason),
+        reasonFamily: resolveReasonFamily(effectiveReason),
         internalSignalsByField,
         overrideHistoryByField,
         /* CP-B §1 — the plan is the authority on what may be asserted to an
@@ -1128,6 +1178,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const held = resolveHeldState({
     automationMode: presentation?.automationMode ?? appliedRule?.mode ?? null,
     caseStrength: caseStrength?.overall ?? null,
+    caseStrengthBeforeRev5: caseStrength?.overallBeforeRev5 ?? null,
     coverageState: coverageInput?.state ?? null,
     fatalLoss:
       ((packRow?.pack_json as { fatal_loss?: unknown } | null)?.fatal_loss as
@@ -1149,8 +1200,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     },
   });
 
+  // Decided cases only: who responded, and why DisputeDesk did not when it
+  // didn't (lib/disputes/decidedResponse). Replaces the single "decided before
+  // DisputeDesk filed" sentence, which was false on cases we held on purpose.
+  // Decided cases only: the decided view's inputs (who responded, why we
+  // held, order facts, evidence items, timeline events), assembled by the
+  // same loader the outcome email uses so the page and the email agree.
+  const decidedView =
+    row.normalized_status === "won" || row.normalized_status === "lost"
+      ? await loadDecidedViewInputs(sb, row as DecidedViewDisputeRow)
+      : null;
+  const decidedResponse = decidedView?.response ?? null;
+
   return NextResponse.json({
     dispute,
+    bankClaim,
     pack,
     gorgiasComms,
     argumentMap,
@@ -1173,6 +1237,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // Auto-pilot hold — what the case is waiting for (a clock, not the
     // merchant) and the one contribution that can still change it.
     held,
+    decidedResponse,
+    decidedView,
     evidenceLineItems,
     submissionSummary,
     // Derived first-class attachment inventory for the dispute Review
@@ -1201,7 +1267,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
        * offer a Submit button that will 422. Merchant-safe copy only —
        * `reasons` are machine codes for support, not merchant prose.
        */
-      safety: defencePackageLatest
+      // A skipped row holds no letter by design (nothing to argue, or
+      // Shopify Protect), so it is not a filing candidate: read as
+      // "unreadable" it would show "cannot be reviewed — regenerate" over
+      // a card whose own banner explains why there is no letter.
+      safety:
+        defencePackageLatest &&
+        (defencePackageLatest as { status?: string }).status !== "skipped"
         ? (() => {
             const verdict = assessPackageCandidateSafety({
               factsJson: (defencePackageLatest as { facts_json?: unknown }).facts_json,

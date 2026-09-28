@@ -1,15 +1,16 @@
 /**
  * Defence Package PDF document — bank-facing representment.
  *
- * Structure (deterministic, in order):
- *   1. Cover page — title, dispute id, key fields
- *   2. Case Details table — dark-header, full case metadata
- *   3. Composed argumentative sections (Executive Summary, Transaction
- *      Overview, Chronology of Events, Order Line Items, Payment
- *      Authentication, Fulfillment, Customer Communication, Policy,
- *      Manual Evidence, Conclusion).
- *   4. Evidence Basis — deterministic, rendered from approved facts
- *   5. Supporting Evidence Index — when manual evidence is present
+ * Built to the Claude Design file "Chargeback Response v2" (2026-09-24), US
+ * Letter, Inter. Structure, in order:
+ *   1. Page 1, the case — top bar, eyebrow + timestamp, dispute title,
+ *      subtitle, "Submitted on behalf of", three fact cards, Case Details.
+ *   2. From page 2, numbered sections: Executive Summary, any other prose
+ *      sections, Fulfillment (shipment cards on a multi-parcel order, prose
+ *      otherwise), Evidence Basis (single-parcel / other claims), Supporting
+ *      Evidence, Order Line Items (with total), Chronology of Events
+ *      (vertical timeline), Conclusion (panel).
+ *   3. Running header on pages 2+, footer with "n / N" on every page.
  *
  * Phase 4 (2026-05-16): thesis blockquotes come from
  * fact-templated `ComposedDocumentBlock[]`. The renderer is
@@ -21,18 +22,37 @@
  */
 
 import React from "react";
-import { Document, Link, Page, Text, View } from "@react-pdf/renderer";
-import { styles } from "./styles";
+import { Document, Font, Image, Link, Page, Text, View } from "@react-pdf/renderer";
+import { exhibitCaption, type ProductListingExhibit } from "../productListingExhibit";
+import { COLORS, styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
-import {
-  buildChronologyEvents,
-  formatChronologyTimestamp,
-  type ChronologyEvent,
-} from "../chronology";
+import { buildChronologyEvents, familyOmitsArrival, type ChronologyEvent } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
 import { buildLineItems, type LineItem } from "../render/lineItems";
+import { formatMoneyDisplay, reasonCodeForNetwork } from "../render/formatting";
+// The derived content (shipment cards, timeline titles, totals, emphasis) is
+// shared with the in-app preview, so the two cannot drift.
+import {
+  dateParts,
+  deliveryFactIds,
+  describeChronologyEvent,
+  emphasisSegments,
+  lineItemsTotal,
+  orderPlacedLine,
+  addressCard,
+  laterOrderCard,
+  productsOf,
+  shipmentCards,
+  shipmentsOf,
+  singleShipmentOf,
+  statusPillTone,
+  type PillTone,
+  type ShipmentCard as ShipmentCardModel,
+} from "../render/documentModel";
 import type {
+  AddressExhibit,
+  LaterOrderExhibit,
   ComposedDocumentBlock,
   EvidenceFact,
   ManualEvidenceRecord,
@@ -80,7 +100,15 @@ export interface DefencePackageMeta {
   timelineEvents?: Array<{ at: string; text: string }>;
   /** Line items extracted from `pack_json.sections[type=order].data.lineItems`
    *  by `deriveOrderContext`. */
-  lineItemsFromContext?: Array<{ description: string; quantity: number; price: string }>;
+  lineItemsFromContext?: Array<{ description: string; quantity: number; price: string; kind?: "item" | "adjustment" }>;
+  /** Counsel v2: shipping and billing addresses, printed only when the letter
+   *  claims they are identical (DefenceNarrativeOutput.addressExhibit). */
+  addressExhibit?: AddressExhibit | null;
+  /** Counsel v2: the customer's later order (DefenceNarrativeOutput.laterOrderExhibit). */
+  laterOrderExhibit?: LaterOrderExhibit | null;
+  /** Not-as-described PR 3b: the collected product listings, printed only
+   *  when the letter cites one. Absent → the section does not render. */
+  productListingExhibits?: ProductListingExhibit[];
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -146,65 +174,156 @@ function findBlock(
   return blocks.find((b) => b.sectionKey === sectionKey) ?? null;
 }
 
-/* ── Section block (presentational) ─────────────────────────────────
- * Renders H1 + (thesis blockquote if non-empty) + body (llmText or
- * fallbackText). Caller decides whether to wrap in a special
- * container (e.g. conclusion's call-out box). When `block` is null
- * the section is dropped entirely. */
-function SectionBlock({
-  block,
-}: {
-  block: ComposedDocumentBlock | null;
-}) {
-  if (!block) return null;
-  const body = block.llmText.trim() || block.fallbackText.trim();
-  if (!body) return null;
-  const thesis = block.thesisText.trim();
+// No automatic hyphenation: it split an email address ("rahma_khan1991@ya-
+// hoo.com") and "charge-back" across lines.
+Font.registerHyphenationCallback((word) => [word]);
+
+/* ── Small formatters ─────────────────────────────────────────────── */
+
+function blockBody(block: ComposedDocumentBlock | null): string {
+  return block ? block.llmText.trim() || block.fallbackText.trim() : "";
+}
+
+/* ── Pills ────────────────────────────────────────────────────────── */
+
+function Pill({ tone, label }: { tone: PillTone; label: string }) {
+  const c =
+    tone === "green"
+      ? { bg: COLORS.greenBg, border: COLORS.greenBorder, text: COLORS.greenText }
+      : tone === "blue"
+        ? { bg: COLORS.blueBg, border: COLORS.blueBorder, text: COLORS.blueText }
+        : { bg: COLORS.greyBg, border: COLORS.greyBorder, text: COLORS.greyText };
   return (
-    <View minPresenceAhead={80}>
-      <View wrap={false}>
-        <Text style={styles.h1}>{block.heading}</Text>
-        {thesis ? (
-          <View style={styles.thesisBox}>
-            <Text style={styles.thesisText}>{thesis}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text style={styles.paragraph}>{body}</Text>
+    <View style={[styles.pill, { backgroundColor: c.bg, borderColor: c.border }]}>
+      <Text style={[styles.pillText, { color: c.text }]}>{label}</Text>
     </View>
   );
 }
 
-/* ── Cover page ───────────────────────────────────────────────────── */
 
-function Cover({ meta }: { meta: DefencePackageMeta }) {
+/* ── Running header / footer ──────────────────────────────────────── */
+
+function caseRef(meta: DefencePackageMeta): string {
+  return [`Dispute ${disputeIdShort(meta.disputeGid)}`, meta.orderName ? `Order ${meta.orderName}` : null]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/* The footer once printed internal build metadata ("prompt v26") and never
+ * drew; it now carries the case reference and "n / N". */
+function Footer({ meta }: { meta: DefencePackageMeta }) {
   return (
-    <Page size="A4" style={styles.coverPage}>
-      <Text style={styles.coverEyebrow}>Chargeback Representment</Text>
-      <Text style={styles.coverTitle}>Complete Defence Package</Text>
-      <Text style={styles.coverDisputeId}>Dispute {disputeIdShort(meta.disputeGid)}</Text>
-      <Text style={styles.coverSubtitle}>
-        Prepared for {meta.merchantName ?? meta.shopName}
-      </Text>
-      <Text style={styles.coverSubtitle}>
-        {[meta.reasonCodeDisplay, meta.claimType].filter(Boolean).join(" — ") || meta.reasonCode || "—"} • {meta.amountDisplay ?? "—"} • v{meta.version}
-      </Text>
-      <Text style={styles.coverSubtitle}>
-        Generated {fmtIsoDate(meta.generatedAt)}
-      </Text>
-    </Page>
+    // A render-prop on the fixed VIEW (the running header's pattern). A
+    // render-prop Text nested inside a fixed View did not draw in this
+    // document — the whole footer vanished (local harness, 2026-09-24).
+    <View
+      style={styles.footerSlot}
+      fixed
+      render={(props) => {
+        const { pageNumber, totalPages } = props as { pageNumber: number; totalPages?: number };
+        return (
+          <View style={styles.footer}>
+            <Text style={styles.footerLeft}>{caseRef(meta)}</Text>
+            <Text style={styles.footerRight}>
+              {totalPages ? `${pageNumber} / ${totalPages}` : String(pageNumber)}
+            </Text>
+          </View>
+        );
+      }}
+    />
   );
 }
 
-/* ── Case Details table ───────────────────────────────────────────── */
+function RunningHeader({ meta }: { meta: DefencePackageMeta }) {
+  return (
+    <View
+      style={styles.runningHeaderSlot}
+      fixed
+      render={({ pageNumber }) =>
+        // Pages 2+ only; the border belongs to the rendered row so page 1
+        // shows no stray rule.
+        pageNumber === 1 ? null : (
+          <View style={styles.runningHeader}>
+            <Text style={styles.runningLeft}>Chargeback response</Text>
+            <Text style={styles.runningRight}>{caseRef(meta)}</Text>
+          </View>
+        )
+      }
+    />
+  );
+}
 
-function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
+/* ── Section frame: "01  Executive Summary" ─────────────────────────── */
+
+function Section({
+  number,
+  title,
+  thesis,
+  keepTogether = false,
+  breakBefore = false,
+  children,
+}: {
+  number: string;
+  title: string;
+  thesis?: string;
+  keepTogether?: boolean;
+  breakBefore?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.section} wrap={!keepTogether} break={breakBefore}>
+      <View wrap={false} minPresenceAhead={60}>
+        <View style={styles.sectionHead}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{number}</Text>
+          </View>
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        {thesis ? (
+          <View style={styles.thesis}>
+            <Text style={styles.thesisText}>{thesis}</Text>
+          </View>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/** Prose with the order's product names set in bold (the design's executive
+ *  summary). Paragraphs split on blank lines and stay whole across pages. */
+function Prose({ text, emphasise = [] }: { text: string; emphasise?: string[] }) {
+  const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <>
+      {parts.map((p, i) => (
+        <Text key={i} style={styles.paragraph} wrap={p.length > 900}>
+          {emphasisSegments(p, emphasise).map((seg, j) =>
+            seg.strong ? (
+              <Text key={j} style={styles.strong}>
+                {seg.text}
+              </Text>
+            ) : (
+              seg.text
+            ),
+          )}
+        </Text>
+      ))}
+    </>
+  );
+}
+
+/* ── Page 1 ───────────────────────────────────────────────────────── */
+
+function FirstPage({ meta }: { meta: DefencePackageMeta }) {
+  const reason = reasonCodeForNetwork(meta.reasonCodeDisplay, meta.cardNetwork) ?? meta.reasonCode ?? "—";
+  const amount = formatMoneyDisplay(meta.amountDisplay);
+  const merchant = meta.merchantName ?? meta.shopName;
   // Row builder is shared with the embedded HTML view via
-  // `lib/defence/render/caseDetails.ts` — same fields, same order,
-  // same "—" empty rendering on both surfaces.
+  // `lib/defence/render/caseDetails.ts` — same fields, same order, same "—".
   const rows = buildCaseDetailsRows({
     disputeIdShort: disputeIdShort(meta.disputeGid),
-    merchantName: meta.merchantName ?? meta.shopName,
+    merchantName: merchant,
     cardNetwork: meta.cardNetwork,
     transactionDateDisplay: fmtIsoDate(meta.transactionDate),
     amountDisplay: meta.amountDisplay,
@@ -216,133 +335,109 @@ function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
     paymentGateway: meta.paymentGateway,
     financialStatus: meta.financialStatus,
     fulfillmentStatus: meta.fulfillmentStatus,
-    // Drives the row deny list — unauthorized_fraud disputes drop
-    // the Fulfillment status row so an UNFULFILLED value can't
-    // reach the bank-facing table and undermine the authentication
-    // argument.
+    // unauthorized_fraud disputes drop the Fulfillment status row so an
+    // UNFULFILLED value cannot undermine the authentication argument.
     familyKey: meta.reasonCodeFamilyKey ?? null,
   });
-  return (
-    <View minPresenceAhead={120}>
-      <Text style={styles.h1}>Case Details</Text>
-      <View style={styles.table}>
-        <View style={styles.tableHeader} wrap={false}>
-          <Text style={styles.tableHeaderCell}>Field</Text>
-          <Text style={styles.tableHeaderCell}>Detail</Text>
-        </View>
-        {rows.map(([k, v], i) => (
-          <View
-            key={k}
-            style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
-            wrap={false}
-          >
-            <Text style={styles.tableCellLabel}>{k}</Text>
-            <Text style={styles.tableCellValue}>{v}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/* ── Chronology bullets (deterministic, from meta) ──────────────────── */
-/* Event-building logic lives in `lib/defence/chronology.ts` — shared
- * with the embedded HTML view so both surfaces render the same bullets
- * for the same pack. This component is the @react-pdf renderer only. */
-
-function ChronologyBullets({ events }: { events: ChronologyEvent[] }) {
-  if (events.length === 0) return null;
+  const subtitle = [
+    meta.orderName ? `Order ${meta.orderName}` : null,
+    [reason, meta.claimType].filter(Boolean).join(" — ") || null,
+    amount,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const cards: Array<[string, string]> = [
+    ["Disputed amount", amount ?? "—"],
+    ["Reason code", reason],
+    ["Claim type", meta.claimType ? meta.claimType.replace(/\s+claim$/i, "") : "—"],
+  ];
   return (
     <View>
-      {events.map((e, i) => (
-        <View key={`${e.at}-${i}`} style={styles.bulletRow} wrap={false}>
-          <Text style={styles.bulletDot}>•</Text>
-          <Text style={styles.bulletText}>
-            <Text style={styles.bulletTimestamp}>{formatChronologyTimestamp(e.at)}</Text>
-            {"   "}
-            {e.text}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
-}
+      <View style={styles.metaRow}>
+        <Text style={styles.eyebrow}>Chargeback response</Text>
+        <Text style={styles.metaRight}>{fmtIsoDate(meta.generatedAt)}</Text>
+      </View>
+      <Text style={styles.title}>Dispute {disputeIdShort(meta.disputeGid)}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={styles.onBehalf}>
+        Submitted on behalf of <Text style={styles.onBehalfName}>{merchant}</Text>
+      </Text>
 
-/* ── Order line items table ──────────────────────────────────────── */
-
-// Line-item extraction logic lives in `lib/defence/render/lineItems.ts`
-// (shared with the embedded HTML view). LineItem type imported above.
-
-function LineItemsTable({ items }: { items: LineItem[] }) {
-  if (items.length === 0) return null;
-  return (
-    <View minPresenceAhead={100}>
-      <Text style={styles.h1}>Order Line Items</Text>
-      <View style={styles.table}>
-        <View style={styles.tableHeader} wrap={false}>
-          <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Description</Text>
-          <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Qty</Text>
-          <Text style={styles.tableHeaderCellRight}>Price</Text>
-        </View>
-        {items.map((item, i) => (
-          <View
-            key={i}
-            style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
-            wrap={false}
-          >
-            <Text style={[styles.tableCell, { flex: 3 }]}>{item.description}</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>{item.quantity}</Text>
-            <Text style={styles.tableCellRight}>{item.price}</Text>
-          </View>
+      <View style={styles.cards}>
+        {cards.map(([label, value], i) => (
+          <React.Fragment key={label}>
+            {i > 0 ? <View style={styles.cardGap} /> : null}
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>{label}</Text>
+              <Text style={styles.cardValue}>{value}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
+
+      <Text style={styles.plainHeading}>Case Details</Text>
+      <View style={styles.thRow}>
+        <Text style={[styles.th, { width: "38%" }]}>Field</Text>
+        <Text style={[styles.th, { flex: 1 }]}>Detail</Text>
+      </View>
+      {rows.map(([k, v], i) => {
+        const pill = (k === "Financial status" || k === "Fulfillment status") && v !== "—";
+        return (
+          <View key={k} style={i % 2 === 0 ? styles.trZebra : styles.tr} wrap={false}>
+            <Text style={[styles.tdLabel, { width: "38%" }]}>{k}</Text>
+            <View style={{ flex: 1 }}>
+              {pill ? (
+                <Pill tone={statusPillTone(v)} label={v} />
+              ) : (
+                <Text style={styles.td}>{v}</Text>
+              )}
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
-/* ── Evidence Basis ──────────────────────────────────────────────── */
+/* ── Shipment cards (multi-parcel letters) ─────────────────────────── */
 
-function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
-  const rows = buildEvidenceBasisRows(approvedFacts);
-  if (rows.length === 0) return null;
+function ShipmentCard({ card, wide = false }: { card: ShipmentCardModel; wide?: boolean }) {
   return (
-    <View minPresenceAhead={120}>
-      <Text style={styles.h1}>Evidence Basis</Text>
-      {/* No caption: the heading + Signal/Detail table is self-
-          explanatory. The prior "Approved bank-facing facts used to
-          ground this package" caption leaked our internal terminology
-          (approval workflow, the existence of a parallel "non-bank-
-          facing" data layer) onto the bank PDF — both invite the
-          reviewer's curiosity in directions that work against us. Per
-          the bank-non-disclosure rule, never expose internal
-          structures or scoring concepts on the submission. */}
-      <View style={styles.table}>
-        <View style={styles.tableHeader} wrap={false}>
-          <Text style={styles.tableHeaderCell}>Signal</Text>
-          <Text style={styles.tableHeaderCell}>Detail</Text>
+    <View style={styles.shipCard} wrap={false}>
+      <View style={styles.shipHead}>
+        <View style={styles.shipHeadRow}>
+          <Text style={styles.shipLabel}>{card.eyebrow ?? `Shipment ${card.index}`}</Text>
+          <Pill tone={card.status.tone} label={card.status.label} />
         </View>
-        {rows.map((r, i) => (
+        <Text style={styles.shipProduct}>{card.product}</Text>
+      </View>
+      <View style={wide ? styles.shipBodyWide : styles.shipBody}>
+        {card.fields.map((f, i) => (
           <View
-            key={r.factId}
-            style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
-            wrap={false}
+            key={f.label}
+            style={
+              wide
+                ? i === card.fields.length - 1
+                  ? styles.shipFieldWideLast
+                  : styles.shipFieldWide
+                : i === card.fields.length - 1
+                  ? styles.shipFieldLast
+                  : styles.shipField
+            }
           >
-            <Text style={styles.tableCellLabel}>{r.label}</Text>
-            {/* The tracking link is a real PDF link annotation, not a URL
-                printed as text. A reviewer clicks the carrier + number and
-                lands on the parcel; they never have to select, copy and
-                paste a 120-character URL — which, in practice, nobody does,
-                leaving the delivery claim unverifiable in the one document
-                that asserts it. `link` is null on every row without a
-                citable URL, and this falls back to plain text. */}
-            <Text style={styles.tableCellValue}>
-              {r.value}
-              {r.link ? (
+            <Text style={styles.shipFieldLabel}>{f.label}</Text>
+            <Text style={styles.shipFieldValue}>
+              {f.value}
+              {f.reference ? (
                 <>
                   {" · "}
-                  <Link src={r.link.url} style={styles.tableCellLink}>
-                    {r.link.label}
-                  </Link>
+                  {f.reference.url ? (
+                    <Link src={f.reference.url} style={styles.link}>
+                      {f.reference.text}
+                    </Link>
+                  ) : (
+                    f.reference.text
+                  )}
                 </>
               ) : null}
             </Text>
@@ -353,7 +448,79 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
   );
 }
 
-/* ── Supporting Evidence Index ──────────────────────────────────── */
+function ShipmentCards({ cards }: { cards: ShipmentCardModel[] }) {
+  const rows: ShipmentCardModel[][] = [];
+  for (let i = 0; i < cards.length; i += 2) rows.push(cards.slice(i, i + 2));
+  return (
+    <View>
+      {rows.map((pair, r) => (
+        <View key={r} style={styles.shipRow} wrap={false}>
+          <ShipmentCard card={pair[0]} />
+          <View style={styles.shipGap} />
+          {pair[1] ? <ShipmentCard card={pair[1]} /> : <View style={{ flex: 1 }} />}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/* ── Tables ───────────────────────────────────────────────────────── */
+
+function LineItemsTable({ items }: { items: LineItem[] }) {
+  const total = lineItemsTotal(items);
+  return (
+    <View>
+      <View style={styles.thRow}>
+        <Text style={[styles.th, { flex: 1 }]}>Description</Text>
+        <Text style={[styles.th, { width: 50, textAlign: "right" }]}>Qty</Text>
+        <Text style={[styles.th, { width: 100, textAlign: "right" }]}>Price</Text>
+      </View>
+      {items.map((it, i) => (
+        <View key={i} style={i % 2 === 0 ? styles.trZebra : styles.tr} wrap={false}>
+          <Text style={[styles.td, { flex: 1 }]}>{it.description}</Text>
+          <Text style={[styles.td, { width: 50, textAlign: "right" }]}>{it.kind === "adjustment" ? "" : it.quantity}</Text>
+          <Text style={[styles.td, { width: 100, textAlign: "right" }]}>{it.price}</Text>
+        </View>
+      ))}
+      {total ? (
+        <View style={styles.totalRow} wrap={false}>
+          <Text style={[styles.totalText, { flex: 1 }]}>Total</Text>
+          <Text style={[styles.totalText, { width: 50, textAlign: "right" }]}>{total.quantity}</Text>
+          <Text style={[styles.totalText, { width: 100, textAlign: "right" }]}>{total.amount}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function EvidenceBasisTable({ rows }: { rows: ReturnType<typeof buildEvidenceBasisRows> }) {
+  // No caption: the Record/Detail table is self-explanatory, and the prior
+  // caption leaked internal terminology onto the bank PDF.
+  return (
+    <View>
+      <View style={styles.thRow}>
+        <Text style={[styles.th, { width: "38%" }]}>Record</Text>
+        <Text style={[styles.th, { flex: 1 }]}>Detail</Text>
+      </View>
+      {rows.map((r, i) => (
+        <View key={`${r.factId}-${r.label}`} style={i % 2 === 0 ? styles.trZebra : styles.tr} wrap={false}>
+          <Text style={[styles.td, { width: "38%", fontWeight: 600, paddingRight: 10 }]}>{r.label}</Text>
+          <Text style={[styles.td, { flex: 1 }]}>
+            {r.value}
+            {r.link ? (
+              <>
+                {" · "}
+                <Link src={r.link.url} style={styles.link}>
+                  {r.link.label}
+                </Link>
+              </>
+            ) : null}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function inclusionLabel(m: ManualEvidenceRecord): string {
   if (m.includeInBankNarrative && m.includeInPackage) return "Narrative + appendix";
@@ -362,90 +529,93 @@ function inclusionLabel(m: ManualEvidenceRecord): string {
   return "Not included";
 }
 
-function SupportingEvidenceIndex({
-  manualEvidence,
+function SupportingEvidenceTable({
+  included,
   issuerSafe,
 }: {
-  manualEvidence: ManualEvidenceRecord[];
+  included: ManualEvidenceRecord[];
   issuerSafe: boolean;
 }) {
-  const included = issuerSafe
-    ? manualEvidence.filter(isBankIncludedManualEvidence)
-    : manualEvidence.filter((m) => m.includeInPackage);
-  if (included.length === 0) return null;
   return (
-    <View minPresenceAhead={100}>
-      <Text style={styles.h1}>Supporting Evidence Index</Text>
-      <View style={styles.table}>
-        <View style={styles.tableHeader} wrap={false}>
-          <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Document</Text>
-          <Text style={[styles.tableHeaderCell, { flex: issuerSafe ? 4.4 : 3 }]}>
-            Type &amp; description
+    <View>
+      <View style={styles.thRow}>
+        <Text style={[styles.th, { flex: 2 }]}>Document</Text>
+        <Text style={[styles.th, { flex: issuerSafe ? 4.4 : 3 }]}>Type &amp; description</Text>
+        {/* The internal routing column. Never on the issuer-safe route. */}
+        {issuerSafe ? null : <Text style={[styles.th, { flex: 1.4 }]}>Inclusion</Text>}
+      </View>
+      {included.map((m, i) => (
+        <View key={m.id} style={i % 2 === 0 ? styles.trZebra : styles.tr} wrap={false}>
+          <Text style={[styles.td, { flex: 2, fontWeight: 600 }]}>{m.filename}</Text>
+          <Text style={[styles.td, { flex: issuerSafe ? 4.4 : 3 }]}>
+            {m.fileType ?? "—"}
+            {m.description ? ` — ${m.description}` : ""}
           </Text>
-          {/* The internal routing column. Never on the issuer-safe route. */}
-          {issuerSafe ? null : (
-            <Text style={[styles.tableHeaderCell, { flex: 1.4 }]}>Inclusion</Text>
-          )}
+          {issuerSafe ? null : <Text style={[styles.td, { flex: 1.4 }]}>{inclusionLabel(m)}</Text>}
         </View>
-        {included.map((m, i) => (
-          <View
-            key={m.id}
-            style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
-            wrap={false}
-          >
-            <Text style={[styles.tableCellLabel, { flex: 2 }]}>{m.filename}</Text>
-            <Text style={[styles.tableCellValue, { flex: issuerSafe ? 4.4 : 3 }]}>
-              {m.fileType ?? "—"}
-              {m.description ? ` — ${m.description}` : ""}
-            </Text>
-            {issuerSafe ? null : (
-              <Text style={[styles.tableCellValue, { flex: 1.4 }]}>
-                {inclusionLabel(m)}
-              </Text>
-            )}
+      ))}
+    </View>
+  );
+}
+
+/* ── Chronology ───────────────────────────────────────────────────────
+ * Events come from `lib/defence/chronology.ts` (shared with the HTML view).
+ * Each gets a short title and a marker: filled for money and fulfilment,
+ * hollow for customer notifications, green for the carrier's own record. */
+
+function ProductListingExhibits({ exhibits }: { exhibits: ProductListingExhibit[] }) {
+  return (
+    <View>
+      {exhibits.map((x, i) => (
+        <View key={i} style={{ marginBottom: i < exhibits.length - 1 ? 18 : 0 }} wrap={false}>
+          <Text style={{ fontSize: 8.5, color: COLORS.muted, marginBottom: 4 }}>{exhibitCaption(x.retrievedOn)}</Text>
+          {x.title ? <Text style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 2 }}>{x.title}</Text> : null}
+          {x.variantLine ? <Text style={{ fontSize: 9.5, marginBottom: 6 }}>{x.variantLine}</Text> : null}
+          {x.images.length > 0 ? (
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
+              {x.images.map((src, k) => (
+                <Image key={k} src={src} style={{ width: 150, height: 150, objectFit: "contain" }} />
+              ))}
+            </View>
+          ) : null}
+          {x.excerpt ? <Text style={{ fontSize: 9.5, lineHeight: 1.4, marginBottom: 4 }}>{x.excerpt}</Text> : null}
+          {x.sourceUrl ? (
+            <Link src={x.sourceUrl} style={{ fontSize: 8.5, color: COLORS.muted }}>
+              {x.sourceUrlDisplay ?? x.sourceUrl}
+            </Link>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Chronology({ events, shipments }: { events: ChronologyEvent[]; shipments: ReturnType<typeof shipmentsOf> }) {
+  return (
+    <View>
+      {events.map((e, i) => {
+        const parts = dateParts(e.at);
+        const { title, marker } = describeChronologyEvent(e, shipments);
+        const last = i === events.length - 1;
+        return (
+          <View key={`${e.at}-${i}`} style={styles.chronoRow} wrap={false}>
+            <View style={styles.chronoDateCol}>
+              <Text style={styles.chronoDate}>{parts ? parts[0] : e.at}</Text>
+              {parts ? <Text style={styles.chronoTime}>{parts[1]}</Text> : null}
+            </View>
+            <View style={styles.chronoRail}>
+              {last ? null : <View style={styles.chronoLine} />}
+              <View
+                style={marker === "green" ? styles.dotGreen : marker === "hollow" ? styles.dotHollow : styles.dotFilled}
+              />
+            </View>
+            <View style={styles.chronoBody}>
+              <Text style={styles.chronoTitle}>{title}</Text>
+              <Text style={styles.chronoText}>{e.text}</Text>
+            </View>
           </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/* ── Footer ──────────────────────────────────────────────────────── */
-
-function PageFooter({ meta }: { meta: DefencePackageMeta }) {
-  return (
-    <View style={styles.footer} fixed>
-      <Text style={styles.footerLeft}>
-        Defence Package v{meta.version} • {meta.packageMode} • prompt v{meta.promptVersion}
-      </Text>
-      <Text
-        style={styles.footerRight}
-        render={({ pageNumber, totalPages }) =>
-          `Page ${pageNumber} of ${totalPages}`
-        }
-      />
-    </View>
-  );
-}
-
-/* ── Conclusion call-out ─────────────────────────────────────────── */
-
-function ConclusionBlock({ block }: { block: ComposedDocumentBlock | null }) {
-  if (!block) return null;
-  const body = block.llmText.trim() || block.fallbackText.trim();
-  if (!body) return null;
-  const thesis = block.thesisText.trim();
-  return (
-    <View minPresenceAhead={100}>
-      <Text style={styles.h1}>{block.heading}</Text>
-      {thesis ? (
-        <View style={styles.thesisBox}>
-          <Text style={styles.thesisText}>{thesis}</Text>
-        </View>
-      ) : null}
-      <View style={styles.conclusionBox}>
-        <Text style={styles.paragraphLast}>{body}</Text>
-      </View>
+        );
+      })}
     </View>
   );
 }
@@ -459,9 +629,56 @@ export function DefencePackageDocument({
 }) {
   const { meta, composedBlocks, approvedFacts, manualEvidence } = data;
   const issuerSafe = data.issuerSafeSupportingIndex === true;
-  const chronology = buildChronologyEvents(meta, approvedFacts);
   const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
+  const chronology = buildChronologyEvents(
+    {
+      ...meta,
+      orderTotalDisplay: lineItemsTotal(lineItems)?.amount ?? null,
+      omitArrivalEvents: familyOmitsArrival(meta.reasonCodeFamilyKey),
+    },
+    approvedFacts,
+  );
+  const shipments = shipmentsOf(approvedFacts);
+  const multiParcel = shipments.length > 1;
+  // Single parcel: the carrier record as a card; the Evidence Basis then
+  // leaves out the rows the card already shows.
+  const single = multiParcel ? null : singleShipmentOf(approvedFacts, chronology, meta.orderName);
+  const shownOnCard = single ? deliveryFactIds(approvedFacts) : new Set<string>();
+  const evidenceRows = buildEvidenceBasisRows(approvedFacts).filter((r) => !shownOnCard.has(r.factId));
+  const included = issuerSafe
+    ? manualEvidence.filter(isBankIncludedManualEvidence)
+    : manualEvidence.filter((m) => m.includeInPackage);
+  const productNames = [
+    ...lineItems.map((it) => it.description),
+    ...shipments.map(productsOf),
+  ];
+
+  // Sections are numbered in the order they actually render.
+  let n = 0;
+  const num = () => String(++n).padStart(2, "0");
+
+  const prose = (key: NarrativeSectionKey) => {
+    const block = findBlock(composedBlocks, key);
+    const body = blockBody(block);
+    if (!block || !body) return null;
+    return (
+      <Section key={key} number={num()} title={block.heading} thesis={block.thesisText.trim() || undefined}>
+        {/* Product names are bolded where they tell parcels and items apart
+            (shipping, line items). The summary and conclusion argue the case,
+            and bold names there pull the eye to the least important words
+            (maintainer, #360980, 2026-09-26). */}
+        <Prose text={body} emphasise={key === "executiveSummary" || key === "conclusion" ? [] : productNames} />
+      </Section>
+    );
+  };
+
+  const overviewBlock = findBlock(composedBlocks, "transactionOverviewArgument");
+  const lineItemsArgument =
+    overviewBlock?.recordBuilt && lineItems.length > 0 ? blockBody(overviewBlock) : null;
   const chronologyBlock = findBlock(composedBlocks, "chronologyArgument");
+  const chronologyBody = blockBody(chronologyBlock);
+  const conclusion = findBlock(composedBlocks, "conclusion");
+  const conclusionBody = blockBody(conclusion);
 
   return (
     <Document
@@ -469,57 +686,152 @@ export function DefencePackageDocument({
       subject="Chargeback Representment — Complete Defence Package"
       creator="DisputeDesk Grounded Defence Package Builder"
     >
-      <Cover meta={meta} />
+      <Page size="LETTER" style={styles.firstPage}>
+        <Footer meta={meta} />
+        <RunningHeader meta={meta} />
+        {/* Page 1 only: not `fixed`, so it draws where it sits. */}
+        <View style={styles.topBar} />
 
-      <Page size="A4" style={styles.page}>
-        <CaseDetailsTable meta={meta} />
+        <View style={{ marginTop: -32 }}>
+          <FirstPage meta={meta} />
+        </View>
 
-        <SectionBlock block={findBlock(composedBlocks, "executiveSummary")} />
-        <SectionBlock block={findBlock(composedBlocks, "transactionOverviewArgument")} />
+        {/* The argument starts on page 2, under the running header. */}
+        <View break>
+          {prose("executiveSummary")}
+          {/* A record-built overview argues the line items: it prints under
+              the table instead (review of #352543, 2026-09-25). */}
+          {lineItemsArgument ? null : prose("transactionOverviewArgument")}
+          {prose("paymentAuthenticationArgument")}
 
-        {/* Chronology: thesis + LLM prose + deterministic bullets. The
-            bullets come from meta — they aren't argumentative prose
-            and don't pass through composedBlocks. */}
-        {chronology.length > 0 || (chronologyBlock && (chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim())) ? (
-          <View minPresenceAhead={100}>
-            <View wrap={false}>
-              <Text style={styles.h1}>Chronology of Events</Text>
-              {chronologyBlock && chronologyBlock.thesisText.trim() ? (
-                <View style={styles.thesisBox}>
-                  <Text style={styles.thesisText}>
-                    {chronologyBlock.thesisText.trim()}
-                  </Text>
+          {multiParcel ? (
+            <Section number={num()} title="Shipping, Delivery & Evidence">
+              <ShipmentCards cards={shipmentCards(shipments, chronology)} />
+              {/* Counsel v2 multi-parcel letters: the addresses and the
+                  record-built prose under the cards (as on a single parcel).
+                  A template multi-parcel letter's prose repeats the cards, so
+                  it stays unprinted. */}
+              {addressCard(meta.addressExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 12 }]} wrap={false}>
+                  <ShipmentCard card={addressCard(meta.addressExhibit)!} wide />
                 </View>
               ) : null}
-            </View>
-            {chronologyBlock && (chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim()) ? (
-              <Text style={styles.paragraph}>
-                {chronologyBlock.llmText.trim() || chronologyBlock.fallbackText.trim()}
-              </Text>
-            ) : null}
-            <ChronologyBullets events={chronology} />
-          </View>
-        ) : null}
+              {findBlock(composedBlocks, "fulfillmentArgument")?.recordBuilt &&
+              blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
+                <View style={{ marginTop: 14 }}>
+                  <Prose
+                    text={blockBody(findBlock(composedBlocks, "fulfillmentArgument")) as string}
+                    emphasise={productNames}
+                  />
+                </View>
+              ) : null}
+            </Section>
+          ) : single ? (
+            <Section
+              number={num()}
+              title={findBlock(composedBlocks, "fulfillmentArgument")?.heading ?? "Shipping & Delivery"}
+            >
+              {/* One parcel: a full-width card with its fields side by side —
+                  half a row of empty page otherwise (review of #352543). */}
+              <View style={styles.shipRow} wrap={false}>
+                <ShipmentCard card={shipmentCards([single], chronology)[0]} wide />
+              </View>
+              {addressCard(meta.addressExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 12 }]} wrap={false}>
+                  <ShipmentCard card={addressCard(meta.addressExhibit)!} wide />
+                </View>
+              ) : null}
+              {blockBody(findBlock(composedBlocks, "fulfillmentArgument")) ? (
+                <View style={{ marginTop: 14 }}>
+                  <Prose
+                    text={blockBody(findBlock(composedBlocks, "fulfillmentArgument")) as string}
+                    emphasise={productNames}
+                  />
+                </View>
+              ) : null}
+            </Section>
+          ) : (
+            prose("fulfillmentArgument")
+          )}
 
-        <LineItemsTable items={lineItems} />
+          {prose("communicationArgument")}
+          {prose("policyArgument")}
 
-        <SectionBlock block={findBlock(composedBlocks, "paymentAuthenticationArgument")} />
-        <SectionBlock block={findBlock(composedBlocks, "fulfillmentArgument")} />
-        <SectionBlock block={findBlock(composedBlocks, "communicationArgument")} />
-        <SectionBlock block={findBlock(composedBlocks, "policyArgument")} />
+          {!multiParcel && evidenceRows.length > 0 ? (
+            <Section number={num()} title="Evidence Basis" keepTogether={evidenceRows.length <= 8}>
+              <EvidenceBasisTable rows={evidenceRows} />
+            </Section>
+          ) : null}
 
-        <EvidenceBasis approvedFacts={approvedFacts} />
+          {prose("manualEvidenceArgument")}
 
-        <SectionBlock block={findBlock(composedBlocks, "manualEvidenceArgument")} />
+          {included.length > 0 ? (
+            <Section number={num()} title="Supporting Evidence">
+              <SupportingEvidenceTable included={included} issuerSafe={issuerSafe} />
+            </Section>
+          ) : null}
 
-        <SupportingEvidenceIndex
-          manualEvidence={manualEvidence}
-          issuerSafe={issuerSafe}
-        />
+          {lineItems.length > 0 ? (
+            <Section number={num()} title="Order Line Items" keepTogether={lineItems.length <= 10}>
+              {orderPlacedLine(meta.orderName, meta.transactionDate) ? (
+                <Text style={{ fontSize: 9.5, color: COLORS.muted, marginBottom: 8 }}>
+                  {orderPlacedLine(meta.orderName, meta.transactionDate)}
+                </Text>
+              ) : null}
+              <LineItemsTable items={lineItems} />
+              {lineItemsArgument ? (
+                <View style={{ marginTop: 14 }}>
+                  <Prose text={lineItemsArgument} emphasise={productNames} />
+                </View>
+              ) : null}
+              {/* The same customer's later order, under the disputed order's
+                  items (maintainer, 2026-09-25: it fits this page). */}
+              {laterOrderCard(meta.laterOrderExhibit) ? (
+                <View style={[styles.shipRow, { marginTop: 22 }]} wrap={false}>
+                  <ShipmentCard card={laterOrderCard(meta.laterOrderExhibit)!} wide />
+                </View>
+              ) : null}
+            </Section>
+          ) : null}
 
-        <ConclusionBlock block={findBlock(composedBlocks, "conclusion")} />
+          {meta.productListingExhibits && meta.productListingExhibits.length > 0 ? (
+            <Section number={num()} title="Product Listing">
+              <ProductListingExhibits exhibits={meta.productListingExhibits} />
+            </Section>
+          ) : null}
 
-        <PageFooter meta={meta} />
+          {chronology.length > 0 || chronologyBody ? (
+            <Section
+              number={num()}
+              title="Chronology of Events"
+              thesis={chronologyBlock?.thesisText.trim() || undefined}
+              keepTogether={chronology.length <= 12}
+            >
+              {chronologyBody ? (
+                <View style={{ marginBottom: 18 }}>
+                  <Prose text={chronologyBody} />
+                </View>
+              ) : null}
+              {chronology.length > 0 ? <Chronology events={chronology} shipments={shipments} /> : null}
+            </Section>
+          ) : null}
+
+          {conclusion && (conclusionBody || conclusion.thesisText.trim()) ? (
+            <Section number={num()} title={conclusion.heading} keepTogether>
+              {/* The reasoning, then the request (review of #352543). */}
+              <View style={styles.conclusion}>
+                {conclusionBody ? (
+                  <Text style={[styles.conclusionBody, conclusion.thesisText.trim() ? { marginBottom: 10 } : {}]}>
+                    {conclusionBody}
+                  </Text>
+                ) : null}
+                {conclusion.thesisText.trim() ? (
+                  <Text style={[styles.conclusionRequest, { marginBottom: 0 }]}>{conclusion.thesisText.trim()}</Text>
+                ) : null}
+              </View>
+            </Section>
+          ) : null}
+        </View>
       </Page>
     </Document>
   );

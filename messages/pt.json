@@ -631,7 +631,17 @@
       "hideFullDefenseLetter": "Ocultar carta de defesa",
       "defenseSectionSummary": "Resumo",
       "defenseSectionConclusion": "Conclusão",
-      "defenseSectionArgument": "Argumento"
+      "defenseSectionArgument": "Argumento",
+      "productListing": {
+        "present": "Obtida da sua loja em {date}: {title}",
+        "currentListingOnly": "Esta é a ficha do produto como está hoje. A Shopify não guarda como era quando o pedido foi feito.",
+        "absent": "O produto deste pedido não tem descrição na sua loja, por isso não há ficha para incluir.",
+        "deleted": "O produto deste pedido foi excluído da sua loja, por isso a ficha não pode ser incluída.",
+        "customItem": "Este pedido contém um item personalizado sem ficha de produto na sua loja.",
+        "failed": "Não conseguimos ler a ficha do produto na Shopify. Tentaremos mais uma vez automaticamente.",
+        "inaccessible": "A DisputeDesk não consegue ler seus produtos. Abra a DisputeDesk pelo painel da Shopify e aprove o acesso a produtos solicitado.",
+        "reconnectForProducts": "Aprovar acesso a produtos"
+      }
     },
     "facts": {
       "title": "Detalhes do caso",
@@ -984,7 +994,9 @@
         "reviewRequiredTitle": "É necessária uma revisão antes de este pacote poder ser apresentado",
         "reviewRequiredBody": "O DisputeDesk não pode apresentar este pacote de defesa tal como foi criado. Gere-o novamente para obter uma versão que possa ser submetida. A pré-visualização e Gerar novamente continuam disponíveis; Finalizar e Submeter ficam indisponíveis até que uma versão regenerada passe na revisão.",
         "notEnoughEvidenceReturnedTitle": "Não há nada a argumentar enquanto não nos disser por que a encomenda voltou",
-        "notEnoughEvidenceReturnedBody": "A transportadora devolveu-lhe esta encomenda, pelo que não há entrega a defender e nunca poderá existir uma confirmação de entrega para este pedido. Esperar não altera isso — não será recolhido mais nada. A única coisa que ainda pode ajudar está no separador Provas: diga-nos se o cliente recusou a entrega ou nunca a levantou. Nenhuma das situações conta como devolução válida, e é isso que incluiremos na sua resposta."
+        "notEnoughEvidenceReturnedBody": "A transportadora devolveu-lhe esta encomenda, pelo que não há entrega a defender e nunca poderá existir uma confirmação de entrega para este pedido. Esperar não altera isso — não será recolhido mais nada. A única coisa que ainda pode ajudar está no separador Provas: diga-nos se o cliente recusou a entrega ou nunca a levantou. Nenhuma das situações conta como devolução válida, e é isso que incluiremos na sua resposta.",
+        "notEnoughEvidenceClaimTitle": "Ainda não há nada que responda à reclamação do banco",
+        "notEnoughEvidenceClaimBody": "Você adicionou a reclamação do banco, então a carta responde a essa reclamação e a nada mais. Nenhuma das provas reunidas até agora trata dela, por isso nenhuma carta foi escrita — enviar uma vazia faria perder o caso. Adicione o que a lista da aba Provas pede e a carta será refeita automaticamente."
       },
       "sections": {
         "status": {
@@ -1369,7 +1381,7 @@
     },
     "decisiveHint": {
       "fraud": "confirmação de entrega, assinatura registrada ou consistência de dispositivo/sessão",
-      "delivery": "confirmação de assinatura da transportadora ou sinais correspondentes de cobrança/IP",
+      "delivery": "uma foto de entrega ou uma assinatura da transportadora, ou uma mensagem do cliente confirmando o recebimento",
       "product": "a ficha do produto conforme anunciada e a divulgação da sua política de reembolso",
       "refund": "processamento de reembolso documentado ou comunicação do lojista",
       "subscription": "a política de cancelamento e o cronograma de comunicação com o cliente",
@@ -1398,11 +1410,11 @@
         "fraudAvsOnly": "A autenticação do pagamento sustenta este caso, mas evidências decisivas adicionais como confirmação de entrega, consistência de dispositivo/sessão ou confirmação do cliente melhorariam o caso.",
         "strongAndModerate": "{strongLabel} e {moderateLabel} sustentam este caso; evidências decisivas adicionais fortaleceriam o caso.",
         "strongOnly": "{label} sustenta este caso, com corroboração moderada; evidências decisivas adicionais fortaleceriam o caso.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { e {label2}}} sustentam este caso. Evidências decisivas adicionais como {hint} o fortaleceriam ainda mais."
+        "moderateOnly": "{label1}{label2, select, empty { sustenta} other { e {label2} sustentam}} este caso. Evidências decisivas adicionais como {hint} o fortaleceriam ainda mais."
       },
       "weak": {
         "strongAlone": "{label} sustenta este caso, mas evidências decisivas adicionais (como {hint}) fortaleceriam o caso.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { e {label2}}} oferecem suporte parcial. Um sinal sólido como {hint} fortaleceria significativamente o caso.",
+        "moderateOnly": "{label1}{label2, select, empty { oferece} other { e {label2} oferecem}} suporte parcial. Um sinal sólido como {hint} fortaleceria significativamente o caso.",
         "supportingOnly": "O caso é fraco porque o pacote de evidências contém principalmente documentação de suporte, mas nenhuma evidência decisiva de {family}. {decisive} fortaleceria o caso.",
         "deliveryInTransit": "Neste momento é fraco porque nenhuma confirmação de entrega chegou à Shopify — o rastreamento está ativo, mas muitas transportadoras nunca informam a entrega à Shopify. Se a página de rastreamento da transportadora mostrar o pacote como entregue, envie essa confirmação como prova de entrega. {decisive} reforçaria o caso."
       },
@@ -1472,7 +1484,6 @@
         "lost": "Enviámos as suas provas a {date}. Ainda assim, o banco decidiu a favor do titular do cartão.",
         "won": "Enviámos as suas provas a {date}, e o banco decidiu a seu favor."
       },
-      "notDefendedByUs": "Esta contestação foi decidida antes de a DisputeDesk ter enviado quaisquer provas.",
       "factor": {
         "avs_mismatch": "A morada de faturação do cartão não correspondia à morada da encomenda",
         "cardholder_name_mismatch": "O nome registado no cartão era diferente do nome do comprador",
@@ -1490,6 +1501,247 @@
         "title": "O que provavelmente enfraqueceu este caso",
         "caveat": "O emissor não partilha o motivo exato da decisão. Estes são os sinais de risco mais fortes da avaliação completa, incluindo os que não foram enviados ao banco.",
         "fraudRecommendation": "Recomendação: analise ou cancele manualmente futuras encomendas de alto risco quando a verificação do pagamento falhar ou os nomes do titular e do comprador forem diferentes, sobretudo se a conta já tiver um chargeback."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Esta contestação foi decidida antes de a DisputeDesk ser instalada.",
+      "sentBeforeInstall": "Foi enviada uma resposta através da Shopify a {date}, antes de a DisputeDesk ser instalada.",
+      "shopifySent": "Foi enviada uma resposta através da Shopify a {date}.",
+      "shopifySentNoDate": "Foi enviada uma resposta através da Shopify.",
+      "noneBeforeDeadline": "O banco decidiu a {date}, antes do prazo de resposta e antes de ter sido enviada qualquer resposta.",
+      "noneFiled": "Não foi enviada nenhuma resposta.",
+      "holdReason": {
+        "merchant_conceded": "Optou por não contestar este caso.",
+        "not_shipped": "A DisputeDesk reteve este caso: a encomenda nunca foi enviada, pelo que não havia nenhuma entrega que pudéssemos mostrar ao banco com verdade.",
+        "refunded": "A DisputeDesk reteve este caso: a encomenda já tinha sido reembolsada.",
+        "covered": "A DisputeDesk reteve este caso: o Shopify Protect cobria esta encomenda.",
+        "plan_limit": "A DisputeDesk não conseguiu preparar provas para este caso: o limite do seu plano tinha sido atingido.",
+        "auto_build_off": "A DisputeDesk não preparou provas para este caso: a preparação automática estava desativada para a sua loja.",
+        "awaiting_review": "A DisputeDesk reteve este caso: estava a aguardar a sua revisão antes do envio.",
+        "thin_evidence": "A DisputeDesk reteve este caso: as provas disponíveis eram demasiado escassas para argumentar."
+      }
+    },
+    "decidedView": {
+      "header": {
+        "decided": "Decidida:"
+      },
+      "hero": {
+        "chipLost": "Definitivo · nada mais a enviar",
+        "chipWon": "Definitivo · o dinheiro é seu"
+      },
+      "outcome": {
+        "titleLost": "Contestação perdida",
+        "titleWon": "Contestação ganha",
+        "amountLost": "Montante perdido",
+        "amountRecovered": "Recuperado"
+      },
+      "product": {
+        "one": "{title} ({count, plural, one {# artigo} other {# artigos}})",
+        "many": "{title} e mais {others} ({count, plural, one {# artigo} other {# artigos}})"
+      },
+      "claim": {
+        "FRAUDULENT": "O cliente diz que não fez esta compra",
+        "UNRECOGNIZED": "O cliente não reconhece a cobrança",
+        "PRODUCT_NOT_RECEIVED": "Produto não recebido",
+        "PRODUCT_UNACCEPTABLE": "Produto não corresponde à descrição",
+        "SUBSCRIPTION_CANCELLED": "O cliente diz que cancelou a subscrição",
+        "DUPLICATE": "O cliente diz que foi cobrado duas vezes",
+        "CREDIT_NOT_PROCESSED": "O cliente diz que o reembolso nunca foi processado",
+        "GENERAL": "Contestação geral"
+      },
+      "who": {
+        "label": "Quem respondeu:",
+        "weFiled": "A DisputeDesk enviou as suas provas a {date}."
+      },
+      "summary": {
+        "claim": {
+          "FRAUDULENT": "O cliente disse ao banco que não fez esta compra.",
+          "UNRECOGNIZED": "O cliente disse ao banco que não reconhecia a cobrança.",
+          "PRODUCT_NOT_RECEIVED": "O cliente disse ao banco que a encomenda nunca chegou.",
+          "PRODUCT_UNACCEPTABLE": "O cliente disse ao banco que o produto não correspondia à descrição.",
+          "SUBSCRIPTION_CANCELLED": "O cliente disse ao banco que já tinha cancelado a subscrição.",
+          "DUPLICATE": "O cliente disse ao banco que foi cobrado duas vezes.",
+          "CREDIT_NOT_PROCESSED": "O cliente disse ao banco que um reembolso nunca foi processado.",
+          "GENERAL": "O cliente contestou a cobrança junto do banco."
+        },
+        "evidence": "{clauses}.",
+        "evidenceHeld": "{clauses}, pelo que não havia um caso honesto a apresentar.",
+        "response": {
+          "weFiledWon": "A DisputeDesk enviou essas provas a {date}, e o banco decidiu a seu favor.",
+          "weFiledWonNoFacts": "A DisputeDesk enviou as suas provas a {date}, e o banco decidiu a seu favor.",
+          "weFiledLost": "A DisputeDesk enviou as provas a {date}, e mesmo assim o banco deu razão ao cliente.",
+          "shopifyWon": "Foi enviada uma resposta através da Shopify, e o banco decidiu a seu favor.",
+          "shopifyLost": "Foi enviada uma resposta através da Shopify, e o banco deu razão ao cliente.",
+          "noneWon": "O banco decidiu a seu favor.",
+          "noneLost": "Não foi enviada nenhuma resposta, e o banco deu razão ao cliente.",
+          "beforeInstallWon": "O banco decidiu a seu favor antes de a DisputeDesk ser instalada.",
+          "beforeInstallLost": "O banco deu razão ao cliente antes de a DisputeDesk ser instalada."
+        },
+        "closingWon": "Os {amount} ficam consigo.",
+        "closingNotShipped": "Enviar ou reembolsar encomendas paradas é a forma mais segura de evitar isto da próxima vez.",
+        "closingLost": "Os passos abaixo são as mudanças mais úteis para a próxima vez.",
+        "clause": {
+          "neverShipped": "nunca foi enviada",
+          "shippedAfterDispute": "só foi enviada depois de a contestação ter sido aberta",
+          "noDelivery": "nada no registo mostrava uma entrega",
+          "avs_mismatch": "a morada de faturação do cartão não correspondia à encomenda",
+          "cardholder_name_mismatch": "o nome no cartão era diferente do do comprador",
+          "prior_chargebacks": "o cliente já tinha contestado uma cobrança antes",
+          "ip_country_mismatch": "a encomenda foi feita a partir de outro país",
+          "ip_high_risk": "o checkout veio de uma rede de alto risco",
+          "no_signature_on_fraud": "ninguém assinou a entrega",
+          "weak_identity_signals": "só foi possível confirmar o país do cliente",
+          "avs_match": "a morada de faturação correspondia ao cartão",
+          "signature_confirmed": "a entrega foi assinada",
+          "delivery_confirmed": "a transportadora confirmou a entrega",
+          "priorUndisputed": "{count, plural, one {já lhe tinha comprado uma vez sem problemas} other {já lhe tinha comprado # vezes sem problemas}}",
+          "threeDs": "o pagamento passou no 3-D Secure"
+        }
+      },
+      "facts": {
+        "titleLost": "O que vimos no registo",
+        "titleWon": "O que sustentou o caso",
+        "subLost": "Factos da encomenda e dos nossos registos. Não é a fundamentação do banco.",
+        "subWon": "Provas da resposta que a DisputeDesk enviou",
+        "subRecord": "Factos da encomenda e dos nossos registos",
+        "weightPill": "Os bancos dão-lhe muito peso",
+        "noteNotReceived": "Numa reclamação de não receção o banco faz uma pergunta: foi entregue? Nada no registo dizia que sim.",
+        "title": {
+          "neverShipped": "A encomenda nunca foi enviada",
+          "shippedAfterDispute": "A encomenda só foi enviada depois de a contestação ter sido aberta",
+          "noTracking": "Não existia número de seguimento nem confirmação de entrega",
+          "priorUndisputed": "{count, plural, one {# encomenda anterior deste cliente nunca foi contestada} other {# encomendas anteriores deste cliente nunca foram contestadas}}",
+          "threeDs": "O pagamento passou no 3-D Secure"
+        },
+        "source": {
+          "order": "Dos dados da encomenda na Shopify",
+          "payment": "Dos dados de pagamento na Shopify",
+          "customer": "Dos dados do cliente na Shopify",
+          "ip": "Do endereço IP do checkout",
+          "carrier": "Do seguimento da transportadora",
+          "unfulfilled": "Estado de processamento: não processada · Dos dados da encomenda na Shopify",
+          "shipped": "Enviada a {date} · Dos dados da encomenda na Shopify"
+        }
+      },
+      "checklist": {
+        "title": "O que ganha este tipo de contestação",
+        "thisCase": "Este caso",
+        "item": {
+          "tracking": "Seguimento da transportadora até à morada do cliente",
+          "deliveryConfirmation": "Confirmação de entrega (assinatura acima do seu limite)",
+          "promisedDelivery": "Data de entrega prometida no checkout",
+          "communication": "Registo de comunicação com o cliente",
+          "addressMatch": "Morada de faturação e código de segurança coincidem",
+          "deliveryToBilling": "Entrega na morada de faturação",
+          "priorOrders": "Encomendas anteriores não contestadas do mesmo cliente",
+          "threeDs": "Autenticação 3-D Secure",
+          "productDescription": "Descrição do produto que corresponde ao que foi enviado",
+          "refundPolicy": "Política de devoluções e reembolsos mostrada no checkout",
+          "refundRecord": "Registo do reembolso, ou porque não era devido",
+          "noReturn": "Não foi recebida nenhuma devolução",
+          "cancellationPolicy": "Condições de cancelamento mostradas na adesão",
+          "activityAfterCancel": "Atividade do cliente após a data de cancelamento",
+          "duplicateExplanation": "Explicação de que as cobranças eram compras distintas",
+          "orderConfirmation": "Confirmação da encomenda",
+          "storePolicies": "Políticas da loja"
+        },
+        "state": {
+          "had": "Registado",
+          "policy": "Na política",
+          "missing": "Em falta",
+          "none": "Nenhum",
+          "notUsed": "Não usado",
+          "notChecked": "Não verificado"
+        },
+        "coverage": "dos elementos que os bancos procuram constavam deste caso"
+      },
+      "next": {
+        "title": "Da próxima vez",
+        "shipOrCancel": {
+          "title": "Envie, ou cancele e reembolse, antes de o cliente contestar",
+          "detail": {
+            "chargeback": "Esta encomenda esteve por enviar durante {days, plural, one {# dia} other {# dias}} antes do chargeback.",
+            "inquiry": "Esta encomenda esteve por enviar durante {days, plural, one {# dia} other {# dias}} antes do pedido de informação."
+          },
+          "detailLate": "Só foi enviada depois de o cliente a ter contestado."
+        },
+        "shareTracking": {
+          "title": "Partilhe o seguimento com o cliente quando a encomenda for enviada",
+          "detail": "Esta encomenda não tinha número de seguimento."
+        },
+        "holdHighRisk": {
+          "title": "Retenha as encomendas que a Shopify assinala como de alto risco",
+          "detail": "A Shopify assinalou esta encomenda antes de ser enviada."
+        },
+        "threeDs": {
+          "title": "Ative o 3-D Secure para encomendas de risco",
+          "detail": "Os pagamentos autenticados transferem a responsabilidade das reclamações de fraude para o banco emissor."
+        },
+        "selfServeCancel": {
+          "title": "Permita o cancelamento em self-service e confirme-o por e-mail",
+          "detail": "Clientes que conseguem cancelar facilmente raramente recorrem ao banco."
+        },
+        "describeProduct": {
+          "title": "Descreva os produtos com precisão e mostre o que é enviado",
+          "detail": "As reclamações de produto não conforme dependem de o anúncio corresponder ao que chegou."
+        },
+        "confirmRefunds": {
+          "title": "Reembolse depressa e envie por e-mail uma confirmação datada",
+          "detail": "Uma confirmação de reembolso responde diretamente a uma reclamação de reembolso não processado."
+        },
+        "sub": "Passos que pode dar em encomendas futuras, com base neste caso"
+      },
+      "timeline": {
+        "title": "O que aconteceu",
+        "opened": "Contestação aberta",
+        "openedDetail": "{claim}. Resposta até {due}.",
+        "openedDetailNoDue": "{claim}.",
+        "gathered": "Provas reunidas",
+        "gatheredNoDelivery": "Sem seguimento nem confirmação de entrega na encomenda.",
+        "held": {
+          "not_shipped": {
+            "title": "Retido: encomenda não enviada",
+            "detail": "Nada no registo mostrava a entrega, por isso não enviámos nada."
+          },
+          "refunded": {
+            "title": "Retido: já reembolsada",
+            "detail": "Não enviámos nada, porque a encomenda já tinha sido reembolsada."
+          },
+          "covered": {
+            "title": "Retido: coberto pelo Shopify Protect",
+            "detail": "Não enviámos nada, porque o Shopify Protect cobre esta encomenda."
+          },
+          "thin_evidence": {
+            "title": "Retido: provas insuficientes",
+            "detail": "Não enviámos nada, porque as provas eram demasiado escassas para argumentar."
+          },
+          "awaiting_review": {
+            "title": "Retido: a aguardar a sua revisão",
+            "detail": "As regras desta loja não enviam nada sem a sua aprovação."
+          },
+          "plan_limit": {
+            "title": "Não preparado: limite do plano atingido",
+            "detail": "O limite de pacotes do seu plano tinha sido atingido."
+          },
+          "auto_build_off": {
+            "title": "Não preparado: preparação automática desativada",
+            "detail": "A preparação automática de provas estava desativada para a sua loja."
+          },
+          "merchant_conceded": {
+            "title": "Optou por não contestar"
+          }
+        },
+        "emailed": "Recebeu um e-mail",
+        "emailedFatalLoss": "Explicámos porque é que este caso não podia ser defendido com verdade.",
+        "emailedPlanLimit": "Informámos que o limite do seu plano tinha sido atingido.",
+        "weFiled": "A DisputeDesk enviou as suas provas",
+        "weFiledDetail": "Guardadas na Shopify e encaminhadas ao banco.",
+        "shopifySent": "Resposta enviada através da Shopify",
+        "cancelled": "Cancelou a encomenda",
+        "lost": "Perdida",
+        "lostDetail": "{amount} não foram devolvidos.",
+        "won": "Ganha",
+        "wonDetail": "{amount} recuperados."
       }
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",
@@ -2024,7 +2276,59 @@
         "generic": "Este item precisa da sua confirmação antes de poder ser utilizado."
       }
     },
-    "multipleOnOrder": "{index} de {total} neste pedido"
+    "multipleOnOrder": "{index} de {total} neste pedido",
+    "bankClaim": {
+      "badge": "Ação necessária",
+      "subReopened": "Disputa reaberta pela Shopify",
+      "subGeneral": "Sem motivo específico do banco",
+      "title": "Adicione a reclamação do banco",
+      "introReopened": "O banco pede uma nova resposta. O motivo só aparece na Shopify — cole-o aqui para que a resposta responda exatamente ao que foi perguntado.",
+      "introGeneral": "O banco não deu um motivo específico para esta disputa. O motivo só aparece na Shopify — cole-o aqui para que a resposta responda exatamente ao que foi perguntado.",
+      "dueLabel": "Prazo da resposta",
+      "dueToday": "Vence hoje",
+      "step1Title": "Encontre a reclamação na Shopify",
+      "step1Path": "Pedido {order} → Detalhes do estorno → Reclamação do emissor",
+      "openInShopify": "Abrir a disputa na Shopify ↗",
+      "step2Title": "Envie o arquivo da reclamação ou cole o texto",
+      "step2Body": "Baixe a reclamação na Shopify (geralmente um PDF) e solte-a abaixo. Nenhuma reclamação aparece? Marque a caixa.",
+      "textLabel": "A reclamação do banco",
+      "countRequired": "Obrigatório",
+      "countChars": "{count, plural, =1 {# caractere} other {# caracteres}}",
+      "countNotNeeded": "Não é necessário",
+      "textPlaceholder": "ex.: O titular afirma que não recebeu o item e o rastreamento não mostra nenhuma entrega…",
+      "privacyNote": "Usada só para orientar a resposta. Nunca é citada nem devolvida ao banco.",
+      "noClaimShown": "A Shopify não mostra nenhuma reclamação para esta disputa",
+      "noClaimShownHelp": "Os bancos nem sempre fornecem uma. O DisputeDesk montará a resposta a partir do código de motivo.",
+      "statusHold": "A resposta está em espera até que a reclamação seja adicionada.",
+      "statusReady": "Pronto para salvar.",
+      "statusSaved": "Salvo — o DisputeDesk está refazendo a resposta.",
+      "save": "Salvar reclamação",
+      "saved": "Salvo",
+      "errorWindowClosed": "A Shopify já encaminhou as provas desta disputa, então a reclamação não pode mais ser adicionada.",
+      "errorGeneric": "Não foi possível salvar a reclamação ({code}). Tente novamente.",
+      "daysCount": "{count, plural, =1 {# dia} other {# dias}}",
+      "tabUpload": "Enviar arquivo",
+      "tabPaste": "Colar texto",
+      "countFile": "1 arquivo",
+      "dropTitle": "Solte aqui o arquivo da reclamação ou <browse>procure</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML ou imagem · até 10 MB",
+      "fileMetaReady": "{size} · Pronto para salvar",
+      "fileMetaUploaded": "{size} · Enviado",
+      "replace": "Substituir",
+      "remove": "Remover",
+      "statusSaving": "Salvando…",
+      "errorFileType": "Envie um arquivo PDF, TXT, DOC, DOCX, RTF, EML ou uma imagem.",
+      "errorFileSize": "O arquivo tem mais de 10 MB.",
+      "savedTitle": "Reclamação do banco recebida — refazendo a resposta",
+      "savedTitleDone": "Reclamação do banco recebida — resposta atualizada",
+      "savedSummaryNoClaim": "A Shopify não mostra reclamação — usando o código de motivo",
+      "savedSummaryText": "{count, plural, =1 {Texto colado · # caractere} other {Texto colado · # caracteres}}",
+      "savedDue": "Prazo da resposta: {date}",
+      "cancel": "Cancelar",
+      "editClaim": "Editar reclamação",
+      "portalBody": "A DisputeDesk não enviará uma resposta para esta disputa até que a reclamação do banco seja adicionada. Ela só aparece na Shopify e é adicionada no app DisputeDesk, no painel da Shopify.",
+      "portalCta": "Adicionar na Shopify"
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banco não pode processar",
@@ -2088,7 +2392,8 @@
         "comms": "Comunicação",
         "other": "Evidências adicionais",
         "access_log": "Registro de atividade"
-      }
+      },
+      "productListings": "Fichas de produto ({count})"
     },
     "title": "Pacotes de Evidências",
     "subtitle": "Visualize e gerencie pacotes de evidências",
@@ -3295,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "Checklist de evidências explicado",
-        "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático."
+        "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático.\n\nNão conforme a descrição: a DisputeDesk obtém automaticamente a ficha do produto da sua loja (o título, a descrição, até três imagens e a variante escolhida) e a adiciona à defesa. É a ficha como está hoje; a Shopify não guarda como era quando o pedido foi feito. Se não for possível obtê-la (por exemplo, porque o produto foi excluído), a lista de verificação informa o motivo."
       },
       "defenseLetterRebuttal": {
         "title": "Carta de defesa e contestação automática",
@@ -3440,6 +3745,10 @@
       "returnedToSenderParcels": {
         "title": "Quando uma encomenda é devolvida ao remetente",
         "body": "Por vezes a transportadora não consegue concluir uma entrega e devolve-lhe a encomenda. O cliente nunca recebeu o pedido — e, se mais tarde contestar a cobrança, isso altera o que o caso pode e não pode defender.\n\n**O que a DisputeDesk faz automaticamente**\n\nQuando detetamos uma devolução ao remetente nos dados da transportadora:\n\n1. Mostramos a linha de entrega como \"Devolvido ao remetente\", com a data da própria transportadora, em vez de a tratar como uma etiqueta nunca lida.\n2. Retiramos qualquer argumento que dependa de o cliente nunca ter devolvido a mercadoria. O Shopify pode continuar a indicar \"sem devolução\", porque nunca foi aberto um pedido de devolução — mas a mercadoria está consigo, e um argumento que diga o contrário seria falso.\n3. Classificamos o caso como de baixa probabilidade e impedimos qualquer envio automático, inclusive na data-limite. Uma encomenda devolvida nunca pode ter confirmação de entrega e, sem ela, o banco decide normalmente a favor do cliente.\n\n**O que precisamos de si**\n\nApenas uma coisa, e é justamente a que não conseguimos ver: **por que motivo a encomenda voltou.** A pergunta está no separador Provas.\n\n- **O cliente recusou a entrega** ou **nunca a levantou no ponto de recolha**: vale a pena argumentá-lo. Segundo as regras de consumo da UE, não aceitar uma encomenda não é uma devolução válida nem um exercício válido do direito de livre resolução. Incluímos isso na resposta por si.\n- **Não foi possível entregar na morada**: registamos, mas não incluímos na resposta. Não ajuda o caso e levanta uma questão que ninguém colocou.\n\nTambém perguntamos o que aconteceu à mercadoria depois de voltar. Essa resposta é para o seu registo e o nosso; nunca aparece na resposta enviada em seu nome.\n\n**Se ficou com a mercadoria e com o pagamento**\n\nA resposta honesta é normalmente reembolsar. O cliente pagou, nunca recebeu o pedido e a mercadoria está de volta consigo. Contestar raramente resulta e pode ainda custar-lhe a taxa da disputa. Reembolsar ou não é decisão sua — a DisputeDesk não o faz por si — mas a avaliação que vê reflete as probabilidades reais, não umas otimistas.\n\n**Uma nota sobre prazos**\n\nSe responder aceitando ajustar a cobrança, alguns prestadores de pagamento esperam o reembolso num prazo curto (a Klarna, por exemplo, reverte o pagamento automaticamente se o reembolso não chegar a tempo). Emita o reembolso logo depois de se comprometer."
+      },
+      "bankClaim": {
+        "title": "Por que o DisputeDesk pede a reclamação do banco",
+        "body": "Na maioria das disputas, o código de motivo diz ao DisputeDesk o que o cliente está contestando, e a resposta é montada a partir dele. Dois tipos de disputa são diferentes:\n\n• Disputas reabertas: a Shopify colocou de volta em \"precisa de resposta\" uma disputa que você já respondeu. O banco pede uma nova resposta, e a anterior não a resolve mais.\n• Disputas \"gerais\" sem código de motivo da rede: o banco não disse de que tipo é a disputa.\n\nNos dois casos, a única indicação do que o banco quer que seja respondido é a reclamação do banco (a Shopify a chama de reclamação do emissor). A Shopify a mostra nos detalhes do estorno na página do pedido no seu admin, mas não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho.\n\nO que fazer:\n1. Abra a disputa no DisputeDesk e use \"Abrir o pedido na Shopify\".\n2. Encontre a reclamação do banco nos detalhes do estorno e baixe-a (geralmente um PDF) ou copie o texto.\n3. Envie o arquivo ou cole o texto no cartão \"Adicione a reclamação do banco\" e salve. Se a Shopify não mostrar nenhuma reclamação, marque \"A Shopify não mostra nenhuma reclamação para esta disputa\" — os bancos nem sempre fornecem uma.\n\nO DisputeDesk então reconstrói a resposta para responder à reclamação. A reclamação só é usada para decidir o que a resposta deve tratar; nunca é citada nem devolvida ao banco.\n\nAté que seja adicionada, o DisputeDesk não enviará resposta para essa disputa, nem no prazo final. Também enviamos um e-mail quando uma disputa passa a precisar dela."
       }
     },
     "embedded": {
@@ -4703,7 +5012,9 @@
       "support_note_added": "Nota adicionada",
       "admin_override": "Ajuste do suporte",
       "admin_override_cleared": "Ajuste do suporte revertido",
-      "dispute_resynced": "Disputa atualizada do Shopify"
+      "dispute_resynced": "Disputa atualizada do Shopify",
+      "response_cycle_reopened": "Reaberta — nova resposta necessária",
+      "escalated_to_chargeback": "Escalada de consulta para estorno"
     },
     "actors": {
       "merchant_user": "Você",
@@ -6055,7 +6366,8 @@
       "feature_blocked": "Ação de cobrança necessária",
       "subscription_expired": "Ação de cobrança necessária",
       "payment_failed": "Ação de cobrança necessária",
-      "auto_build_off": "Automação pausada"
+      "auto_build_off": "Automação pausada",
+      "bank_claim_needed": "Falta a reclamação do banco"
     },
     "attentionBlockingSub": {
       "approval_gate": "O DisputeDesk aguarda sua aprovação para salvar o pacote de provas",
@@ -6064,7 +6376,8 @@
       "feature_blocked": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
       "subscription_expired": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
       "payment_failed": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
-      "auto_build_off": "A montagem automática de provas está desativada nas suas configurações"
+      "auto_build_off": "A montagem automática de provas está desativada nas suas configurações",
+      "bank_claim_needed": "Copie a reclamação do banco da Shopify — o DisputeDesk não enviará resposta até que seja adicionada"
     },
     "outcomeCard": {
       "title": "Resultado",

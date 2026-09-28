@@ -50,6 +50,7 @@ import type {
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 import type { DeriveCaseEvidenceModelInput } from "@/lib/evidence/model/derive";
 import { alwaysAdmissibleCategories } from "@/lib/defence/alwaysAdmissible";
+import { familyKeyForModule } from "@/lib/defence/reasonCodes/familyRegistry";
 import type { EvidenceFact, ReasonCodeGuidance } from "@/lib/defence/types";
 import { planCandidatesFromModel, type PlanCandidate } from "./candidates";
 import { computePlanInputHash } from "./planInputHash";
@@ -60,6 +61,17 @@ import { deriveCaseArgumentPlan, PLAN_VERSION } from "./deriveArgumentPlan";
  * review item blocks — as opposed to when the derivation's shape changes
  * (`PLAN_VERSION`). A policy bump invalidates every snapshot even when the
  * inputs are byte-identical, which a hash alone cannot express.
+ *
+ * NOT bumped for the 2026-09-23 item-not-received admission change
+ * (`deniedForFamilies`, lib/defence/alwaysAdmissible.ts), deliberately:
+ *   - the admitted categories are already a plan-hash input
+ *     (`planInputHash.ts`, `alwaysAdmissible`), so exactly the plans the
+ *     change affects go stale via `input_hash_mismatch`, and no others;
+ *   - `caseSelectionContext` compares ONE policy version — this one — against
+ *     the decision, assessment AND plan snapshots, so a plan-only bump reports
+ *     `policy_version_superseded` for every package in every family and stops
+ *     the deadline cron filing anything. A future bump needs that comparison
+ *     made per layer first.
  */
 export const PLAN_POLICY_VERSION = 1;
 
@@ -115,7 +127,10 @@ export function derivePlanForCase(input: DerivePlanForCaseInput): PlanForCase {
   // Resolved against the real facts, here rather than inside the derivation:
   // the admission test reads `value.fieldKey`, and letting the plan reach a
   // payload is the one thing its narrow input shape exists to prevent.
-  const alwaysAdmissible = alwaysAdmissibleCategories(input.approvedFacts);
+  const alwaysAdmissible = alwaysAdmissibleCategories(
+    input.approvedFacts,
+    familyKeyForModule(input.reasonCodeModule.key),
+  );
 
   const planInputHash = computePlanInputHash({
     reasonModuleId: input.reasonCodeModule.key,

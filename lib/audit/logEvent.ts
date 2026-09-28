@@ -153,6 +153,28 @@ export type EventType =
   | "pack_regenerate_coalesced"
   | "pack_regenerate_coalesced_skipped_window_closed"
   | "pack_regenerate_coalesced_job_already_exists"
+  // Response cycles (lib/disputes/responseCycle.ts): a pack built for an
+  // earlier cycle (before a reopen or an inquiry → chargeback escalation)
+  // was refused by the save worker / the deadline cron. Payload
+  // `{ packCycle, disputeCycle }`.
+  | "save_to_shopify_refused_stale_cycle"
+  | "deadline_submit_refused_stale_cycle"
+  // Bank's claim (lib/disputes/bankClaim.ts): the merchant copied the
+  // issuer claim from Shopify Admin or confirmed none is shown
+  // (`{ bankClaimId, cycle, noClaimShown, textLength, file }`); or a filing
+  // path refused because it is still missing (`{ trigger, cycle }`).
+  | "bank_claim_recorded"
+  // The merchant withdrew the saved claim ("Cancel"); payload { cycle }.
+  | "bank_claim_withdrawn"
+  // The letter builder removed facts the bank's claim makes irrelevant or
+  // contradicts (lib/disputes/bankClaimAnalysis.ts). Payload
+  // `{ packageId, claimReason, removed: [{ id, category, why }] }`.
+  | "defence_facts_scoped_to_bank_claim"
+  | "save_to_shopify_refused_bank_claim_missing"
+  /** Bank-claim plan F4: the merchant's own file holds the evidence slot. */
+  | "save_to_shopify_refused_merchant_file_present"
+  | "save_to_shopify_merchant_file_annexed"
+  | "deadline_submit_refused_bank_claim_missing"
   // Merchant review lifecycle — POST /api/disputes/:id/review
   // (lib/disputes/reviewState.ts). actorType "merchant". Payload
   // `{ action, from, to }` where action ∈ hold|approve|concede|clear.

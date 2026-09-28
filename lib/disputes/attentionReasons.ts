@@ -72,6 +72,14 @@ export const DISPUTE_ATTENTION_REASONS = {
    *  `{ package_id: string | null, reasons: string[] }`. Cleared when a
    *  regenerated package passes the same preflight. */
   PACKAGE_REVIEW_REQUIRED: "package_review_required",
+
+  /** The dispute needs the bank's claim (issuer claim), which Shopify shows
+   *  only in Shopify Admin: a reopened dispute, or a `general` one with no
+   *  network reason code (lib/disputes/bankClaim.ts). Nothing is filed until
+   *  the merchant copies it across or confirms Shopify shows none. Payload:
+   *  `{ trigger: "reopened" | "general_reason", cycle: number }`. Cleared by
+   *  POST /api/packs/:id/bank-claim. */
+  BANK_CLAIM_NEEDED: "bank_claim_needed",
 } as const;
 
 export type DisputeAttentionReason =
@@ -86,6 +94,20 @@ export const BILLING_ATTENTION_REASONS: ReadonlySet<DisputeAttentionReason> =
     DISPUTE_ATTENTION_REASONS.FEATURE_BLOCKED,
     DISPUTE_ATTENTION_REASONS.SUBSCRIPTION_EXPIRED,
     DISPUTE_ATTENTION_REASONS.PAYMENT_FAILED,
+  ]);
+
+/** Reasons written by the pipeline's PRE-BUILD gates (auto-build switch +
+ *  credit/billing). Each describes a gate the dispute failed on an earlier
+ *  pass; once a later pass gets past BOTH gates, every one of them is stale
+ *  and the pipeline clears it. `auto_build_off` was missing from the clear
+ *  (only billing reasons were), so a dispute blocked while auto-build was off
+ *  kept saying "Automation paused" after it was turned on and the pack built
+ *  (6a8848-dd, 2026-09-25). Superset of BILLING_ATTENTION_REASONS by
+ *  construction — never a merchant task (gorgias review, approval, errors). */
+export const PIPELINE_GATE_ATTENTION_REASONS: ReadonlySet<DisputeAttentionReason> =
+  new Set<DisputeAttentionReason>([
+    DISPUTE_ATTENTION_REASONS.AUTO_BUILD_OFF,
+    ...BILLING_ATTENTION_REASONS,
   ]);
 
 export function isBillingAttentionReason(

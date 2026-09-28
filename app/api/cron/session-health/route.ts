@@ -48,7 +48,12 @@ import { sendAdminEmail } from "@/lib/email/adminEmail";
 export const runtime = "nodejs";
 
 /** Topics a shop MUST carry for order data to flow at all. */
-const REQUIRED_ORDER_TOPICS = ["ORDERS_CREATE", "ORDERS_UPDATED"] as const;
+const REQUIRED_ORDER_TOPICS = [
+  "ORDERS_CREATE",
+  "ORDERS_UPDATED",
+  "FULFILLMENT_EVENTS_CREATE",
+  "FULFILLMENTS_UPDATE",
+] as const;
 
 const SUBSCRIPTIONS_QUERY = /* GraphQL */ `
   query ShopWebhookSubscriptions {

@@ -730,6 +730,9 @@ export function calculateCaseStrength(
 
   let overall: CaseStrengthLevel;
   let isFraudAvsOnlyStrong = false;
+  // The item-not-received rollup as it stood before non-receipt plan rev 5
+  // (§6.1.4). Set only for that family; see `overallBeforeRev5` below.
+  let priorDeliveryOverall: CaseStrengthLevel | null = null;
   if (family === "fraud") {
     if (
       strongCountFromFraudSignals >= 2 ||
@@ -753,20 +756,46 @@ export function calculateCaseStrength(
       overall = "weak";
     }
   } else if (family === "delivery") {
-    // Item-not-received family. Carrier-confirmed delivery to the verified
-    // customer address is the single most decisive fact for an INR claim —
-    // it directly refutes "I never received it". So one STRONG `delivery`
-    // signal reaches Moderate on its own (no second signal required),
-    // rather than falling through to Weak under the strict count formula.
-    // (`delivered_confirmed` → strong requires deliveredToVerifiedAddress,
-    // set by the fulfillment collector for genuine final delivery only, so
-    // pickup/neighbour/returned never trigger this.) Two strong signals
-    // still reach Strong; everything below one strong delivery is Weak.
+    /* Item-not-received family (non-receipt plan §6.1.3, D3).
+     *
+     * The carrier's record of delivery is the fact that answers "I never
+     * received it", so the delivery signal carries the case on its own:
+     *
+     *   strong delivery (signature / POD) covering ALL the disputed goods
+     *       → strong
+     *   strong delivery on partial or unknown coverage, or a carrier-
+     *   confirmed delivery (`delivered_confirmed`, moderate) → moderate
+     *   in transit, available for collection, label only → weak
+     *
+     * The previous rung required a STRONG delivery signal to reach even
+     * moderate, and the only strong route left after PR-C1 retired the
+     * verified-address upgrade was a signature — which 0 of 287 non-receipt
+     * disputes since June carry. So every carrier-confirmed delivery rated
+     * weak (blume-box #352543: delivered 6 July, disputed 19 September).
+     *
+     * Coverage is read from the collector's `deliveryCoverage`
+     * (complete | partial | none | unknown). Only `complete` lets a signal
+     * lift the case to strong: a signature on a parcel carrying part of the
+     * order does not answer the claim for the rest. Two strong signals still
+     * reach strong, as before. */
     const hasStrongDelivery = strongSignalIds.has("delivery");
+    const hasConfirmedDelivery = moderateSignalIds.has("delivery");
+    const deliveryPayload =
+      payloadFor(payloadSource, "delivery_proof") ??
+      payloadFor(payloadSource, "shipping_tracking");
+    const coverageComplete = deliveryPayload?.deliveryCoverage === "complete";
     if (strongCount >= 2) overall = "strong";
+    else if (hasStrongDelivery && coverageComplete) overall = "strong";
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
-    else if (hasStrongDelivery) overall = "moderate";
+    else if (hasStrongDelivery || hasConfirmedDelivery) overall = "moderate";
     else overall = "weak";
+
+    // Today's rollup over today's grades (§6.1.4 step 2). No signal grade
+    // changed in this revision, so the counts above ARE today's grades.
+    if (strongCount >= 2) priorDeliveryOverall = "strong";
+    else if (strongCount === 1 && moderateCount >= 1) priorDeliveryOverall = "moderate";
+    else if (hasStrongDelivery) priorDeliveryOverall = "moderate";
+    else priorDeliveryOverall = "weak";
   } else if (family === "refund") {
     // Credit-not-processed family ("you owed me a refund and didn't issue
     // it"). The decisive fact is whether a refund obligation actually
@@ -988,8 +1017,22 @@ export function calculateCaseStrength(
           ? { key: "disputes.strengthReason.creditAlreadyIssued" }
           : strengthReasonI18nToken;
 
+  // What the case would rate under the pre-rev-5 delivery rollup, with the
+  // same gates applied — so the ladder can hold for the deadline any case
+  // this revision newly made strong (§6.1.4). Fatal-loss and returned-to-sender
+  // cap both ratings; the credit floor lifts both.
+  const overallBeforeRev5: CaseStrengthLevel | undefined =
+    priorDeliveryOverall === null
+      ? undefined
+      : isFatalLoss || isReturnedToSender
+        ? "weak"
+        : isCreditAlreadyIssued
+          ? "strong"
+          : priorDeliveryOverall;
+
   return {
     overall,
+    ...(overallBeforeRev5 !== undefined ? { overallBeforeRev5 } : {}),
     score,
     coveragePercent,
     strongCount,

@@ -25,12 +25,17 @@ import {
   deriveClaimCapabilities,
 } from "./claimCapabilities";
 import { FACT_PREDICATES } from "./factPredicates";
+import { isParcelIdentifier } from "@/lib/carriers/trackingLinkUrl";
+import {
+  internalConstraintViolations,
+  type InternalNarrativeConstraints,
+} from "./internalConstraints";
 import { isBankIncludedFact } from "./bankInclusion";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
-  FactPredicateId,
+  GuardedBankPhrase,
   NarrativeSectionKey,
   PackageMode,
   ReasonCodeGuidance,
@@ -108,8 +113,74 @@ import type {
  *      can appear negated ("no signature was captured", "never signed
  *      for"). Bumped so packages that failed on a negated non-claim
  *      regenerate.
+ *   5  (2026-09-23) — non-receipt letters (docs/plans/non-receipt-delivery-
+ *      evidence.plan.md §4.1(c), §6.3, §6.6). The item-not-received family
+ *      hard-bans arguments from the absence of a return, denials that a
+ *      refund was requested, and collector / identity claims; internal
+ *      carrier-status and proof-type enums are banned in every family; and a
+ *      new `internalConstraints` input refuses a refund-request denial when a
+ *      stored customer message asked for one, in any family. Bumped so the
+ *      scheduled drafts that argue from "no return" are rebuilt, not filed.
+ *   6  (2026-09-23) — `deliveryPostDatesDispute` constraint: when every cited
+ *      delivery is after the dispute was opened, any sentence relating the
+ *      delivery to the dispute's timing is refused. The first v5 rebuild of
+ *      cay-collective #14784 (opened 13 Sep, collected 18 Sep) said the
+ *      delivery was recorded "prior to the dispute being raised" — false, in
+ *      a letter scheduled to file on 1 October.
+ *   7  (2026-09-23) — blume-box #360980's first letter. `carrierPossessionUndated`
+ *      refuses any sentence relating carrier custody or transit to the dispute
+ *      when a cited shipment is in transit (no hand-over date exists); the
+ *      item-not-received family bans statements of what a record lacks ("no
+ *      delivery confirmation or signature event has been recorded", "the
+ *      merchant does not assert otherwise").
+ *   8  (2026-09-23) — the v7 rebuild of #360980 failed on a TRUE sentence:
+ *      "The carrier's record shows this shipment in transit" after a sentence
+ *      naming GOFO. A shipment-scoped claim that refers back ("this shipment",
+ *      "it") is now read against the shipment named last in its paragraph.
+ *      The hand-over guard also catches "tendering it to" / "tendered each to
+ *      its respective carrier", which the same letter used for the USPS
+ *      parcel with no carrier record.
+ *   9  (2026-09-23) — "left the merchant's possession" is a shipment-scoped
+ *      custody claim (item_not_received v4): "both items left the merchant's
+ *      possession" passed v8 on a two-parcel order where one parcel has no
+ *      carrier record.
+ *  10  (2026-09-23) — a carrier record claimed for EVERY parcel ("each with
+ *      its own carrier record") is shipment-scoped (item_not_received v5);
+ *      #360980's validated v9 draft said it with one parcel unrecorded.
+ *  11  (2026-09-23) — `carrierPossessionUndated` no longer fires for an
+ *      in-transit parcel whose first dated in-carrier event
+ *      (`inTransitSince`) precedes the dispute: that ordering is recorded,
+ *      true, and the merchant's best timing fact.
+ *  12  (2026-09-23) — item_not_received v6 bans relating a fulfilment to the
+ *      dispute or the order date, and counting days between them: a
+ *      fulfilment is the merchant's own record, and on #360980 the interval
+ *      (ordered 22 Aug, fulfilled 15 Sep) exposes a late shipment.
+ *  13  (2026-09-23) — the v12 rebuild of #360980 refused two TRUE sentences:
+ *      "…shows the shipment in transit since 17 September" after a sentence
+ *      naming GOFO ("the shipment" now refers back), and one sentence giving
+ *      GOFO's transit and the sunscreen's fulfilment (each clause is now read
+ *      against the parcel it names). item_not_received v7 hard-bans "prior to
+ *      the dispute / filing / chargeback", which the model kept writing with
+ *      no dispute date to support it.
+ *  14  (2026-09-23) — v13's ban was too broad: it refused "delivered on 6
+ *      July … prior to the dispute being raised" (#352543), true and the
+ *      strongest sentence in the letter. Narrowed (item_not_received v8) to
+ *      custody / dispatch / transit words placed before the dispute; a
+ *      carrier-confirmed delivery's ordering is checked against the data by
+ *      `deliveryPostDatesDispute`.
+ * v15 (2026-09-24) — item_not_received v9: records of one carrier event may
+ *      not be called independent or corroborating, and the letter may not
+ *      characterise who initiated the transaction (#352543).
+ * v16 (2026-09-28) — product_not_as_described v2 bans the rule-10 hedge
+ *      lead-ins, conformity conclusions ("was as described", "matched the
+ *      listing", "not defective", condition claims), dating the listing to the
+ *      purchase, unsupported delivery-window claims and payment-authentication
+ *      signals (not-as-described plan PR 1).
+ * v17 (2026-09-28) — product_not_as_described bans carrier / tracking /
+ *      delivered-on / shipped-on / in-transit wording: arrival is not in
+ *      dispute for this family (maintainer).
  */
-export const VALIDATOR_VERSION = 4;
+export const VALIDATOR_VERSION = 17;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -156,6 +227,13 @@ export const FORBIDDEN_PHRASES = [
   // still banned in ANY position by the bare pattern below.
   /\bfulfillment\s+status\s+of\s+(?:UNFULFILLED|FULFILLED|PARTIAL)\b/,
   /\bUNFULFILLED\b/,
+  // Internal carrier-status and proof-type enums. They are hash and routing
+  // inputs, never English: cay-collective #14784's letter told the issuer the
+  // carrier "recorded a CollectedAtPickup status event". Case-sensitive on
+  // purpose — the verbatim identifier is the leak; "collected at the pickup
+  // point" is the permitted prose (non-receipt plan §6.6, v5).
+  /\b(?:CollectedAtPickup|DeliveredToPickup|ReturnedToSender|NotDelivered|OutForDelivery|InTransit)\b/,
+  /\b(?:delivered_confirmed|delivered_unverified|signature_confirmed|label_created|returned_to_sender|in_transit|delivered_final_verified)\b/,
 ];
 
 export const NARROW_AGGRESSIVE_PHRASES = [
@@ -185,7 +263,35 @@ export interface ValidateNarrativeInput {
   /** Family-level hard-banned phrases. v2.2+. */
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (v5). Never shown
+   *  to the generator. See lib/defence/internalConstraints.ts. */
+  internalConstraints?: InternalNarrativeConstraints | null;
+  /** The bank's claim text. Context the letter answers, never text it may
+   *  repeat: a run of CLAIM_QUOTE_WORDS consecutive words from it fails. */
+  bankClaimText?: string | null;
+}
+
+/** Words in a row that count as quoting the bank's claim. Long enough that
+ *  ordinary shared wording ("the order was placed on") never trips it. */
+export const CLAIM_QUOTE_WORDS = 8;
+
+const words = (t: string): string[] =>
+  t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+
+/** The first run of `CLAIM_QUOTE_WORDS` words the text shares with the claim, or null. */
+export function findQuotedClaimRun(text: string, claim: string | null | undefined): string | null {
+  if (!claim) return null;
+  const c = words(claim);
+  if (c.length < CLAIM_QUOTE_WORDS) return null;
+  const grams = new Set<string>();
+  for (let i = 0; i + CLAIM_QUOTE_WORDS <= c.length; i++) grams.add(c.slice(i, i + CLAIM_QUOTE_WORDS).join(" "));
+  const w = words(text);
+  for (let i = 0; i + CLAIM_QUOTE_WORDS <= w.length; i++) {
+    const g = w.slice(i, i + CLAIM_QUOTE_WORDS).join(" ");
+    if (grams.has(g)) return g;
+  }
+  return null;
 }
 
 /** Shared phrase + guard check for any single piece of prose. The layer
@@ -206,7 +312,161 @@ export interface RunPhraseAndGuardChecksInput {
    *  (`ReasonCodeFamily.guardedBankPhrases`). Each entry is rejected
    *  only when its `requires` predicate evaluates `false` against
    *  `approvedFacts`. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
+}
+
+/* ── Shipment-scoped guards (validator v5, non-receipt plan §4.1(b)) ───────
+ *
+ * A case-wide predicate lets ONE shipment license a claim about ANOTHER: a
+ * valid GOFO transit fact would pass "the USPS shipment is in transit" about a
+ * batch reference. So for a `shipmentScoped` guard each matching SENTENCE is
+ * checked against the shipment(s) it names — by tracking number, or by carrier
+ * name when that carrier is unique on the order.
+ *
+ * Shipment identities come from the delivery fact's `shipmentIndex` (written
+ * by the classifier, stripped from the LLM payload). The shipment the fact
+ * cites is evaluated as the real fact; every other shipment as a non-citable
+ * stand-in carrying only its own tier — so it can never satisfy a predicate
+ * that requires bank-citability. Facts without an index (older packs) fall
+ * back to the case-wide evaluation.
+ */
+interface ShipmentRef {
+  key: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  fact: EvidenceFact;
+}
+
+function shipmentRefsOf(facts: readonly EvidenceFact[]): ShipmentRef[] | null {
+  const refs = new Map<string, ShipmentRef>();
+  let sawIndex = false;
+  for (const f of facts) {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") continue;
+    const v = (f.value ?? {}) as Record<string, unknown>;
+    const index = Array.isArray(v.shipmentIndex) ? (v.shipmentIndex as Array<Record<string, unknown>>) : null;
+    if (!index) continue;
+    sawIndex = true;
+    for (const s of index) {
+      const key = typeof s.instanceKey === "string" ? s.instanceKey : null;
+      if (!key || refs.has(key)) continue;
+      const trackingNumber = typeof s.trackingNumber === "string" ? s.trackingNumber : null;
+      const carrier = typeof s.carrier === "string" ? s.carrier : null;
+      const isCited = trackingNumber !== null && trackingNumber === v.trackingNumber;
+      refs.set(key, {
+        key,
+        carrier,
+        trackingNumber,
+        fact: isCited
+          ? f
+          : {
+              ...f,
+              bankEligible: false,
+              includeInBankNarrative: false,
+              value: { fieldKey: v.fieldKey, proofType: s.proofType ?? null, carrier, trackingNumber },
+            },
+      });
+    }
+  }
+  return sawIndex ? [...refs.values()] : null;
+}
+
+function namedShipments(sentence: string, refs: readonly ShipmentRef[]): ShipmentRef[] {
+  const lower = sentence.toLowerCase();
+  const byNumber = refs.filter((r) => r.trackingNumber && sentence.includes(r.trackingNumber));
+  if (byNumber.length > 0) return byNumber;
+  return refs.filter((r) => {
+    if (!r.carrier) return false;
+    const c = r.carrier.toLowerCase();
+    // A carrier name identifies a shipment only when it is unique on the order.
+    const unique = refs.filter((o) => o.carrier?.toLowerCase() === c).length === 1;
+    return unique && lower.includes(c);
+  });
+}
+
+/**
+ * A shipping reference that is not a parcel identifier (a shipping-app batch
+ * reference — blume-box #360980's USPS "260914OET4") presented as a tracking
+ * number. An issuer who tries it finds nothing; the letter calls it a shipping
+ * reference instead (validator v7).
+ */
+function nonParcelTrackingClaim(text: string, approvedFacts: readonly EvidenceFact[]): string | null {
+  const refs = shipmentRefsOf(approvedFacts) ?? [];
+  const nonParcel = refs.filter(
+    (r) => r.trackingNumber && !isParcelIdentifier(r.carrier, r.trackingNumber),
+  );
+  if (nonParcel.length === 0) return null;
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    for (const r of nonParcel) {
+      const at = sentence.indexOf(r.trackingNumber as string);
+      if (at < 0) continue;
+      const before = sentence.slice(Math.max(0, at - 40), at);
+      const after = sentence.slice(at, at + (r.trackingNumber as string).length + 25);
+      if (/\btracking\s+(?:number|no\.?|#|id|code)\b[^.;]{0,20}$/i.test(before) ||
+          /^\S+\s*\)?\s*(?:is|as)\s+(?:the|its)\s+tracking\s+number\b/i.test(after)) {
+        return sentence.trim();
+      }
+    }
+  }
+  return null;
+}
+
+/** "this shipment", "the same parcel", "it" — a sentence that refers back to
+ *  the shipment named before it rather than naming one itself. */
+const SHIPMENT_ANAPHORA =
+  /\b(?:this|that|the\s+same|said|the)\s+(?:shipment|parcel|package|consignment)\b|\bit\b/i;
+
+/** Clause boundaries inside one sentence: "X shows A in transit, and Y was
+ *  fulfilled" makes two claims about two parcels (validator v13). */
+const CLAUSE_BREAK = /;\s*|,\s+(?:and|but|while|whereas)\s+/i;
+
+/**
+ * The first offending sentence, or null when every scoped claim is supported.
+ *
+ * A sentence that names no shipment but refers back to one ("The carrier's
+ * record shows this shipment in transit") is read against the shipment named
+ * most recently in the SAME paragraph (validator v8). blume-box #360980's
+ * two-parcel letter failed on exactly that true sentence, the one after
+ * "…via GOFO, tracking number YT2640221437435982". A bare "The order is in
+ * transit" still has no referent and is still refused.
+ */
+function shipmentScopedViolation(
+  text: string,
+  entry: GuardedBankPhrase,
+  approvedFacts: EvidenceFact[],
+): string | null {
+  const predicate = FACT_PREDICATES[entry.requires];
+  if (!predicate) return null;
+  const refs = shipmentRefsOf(approvedFacts);
+  for (const paragraph of text.split(/\n\s*\n/)) {
+    let lastNamed: ShipmentRef[] = [];
+    for (const sentence of paragraph.split(/(?<=[.!?])\s+/)) {
+      // Each clause is read against the shipment IT names (v13): a sentence
+      // giving one parcel's transit and another's fulfilment is two claims.
+      for (const clause of sentence.split(CLAUSE_BREAK)) {
+        const named = refs ? namedShipments(clause, refs) : [];
+        const referent =
+          named.length > 0
+            ? named
+            : lastNamed.length > 0 && SHIPMENT_ANAPHORA.test(clause)
+              ? lastNamed
+              : [];
+        if (named.length > 0) lastNamed = named;
+        if (!entry.pattern.test(clause)) continue;
+        if (!refs) {
+          if (!predicate.evaluate(approvedFacts)) return sentence.trim();
+          continue;
+        }
+        const scope = referent.length > 0 ? referent : refs.length <= 1 ? refs : null;
+        const ok = scope
+          ? scope.every((r) => predicate.evaluate([r.fact]))
+          : refs.every((r) => predicate.evaluate([r.fact]));
+        if (!ok) return sentence.trim();
+      }
+    }
+  }
+  return null;
 }
 
 export function runPhraseAndGuardChecks(
@@ -220,6 +480,7 @@ export function runPhraseAndGuardChecks(
     layer,
     extraHardPhrases,
     guardedPhrases,
+    internalConstraints,
   } = input;
   const errors: ValidationError[] = [];
   if (!text || !text.trim()) return errors;
@@ -253,6 +514,21 @@ export function runPhraseAndGuardChecks(
   // 1b. Family-specific guarded list — rejected only when the gating
   //     predicate fails against approvedFacts (v2.2+).
   for (const entry of guardedPhrases ?? []) {
+    if (entry.shipmentScoped) {
+      // Per sentence, against the shipment the sentence names (v5, plan §4.1(b)).
+      const offending = shipmentScopedViolation(text, entry, approvedFacts);
+      if (offending) {
+        errors.push({
+          section: sectionKey,
+          rule: "forbidden_phrase",
+          message: `Shipment claim "${offending}" in ${sectionKey} is not supported by the shipment it names (requires ${entry.requires})`,
+          evidenceText: offending,
+          requiredFact: entry.requires,
+          layer,
+        });
+      }
+      continue;
+    }
     const match = text.match(entry.pattern);
     if (!match) continue;
     const predicate = FACT_PREDICATES[entry.requires];
@@ -263,6 +539,30 @@ export function runPhraseAndGuardChecks(
       message: `Unsupported channel assertion "${match[0]}" in ${sectionKey} (requires ${entry.requires})`,
       evidenceText: match[0],
       requiredFact: entry.requires,
+      layer,
+    });
+  }
+  // 1b''. A shipping reference is never presented as a tracking number (v7).
+  const nonParcel = nonParcelTrackingClaim(text, approvedFacts);
+  if (nonParcel) {
+    errors.push({
+      section: sectionKey,
+      rule: "forbidden_phrase",
+      message: `"${nonParcel}" in ${sectionKey} presents a shipping reference as a tracking number`,
+      evidenceText: nonParcel,
+      layer,
+    });
+  }
+  // 1b'. Internal constraints (v5). A sentence denying a refund /
+  //      reimbursement request is refused when a stored customer message on an
+  //      order-matched ticket asked for one. The message itself never reaches
+  //      the generator — only this check knows it exists.
+  for (const v of internalConstraintViolations(text, sectionKey, internalConstraints)) {
+    errors.push({
+      section: sectionKey,
+      rule: "forbidden_phrase",
+      message: `"${v.evidenceText}" in ${sectionKey} violates an internal constraint (a stored customer refund request, a delivery that post-dates the dispute, or undated carrier custody related to the dispute)`,
+      evidenceText: v.evidenceText,
       layer,
     });
   }
@@ -387,8 +687,23 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
         layer: "narrative",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
+  }
+
+  // 2b. The bank's claim is context to answer, never text to quote back.
+  for (const sectionKey of SECTION_KEYS) {
+    const run = findQuotedClaimRun(input.narrative[sectionKey].text, input.bankClaimText);
+    if (run) {
+      errors.push({
+        section: sectionKey,
+        rule: "bank_claim_quoted",
+        message: `${sectionKey} repeats the bank's claim word for word ("${run}"). Answer the claim in your own words; never quote it.`,
+        evidenceText: run,
+        layer: "narrative",
+      });
+    }
   }
 
   // 3. usedFactIds referential integrity + no internal-only references.
@@ -477,7 +792,9 @@ export interface ValidateComposedDocumentInput {
   /** Family-level hard-banned phrases. v2.2+. */
   extraHardPhrases?: readonly RegExp[];
   /** Family-level predicate-gated phrases. v2.2+. */
-  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedPhrases?: readonly GuardedBankPhrase[];
+  /** Validator-only knowledge derived from stored messages (v5). */
+  internalConstraints?: InternalNarrativeConstraints | null;
 }
 
 /** Run forbidden-phrase + claim-guard checks against every sub-text of
@@ -501,6 +818,7 @@ export function validateComposedDocument(
         layer: "thesis",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
     errors.push(
@@ -512,6 +830,7 @@ export function validateComposedDocument(
         layer: "llm",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
     errors.push(
@@ -523,6 +842,7 @@ export function validateComposedDocument(
         layer: "fallback",
         extraHardPhrases: input.extraHardPhrases,
         guardedPhrases: input.guardedPhrases,
+        internalConstraints: input.internalConstraints,
       }),
     );
   }

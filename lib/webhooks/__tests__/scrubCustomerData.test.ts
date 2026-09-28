@@ -120,3 +120,31 @@ describe("scrubCustomerData", () => {
     expect(out.email).toBe(12345);
   });
 });
+
+describe("full addresses kept for the defence package", () => {
+  const pack = {
+    sections: [
+      {
+        type: "order",
+        data: {
+          email: "jane@example.com",
+          shippingAddressFull: { address1: "1 Main St", city: "Carman", zip: "R0G 0J0" },
+          billingAddressFull: { address1: "1 Main St", city: "Carman", zip: "R0G 0J0" },
+        },
+      },
+    ],
+  };
+
+  it("are redacted whole when the pack belongs to the redacted customer", () => {
+    const out = scrubCustomerData(pack, { email: "jane@example.com", name: null });
+    const data = out.sections[0].data as Record<string, unknown>;
+    expect(data.shippingAddressFull).toBe("[redacted]");
+    expect(data.billingAddressFull).toBe("[redacted]");
+    expect(data.email).toBe("[redacted]");
+  });
+
+  it("are left alone when the pack belongs to someone else", () => {
+    const out = scrubCustomerData(pack, { email: "other@example.com", name: null });
+    expect((out.sections[0].data as Record<string, unknown>).shippingAddressFull).toEqual(pack.sections[0].data.shippingAddressFull);
+  });
+});

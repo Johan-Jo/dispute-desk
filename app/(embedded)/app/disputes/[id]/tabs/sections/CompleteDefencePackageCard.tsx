@@ -53,6 +53,8 @@ type Status =
   | "skipped";
 
 export interface DefencePackageRow {
+  /** Signed new-tab preview link from the workspace API. */
+  preview_url?: string | null;
   id: string;
   version: number;
   status: Status;
@@ -88,6 +90,15 @@ export type PresentationStatusLike =
 
 interface Props {
   packId: string | null;
+  /**
+   * Auto-pilot is holding this case for its due date (`HeldState.held`,
+   * lib/disputes/heldState.ts). The deadline cron finalizes and saves the
+   * latest draft on the due date by itself, so approving changes nothing:
+   * the card offers no approval. No banner either (maintainer, 2026-09-26):
+   * the card's intro already says Auto-pilot saves on the due date, and the
+   * deadline badge says when.
+   */
+  autoFilesOnDueDate?: boolean;
   /** Used to render the inline HTML defence view + the days-remaining
    *  badge. Optional — when absent the card still works, just without
    *  the case-details / countdown enrichment. */
@@ -113,6 +124,10 @@ interface Props {
    *  nothing further will ever be collected, because the parcel came back.
    *  Read from the same gate every other surface reads, never re-derived. */
   returnedToSender?: boolean;
+  /** The merchant gave the bank's claim (not "no claim shown"). The letter
+   *  then answers only that claim, so "nothing to argue" means nothing on
+   *  file answers IT — the fix is the claim-driven checklist, not waiting. */
+  answeredBankClaim?: boolean;
   /** Shopify's `evidenceSentOn` — the moment Shopify forwarded the
    *  evidence to the card network. Persisted as `disputes.submitted_at`.
    *  Drives the outcome-expected countdown. Optional. */
@@ -238,11 +253,13 @@ function StatusBadge({ status }: { status: Status }) {
 
 export function CompleteDefencePackageCard({
   packId,
+  autoFilesOnDueDate = false,
   dispute,
   submittedToShopifyAt,
   shopifyAdminUrl,
   presentationStatus,
   returnedToSender,
+  answeredBankClaim,
   evidenceSentOn,
   onSubmitted,
   defencePackage,
@@ -509,10 +526,13 @@ export function CompleteDefencePackageCard({
   // context — and a link navigation bypasses the demo fetch shim, which
   // only wraps window.fetch. The demo fixture stores a static sample
   // PDF path under /public, so link to it directly.
+  // `preview_url` carries a signed token from the workspace API: the new tab
+  // has no session cookie (lib/security/previewLink.ts). The bare path is the
+  // fallback for a row served without one.
   const previewHref = displayRow?.pdf_path
     ? dispute?.shopId === "demo"
       ? displayRow.pdf_path
-      : `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
+      : (displayRow.preview_url ?? `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`)
     : null;
 
   /** True when the merchant clicked Regenerate AND no newer-version
@@ -673,7 +693,11 @@ export function CompleteDefencePackageCard({
     submitPending,
     safety: defencePackage?.safety,
   });
-  const canFinalize = actionState.canFinalize;
+  // Held on Auto-pilot and not yet with Shopify: nothing waits for an
+  // approval, so none is offered. The package still previews and regenerates.
+  const filesAutomatically =
+    autoFilesOnDueDate && !submittedToShopifyAt && !!dispute?.dueAt && (latest?.status === "draft" || latest?.status === "stale");
+  const canFinalize = actionState.canFinalize && !filesAutomatically;
   const canSubmit = actionState.canSubmit;
   // Regenerate gate (unchanged rules, now derived in one place): the
   // pre-submit cases (draft / stale / failed) are always reachable; a
@@ -983,13 +1007,17 @@ export function CompleteDefencePackageCard({
               title={
                 returnedToSender
                   ? tPkg("notEnoughEvidenceReturnedTitle")
-                  : t("notEnoughEvidenceTitle")
+                  : answeredBankClaim
+                    ? tPkg("notEnoughEvidenceClaimTitle")
+                    : t("notEnoughEvidenceTitle")
               }
             >
               <p>
                 {returnedToSender
                   ? tPkg("notEnoughEvidenceReturnedBody")
-                  : tPkg("notEnoughEvidenceBody")}
+                  : answeredBankClaim
+                    ? tPkg("notEnoughEvidenceClaimBody")
+                    : tPkg("notEnoughEvidenceBody")}
               </p>
             </Banner>
           )}

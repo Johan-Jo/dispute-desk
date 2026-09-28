@@ -74,11 +74,16 @@ export interface OutcomeFactor {
  * response reached Shopify, not who assembled it. Gating on it would make
  * the product claim credit for evidence a merchant filed themselves years
  * earlier (`scripts/sql/filed-by-whom.sql`).
+ *
+ * `not_filed_by_us` carries no copy of its own. It used to render "decided
+ * before DisputeDesk filed any evidence", which was false on every case we
+ * HELD on purpose (order #360499: held for two weeks, Shopify responded after
+ * the deadline). Who responded, and why we did not, is `decidedResponse.ts`.
  */
 export type OutcomeExplanation =
   | { kind: "we_defended_with_facts"; filedAt: string | null; factors: OutcomeFactor[] }
   | { kind: "we_defended_no_facts"; filedAt: string | null }
-  | { kind: "not_defended_by_us" };
+  | { kind: "not_filed_by_us" };
 
 /** Shape of one classified fact as persisted in `defence_packages.facts_json`. */
 interface PersistedFact {
@@ -255,7 +260,7 @@ export function resolveOutcomeExplanation(input: {
   pack: { submittedAt: string | null; facts: unknown } | null;
   customerName?: string | null;
 }): OutcomeExplanation {
-  if (!input.pack) return { kind: "not_defended_by_us" };
+  if (!input.pack) return { kind: "not_filed_by_us" };
 
   const factors = deriveOutcomeFactors({
     facts: input.pack.facts,
@@ -276,9 +281,10 @@ export function resolveOutcomeExplanation(input: {
  * deliberate: a merchant who reads the email and then opens the app must not
  * see two different explanations of the same decision.
  *
- * Returns null when there is nothing honest to say — `not_defended_by_us`
- * with no date, for instance. The caller renders nothing rather than a
- * placeholder.
+ * Returns null when there is nothing honest to say — a filing with no date,
+ * for instance. The caller renders nothing rather than a placeholder.
+ * `not_filed_by_us` is always null here: `decidedResponseTokens` owns that
+ * copy, because only it knows who responded instead and why.
  */
 export function outcomeExplanationToken(
   explanation: OutcomeExplanation,
@@ -286,8 +292,8 @@ export function outcomeExplanationToken(
   formattedDate: string | null,
 ): I18nToken | null {
   switch (explanation.kind) {
-    case "not_defended_by_us":
-      return { key: "disputes.outcomeExplanation.notDefendedByUs" };
+    case "not_filed_by_us":
+      return null;
     case "we_defended_no_facts":
       if (!formattedDate) return null;
       return {

@@ -61,7 +61,7 @@ interface PackJsonShape {
     returnedAt?: string | null;
     messageToken?: unknown;
   } | null;
-  case_strength?: { overall?: string } | null;
+  case_strength?: { overall?: string; overallBeforeRev5?: string } | null;
   credit_already_issued?: { triggered?: boolean; coversDisputedAmount?: boolean } | null;
 }
 
@@ -139,6 +139,9 @@ export function assessmentFromPackRow(
 ): CaseAssessmentSnapshot {
   const pj = packJsonOf(pack);
   const overall = normaliseStrength(pj.case_strength?.overall ?? null);
+  // Item-not-received packs scored after non-receipt plan rev 5 only. An
+  // absent value leaves the ladder's newly-strong hold (§6.1.4) inert.
+  const overallBeforeRev5 = strengthOrUndefined(pj.case_strength?.overallBeforeRev5);
   const persisted = readPersistedCompletenessForGate({
     completeness_score: pack.completeness_score,
     blockers: pack.blockers,
@@ -160,6 +163,7 @@ export function assessmentFromPackRow(
     assessmentVersion: 1,
     strength: {
       overall,
+      ...(overallBeforeRev5 !== undefined ? { overallBeforeRev5 } : {}),
       score: 0,
       coveragePercent: 0,
       strongCount: 0,
@@ -197,6 +201,7 @@ export function assessmentFromPackRow(
         packId: pack.id,
         completeness,
         strengthOverall: overall,
+        strengthOverallBeforeRev5: overallBeforeRev5 ?? null,
         coverageState: pj.coverage?.state ?? null,
         fatalLossTriggered: pj.fatal_loss?.triggered === true,
         reviewRequiredCount: opts.reviewRequiredCount ?? 0,
@@ -215,6 +220,14 @@ export function assessmentFromPackRow(
  */
 const FRESH_BY_CONSTRUCTION = "1970-01-01T00:00:00.000Z";
 export const PROJECTED_ASSESSMENT_FRESHNESS: FreshnessVerdict = { fresh: true };
+
+function strengthOrUndefined(
+  raw: string | null | undefined,
+): CaseAssessmentSnapshot["strength"]["overall"] | undefined {
+  return raw === "strong" || raw === "moderate" || raw === "weak" || raw === "insufficient"
+    ? raw
+    : undefined;
+}
 
 function normaliseStrength(
   raw: string | null,

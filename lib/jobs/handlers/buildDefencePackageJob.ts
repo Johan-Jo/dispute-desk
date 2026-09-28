@@ -20,10 +20,18 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
-import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
 import {
-  resolveReasonCodeModule,
-  resolveReasonCodeModuleForContext,
+  classifyFacts,
+  hasArgumentBeyondRecordContext,
+  type ChecklistItemLike,
+} from "@/lib/defence/factClassifier";
+import { loadInternalNarrativeConstraints } from "@/lib/integrations/gorgias/internalNarrativeConstraints";
+import {
+  carrierPossessionUndated,
+  deliveryPostDatesDispute,
+} from "@/lib/defence/internalConstraints";
+import {
+  resolveCaseReasonCodeModule,
   familyKeyForModule,
 } from "@/lib/defence/reasonCodes/registry";
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
@@ -31,7 +39,11 @@ import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
-import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { generateNarrative, CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
+import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
+import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
+import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
+import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
 import {
   validateNarrative,
@@ -46,7 +58,11 @@ import { COMPOSITION_VERSION } from "@/lib/defence/pdf/thesisTemplates";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
+import { bankClaimInputFromRow, loadBankClaimAnswer, needsBankClaim } from "@/lib/disputes/bankClaim";
+import { effectiveReasonForClaim, scopeFactsToBankClaim } from "@/lib/disputes/bankClaimAnalysis";
+import { ensureBankClaimAnalysis } from "@/lib/disputes/bankClaimAnalysisStore";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
 import { finalizeDedupeKey } from "@/lib/defence/finalizeRpc";
@@ -74,6 +90,7 @@ import {
   type PackageProjection,
 } from "@/lib/defence/package";
 import { projectReviewItems } from "@/lib/evidence/model/merchantProjection";
+import { buildProductListingExhibits } from "@/lib/defence/productListingExhibit";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
@@ -164,12 +181,12 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("disputes")
-      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name")
+      .select("id, dispute_gid, order_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name, initiated_at, response_cycle")
       .eq("id", pkg.dispute_id)
       .single(),
     sb
       .from("shops")
-      .select("id, shop_domain")
+      .select("id, shop_domain, primary_domain, shop_name")
       .eq("id", pkg.shop_id)
       .single(),
   ]);
@@ -283,6 +300,26 @@ export async function handleBuildDefencePackage(
       status: c.status as ChecklistItemLike["status"],
     })) ?? [];
 
+  /* ── The bank's claim (lib/disputes/bankClaim.ts) ─────────────────────
+   * Loaded BEFORE the module is chosen, because on a `general` dispute the
+   * claim decides which template the letter is written from, and which
+   * facts it may cite (lib/disputes/bankClaimAnalysis.ts). Only looked up
+   * when the dispute needs it (reopened, or GENERAL with no network code).
+   * Counsel v2 does not take the claim, so a claimed case always goes to the
+   * template writer that does. */
+  const claimCycle = (dispute as { response_cycle?: number | null } | null)?.response_cycle ?? 1;
+  const bankClaim =
+    dispute && needsBankClaim(bankClaimInputFromRow(dispute as unknown as Record<string, unknown>))
+      ? await loadBankClaimAnswer(sb, pkg.dispute_id, claimCycle)
+      : null;
+  const bankClaimInput = bankClaim
+    ? { text: bankClaim.text, noClaimShown: bankClaim.noClaimShown }
+    : null;
+  const claimAnalysis = bankClaim?.text
+    ? await ensureBankClaimAnalysis(sb, pkg.dispute_id, claimCycle).catch(() => null)
+    : null;
+  const claimReason = effectiveReasonForClaim(dispute?.reason ?? null, claimAnalysis);
+
   // Resolve reason-code module with optional DB override.
   const reasonCode = dispute?.network_reason_code ?? null;
   // BNPL/local methods (Klarna, Affirm) carry no network reason code —
@@ -307,9 +344,16 @@ export async function handleBuildDefencePackage(
         version: moduleOverride.version ?? undefined,
       }
     : undefined;
-  const reasonCodeModule = isNonCardPayment
-    ? resolveReasonCodeModuleForContext(reasonCode, dispute?.reason ?? null, moduleOverrideInput)
-    : resolveReasonCodeModule(reasonCode, moduleOverrideInput);
+  // A GENERAL dispute whose bank's claim names a specific category is
+  // written from that category's module — the SAME resolver the filing-time
+  // plan check uses, or the stored plan hash could never match.
+  const reasonCodeModule = resolveCaseReasonCodeModule({
+    networkReasonCode: reasonCode,
+    shopifyReason: (dispute?.reason as string | null) ?? null,
+    caseReason: claimReason,
+    nonCardPayment: isNonCardPayment,
+    dbOverride: moduleOverrideInput,
+  });
 
   // Resolve the family (Phase 1). One family per module today; the
   // family's overlayPromptBody fills in cross-cutting rules that span
@@ -408,7 +452,9 @@ export async function handleBuildDefencePackage(
       caseId: pkg.dispute_id as string,
       model: {
         disputeId: pkg.dispute_id as string,
-        reason: (dispute?.reason as string | null) ?? null,
+        // The claim's reason on a GENERAL dispute the bank's claim re-typed,
+        // like the module and the checklist (bank-claim plan F2).
+        reason: claimReason,
         packId: pack.id as string,
         sections: sectionsRaw,
         evidenceItems: items,
@@ -489,10 +535,41 @@ export async function handleBuildDefencePackage(
       selectPlanFacts(activePlan.plan, activePlan.factsByRecordId).includedFacts,
     );
 
-    // Everything the plan authorised was bank-ineligible. Same honest answer:
-    // no document, no draft, no candidate.
-    if (planFacts.length === 0) {
+    // Everything the plan authorised was bank-ineligible, or only the store's
+    // own records (policies, the order) survived — context, not an argument.
+    // Same honest answer: no document, no draft, no candidate.
+    if (!hasArgumentBeyondRecordContext(planFacts)) {
       return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+    }
+  }
+
+  /* The bank's claim scopes the facts the writer may cite: authorisation
+   * facts go when the bank says authorisation is not in dispute, and the
+   * "no return initiated" fact goes when the claim says a return was
+   * requested. Removed from the ONE list the writer, the validator and the
+   * PDF all read, so a sentence built on them cannot pass validation. */
+  if (claimAnalysis) {
+    const scoped = scopeFactsToBankClaim(planFacts, claimAnalysis);
+    if (scoped.removed.length > 0) {
+      planFacts = scoped.facts as typeof planFacts;
+      await logAuditEvent({
+        shopId: pkg.shop_id,
+        disputeId: pkg.dispute_id,
+        actorType: "system",
+        eventType: "defence_facts_scoped_to_bank_claim",
+        eventPayload: {
+          packageId,
+          claimReason: claimAnalysis.reason,
+          removed: scoped.removed,
+        },
+      });
+      // Nothing left that answers the claim: no letter. An all-omitted draft
+      // (Sura Svenne test, 2026-09-27) could otherwise be filed at the
+      // deadline as a blank response. Same honest exit the canonical plan
+      // takes; the merchant's checklist now asks for the claim's evidence.
+      if (!hasArgumentBeyondRecordContext(planFacts)) {
+        return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+      }
     }
   }
 
@@ -519,8 +596,99 @@ export async function handleBuildDefencePackage(
       subProduct: klarnaSubProduct,
     });
 
-  // Generate the narrative.
-  const narrativeRes = await generateNarrative(
+  /* ── Counsel v2 (lib/defence/counsel/run.ts) ─────────────────────────
+   * Item-not-received letters are written by the counsel pipeline first. A
+   * null result — no carrier-confirmed single delivery, no draft passing its
+   * checks, a model error — falls through to the template writer below,
+   * unchanged. Its letter still passes every validator this job runs; if it
+   * fails one, the existing retry regenerates with the template writer. */
+  let usedCounsel = false;
+  let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
+  if (counselEnabled(reasonCodeModule.key) && !isNonCardPayment && !bankClaim?.text) {
+    const cap = await checkDailyCap(sb, pkg.shop_id);
+    if (!cap.capReached && cap.counselRuns < COUNSEL_DAILY_RUN_CAP) {
+      try {
+        const orderCtx = deriveOrderContext(
+          sectionsRaw.map((s) => ({ type: s.type, label: s.label, source: s.source, data: s.data ?? {}, fieldsProvided: s.fieldsProvided ?? [] })),
+        );
+        counselRes = await runCounsel({
+          shopId: pkg.shop_id,
+          moduleKey: reasonCodeModule.key,
+          facts: planFacts,
+          packSections: sectionsRaw.map((s) => ({ type: s.type, source: s.source, data: s.data ?? {} })),
+          orderName: orderCtx.orderName ?? null,
+          orderGid: (dispute as { order_gid?: string | null } | null)?.order_gid ?? null,
+          disputeGid: dispute?.dispute_gid ?? null,
+          disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+          disputeAmount: Number.isFinite(Number(dispute?.amount)) ? Number(dispute?.amount) : null,
+          disputeCurrency: dispute?.currency_code ?? null,
+          amountDisplay: dispute?.amount != null ? `${dispute.currency_code ?? ""} ${dispute.amount}`.trim() : null,
+          cardLast4: orderCtx.cardLast4 ?? null,
+          merchantName:
+            (shop as { shop_name?: string | null } | null)?.shop_name?.trim() ||
+            (shop?.shop_domain
+              ? displayShopDomain({
+                  shop_domain: shop.shop_domain as string,
+                  primary_domain: (shop as { primary_domain?: string | null }).primary_domain ?? null,
+                })
+              : "The merchant"),
+          // Rebuild with unchanged inputs: reuse the last counsel letter's
+          // summary for this dispute (no model call). Any failed package is
+          // skipped; the summary is re-checked against today's ledger.
+          findReusable: async (inputHash) => {
+            const { data } = await sb
+              .from("defence_packages")
+              .select("narrative_json")
+              .eq("dispute_id", pkg.dispute_id)
+              .eq("prompt_family", COUNSEL_PROMPT_FAMILY)
+              .neq("status", "failed")
+              .eq("narrative_json->counsel->>inputHash", inputHash)
+              .order("version", { ascending: false })
+              .limit(1);
+            const summary = (data?.[0]?.narrative_json as { counsel?: { summary?: unknown } } | null)?.counsel?.summary;
+            return Array.isArray(summary) && summary.every((p) => typeof p === "string") ? (summary as string[]) : null;
+          },
+          // Every run is recorded, letter or not, so the counsel cap sees it.
+          // Reused letters are recorded too (zero tokens), under their own
+          // strategy key, which neither cap counts.
+          onSpend: async (spend) => {
+            await writeRun(sb, { shopId: pkg.shop_id, packageId }, {
+              model: spend.model,
+              packageMode: classification.packageMode,
+              promptTokens: spend.tokens.prompt,
+              completionTokens: spend.tokens.completion,
+              cachedTokens: spend.tokens.cached,
+              stageTokens: spend.stages,
+              durationMs: spend.durationMs,
+              validationStatus: spend.ok ? "ok" : "failed",
+              strategyKeys: [spend.reused ? COUNSEL_REUSED_STRATEGY_KEY : "counsel_v2"],
+              promptVersion: COUNSEL_PROMPT_VERSION,
+            });
+          },
+        });
+      } catch (err) {
+        console.warn(
+          `[buildDefencePackage] counsel v2 failed for ${pkg.dispute_id}, using the template writer: ` +
+            (err instanceof Error ? err.message : String(err)),
+        );
+        counselRes = null;
+      }
+    }
+  }
+
+  // Generate the narrative (template writer) unless counsel wrote it.
+  const narrativeRes = counselRes
+    ? {
+        narrative: counselRes.narrative,
+        modelUsed: counselRes.modelUsed,
+        promptVersion: counselRes.promptVersion,
+        promptFamily: counselRes.promptFamily,
+        tokens: counselRes.tokens,
+        durationMs: counselRes.durationMs,
+        capReached: false,
+        error: null as string | null,
+      }
+    : await generateNarrative(
     {
       packageId,
       disputeId: pkg.dispute_id,
@@ -535,6 +703,7 @@ export async function handleBuildDefencePackage(
       manualEvidence: classification.manual,
       internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
       missingEvidence: classification.missing,
+      bankClaim: bankClaimInput,
     },
     {
       shopId: pkg.shop_id,
@@ -542,6 +711,7 @@ export async function handleBuildDefencePackage(
       modelOverride: moduleOverride?.model ?? null,
     },
   );
+  usedCounsel = !!counselRes;
 
   if (narrativeRes.capReached) {
     return await markFailed(sb, pkg, narrativeRes.error ?? "daily cap reached", "daily_cap_reached", true);
@@ -575,11 +745,73 @@ export async function handleBuildDefencePackage(
     ...reasonCodeFamily.prohibitedBankPhrases,
     ...paymentProhibited,
   ];
+  // Validator-only constraints derived from stored messages (validator v5,
+  // lib/defence/internalConstraints.ts). Passed to every validator below and to
+  // NOTHING else — not the narrative writer, the projection, the PDF or
+  // facts_json. A customer reimbursement request refuses a sentence denying it.
+  const internalConstraints = {
+    ...(await loadInternalNarrativeConstraints(pkg.dispute_id as string)),
+    // Delivery after the dispute was opened: no sentence may relate the two
+    // (non-receipt plan §6.6 rule 2). Computed from the facts the letter cites.
+    deliveryPostDatesDispute: deliveryPostDatesDispute(
+      classification.approved,
+      (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    ),
+    // An in-transit shipment has no hand-over date: no sentence may place the
+    // carrier's custody relative to the dispute (blume-box #360980).
+    carrierPossessionUndated: carrierPossessionUndated(
+      classification.approved,
+      (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    ),
+  };
+  // Derive order/payment/timeline context from the pack once (before the record sections, which read the
+  // timeline) — the PDF
+  // renderer + the workspace API both consume this shape. Before this
+  // call, the meta object hardcoded `null` for 8 fields the case-details
+  // table needs (card network, last 4, transaction date, gateway,
+  // financial/fulfillment status, order name, cardholder name) even
+  // though the data was already in `pack_json`.
+  const orderContext = deriveOrderContext(
+    sectionsRaw.map((s) => ({
+      type: s.type,
+      label: s.label,
+      source: s.source,
+      data: s.data ?? {},
+      fieldsProvided: s.fieldsProvided ?? [],
+    })),
+  );
   // Drop argument sections whose every supporting fact is withheld from the
   // Evidence Basis, BEFORE validating. Measured on the 50 decided prod
   // disputes: 51 such sections across 27 cases. Blocking them would mean
   // status:"failed" and no PDF at all, so the letter loses the paragraph
   // instead of the merchant losing the filing.
+  // Multi-parcel item-not-received letters: the parcel sections come from the
+  // records, not the model (lib/defence/shipmentRecordSections.ts). No-op for
+  // every other letter.
+  // Item-not-received letters: parcel sections come from the records, not
+  // the model (lib/defence/shipmentRecordSections.ts) — multi-parcel, and a
+  // single carrier-confirmed delivery.
+  const recordContext = {
+    moduleKey: reasonCodeModule.key,
+    orderName: orderContext.orderName ?? null,
+    disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    timelineEvents: orderContext.timelineEvents,
+    lineItems: orderContext.lineItems,
+    // numeric columns can arrive as strings
+    disputeAmount: Number.isFinite(Number((dispute as { amount?: unknown } | null)?.amount ?? NaN))
+      ? Number((dispute as { amount?: unknown }).amount)
+      : null,
+    disputeCurrency: (dispute as { currency_code?: string | null } | null)?.currency_code ?? null,
+    customerEmail: orderContext.customerEmail ?? null,
+    packSections: sectionsRaw.map((s) => ({ type: s.type, data: s.data ?? {} })),
+  };
+  // Deny-list the MODEL's restating sections first; the record sections may
+  // then write their own (source "record") under Order Line Items and the
+  // timeline (lib/defence/sectionVisibility.ts `isSectionShown`).
+  narrativeRes.narrative = omitDeniedSections(narrativeRes.narrative, reasonCodeModule.key);
+  if (!usedCounsel) {
+    narrativeRes.narrative = applyShipmentRecordSections(narrativeRes.narrative, planFacts, recordContext);
+  }
   const suppression = suppressUnsupportedSections({
     narrative: narrativeRes.narrative,
     approvedFacts: planFacts,
@@ -594,7 +826,9 @@ export async function handleBuildDefencePackage(
     packageMode: classification.packageMode,
     internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
     extraHardPhrases: hardPhrases,
+    internalConstraints,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+    bankClaimText: bankClaim?.text ?? null,
   });
   // Non-blocking findings are recorded whether or not the package passes.
   // Without this the rule is invisible on live traffic, and "detect first,
@@ -668,6 +902,7 @@ export async function handleBuildDefencePackage(
         manualEvidence: classification.manual,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
         missingEvidence: classification.missing,
+        bankClaim: bankClaimInput,
       },
       {
         shopId: pkg.shop_id,
@@ -689,6 +924,8 @@ export async function handleBuildDefencePackage(
       // with its errors.
       // The retry output needs the same treatment; without this a retried
       // package keeps the unsupported section the first pass had removed.
+      retryRes.narrative = omitDeniedSections(retryRes.narrative, reasonCodeModule.key);
+      retryRes.narrative = applyShipmentRecordSections(retryRes.narrative, planFacts, recordContext);
       const retrySuppression = suppressUnsupportedSections({
         narrative: retryRes.narrative,
         approvedFacts: planFacts,
@@ -705,7 +942,9 @@ export async function handleBuildDefencePackage(
         packageMode: classification.packageMode,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
         extraHardPhrases: hardPhrases,
+        internalConstraints,
         guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+        bankClaimText: bankClaim?.text ?? null,
       });
       // Reassign so the rest of the pipeline uses the better output.
       // We track token totals on the original `narrativeRes` for ops
@@ -713,6 +952,10 @@ export async function handleBuildDefencePackage(
       // retry's.
       narrativeRes.narrative = retryRes.narrative;
       narrativeRes.modelUsed = retryRes.modelUsed;
+      // The retry is the template writer's letter, whoever wrote the first.
+      narrativeRes.promptVersion = retryRes.promptVersion;
+      narrativeRes.promptFamily = retryRes.promptFamily;
+      usedCounsel = false;
       narrativeRes.tokens.prompt += retryRes.tokens.prompt;
       narrativeRes.tokens.completion += retryRes.tokens.completion;
       narrativeRes.tokens.cached += retryRes.tokens.cached;
@@ -772,24 +1015,16 @@ export async function handleBuildDefencePackage(
     return { ok: false, retriable: false, reason: "validation_failed" };
   }
 
-  // Derive order/payment/timeline context from the pack once — the PDF
-  // renderer + the workspace API both consume this shape. Before this
-  // call, the meta object hardcoded `null` for 8 fields the case-details
-  // table needs (card network, last 4, transaction date, gateway,
-  // financial/fulfillment status, order name, cardholder name) even
-  // though the data was already in `pack_json`.
-  const orderContext = deriveOrderContext(
-    sectionsRaw.map((s) => ({
-      type: s.type,
-      label: s.label,
-      source: s.source,
-      data: s.data ?? {},
-      fieldsProvided: s.fieldsProvided ?? [],
-    })),
-  );
 
-  const merchantDisplayName =
-    merchantNameFromDomain(shop?.shop_domain ?? null) ?? "Merchant";
+  // The merchant is named by its real storefront domain ("blume.com"), never
+  // the myshopify alias (maintainer, 2026-09-24). `displayShopDomain` falls
+  // back to the alias only for a shop with no primary domain on record.
+  const merchantDisplayName = shop?.shop_domain
+    ? displayShopDomain({
+        shop_domain: shop.shop_domain as string,
+        primary_domain: (shop as { primary_domain?: string | null }).primary_domain ?? null,
+      })
+    : (merchantNameFromDomain(null) ?? "Merchant");
 
   // Phase 1.5 — composed-document validation. Every byte of
   // argumentative prose that the renderer will write into the PDF
@@ -894,6 +1129,13 @@ export async function handleBuildDefencePackage(
     }
   }
 
+  // The opening line states the order and, when delivery came first, the
+  // dispute date (lib/defence/pdf/thesisTokens.ts).
+  const thesisContext = {
+    orderName: orderContext.orderName ?? null,
+    disputeOpenedAt: (dispute as { initiated_at?: string | null } | null)?.initiated_at ?? null,
+    disputedAmount: disputedAmountDisplay(recordContext.disputeAmount, recordContext.disputeCurrency),
+  };
   if (activePlan) {
     projection = projectPackageFromPlan({
       plan: activePlan.plan,
@@ -906,6 +1148,7 @@ export async function handleBuildDefencePackage(
       familyKey: reasonCodeFamily.key,
       moduleKey: reasonCodeModule.key,
       fulfillmentStatus: orderContext.fulfillmentStatus,
+      caseContext: thesisContext,
     });
   }
 
@@ -918,6 +1161,7 @@ export async function handleBuildDefencePackage(
       familyKey: reasonCodeFamily.key,
       moduleKey: reasonCodeModule.key,
       fulfillmentStatus: orderContext.fulfillmentStatus,
+      caseContext: thesisContext,
     });
 
   /* F2's second half — DETERMINISTIC document validation, run after
@@ -937,6 +1181,7 @@ export async function handleBuildDefencePackage(
             missingRecordIds: projection.missingRecordIds,
             packageMode: classification.packageMode,
             extraHardPhrases: hardPhrases,
+            internalConstraints,
             guardedPhrases: reasonCodeFamily.guardedBankPhrases,
           });
           documentFailureCodes = verdict.failureCodes;
@@ -961,6 +1206,7 @@ export async function handleBuildDefencePackage(
           approvedFacts: planFacts,
           packageMode: classification.packageMode,
           extraHardPhrases: hardPhrases,
+          internalConstraints,
           guardedPhrases: reasonCodeFamily.guardedBankPhrases,
         });
 
@@ -990,6 +1236,7 @@ export async function handleBuildDefencePackage(
         missingRecordIds: darkProjection.missingRecordIds,
         packageMode: classification.packageMode,
         extraHardPhrases: hardPhrases,
+        internalConstraints,
         guardedPhrases: reasonCodeFamily.guardedBankPhrases,
       });
       darkDocumentPassed = darkVerdict.passed;
@@ -1081,8 +1328,18 @@ export async function handleBuildDefencePackage(
       cardholderName:
         orderContext.cardholderName ?? (dispute?.customer_display_name as string | null) ?? null,
       transactionDate: orderContext.transactionDate,
-      timelineEvents: orderContext.timelineEvents,
+      timelineEvents: [...(orderContext.timelineEvents ?? []), ...(narrativeRes.narrative.timelineAdditions ?? [])],
       lineItemsFromContext: orderContext.lineItems,
+      addressExhibit: narrativeRes.narrative.addressExhibit ?? null,
+      laterOrderExhibit: narrativeRes.narrative.laterOrderExhibit ?? null,
+      productListingExhibits: await buildProductListingExhibits({
+        sb,
+        sections: sectionsRaw,
+        // Only when the letter's own facts include a collected listing.
+        listingCited: planFacts.some(
+          (f) => f.category === "product_listing" && (f.value as { collected?: unknown }).collected === true,
+        ),
+      }),
       generatedAt: new Date().toISOString(),
       version: pkg.version,
       packageMode: classification.packageMode,
@@ -1171,7 +1428,8 @@ export async function handleBuildDefencePackage(
       const ruleResult = await evaluateRules({
         id: pkg.dispute_id,
         shop_id: pkg.shop_id,
-        reason: (dispute.reason as string | null) ?? null,
+        // Per-reason rules follow the type the case is argued as (F2).
+        reason: claimReason,
         status: (dispute.status as string | null) ?? null,
         amount: (dispute.amount as number | null) ?? null,
         phase: (dispute.phase as "inquiry" | "chargeback" | null | undefined) ?? null,

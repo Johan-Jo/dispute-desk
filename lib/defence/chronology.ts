@@ -36,6 +36,9 @@ export interface ChronologyEvent {
  * `DisputeContextLike`) pass a superset of this shape.
  */
 export interface ChronologyContext {
+  /** The disputed order's total as printed in the line-items table
+   *  ("CAD 120.75"). Named on the "placed this order" row. */
+  orderTotalDisplay?: string | null;
   /** Full event timeline from the pack's access_log section.
    *  Threaded through by:
    *    - PDF: `meta.timelineEvents` (set by `buildDefencePackageJob`)
@@ -53,7 +56,28 @@ export interface ChronologyContext {
   orderName?: string | null;
   cardNetwork?: string | null;
   cardLast4?: string | null;
+  /** Drop fulfilment, shipping-notification and delivery events. Set for
+   *  families where arrival is not in dispute (`familyOmitsArrival`). */
+  omitArrivalEvents?: boolean;
 }
+
+/**
+ * Families whose buyer agrees the parcel arrived and disputes what was in it
+ * (maintainer, 2026-09-28): the letter and its timeline leave the parcel's
+ * journey out entirely.
+ */
+const ARRIVAL_NOT_IN_DISPUTE_FAMILIES: ReadonlySet<string> = new Set(["product_not_as_described"]);
+
+export function familyOmitsArrival(familyKey: string | null | undefined): boolean {
+  return !!familyKey && ARRIVAL_NOT_IN_DISPUTE_FAMILIES.has(familyKey);
+}
+
+const ARRIVAL_CATEGORIES: ReadonlySet<ChronologyCategory> = new Set([
+  "fulfillment_shipment",
+  "shipping_confirmation",
+  "delivery_notification",
+  "carrier_delivery",
+]);
 
 /**
  * Build the chronology bullets for one defence package.
@@ -82,10 +106,17 @@ export interface ChronologyContext {
  * information). Applied to the rich Shopify timeline text verbatim.
  */
 export function normalizeChronologyText(text: string): string {
-  // "kr628.00 SEK" → "628.00 SEK"; "kr 605,22 SEK" → "605,22 SEK".
-  return text.replace(
-    /\bkr\s?(\d[\d.,\s]*\s+[A-Z]{3})\b/g,
-    "$1",
+  return (
+    text
+      // "kr628.00 SEK" → "628.00 SEK"; "kr 605,22 SEK" → "605,22 SEK".
+      .replace(/\bkr\s?(\d[\d.,\s]*\s+[A-Z]{3})\b/g, "$1")
+      // Shopify's chargeback line adds its own fee to the disputed amount
+      // ("totaling $120.75 CAD + $15.00 USD"). The fee is not the
+      // customer's money and does not match the disputed amount (#352543).
+      .replace(/(opened a chargeback totaling .+?)\s+\+\s+.+?\.$/i, "$1.")
+      // Packs built before 2026-09-24 carry the old wording, which claimed
+      // the recipient; the record says delivered, not who took it.
+      .replace(/^Carrier confirmed delivery of the shipment to the recipient\.$/i, "Carrier recorded the shipment as delivered.")
   );
 }
 
@@ -165,6 +196,7 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
     patterns: [
       /shipment (?:out for delivery|delivered) email was sent/i,
       /(?:out for delivery|delivered) email was sent/i,
+      /sent an? (?:shipment )?(?:out for delivery|delivered) email/i,
     ],
   },
   {
@@ -173,6 +205,7 @@ const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> 
     category: "carrier_delivery",
     patterns: [
       /carrier confirmed delivery/i,
+      /carrier recorded the shipment as delivered/i,
       /carrier delivered the shipment to a pickup point/i,
       /collected the shipment at the pickup point/i,
       /carrier reported the shipment returned to sender/i,
@@ -256,6 +289,17 @@ export function formatChronologyTimestamp(iso: string): string {
   return `${mon} ${day}, ${yyyy}, ${hh}:${mm} UTC`;
 }
 
+/** "placed this order" → "placed order #352543 for CAD 120.75";
+ *  "opened a chargeback totaling" → "opened a chargeback on order #352543,
+ *  totaling". Both still match their allow-list patterns. */
+function nameTheOrder(text: string, context: ChronologyContext): string {
+  const name = context.orderName;
+  if (!name) return text;
+  return text
+    .replace(/\bplaced this order\b/, `placed order ${name}${context.orderTotalDisplay ? ` for ${context.orderTotalDisplay}` : ""}`)
+    .replace(/\bopened a chargeback totaling\b/, `opened a chargeback on order ${name}, totaling`);
+}
+
 export function buildChronologyEvents(
   context: ChronologyContext,
   facts: EvidenceFact[] = [],
@@ -264,7 +308,7 @@ export function buildChronologyEvents(
   const rich = context.timelineEvents;
   if (Array.isArray(rich) && rich.length > 0) {
     const normalized = [...rich]
-      .map((e) => ({ ...e, text: normalizeChronologyText(e.text) }))
+      .map((e) => ({ ...e, text: nameTheOrder(normalizeChronologyText(e.text), context) }))
       .sort((a, b) => a.at.localeCompare(b.at));
     // Bank-facing hygiene: keep ONLY allow-listed evidentiary events.
     // Shopify's raw Order.events is an open-ended free-text stream that
@@ -275,7 +319,11 @@ export function buildChronologyEvents(
     // drops everything that isn't a recognized category. This is the single
     // wiring point both renderers share (PDF + HTML view), so the filter
     // can never be silently skipped by one surface.
-    const { kept, droppedUnknown } = partitionChronologyEvents(normalized);
+    const partitioned = partitionChronologyEvents(normalized);
+    const { droppedUnknown } = partitioned;
+    const kept = context.omitArrivalEvents
+      ? partitioned.kept.filter((e) => !ARRIVAL_CATEGORIES.has(classifyChronologyEvent(e.text) as ChronologyCategory))
+      : partitioned.kept;
     if (droppedUnknown.length > 0) {
       // Log the excluded tail (numbers collapsed so identical shapes
       // dedupe) — review it to promote genuinely useful new event types
@@ -292,7 +340,7 @@ export function buildChronologyEvents(
         `[chronology] dropped ${droppedUnknown.length} non-evidentiary timeline line(s); shapes: ${shapes.slice(0, 10).join(" | ")}`,
       );
     }
-    return kept;
+    return withShipmentEvents(kept, facts);
   }
 
   // Path 2: synthetic fallback. Only fires when the pack lacks captured events.
@@ -327,5 +375,80 @@ export function buildChronologyEvents(
       }
     }
   }
-  return events.sort((a, b) => a.at.localeCompare(b.at));
+  return withShipmentEvents(events.sort((a, b) => a.at.localeCompare(b.at)), facts);
+}
+
+/**
+ * Multi-parcel orders: ONE timeline (#360980, 2026-09-23 — the letter printed
+ * a chronology paragraph and, below it, a second bullet list).
+ *
+ *   - Each dated carrier event from the delivery fact's `shipments` joins the
+ *     bullets, naming its product: "GOFO's tracking record shows The Back to
+ *     School Bundle in transit (tracking …)" at the event's own time.
+ *   - Shopify's "marked 1 item as fulfilled" lines name their product, matched
+ *     by the fulfilment's own timestamp (within two minutes).
+ *   - A generic carrier-delivery line at the same moment as a parcel's named
+ *     delivery is dropped: the named one says it with the product.
+ *
+ * No-op when no delivery fact carries `shipments`.
+ */
+function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): ChronologyEvent[] {
+  const fact = facts.find((f) => {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") return false;
+    const s = (f.value as Record<string, unknown> | null)?.shipments;
+    return Array.isArray(s) && s.length > 1;
+  });
+  if (!fact) return events;
+  const shipments = (fact.value as Record<string, unknown>).shipments as Array<Record<string, unknown>>;
+  const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const itemsOf = (s: Record<string, unknown>): string | null => {
+    const names = (Array.isArray(s.items) ? (s.items as Array<Record<string, unknown>>) : [])
+      .map((it) => str(it.title))
+      .filter((t): t is string => t !== null);
+    return names.length ? names.join(", ") : null;
+  };
+
+  const annotated = events.map((e) => {
+    if (!/marked \d+ items? as fulfilled/i.test(e.text)) return e;
+    const at = Date.parse(e.at);
+    const match = shipments.find((s) => {
+      const t = Date.parse(str(s.fulfillmentEventAt) ?? "");
+      return !Number.isNaN(t) && !Number.isNaN(at) && Math.abs(t - at) <= 120_000;
+    });
+    const items = match ? itemsOf(match) : null;
+    return items ? { ...e, text: e.text.replace(/\.?\s*$/, ` (${items}).`) } : e;
+  });
+
+  const carrierEvents: ChronologyEvent[] = [];
+  for (const s of shipments) {
+    const items = itemsOf(s) ?? "the shipment";
+    const carrier = str(s.carrier) ?? "The carrier";
+    if (s.proofType === "in_transit" && str(s.inTransitSince)) {
+      carrierEvents.push({
+        at: str(s.inTransitSince) as string,
+        text: `${carrier}'s tracking record shows ${items} in transit.`,
+      });
+    } else if (
+      (s.proofType === "delivered_confirmed" || s.proofType === "signature_confirmed") &&
+      str(s.deliveredAt)
+    ) {
+      carrierEvents.push({
+        at: str(s.deliveredAt) as string,
+        text: `${carrier} records delivery of ${items}.`,
+      });
+    }
+  }
+  // The order's own generic delivery line ("Carrier confirmed delivery of the
+  // shipment to the recipient.") at the same moment as a parcel's named
+  // delivery says the same thing twice (#360980, 2026-09-24) — keep the one
+  // that names the parcel.
+  const namedDeliveries = carrierEvents
+    .filter((c) => / records delivery of /.test(c.text))
+    .map((c) => Date.parse(c.at));
+  const deduped = annotated.filter((e) => {
+    if (!/carrier confirmed delivery|carrier recorded the shipment as delivered/i.test(e.text)) return true;
+    const at = Date.parse(e.at);
+    return !namedDeliveries.some((t) => !Number.isNaN(at) && Math.abs(t - at) <= 120_000);
+  });
+  return [...deduped, ...carrierEvents].sort((a, b) => a.at.localeCompare(b.at));
 }

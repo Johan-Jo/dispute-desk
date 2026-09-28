@@ -45,6 +45,9 @@ import {
   type CoverageSummary,
 } from "./sources/coverageSource";
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
+import { collectProductEvidence } from "./sources/productSource";
+import { effectiveFamilyForDispute } from "@/lib/defence/reasonCodes/registry";
+import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import {
   buildCaseGateAssessment,
@@ -112,6 +115,8 @@ function sectionLabelEn(section: EvidenceSection): string {
   return readSectionLabel(section, enTranslate);
 }
 import type { OrderContext } from "@/lib/automation/completeness";
+import { ensureBankClaimAnalysis } from "@/lib/disputes/bankClaimAnalysisStore";
+import { effectiveReasonForClaim } from "@/lib/disputes/bankClaimAnalysis";
 
 function decryptAccessToken(encrypted: string): string {
   try {
@@ -187,11 +192,34 @@ export async function buildPack(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at",
+      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at, response_cycle, network_reason_code",
     )
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
+  // Shopify's own reason, before the bank's claim may re-type this build.
+  const shopifyReason = (dispute.reason as string | null) ?? null;
+
+  // The bank's claim decides what this dispute is about when Shopify's own
+  // reason is GENERAL (lib/disputes/bankClaimAnalysis.ts): the evidence
+  // checklist, the strength assessment and the asks then follow the claim
+  // ("not as described" → product listing, return policy…) instead of the
+  // generic template. For THIS build only — disputes.reason stays Shopify's.
+  if (!dispute.reason || String(dispute.reason).toUpperCase() === "GENERAL") {
+    try {
+      const analysis = await ensureBankClaimAnalysis(
+        sb,
+        dispute.id as string,
+        (dispute as { response_cycle?: number | null }).response_cycle ?? 1,
+      );
+      const effective = effectiveReasonForClaim(dispute.reason as string | null, analysis);
+      if (effective && effective !== dispute.reason) {
+        (dispute as { reason: string | null }).reason = effective;
+      }
+    } catch (err) {
+      console.warn("[buildPack] bank-claim analysis failed", err instanceof Error ? err.message : err);
+    }
+  }
 
   const { data: shop } = await sb
     .from("shops")
@@ -427,6 +455,19 @@ export async function buildPack(
     }
   }
 
+  // The family this case is argued as — the letter build's resolver, fed the
+  // same inputs (network code, Shopify's reason, the claim's reason, payment
+  // method). productSource runs only for product_not_as_described.
+  ctx.caseFamily = effectiveFamilyForDispute({
+    // As the letter build reads it: the stored code, which enrichment above
+    // has just refreshed when it could.
+    networkReasonCode:
+      resolvedNetworkCode ?? ((dispute as { network_reason_code?: string | null }).network_reason_code ?? null),
+    shopifyReason,
+    caseReason: (dispute.reason as string | null) ?? null,
+    nonCardPayment: isNonCardPaymentFamily(paymentContext.family),
+  });
+
   // Run all collectors concurrently
   const results = await Promise.allSettled([
     collectOrderEvidence(ctx),
@@ -440,6 +481,7 @@ export async function buildPack(
     collectFraudRiskEvidence(ctx),
     collectCoverageEvidence(ctx),
     collectDeviceLocationEvidence(ctx),
+    collectProductEvidence(ctx),
   ]);
 
   const allSections: EvidenceSection[] = [];
@@ -942,11 +984,19 @@ export async function buildPack(
   const caseStrengthForGate = caseAssessmentSnapshot.strength;
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
+    /** Item-not-received only. The automation ladder reads it from HERE
+     *  (`loadCaseAutomationDecision`, `resolveHeldState`) to hold a case the
+     *  revised rollup newly made strong (non-receipt plan §6.1.4). Omitting it
+     *  left that hold inert on every persisted pack. */
+    overallBeforeRev5?: CaseStrengthLevel;
     strongCount: number;
     moderateCount: number;
     supportingCount: number;
   } = {
     overall: caseStrengthForGate.overall,
+    ...(caseStrengthForGate.overallBeforeRev5 !== undefined
+      ? { overallBeforeRev5: caseStrengthForGate.overallBeforeRev5 }
+      : {}),
     strongCount: caseStrengthForGate.strongCount,
     moderateCount: caseStrengthForGate.moderateCount,
     supportingCount: caseStrengthForGate.supportingCount,
@@ -1080,6 +1130,13 @@ export async function buildPack(
      * across write and read, so what the reader observes is evidence drift:
      * the thing it can actually see. */
     case_assessment_gates: persistableGateFingerprint(gateAssessment),
+
+    /* The dispute reason this build assessed under. It differs from
+     * `disputes.reason` when the bank's claim re-typed a GENERAL dispute
+     * (see the override above). The reader derives its model from the same
+     * reason or its hash can never match — which showed "assessed under an
+     * earlier version" on every claim-typed case right after its rebuild. */
+    case_assessment_reason: (dispute.reason as string | null) ?? null,
 
     /* DIAGNOSTIC ONLY — the three input-hash terms as they were at write time.
      *

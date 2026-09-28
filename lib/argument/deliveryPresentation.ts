@@ -60,6 +60,8 @@ const PROOF_LABEL_KEY: Record<DeliveryProofType, I18nKey> = {
   signature_confirmed: "disputes.deliveryProof.signature",
   delivered_confirmed: "disputes.deliveryProof.carrierConfirmed",
   delivered_unverified: "disputes.deliveryProof.shippedUnconfirmed",
+  // Reuses the per-parcel status wording already translated in all 6 locales.
+  in_transit: "disputes.evidenceTab.row.deliveryProof.parcelStatusInTransit",
   label_created: "disputes.deliveryProof.labelOnly",
   returned_to_sender: "disputes.deliveryProof.returnedToSender",
 };
@@ -78,6 +80,7 @@ function resolveProofType(
     explicit === "signature_confirmed" ||
     explicit === "delivered_confirmed" ||
     explicit === "delivered_unverified" ||
+    explicit === "in_transit" ||
     explicit === "label_created" ||
     explicit === "returned_to_sender"
   ) {
@@ -358,6 +361,9 @@ export function resolveDeliveryTitle(
     return date
       ? { key: `${NS}.titleReturnedToSenderOn`, params: { date } }
       : { key: `${NS}.titleReturnedToSender` };
+  }
+  if (proofType === "in_transit") {
+    return { key: PROOF_LABEL_KEY.in_transit };
   }
   return { key: PROOF_LABEL_KEY.label_created };
 }

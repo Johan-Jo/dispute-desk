@@ -922,6 +922,45 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 - Emits per-change `dispute_events` ledger entries (already idempotent via `dedupe_key`).
 - Returns an `events: DisputeTransitionEvent[]` array that downstream effects key off.
 
+**Response cycles — reopens and inquiry → chargeback escalations (2026-09-27, plan `docs/plans/mein-maison-status-and-no-return.plan.md` Fix B).** Shopify can ask for a new response after one was given: `needs_response → under_review` (answered) and later `under_review → needs_response` with a fresh `evidence_due_by` (reopened, or an answered inquiry escalated to a chargeback). The first response's "sent" state used to survive this, so the dispute showed "Under review" with a live deadline and neither the deadline cron nor the reminders picked it up (Mein Maison #99142/#99348).
+
+- **Ledger:** `dispute_response_cycles` holds one row per cycle after the first, `unique (dispute_id, anchor_key)`. The anchor is the prior response the cycle follows, `resp:{UTC second}`, from `responseAnchorKey` (`lib/disputes/responseCycle.ts`) with a fixed precedence: `submitted_at` → `evidence_saved_to_shopify_at` → `shopify_updated_at` of an `under_review`-with-deadline row. Every path that discovers a cycle MUST use that helper, or one cycle becomes two rows.
+- **Derived columns:** `disputes.response_cycle = 1 + ledger rows`, `disputes.reopened_at = max(started_at)`, `disputes.escalated_from_inquiry_at` (set once, Shopify's time). `evidence_packs.response_cycle` and `defence_packages.response_cycle` are stamped **at insert** by a DB trigger from the dispute's current cycle, so no insert path has to remember it.
+- **One writer:** the SQL function `reconcile_response_cycle(dispute, anchor_key, started_at, trigger, source)` — idempotent (`on conflict do nothing`, derived columns recomputed from the ledger). Only when it inserts the newest row of an OPEN dispute that Shopify currently has at `needs_response`, and no response was recorded after the cycle start, does it: archive packs created before `started_at` and clear their `approved_for_save_at`; supersede `draft`/`stale`/`final` defence packages generated before it; re-stamp artifacts built at/after it; and reset `submitted_at`, `submission_state → not_saved`, `evidence_saved_to_shopify_at`, `reminder_sent_at`, `review_state`, `review_due_at`. This is the one sanctioned override of the `evidence_sent_on` walk-back guard; the previous values are returned and stored in the `response_cycle_reopened` event metadata. A late-discovered cycle older than the current one only corrects the count.
+- **Live detection** (`applyDisputeSnapshot`): a TRANSITION into `needs_response` with a real deadline, on a row with a RECORDED prior response (`hasPriorResponse`: a responded `submission_state`, `submitted_at` or `evidence_saved_to_shopify_at`). `under_review` alone is NOT a response: inquiries flip `needs_response` ↔ `under_review` with the same deadline and nothing sent while buyer and merchant message in Shopify (prod #99143, three flips in four days) — counting those would archive and rebuild the pack on every flip. Emits `response_cycle_reopened` (key `{id}:RESPONSE_CYCLE_REOPENED:{anchor}`) and the `RESPONSE_CYCLE_REOPENED` transition event; the dispatcher then runs `evaluateRules` → `runAutomationPipeline`, so the new cycle builds and files per the shop's automation mode. An inquiry → chargeback phase change emits `escalated_to_chargeback` once per dispute, whether or not it opens a cycle.
+- **Cycle-aware keys:** `STATUS_CHANGED` dedupe keys end in `:c{cycle}`, so a second reopen is not dropped. `submitted_confirmed` is only set from an `evidence_sent_on` later than `reopened_at`.
+- **Invariant — a cycle-N artifact is never filed on cycle N+1:** `saveToShopifyJob` (non-retriable `stale_response_cycle`, audit `save_to_shopify_refused_stale_cycle`), the deadline-submit cron (`deadline_submit_refused_stale_cycle`, counted in `blockedByDecision`) and `POST /api/packs/:id/approve` (409 `STALE_RESPONSE_CYCLE`) each compare `isStaleCycle(pack.response_cycle, dispute.response_cycle)`.
+- Disputes that were already reopened before this shipped are repaired by the history reconstruction and live confirmation scripts (plan B3/B4), which call the same SQL function.
+- Pinned by `lib/disputes/__tests__/responseCycle.test.ts`, the dispatcher, save-job, approve-route and deadline-cron suites.
+
+**The bank's claim — captured by the merchant (2026-09-27, plan `docs/plans/bank-claim-capture.plan.md`).** The card-issuing bank's explanation of the dispute (Shopify's *issuer claim*) is shown only in the chargeback details on the order page in Shopify Admin; the Admin API has no field for it (`ShopifyPaymentsDispute`, `reasonDetails`, `ShopifyPaymentsDisputeEvidence` verified 2026-09-27). For most disputes the reason code suffices. For two it does not, and a letter built without the claim answers a question nobody asked (#99142: reopened, reason `fraudulent` → `general`, letter fell back to "Unmapped chargeback claim").
+
+- **When it is needed** — `bankClaimTrigger()` in `lib/disputes/bankClaim.ts`: an open dispute at `needs_response` with a future deadline that is either **reopened** (`response_cycle ≥ 2`) or **`GENERAL` with no `network_reason_code`**.
+- **Storage** — `dispute_bank_claims` (migration `20260927180000`), one row per `(dispute_id, response_cycle)`: `claim_text` or `no_claim_shown`. Deliberately NOT `evidence_items`: a pack rebuild deletes and re-creates evidence_items and folds manual rows into one nested "manual uploads" row (see the note below), and `manualSource` reads untyped manual rows as customer communication. A reopen (new cycle) asks again.
+- **Merchant flow** — `BankClaimCard`, transcribed from Claude Design `Bank Claim Card.dc.html` (project b198374f; `components/ui` Badge/Button + `--dd-*` tokens), first card on the Overview tab (, `id="bank-claim"`, `?section=bank-claim` scrolls to it): why the claim is needed, a button to the order in Shopify Admin (`getShopifyOrderUrl`), a text field, and "Shopify shows no claim for this dispute". `POST /api/packs/:packId/bank-claim` upserts the row, clears the task, audits `bank_claim_recorded` (without the text) and enqueues `build_pack`.
+- **The merchant's own file is never replaced** (bank-claim plan F4, 2026-09-28) — our save writes one file, into Shopify's `uncategorizedFile`. On a reopened dispute that slot can hold the merchant's round-one upload (6 of 8 open reopened disputes, e.g. "AdditionalEvidence.pdf"). Save-worker step 5b (`guardMerchantFileSlot`, `lib/defence/merchantFileGuard.ts`) reads the slot first (`readUncategorizedFile`); a file not named `Defence-<id>-…` refuses the save (`merchant_file_present`, audit `save_to_shopify_refused_merchant_file_present`), and an unreadable slot refuses retriably. **Prepared, not active:** with `MERCHANT_FILE_ANNEX_ENABLED=on` AND a `merchant_file_approvals` row (`decision='attach'`) for the dispute and cycle, the merchant's PDF/PNG/JPEG is appended to ours (`appendMerchantFile`, pdf-lib) and saved (audit `save_to_shopify_merchant_file_annexed`); any annex failure still refuses. The flag is off and no approvals exist, so today every such save is refused.
+- **Portal** (bank-claim plan F6) — the web portal's dispute page has no card of its own (the card's design is the embedded app's). When `attention_reason = bank_claim_needed` it shows a warning banner (`disputes.bankClaim.title` / `portalBody` / `portalCta`, 6 locales) linking into the embedded card: `getEmbeddedAppUrl(shop, "disputes/<id>?section=bank-claim")`, the same link as the email.
+- **Collapsed after save (design revision 3)** — once a claim is saved the card folds into a blue bar ("Bank's claim received — rebuilding the response" with a spinner while the pack/letter rebuild; "— response updated" with a check once done), showing what was given and the due date, with **Cancel** (`DELETE /api/packs/:id/bank-claim`: removes the answer for the cycle, re-raises `bank_claim_needed`, audits `bank_claim_withdrawn`, queues a rebuild) and **Edit claim** (reopens the card prefilled: pasted text, the saved file, or "no claim shown").
+- **File upload (2026-09-27 design revision)** — the card offers "Upload file" (default) or "Paste text". `POST /api/packs/:id/bank-claim` also takes multipart `file` (PDF, TXT, DOC, DOCX, RTF, EML, PNG/JPEG; ≤ 10 MB), stores it in `evidence-packs` at `{shop}/{dispute}/bank-claim-c{cycle}-{ts}.{ext}` and records `file_path/file_name/file_size/file_mime` (migration `20260927210000`). Its text is read for the letter writer by `lib/disputes/bankClaimFile.ts`: TXT/EML/RTF directly (`text_source='file_text'`); PDF and images transcribed by `claude-haiku-4-5` reading the file natively (`'file_ai'`); DOC/DOCX stored but not read (no parser in the stack). A file whose text cannot be read still counts as the answer; the letter then has no claim context.
+- **The claim steers the letter (2026-09-27, after the Sura Svenne test letter argued card authorisation the claim said was undisputed and asserted "no return" the claim contradicted).** `analyzeBankClaim` (`lib/disputes/bankClaimAnalysis.ts`, claude-haiku-4-5, stored in `dispute_bank_claims.analysis`, migration `20260927230000`; run at save time, or lazily by `ensureBankClaimAnalysis`) returns `{ reason, authorizationDisputed, returnOrRefundRequested }`. Then:
+  1. **Template + checklist** — when Shopify's reason is `GENERAL`/missing and the claim names a category, `effectiveReasonForClaim` gives the reason the letter module (`buildDefencePackageJob`, via `resolveReasonCodeModuleForContext`; the enqueued module's DB override is NOT layered on) and the pack's evidence checklist/strength (`buildPack`, this build only) follow. `disputes.reason` stays Shopify's. The letter's "Claim type" line shows the chosen module, and the merchant's "Missing or weak evidence" list asks for that category's evidence.
+  2. **Facts scoped, deterministically** — `scopeFactsToBankClaim` removes `payment_authentication`/`billing_match` when `authorizationDisputed === false` and `no_return_initiated` when `returnOrRefundRequested === true`, from the ONE list the writer, validator and PDF read (audit `defence_facts_scoped_to_bank_claim`). A sentence built on a removed fact cannot pass validation.
+  3. **The claim is a system block** in `generateNarrative` (answer it; never assert what it contradicts; never cite or quote it), in addition to the payload context. **Quoting is enforced** (F3): `validateNarrative` gets `bankClaimText` and fails any section sharing a run of `CLAIM_QUOTE_WORDS` (8) consecutive words with the claim (`bank_claim_quoted`, `findQuotedClaimRun`), on the first attempt and the retry.
+  4. **Nothing left to argue → no letter** — if scoping leaves no letter-eligible fact, the package is `skipped` (`no_bank_eligible_facts`) instead of an all-omitted draft. The Review tab then shows `notEnoughEvidenceClaim*` ("Nothing on file answers the bank's claim yet" → add what the checklist asks for) rather than the generic "wait for the next sync" copy.
+  - **The argument follows the claim's type too** (F2) — `buildDefencePackageJob` passes the claim's reason (`effectiveReasonForClaim`) to `derivePlanForCase` and to `evaluateRules`, not `disputes.reason`: the plan picks facts, and per-reason automation rules apply, as for the claim's type.
+  - **Build and filing resolve the same module** — `resolveCaseReasonCodeModule` (`reasonCodes/registry.ts`) is the one answer for both the letter build and the filing-time plan check (`derivePlanIdentityForPack`, which reads `pack_json.case_assessment_reason`). The module's `allowedFactCategories` feed `plan_input_hash`; before this the filing check used Shopify's reason, so every claim-typed letter read stale and could not be filed (verified on the Sura Svenne test package, 2026-09-28).
+  - **The page follows the claim's type** — the workspace sends `dispute.reason` = the reason the pack was assessed under (`shopifyReason` = Shopify's own), so the header, case type, family and assessment read "Product not received" / "Not as described" instead of "General" once the claim-driven rebuild has run.
+  - **Assessment reason persisted** — `buildPack` writes `pack_json.case_assessment_reason` (the reason it assessed under, i.e. the claim's reason on a re-typed GENERAL dispute); the workspace re-derives the freshness hash from it, not from `disputes.reason`. Without it every claim-typed case read "Assessed under an earlier version" right after its rebuild.
+  - **Skipped packages are not filing candidates** — the workspace `defencePackage.safety` is not evaluated for a `skipped` row (it holds no narrative by design, which the safety check would read as "unreadable" and show "cannot be reviewed automatically — regenerate").
+- **Return / contact absence claims are banned outright** (Fix C, C2) — `RETURN_ABSENCE_BANS` in `lib/defence/claimGuards.ts` fails "did not request a return", "no return was initiated", "no return request", "never contacted", "made no complaint", "through any channel"… whatever facts are cited (guard ids `return_claim_beyond_record` / `contact_claim_beyond_record`). The only permitted sentence: "No return has been recorded in Shopify for this order." Base prompt rule 8c and the `credit_not_processed` module say the same.
+- **Task + email** — `raiseBankClaimIfNeeded` (`lib/disputes/raiseBankClaim.ts`) runs from the dispatcher on DISPUTE_OPENED / STATUS_CHANGED / DUE_DATE_CHANGED / RESPONSE_CYCLE_REOPENED (never on historical import). It sets attention reason `bank_claim_needed` (blocking → "Action required: Bank's claim needed"; only when no other reason is set) and — only when `BANK_CLAIM_EMAILS_ENABLED=true` (off by default; held off at launch until verified) — sends `sendBankClaimNeededAlert` once per dispute and cycle (dedupe key `{id}:BANK_CLAIM_NEEDED:c{cycle}`; suppressed on first-sync backfill; gated by the evidenceReady preference; 6 locales). The email links to `disputes/{id}?section=bank-claim` and to the order in Shopify Admin.
+- **Filing gate** — `bankClaimBlocksFiling()` refuses while the claim is needed and unanswered, in `saveToShopifyJob` (`bank_claim_missing`, audit `save_to_shopify_refused_bank_claim_missing`), the deadline-submit cron (`deadline_submit_refused_bank_claim_missing`, counted in `blockedByDecision`) and `POST /api/packs/:id/approve` (409 `BANK_CLAIM_REQUIRED`).
+- **Letter** — `buildDefencePackageJob` loads the claim for the current cycle and passes it as `NarrativeInput.bankClaim`; `buildLlmFactPayload` adds `bankClaimContext` with a directive: answer it, never cite, quote or paraphrase it, never treat it as established. It has no fact id, so the citation validator cannot accept it as support. A claimed case skips counsel v2 (which does not take the claim) and uses the template writer.
+- **Backfill** — `scripts/shopify/raise-bank-claims.ts` (dry run by default; `--apply` raises the task; `--email` also sends the email, same dedupe key).
+- **Known, separate:** our save fills only Shopify's `uncategorizedFile` slot (plus name/email); a merchant's own file already in that slot is replaced. Other slots and text fields are untouched.
+- **Known, separate (found while building this):** a pack rebuild wraps manual evidence_items one level deeper each time (`payload.uploads[].payload.uploads[]…`; 31 double-nested rows on prod 2026-09-27), so checks that look for a manual answer's top-level `kind` (`merchantAnsweredParcelOutcomeFromItems`, the cardholder-acknowledgement gate) stop seeing it after one rebuild.
+- Pinned by `lib/disputes/__tests__/bankClaim.test.ts`, `tests/api/packs/bankClaimRoute.test.ts`, and the save-job, deadline-cron, approve-route and dispatcher suites.
+
 **Reason casing is canonicalized at ingest.** Shopify hands the dispute reason back in two casings depending on transport: the **REST webhook** payload is lowercase snake_case (`credit_not_processed`), the **GraphQL** `reasonDetails.reason` is the UPPERCASE enum (`CREDIT_NOT_PROCESSED`). Everything downstream — the `packs.disputeTypeLabel.*` / `disputeReasons.*` i18n maps, `DISPUTE_REASON_FAMILIES`, the network-reason mapper — keys off the UPPERCASE enum. Both snapshot normalizers therefore run the reason through `normalizeDisputeReasonKey` (`lib/disputes/reasonLabel.ts`) so `disputes.reason` is stored canonically and one form is queried everywhere. Genuine `null` is preserved (not coerced to `GENERAL`). Regression: dispute #12452 (2026-07-15) arrived live via the REST webhook, stored `credit_not_processed` raw, and the dashboard leaked the raw key `packs.disputeTypeLabel.credit_not_processed` because next-intl returns the key path on a miss (it does **not** throw). The render helpers (`resolveDisputeTypeLabel`, `translateReason`) normalize the key again defensively so any legacy lowercase rows already in the DB still resolve. Pinned by `disputeSnapshot.test.ts > reason casing` + `reasonLabel.test.ts`.
 
 **Dynamic i18n keys: one safe helper + copy enforcement (2026-07-15, second leak of the day).** `disputes.whyText.refund_record` rendered raw in the workspace "Missing or weak evidence" card. Two stacked origins, both closed at class level:
@@ -939,6 +978,7 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 - `DISPUTE_OPENED` → `evaluateRules` → `runAutomationPipeline` → maybe send review alert (deferred when a build was enqueued).
 - `SUBMISSION_CONFIRMED` → `claimAndSendDeferredNewDisputeAlert` (auto variant).
 - `OUTCOME_DETECTED` → `sendOutcomePostedAlert` (won / lost / accepted variant). The email is **phase-aware**: the dispatcher forwards `event.context.phase`, and when the case resolved while still an **inquiry**, the copy says "dispute" (subject + heading) and the body states explicitly that the case was an inquiry — an inquiry must never be announced as "You won this chargeback" (K-Collective #12809, 2026-07-16). Unknown/null phase falls back to the chargeback wording, matching `phaseUtils`' default. All 6 locales carry inquiry variants; preview all wordings with `scripts/preview-outcome-emails.mjs`.
+- `RESPONSE_CYCLE_REOPENED` → `evaluateRules` → `runAutomationPipeline` for the new cycle (no email; the previous cycle's packs are already archived, so the pipeline's existing-pack check passes).
 - `STATUS_CHANGED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient. (`DISPUTE_CLOSED` always fires alongside `OUTCOME_DETECTED`, so the email is keyed off the latter to avoid double-firing.)
 
 Each effect is wrapped in `withEffectDedup`, which writes the `audit_events` claim row first. Unique-violation (Postgres 23505) → effect skipped (`already_applied`). Otherwise the effect runs.
@@ -2865,6 +2905,80 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 
 **Getting late delivery TO an open dispute:** nothing re-fetched an existing dispute's order once its pack was built, so a carrier delivery that lands weeks after the dispute opened never reached the case. The nightly cron [app/api/cron/refresh-open-disputes/route.ts](../app/api/cron/refresh-open-disputes/route.ts) (02:30 UTC) re-ingests each open dispute's order via `normalizeOrderIngest` and enqueues a `build_pack` when the order's `delivery_status` changed (esp. → `Delivered`). The rebuild then flows through the strength rule + improvement notification above automatically. Bounded (`MAX_PER_RUN`, oldest-refreshed first) and gated by `cronEnvGate`.
 
+**Copy rule: each fact once (2026-09-25).** The maintainer: stop repeating the order number, and write no timestamps in the text. Each fact now appears in one place only:
+
+- the page header: the order number;
+- the opening line: the carrier and the delivery and dispute dates;
+- the card: tracking number and times;
+- the table: the amounts;
+- the timeline: every dated event.
+
+The prose carries only the argument. It says "this order" and "the carrier", and gives no order number, tracking number or time of day. The disputed amount appears only in the request line (removed from the summary later the same day; PROMPT_VERSION 39). The opening line reads "… recorded the shipment for this order as delivered on …". The reconciliation ends "reconciles to the full disputed amount", and the chronology and email paragraphs no longer restate dates. `singleParcelRecordSections.test.ts` pins the rule ("COPY RULE").
+
+The reconciliation sentence was later removed as well: the table's rows and Total already show the arithmetic. Under Order Line Items the prose now says only what the table cannot show, that the shipment holds every item, and only when the item-by-item check (`fulfilmentCoverage`) passes. PROMPT_VERSION 38.
+
+**Use the records to make the case (2026-09-25, fourth review of #352543).** The reasoning is now spread across its proper sections, and each link in the argument depends on the record that supports it. The argument: the claim is non-receipt; the shipment linked to the purchase has a carrier-recorded delivery; the fulfilment mapping puts every purchased item in that shipment; so the delivery evidence covers the complete disputed purchase.
+
+- **Item-by-item coverage (`lib/defence/fulfilmentCoverage.ts`).** The order and fulfilment queries now fetch line-item IDs. The pack's order `lineItems[].lineItemId` and shipping `fulfillments[].items[].lineItemId` carry them. `fulfilmentCoverage` returns one of three results:
+  - `verified` only when the fulfilment carrying the tracking number maps, by ID, to every order line item in the quantity ordered;
+  - `history` when only the order history's "<actor> marked N items as fulfilled" line is available (a count is not an item match). The letter then quotes that line and claims no item-by-item match;
+  - null otherwise.
+- **Sections.**
+
+  | Section | States |
+  |---|---|
+  | Summary | position, disputed amount, the chain the case rests on |
+  | Shipping & Delivery | order → shipment → carrier delivery; why the carrier's record, not the merchant's, answers non-receipt |
+  | Order Line Items | printed under the table: the shipment covers each product (verified only); the money reconciles to the disputed amount (only when it does) |
+  | Chronology | above the timeline: the delivery is dated before the dispute (not "made before" it); the emails as shipment updates sent to the customer's recorded email address (only when the history line names the order's email, now carried as the order section's `email`), never as proof of receipt |
+  | Conclusion | reasoning first, then the request line, which now names the amount for item not received (`disputedAmount` token, COMPOSITION_VERSION 3) |
+- **Record-built sections pass the family deny list.** The job now runs `omitDeniedSections` BEFORE `applyShipmentRecordSections`. Record-built sections carry `source: "record"` (`NarrativeSection`), and composed blocks carry `recordBuilt`. `isSectionShown` (sectionVisibility.ts) lets them through, while model text and stale rows in a deny-listed section stay hidden. A record-built transaction overview prints under Order Line Items in both renderers.
+- **Conclusion order (all letters).** The body prints before the request line in the PDF and the in-app preview.
+
+PROMPT_VERSION 36. Regression: `lib/defence/__tests__/singleParcelRecordSections.test.ts` (coverage, sections, conditions, full validator).
+
+**Remove repeated wording, not reasoning (2026-09-25, third review of #352543).** The record-only rewrite below went too far: one sentence of argument and no reasoning. The single-parcel sections still come from the records (`applySingleParcelRecordSections`), but each part now has its own job again, and the shipping section argues the chain the records form. `RecordSectionContext` also carries the Order Line Items rows and the disputed amount and currency.
+
+| Part | States |
+|---|---|
+| Summary body | the merchant's position with the amount, and the chain the defence rests on: order → fulfilment record → carrier record |
+| Shipping prose (under the card) | (1) the fulfilment record ties the order to the carrier and tracking number, and "all N purchased items … shipped together" **only** when exactly one fulfilment event is recorded and its "marked N items" count equals the order's item quantity; the carrier then recorded that shipment as delivered (date, time, signature), and this is the carrier's own record, not the merchant's. (2) Timing, only when the delivery predates the dispute: the record was made before the claim, not in response to it. It never argues that elapsed time invalidates the claim. (3) Money, only when the rows add up exactly to the disputed amount in its currency: items, less discount, plus shipping and tax, equal the full disputed amount. (4) The shipping-confirmation and delivery-notification emails, as notices only: "the delivery itself rests on the carrier's record". (5) The tracking link |
+| Conclusion body | "The records connect the full CAD 120.75 purchase to a shipment that <carrier> recorded as delivered [before the dispute was opened]." It is printed under the fixed request line |
+
+The tracking number is printed once in the prose, plus once in the link. The INR family bans still apply: no independence claims, no custody or dispatch words dated against the dispute, and no delivery destination. PROMPT_VERSION 35. Regression: `lib/defence/__tests__/singleParcelRecordSections.test.ts`.
+
+**Every part says something new (2026-09-24, second review of #352543).** The maintainer's rule: *"each section should provide new information else it shouldn't be there"*. Even after the tightening, the tracking number appeared five times and the delivery fact four. Single-parcel item-not-received letters with a carrier-confirmed delivery (carrier + tracking number) are now record-built, like multi-parcel ones, in `applySingleParcelRecordSections` (lib/defence/shipmentRecordSections.ts). It is called with a `RecordSectionContext` (module, order name, dispute-opened date, timeline); the job now derives `orderContext` before this step. One job per part:
+
+| Part | States |
+|---|---|
+| Opening line | carrier, order, delivery date, dispute date (when delivery came first). **No tracking number.** |
+| Summary body | the inference only: "The carrier's delivery record contradicts the claim that the item was not received." ("answers" when delivery came after the dispute opened) |
+| Shipment card | carrier, tracking number, shipped, delivered. **Full width, fields side by side** for one parcel (`ShipmentCard wide`) |
+| Shipping prose | only the tracking link as text |
+| Timeline | dated events, customer emails included; carrier lines no longer repeat the tracking number. The delivered email ("Stallion sent a shipment delivered email to …") is now allow-listed as `delivery_notification` |
+| Conclusion | the request line alone. The body is empty and listed in `omittedSections`. `composePdfBlocks` keeps a conclusion block whose thesis resolves even when the body is empty; both renderers draw it |
+
+Multi-parcel letters follow the same rule: the summary says only how many parcels there are, and the conclusion body is empty. The in-app preview no longer shows an empty "Evidence Basis — (No bank-eligible facts available.)" when the card already shows the record. Result on #352543: 3 pages instead of 4. PROMPT_VERSION 34. Regression: `lib/defence/__tests__/singleParcelRecordSections.test.ts`.
+
+**Item-not-received letter tightened (2026-09-24, review of #352543).** A reviewer found the same delivery assertion six times in one letter, a USD line-item total under a CAD dispute, and sentences that overstated their sources. Changes, all shared by the PDF and the in-app preview:
+
+- **Opening line states the record.** `deliveryRecordClause` + `disputeOpenedClause` (lib/defence/pdf/thesisTokens.ts) replace "The submitted records respond to the item-not-received claim": *"Stallion Express recorded the shipment for order #352543 (tracking 260702441A) as delivered on 6 July 2026; the dispute was opened on 19 September 2026."* The dispute date appears only when the delivery came first. On a multi-parcel order the clause names the delivered parcel as "a shipment". Tokens now take an optional `ThesisContext` (order name, dispute-opened date), threaded through `renderThesis`, `composePdfBlocks`, `projectPackageFromPlan`, the job and the HTML view. The fulfilment section's item-not-received thesis (a verbatim repeat) is gone. `COMPOSITION_VERSION` 2.
+- **No restating sections.** `SECTION_DENY_BY_FAMILY` (lib/defence/sectionVisibility.ts) drops `transactionOverviewArgument` and `chronologyArgument` for item not received. `omitDeniedSections` empties them before validation, so unprinted text cannot fail a letter. The timeline still renders.
+- **The carrier record as a card.** `singleShipmentOf` (lib/defence/render/documentModel.ts) gives a single-parcel letter the same card as a multi-parcel parcel. It shows carrier, tracking number, when the merchant shipped it (the one "marked N items as fulfilled" event) and the carrier's delivery. The card is labelled with the order, never with product names. The Evidence Basis drops the rows the card already shows.
+- **Money reconciles.** The order query now fetches `presentmentMoney` (the customer's currency, which is the dispute's). Line items use it, and `reconcileToOrderTotal` (lib/defence/orderContext.ts) adds Discount / Shipping / Tax rows when they add up to the order total, or one net row otherwise. The table's Total is therefore the amount charged. Shopify's chargeback fee ("+ $15.00 USD") is removed from the timeline's chargeback line (`normalizeChronologyText`).
+- **Sources not overstated.** `orderSource` now writes "Carrier recorded the shipment as delivered." instead of "…to the recipient." Old packs are normalised to the new text. item_not_received v9 bans records said to corroborate each other independently, and any statement of who initiated the transaction. VALIDATOR_VERSION 15, PROMPT_VERSION 33.
+- **Heading.** `sectionTitleFor`: "Shipping & Delivery" for goods, or "Delivery & Access" when the evidence is a digital-access or service record.
+
+Regression: `lib/defence/__tests__/inrLetterTightening.test.ts`.
+
+**Thesis lines print dates (2026-09-24).** The delivery and digital-access clauses in `lib/defence/pdf/thesisTokens.ts` printed the fact's stored ISO timestamp verbatim ("delivery was confirmed by the carrier on 2026-09-24T19:43:25Z (GOFO)", #360980). Both now go through `letterDate` ("24 September 2026", UTC). PROMPT_VERSION 32.
+
+**Narrative JSON extraction (2026-09-24).** `tryParseNarrative` (lib/defence/narrativeWriter.ts) reads the model's reply through `extractJsonObject`, which accepts the whole reply, then a fenced block, then the span from the first `{` to the last `}`. The model sometimes writes an analysis before the JSON. #360980 failed twice that way (`JSON parse failed on attempt 2: I need to carefully analyze…`), with complete, untruncated replies. Only the parse is lenient: the section shape checks and every validator run unchanged. Regression: `lib/defence/__tests__/narrativeWriter.extractJson.test.ts`.
+
+**Multi-parcel timeline: one line per delivery (2026-09-24).** `withShipmentEvents` (lib/defence/chronology.ts) adds a named line per parcel delivery ("GOFO records delivery of The Back to School Bundle (tracking …)"). Shopify's own generic line, "Carrier confirmed delivery of the shipment to the recipient.", within two minutes of a named delivery is dropped, so the timeline no longer states the same delivery twice (#360980). A generic line that no named delivery covers is kept. Pickup and return lines are never dropped. PROMPT_VERSION 31.
+
+**Real-time path: fulfillment webhooks (2026-09-24).** The nightly cron made a carrier update wait up to a day, and — comparing only the order's best-of `delivery_status` — never fired when one parcel of a multi-parcel order moved while another was already further along. `registerOrderWebhooks` now also subscribes **`fulfillment_events/create`** (carrier events) and **`fulfillments/update`** (Shopify's shipment-status changes), both handled by [lib/webhooks/handleFulfillmentWebhook.ts](../lib/webhooks/handleFulfillmentWebhook.ts) → [lib/disputes/rebuildOnCarrierUpdate.ts](../lib/disputes/rebuildOnCarrierUpdate.ts). The handler looks up open disputes with a pack on the payload's `order_id` **before writing anything** — these topics fire for every shipment in the shop, so an undisputed order costs one read and leaves no `webhook_events` row. For a disputed order it claims the delivery (Layer A dedup), re-ingests the order, and queues a `build_pack` (priority 90, audit trigger `webhook_fulfillment_events_create` / `webhook_fulfillments_update`) unless one is already queued for that pack. It rebuilds on every event, not only on a status change: the event is the change, and an unchanged rebuild does not regenerate the letter (defence-package input hash). Existing shops get the subscriptions from the hourly `session-health` cron, whose `REQUIRED_ORDER_TOPICS` now includes both. The webhook only fires for updates Shopify itself receives from the carrier or the shipping app; the nightly cron stays as the safety net. Regression: `lib/webhooks/__tests__/handleFulfillmentWebhook.test.ts`.
+
 The improvement stamp runs **last** in `buildPackJob` (after `evaluateAndMaybeAutoSave`), so `last_rebuild_at` is the final write to the pack — otherwise a later auto-save pack update bumps `updated_at` past `last_rebuild_at` and the EvidenceTab staleness gate suppresses the banner.
 
 #### Delivery milestones in the Chronology of Events
@@ -2935,7 +3049,7 @@ The in-app `strengthReason` token is keyed on the fatal-loss reason ALONE (`case
 |---|---|---|
 | `we_defended_with_facts` | submitted `defence_packages` row with usable `facts_json` | "We filed your evidence on {date}. {clause} — banks weight this heavily…" |
 | `we_defended_no_facts` | pack row, no usable facts (e.g. Klarna: no card network) | "We filed your evidence on {date}. The bank still decided for the cardholder." |
-| `not_defended_by_us` | no pack row | "This dispute was decided before DisputeDesk filed any evidence for it." |
+| `not_filed_by_us` | no pack row | *(none — see "Who responded" below)* |
 
 **`submission_state = 'submitted_confirmed'` MUST NOT gate this.** It is true on ~390 disputes that closed *before* the shop installed — it records that a response reached Shopify, not who assembled it (`scripts/sql/filed-by-whom.sql`). Gating on it would claim credit for evidence merchants filed themselves, years earlier. Pack rows switch on at install rather than eroding (`pack-presence-by-era.sql`: 2026-Q3 139/140; 2026-Q1 and earlier 0), so presence is a reliable proxy — 96% post-install.
 
@@ -2953,6 +3067,92 @@ Rules that are load-bearing:
 **Email specifics.** Inserted as `body[1]` on `won`/`lost` and their `inquiry` counterparts. **`accepted` is excluded** — it is a catch-all that also reaches disputes we submitted, so it cannot know what was filed. The lookup is failure-tolerant at both layers: a read error or missing key degrades to the email's existing wording rather than costing the merchant the notification. Historical emails are not resent (`OUTCOME_DETECTED` is dedup-guarded), so already-decided cases get the sentence in the Overview only.
 
 **Won side is unvalidated.** The only won dispute holding a package is a Klarna inquiry (`cardNetwork: null`), where AVS and signature do not exist — so the win predicates cannot fire there and must not be tuned against it. Expect `we_defended_no_facts` until a card-network win is decided post-install.
+
+#### Who responded, and why DisputeDesk did not (2026-09-26)
+
+**Source:** `lib/disputes/decidedResponse.ts` (pure) + `lib/disputes/loadDecidedResponse.ts` (reads). The workspace API returns it as `decidedResponse` on won/lost disputes only; the outcome-email effect in `disputeEffectsDispatcher.ts` loads the same thing and passes it to `sendOutcomePostedAlert`. Plan: `docs/plans/decided-dispute-view.plan.md` (PR 1).
+
+**The defect.** `not_defended_by_us` rendered "This dispute was decided before DisputeDesk filed any evidence for it." on every decided case without a submitted package — including cases the pipeline **held on purpose**. Order #360499 (blume-box): fatal-loss `inr_no_fulfillment` held it for two weeks because the order never shipped, Shopify sent its response after the deadline, the bank decided six days later — and the page implied we had run out of time. The same case still offered "Add missing evidence" / "Save anyway" and a "Not yet assessed" chip.
+
+**Responder** — resolved in this order:
+
+| Responder | Condition | Copy |
+|---|---|---|
+| `before_install` | `closed_at` < first install (`min(shops.created_at, installed_at)` — `installed_at` moves on reinstall) | "This dispute was decided before DisputeDesk was installed." |
+| `we` | any DisputeDesk save: `disputes.evidence_saved_to_shopify_at`, `evidence_packs.saved_to_shopify_at`, or a `defence_packages` row with `status='submitted'` | `outcomeExplanation` filed copy |
+| `sent_before_install` | `evidenceSentOn` < first install | "A response was sent through Shopify on {date}, before DisputeDesk was installed." |
+| `shopify` | `evidenceSentOn` set, not ours | "A response was sent through Shopify on {date}." |
+| `none` | nothing sent | decided before `due_at` → "The bank decided on {date}, before the response deadline and before any response was filed."; otherwise "No response was filed." |
+
+`shopify` covers both Shopify's own response and a merchant filing in Admin, and the API cannot tell them apart. **Standing rule (maintainer, 2026-09-26): merchant copy never calls it an "automatic response"** or says Shopify responded "on its own", in any locale. It says "a response was sent through Shopify". A test in `decidedView.test.ts` scans both namespaces in all 6 locales for the phrase. The hold-reason sentence is the second line, "DisputeDesk held this case: {reason}".
+
+**Hold reason** (appended sentence; `shopify` / `none` only). Classified from `audit_events` (`auto_save_blocked`, `parked_for_review`, `defence_package_blocked_unsafe_claim`, `auto_build_skipped`, `billing_blocked_email_sent`, `review_conceded`, `review_approved`) plus `disputes.review_state`. Priority order — first match wins: `merchant_conceded` → `not_shipped` (`inr_no_fulfillment`) → `refunded` (`refund_issued`) → `covered` → `plan_limit` (`quota_exceeded`/`feature_blocked`) → `auto_build_off` → `awaiting_review` → `thin_evidence`. Rules:
+
+- The classifier reads meaning from every field that has ever carried it — prod holds at least eight `auto_save_blocked` payload generations.
+- Build-skip reasons (`plan_limit`, `auto_build_off`) only explain a case **with no pack**; once a pack exists the skip was replayed.
+- An approval (`review_state='approved'` or a `review_approved` row) clears `awaiting_review`.
+- An unrecognised payload yields **no reason**, never a guess.
+
+Prod distribution at ship (1,111 decided): 880 `before_install`, 85 `we`, 27 `sent_before_install`, the rest held — `awaiting_review` 90, `auto_build_off` 13, `plan_limit` 8, `not_shipped` 2, `merchant_conceded` 1, no reason 6.
+
+**Email.** Same sentences, same order. `before_install` / `sent_before_install` add no paragraph (unprompted "before your time with us" is noise). A case filed through the older evidence-pack path has no package row; the resolver's filing date stands in so it still gets "We filed your evidence on {date}".
+
+**Live-case UI suppressed on decided disputes.** `OverviewTab`: the gate actions ("Add missing evidence" / "Save anyway" — `isReadOnly` is only true once *we* saved) and "What happens now". `WorkspaceShell`: the strength chip. Since PR 2 (below) a decided dispute no longer renders `OverviewTab` at all; these suppressions remain as the fallback when `decidedView` is absent.
+
+#### Decided-dispute view (2026-09-26)
+
+**Design (the spec, rule 8):** Claude Design project `39b1425e-9413-47de-8fe4-64c9cc11af3a`, `Decided Dispute View.dc.html` → **`DecidedView3.dc.html`** (third revision; it replaced v1, which never reached a merchant). **Code:**
+- `lib/disputes/decidedView.ts`: pure builder, tokens only
+- `lib/disputes/decidedViewText.ts`: the executive-summary paragraph
+- `app/(embedded)/app/disputes/[id]/DecidedWorkspace.tsx`: the renderer, routed from `WorkspaceShell` whenever the workspace API returns `decidedView` (won/lost only)
+
+**One assembly for the page and the email.** `loadDecidedViewInputs` (in `lib/disputes/loadDecidedResponse.ts`) reads:
+- the dispute row
+- `loadDecidedContext`: who responded, audit events, first pack date, the `shopify_orders` row
+- the latest pack's evidence items by field
+- `pack_json.fatal_loss.reason`
+
+The workspace route and the `OUTCOME_DETECTED` email effect (`disputeEffectsDispatcher.ts`) both call it. The builder then runs with the caller's formatter: the client's locale, or `createTranslator` over the store locale in `decidedEmailSections`. The Overview and the email therefore show the same summary, facts and "Next time". A test asserts the email's summary string equals the page's.
+
+**Layout (DecidedView3):**
+1. **Header card.** "Order {n} — {reason}", a Lost/Won badge, "Decided: {date}", "View in Shopify Admin", then Amount / Customer / Date filed / Dispute reason.
+2. **One card holding the tabs and the panel.** On Overview, in order:
+   - **Hero.** An icon tile, "Dispute lost/won", "{product} · {claim}", a chip ("Final · nothing left to file" / "Final · the money is yours"), and the amount. Then the **executive summary** paragraph. (The design's "Who responded:" line was removed from the page on 2026-09-26 because the summary already says who filed; the outcome email keeps it.)
+   - **What we saw in the record / What carried the case.** Facts, each with its source line; the top loss fact carries "Banks weight this heavily". Not-received losses add a note.
+   - **What wins this type of dispute.** A "{had} / {total}" coverage score, a segmented bar, then the rows with On record / Missing / None / In policy / Not used pills.
+   - **Next time** (losses only).
+   - **What happened.** Ringed timeline dots, with "{date} · {detail}" under each title.
+
+**Executive summary**, built from data and never free text:
+1. The claim, e.g. "The customer told their bank the order never arrived."
+2. The case's own facts, as lower-case clauses joined with the locale's list format (`Intl.ListFormat`) and capitalised. When the hold reason is "not shipped", this sentence adds ", so there was no honest case to put forward".
+3. Who responded and how the bank ruled.
+4. A closing line: on a win, "The {amount} stays with you."; on a never-shipped loss, the ship-or-refund line; on any other loss that has "Next time" steps, a pointer to them.
+
+A win with no recorded facts uses "DisputeDesk filed your evidence…", never "that evidence" (prod #347615).
+
+**Outcome email (`sendOutcomePostedAlert.ts`).** On won/lost with `decidedView`, the body is:
+- the summary paragraph
+- the Who-responded line
+- up to four facts, each with its source
+- "Next time"
+- the chip as the result line. For cases we filed, the timeline line reads "Saved to Shopify and sent on to the bank": DisputeDesk submits to Shopify and never to a bank or card network directly
+
+This replaces the one-size template, which claimed "the card network accepted your defence package" even on cases DisputeDesk never filed. If the view fails to load, the template is used as before. `accepted` is unchanged.
+
+**Rules that are load-bearing:**
+- **Checklist rows are observations.** No evidence items → the checklist is hidden, not marked Missing everywhere (#347615). "Delivery to the billing address" needs a confirmed delivery **and** shipping = billing **and** an AVS match (#349145). The AVS row is dropped when no AVS exists (PayPal, Klarna).
+- **"Next time" fires only on a data trigger:**
+  - never shipped → ship or cancel, with the real days unshipped
+  - shipped after the dispute → ship or cancel
+  - fulfilled without tracking → share tracking
+  - fraud + Shopify risk CANCEL/INVESTIGATE + shipped → hold high-risk orders
+  - fraud without 3DS → 3-D Secure
+  - one per family for product, refund and subscription
+
+  At most three. Never on a win.
+- **Timeline steps come only from stored timestamps.** Nothing but the decision may be dated after the decision; a pack rebuilt afterwards is dropped (dev seed #9010). `pack_created` audit rows mostly lack `dispute_id`, so "Evidence gathered" uses the first `evidence_packs.created_at`.
+- **Merchant-facing only.** None of these strings may reach the bank-facing package.
 
 ### Returned-to-sender Gate (2026-08-20)
 
@@ -3005,6 +3205,533 @@ Collectors run **concurrently**, so none of them could consult another — and i
 1. **The collector level** — this gate suppresses the section.
 2. **Admissibility** — `lib/defence/alwaysAdmissible.ts`'s `no_return_initiated` rule was `matches: () => true` on the rationale that the fact "has no adverse reading". It is now conditional: with a returned parcel the module's own admission test ("can citing this read AGAINST us under any claim type?") answers *yes*.
 3. **The narrative** — the `return_not_initiated` predicate and a new claim guard (below).
+
+### Non-receipt letters: no argument from "no return", no refund-request denials (2026-09-23)
+
+Plan: `docs/plans/non-receipt-delivery-evidence.plan.md` §4.1(a), (c), §6.3, §6.6. Two live
+item-not-received letters argued from the absence of a return: blume-box #360980 ("the absence
+of any return activity is inconsistent with a genuine non-receipt claim") and cay-collective
+#14784 ("no return … which is consistent with the goods having been received"). A cardholder who
+says nothing arrived has nothing to return, so the sentence concedes their premise.
+
+- **Admission is claim-family-aware.** `ALWAYS_ADMISSIBLE_RULES` entries carry an optional
+  `deniedForFamilies`. `no_return_initiated` is denied for `item_not_received`.
+  `alwaysAdmissibleCategories(facts, family)` takes the resolved family. Both callers
+  (`planForCase`, `narrativeWriter`) resolve it with the new non-throwing
+  `familyKeyForModule` (`lib/defence/reasonCodes/familyRegistry.ts`). A null family applies no
+  denial. The refund family keeps the fact.
+- **Validator layer (`VALIDATOR_VERSION` 5).** The `item_not_received` family's
+  `prohibitedBankPhrases` hard-ban, at every layer:
+  - any absence-of-return argument (paraphrase-tolerant);
+  - any denial that a refund, reimbursement or compensation was requested;
+  - collector and identity claims ("collected by the cardholder", "the cardholder has the
+    goods", "identity verified"). The permitted form is the carrier's record: *"PostNord records
+    the shipment as collected at the pickup point on {date}"*.
+
+  Raw carrier-status and proof-type enums (`CollectedAtPickup`, `delivered_confirmed`, …) are
+  banned in `FORBIDDEN_PHRASES` for every family. They also no longer reach the model:
+  `stripDeliveryHashInputs` (`narrativeWriter.ts`) drops the hash-only `deliveryStatuses` /
+  `returnedAt` from delivery facts in the LLM payload. The evidence hash still reads them.
+- **Internal refund-request constraint.** `lib/defence/internalConstraints.ts` defines
+  `InternalNarrativeConstraints` (ids + one date, never text).
+  `loadInternalNarrativeConstraints` (`lib/integrations/gorgias/internalNarrativeConstraints.ts`)
+  derives it once per build from **all** stored customer messages on order-matched tickets
+  (`confirmed_match`, or `proposed_match` at `high`), whatever their review state, by text
+  (six locales) or the `refund_history` category. `buildDefencePackageJob` passes it to every
+  validator (`validateNarrative`, its retry, `validatePackageDocument`,
+  `validateComposedDocument`) and to nothing else: never the narrative writer, projection,
+  PDF or `facts_json`. When set, a refund-request denial is refused in any family. Case A's
+  request is `review_status = proposed`, category `contradiction`, and is caught.
+- **`PLAN_POLICY_VERSION` stays 1, deliberately.** The admitted categories are already a plan-hash
+  input, so exactly the affected plans go stale via `input_hash_mismatch`. `caseSelectionContext`
+  compares a **single** policy version against the decision, assessment and plan snapshots, so a
+  plan-only bump would mark every package in every family `policy_version_superseded` and stop
+  the deadline cron. A future bump needs that comparison made per layer first.
+
+Tests: `nonReceiptValidatorRules.test.ts`, `alwaysAdmissible.test.ts`,
+`internalNarrativeConstraints.test.ts`, `stripDeliveryHashInputs.test.ts`.
+
+### Non-receipt letters: the in-transit shipment, one coherent shipment per fact (2026-09-23)
+
+Plan §4.1(b), (f), (g), §5.1–§5.3. blume-box #360980's GOFO parcel was in transit,
+but every non-delivery collapsed to `label_created` → `invalid`, so nothing citable
+remained once "no return" was denied.
+
+- **Sixth proof state `in_transit`** (`DeliveryProofType`, now defined ONCE in
+  `canonicalEvidence.ts`; the private copies in `evidenceLineItem.ts` and
+  `evidence/model/payloads.ts` re-export it). Categorised `supporting`, so it is never
+  scored. `fulfillmentSource.resolveShipmentProofType` assigns it per shipment from
+  Shopify's `displayStatus` (`IN_TRANSIT`, `OUT_FOR_DELIVERY`, `ATTEMPTED_DELIVERY`), or
+  from a carrier lookup with scans and no terminal event. A tracking number alone stays
+  `label_created`. Availability for collection stays `delivered_unverified`. The
+  section-level tier is the best shipment tier, as before.
+- **One coherent shipment per delivery fact.** `factClassifier.citedShipment` cites the
+  best-evidenced shipment by its own tier (a parcel identifier beats a batch reference;
+  ties go to the shipment key, never to array position). Carrier, number, status and
+  `deliveredAt` come from that shipment together. Previously the first tracking row was
+  paired with a section-wide tier. A hash-only `shipmentIndex` lists every shipment's
+  identity and tier for the validator; it is stripped from the LLM payload. Deliberate
+  deviation from the plan's one-fact-per-shipment wording: the renderers (Evidence
+  Basis pair-collapse, provenance, post-outcome analysis) assume one fact per field.
+  The association guarantee is met without touching them.
+- **Never undersell the merchant's case** (2026-09-28) — base prompt rule 10 used to REQUIRE hedged framing for narrow packages ("The available evidence supports…"); 176 of 235 letters in 30 days qualified the merchant's own records that way, and some said "the merchant acknowledges…" / "the evidence is limited". Now narrow means fewer points stated as firmly as full; firm never means claiming more than the record shows (an in-transit record does not "contradict" non-receipt). `UNDERSELL_BANS` (`claimGuards.ts`, unconditional, id `undersells_case`) fails "the available evidence/records", "the merchant acknowledges", "evidence is limited", "limited evidence", "framed accordingly", "this response presents". The hedge instructions in `generic_fallback` and the three narrow-fallback strategies were rewritten; `credit_not_processed_no_return` v2 no longer tells the model to claim the customer agreed to a return-conditional refund policy. PDF thesis (COMPOSITION_VERSION 6): the narrow conclusion now asks for the chargeback to be reversed instead of "respectfully requests review". `policy_terms_beyond_record` also scopes "published terms" / "terms and conditions".
+- **Supporting-but-citable: the store's own records** (bank-claim plan F1, 2026-09-28).
+  `isCitableRecordContext`: the published refund and shipping policies and the order
+  record (`order_confirmation`) get `bankEligible` / `includeInBankNarrative` with strength
+  still `supporting` (never scored). `cancellation_policy` is excluded: policySource fills
+  it from the store's terms of service. A policy fact's value is `{ publishedOnStore,
+  publishedUrl }` (+ `acceptedAtCheckout: true` only when it happened — a `false` was
+  written into letters as "not accepted at checkout"). Base prompt rule 8d and
+  `POLICY_AND_RECORD_BANS` (`claimGuards.ts`, unconditional) let a letter say only that a
+  policy is published on the store, with its link: describing its terms
+  (`policy_terms_beyond_record`), its acceptance (`policy_acceptance_disclaimed`), when it
+  was shown (`policy_timing_beyond_record`), or narrating absent evidence
+  (`record_absence_narrated`) fails validation. The PDF thesis clause reads "the
+  merchant's refund and shipping policies are published on its store" (was "…available to
+  the customer at checkout"); the Evidence Basis row reads "Published on the store".
+  Canary: `scripts/defence/canary-record-context.mts` (read-only; 7 prod disputes across all
+  modules passed with the job's one feedback retry). Before this, eligibility was read off
+  strength alone: the argument plan included the refund policy on 133 of 242 prod letters
+  (30 days) and none could cite it. Relevance stays with the plan (`allowedFactCategories`;
+  fraud modules still exclude policies). **Context alone is never an argument:** the
+  classifier's eligibility and the build's skip checks use `hasArgumentBeyondRecordContext`,
+  so a case left with only policies and the order record is still `skipped`
+  (`no_bank_eligible_facts`).
+- **Supporting-but-citable: shipment context.** `isCitableShipmentContext`: an `in_transit`
+  cited shipment with a named carrier and a parcel identifier gets `bankEligible` /
+  `includeInBankNarrative`, with strength still `supporting`.
+  `isParcelIdentifier(carrier, number)` (`lib/carriers/trackingLinkUrl.ts`) combines
+  the generic check with the USPS shape list, so `260914OET4` (a batch reference) never
+  qualifies.
+- **Predicate and strategy.** `shipment_in_carrier_possession` (a bank-citable delivery
+  fact that is `in_transit`, `delivered_confirmed` or `signature_confirmed`) gates the
+  item-not-received family's new `guardedBankPhrases` ("in transit", "in the carrier's
+  possession", "handed to …", "out for delivery"). New strategy
+  `item_not_received_carrier_possession` (`none: delivery_confirmed`) tells the writer to
+  date the status only as a retrieval date. `PROMPT_VERSION` 17.
+- **Shipment-scoped guards.** `GuardedBankPhrase.shipmentScoped`: each matching sentence
+  is checked against the shipment it names (tracking number, or a carrier unique on the
+  order). Non-cited shipments are evaluated as non-citable stand-ins, so one GOFO transit
+  fact cannot license "the USPS shipment is in transit". An unnamed sentence on a
+  multi-shipment order must hold for every shipment.
+- **Hashing.** The collector writes `carrierStatusObservedAt` (when the build read the
+  status). `computeEvidenceHash` drops it via `EVIDENCE_HASH_DROP_KEYS` (its own policy;
+  the shared canonicaliser is untouched; the generic `observedAt` is taken by
+  `liabilityShift`). An unchanged re-read keeps the hash; a status change moves it.
+- **Evidence Basis** prints *"In transit with the carrier (status as retrieved …)"*.
+  Without that branch the row fell through to "Confirmed".
+
+Tests: `nonReceiptInTransitShipment.test.ts`, `shipmentProofType.test.ts`.
+
+**Delivery after the dispute (validator 6, 2026-09-23).** The first rebuild of
+cay-collective #14784 under validator 5 said the delivery was recorded *"prior to the
+dispute being raised"*. That is false: the dispute was opened 13 Sep, and the parcel was
+collected 18 Sep. `InternalNarrativeConstraints.deliveryPostDatesDispute` (computed in
+`buildDefencePackageJob` from the cited `deliveredAt` values and `disputes.initiated_at`)
+makes the validator refuse any sentence relating delivery to the dispute's timing, in
+either direction. "Before" would be false; "after" hands the cardholder their argument.
+The retrieval date (`carrierStatusObservedAt`) now rides only on in-transit citations;
+on a delivered shipment it was written up as "observed and confirmed … corroborating the
+delivery".
+
+**In transit beats a bare SUCCESS (2026-09-23, PR #773).** Shopify sets
+`fulfillment.status = SUCCESS` on every created fulfillment. `resolveShipmentProofType`
+checked that bare flag before the in-transit display statuses, so blume-box #360980's GOFO
+parcel (`SUCCESS` + `displayStatus: IN_TRANSIT`) graded `delivered_unverified` on its first
+live rebuild, and the package skipped with `no_bank_eligible_facts`. The specific in-transit
+display status now wins; a bare `SUCCESS` with no transit or delivery status is still
+`delivered_unverified`. Both grade `supporting`, so strength is unchanged.
+
+**The cited shipment must be one an issuer may be shown (2026-09-23).** The second live
+rebuild of #360980 still skipped. Its USPS batch reference is a bare-`SUCCESS` fulfilment,
+so it resolves `delivered_unverified`, and `citedShipment` ranked by tier alone:
+`delivered_unverified` (3) beat GOFO's `in_transit` (2) and the delivery fact cited a
+shipment that is never bank-eligible. `citedShipment` now sorts bank-citable shipments
+first (`signature_confirmed`, `delivered_confirmed`, or `in_transit` with a named carrier
+and a parcel identifier), then by tier. A case with no citable shipment cites exactly what
+it did before.
+
+**Every shipment in the letter; what a record lacks is never said (2026-09-23, validator 7,
+prompt 18).** The first letter #360980 ever produced named one of its two parcels, said *"No
+delivery confirmation or signature event has been recorded … and the merchant does not assert
+otherwise"*, and placed GOFO's custody *"prior to the filing of this dispute"*, a date no
+record holds. Four changes:
+
+- **`shipments` on the delivery fact** (multi-shipment orders only; `shipmentsForLetter` in
+  `factClassifier.ts`). One entry per parcel, sorted by shipment key: products, carrier, the
+  merchant's fulfilment date, and `reference` plus `referenceIsTrackingNumber`. A
+  batch/shipping-app reference is never a tracking number and gets no link. `deliveredAt` is
+  set only on a carrier-confirmed tier and `carrierStatusObservedAt` only in transit
+  (hash-exempt at every depth). A returned parcel is left out. The item-not-received family
+  now has an `overlayPromptBody` telling the model to account for every entry, each only by
+  its own record. The carrier-possession strategy no longer says "refer only to the cited
+  shipment".
+- **What a record lacks** is hard-banned for item-not-received: "no delivery …
+  confirmation/scan/event", "not yet delivered", "undelivered", "the merchant does not
+  assert". Three module/strategy prompts that used the phrase "no delivery confirmation" as
+  an instruction were reworded.
+- **`carrierPossessionUndated`** (internal constraint, any family): when a cited shipment is in
+  transit, a sentence that uses carrier-custody vocabulary AND a dispute-timing phrase is
+  refused. The merchant's fulfilment date may still be stated.
+- **`nonParcelTrackingClaim`** (validator): a non-parcel reference introduced as a "tracking
+  number" is refused.
+
+**Validator 8 (2026-09-23).** #360980's first v7 rebuild covered both parcels but failed
+validation on a true sentence: *"The carrier's record shows this shipment in transit"*, right
+after a sentence naming GOFO. It named no shipment, and on a two-parcel order an unnamed
+transit claim is refused. `shipmentScopedViolation` now reads a sentence that refers back
+("this shipment", "the same parcel", "it") against the shipment named last in the SAME
+paragraph. It never carries across a paragraph break, and "The order is in transit" still
+has no referent. The hand-over guard also now catches "tendering it to USPS" and "tendered
+each to its respective carrier": the same letter used both for the USPS parcel, which has no
+carrier record.
+
+**Validator 9 / prompt 19 (2026-09-23).** The v8 rebuild wrote "tendered it to USPS" for the
+parcel with no carrier record twice, the second time after the retry. The item-not-received
+overlay now gives such a parcel one permitted sentence shape, "The merchant fulfilled <items>
+on <date> (<carrier> shipping reference <ref>)", and names the verbs it may never take. A
+whole-order sentence may only say the merchant fulfilled the items. "Left the merchant's
+possession" is now a shipment-scoped custody guard (family v4): *"both items left the
+merchant's possession"* had passed v8.
+
+**Validator 10 / prompt 20 (2026-09-23).** The first validated letter for #360980 still said the
+parcels were sent *"each with its own carrier record"*, and the USPS parcel has none. A carrier
+record claimed for every parcel (each / both / every / all ... carrier record, tracking, scan or
+event) is now a shipment-scoped guard (family v5). Only the cited shipment is bank-citable, so on
+any multi-parcel order such a sentence is refused, and the overlay tells the model to mention a
+carrier record only in a sentence about the parcel that has one.
+
+### In transit since the event, and one Evidence Basis row per parcel (2026-09-23, validator 11, prompt 21)
+
+Two defects on blume-box #360980, both reported by the maintainer from the live page:
+
+- **"Status as retrieved on 23 September."** Only our read time was carried. Shopify holds a
+  dated event for the GOFO parcel, IN_TRANSIT at 2026-09-17 03:48 UTC, two days before the
+  dispute. `fulfillmentSource.inTransitSinceOf` takes the earliest in-carrier event
+  (`CARRIER_PICKED_UP`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `ATTEMPTED_DELIVERY`, `DELAYED`; never a
+  label or ready-for-pickup event) as `inTransitSince`, only while the shipment is in transit. It
+  rides on the cited fact and on each `shipments` entry. The narrative payload now also carries
+  `disputeOpenedAt`. The item-not-received overlay dates transit from the event ("in transit
+  since 17 September"), and may place a fulfilment, or a dated transit event, before the dispute
+  with both dates. `carrierPossessionUndated(facts, disputeOpenedAt)` fires only for an in-transit
+  parcel with no `inTransitSince`, or one dated after the dispute opened. GOFO's own later scans
+  (e.g. "Loaded on Vehicle, Carteret, NJ") are not in Shopify; they need a GOFO lookup (plan P4).
+- **The same row twice, and the USPS parcel missing.** The evidence model makes one record per
+  parcel, and every record maps to the same section-level fact (per-parcel grading is deferred in
+  `derive.ts`). So a two-parcel order carried two identical `delivery_proof` facts, the second
+  under the USPS fulfilment's id with GOFO's values. `buildEvidenceBasisRows` now expands a fact
+  carrying `shipments` into one row per parcel, labelled with its products and stating only its
+  own record. A parcel with no carrier record prints "Fulfilled <date> · USPS shipping reference
+  <ref>", with no link. Identical rows print once.
+
+**Timing licence withdrawn (validator 12, prompt 22, same day).** Prompt 21 let the letter place a
+fulfilment, or a dated transit event, "before the dispute". A fulfilment is the merchant's own
+"marked as shipped" record, not proof of dispatch, and set against the purchase date it can
+expose a late shipment. #360980 was ordered 22 Aug and fulfilled 15/16 Sep, against blume-box's
+1–3 business-day promise. Until the delivery-commitment resolver (plan P3) can tell a helpful
+date from a harmful one:
+
+- the payload carries no `disputeOpenedAt`;
+- a `shipments` entry carries `fulfilledAt` only for a parcel with NO carrier record, where it
+  is the whole account;
+- Evidence Basis prints no fulfilment date beside a carrier record;
+- the item-not-received family (v6) hard-bans relating a fulfilment to the dispute or the order
+  date, and counting days between them.
+
+`carrierPossessionUndated` keeps its v11 semantics (the validator does not refuse a true dated
+ordering); the prompt simply no longer invites one.
+
+**Validator 13, prompt 23 (same day).** The v12 rebuild of #360980 failed. Two of its refusals were
+correct: *"both items left the merchant's possession and were tendered to their respective
+carriers prior to the filing of this dispute"*. Two were of TRUE sentences, and the validator
+now handles both:
+
+- `shipmentScopedViolation` reads each CLAUSE (split on `;` and `, and|but|while|whereas`)
+  against the parcel it names, so one sentence may give GOFO's transit and the sunscreen's
+  fulfilment.
+- "the shipment/parcel" now refers back to the parcel named last in the paragraph.
+
+The item-not-received family (v7) hard-bans "prior to / before / ahead of the (filing of this)
+dispute / chargeback / claim". The model holds no dispute date. A dated in-transit citation no
+longer carries `carrierStatusObservedAt`, and the overlay lists the forbidden wording
+(paraphrased, since a prompt may not quote its own banned phrase).
+
+**Validator 14, prompt 24 (same day).** v13's blanket "prior to the dispute" ban also refused
+*"delivered on 6 July … prior to the dispute being raised"* (#352543), which is true and decisive.
+Item-not-received v8 bans only custody, dispatch and transit words placed before the dispute. A
+carrier-confirmed delivery may be ordered against it, and `deliveryPostDatesDispute` checks the
+direction against the data. **Also:** `pack_json.case_strength` is a four-field summary built in
+`buildPack.ts`, and it did not carry `overallBeforeRev5`, so the P1a newly-strong hold was inert on
+every persisted pack. It is now persisted.
+
+**Multi-parcel letters are written from the records (prompt 25).** After eight rebuilds of #360980,
+each fixing one invented sentence only for the next draft to find another, the parcel-describing
+sections of a multi-parcel item-not-received letter are no longer the model's. When a delivery fact
+carries `shipments`, `applyShipmentRecordSections` (`lib/defence/shipmentRecordSections.ts`,
+called in `buildDefencePackageJob` on the first and the retry narrative, before suppression and
+validation) replaces `executiveSummary`, `transactionOverviewArgument`, `fulfillmentArgument`,
+`chronologyArgument` and `conclusion`. Each parcel is stated only from its own entry: products,
+carrier, tracking number with its link or a shipping reference without one, the carrier's delivery
+or in-transit date, or the merchant's fulfilment for a parcel with no carrier record. The chronology
+lists dated records oldest first. The model's other sections (policy, communication, …) are kept, and
+the whole letter still passes the validator. Single-parcel letters are unchanged.
+
+**Prompt 26:** no repetition. Every composed section already opens with a fixed thesis line
+(`thesisTemplates.ts`), and the first version repeated the parcels in four sections and the
+reversal request twice. Now each section adds something the others don't:
+
+- the summary gives one sentence per parcel, with no identifiers;
+- the fulfilment section gives the one full account, with tracking numbers and links;
+- the chronology gives dates and events only;
+- the conclusion states what the request rests on, since the thesis already asks for reversal;
+- the transaction overview is omitted.
+
+### The letter names the merchant by its storefront domain (2026-09-24, prompt 30)
+
+The defence document (PDF and in-app preview) names the merchant by `displayShopDomain`
+(`shops.primary_domain` without `www.`, e.g. "blume.com"). It falls back to the myshopify alias only when
+no primary domain is on record. This covers "Submitted on behalf of" and the Case Details "Merchant
+name" row. The job reads `primary_domain` with the shop, and the workspace API returns it as
+`dispute.merchantDomain`. `dispute.shopDomain` stays the alias, because it builds Shopify Admin links.
+
+### Document wording: "shipped", and "delivered" only from a carrier (2026-09-24, prompt 29)
+
+"Fulfilled" is Shopify's term and can mean anything from "label printed" to "handed to the carrier",
+so a bank reader can't tell which. The document (PDF and in-app preview) now says **shipped** for the
+merchant's own record, and **delivered** only when a carrier recorded the delivery:
+
+| Where | Wording |
+|---|---|
+| Status pill | Delivered · In transit · Shipped |
+| Card rows | "Shipped by merchant", "Marked shipped by" |
+| Timeline titles | "Shipment N shipped" |
+| Record-built prose | "The order was sent in two parcels", "shipped by the merchant on …", "the merchant's shipping records" |
+| Section titles | "Shipping, Delivery & Evidence" / "Shipping, Delivery & Access" |
+| Fulfilment fallback | "…marks the order as shipped" |
+
+Shopify's own timeline lines ("… marked 1 item as fulfilled") are quoted as recorded. The Case
+Details field "Fulfillment status" is Shopify's record field and is unchanged.
+
+### In-app preview drawn to the same design (2026-09-24)
+
+`DefencePackageHtmlView` (the defence preview on the dispute page) now renders the "Chargeback Response
+v2" document too. It shows the case header, fact cards, Case Details with status pills, numbered
+sections, shipment cards, line items with a total, the vertical chronology and the conclusion panel.
+Previously it ran the parcel paragraphs together in one block. The derived content (shipment cards,
+timeline titles and markers, totals, product-name emphasis, status-pill tones) lives in
+`lib/defence/render/documentModel.ts`, and the palette in `lib/defence/render/documentTheme.ts`. Both
+the PDF and the preview use them, so the two cannot drift. The preview shows the document as filed,
+so its copy is the document's English.
+
+### "View PDF" — signed new-tab links (2026-09-24)
+
+"View PDF" opened `/api/defence-packages/:id/preview?shop_id=…` in a new top-level tab, and middleware
+answered 401 `SESSION_REQUIRED`. The embedded session cookies are `sameSite=none; partitioned`, so they
+live only in Shopify Admin's iframe partition. A new tab carries none, and `shop_id` is not
+authentication. Now:
+
+- The session-authenticated workspace API attaches `preview_url` to each package row that has a
+  PDF. It carries `t = exp.hmac` (`lib/security/previewLink.ts`: HMAC-SHA256 over package id, shop
+  id and expiry with `SHOPIFY_API_SECRET`; valid for 1 hour).
+- Middleware lets `/api/defence-packages/:id/preview` through only when `t` is present.
+- The route verifies the token against the package and shop it serves, and returns 401
+  `PREVIEW_LINK_INVALID` otherwise.
+- Without `t`, the old session path is unchanged.
+
+### Item-not-received prompt v40 — no negated delivery (2026-09-25)
+
+The `item_not_received` family overlay now tells the model never to negate delivery in any form (no "un-" prefix,
+no "not" before the word) and never to state the case as a denial. An in-transit letter (6a8848-dd #102193) wrote
+"the order was not undelivered" on both attempts and failed validation, filing nothing. The rule is phrased without
+quoting the banned word (`familyRegistry.test.ts` forbids that). `PROMPT_VERSION` 39 → 40, so failed packages regenerate.
+
+### Defence counsel v2 — item-not-received letters (2026-09-25, wired into the job)
+
+`lib/defence/counsel/` (plans in `docs/plans/defence-counsel/`) writes item-not-received letters from a
+code-built claim ledger.
+
+- **In the job.** `buildDefencePackageJob` calls `runCounsel` (`counsel/run.ts`) before the template writer for
+  `inr_product_not_received` card disputes. It reads the customer's other orders live (Admin API, `makeAuthedRequest`)
+  and builds the ledger. A null result (no single carrier-confirmed delivery, no passing summary, any error) falls
+  through to the template writer unchanged. The counsel letter then passes the same `validateNarrative` / projection /
+  composed-document checks; on a validation failure the existing retry regenerates with the template writer.
+  `applyShipmentRecordSections` is skipped for counsel letters. `prompt_family = counsel_v2`,
+  `prompt_version = COUNSEL_PROMPT_VERSION` (2). Kill switch: `DEFENCE_COUNSEL_V2=off`. Merchant name:
+  `shops.shop_name`, else the storefront domain.
+- **How the letter is written (cost refactor, 2026-09-26; plan `docs/plans/counsel-v2-cost-refactor.plan.md`).** The first
+  prod run (#352543 v12) cost ≈ $0.45 in ~32 uncached calls. Now:
+  - **Code writes what the records fix** (`counsel/recordSections.ts`): the Shipping & Delivery section (the carrier's own
+    scan + tracking link; "All N items … single tracked shipment. There was no partial or second shipment, so no part of the
+    non-receipt claim falls outside this delivery.") and the Conclusion, word for word as FILED in #352543 v12 (package
+    `caa70bf2`), pinned by `recordSections.test.ts`. No Chronology prose (v12 had none; dispatch timing is never
+    volunteered). The summary may not say "the complete order" unless `whole_order_in_shipment` is in the ledger (code check). The theory of the case is the first playbook theory whose claims are all in the ledger
+    (`pickTheory`). No strategist call.
+  - **The model writes only the executive summary** (≤ 80 words), from a STATIC system prompt (`SUMMARY_SYSTEM`, ~1,250
+    tokens, sent with `cache_control: ephemeral`; the case goes in the user message). Rules the code checks enforce are
+    not repeated in the prompt.
+  - **One review call** (`COUNSEL_REVIEW_MODEL` = `claude-sonnet-4-6`, override `DEFENCE_COUNSEL_REVIEW_MODEL`): fact-check +
+    clarity over the summary, only after the code checks pass, given the case's events and intervals precomputed
+    (`timelineBlock`). Not Haiku, as the plan proposed: in the offline eval Haiku flagged correct intervals on #352543 as
+    "inverted" in every run. Any finding → **one** surgical correction (same cached prompt), checked and
+    reviewed again; if that fails, the template writer. Calls per package: 2 (write, review), at most 4.
+  - **No judge in production.** `judgePrompt` is used only by the offline eval, `scripts/counsel/eval-counsel.mts`.
+  - **Reuse.** `counselInputHash` hashes the ledger (claims, specifics, limits, exhibits), the page context, the
+    merchant name, the models and `COUNSEL_PROMPT_VERSION` (which also versions the code-written wording). It is stored
+    with the summary in `narrative_json.counsel = { inputHash, summary }`. A rebuild whose latest non-failed counsel
+    package for the dispute has the same hash reuses the summary (re-checked against today's ledger) and calls no model.
+- **Spend, limits and telemetry.** Every counsel run, letter or not, writes one `defence_package_runs` row with
+  `cached_tokens` and `stage_tokens` (`[{stage, model, input, output, cacheRead, cacheWrite}]`; migration
+  `20260926120000`). `strategy_keys = [counsel_v2]` for a run that called a model, `[counsel_v2_reused]` (and
+  `stage_tokens = []`) for a reused letter. `checkDailyCap` counts counsel runs as generations but not in the template
+  writer's 50k prompt-token cap, and counts reused rows against nothing; counsel has its own cap,
+  `DEFENCE_COUNSEL_DAILY_RUN_CAP` (default 25 model-calling runs per shop per day). A failed summary logs
+  `[counsel] summary failed …` with its findings. Cost: `lib/defence/counsel/cost.ts` (list prices; budget
+  `COUNSEL_COST_BUDGET_USD` = $0.05), `scripts/sql/counsel-cost-daily.sql` (median / p90 per package per day), and the
+  daily `/api/cron/counsel-cost-monitor` (07:30 UTC), which emails the admin address when yesterday's median package
+  cost exceeds the budget.
+- **Multi-parcel orders (2026-09-26).** `buildMultiParcelLedger` (`claimLedger.ts`) states each parcel from its own
+  shipment record (`delivery_proof.value.shipments[]`): `parcel_N` is "recorded as delivered on {date}" only for a
+  carrier-confirmed delivery, "shows in transit" for an in-transit record, and "the merchant shipped" otherwise; never a
+  shipping date, never a shipment against the order date or the dispute. `order_in_parcels` says every purchased item
+  was in one of the parcels only when the fulfilment line items prove it item by item. `all_parcels_delivered` (then the
+  dispute timing, when every delivery precedes the dispute, and the later order) or `some_parcel_delivered` pick the
+  theory (`every_parcel_delivered` / `delivered_parcel_and_rest_shipped`). No carrier-confirmed delivery on any parcel →
+  no counsel letter (template writer). The code-written Shipping text and conclusion are scoped to what each parcel's
+  record proves ("…so the non-receipt claim is not supported for those goods"). The checks ban every parcel's carrier name
+  and reference, and mask product names ("SPF 50") before the number and style checks. The PDF and the HTML view print
+  a record-built Shipping section and the address card under the parcel cards; a template multi-parcel letter (prose not
+  record-built) is unchanged. #360980 in the offline eval: 2 calls, ≈ $0.014, first draft clean 3/3; the judge stays
+  "undecided" (one parcel has no carrier record), against "cardholder" for the template letter.
+- **Package safety gate (`packageSafety.ts`, 2026-09-26).** The reader behind "This defence package cannot be reviewed
+  automatically" knew only `{text, usedFactIds}` sections and two metadata keys, so every letter with a record-built
+  section (`source: "record"`) or counsel fields (`headline`, `addressExhibit`, `laterOrderExhibit`,
+  `timelineAdditions`, `counsel`) was unreadable and refused for saving and deadline filing (#352543 v11–v13 and three
+  6a8848-dd drafts). Each field now has an exact shape check (anything else still fails closed), and the headline,
+  added timeline rows and stored counsel summary are judged with the section prose.
+- **Fact-check exemptions.** The review never flags the summary's tie-back sentence or request against the Conclusion,
+  or "the complete order" against the Shipping item count. The Shipping pair and the Conclusion are code-written and
+  are not reviewed.
+- **Exhibits and timeline.** `narrative.addressExhibit`, `laterOrderExhibit` and `timelineAdditions` are stored
+  in `narrative_json`; the job passes them to the PDF `meta` (timeline rows merged into `timelineEvents`) and the
+  HTML view merges `timelineAdditions` into its chronology.
+
+Address rule:
+
+- **Data.** The order source keeps `billingAddressFull` / `shippingAddressFull` (street, unit, city,
+  province, postal code, country); `customers/redact` scrubs both (`scrubCustomerData.ts`, `ADDRESS_KEYS`).
+- **Claim.** `claimLedger.ts` `addressClaims` adds `shipping_matches_billing` only when every field
+  (street, unit, city, province, postal code, country; case and punctuation ignored) is identical on
+  both. When they differ nothing is said and nothing is printed: a mismatch is never volunteered.
+  `billing_address_verified` is added on top only for a citable AVS cell (`isCeItem3Citable`: Visa `Y`/`M`).
+- **Exhibit.** The claim carries both addresses. `toNarrative` sets `narrative.addressExhibit`; the PDF
+  (`meta.addressExhibit`) and the HTML view print an "Order addresses" card under the shipment card
+  (`documentModel.ts` `addressCard`). An address claim is never made without the addresses shown.
+- **The match is stated on the card, never in prose.** The card's title reads "The shipping address entered at
+  checkout is identical to the billing address." The prose never mentions addresses: the production
+  address-delivery detector reads any "shipping address" sentence as a delivery claim, and loosening it would let
+  the template writer assert a match it cannot see. `address_delivery` (`claimCapabilities.ts`) stays ungranted.
+- **Later order.** The `later_order` claim carries the order as `narrative.laterOrderExhibit`; the PDF
+  (`meta.laterOrderExhibit`) and HTML view print a "Same customer's later order" card under the Order Line Items table
+  (`documentModel.ts` `laterOrderCard`). Its delivery date is shown only when the order arrived within the
+  merchant's delivery period (`deliveryPeriodDays`: a published delivery window, else the dispatch window plus
+  the disputed order's transit, else 10 days); a long order-to-delivery span is left out.
+- **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
+  later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
+  second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
+  "not supported by the record"; the fixed request line with the amount follows.
+
+### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
+
+`lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude
+Design file "Chargeback Response v2". It is **US Letter**, set in **Inter** (`scripts/pdf-worker/fonts/`,
+SIL OFL, registered by the worker before rendering), with one burgundy accent.
+
+- **Page 1, the case:** a top bar, the eyebrow and generated timestamp, "Dispute …" as the
+  title, a subtitle, "Submitted on behalf of", three fact cards (amount, reason code, claim type),
+  and Case Details (zebra rows, PAID/FULFILLED pills).
+- **Pages 2 and on:** numbered sections (burgundy badge, title and rule).
+  - **Multi-parcel orders:** shipment cards show the carrier with a tracking number or shipping
+    reference, the fulfilment time, and the first carrier event or the fulfilling app. They
+    replace Evidence Basis; a counsel v2 letter prints its address card and record-built Shipping prose under them.
+  - **Order Line Items** ends with a total row.
+  - **Chronology** is a vertical timeline with titled events and markers: filled for money and
+    fulfilment, hollow for notifications, green for the carrier's record.
+  - **Conclusion** is a panel.
+- **Headers and footers:** a running header on pages 2 and on, and "Dispute · Order … n / N" on
+  every page.
+- **Renderer quirks,** measured with a local render harness:
+  - A node's bottom **margin** counts toward react-pdf's presence check (`@react-pdf/layout` `shouldBreak`), so a
+    section whose content fit but whose 24pt margin did not was moved whole to the next page (#360980 v23: the
+    executive summary alone on page 2; content ended at 641 of 656pt). Sections space with `paddingBottom` instead.
+  - A fixed element anchored with `bottom` and a render prop did not draw, so both the header
+    and the footer are fixed Views anchored from the **top**, with a View render prop.
+  - Automatic hyphenation is off.
+
+### Defence PDF layout (2026-09-23, prompt 27)
+
+Reviewed on blume-box #360980's filed PDF: four pages for one page of argument, a mostly empty
+cover, justified text stretched on URL lines, an Evidence Basis label running into its value,
+two chronologies, filler thesis boxes, "USD 40.0", "Visa 13.1 / Mastercard 4855" on a Visa
+card, and a footer that never drew and would have printed internal build metadata. Now:
+
+- **No cover page.** A header on page 1 gives the dispute, order, network reason code and amount.
+- **Footer** (`fixed`, first child of the page): "Dispute … · Order …" only. In this react-pdf
+  build a `render` prop ("Page N of M") stops the whole fixed element from drawing, which was
+  measured with a local render harness, so there are no page numbers.
+- **Text and page breaks:** left-aligned body text, and paragraphs split on blank lines and kept
+  whole across page breaks. Headings keep with what follows (`minPresenceAhead` on the heading,
+  not the whole section, which forced early page breaks). Short tables stay whole.
+- **Tables:** compact rows (line height on the cells, not the row), and header cells aligned with
+  their columns.
+- `lib/defence/render/formatting.ts`: `formatMoneyDisplay` ("USD 129" → "USD 129.00") and
+  `reasonCodeForNetwork` (only the card's own network), used by the shared Case Details and
+  line-item builders, so the PDF and the HTML view agree.
+- `renderThesis` suppresses a thesis that states no fact of the case, except the conclusion's
+  request line.
+- **Multi-parcel letters, one timeline:** no chronology paragraph. `withShipmentEvents`
+  (`chronology.ts`) adds each dated carrier event to the bullets and names the product on
+  Shopify's "marked 1 item as fulfilled" lines, matched by the fulfilment's own time
+  (`shipments[].fulfillmentEventAt`, which is stripped from the model payload). Transit is worded
+  "first shows … in transit on <date>".
+
+### Non-receipt P1a — the delivery rollup and the newly-strong hold (2026-09-23)
+
+`docs/plans/non-receipt-delivery-evidence.plan.md` §6.1.3–§6.1.4, defect D3. The
+item-not-received rollup (`lib/argument/caseStrength.ts`, `family === "delivery"`) needed a
+STRONG delivery signal to reach even `moderate`. After PR-C1, the only strong route was a
+signature, and 0 of 287 non-receipt disputes since June carry one. So every
+carrier-confirmed delivery rated `weak` (blume-box #352543: delivered 6 July, disputed 19
+September). Now:
+
+| package holds | overall |
+|---|---|
+| strong delivery signal (signature / POD) with `deliveryCoverage === "complete"` | `strong` |
+| strong delivery on partial / unknown / none coverage, or `delivered_confirmed` (moderate) | `moderate` |
+| in transit, available for collection, label only | `weak` |
+
+Two strong signals still reach `strong`, as before. Fatal-loss and returned-to-sender still cap
+at `weak`, and the credit floor still lifts to `strong`.
+
+**`overallBeforeRev5`** (on `CaseStrengthResult`, delivery family only) is the previous rollup
+over the same grades, with the same gates applied. The automation ladder has a new rung
+(`deriveCaseAutomationDecision`, step 10): `overall === "strong"` with a defined
+`overallBeforeRev5` that is not `strong` → `hold_for_deadline` with reason
+`strength_upgraded_timing_held`. The rating shows; the filing date does not move until plan
+§11 Q-7. `resolveHeldState` maps it to `HeldReason = "strong_timing_held"`, and the pack
+loader, the workspace route and the new-dispute email pass the value through. **Follow-up:**
+the email's held copy ("held while we look for stronger evidence") is not yet tailored to this
+reason. No live case reaches it today.
+
+`SCORING_POLICY_VERSION` 3 → 4. No category moved, only the rollup, so the categorization
+snapshot is unchanged and only its version moved. Every v3 assessment snapshot is invalidated,
+and unsubmitted packs show "not yet assessed" until their next rebuild. A pack rebuild with
+unchanged evidence does not regenerate the defence letter (the enqueue's idempotent match).
+
+Copy (§6.2): `strengthReason.{moderate,weak}.moderateOnly` now agree in number with one or
+two signals ("Delivery confirmation supports…"), in all six locales. `decisiveHint.delivery`
+no longer recommends billing/IP signals, which are on the module's `avoid` list. It names what
+a merchant can actually add: a carrier delivery photo or signature, or a customer message
+acknowledging receipt.
 
 ### Negative-polarity claim guards (2026-08-20)
 
@@ -3269,6 +3996,10 @@ interface HeldState {
 
 Tests: `lib/disputes/__tests__/heldState.test.ts` (derivation), `tests/unit/heldCopyTruth.test.ts` (six-locale catalog guard), `lib/email/__tests__/newDisputeAlertHeldVariant.test.ts` (rendered HTML).
 
+**Review and Forward tab (2026-09-26).** The Complete Defence Package card receives `held.held` (`autoFilesOnDueDate`). While a held case's latest package is a draft (or stale) and not yet with Shopify, the card offers no "Approve vX" and adds no banner (maintainer, 2026-09-26: the card's intro already says Auto-pilot saves on the due date, and the deadline badge shows when). Approving never filed a held case early (the deadline cron promotes and saves the latest draft on the due date), so the button asked for a step that does not exist (maintainer, #360980). Review mode and non-held cases keep the approval. Test: `tests/unit/completeDefencePackageCard.render.test.tsx`.
+
+**Product-name emphasis.** Both renderers bold order product names in prose only where they tell parcels and items apart (Shipping, line items); the executive summary and the conclusion are not emphasised (`DefencePackageDocument.tsx` / `DefencePackageHtmlView.tsx` `prose()`).
+
 ### Store-wide automation mode (2026-07-27)
 
 Replaces the per-dispute-type Automatic/Review grid. **One switch per shop**, plus an explicit amount safeguard.
@@ -3449,6 +4180,7 @@ Two exceptions that genuinely never submit, and are the only places absolute lan
 
 - **Shopify Protect** — `lib/defence/enqueue.ts:136-145` returns a `skipped` row with no `pdf_path`, so the finalize branch can never match it.
 - **Review mode / the high-value safeguard** — the safeguard forces `mode:"review"` (`storeAutomation.ts:268-279`), so `needs_review=true` keeps the dispute outside the cron's filter entirely.
+- **`needs_review` follows the CURRENT mode** (bank-claim plan F5, 2026-09-28) — `syncNeedsReview` in `disputeEffectsDispatcher.ts` writes `needs_review = (mode === "review")` on every rule evaluation, both ways. It used to be set on review and never cleared on auto, so a shop that moved to auto-pilot kept the flag and the cron skipped those disputes (16 Mein Maison disputes on 2026-09-28). A merchant's explicit choice lives in `review_state` and is untouched. One-off repair: `scripts/reconcile-needs-review.mts` (dry run by default; `--apply` clears the flag where the rules now resolve to auto and recomputes `normalized_status`).
 
 **The copy contract.** Merchant-facing copy about Auto-pilot said the opposite of all this — *"Everything else waits for your review"* — across ~13 keys. The vocabulary is now fixed, three moves, no synonyms:
 
@@ -3607,6 +4339,8 @@ Tests: `tests/unit/presentationResolvers.test.ts` (truth tables + cross-page con
 ## Dispute Workspace
 
 The dispute detail page (`/app/disputes/:id`) is a **unified tabbed workspace** with 3 tabs in the approved order: **Overview, Evidence, Review and Forward** (Review and Forward rightmost — the last step of the flow; tab indices via `TAB_INDEX` in `workspace-components/types.ts`; the deep-link `?section=gorgias-comms` opens Evidence). The Review and Forward tab shows an honest empty-state banner when no defence package has been generated for the pack (the package card otherwise renders nothing). It replaces the previous separate dispute detail + pack detail pages. The heading shows the operational-lifecycle chip + strength chip + conditional attention pill (only when attention ≠ none), the deadline line while the response is editable, and a "View in Shopify Admin" secondary action. Per the approved design (`Dispute Detail.html`), that action is always PRESENT: it links out when `getShopifyDisputeUrl` returns a URL, and degrades to a DISABLED button (with an explanatory `title`) when the URL is null — never hidden, never a guessed fallback URL. **Technical-problem state:** when the resolved attention is the one merchant-resolvable `technical_error` (an expired integration connection — e.g. Gorgias reconnect, `integrations.status='needs_attention'` + `meta.error_code='reconnect_required'`), the Overview hero renders the design's red "Monitoring needs attention" treatment (warning icon + red tone) while the LIFECYCLE chip stays calm (internal facts never change lifecycle — the red lives on the attention dimension), and a red attention card offers a "Reconnect" action (→ `/app/settings`). Truly internal failures still surface transparency copy only (`internalIssue`), no red, no action.
+
+**Phase pill (2026-09-27).** Every dispute detail page shows the same **Inquiry / Chargeback** pill as the disputes list: the open-case header in `WorkspaceShell.tsx` (first chip in the header row), the decided view in `DecidedWorkspace.tsx` (before the outcome badge — an addition to the Claude Design `DecidedView` file made at the maintainer's request, plan D-4), and the portal detail page (`Badge` with `phaseBadgeTone`). Colours come from `phasePillColors` and the label from `phaseLabel`, both in `lib/disputes/phaseUtils.ts` and shared with `DesktopDisputesTable` / `MobileDisputeCard`, so list and detail cannot drift. Null phase renders "Chargeback", matching `phaseLabel`'s default.
 
 **Architecture:** `page.tsx` → `WorkspaceShell.tsx` (custom Figma-style tab strip) → `OverviewTab`, `EvidenceTab`, `ReviewSubmitTab`. Central data hook `useDisputeWorkspace.ts` loads all data from `GET /api/disputes/:id/workspace` (composite endpoint). Tab state is React state, not URL params (avoids App Bridge iframe re-renders). The tab strip is a `role="tablist"` with three `role="tab"` buttons that share borders with the panel below into a single rounded-12 white card; the active tab carries a 2-px blue underline (`#005BD3`), inactive tabs use `#6D7175`. Replaces the Polaris `<Tabs>` so the visual matches the Figma `shopify-dispute-detail.tsx` design (lines 105-139): connected card, blue (not gray) underline, `text-sm font-medium` labels at `padding 12 24`. ARIA wiring uses `aria-controls`, `aria-selected`, and `aria-labelledby` between each tab and its panel; the inactive tab is `tabIndex={-1}`.
 
@@ -5213,9 +5947,16 @@ candidate, **bypassing the burnt effect claim** rather than trying to un-burn it
   non-archived pack. A dispute past its deadline cannot be helped by a pack, and the tight scope
   is what keeps the sweep from re-running over resolved history.
 - **The sweep decides nothing itself.** `runAutomationPipeline` already guards terminal status,
-  auto-build-off, existing packs and quota, and clears stale billing attention on the way
+  auto-build-off, existing packs and quota, and clears stale gate attention on the way
   through; the sweep only selects candidates and re-invokes it. A dispute the pipeline declines
   keeps its attention flag — clearing it would hide a real blocker.
+- **Stale gate attention is cleared once BOTH pre-build gates pass.** `clearStaleGateAttention`
+  (`lib/automation/pipeline.ts`) runs after the auto-build switch and the quota check and clears
+  any `attention_reason` in `PIPELINE_GATE_ATTENTION_REASONS` (`auto_build_off` + the billing
+  reasons). Before 2026-09-25 it cleared billing reasons only, so a dispute first blocked while
+  auto-build was off kept its "Automation paused" banner after auto-build was turned on and the
+  pack built (6a8848-dd #93670). Merchant tasks (Gorgias review, approval, errors) are never in
+  the set.
 - **Capped** at `REPLAY_CANDIDATE_CAP = 200` per sweep, ordered by soonest deadline, and the
   handler logs when the cap is hit rather than silently truncating.
 - **Deferred while the order backfill runs.** Pack evidence is computed *from* `shopify_orders` —
@@ -7428,6 +8169,26 @@ What changed:
 
 **Blast radius.** `packageMode` governs narrative **tone** (firm vs hedged), not whether evidence is filed, and it is not an auto-save gate — nothing in `lib/automation/` reads it. Strength scoring is untouched: `product_description` remains `supportingOnly: true` / `excludedFromStrength: true` in `canonicalEvidence.ts`. The practical effect is that a not-as-described package with no conformity evidence now argues hedged instead of firm, which is the honest rendering of what it actually holds.
 
+#### Not-as-described letters: defend without hedging (2026-09-28)
+
+Superseded in part by `docs/plans/not-as-described-defence-package.plan.md` PR 1 (maintainer decision D5). The hedged voice above was accurate but not counsel: nearly every letter in the family is `narrow` (0 of 308 prod packs carry a listing, measured 2026-09-28), so nearly every letter apologised for its own record. What changed:
+
+- **Family overlay** (`reasonCodes/families/product_not_as_described.ts`, v2): overrides base rule 10's hedged framing for this family only. Narrow mode keeps its other limits (≤4-sentence summary, no declarative reason-code conclusions). It also states what each record can show: the order record shows what was ordered, a listing what was advertised, a delivery record that the parcel arrived — none of them what it contained.
+- **Deterministic bans** in the family's `prohibitedBankPhrases` (validator v16, applied to LLM prose and to the composed PDF): the rule-10 hedge lead-ins ("the available/submitted evidence/records supports/indicates/is consistent with" — bare "consistent with" stays legal); conformity conclusions ("was as described", "matched the listing", "conformed to", "not defective", "free of defects", condition claims); dating the listing to the purchase ("at the time of purchase"); delivery-window claims; what the buyer did not do or submit ("the buyer has not…", "no … evidence has been submitted", "unsupported claim", "absence of any return" — "absence of any recorded return" stays legal); and calling two records of one carrier event corroborating or independent. Restating the cardholder's claim stays legal. The last two groups came from the release-gate comparison (`docs/plans/not-as-described-defence-package/pr1-letter-comparison.md`). Other families are unchanged.
+- **Strategies v2**: `listing_as_purchased` no longer tells the model to cite the listing "published at the time" or argue it "matched what was delivered" (selection unchanged: `order_record_present`); `narrow_fallback` no longer says a listing is "always present".
+- **Module v4**: the listing is "as retrieved for this response", never the page shown at checkout.
+- **PDF** (composition v5): a family narrow conclusion, "The merchant respectfully requests reversal of the [amount] chargeback.", replaces "Based on the available evidence … requests review"; the generic transaction-overview line ("internally consistent with cardholder-initiated activity") no longer renders for this family.
+- Prompt version 41. Tests: `lib/defence/__tests__/productNotAsDescribedLetter.test.ts`.
+
+**Arrival is not in dispute (2026-09-28, maintainer, PR 1b).** The buyer of a not-as-described claim agrees the parcel arrived, so delivery is left out of these letters entirely. Before this, packages held only delivery, tracking and no-return facts, so letters were built around a delivery nobody disputed.
+- `product_unacceptable` v5: `delivery_proof`, `shipping_tracking` and `policy_shipping` leave `prioritize` and `allowedFactCategories` (and join `avoid`). This removes them from the argument plan, the prose and the PDF's shipment cards. **Prod reads this module from `defence_prompt_modules`** — after release run `npx tsx scripts/reconcile-defence-prompt-modules.mts --env-file .env.production.local --apply`, or v3 keeps serving.
+- The PayPal not-as-described overlay drops "listing as it appeared at the time of purchase" and says arrival is not in dispute.
+- The writer is not shown the order record's `fulfillmentStatus` for this family (`buildLlmFactPayload`, `withoutArrivalFields`); claim guards still read it. The instruction alone did not hold.
+- The PDF hides the fulfilment section for the family (`SECTION_DENY_BY_FAMILY`, which also suppresses its "marks the order as shipped" fallback), and the timeline drops fulfilment, shipping-confirmation and delivery events (`familyOmitsArrival` in `lib/defence/chronology.ts`, PDF and HTML view).
+- Family bans (validator v17): carrier/tracking wording, "delivered on", "confirmed delivery", "shipped on", "in transit", "was fulfilled", "left the merchant", and "as listed/advertised" (the restated claim "not as advertised" stays legal).
+- **Reverted from PR 1:** the ban on payment-authentication wording (IP, AVS, CVV, 3-D Secure). Banks mislabel fraud disputes as not as described, and a liability-shifted 3-D Secure result must stay citable (blume-box #352552, `alwaysAdmissible.ts`).
+- Prompt version 42. Measured on prod (`scripts/sql/product-no-delivery-exposure.sql`): of 20 open not-as-described packages, 17 keep only "no return recorded" plus record context, and 1 keeps nothing and would be skipped by the build.
+
 ### Data model
 
 Single migration: `supabase/migrations/20260515220000_defence_packages.sql`.
@@ -8883,6 +9644,14 @@ latest login matters; here every view *is* the signal, and collapsing repeats
 would discard the navigation sequence the table exists to capture.
 
 ### Retention
+
+**Product-listing snapshots (not-as-described PR 2, 2026-09-28).** Table `product_listing_snapshots` (append-only: UPDATE always refused, DELETE only under `app.allow_append_only_delete`; unique `(dispute_id, line_item_gid, content_hash)`), images in `evidence-packs/{shop_id}/product-listings/{dispute_id}/`. Retention: `purge_expired_product_snapshots()` (SECURITY DEFINER) deletes rows older than the shop's `retention_days` (default 365) and returns their image paths; the `retention-cleanup` cron removes those objects (`productSnapshotImagesDeleted`). GDPR `shop/redact` removes the shop's whole `product-listings/` prefix alongside `admin_purge_shop` (which covers the table via its `shops` FK). Inert until PR 3's collector (behind `PRODUCT_LISTING_EVIDENCE_ENABLED`) writes rows.
+
+**Product-listing collector (not-as-described PR 3a, behind `PRODUCT_LISTING_EVIDENCE_ENABLED`, default OFF).** `lib/packs/sources/productSource.ts` runs in `buildPack`'s fan-out only when the flag is ON **and** `ctx.caseFamily === "product_not_as_described"` (`effectiveFamilyForDispute`, the same resolver the letter build uses — network code, Shopify's reason, the bank claim's reason, payment family). `collectProductListings` (`lib/packs/productListing/`) runs `PRODUCT_EVIDENCE_QUERY` (≤ 2 pages of 50 line items, 8 s timeout, registered for the drift dry-run), stores ≤ 3 images per line item (≤ 1 MB, content-addressed under `{shop}/product-listings/{dispute}/`) and inserts a `product_listing_snapshots` row (identical content reuses the existing row). Outcomes per line item: `present | absent | inaccessible | failed | custom_item | deleted`; never throws. The pack section (`packs.section.productListings`, source `shopify_product`) carries `listings[]` (snapshot id + hash + title, variant, ≤ 600-char excerpt, URL, retrieval date, image paths; highest-value line item first = the model's representative) and `outcomes[]`; `fieldsProvided` = `product_description` only when a listing was collected. A collected listing is `supporting` (never scored, D4) but citable (`isCitableCollectedListing`); merchant uploads are unchanged. On `failed`, exactly one retry: `collect_product_evidence` with the permanent dedupe key `collect-product:<pack>:retry1` (`enqueueJob(…, { onDuplicate: "return" })`); the retry re-runs only the query + snapshot and, if no letter is final/submitted and no save is pending, enqueues a normal rebuild (no pack credit: `consumePack` is idempotent per dispute). Checklist, flag ON only: `templateCollectorKey` scores templated `product_description` rows (b…0004/b…0013) against the collected listing instead of `order_confirmation`, and the built-in template's row becomes `auto_shopify`/`auto`. With the flag OFF nothing is called and payloads are byte-identical (`listings` is absent, not empty).
+
+**Product-listing PDF exhibit (not-as-described PR 3b).** When the letter's facts include a collected, bank-included listing, the defence PDF prints a "Product Listing" section after the line items (`buildProductListingExhibits`, `lib/defence/productListingExhibit.ts`): per line item the caption "Product listing as published in the store, retrieved {date}" (plan C2 — provenance, never "what the customer saw" or "may differ"), title, variant options, the ≤ 600-char excerpt, images and the store URL. Images: JPEG/PNG only (react-pdf reads nothing else), content-addressed dedupe, ≤ 6 per PDF and ≤ 900 KB total so the PDF stays under Shopify's 2 MB upload ceiling. The collector now requests Shopify's resized copy (`evidenceImageUrl`: `width=600&format=jpg`): live originals were 0.8–1.4 MB PNGs (over the 1 MB cap, so they would all have been skipped); the resized copies measured ~50 KB (JPEG) / ~400 KB (a transparent PNG). Absent section → nothing renders, so packs built with the collector OFF are unchanged. Presentation (prod canary 2026-09-28): text runs through `printable` (emoji/pictographs the PDF font cannot draw are stripped), the excerpt is cut at a word boundary (`excerptOf`), Shopify's implicit "Title" option is never printed, and the link text is shortened (`displayUrl`; the target stays the full URL). The collector skips line items with `requiresShipping = false` (shipping insurance, services, gift cards).
+
+**Product listing on the Evidence tab (not-as-described PR 3c).** `productListingNote` (`useEvidenceSections.ts`) reads the collector's section (`source: shopify_product`). Collected → the Product description row reads "Collected from your store on {date}: {title}" plus the merchant-only limitation "This is your listing as it is today…" (never bank-facing, plan C1). Not collected → the missing row explains why, in priority `inaccessible > failed > deleted > absent > custom_item` (`disputes.evidence.productListing.*`, 6 locales); `inaccessible` sets the action to "Approve product access". No collector section (flag OFF) → the tab is unchanged. The help article (`evidence-checklist`) is updated when the flag goes ON (PR 4), not before, so it never describes a feature merchants cannot see.
 
 90 days, swept daily by `/api/cron/cleanup-page-views` (03:30 UTC, `cronEnvGate`
 first per the cron rule). Batched at 5000 rows/run so the job stays bounded as

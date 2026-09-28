@@ -631,7 +631,17 @@
       "hideFullDefenseLetter": "Verteidigungsschreiben ausblenden",
       "defenseSectionSummary": "Zusammenfassung",
       "defenseSectionConclusion": "Schluss",
-      "defenseSectionArgument": "Argument"
+      "defenseSectionArgument": "Argument",
+      "productListing": {
+        "present": "Aus Ihrem Shop übernommen am {date}: {title}",
+        "currentListingOnly": "Das ist Ihre Produktinformation in der heutigen Fassung. Shopify speichert nicht, wie sie bei der Bestellung aussah.",
+        "absent": "Das Produkt dieser Bestellung hat in Ihrem Shop keine Beschreibung, daher gibt es keine Produktinformation zum Anhängen.",
+        "deleted": "Das Produkt dieser Bestellung wurde aus Ihrem Shop gelöscht, daher kann seine Produktinformation nicht angehängt werden.",
+        "customItem": "Diese Bestellung enthält einen individuellen Artikel ohne Produktinformation in Ihrem Shop.",
+        "failed": "Wir konnten die Produktinformation nicht von Shopify lesen. Wir versuchen es automatisch noch einmal.",
+        "inaccessible": "DisputeDesk kann Ihre Produkte nicht lesen. Öffnen Sie DisputeDesk im Shopify-Admin und bestätigen Sie den angefragten Produktzugriff.",
+        "reconnectForProducts": "Produktzugriff bestätigen"
+      }
     },
     "facts": {
       "title": "Falldetails",
@@ -1104,7 +1114,9 @@
         "reviewRequiredTitle": "Prüfung erforderlich, bevor dieses Paket eingereicht werden kann",
         "reviewRequiredBody": "DisputeDesk kann dieses Verteidigungspaket in der vorliegenden Form nicht einreichen. Generieren Sie es neu, um eine einreichbare Version zu erstellen. Vorschau und Neu generieren bleiben verfügbar; Abschließen und Einreichen sind gesperrt, bis eine neu generierte Version die Prüfung besteht.",
         "notEnoughEvidenceReturnedTitle": "Es gibt nichts zu argumentieren, bis Sie uns sagen, warum das Paket zurückkam",
-        "notEnoughEvidenceReturnedBody": "Der Zusteller hat dieses Paket an Sie zurückgesendet. Es gibt also keine Zustellung, über die sich streiten ließe, und für diese Bestellung kann nie eine Zustellbestätigung entstehen. Warten ändert daran nichts — es wird nichts mehr erfasst. Das Einzige, was jetzt noch hilft, finden Sie im Reiter „Nachweise“: Sagen Sie uns, ob der Kunde die Annahme verweigert oder das Paket nie abgeholt hat. Beides gilt nicht als gültige Rücksendung, und genau das nehmen wir in Ihre Stellungnahme auf."
+        "notEnoughEvidenceReturnedBody": "Der Zusteller hat dieses Paket an Sie zurückgesendet. Es gibt also keine Zustellung, über die sich streiten ließe, und für diese Bestellung kann nie eine Zustellbestätigung entstehen. Warten ändert daran nichts — es wird nichts mehr erfasst. Das Einzige, was jetzt noch hilft, finden Sie im Reiter „Nachweise“: Sagen Sie uns, ob der Kunde die Annahme verweigert oder das Paket nie abgeholt hat. Beides gilt nicht als gültige Rücksendung, und genau das nehmen wir in Ihre Stellungnahme auf.",
+        "notEnoughEvidenceClaimTitle": "Noch nichts in den Unterlagen beantwortet die Begründung der Bank",
+        "notEnoughEvidenceClaimBody": "Sie haben die Begründung der Bank hinzugefügt, daher beantwortet das Schreiben genau diese Begründung. Keiner der bisher gesammelten Nachweise geht darauf ein, deshalb wurde kein Schreiben erstellt – ein leeres würde den Fall verlieren. Fügen Sie hinzu, was die Checkliste im Tab „Nachweise“ anfordert; das Schreiben wird dann automatisch neu erstellt."
       },
       "inclusion": {
         "title": "Einschluss­prüfung",
@@ -1369,7 +1381,7 @@
     },
     "decisiveHint": {
       "fraud": "Lieferbestätigung, Unterschrift bei Empfang oder Geräte-/Sitzungskonsistenz",
-      "delivery": "Empfangsbestätigung des Versanddienstleisters oder übereinstimmende Rechnungs-/IP-Signale",
+      "delivery": "ein Zustellfoto oder eine Unterschrift vom Versanddienstleister oder eine Nachricht, in der der Kunde den Erhalt bestätigt",
       "product": "die Produktbeschreibung wie beworben und Ihre Rückerstattungsrichtlinie",
       "refund": "dokumentierte Rückerstattungsbearbeitung oder Händlerkommunikation",
       "subscription": "die Stornierungsrichtlinie und der Zeitplan der Kundenkommunikation",
@@ -1398,11 +1410,11 @@
         "fraudAvsOnly": "Die Zahlungsauthentifizierung stützt diesen Fall, aber zusätzliche entscheidende Beweise wie Lieferbestätigung, Geräte-/Sitzungskonsistenz oder Kundenbestätigung würden den Fall verbessern.",
         "strongAndModerate": "{strongLabel} und {moderateLabel} stützen diesen Fall; zusätzliche entscheidende Beweise würden den Fall stärken.",
         "strongOnly": "{label} stützt diesen Fall mit moderater Bestätigung; zusätzliche entscheidende Beweise würden den Fall stärken.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} stützen diesen Fall. Zusätzliche entscheidende Beweise wie {hint} würden ihn weiter stärken."
+        "moderateOnly": "{label1}{label2, select, empty { stützt} other { und {label2} stützen}} diesen Fall. Zusätzliche entscheidende Beweise wie {hint} würden ihn weiter stärken."
       },
       "weak": {
         "strongAlone": "{label} stützt diesen Fall, aber zusätzliche entscheidende Beweise (wie {hint}) würden den Fall stärken.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} bieten teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
+        "moderateOnly": "{label1}{label2, select, empty { bietet} other { und {label2} bieten}} teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
         "supportingOnly": "Der Fall ist schwach, weil das Beweispaket hauptsächlich unterstützende Dokumentation enthält, aber keine entscheidenden Beweise für {family}. {decisive} würde den Fall stärken.",
         "deliveryInTransit": "Derzeit schwach, weil keine Zustellbestätigung bei Shopify eingegangen ist – die Sendungsverfolgung ist aktiv, aber viele Zusteller melden die Zustellung nicht an Shopify zurück. Zeigt die Tracking-Seite des Zustellers das Paket als zugestellt, laden Sie diese Bestätigung als Zustellnachweis hoch. {decisive} würde den Fall stärken."
       },
@@ -1472,7 +1484,6 @@
         "lost": "Wir haben Ihre Nachweise am {date} eingereicht. Die Bank hat dennoch zugunsten des Karteninhabers entschieden.",
         "won": "Wir haben Ihre Nachweise am {date} eingereicht, und die Bank hat zu Ihren Gunsten entschieden."
       },
-      "notDefendedByUs": "Dieser Fall wurde entschieden, bevor DisputeDesk Nachweise dafür eingereicht hat.",
       "factor": {
         "avs_mismatch": "Die Rechnungsadresse der Karte stimmte nicht mit der Adresse der Bestellung überein",
         "cardholder_name_mismatch": "Der für die Karte registrierte Name unterschied sich vom Namen des Käufers",
@@ -1490,6 +1501,247 @@
         "title": "Was diesen Fall wahrscheinlich geschwächt hat",
         "caveat": "Der Kartenaussteller teilt seine genaue Begründung nicht mit. Dies sind die stärksten Risikosignale aus der vollständigen Bewertung, einschließlich der Signale, die nicht an die Bank übermittelt wurden.",
         "fraudRecommendation": "Empfehlung: Prüfen oder stornieren Sie zukünftige Hochrisikobestellungen manuell, wenn die Zahlungsprüfung fehlschlägt oder Karteninhaber und Käufer unterschiedliche Namen haben – insbesondere bei früheren Rückbuchungen."
+      }
+    },
+    "decidedResponse": {
+      "beforeInstall": "Dieser Fall wurde entschieden, bevor DisputeDesk installiert war.",
+      "sentBeforeInstall": "Eine Antwort wurde am {date} über Shopify gesendet, bevor DisputeDesk installiert war.",
+      "shopifySent": "Am {date} wurde eine Antwort über Shopify gesendet.",
+      "shopifySentNoDate": "Es wurde eine Antwort über Shopify gesendet.",
+      "noneBeforeDeadline": "Die Bank hat am {date} entschieden – vor Ablauf der Antwortfrist und bevor eine Antwort eingereicht wurde.",
+      "noneFiled": "Es wurde keine Antwort eingereicht.",
+      "holdReason": {
+        "merchant_conceded": "Sie haben sich entschieden, diesen Fall nicht anzufechten.",
+        "not_shipped": "DisputeDesk hat diesen Fall zurückgehalten: Die Bestellung wurde nie versandt, es gab also keine Zustellung, die wir der Bank wahrheitsgemäß hätten zeigen können.",
+        "refunded": "DisputeDesk hat diesen Fall zurückgehalten: Die Bestellung war bereits erstattet.",
+        "covered": "DisputeDesk hat diesen Fall zurückgehalten: Shopify Protect hat diese Bestellung abgedeckt.",
+        "plan_limit": "DisputeDesk konnte für diesen Fall keine Nachweise erstellen: Das Limit Ihres Tarifs war erreicht.",
+        "auto_build_off": "DisputeDesk hat für diesen Fall keine Nachweise erstellt: Die automatische Erstellung war für Ihren Shop ausgeschaltet.",
+        "awaiting_review": "DisputeDesk hat diesen Fall zurückgehalten: Er wartete vor dem Einreichen auf Ihre Prüfung.",
+        "thin_evidence": "DisputeDesk hat diesen Fall zurückgehalten: Die vorliegenden Nachweise waren für eine Argumentation zu dünn."
+      }
+    },
+    "decidedView": {
+      "header": {
+        "decided": "Entschieden:"
+      },
+      "hero": {
+        "chipLost": "Endgültig · nichts mehr einzureichen",
+        "chipWon": "Endgültig · das Geld gehört Ihnen"
+      },
+      "outcome": {
+        "titleLost": "Fall verloren",
+        "titleWon": "Fall gewonnen",
+        "amountLost": "Verlorener Betrag",
+        "amountRecovered": "Zurückerhalten"
+      },
+      "product": {
+        "one": "{title} ({count, plural, one {# Artikel} other {# Artikel}})",
+        "many": "{title} und {others} weitere ({count, plural, one {# Artikel} other {# Artikel}})"
+      },
+      "claim": {
+        "FRAUDULENT": "Kunde gibt an, diesen Kauf nicht getätigt zu haben",
+        "UNRECOGNIZED": "Kunde erkennt die Abbuchung nicht",
+        "PRODUCT_NOT_RECEIVED": "Produkt nicht erhalten",
+        "PRODUCT_UNACCEPTABLE": "Produkt entspricht nicht der Beschreibung",
+        "SUBSCRIPTION_CANCELLED": "Kunde gibt an, das Abo gekündigt zu haben",
+        "DUPLICATE": "Kunde gibt an, doppelt belastet worden zu sein",
+        "CREDIT_NOT_PROCESSED": "Kunde gibt an, dass die Erstattung nie bearbeitet wurde",
+        "GENERAL": "Allgemeiner Fall"
+      },
+      "who": {
+        "label": "Wer geantwortet hat:",
+        "weFiled": "DisputeDesk hat Ihre Nachweise am {date} eingereicht."
+      },
+      "summary": {
+        "claim": {
+          "FRAUDULENT": "Der Kunde hat seiner Bank mitgeteilt, dass er diesen Kauf nicht getätigt hat.",
+          "UNRECOGNIZED": "Der Kunde hat seiner Bank mitgeteilt, dass er die Abbuchung nicht erkennt.",
+          "PRODUCT_NOT_RECEIVED": "Der Kunde hat seiner Bank mitgeteilt, dass die Bestellung nie angekommen ist.",
+          "PRODUCT_UNACCEPTABLE": "Der Kunde hat seiner Bank mitgeteilt, dass das Produkt nicht der Beschreibung entsprach.",
+          "SUBSCRIPTION_CANCELLED": "Der Kunde hat seiner Bank mitgeteilt, dass er das Abo bereits gekündigt hatte.",
+          "DUPLICATE": "Der Kunde hat seiner Bank mitgeteilt, dass er doppelt belastet wurde.",
+          "CREDIT_NOT_PROCESSED": "Der Kunde hat seiner Bank mitgeteilt, dass eine Erstattung nie bearbeitet wurde.",
+          "GENERAL": "Der Kunde hat die Abbuchung bei seiner Bank angefochten."
+        },
+        "evidence": "{clauses}.",
+        "evidenceHeld": "{clauses} – es gab also keinen ehrlichen Fall, den man hätte vorbringen können.",
+        "response": {
+          "weFiledWon": "DisputeDesk hat diese Nachweise am {date} eingereicht, und die Bank hat zu Ihren Gunsten entschieden.",
+          "weFiledWonNoFacts": "DisputeDesk hat Ihre Nachweise am {date} eingereicht, und die Bank hat zu Ihren Gunsten entschieden.",
+          "weFiledLost": "DisputeDesk hat die Nachweise am {date} eingereicht, und die Bank hat dennoch zugunsten des Kunden entschieden.",
+          "shopifyWon": "Eine Antwort wurde über Shopify gesendet, und die Bank hat zu Ihren Gunsten entschieden.",
+          "shopifyLost": "Eine Antwort wurde über Shopify gesendet, und die Bank hat zugunsten des Kunden entschieden.",
+          "noneWon": "Die Bank hat zu Ihren Gunsten entschieden.",
+          "noneLost": "Es wurde keine Antwort eingereicht, und die Bank hat zugunsten des Kunden entschieden.",
+          "beforeInstallWon": "Die Bank hat zu Ihren Gunsten entschieden, bevor DisputeDesk installiert war.",
+          "beforeInstallLost": "Die Bank hat zugunsten des Kunden entschieden, bevor DisputeDesk installiert war."
+        },
+        "closingWon": "Die {amount} bleiben bei Ihnen.",
+        "closingNotShipped": "Festhängende Bestellungen zu versenden oder zu erstatten ist der sicherste Weg, das beim nächsten Mal zu vermeiden.",
+        "closingLost": "Die folgenden Schritte sind die wirksamsten Änderungen für das nächste Mal.",
+        "clause": {
+          "neverShipped": "sie wurde nie versandt",
+          "shippedAfterDispute": "sie wurde erst nach Eröffnung des Falls versandt",
+          "noDelivery": "nichts in den Unterlagen belegte eine Zustellung",
+          "avs_mismatch": "die Rechnungsadresse der Karte stimmte nicht mit der Bestellung überein",
+          "cardholder_name_mismatch": "der Name auf der Karte wich vom Namen des Käufers ab",
+          "prior_chargebacks": "der Kunde hatte schon einmal eine Abbuchung angefochten",
+          "ip_country_mismatch": "die Bestellung wurde aus einem anderen Land aufgegeben",
+          "ip_high_risk": "der Checkout kam aus einem Netzwerk mit hohem Risiko",
+          "no_signature_on_fraud": "niemand hat die Zustellung unterschrieben",
+          "weak_identity_signals": "nur das Land des Kunden ließ sich bestätigen",
+          "avs_match": "die Rechnungsadresse stimmte mit der Karte überein",
+          "signature_confirmed": "die Zustellung wurde unterschrieben",
+          "delivery_confirmed": "der Versanddienstleister hat die Zustellung bestätigt",
+          "priorUndisputed": "{count, plural, one {der Kunde hatte schon einmal ohne Probleme bei Ihnen bestellt} other {der Kunde hatte schon # Mal ohne Probleme bei Ihnen bestellt}}",
+          "threeDs": "die Zahlung hat 3-D Secure bestanden"
+        }
+      },
+      "facts": {
+        "titleLost": "Was wir in den Unterlagen gesehen haben",
+        "titleWon": "Was den Fall getragen hat",
+        "subLost": "Fakten aus der Bestellung und unseren Unterlagen. Das ist nicht die Begründung der Bank.",
+        "subWon": "Nachweise in der von DisputeDesk eingereichten Antwort",
+        "subRecord": "Fakten aus der Bestellung und unseren Unterlagen",
+        "weightPill": "Banken gewichten das stark",
+        "noteNotReceived": "Bei einer Nicht-Erhalten-Reklamation stellt die Bank eine Frage: Wurde geliefert? Nichts in den Unterlagen sagte ja.",
+        "title": {
+          "neverShipped": "Die Bestellung wurde nie versandt",
+          "shippedAfterDispute": "Die Bestellung wurde erst nach Eröffnung des Falls versandt",
+          "noTracking": "Es gab weder Sendungsnummer noch Zustellbestätigung",
+          "priorUndisputed": "{count, plural, one {# frühere Bestellung dieses Kunden wurde nie angefochten} other {# frühere Bestellungen dieses Kunden wurden nie angefochten}}",
+          "threeDs": "Die Zahlung hat 3-D Secure bestanden"
+        },
+        "source": {
+          "order": "Aus Shopify-Bestelldaten",
+          "payment": "Aus Shopify-Zahlungsdaten",
+          "customer": "Aus Shopify-Kundendaten",
+          "ip": "Aus der IP-Adresse beim Checkout",
+          "carrier": "Aus der Sendungsverfolgung",
+          "unfulfilled": "Versandstatus: nicht versandt · Aus Shopify-Bestelldaten",
+          "shipped": "Versandt am {date} · Aus Shopify-Bestelldaten"
+        }
+      },
+      "checklist": {
+        "title": "Was bei dieser Art von Fall gewinnt",
+        "thisCase": "Dieser Fall",
+        "item": {
+          "tracking": "Sendungsverfolgung bis zur Adresse des Kunden",
+          "deliveryConfirmation": "Zustellbestätigung (Unterschrift über Ihrem Schwellenwert)",
+          "promisedDelivery": "Beim Checkout zugesagtes Lieferdatum",
+          "communication": "Nachweis der Kundenkommunikation",
+          "addressMatch": "Rechnungsadresse und Sicherheitscode stimmen überein",
+          "deliveryToBilling": "Zustellung an die Rechnungsadresse",
+          "priorOrders": "Frühere, nicht angefochtene Bestellungen desselben Kunden",
+          "threeDs": "3-D-Secure-Authentifizierung",
+          "productDescription": "Produktbeschreibung, die dem Versandten entspricht",
+          "refundPolicy": "Beim Checkout angezeigte Rückgabe- und Erstattungsrichtlinie",
+          "refundRecord": "Erstattungsnachweis oder Begründung, warum keine fällig war",
+          "noReturn": "Keine Rücksendung eingegangen",
+          "cancellationPolicy": "Bei der Anmeldung angezeigte Kündigungsbedingungen",
+          "activityAfterCancel": "Kundenaktivität nach dem Kündigungsdatum",
+          "duplicateExplanation": "Erklärung, dass es separate Käufe waren",
+          "orderConfirmation": "Bestellbestätigung",
+          "storePolicies": "Shop-Richtlinien"
+        },
+        "state": {
+          "had": "Vorhanden",
+          "policy": "In Richtlinie",
+          "missing": "Fehlt",
+          "none": "Keine",
+          "notUsed": "Nicht genutzt",
+          "notChecked": "Nicht geprüft"
+        },
+        "coverage": "der Nachweise, auf die Banken achten, lagen in diesem Fall vor"
+      },
+      "next": {
+        "title": "Beim nächsten Mal",
+        "shipOrCancel": {
+          "title": "Versenden oder stornieren und erstatten, bevor der Kunde reklamiert",
+          "detail": {
+            "chargeback": "Diese Bestellung lag {days, plural, one {# Tag} other {# Tage}} unversandt, bevor die Rückbuchung kam.",
+            "inquiry": "Diese Bestellung lag {days, plural, one {# Tag} other {# Tage}} unversandt, bevor die Anfrage kam."
+          },
+          "detailLate": "Sie wurde erst versandt, nachdem der Kunde reklamiert hatte."
+        },
+        "shareTracking": {
+          "title": "Teilen Sie die Sendungsverfolgung beim Versand mit dem Kunden",
+          "detail": "Diese Bestellung hatte keine Sendungsnummer."
+        },
+        "holdHighRisk": {
+          "title": "Halten Sie Bestellungen zurück, die Shopify als hohes Risiko markiert",
+          "detail": "Shopify hat diese Bestellung vor dem Versand markiert."
+        },
+        "threeDs": {
+          "title": "Aktivieren Sie 3-D Secure für riskante Bestellungen",
+          "detail": "Authentifizierte Zahlungen verlagern die Haftung für Betrugsreklamationen auf die kartenausgebende Bank."
+        },
+        "selfServeCancel": {
+          "title": "Ermöglichen Sie Kündigungen per Self-Service und bestätigen Sie sie per E-Mail",
+          "detail": "Kunden, die leicht kündigen können, wenden sich selten an ihre Bank."
+        },
+        "describeProduct": {
+          "title": "Beschreiben Sie Produkte genau und zeigen Sie, was versandt wird",
+          "detail": "Bei Reklamationen wegen Abweichung von der Beschreibung zählt, ob das Angebot dem Gelieferten entsprach."
+        },
+        "confirmRefunds": {
+          "title": "Erstatten Sie zügig und senden Sie eine datierte Bestätigung per E-Mail",
+          "detail": "Eine Erstattungsbestätigung beantwortet eine Reklamation wegen nicht bearbeiteter Erstattung direkt."
+        },
+        "sub": "Schritte für künftige Bestellungen, abgeleitet aus diesem Fall"
+      },
+      "timeline": {
+        "title": "Was passiert ist",
+        "opened": "Fall eröffnet",
+        "openedDetail": "{claim}. Antwort fällig bis {due}.",
+        "openedDetailNoDue": "{claim}.",
+        "gathered": "Nachweise gesammelt",
+        "gatheredNoDelivery": "Keine Sendungsverfolgung oder Zustellbestätigung zur Bestellung.",
+        "held": {
+          "not_shipped": {
+            "title": "Zurückgehalten: Bestellung nicht versandt",
+            "detail": "Nichts in den Unterlagen belegte eine Zustellung, daher haben wir nicht eingereicht."
+          },
+          "refunded": {
+            "title": "Zurückgehalten: bereits erstattet",
+            "detail": "Wir haben nicht eingereicht, weil die Bestellung bereits erstattet war."
+          },
+          "covered": {
+            "title": "Zurückgehalten: durch Shopify Protect abgedeckt",
+            "detail": "Wir haben nicht eingereicht, weil Shopify Protect diese Bestellung abdeckt."
+          },
+          "thin_evidence": {
+            "title": "Zurückgehalten: zu dünne Nachweise",
+            "detail": "Wir haben nicht eingereicht, weil die Nachweise für eine Argumentation zu dünn waren."
+          },
+          "awaiting_review": {
+            "title": "Zurückgehalten: wartet auf Ihre Prüfung",
+            "detail": "Die Regeln dieses Shops reichen nicht ohne Ihre Freigabe ein."
+          },
+          "plan_limit": {
+            "title": "Nicht erstellt: Tariflimit erreicht",
+            "detail": "Das Paketlimit Ihres Tarifs war erreicht."
+          },
+          "auto_build_off": {
+            "title": "Nicht erstellt: automatische Erstellung aus",
+            "detail": "Die automatische Erstellung von Nachweisen war für Ihren Shop ausgeschaltet."
+          },
+          "merchant_conceded": {
+            "title": "Sie haben sich gegen eine Anfechtung entschieden"
+          }
+        },
+        "emailed": "Sie wurden per E-Mail informiert",
+        "emailedFatalLoss": "Wir haben erklärt, warum dieser Fall nicht wahrheitsgemäß verteidigt werden konnte.",
+        "emailedPlanLimit": "Wir haben Ihnen mitgeteilt, dass das Limit Ihres Tarifs erreicht war.",
+        "weFiled": "DisputeDesk hat Ihre Nachweise eingereicht",
+        "weFiledDetail": "In Shopify gespeichert und an die Bank weitergeleitet.",
+        "shopifySent": "Antwort über Shopify gesendet",
+        "cancelled": "Sie haben die Bestellung storniert",
+        "lost": "Verloren",
+        "lostDetail": "{amount} wurden nicht zurückerstattet.",
+        "won": "Gewonnen",
+        "wonDetail": "{amount} zurückerhalten."
       }
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",
@@ -2024,7 +2276,59 @@
         "generic": "Dieser Beweis benötigt Ihre Bestätigung, bevor er verwendet werden kann."
       }
     },
-    "multipleOnOrder": "{index} von {total} zu dieser Bestellung"
+    "multipleOnOrder": "{index} von {total} zu dieser Bestellung",
+    "bankClaim": {
+      "badge": "Aktion erforderlich",
+      "subReopened": "Von Shopify wieder geöffnet",
+      "subGeneral": "Kein konkreter Grund von der Bank",
+      "title": "Begründung der Bank hinzufügen",
+      "introReopened": "Die Bank verlangt eine neue Antwort. Ihre Begründung ist nur in Shopify sichtbar – fügen Sie sie hier ein, damit die Antwort genau auf die Frage eingeht.",
+      "introGeneral": "Die Bank hat für diese Rückbuchung keinen konkreten Grund angegeben. Ihre Begründung ist nur in Shopify sichtbar – fügen Sie sie hier ein, damit die Antwort genau auf die Frage eingeht.",
+      "dueLabel": "Antwort fällig am",
+      "dueToday": "Heute fällig",
+      "step1Title": "Begründung in Shopify finden",
+      "step1Path": "Bestellung {order} → Rückbuchungsdetails → Begründung des Kartenausstellers",
+      "openInShopify": "Rückbuchung in Shopify öffnen ↗",
+      "step2Title": "Datei der Begründung hochladen oder Text einfügen",
+      "step2Body": "Laden Sie die Begründung aus Shopify herunter (meist ein PDF) und ziehen Sie sie hierher. Keine Begründung angezeigt? Setzen Sie stattdessen das Häkchen.",
+      "textLabel": "Begründung der Bank",
+      "countRequired": "Erforderlich",
+      "countChars": "{count, plural, =1 {# Zeichen} other {# Zeichen}}",
+      "countNotNeeded": "Nicht nötig",
+      "textPlaceholder": "z. B. Der Karteninhaber gibt an, den Artikel nicht erhalten zu haben, und die Sendungsverfolgung zeigt keine Zustellung…",
+      "privacyNote": "Wird nur zur Ausrichtung der Antwort verwendet. Nie zitiert oder an die Bank zurückgeschickt.",
+      "noClaimShown": "Shopify zeigt für diese Rückbuchung keine Begründung an",
+      "noClaimShownHelp": "Banken liefern nicht immer eine. DisputeDesk erstellt die Antwort dann anhand des Grundcodes.",
+      "statusHold": "Die Antwort ist angehalten, bis die Begründung hinzugefügt ist.",
+      "statusReady": "Bereit zum Speichern.",
+      "statusSaved": "Gespeichert – DisputeDesk erstellt die Antwort neu.",
+      "save": "Begründung speichern",
+      "saved": "Gespeichert",
+      "errorWindowClosed": "Shopify hat die Beweise für diese Rückbuchung bereits weitergeleitet, die Begründung kann nicht mehr hinzugefügt werden.",
+      "errorGeneric": "Die Begründung konnte nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut.",
+      "daysCount": "{count, plural, =1 {# Tag} other {# Tage}}",
+      "tabUpload": "Datei hochladen",
+      "tabPaste": "Text einfügen",
+      "countFile": "1 Datei",
+      "dropTitle": "Datei der Begründung hier ablegen oder <browse>durchsuchen</browse>",
+      "dropHint": "PDF, TXT, DOC, DOCX, EML oder Bild · bis 10 MB",
+      "fileMetaReady": "{size} · Bereit zum Speichern",
+      "fileMetaUploaded": "{size} · Hochgeladen",
+      "replace": "Ersetzen",
+      "remove": "Entfernen",
+      "statusSaving": "Wird gespeichert…",
+      "errorFileType": "Laden Sie eine PDF-, TXT-, DOC-, DOCX-, RTF-, EML- oder Bilddatei hoch.",
+      "errorFileSize": "Die Datei ist größer als 10 MB.",
+      "savedTitle": "Begründung der Bank erhalten – Antwort wird neu erstellt",
+      "savedTitleDone": "Begründung der Bank erhalten – Antwort aktualisiert",
+      "savedSummaryNoClaim": "Keine Begründung in Shopify – Grundcode wird verwendet",
+      "savedSummaryText": "{count, plural, =1 {Eingefügter Text · # Zeichen} other {Eingefügter Text · # Zeichen}}",
+      "savedDue": "Antwort fällig am {date}",
+      "cancel": "Abbrechen",
+      "editClaim": "Begründung bearbeiten",
+      "portalBody": "DisputeDesk reicht für diese Rückbuchung keine Antwort ein, bis die Begründung der Bank hinzugefügt ist. Sie ist nur in Shopify sichtbar und wird in der DisputeDesk-App im Shopify-Admin hinzugefügt.",
+      "portalCta": "In Shopify hinzufügen"
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
@@ -2088,7 +2392,8 @@
         "comms": "Kommunikation",
         "other": "Zusätzliche Belege",
         "access_log": "Aktivitätsprotokoll"
-      }
+      },
+      "productListings": "Produktinformationen ({count})"
     },
     "title": "Bewispakete",
     "subtitle": "Bewispakete anzeigen und verwalten",
@@ -3295,7 +3600,7 @@
       },
       "evidenceChecklist": {
         "title": "Die Beweischeckliste erklärt",
-        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten."
+        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten.\n\nNicht wie beschrieben: DisputeDesk übernimmt die Produktinformation automatisch aus Ihrem Shop (Titel, Beschreibung, bis zu drei Bilder und die gewählte Variante) und fügt sie der Verteidigung hinzu. Es ist Ihre Produktinformation in der heutigen Fassung; Shopify speichert nicht, wie sie bei der Bestellung aussah. Kann sie nicht übernommen werden (etwa weil das Produkt gelöscht wurde), nennt die Checkliste den Grund."
       },
       "defenseLetterRebuttal": {
         "title": "Verteidigungsschreiben und automatischer Widerredestext",
@@ -3440,6 +3745,10 @@
       "returnedToSenderParcels": {
         "title": "Wenn ein Paket an den Absender zurückgeht",
         "body": "Manchmal kann ein Zusteller eine Sendung nicht zustellen und bringt das Paket zu Ihnen zurück. Der Kunde hat die Bestellung nie erhalten — und wenn er die Zahlung später anficht, ändert das, worum es im Fall gehen kann und worum nicht.\n\n**Was DisputeDesk automatisch tut**\n\nSobald wir ein Rücksendeereignis des Zustellers erfassen:\n\n1. Zeigen wir die Zustellzeile als \"An den Absender zurückgesendet\" mit dem Datum des Zustellers, statt sie wie ein nie gescanntes Etikett zu behandeln.\n2. Entfernen wir jedes Argument, das darauf beruht, dass der Kunde die Ware nie zurückgeschickt hat. Shopify zeigt den Rücksendestatus womöglich weiterhin als \"keine Rücksendung\", weil nie eine Rücksendung beantragt wurde — aber die Ware ist bei Ihnen, und ein Argument, das das Gegenteil behauptet, wäre unwahr.\n3. Stufen wir den Fall als aussichtsarm ein und verhindern jede automatische Übermittlung, auch am Fristtag. Für ein zurückgesendetes Paket kann es nie eine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden.\n\n**Was wir von Ihnen brauchen**\n\nNur eines, und zwar genau das, was wir nicht sehen können: **warum das Paket zurückkam.** Die Frage finden Sie im Reiter \"Nachweise\".\n\n- **Der Kunde hat die Annahme verweigert** oder **das Paket nie an der Abholstelle abgeholt** — das ist ein Argument wert. Nach EU-Verbraucherrecht ist es weder eine gültige Rücksendung noch eine wirksame Ausübung des Widerrufsrechts, ein Paket einfach nicht anzunehmen. Wir nehmen das für Sie in die Stellungnahme auf.\n- **An die Adresse konnte nicht zugestellt werden** — wir halten es fest, nehmen es aber nicht in die Stellungnahme auf. Es hilft dem Fall nicht und wirft eine Frage auf, die niemand gestellt hat.\n\nWir fragen außerdem, was nach der Rücksendung mit der Ware geschehen ist. Diese Antwort dient Ihren und unseren Unterlagen; sie erscheint nie in der Stellungnahme, die in Ihrem Namen übermittelt wird.\n\n**Wenn Sie Ware und Zahlung behalten haben**\n\nDie ehrliche Antwort ist meist eine Rückerstattung. Der Kunde hat bezahlt, die Bestellung nie erhalten, und die Ware ist wieder bei Ihnen. Den Fall zu bestreiten gelingt selten und kann Sie zusätzlich die Fallgebühr kosten. Ob Sie erstatten, ist Ihre Entscheidung — DisputeDesk tut es nicht für Sie — aber die angezeigte Einschätzung bildet die tatsächlichen Chancen ab, nicht die optimistischen.\n\n**Hinweis zur Frist**\n\nWenn Sie zusagen, die Belastung anzupassen, erwarten manche Zahlungsanbieter die Rückerstattung innerhalb eines kurzen Zeitfensters (Klarna storniert die Zahlung zum Beispiel automatisch, wenn die Erstattung nicht rechtzeitig erfolgt). Erstatten Sie zügig, nachdem Sie sich dazu verpflichtet haben."
+      },
+      "bankClaim": {
+        "title": "Warum DisputeDesk nach der Begründung der Bank fragt",
+        "body": "Bei den meisten Rückbuchungen sagt der Grundcode DisputeDesk, was der Kunde beanstandet, und die Antwort wird darauf aufgebaut. Zwei Arten sind anders:\n\n• Wieder geöffnete Rückbuchungen: Shopify hat eine Rückbuchung, die Sie bereits beantwortet haben, wieder auf „Antwort erforderlich“ gesetzt. Die Bank verlangt eine neue Antwort, und Ihre frühere Antwort erledigt sie nicht mehr.\n• „Allgemeine“ Rückbuchungen ohne Netzwerk-Grundcode: Die Bank hat nicht angegeben, um welche Art von Rückbuchung es sich handelt.\n\nIn beiden Fällen sagt nur die Begründung der Bank (Shopify nennt sie Begründung des Kartenausstellers), worauf die Bank eine Antwort erwartet. Shopify zeigt sie in den Rückbuchungsdetails auf der Bestellseite in Ihrem Shopify-Adminbereich an, gibt sie aber nicht an Apps weiter. DisputeDesk kann sie daher nicht selbst lesen.\n\nSo gehen Sie vor:\n1. Öffnen Sie die Rückbuchung in DisputeDesk und nutzen Sie „Bestellung in Shopify öffnen“.\n2. Suchen Sie die Begründung der Bank in den Rückbuchungsdetails und laden Sie sie herunter (meist ein PDF) oder kopieren Sie den Text.\n3. Laden Sie die Datei hoch oder fügen Sie den Text in die Karte „Begründung der Bank hinzufügen“ ein und speichern Sie. Wenn Shopify keine Begründung anzeigt, setzen Sie stattdessen das Häkchen bei „Shopify zeigt für diese Rückbuchung keine Begründung an“ – Banken liefern nicht immer eine.\n\nDisputeDesk erstellt die Antwort dann neu, sodass sie auf die Begründung eingeht. Die Begründung dient nur dazu, zu entscheiden, worauf die Antwort eingehen muss; sie wird nie zitiert oder an die Bank zurückgeschickt.\n\nBis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort, auch nicht zur Frist. Wir benachrichtigen Sie außerdem per E-Mail, sobald eine Rückbuchung sie benötigt."
       }
     },
     "embedded": {
@@ -4703,7 +5012,9 @@
       "support_note_added": "Notiz hinzugefügt",
       "admin_override": "Support-Anpassung",
       "admin_override_cleared": "Support-Anpassung zurückgenommen",
-      "dispute_resynced": "Streitfall aus Shopify aktualisiert"
+      "dispute_resynced": "Streitfall aus Shopify aktualisiert",
+      "response_cycle_reopened": "Wieder eröffnet – neue Antwort erforderlich",
+      "escalated_to_chargeback": "Von Anfrage zu Rückbuchung eskaliert"
     },
     "actors": {
       "merchant_user": "Sie",
@@ -6055,7 +6366,8 @@
       "feature_blocked": "Abrechnungsaktion erforderlich",
       "subscription_expired": "Abrechnungsaktion erforderlich",
       "payment_failed": "Abrechnungsaktion erforderlich",
-      "auto_build_off": "Automatisierung pausiert"
+      "auto_build_off": "Automatisierung pausiert",
+      "bank_claim_needed": "Begründung der Bank fehlt"
     },
     "attentionBlockingSub": {
       "approval_gate": "DisputeDesk wartet auf Ihre Freigabe, um das Beweispaket zu speichern",
@@ -6064,7 +6376,8 @@
       "feature_blocked": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
       "subscription_expired": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
       "payment_failed": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
-      "auto_build_off": "Die automatische Beweiserstellung ist in Ihren Einstellungen deaktiviert"
+      "auto_build_off": "Die automatische Beweiserstellung ist in Ihren Einstellungen deaktiviert",
+      "bank_claim_needed": "Übernehmen Sie die Begründung der Bank aus Shopify – DisputeDesk sendet keine Antwort, bevor sie hinzugefügt ist"
     },
     "outcomeCard": {
       "title": "Ergebnis",

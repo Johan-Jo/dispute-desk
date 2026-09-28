@@ -35,6 +35,7 @@ const BLOCKING_LABELED_REASONS = new Set([
   "subscription_expired",
   "payment_failed",
   "auto_build_off",
+  "bank_claim_needed",
 ]);
 
 /** Attention pill label (shown only when attention ≠ none on the

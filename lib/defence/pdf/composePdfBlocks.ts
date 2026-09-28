@@ -13,27 +13,26 @@
  */
 
 import { renderThesis } from "./renderThesis";
-import { isSectionDeniedForModule } from "../sectionVisibility";
-import { SECTION_ORDER, SECTION_TITLES } from "../render/sections";
+import { isSectionShown } from "../sectionVisibility";
+import { SECTION_ORDER, sectionTitleFor } from "../render/sections";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
   PackageMode,
   ReasonCodeFamilyKey,
+  ThesisContext,
 } from "../types";
 
-// SECTION_HEADINGS lives in `lib/defence/render/sections.ts` as
-// SECTION_TITLES — both renderers share the same map. Local alias for
-// readability inside this file.
-const SECTION_HEADINGS = SECTION_TITLES;
+// Headings come from `sectionTitleFor` (lib/defence/render/sections.ts),
+// shared with the HTML view.
 
 /** Hard-coded deterministic fallback prose. Currently only
  *  fulfillmentArgument has one — Phase 5 may add others on a per-
  *  family basis. Every fallback string MUST pass the composed
  *  validator just like any other prose. */
 const FULFILLMENT_FALLBACK_TEXT =
-  "The merchant's order record marks the order as fulfilled. " +
+  "The merchant's order record marks the order as shipped. " +
   "No separate delivery, access-use, or service-completion claim is " +
   "made in this section unless supported by approved evidence.";
 
@@ -47,6 +46,8 @@ export interface ComposePdfBlocksInput {
    *  module are dropped from the output regardless of LLM emission. */
   moduleKey: string | null;
   fulfillmentStatus: string | null;
+  /** Order name + dispute-opened date for thesis lines that state them. */
+  caseContext?: ThesisContext;
   /**
    * F6 — CANONICAL CLAIM AUTHORITY for the deterministic fulfilment fallback.
    *
@@ -84,7 +85,7 @@ export function composePdfBlocks(
     // Per-module section deny list — sections ruled out for this
     // reason code are dropped before any fallback/LLM logic runs.
     // See lib/defence/sectionVisibility.ts.
-    if (isSectionDeniedForModule(sectionKey, input.moduleKey)) {
+    if (!isSectionShown(input.narrative, sectionKey, input.moduleKey)) {
       continue;
     }
 
@@ -108,8 +109,30 @@ export function composePdfBlocks(
     const hasLlm = !sectionOmitted && llmText.length > 0;
 
     if (!hasFallback && !hasLlm) {
-      // Section is completely absent from the rendered PDF — produce
-      // no block. Renderer drops the heading too.
+      // The conclusion's request line is a conclusion on its own: a record-
+      // built letter leaves the body empty rather than restate the record
+      // (lib/defence/shipmentRecordSections.ts).
+      if (sectionKey === "conclusion") {
+        const request = renderThesis({
+          sectionKey,
+          familyKey: input.familyKey,
+          packageMode: input.packageMode,
+          approvedFacts: input.approvedFacts,
+          caseContext: input.caseContext,
+        });
+        if (request) {
+          blocks.push({
+            sectionKey,
+            heading: sectionTitleFor(sectionKey, input.approvedFacts),
+            thesisText: request,
+            llmText: "",
+            fallbackText: "",
+            usedFactIds: [],
+          });
+        }
+      }
+      // Any other section is completely absent from the rendered PDF — no
+      // block, and the renderer drops the heading too.
       continue;
     }
 
@@ -117,20 +140,29 @@ export function composePdfBlocks(
     // prose. Template returns "" when its required tokens don't
     // resolve — the renderer drops the blockquote entirely in that
     // case.
-    const thesisText = renderThesis({
-      sectionKey,
-      familyKey: input.familyKey,
-      packageMode: input.packageMode,
-      approvedFacts: input.approvedFacts,
-    });
+    // Counsel v2: the checked, model-written punchline replaces the
+    // templated headline above the summary.
+    // Counsel v2 sets `headline` (possibly empty): the templated pull-quote
+    // is never rendered for those letters.
+    const counsel = sectionKey === "executiveSummary" && input.narrative.headline !== undefined;
+    const thesisText = counsel
+      ? (input.narrative.headline ?? "").trim()
+      : renderThesis({
+          sectionKey,
+          familyKey: input.familyKey,
+          packageMode: input.packageMode,
+          approvedFacts: input.approvedFacts,
+          caseContext: input.caseContext,
+        });
 
     blocks.push({
       sectionKey,
-      heading: SECTION_HEADINGS[sectionKey],
+      heading: sectionTitleFor(sectionKey, input.approvedFacts),
       thesisText,
       llmText: hasLlm ? llmText : "",
       fallbackText,
       usedFactIds: section.usedFactIds.slice(),
+      ...(section.source === "record" ? { recordBuilt: true } : {}),
     });
   }
 

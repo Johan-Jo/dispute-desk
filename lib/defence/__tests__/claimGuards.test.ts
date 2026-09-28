@@ -398,8 +398,9 @@ describe("claimGuards", () => {
 
 describe("claimGuards — negated statements are not claims (validator 4)", () => {
   // Verbatim conclusion from cay-collective #13195 (prod, 2026-08-18):
-  // the credit_not_processed_no_return strategy INSTRUCTS this sentence,
-  // and validator 3 failed it as an affirmative refund claim.
+  // the credit_not_processed_no_return strategy v1 INSTRUCTED this sentence
+  // (v2, 2026-09-28, no longer does), and validator 3 failed it as an
+  // affirmative refund claim.
   const CAY_13195_CONCLUSION =
     "The available records indicate that no return was initiated by the " +
     "customer, and no refund was issued. The submitted evidence is " +
@@ -414,7 +415,11 @@ describe("claimGuards — negated statements are not claims (validator 4)", () =
         fact({ id: "no_return_initiated#shopify_order", category: "no_return_initiated" }),
       ],
     });
-    expect(result.failures).toEqual([]);
+    expect(result.failures.filter((f) => f.guardId === "refund_processed")).toEqual([]);
+    // Since Fix C (2026-09-27) this letter's "no return was initiated by the
+    // customer" is itself banned — see the return-absence suite below — and
+    // since rule 10 (2026-09-28) so is opening with "the available records".
+    expect(result.failures.map((f) => f.guardId).sort()).toEqual(["return_claim_beyond_record", "undersells_case"]);
   });
 
   it("an affirmative refund claim still fires with the same fact set", () => {
@@ -562,5 +567,147 @@ describe("claimGuards — negated statements are not claims (validator 4)", () =
 
     const boundary = "no return was initiated, and a refund was issued";
     expect(isNegatedContext(boundary, boundary.indexOf("refund was"))).toBe(false);
+  });
+});
+
+describe("claimGuards — return / contact absence claims are banned outright (Fix C, C2)", () => {
+  const noReturn = fact({ id: "no_return_initiated#shopify_order", category: "no_return_initiated" });
+
+  it("fails every absence paraphrase, even with the no_return_initiated fact cited", () => {
+    for (const text of [
+      "The customer did not request a return.",
+      "The cardholder never asked for a refund before disputing.",
+      "No return was initiated by the customer.",
+      "No return request was made.",
+      "No refund has been requested.",
+      "There is no return request on record.",
+      "The customer has not initiated a return or exchange.",
+    ]) {
+      const r = runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [noReturn] });
+      expect(r.failures.map((f) => f.guardId), text).toContain("return_claim_beyond_record");
+    }
+  });
+
+  it("fails contact-history claims", () => {
+    for (const text of [
+      "The customer never contacted the merchant about this order.",
+      "The cardholder did not reach out before filing.",
+      "The customer made no complaint.",
+      "No complaint was received through any channel.",
+    ]) {
+      const r = runClaimGuards({ narrativeSections: narrative({ executiveSummary: { text } }), approvedFacts: [noReturn] });
+      expect(r.failures.map((f) => f.guardId), text).toContain("contact_claim_beyond_record");
+    }
+  });
+
+  it("allows the sanctioned sentence and ordinary refund facts", () => {
+    for (const text of [
+      "No return has been recorded in Shopify for this order.",
+      "No refund was issued.",
+      "The order was fulfilled on 2026-09-01.",
+    ]) {
+      const r = runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [noReturn] });
+      expect(
+        r.failures.filter((f) => f.guardId === "return_claim_beyond_record" || f.guardId === "contact_claim_beyond_record"),
+        text,
+      ).toEqual([]);
+    }
+  });
+});
+
+describe("policy and record bans (base prompt rule 8d, bank-claim plan F1)", () => {
+  const ids = (text: string) =>
+    runClaimGuards({ narrativeSections: narrative({ policyArgument: { text } }), approvedFacts: [] }).failures.map(
+      (f) => f.guardId,
+    );
+
+  it.each([
+    "Neither policy was recorded as accepted at checkout for this order.",
+    "The merchant's refund and shipping policies are on record, though acceptance at checkout was not captured for this transaction.",
+    "While the available evidence does not confirm explicit acceptance of these policies at checkout, they are published.",
+  ])("fails a sentence admitting non-acceptance: %s", (text) => {
+    expect(ids(text)).toContain("policy_acceptance_disclaimed");
+  });
+
+  it.each([
+    "Under the merchant's refund policy, any refund is contingent upon the return of the goods.",
+    "The refund policy requires the customer to contact the merchant first.",
+    "The merchant's policy provides that returns are accepted within 30 days.",
+  ])("fails a sentence describing policy terms: %s", (text) => {
+    expect(ids(text)).toContain("policy_terms_beyond_record");
+  });
+
+  it("fails a claim that the policy was available at the time of purchase", () => {
+    expect(ids("The available evidence supports that this policy was accessible to the customer at the time of purchase.")).toContain(
+      "policy_timing_beyond_record",
+    );
+  });
+
+  it("fails narrated absence of evidence", () => {
+    expect(ids("No product listing fact is available in the approved record for this response.")).toContain(
+      "record_absence_narrated",
+    );
+  });
+
+  it.each([
+    "The merchant's refund and shipping policies are published on its store.",
+    "The merchant's refund policy is published at https://shop.example/policies/refund-policy.",
+    "No return has been recorded in Shopify for this order.",
+    "The carrier accepted the parcel on 3 March, and the merchant's shipping policy is published on its store.",
+    "The customer accepted the merchant's refund policy at checkout.",
+  ])("passes what the record supports: %s", (text) => {
+    expect(ids(text)).toEqual([]);
+  });
+});
+
+describe("underselling the merchant's case is banned (base prompt rule 10)", () => {
+  const ids = (text: string) =>
+    runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [] }).failures.map(
+      (f) => f.guardId,
+    );
+
+  it.each([
+    "The available evidence supports that the order was delivered.",
+    "However, the merchant acknowledges that documentation on product conformity is limited.",
+    "Evidence on this point is limited, and the response is framed accordingly.",
+    "This response presents the documented record as submitted.",
+    "Despite limited evidence, the carrier confirmed delivery.",
+  ])("fails: %s", (text) => {
+    expect(ids(text)).toContain("undersells_case");
+  });
+
+  it.each([
+    "The carrier confirmed delivery on 21 July 2026.",
+    "These records support a cardholder-authorized transaction.",
+    "The merchant requests that this chargeback be reversed in its favour.",
+  ])("passes: %s", (text) => {
+    expect(ids(text)).not.toContain("undersells_case");
+  });
+});
+
+describe("policy terms described without the word 'policy'", () => {
+  it("fails 'under the merchant's published terms'", () => {
+    const failures = runClaimGuards({
+      narrativeSections: narrative({
+        executiveSummary: { text: "Without a completed return, no refund obligation has arisen under the merchant's published terms." },
+      }),
+      approvedFacts: [],
+    }).failures.map((f) => f.guardId);
+    expect(failures).toContain("policy_terms_beyond_record");
+  });
+});
+
+describe("complaint absence in any wording is beyond the record (canary #101111)", () => {
+  const ids = (text: string) =>
+    runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [] }).failures.map((f) => f.guardId);
+  it.each([
+    "The cardholder's claim is not supported by any return or documented complaint in the merchant's records.",
+    "There is no documented complaint about the item.",
+    "The order completed without any complaint.",
+  ])("fails: %s", (text) => {
+    expect(ids(text)).toContain("contact_claim_beyond_record");
+  });
+  it("passes a sentence that merely names the cardholder's complaint", () => {
+    expect(ids("The cardholder's complaint concerns the colour of the item.")).not.toContain("contact_claim_beyond_record");
   });
 });

@@ -88,7 +88,7 @@ describe("outcomeExplanation — the reported bug", () => {
 });
 
 describe("outcomeExplanation — state resolution", () => {
-  it("no defence package is 'not defended by us', whatever the dispute row says", () => {
+  it("no defence package is 'not filed by us', and carries no copy of its own", () => {
     // The 390 historical imports carry submission_state='submitted_confirmed'
     // while closing before the shop installed. Only pack presence may decide.
     const explanation = resolveOutcomeExplanation({
@@ -96,12 +96,11 @@ describe("outcomeExplanation — state resolution", () => {
       reason: "FRAUDULENT",
       pack: null,
     });
-    expect(explanation.kind).toBe("not_defended_by_us");
-
-    const token = outcomeExplanationToken(explanation, "lost", "Aug 9, 2026")!;
-    const rendered = lookup(token.key)!;
-    expect(rendered).toContain("before DisputeDesk filed any evidence");
-    expect(rendered).not.toContain("We filed your evidence");
+    expect(explanation.kind).toBe("not_filed_by_us");
+    // Who responded instead, and why, is decidedResponse.ts. A sentence here
+    // was "decided before DisputeDesk filed any evidence" — false on every
+    // case we held on purpose (order #360499).
+    expect(outcomeExplanationToken(explanation, "lost", "Aug 9, 2026")).toBeNull();
   });
 
   it("a package with no usable facts still says we filed", () => {
@@ -311,7 +310,7 @@ describe("i18n parity", () => {
         expect(withFactor, `${loc}.${outcome}`).toContain("{clause}");
         expect(noFactors, `${loc}.${outcome}`).toContain("{date}");
       }
-      expect(typeof block["notDefendedByUs"]).toBe("string");
+      expect(block["notDefendedByUs"]).toBeUndefined();
     }
   });
 

@@ -45,6 +45,15 @@ import {
   outcomeExplanationToken,
   resolveOutcomeExplanation,
 } from "@/lib/disputes/outcomeExplanation";
+import {
+  decidedResponseTokens,
+  type DecidedResponse,
+} from "@/lib/disputes/decidedResponse";
+import type { I18nToken } from "@/lib/i18n/token";
+import { createTranslator } from "next-intl";
+import { resolveToken } from "@/lib/i18n/resolveToken";
+import { buildDecidedView, type DecidedViewInputs } from "@/lib/disputes/decidedView";
+import { decidedSummaryParagraph } from "@/lib/disputes/decidedViewText";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -80,6 +89,20 @@ export interface OutcomePostedAlertContext {
    * Omit (or pass null) and the email keeps its existing wording exactly.
    */
   defencePackage?: { submittedAt: string | null; facts: unknown } | null;
+  /**
+   * Who responded, and why DisputeDesk did not when it didn't
+   * (`lib/disputes/decidedResponse`) — the same answer the Overview renders.
+   * When it says someone else responded, the email explains that instead of
+   * the filing sentence. Omit (or pass null) to keep the package-only path.
+   */
+  decidedResponse?: DecidedResponse | null;
+  /**
+   * The decided view's inputs (`loadDecidedViewInputs`) — the same data the
+   * Overview renders. When present on a won/lost email, the body becomes the
+   * case's own executive summary, facts and "Next time" instead of the
+   * one-size template. Omit to keep the template.
+   */
+  decidedView?: DecidedViewInputs | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -682,47 +705,131 @@ async function outcomeExplanationSentence(input: {
   outcome: "won" | "lost";
   reason: string | null;
   pack: { submittedAt: string | null; facts: unknown } | null;
+  decided: DecidedResponse | null;
 }): Promise<string | null> {
   try {
+    const formatDate = (iso: string) =>
+      new Date(iso).toLocaleDateString(input.locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    const messages = await getMessages(input.locale);
+
+    // Someone other than DisputeDesk responded (or nobody did): say who, and
+    // why we held — the same sentences the Overview renders. Pre-install
+    // cases get no paragraph: an unprompted email volunteering "this was
+    // before your time with us" is noise.
+    const decided = input.decided;
+    if (decided && decided.responder !== "we") {
+      if (decided.responder === "before_install" || decided.responder === "sent_before_install") {
+        return null;
+      }
+      const tokens = decidedResponseTokens(decided, formatDate);
+      if (tokens.length === 0) return null;
+      const parts: string[] = [];
+      for (const tk of tokens) {
+        const text = renderEmailToken(messages, tk);
+        if (text === null) return null;
+        parts.push(text);
+      }
+      return parts.join(" ");
+    }
+
+    // We filed. A package row is the richest record; a case saved through the
+    // older evidence-pack path has none, so the resolver's filing date stands in.
+    const pack =
+      input.pack ??
+      (decided?.responder === "we" ? { submittedAt: decided.filedAt, facts: null } : null);
     const explanation = resolveOutcomeExplanation({
       outcome: input.outcome,
       reason: input.reason,
-      pack: input.pack,
+      pack,
     });
-    const filedAt =
-      explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
-    // A historical import gets no paragraph at all. The Overview header
-    // states it plainly because the merchant is looking at that case; an
-    // unprompted email volunteering "we did nothing here" is noise.
-    if (explanation.kind === "not_defended_by_us") return null;
+    if (explanation.kind === "not_filed_by_us") return null;
 
-    const formattedDate = filedAt
-      ? new Date(filedAt).toLocaleDateString(input.locale, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
-      : null;
+    const formattedDate = explanation.filedAt ? formatDate(explanation.filedAt) : null;
     const token = outcomeExplanationToken(explanation, input.outcome, formattedDate);
     if (!token) return null;
-
-    const messages = await getMessages(input.locale);
-    const template = lookupMessage(messages, token.key);
-    if (!template) return null;
-
-    let out = template;
-    for (const [name, value] of Object.entries(token.params ?? {})) {
-      const resolved =
-        typeof value === "object" && value !== null && "key" in value
-          ? lookupMessage(messages, (value as { key: string }).key)
-          : String(value);
-      if (resolved === null) return null;
-      out = out.split(`{${name}}`).join(resolved);
-    }
-    return out;
+    return renderEmailToken(messages, token);
   } catch {
     return null;
   }
+}
+
+export interface DecidedEmailSections {
+  summary: string;
+  whoLabel: string;
+  whoFirst: string | null;
+  whoSecond: string | null;
+  factsTitle: string;
+  facts: Array<{ title: string; source: string }>;
+  nextTitle: string;
+  next: Array<{ title: string; detail: string | null }>;
+  chip: string;
+}
+
+/**
+ * The won/lost email body, built from the SAME `buildDecidedView` +
+ * `decidedSummaryParagraph` the Overview renders — so the executive summary,
+ * facts and "Next time" in the inbox are the ones on the page. Resolved with a
+ * server translator (ICU plurals included) in the store's locale. Null on any
+ * failure; the caller then sends the template body.
+ */
+export async function decidedEmailSections(
+  locale: Locale,
+  inputs: DecidedViewInputs,
+): Promise<DecidedEmailSections | null> {
+  try {
+    const messages = await getMessages(locale);
+    const t = createTranslator({ locale, messages: messages as Record<string, unknown> });
+    const r = (tok: I18nToken) => resolveToken(t as never, tok) as string;
+    const date = (iso: string) =>
+      new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
+    const short = (iso: string) => new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric" });
+    const money = (a: number, c: string) => `${c} ${Number.isFinite(a) ? a.toFixed(2) : a}`;
+    const view = buildDecidedView(inputs, { date, short, money });
+    return {
+      summary: decidedSummaryParagraph(view, r, locale),
+      whoLabel: r({ key: "disputes.decidedView.who.label" }),
+      whoFirst: view.who ? r(view.who.first) : null,
+      whoSecond: view.who?.second ? r(view.who.second) : null,
+      factsTitle: r(view.facts.title),
+      facts: view.facts.items.slice(0, 4).map((f) => ({ title: r(f.title), source: r(f.source) })),
+      nextTitle: r({ key: "disputes.decidedView.next.title" }),
+      next: view.nextTime.map((n) => ({ title: r(n.title), detail: n.detail ? r(n.detail) : null })),
+      chip: r(view.outcome.chip),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Resolve one token against the locale bundle. Null on any missing key. */
+function renderEmailToken(
+  messages: Awaited<ReturnType<typeof getMessages>>,
+  token: I18nToken,
+): string | null {
+  const template = lookupMessage(messages, token.key);
+  if (!template) return null;
+  let out = template;
+  for (const [name, value] of Object.entries(token.params ?? {})) {
+    const resolved =
+      typeof value === "object" && value !== null && "key" in value
+        ? lookupMessage(messages, (value as { key: string }).key)
+        : String(value);
+    if (resolved === null) return null;
+    out = out.split(`{${name}}`).join(resolved);
+  }
+  return out;
 }
 
 function formatCurrency(
@@ -827,12 +934,58 @@ export async function sendOutcomePostedAlert(
         outcome: ctx.outcome,
         reason: ctx.reason,
         pack: ctx.defencePackage ?? null,
+        decided: ctx.decidedResponse ?? null,
       });
       // Slot in after the result statement and before the "no further
       // action / review what happened" paragraph, which then reads as the
       // natural follow-on rather than an interruption.
       if (sentence) bodyParagraphs.splice(1, 0, sentence);
     }
+
+    /* The case's own account (decided view), replacing the one-size template
+     * on won/lost. The template claimed "the card network accepted your
+     * defence package" even on cases DisputeDesk never filed. */
+    const sections =
+      (ctx.outcome === "won" || ctx.outcome === "lost") && ctx.decidedView
+        ? await decidedEmailSections(locale, ctx.decidedView)
+        : null;
+    const P = "font-size:14px;color:#202223;margin:0 0 12px;line-height:1.6";
+    const H2 = "font-size:14px;font-weight:600;color:#202223;margin:20px 0 8px";
+    const bodyHtml = sections
+      ? [
+          `<p style="${P}">${escapeHtml(sections.summary)}</p>`,
+          sections.whoFirst
+            ? `<p style="${P};border-top:1px solid #E1E3E5;padding-top:12px"><strong>${escapeHtml(sections.whoLabel)}</strong> ${escapeHtml(sections.whoFirst)}${
+                sections.whoSecond
+                  ? `<br><span style="color:#5C5F62">${escapeHtml(sections.whoSecond)}</span>`
+                  : ""
+              }</p>`
+            : "",
+          sections.facts.length > 0
+            ? `<h2 style="${H2}">${escapeHtml(sections.factsTitle)}</h2>` +
+              sections.facts
+                .map(
+                  (f) =>
+                    `<div style="background:#F6F8FB;border:1px solid #E8ECF2;border-radius:8px;padding:10px 12px;margin:0 0 6px"><div style="font-size:13px;font-weight:600;color:#202223">${escapeHtml(f.title)}</div><div style="font-size:12px;color:#5C5F62;margin-top:2px">${escapeHtml(f.source)}</div></div>`,
+                )
+                .join("")
+            : "",
+          sections.next.length > 0
+            ? `<h2 style="${H2}">${escapeHtml(sections.nextTitle)}</h2>` +
+              sections.next
+                .map(
+                  (n, i) =>
+                    `<div style="background:#F6F8FB;border:1px solid #E8ECF2;border-radius:8px;padding:10px 12px;margin:0 0 6px"><div style="font-size:13px;font-weight:600;color:#202223">${i + 1}. ${escapeHtml(n.title)}</div>${
+                      n.detail ? `<div style="font-size:12px;color:#5C5F62;margin-top:2px">${escapeHtml(n.detail)}</div>` : ""
+                    }</div>`,
+                )
+                .join("")
+            : "",
+        ].join("")
+      : bodyParagraphs
+          .map((p) => `<p style="font-size:14px;color:#202223;margin:0 0 12px;line-height:1.55">${p}</p>`)
+          .join("");
+    const resultLine = sections ? sections.chip : variant.resultLine;
 
     const { data: shop } = await sb
       .from("shops")
@@ -882,12 +1035,7 @@ export async function sendOutcomePostedAlert(
       <h1 style="font-size:20px;font-weight:600;color:${accent};margin:0 0 12px">
         ${variant.heading}
       </h1>
-      ${bodyParagraphs
-        .map(
-          (p) =>
-            `<p style="font-size:14px;color:#202223;margin:0 0 12px;line-height:1.55">${p}</p>`,
-        )
-        .join("")}
+      ${bodyHtml}
 
       <table style="width:100%;border-collapse:collapse;margin:18px 0 20px;font-size:13px" role="presentation">
         <tr><td style="padding:6px 0;color:#5C5F62;width:38%">${s.shared.order}</td><td style="padding:6px 0;color:#202223">${orderNameDisplay}</td></tr>
@@ -900,8 +1048,8 @@ export async function sendOutcomePostedAlert(
       </a>
 
       ${
-        variant.resultLine
-          ? `<p style="font-size:12px;color:${accent};margin:16px 0 0;line-height:1.5;font-weight:500;letter-spacing:0.01em">${variant.resultLine}</p>`
+        resultLine
+          ? `<p style="font-size:12px;color:${accent};margin:16px 0 0;line-height:1.5;font-weight:500;letter-spacing:0.01em">${escapeHtml(resultLine)}</p>`
           : ""
       }
     </div>

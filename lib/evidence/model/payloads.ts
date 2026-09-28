@@ -38,15 +38,11 @@ import type { EvidenceFieldKey } from "./domains";
 
 /* ── Shared value types ──────────────────────────────────────────────── */
 
-export type DeliveryProofType =
-  | "signature_confirmed"
-  | "delivered_confirmed"
-  | "delivered_unverified"
-  | "label_created"
-  /** The carrier brought the parcel back. Scores `invalid` like
-   *  `label_created`, but it is a different fact — see the note on the
-   *  union in `lib/argument/canonicalEvidence.ts`. */
-  | "returned_to_sender";
+/** Re-exported from the ONE definition in `lib/argument/canonicalEvidence.ts`
+ *  (members and their meaning are documented there). A private copy here had
+ *  to be edited by hand for every new state. */
+import type { DeliveryProofType } from "@/lib/argument/canonicalEvidence";
+export type { DeliveryProofType };
 
 export interface TrackingEntry {
   carrier: string | null;
@@ -75,6 +71,14 @@ export interface UploadInstance {
   filename: string | null;
   mimeType: string | null;
   storagePath: string | null;
+}
+
+/** A collected product listing (not-as-described PR 3): a reference to its
+ *  immutable snapshot row, one per line item. Never mixed with uploads. */
+export interface ListingInstance {
+  snapshotId: string | null;
+  lineItemGid: string | null;
+  contentHash: string | null;
 }
 
 /* ── The discriminated union ─────────────────────────────────────────── */
@@ -144,8 +148,16 @@ export type EvidencePayload =
       customerConfirmsOrder: boolean;
     }
   | {
-      fieldKey: "supporting_documents" | "product_description";
+      fieldKey: "supporting_documents";
       uploads: UploadInstance[];
+    }
+  | {
+      fieldKey: "product_description";
+      uploads: UploadInstance[];
+      /** Collected listings, highest-value line item first. ABSENT (not
+       *  empty) when none were collected, so a payload without listings is
+       *  byte-identical to before PR 3 — it feeds input hashes. */
+      listings?: ListingInstance[];
     }
   | {
       fieldKey: "ip_location_check";
@@ -340,6 +352,15 @@ export function normalizeEvidencePayload(
       };
 
     case "supporting_documents":
+      return {
+        fieldKey,
+        uploads: arr(raw?.uploads).map((u) => ({
+          evidenceItemId: str(u.id),
+          filename: str(u.fileName) ?? str(u.filename),
+          mimeType: str(u.mimeType) ?? str(u.fileType),
+          storagePath: str(u.storagePath),
+        })),
+      };
     case "product_description":
       return {
         fieldKey,
@@ -349,6 +370,15 @@ export function normalizeEvidencePayload(
           mimeType: str(u.mimeType) ?? str(u.fileType),
           storagePath: str(u.storagePath),
         })),
+        ...(arr(raw?.listings).length > 0
+          ? {
+              listings: arr(raw?.listings).map((l) => ({
+                snapshotId: str(l.snapshotId),
+                lineItemGid: str(l.lineItemGid),
+                contentHash: str(l.contentHash),
+              })),
+            }
+          : {}),
       };
 
     case "ip_location_check":
@@ -439,8 +469,9 @@ export function instanceCount(payload: EvidencePayload): number {
     case "customer_communication":
       return Math.max(payload.conversations.length, 1);
     case "supporting_documents":
-    case "product_description":
       return Math.max(payload.uploads.length, 1);
+    case "product_description":
+      return Math.max((payload.listings?.length ?? 0) + payload.uploads.length, 1);
     default:
       return 1;
   }

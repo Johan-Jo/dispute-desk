@@ -17,7 +17,7 @@ export const item_not_received_delivery_proof_stack: StrategySubmodule = {
   priority: 10,
   promptBody: [
     "STRATEGY FOCUS — delivery proof stack:",
-    "Build the fulfillmentArgument and executiveSummary around the carrier delivery record. When proofType=signature_confirmed, lead with the captured signature. When proofType=delivered_confirmed (no signature), describe the carrier's delivery confirmation without overclaiming signature capture.",
+    "Build the fulfillmentArgument and executiveSummary around the carrier delivery record. When proofType=signature_confirmed, lead with the captured signature. When proofType=delivered_confirmed (unsigned), describe the carrier's delivery confirmation without overclaiming signature capture.",
     "Cite carrier, trackingNumber, trackingUrl and deliveredAt when present in the approved fact value — these are the identifiers an issuer can independently verify.",
     "NEVER state which physical address received the parcel, and never describe an address as verified, matched, confirmed, AVS-confirmed, the cardholder's, or the same as the billing address. DisputeDesk holds no evidence tying a delivery event to a specific address. Write 'the carrier confirmed delivery of the shipment', not 'delivered to the cardholder's verified address'.",
   ].join("\n"),

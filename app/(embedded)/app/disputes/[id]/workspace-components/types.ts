@@ -8,6 +8,8 @@ import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, 
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 import type { HeldState } from "@/lib/disputes/heldState";
+import type { DecidedResponse } from "@/lib/disputes/decidedResponse";
+import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 import type { WorkspaceAssessmentPayload } from "@/lib/disputes/workspaceAssessmentTypes";
 
 /** Canonical tab indices for the dispute-detail workspace. Order per
@@ -85,12 +87,20 @@ export interface WorkspaceDispute {
   customerName: string;
   shopId?: string;
   shopDomain: string;
+  /** The merchant's real storefront domain for the defence document
+   *  ("blume.com"); the myshopify alias only when none is on record. */
+  merchantDomain?: string | null;
   disputeGid: string;
   disputeEvidenceGid: string;
   dueAt: string | null;
   openedAt: string;
   normalizedStatus: string;
   submissionState: string;
+  /** Response cycle (1 = first round). ≥ 2 once Shopify reopened an
+   *  answered dispute or an answered inquiry escalated. */
+  responseCycle?: number;
+  reopenedAt?: string | null;
+  escalatedFromInquiryAt?: string | null;
   /** Review-lifecycle state (2026-07-23). Gates + reflects the
    *  Hold/Approve/Concede action row on a parked/weak dispute. */
   needsReview?: boolean;
@@ -298,8 +308,24 @@ export interface GorgiasCommsBlock {
   tickets: GorgiasCommsTicketSummary[];
 }
 
+/** The bank's claim (lib/disputes/bankClaim.ts). `trigger` is set while the
+ *  dispute needs it; `answer` is the merchant's answer for this cycle. */
+export interface WorkspaceBankClaim {
+  trigger: "reopened" | "general_reason" | null;
+  answer: {
+    text: string | null;
+    noClaimShown: boolean;
+    cycle: number;
+    answeredAt: string;
+    fileName?: string | null;
+    fileSize?: number | null;
+    textSource?: "pasted" | "file_text" | "file_ai" | null;
+  } | null;
+}
+
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
+  bankClaim?: WorkspaceBankClaim;
   pack: WorkspacePack | null;
   /** Gorgias evidence core (null when the shop has no Gorgias
    *  integration — the review section self-hides). */
@@ -332,6 +358,12 @@ export interface WorkspaceData {
    *  the new-dispute email so the page and the email cannot describe
    *  one dispute two ways. */
   held?: HeldState | null;
+  /** Decided cases only (lib/disputes/decidedResponse): who responded, and
+   *  why DisputeDesk did not when it didn't. Null on live cases. */
+  decidedResponse?: DecidedResponse | null;
+  /** Decided cases only: inputs for `buildDecidedView` (the decided-case
+   *  Overview, plan PR 2). Null on live cases. */
+  decidedView?: DecidedViewInputs | null;
   /** Per-row dispute-detail view-model from `deriveEvidenceLineItems`.
    *  Single source of truth for every UI surface; never duplicated. */
   evidenceLineItems: EvidenceLineItem[];

@@ -206,19 +206,68 @@ const NARRATIVE_SECTION_KEYS = [
 /** Permitted non-section metadata keys, both arrays. */
 const NARRATIVE_METADATA_KEYS = ["omittedSections", "warnings"] as const;
 
+/**
+ * Optional keys the letter writers persist beside the nine sections, each
+ * with an exact shape (types.ts `DefenceNarrativeOutput`). Until 2026-09-26
+ * none of them was known here, so every letter carrying one — every
+ * record-built section (`source: "record"`) and every counsel v2 letter
+ * (headline, exhibits, timeline rows, reuse hash) — read as UNREADABLE and
+ * was refused for filing with "cannot be reviewed automatically", despite
+ * validation ok and a rendered PDF (#352543 v11–v13; three 6a8848-dd drafts).
+ * They are known now, and still fail closed on any other shape.
+ */
+const NARRATIVE_OPTIONAL_KEYS = ["headline", "addressExhibit", "laterOrderExhibit", "timelineAdditions", "counsel"] as const;
+
+const isStr = (v: unknown): v is string => typeof v === "string";
+const isStrOrNull = (v: unknown) => v === null || typeof v === "string";
+const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
+const isPlain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const keysWithin = (o: Record<string, unknown>, allowed: readonly string[]) => Object.keys(o).every((k) => allowed.includes(k));
+
+function isValidOptional(key: (typeof NARRATIVE_OPTIONAL_KEYS)[number], v: unknown): boolean {
+  switch (key) {
+    case "headline":
+      return isStr(v);
+    case "addressExhibit":
+      return (
+        isPlain(v) &&
+        keysWithin(v, ["shipping", "billing", "avs"]) &&
+        isStrArray(v.shipping) &&
+        isStrArray(v.billing) &&
+        (v.avs === undefined || v.avs === null || (isPlain(v.avs) && keysWithin(v.avs, ["code", "network"]) && isStr(v.avs.code) && isStr(v.avs.network)))
+      );
+    case "laterOrderExhibit":
+      return (
+        isPlain(v) &&
+        keysWithin(v, ["name", "placedAt", "total", "cardLast4", "wallet", "deliveredAt"]) &&
+        isStr(v.name) &&
+        isStr(v.placedAt) &&
+        [v.total, v.cardLast4, v.wallet, v.deliveredAt].every(isStrOrNull)
+      );
+    case "timelineAdditions":
+      return Array.isArray(v) && v.every((r) => isPlain(r) && keysWithin(r, ["at", "text"]) && isStr(r.at) && isStr(r.text));
+    case "counsel":
+      return isPlain(v) && keysWithin(v, ["inputHash", "summary"]) && isStr(v.inputHash) && isStrArray(v.summary);
+  }
+}
+
 const NARRATIVE_ALLOWED_KEYS: ReadonlySet<string> = new Set<string>([
   ...NARRATIVE_SECTION_KEYS,
   ...NARRATIVE_METADATA_KEYS,
+  ...NARRATIVE_OPTIONAL_KEYS,
 ]);
 
 const NARRATIVE_SECTION_KEY_SET: ReadonlySet<string> = new Set<string>(NARRATIVE_SECTION_KEYS);
 
-/** A section is EXACTLY `{ text: string, usedFactIds: string[] }`. */
+/** A section is EXACTLY `{ text: string, usedFactIds: string[] }`, plus an
+ *  optional `source: "record"` on a record-built section. */
 function isValidNarrativeSection(section: unknown): boolean {
   if (!section || typeof section !== "object" || Array.isArray(section)) return false;
   const s = section as Record<string, unknown>;
   const keys = Object.keys(s);
-  if (keys.length !== 2) return false;
+  if (!keys.includes("text") || !keys.includes("usedFactIds")) return false;
+  if (!keys.every((k) => k === "text" || k === "usedFactIds" || k === "source")) return false;
+  if (s.source !== undefined && s.source !== "record") return false;
   if (typeof s.text !== "string") return false;
   if (!Array.isArray(s.usedFactIds)) return false;
   return s.usedFactIds.every((id) => typeof id === "string");
@@ -301,6 +350,9 @@ function readNarrative(narrativeJson: unknown): NarrativeRead {
 
   if (!isValidOmittedSections(o.omittedSections)) return { readable: false };
   if (!isValidWarnings(o.warnings)) return { readable: false };
+  for (const k of NARRATIVE_OPTIONAL_KEYS) {
+    if (o[k] !== undefined && !isValidOptional(k, o[k])) return { readable: false };
+  }
 
   /* ── JUDGE THE PROSE THAT REACHES THE ISSUER, AND ONLY THAT ─────────
    *
@@ -334,6 +386,12 @@ function readNarrative(narrativeJson: unknown): NarrativeRead {
    * guard, and it is unchanged — it just stops being read as argument. */
   const texts: string[] = [];
   for (const key of NARRATIVE_SECTION_KEYS) collectStrings(o[key], texts);
+  // Prose the issuer reads outside the sections: the headline, the timeline
+  // rows a letter adds, and the counsel summary (the stored copy of the
+  // executive summary). Exhibit fields are data (addresses, dates), not claims.
+  if (isStr(o.headline) && o.headline.trim()) texts.push(o.headline);
+  for (const r of (o.timelineAdditions as Array<{ text: string }> | undefined) ?? []) texts.push(r.text);
+  for (const t of (o.counsel as { summary: string[] } | undefined)?.summary ?? []) texts.push(t);
   return { readable: true, texts };
 }
 

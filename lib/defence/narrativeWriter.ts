@@ -23,6 +23,8 @@
  */
 
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
+import { familyKeyForModule } from "./reasonCodes/familyRegistry";
+import { familyOmitsArrival } from "./chronology";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
 import {
@@ -144,7 +146,85 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // failed v6 is unretryable at prompt 15 (same prompt, same validator, same
 // evidence), and this constant is the one that moved. Legacy payloads still
 // carry `f${n}` — the legacy route does not consult the plan, by contract.
-const PROMPT_VERSION = 16;
+// v17 (2026-09-23) — non-receipt letters (docs/plans/non-receipt-delivery-
+// evidence.plan.md §4.1(b), §5.2, §6.6). A new item-not-received strategy,
+// `item_not_received_carrier_possession`, states a shipment in the carrier's
+// possession with a RETRIEVAL date only; delivery facts cite one coherent
+// shipment and carry `carrierStatusObservedAt`; the hash-only
+// `deliveryStatuses` / `returnedAt` / `shipmentIndex` no longer reach the
+// model (they printed "CollectedAtPickup" into cay-collective #14784's letter).
+// v18 (2026-09-23) — every shipment on a multi-shipment order reaches the
+// model as `shipments` (products, carrier, fulfilment date, and only what each
+// shipment's own record supports), and the item-not-received family overlay
+// tells it to account for all of them. blume-box #360980 had two products in
+// two parcels and its letter named one.
+// v19 (2026-09-23) — the v18/v8 rebuild of #360980 wrote "tendered it to USPS"
+// for the parcel with no carrier record, twice, through the retry. The family
+// overlay now gives that parcel ONE permitted sentence shape and names the
+// verbs it may never take.
+// v20 (2026-09-23) — whole-order sentences may not mention a carrier record
+// (#360980's v9 draft: "each with its own carrier record", one had none).
+// v21 (2026-09-23) — the payload carries `disputeOpenedAt`, and an in-transit
+// shipment carries `inTransitSince` (its first dated in-carrier event). The
+// item-not-received overlay dates transit from that event instead of "status
+// as retrieved", and may place a fulfilment or a dated transit event before
+// the dispute. blume-box #360980: GOFO in transit since 17 Sep, opened 19 Sep.
+// v22 (2026-09-23) — v21's timing licence is withdrawn. A fulfilment date is
+// the merchant's own record, not proof of dispatch, and set against the
+// purchase date it can expose a late shipment (#360980: ordered 22 Aug,
+// fulfilled 15/16 Sep against a 1–3 business-day promise). Until the
+// delivery-commitment resolver (plan P3) can tell a helpful date from a
+// harmful one, the model gets no dispute date, a carrier-recorded parcel
+// carries no fulfilment date, and no record is related to the dispute or the
+// order date.
+// v23 (2026-09-23) — an in-transit shipment with a dated event no longer
+// carries its retrieval time, and the item-not-received overlay names the
+// wording the v22 draft kept using ("prior to the filing of this dispute",
+// "left the merchant's possession", "tendered to their respective carriers").
+// v24 (2026-09-23) — the overlay's forbidden-timing wording is narrowed to
+// fulfilments, hand-overs, in-transit parcels and unrecorded parcels; a
+// carrier-confirmed delivery may be placed before the dispute (#352543).
+// v25 (2026-09-23) — multi-parcel item-not-received letters: the summary,
+// transaction overview, fulfilment, chronology and conclusion are written from
+// the records (lib/defence/shipmentRecordSections.ts), replacing the model's
+// text for those sections. Bumped so existing drafts regenerate.
+// v26 (2026-09-23) — the record-built sections no longer repeat each other or
+// the thesis lines: summary one sentence per parcel, identifiers only in the
+// fulfilment section, chronology dates only, conclusion states the basis (the
+// thesis already asks for reversal), transaction overview omitted.
+// v27 (2026-09-23) — multi-parcel letters: no chronology paragraph (the parcel
+// events join the timeline bullets); transit worded "first shows … in transit
+// on <date>". Bumped so drafts regenerate with the new PDF layout.
+// v28 (2026-09-24) — no prompt change: the defence PDF was rebuilt to the
+// "Chargeback Response v2" design, and packages only re-render on a version
+// move. Bumped so drafts regenerate with the new document.
+// v29 (2026-09-24) — document wording: "shipped" for the merchant's own
+// record, "delivered" only from a carrier's (record-built sections, cards,
+// timeline titles). Bumped so drafts regenerate.
+// v30 (2026-09-24) — the document names the merchant by its storefront
+// domain ("blume.com"), not the myshopify alias. Bumped so drafts re-render.
+// v31 (2026-09-24) — a multi-parcel timeline states a parcel delivery once
+// (named line kept, generic Shopify line at the same moment dropped).
+// v32 (2026-09-24) — thesis lines print dates ("24 September 2026"), not the
+// stored ISO timestamp. Bumped so drafts re-render.
+// v33 (2026-09-24) — item-not-received letter tightened after review of
+// #352543: opening line states the carrier record and dispute date, no
+// transaction overview or chronology paragraph, no independence or
+// cardholder-initiated claims (family v9).
+// v34 (2026-09-24) — single-parcel item-not-received letters with a carrier-
+// confirmed delivery are record-built (summary, shipping, conclusion), as
+// multi-parcel ones already were (#352543).
+// v40 (2026-09-25) — item-not-received family names its forbidden words in the
+// prompt (no negated delivery, no denial framing): an in-transit
+// letter wrote "the order was not undelivered" twice and was refused (#102193).
+// v41 (2026-09-28) — not-as-described family overlay overrides rule 10's
+// hedged framing for narrow packages and states what a listing / delivery
+// record can and cannot show; both family strategies and the module prompt
+// no longer date the listing to the purchase (plan PR 1, D5).
+// v42 (2026-09-28) — not-as-described letters leave delivery out entirely:
+// arrival is not in dispute (module v5 drops delivery/tracking; PayPal overlay
+// and family overlay say so).
+const PROMPT_VERSION = 42;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -288,6 +368,28 @@ Rules:
    If only fulfillmentStatus=FULFILLED exists with no delivery/access
    fact, leave fulfillmentArgument EMPTY and add it to omittedSections
    — the renderer will emit a minimal neutral sentence in its place.
+8c. RETURNS AND CUSTOMER CONTACT — state only what Shopify records. The only
+   permitted sentence about returns is: "No return has been recorded in
+   Shopify for this order." NEVER write that the customer did not request,
+   ask for, seek or initiate a return, refund, replacement or exchange;
+   never that they did not contact, reach out to or complain to the
+   merchant; never "through any channel" or "at any point". Merchants take
+   return requests by email and chat that Shopify never sees, so those
+   statements are beyond the record and may be false. A sentence of this
+   kind fails validation whatever facts are cited.
+8d. STORE POLICIES AND THE ORDER RECORD are context, cited as such. About a
+   policy_refund / policy_shipping fact you may say ONLY that the policy is
+   published on the merchant's store, with its publishedUrl when present.
+   The policy's TERMS are not in the fact: NEVER describe what a policy
+   requires, allows, excludes or makes conditional (no return windows, no
+   "refunds are contingent on…", no "under the policy the customer must…").
+   NEVER mention acceptance unless acceptedAtCheckout=true: do not write that
+   a policy was not accepted, not agreed to, not shown, or that acceptance
+   was not captured, and do not say when it was shown or available (not "at
+   checkout", not "at the time of purchase"). Never refer to evidence that
+   is absent from the record ("no product listing is available", "the
+   approved record does not include…"): leave that point out instead. Any
+   such sentence fails validation.
 9. If approvedFacts are weak or incomplete, write a NARROWER argument. Do not
    fill gaps. If a section has no supporting facts, return an empty string for
    that section AND list its sectionKey in omittedSections.
@@ -297,11 +399,26 @@ Rules:
                  the reason code in question (e.g. "These signals are
                  consistent with cardholder-initiated activity under
                  [reason code]."). Length: 3–6 sentences per section.
-    - "narrow" → hedged framing required. Use "The available evidence
-                 supports…", "The available records indicate…", "The
-                 submitted evidence is consistent with…". Executive
-                 summary must be one paragraph of ≤ 4 sentences. No
-                 declarative reason-code conclusions.
+    - "narrow" → FEWER points, stated just as firmly. Narrow means the
+                 argument rests on less, not that it is argued weakly:
+                 state what each record shows as a fact ("The carrier
+                 confirmed delivery on 21 July."), never through a
+                 qualifier ("the available evidence suggests…", "the
+                 records appear to…"). Executive summary must be one
+                 paragraph of ≤ 4 sentences. No declarative reason-code
+                 conclusions ("the dispute is invalid").
+    In EITHER mode you act for the merchant: never run the merchant's
+    case down. Do not write that evidence is limited or thin, that the
+    merchant "acknowledges" anything, that the response is "framed
+    accordingly", or that the letter "presents the record as submitted";
+    do not open with "the available evidence/records". Leave a missing
+    point out instead of apologising for it. Such sentences fail
+    validation.
+    Firm is not bigger: never claim more than the record shows. A record
+    "contradicts" the claim only when it shows the opposite of what the
+    cardholder says (a carrier-confirmed delivery contradicts non-receipt;
+    a parcel in transit does not). Never state what the merchant's terms
+    say or require.
 11. Return valid JSON only. No markdown. No code fences. No prose outside JSON.
 12. Schema of the JSON output:
 
@@ -474,11 +591,20 @@ export async function generateNarrative(
   // System payload layout (cached, ephemeral):
   //   [0] BASE_SYSTEM_PROMPT                  (always)
   //   [1] family overlay   — Phase 1+         (only when non-empty)
-  //   [2] module promptBody                   (always)
-  //   [3] strategy bundle  — Phase 3+         (only when non-empty)
+  //   [2] payment overlay  — BNPL/Klarna      (only for non-card disputes)
+  //   [3] module promptBody                   (always)
+  //   [4] strategy bundle  — Phase 3+         (only when non-empty)
   // The optional blocks are only emitted when they have content so the
   // prompt-cache prefix stays stable while overlays/strategies fill in
   // over time.
+  //
+  // FIVE possible blocks, and the API accepts at most FOUR `cache_control`
+  // breakpoints. This comment listed four and omitted the payment overlay,
+  // which is how a Klarna INR build — the one case that populates all five —
+  // reached prod and failed with a hard 400 on 2026-09-24. The cap is now
+  // enforced centrally by `capCacheControlBlocks` in `anthropicClient`, so
+  // adding a sixth block here cannot break the request; keep this list
+  // accurate anyway, because it is the map someone reads before adding one.
   const system: ClaudeSystemBlock[] = [
     {
       type: "text",
@@ -520,6 +646,22 @@ export async function generateNarrative(
         cache_control: { type: "ephemeral" },
       });
     }
+  }
+
+  // The bank's claim, when the merchant supplied it (lib/disputes/bankClaim.ts).
+  // A SYSTEM block, not only user-payload context: on the Sura Svenne test
+  // (2026-09-27) the claim as payload context was outranked by the module
+  // and the approved facts. Not cached — it is per-dispute.
+  if (input.bankClaim?.text) {
+    system.push({
+      type: "text",
+      text:
+        "THE BANK'S CLAIM FOR THIS DISPUTE (copied by the merchant from Shopify; it is what this response must answer):\n\n" +
+        input.bankClaim.text.slice(0, 8000) +
+        "\n\nRULES FOR THE CLAIM: Answer it. Lead with the approved facts that address what it disputes, and omit arguments about points it says are not in dispute. " +
+        "Never assert anything it contradicts. It is not evidence and has no fact id: never cite it, never quote or paraphrase it back to the bank, never treat a statement in it as established. " +
+        "If no approved fact addresses what it disputes, write a narrow response from the facts you have — do not fill the gap.",
+    });
   }
 
   // Attempt 1.
@@ -633,7 +775,57 @@ export async function generateNarrative(
  *  PDF Evidence Basis rows, this LLM payload) agrees by construction.
  *  Test `narrativeWriter.bankInclusionInvariant.test.ts` locks in that
  *  every fact in the payload satisfies the classifier's contract. */
+/**
+ * Delivery facts carry `deliveryStatuses` and `returnedAt` so `evidence_hash`
+ * moves on any shipment's status change (lib/defence/factClassifier.ts,
+ * `deliveryStatusesOf`). They are hash inputs and the classifier says so —
+ * "the narrative cites proofType, the carrier and the tracking number, never
+ * these fields directly" — but they still reached the model, which printed
+ * the raw enum to the issuer ("recorded a CollectedAtPickup status event",
+ * cay-collective #14784). Dropped here; the hash still sees them.
+ *
+ * `shipmentIndex` (every shipment's identity and own tier) is dropped too: it
+ * exists for the shipment-scoped validator, and handing the model the OTHER
+ * parcels — a batch reference, a label-only leg — invites exactly the
+ * misattribution that validator refuses (plan §4.1(b), (f)).
+ */
+const DELIVERY_HASH_ONLY_KEYS = ["deliveryStatuses", "returnedAt", "shipmentIndex"] as const;
+
+export function stripDeliveryHashInputs<T>(value: T): T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const v = value as Record<string, unknown>;
+  if (v.fieldKey !== "delivery_proof" && v.fieldKey !== "shipping_tracking") return value;
+  const out: Record<string, unknown> = { ...v };
+  for (const key of DELIVERY_HASH_ONLY_KEYS) delete out[key];
+  // Timeline-only per-parcel field: never a date the model may cite.
+  if (Array.isArray(out.shipments)) {
+    out.shipments = (out.shipments as Array<Record<string, unknown>>).map((s) => {
+      const { fulfillmentEventAt: _timelineOnly, ...rest } = s;
+      return rest;
+    });
+  }
+  return out as T;
+}
+
+/**
+ * Arrival is not in dispute for these families (maintainer, 2026-09-28): the
+ * letter leaves the parcel's journey out. The order record's fulfilment status
+ * is withheld from the WRITER only — claim guards still read the full fact.
+ * An instruction alone did not hold: shown `fulfillmentStatus: FULFILLED`, the
+ * model wrote "the order record confirms it was fulfilled" on every draft.
+ */
+function withoutArrivalFields(
+  value: unknown,
+  category: string,
+  familyKey: string | null,
+): unknown {
+  if (!value || typeof value !== "object" || category !== "order_record" || !familyOmitsArrival(familyKey)) return value;
+  const { fulfillmentStatus: _fulfillmentStatus, ...rest } = value as Record<string, unknown>;
+  return rest;
+}
+
 export function buildLlmFactPayload(input: NarrativeInput): Record<string, unknown> {
+  const payloadFamily = familyKeyForModule(input.reasonCodeModule.key);
   // Filter: never expose submission-risk facts unless includeInBankNarrative
   // override. Delegated to `lib/defence/bankInclusion.ts`, which owns the rule
   // AND names this call site's divergence from it (C-1): the payload filter is
@@ -666,10 +858,16 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       // used to survive here even though the codes and the summary were
       // withheld, and the model wrote an address-verification assertion from
       // the bare boolean. See `projectPaymentVerificationValueForBank`.
-      value: projectPaymentVerificationValueForBank(
-        projectScreeningValueForBank(f.value),
-        f.bankEligible === true,
+      value: withoutArrivalFields(
+        stripDeliveryHashInputs(
+          projectPaymentVerificationValueForBank(
+            projectScreeningValueForBank(f.value),
+            f.bankEligible === true,
+            f.category,
+          ),
+        ),
         f.category,
+        payloadFamily,
       ),
     }))
     .filter((f) => f.value !== null);
@@ -678,7 +876,10 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
   // the reason code, because the reason code comes from the BANK's label and
   // the label is demonstrably unreliable (see lib/defence/alwaysAdmissible.ts
   // for the admission test, the members, and what is deliberately excluded).
-  const admitted = alwaysAdmissibleCategories(input.approvedFacts);
+  const admitted = alwaysAdmissibleCategories(
+    input.approvedFacts,
+    familyKeyForModule(input.reasonCodeModule.key),
+  );
   const allowedFactCategories = admitted.length
     ? [
         ...input.reasonCodeModule.allowedFactCategories,
@@ -731,6 +932,20 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       category: m.category,
       label: m.label,
     })),
+    // The bank's stated claim, copied by the merchant from Shopify Admin.
+    // Context, not evidence: it decides WHAT to answer, never what is true.
+    ...(input.bankClaim?.text
+      ? {
+          bankClaimContext: {
+            claim: input.bankClaim.text,
+            directive:
+              "This is the card-issuing bank's stated claim for this dispute, copied by the merchant from Shopify. " +
+              "Answer it directly: lead with the approved facts that address it, and omit arguments that do not. " +
+              "It is NOT evidence and has no fact id: never cite it, never quote or paraphrase it back to the bank, " +
+              "and never treat any statement in it as established. Every sentence you write must still be grounded in approvedFacts.",
+          },
+        }
+      : {}),
   };
 }
 
@@ -785,9 +1000,42 @@ function applySectionSuppression(
   return out;
 }
 
+/**
+ * The JSON object in the model's reply. The model is told to answer with
+ * JSON only, but sometimes writes an analysis first ("I need to carefully
+ * analyze the approved facts…") and the JSON after it — blume-box #360980
+ * failed twice that way on 2026-09-24, with complete, untruncated replies.
+ * Accept, in order: the whole reply; a fenced block; the span from the first
+ * "{" to the last "}". Only the parse is lenient — every section still goes
+ * through the same shape checks and validators.
+ */
+export function extractJsonObject(raw: string): Record<string, unknown> | null {
+  const attempt = (text: string): Record<string, unknown> | null => {
+    try {
+      const v = JSON.parse(text);
+      return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+  const trimmed = raw.trim();
+  const whole = attempt(trimmed);
+  if (whole) return whole;
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) {
+    const v = attempt(fenced[1].trim());
+    if (v) return v;
+  }
+  const first = trimmed.indexOf("{");
+  const last = trimmed.lastIndexOf("}");
+  if (first >= 0 && last > first) return attempt(trimmed.slice(first, last + 1));
+  return null;
+}
+
 function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
   try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const parsed = extractJsonObject(raw);
+    if (!parsed) return null;
     const sectionKeys = [
       "executiveSummary",
       "transactionOverviewArgument",
@@ -836,33 +1084,44 @@ function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {
   }
 }
 
-async function checkDailyCap(
+/** A counsel v2 letter reused from a previous build (no model call). */
+export const COUNSEL_REUSED_STRATEGY_KEY = "counsel_v2_reused";
+
+export async function checkDailyCap(
   sb: ReturnType<typeof getServiceClient>,
   shopId: string,
-): Promise<{ capReached: boolean; generations: number; inputTokens: number }> {
+): Promise<{ capReached: boolean; generations: number; inputTokens: number; counselRuns: number }> {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await sb
     .from("defence_package_runs")
-    .select("prompt_tokens")
+    .select("prompt_tokens, strategy_keys")
     .eq("shop_id", shopId)
     .eq("daily_bucket", today);
   if (error) {
     // Soft-fail: log and proceed. We'd rather make the call than block on a
     // count query.
     console.warn("[defence] daily-cap query failed", error.message);
-    return { capReached: false, generations: 0, inputTokens: 0 };
+    return { capReached: false, generations: 0, inputTokens: 0, counselRuns: 0 };
   }
-  const generations = data?.length ?? 0;
-  const inputTokens = (data ?? []).reduce(
-    (sum, r) => sum + ((r as { prompt_tokens?: number | null }).prompt_tokens ?? 0),
-    0,
-  );
+  // Counsel v2 runs (lib/defence/counsel/run.ts) have their own per-day run
+  // cap and are kept out of the template writer's token cap: a counsel run's
+  // spend must never block the template letter that is its fallback. They
+  // count as generations.
+  const keys = (r: unknown) => (r as { strategy_keys?: string[] | null }).strategy_keys ?? [];
+  const isCounsel = (r: unknown) => keys(r).includes("counsel_v2");
+  // A reused counsel letter made no model call: it counts against nothing.
+  const rows = (data ?? []).filter((r) => !keys(r).includes(COUNSEL_REUSED_STRATEGY_KEY));
+  const generations = rows.length;
+  const counselRuns = (data ?? []).filter(isCounsel).length;
+  const inputTokens = (data ?? [])
+    .filter((r) => !isCounsel(r))
+    .reduce((sum, r) => sum + ((r as { prompt_tokens?: number | null }).prompt_tokens ?? 0), 0);
   const capReached =
     generations >= DAILY_GENERATION_CAP || inputTokens >= DAILY_TOKEN_CAP;
-  return { capReached, generations, inputTokens };
+  return { capReached, generations, inputTokens, counselRuns };
 }
 
-async function writeRun(
+export async function writeRun(
   sb: ReturnType<typeof getServiceClient>,
   ctx: GenerateNarrativeContext,
   row: {
@@ -873,12 +1132,17 @@ async function writeRun(
     durationMs: number;
     validationStatus: "ok" | "failed" | "skipped" | "error";
     strategyKeys: string[];
+    /** Counsel v2 runs record their own prompt version. */
+    promptVersion?: number;
+    /** Counsel v2: prompt-cache reads, and per-call usage (cost refactor §6). */
+    cachedTokens?: number;
+    stageTokens?: unknown[];
   },
 ): Promise<void> {
-  await sb.from("defence_package_runs").insert({
+  const { error } = await sb.from("defence_package_runs").insert({
     package_id: ctx.packageId,
     shop_id: ctx.shopId,
-    prompt_version: PROMPT_VERSION,
+    prompt_version: row.promptVersion ?? PROMPT_VERSION,
     model: row.model,
     package_mode: row.packageMode,
     prompt_tokens: row.promptTokens,
@@ -886,7 +1150,11 @@ async function writeRun(
     duration_ms: row.durationMs,
     validation_status: row.validationStatus,
     strategy_keys: row.strategyKeys,
+    ...(row.cachedTokens !== undefined ? { cached_tokens: row.cachedTokens } : {}),
+    ...(row.stageTokens !== undefined ? { stage_tokens: row.stageTokens } : {}),
   });
+  // A lost row is a run the daily caps cannot see: say so.
+  if (error) console.warn("[defence] run telemetry insert failed", error.message);
 }
 
 function truncate(s: string, n: number): string {

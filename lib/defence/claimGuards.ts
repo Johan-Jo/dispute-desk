@@ -354,6 +354,134 @@ export interface RunClaimGuardsInput {
   approvedFacts: EvidenceFact[];
 }
 
+/**
+ * Absence and contact-history claims about returns — banned OUTRIGHT
+ * (plan docs/plans/mein-maison-status-and-no-return.plan.md, Fix C / C2).
+ *
+ * Unlike every guard above, no fact can satisfy these: Shopify records only
+ * the returns made through Shopify, and merchants take return requests by
+ * email and chat it never sees (Mein Maison, 2026-09-27). "The customer did
+ * not request a return" is therefore beyond the record whatever is cited, and
+ * no set of messages can prove an absence. The one sanctioned sentence —
+ * "No return has been recorded in Shopify for this order." — does not match.
+ *
+ * Plain regex tests, deliberately NOT routed through the negation window:
+ * these claims ARE negations, so a negation-aware matcher would skip them.
+ */
+const NEG = String.raw`(?:did\s+not|didn['’]t|never|has\s+not|hasn['’]t|had\s+not|have\s+not|was\s+not|were\s+not)`;
+const ASK = String.raw`(?:request(?:ed)?|ask(?:ed)?(?:\s+for)?|initiat(?:e|ed)|s(?:eek|ought)|open(?:ed)?|submit(?:ted)?|raised?)`;
+const RETURN_WORD = String.raw`(?:return|refund|replacement|exchange)s?`;
+
+export const RETURN_ABSENCE_BANS: ReadonlyArray<{ id: string; pattern: RegExp }> = [
+  {
+    // "did not request a return" · "never asked for a refund" · "has not
+    // initiated a return" · "did not seek a replacement"
+    id: "return_claim_beyond_record",
+    pattern: new RegExp(String.raw`\b${NEG}\s+${ASK}\b[^.!?;\n]{0,60}\b${RETURN_WORD}\b`, "i"),
+  },
+  {
+    // "no return was initiated" · "no return request was made" · "no refund
+    // has been requested" — but NOT "no return has been recorded in Shopify"
+    id: "return_claim_beyond_record",
+    pattern: new RegExp(
+      String.raw`\bno\s+(?:return|refund|replacement|exchange)(?:\s+requests?)?\s+(?:was|were|has\s+been|had\s+been|have\s+been)\s+(?:initiated|requested|made|opened|submitted|sought|received)\b`,
+      "i",
+    ),
+  },
+  {
+    // "no return request" / "no refund requests" as a noun phrase
+    id: "return_claim_beyond_record",
+    pattern: /\bno\s+(?:return|refund)\s+requests?\b/i,
+  },
+  {
+    // "never contacted the merchant" · "did not reach out" · "made no
+    // complaint" · "no complaint was received"
+    id: "contact_claim_beyond_record",
+    pattern: new RegExp(
+      String.raw`\b(?:${NEG}\s+(?:contact(?:ed)?|reach(?:ed)?\s+out|complain(?:ed)?|raised?\s+(?:a\s+|any\s+)?(?:concern|complaint|issue))|made\s+no\s+(?:complaint|contact)|no\s+(?:complaint|contact)\s+(?:was|has\s+been|had\s+been)\s+(?:made|received|raised))\b`,
+      "i",
+    ),
+  },
+  {
+    id: "contact_claim_beyond_record",
+    pattern: /\bthrough\s+any\s+channel\b|\binconsistent\s+with\s+a\s+genuine\b[^.!?;\n]{0,40}\bcomplaint\b/i,
+  },
+  {
+    // "not supported by any return or documented complaint in the merchant's
+    // records" · "no documented complaint" · "without any complaint" — an
+    // absence of complaint is beyond the record (merchants take complaints by
+    // email and chat that Shopify never sees). Canary #101111, 2026-09-28.
+    id: "contact_claim_beyond_record",
+    pattern:
+      /\b(?:no|any|without)\b[^.!?;\n]{0,40}\b(?:documented\s+|recorded\s+|prior\s+)?(?:complaints?|contact|correspondence)\b[^.!?;\n]{0,40}\b(?:in|on)\s+(?:the\s+)?(?:merchant'?s\s+)?records?\b|\bno\s+(?:documented|recorded|prior)\s+(?:complaints?|contact)\b|\bwithout\s+(?:any\s+)?(?:complaints?|contact)\b/i,
+  },
+];
+
+/**
+ * Store policies and missing evidence (base prompt rule 8d). Unconditional,
+ * like the return bans: a policy fact carries no terms and, unless accepted at
+ * checkout, no acceptance — so no fact can support a sentence describing
+ * either. Each pattern is scoped to a sentence that names a policy / the
+ * record, so "the carrier accepted the parcel" never matches.
+ */
+export const POLICY_AND_RECORD_BANS: ReadonlyArray<{ id: string; scope: RegExp; pattern: RegExp }> = [
+  {
+    // "neither policy was recorded as accepted at checkout" · "acceptance
+    // was not captured" · "does not confirm explicit acceptance"
+    id: "policy_acceptance_disclaimed",
+    scope: /\b(?:polic(?:y|ies)|terms|checkout)\b/i,
+    pattern:
+      /\b(?:not|never|neither|nor|no|without)\b[^.!?;\n]{0,60}\baccept(?:ed|ance)\b|\baccept(?:ed|ance)\b[^.!?;\n]{0,40}\b(?:not|never)\b/i,
+  },
+  {
+    // "a refund is contingent on the return of goods" · "the policy requires"
+    id: "policy_terms_beyond_record",
+    // "under the merchant's published terms" is the same claim without the word.
+    scope: /\bpolic(?:y|ies)\b|\b(?:published|merchant's|store's|standard)\s+terms\b|\bterms\s+(?:and|&)\s+conditions\b/i,
+    pattern:
+      /\b(?:contingent|conditional|condition(?:s|ed)?|requires?|required|stipulat\w*|entitle\w*|obligat\w*|only\s+(?:if|when|after)|within\s+\d+\s+days|states?\s+that|provides?\s+that)\b/i,
+  },
+  {
+    // "the policy was accessible to the customer at the time of purchase" —
+    // the snapshot can post-date the order; only "published on the store".
+    id: "policy_timing_beyond_record",
+    scope: /\bpolic(?:y|ies)\b/i,
+    pattern:
+      /\b(?:available|accessible|visible|displayed|shown|presented|disclosed)\b[^.!?;\n]{0,60}\b(?:at\s+the\s+time\s+of\s+(?:purchase|the\s+order|ordering|sale)|at\s+checkout|during\s+checkout|before\s+(?:the\s+)?(?:purchase|order)|when\s+(?:the\s+(?:customer|cardholder|buyer)\s+)?(?:ordered|purchased|placed))\b/i,
+  },
+  {
+    // "no product listing fact is available in the approved record"
+    id: "record_absence_narrated",
+    scope: /\b(?:record|fact)\b/i,
+    pattern:
+      /\b(?:no|not|without)\b[^.!?;\n]{0,40}\b(?:fact|listing|record)\b[^.!?;\n]{0,40}\b(?:available|present|included|provided)\b/i,
+  },
+];
+
+/**
+ * The merchant's own case, run down in its own letter (base prompt rule 10).
+ * Measured 2026-09-28: 176 of 235 letters in 30 days qualified the merchant's
+ * records ("the available evidence supports…"), and some said "the merchant
+ * acknowledges…" or "the evidence is limited". Unconditional: no fact makes
+ * underselling the merchant's case acceptable.
+ */
+export const UNDERSELL_BANS: ReadonlyArray<{ id: string; pattern: RegExp }> = [
+  { id: "undersells_case", pattern: /\bthe\s+merchant\s+acknowledges\b/i },
+  { id: "undersells_case", pattern: /\b(?:evidence|records?|documentation)\b[^.!?;\n]{0,40}\bis\s+(?:limited|thin|sparse|incomplete)\b/i },
+  { id: "undersells_case", pattern: /\b(?:limited|thin|sparse)\s+(?:evidence|records?|documentation)\b/i },
+  { id: "undersells_case", pattern: /\bframed\s+accordingly\b|\bthis\s+response\s+presents\b/i },
+  { id: "undersells_case", pattern: /\bthe\s+available\s+(?:evidence|records?)\b/i },
+];
+
+const UNDERSELL_REQUIRED =
+  "none — the letter argues for the merchant: state what each record shows, never qualify the merchant's own records or describe the evidence as limited.";
+
+const POLICY_AND_RECORD_REQUIRED =
+  "none — a policy may only be said to be published on the store (with its link). Its terms, when it was shown, its acceptance (unless accepted at checkout) and evidence absent from the record are never described.";
+
+const RETURN_ABSENCE_REQUIRED =
+  'none — absence and contact-history claims are banned outright. The only permitted sentence is "No return has been recorded in Shopify for this order."';
+
 export function runClaimGuards(input: RunClaimGuardsInput): {
   failures: GuardFailure[];
 } {
@@ -384,6 +512,50 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
         section: sectionKey,
         matchedText: match[0],
         requiredFact: guard.requiredFact,
+        checkedFactIds: factIds,
+      });
+    }
+
+    // Unconditional: no fact satisfies an absence claim (RETURN_ABSENCE_BANS).
+    const seen = new Set<string>();
+    for (const ban of RETURN_ABSENCE_BANS) {
+      if (seen.has(ban.id)) continue;
+      const m = text.match(ban.pattern);
+      if (!m) continue;
+      seen.add(ban.id);
+      failures.push({
+        guardId: ban.id,
+        section: sectionKey,
+        matchedText: m[0],
+        requiredFact: RETURN_ABSENCE_REQUIRED,
+        checkedFactIds: factIds,
+      });
+    }
+
+    // Unconditional: never run the merchant's case down (rule 10).
+    for (const ban of UNDERSELL_BANS) {
+      const m = text.match(ban.pattern);
+      if (!m) continue;
+      failures.push({
+        guardId: ban.id,
+        section: sectionKey,
+        matchedText: m[0],
+        requiredFact: UNDERSELL_REQUIRED,
+        checkedFactIds: factIds,
+      });
+      break;
+    }
+
+    // Unconditional: policy terms, policy non-acceptance, narrated absence.
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    for (const ban of POLICY_AND_RECORD_BANS) {
+      const hit = sentences.find((sn) => ban.scope.test(sn) && ban.pattern.test(sn));
+      if (!hit) continue;
+      failures.push({
+        guardId: ban.id,
+        section: sectionKey,
+        matchedText: hit.match(ban.pattern)?.[0] ?? hit,
+        requiredFact: POLICY_AND_RECORD_REQUIRED,
         checkedFactIds: factIds,
       });
     }

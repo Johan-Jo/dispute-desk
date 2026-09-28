@@ -17,7 +17,7 @@ export const inr_product_not_received: ReasonCodeGuidance = {
     "Prioritise delivery / access evidence: tracking number, carrier, delivery date and time, signature where present, pickup proof, digital access logs, shipping address that matches what was authorised.",
     "Do NOT claim delivery unless an approved delivery_proof fact carries proofType='delivered_confirmed' or proofType='signature_confirmed'.",
     "Do NOT claim digital access unless an approved digital_access_log or service_access fact is present.",
-    "If a tracking number exists but no delivery confirmation, frame the argument around what the tracking does show (handed to carrier, in transit, last scan) without claiming delivery.",
+    "When the tracking record stops short of a delivery confirmation, frame the argument around what the tracking does show (handed to carrier, in transit, last scan), never claiming delivery and never describing what the record lacks.",
   ].join("\n"),
   prioritize: [
     "delivery_proof",

@@ -1,6 +1,6 @@
 /**
- * DefencePackageHtmlView — Polaris-rendered, web-native version of the
- * Defence Package PDF.
+ * DefencePackageHtmlView — the in-app preview of the Defence Package PDF,
+ * drawn to the same "Chargeback Response v2" design (2026-09-24).
  *
  * Mirrors the deterministic PDF document structure (`lib/defence/pdf/
  * DefencePackageDocument.tsx`) section-for-section so what the merchant
@@ -17,34 +17,22 @@
 
 "use client";
 
-import { Fragment, useState } from "react";
+import React, { Fragment } from "react";
 import { useTranslations } from "next-intl";
-import {
-  BlockStack,
-  Box,
-  Button,
-  Card,
-  Collapsible,
-  Divider,
-  InlineStack,
-  Text,
-} from "@shopify/polaris";
+import { Card } from "@shopify/polaris";
 import type {
   DefenceNarrativeOutput,
   EvidenceFact,
-  NarrativeSection,
   NarrativeSectionKey,
   PackageMode,
 } from "@/lib/defence/types";
-import { isSectionDeniedForModule } from "@/lib/defence/sectionVisibility";
-import {
-  buildChronologyEvents,
-  formatChronologyTimestamp,
-  type ChronologyEvent,
-} from "@/lib/defence/chronology";
+import { isSectionShown } from "@/lib/defence/sectionVisibility";
+import { disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
+import { buildChronologyEvents, familyOmitsArrival, type ChronologyEvent } from "@/lib/defence/chronology";
 import {
   SECTION_ORDER,
   SECTION_TITLES,
+  sectionTitleFor,
 } from "@/lib/defence/render/sections";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
@@ -55,6 +43,25 @@ import {
   type LineItem,
 } from "@/lib/defence/render/lineItems";
 import type { ReasonCodeModuleKey } from "@/lib/defence/types";
+import { formatMoneyDisplay, humanizeEnum, reasonCodeForNetwork } from "@/lib/defence/render/formatting";
+import { DOCUMENT_COLORS } from "@/lib/defence/render/documentTheme";
+import {
+  dateParts,
+  describeChronologyEvent,
+  emphasisSegments,
+  lineItemsTotal,
+  orderPlacedLine,
+  addressCard,
+  laterOrderCard,
+  productsOf,
+  deliveryFactIds,
+  shipmentCards,
+  shipmentsOf,
+  singleShipmentOf,
+  statusPillTone,
+  type PillTone,
+  type ShipmentCard,
+} from "@/lib/defence/render/documentModel";
 
 /** Recognized reason-code module keys. Used to normalize an unknown
  *  `reason_code_module` to null before it reaches familyForModule()
@@ -84,6 +91,7 @@ function thesisFor(
   moduleKey: string | null | undefined,
   mode: PackageMode,
   facts: EvidenceFact[],
+  caseContext?: { orderName?: string | null; disputeOpenedAt?: string | null; disputedAmount?: string | null },
 ): string | null {
   const familyKey = moduleKey
     ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
@@ -94,6 +102,7 @@ function thesisFor(
     familyKey,
     packageMode: mode,
     approvedFacts: facts,
+    caseContext,
   });
   return out || null;
 }
@@ -143,6 +152,9 @@ export interface DisputeContextLike {
   cardholderName?: string | null;
   customerEmail?: string | null;
   transactionDate?: string | null;
+  /** When the dispute was opened — the opening line states it when the
+   *  carrier-recorded delivery came first. */
+  openedAt?: string | null;
   merchantName?: string | null;
   shopName?: string | null;
   /** Full event timeline from the pack's access_log section. Threaded
@@ -206,10 +218,15 @@ function fmtAmount(amount: number | string | null | undefined, currency: string 
 function chronologyEvents(
   dispute: DisputeContextLike | undefined,
   facts: EvidenceFact[],
+  orderTotalDisplay: string | null = null,
+  additions: ReadonlyArray<{ at: string; text: string }> = [],
+  omitArrivalEvents = false,
 ): ChronologyEvent[] {
   return buildChronologyEvents(
     {
-      timelineEvents: dispute?.timelineEvents ?? null,
+      orderTotalDisplay,
+      omitArrivalEvents,
+      timelineEvents: additions.length ? [...(dispute?.timelineEvents ?? []), ...additions] : (dispute?.timelineEvents ?? null),
       transactionDate: dispute?.transactionDate ?? null,
       orderName: dispute?.orderName ?? null,
       cardNetwork: dispute?.cardNetwork ?? null,
@@ -220,6 +237,242 @@ function chronologyEvents(
 }
 
 // ─── Component ───────────────────────────────────────────────────────
+//
+// Rendered to the "Chargeback Response v2" design, the same document the PDF
+// draws (lib/defence/pdf/DefencePackageDocument.tsx): the case header, fact
+// cards and Case Details, then numbered sections — shipment cards on a
+// multi-parcel order, line items with a total, a vertical chronology, and the
+// conclusion panel. The derived content comes from the shared
+// `lib/defence/render/documentModel.ts`, so the two cannot drift. The copy is
+// the document's own (English, as filed), not merchant UI copy.
+
+const C = DOCUMENT_COLORS;
+const FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+const css = {
+  doc: { fontFamily: FONT, color: C.body, fontSize: 14, lineHeight: 1.55 } as React.CSSProperties,
+  bar: { height: 6, background: C.accent, borderRadius: "6px 6px 0 0", margin: "-20px -20px 20px" } as React.CSSProperties,
+  metaRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" } as React.CSSProperties,
+  eyebrow: { fontSize: 11, fontWeight: 700, color: C.accent, letterSpacing: "0.12em", textTransform: "uppercase" } as React.CSSProperties,
+  metaRight: { fontSize: 12, color: C.muted },
+  title: { fontSize: 32, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "16px 0 6px" } as React.CSSProperties,
+  subtitle: { fontSize: 16, color: C.muted },
+  onBehalf: { fontSize: 14, color: C.muted, marginTop: 12 },
+  factGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, margin: "22px 0 28px" } as React.CSSProperties,
+  factCard: { background: C.accentSoft, borderRadius: 10, padding: "14px 16px" },
+  factLabel: { fontSize: 11, fontWeight: 600, color: C.accent, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 } as React.CSSProperties,
+  factValue: { fontSize: 22, fontWeight: 700, color: C.ink, lineHeight: 1.2 },
+  plainHeading: { fontSize: 20, fontWeight: 700, color: C.accent, paddingBottom: 10, borderBottom: `2px solid ${C.accent}`, marginBottom: 10 },
+  sectionHead: { display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, borderBottom: `2px solid ${C.accent}`, margin: "32px 0 14px" },
+  badge: { background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700, borderRadius: 5, padding: "3px 7px" },
+  sectionTitle: { fontSize: 20, fontWeight: 700, color: C.accent },
+  th: { fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: "0.08em", textTransform: "uppercase", padding: "8px 12px", textAlign: "left" } as React.CSSProperties,
+  td: { fontSize: 14, color: C.ink, padding: "9px 12px", verticalAlign: "top" } as React.CSSProperties,
+  tdLabel: { fontSize: 14, color: C.muted, padding: "9px 12px", verticalAlign: "top" } as React.CSSProperties,
+  paragraph: { fontSize: 15, color: C.body, margin: "0 0 10px" },
+  thesis: { borderLeft: `3px solid ${C.accent}`, paddingLeft: 12, margin: "0 0 12px", color: C.ink, fontWeight: 500 },
+  link: { color: C.accent, textDecoration: "none" },
+};
+
+function Pill({ tone, label }: { tone: PillTone; label: string }) {
+  const c =
+    tone === "green"
+      ? { bg: C.greenBg, border: C.greenBorder, text: C.greenText }
+      : tone === "blue"
+        ? { bg: C.blueBg, border: C.blueBorder, text: C.blueText }
+        : { bg: C.greyBg, border: C.greyBorder, text: C.greyText };
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+        color: c.text,
+        borderRadius: 6,
+        padding: "2px 8px",
+        fontSize: 12,
+        fontWeight: 500,
+        lineHeight: 1.5,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Section({ number, title, children }: { number: string; title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <div style={css.sectionHead}>
+        <span style={css.badge}>{number}</span>
+        <span style={css.sectionTitle}>{title}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Prose({ text, emphasise = [] }: { text: string; emphasise?: string[] }) {
+  const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <>
+      {parts.map((p, i) => (
+        <p key={i} style={css.paragraph}>
+          {emphasisSegments(p, emphasise).map((seg, j) =>
+            seg.strong ? (
+              <strong key={j} style={{ color: C.ink }}>
+                {seg.text}
+              </strong>
+            ) : (
+              <Fragment key={j}>{seg.text}</Fragment>
+            ),
+          )}
+        </p>
+      ))}
+    </>
+  );
+}
+
+function ZebraTable({
+  head,
+  rows,
+  widths,
+  align,
+}: {
+  head: string[];
+  rows: React.ReactNode[][];
+  widths?: string[];
+  align?: Array<"left" | "right">;
+}) {
+  return (
+    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+      <thead>
+        <tr>
+          {head.map((h, i) => (
+            <th key={h} style={{ ...css.th, width: widths?.[i], textAlign: align?.[i] ?? "left" }}>
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((cells, r) => (
+          <tr key={r} style={{ background: r % 2 === 0 ? C.zebra : "transparent" }}>
+            {cells.map((cell, i) => (
+              <td
+                key={i}
+                style={{
+                  ...(i === 0 && head[0] === "Field" ? css.tdLabel : css.td),
+                  textAlign: align?.[i] ?? "left",
+                  borderTopLeftRadius: i === 0 ? 6 : 0,
+                  borderBottomLeftRadius: i === 0 ? 6 : 0,
+                  borderTopRightRadius: i === cells.length - 1 ? 6 : 0,
+                  borderBottomRightRadius: i === cells.length - 1 ? 6 : 0,
+                }}
+              >
+                {cell}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ShipmentCardView({ card, wide = false }: { card: ShipmentCard; wide?: boolean }) {
+  return (
+    <div style={{ border: `1px solid ${C.hairline}`, borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: C.accentSoft, padding: "14px 18px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ ...css.eyebrow, fontSize: 11 }}>{card.eyebrow ?? `Shipment ${card.index}`}</span>
+          <Pill tone={card.status.tone} label={card.status.label} />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{card.product}</div>
+      </div>
+      <div
+        style={
+          wide
+            ? { padding: "14px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }
+            : { padding: "4px 18px 10px" }
+        }
+      >
+        {card.fields.map((f, i) => (
+          <div
+            key={f.label}
+            style={
+              wide
+                ? {}
+                : {
+                    padding: "10px 0",
+                    borderBottom: i === card.fields.length - 1 ? "none" : `1px solid ${C.hairline}`,
+                  }
+            }
+          >
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{f.label}</div>
+            <div style={{ fontSize: 14, color: C.ink, fontWeight: 500, whiteSpace: "pre-line" }}>
+              {f.value}
+              {f.reference ? (
+                <>
+                  {" · "}
+                  {f.reference.url ? (
+                    <a href={f.reference.url} target="_blank" rel="noopener noreferrer" style={css.link}>
+                      {f.reference.text}
+                    </a>
+                  ) : (
+                    f.reference.text
+                  )}
+                </>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChronologyView({
+  events,
+  shipments,
+}: {
+  events: ChronologyEvent[];
+  shipments: ReturnType<typeof shipmentsOf>;
+}) {
+  return (
+    <div>
+      {events.map((e, i) => {
+        const parts = dateParts(e.at);
+        const { title, marker } = describeChronologyEvent(e, shipments);
+        const last = i === events.length - 1;
+        const dot: React.CSSProperties =
+          marker === "green"
+            ? { background: C.greenDot }
+            : marker === "hollow"
+              ? { background: "#fff", border: `2px solid ${C.accent}`, width: 7, height: 7 }
+              : { background: C.accent };
+        return (
+          <div key={`${e.at}-${i}`} style={{ display: "grid", gridTemplateColumns: "150px 28px 1fr", minHeight: 58 }}>
+            <div style={{ paddingBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{parts ? parts[0] : e.at}</div>
+              {parts ? <div style={{ fontSize: 12.5, color: C.muted }}>{parts[1]}</div> : null}
+            </div>
+            <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
+              {last ? null : (
+                <div style={{ position: "absolute", top: 12, bottom: 0, width: 2, background: C.accentLine }} />
+              )}
+              <div style={{ position: "relative", width: 11, height: 11, borderRadius: "50%", marginTop: 5, ...dot }} />
+            </div>
+            <div style={{ paddingBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{title}</div>
+              <div style={{ fontSize: 14, color: C.muted }}>{e.text}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function DefencePackageHtmlView({ row, dispute }: Props) {
   const t = useTranslations("disputes.defencePackageHtml");
@@ -233,359 +486,333 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     narrative.omittedSections.map((o) => o.sectionKey),
   );
   const mode: PackageMode = row.package_mode ?? "full";
-  // Guard against an unrecognized reason_code_module. familyForModule()
-  // THROWS on an unknown key (it's a fail-loud invariant for code bugs),
-  // which would white-screen the whole Review and Forward tab on a single
-  // bad/stale data row. Normalize any unknown value to null so the
-  // module-aware helpers (familyKeyForModule / isSectionDeniedForModule)
-  // take their null-safe paths instead of crashing.
+  // Guard against an unrecognized reason_code_module: familyForModule()
+  // THROWS on an unknown key, which would white-screen the whole tab on a
+  // single bad/stale row. Normalize to null so the null-safe paths run.
   const moduleKey = VALID_MODULE_KEYS.has(row.reason_code_module as string)
     ? row.reason_code_module
     : null;
+  const reasonModule = moduleKey ? ALL_REASON_CODE_MODULES.find((m) => m.key === moduleKey) ?? null : null;
 
-  const evidenceBasis = buildEvidenceBasisRows(facts);
-  const chrono = chronologyEvents(dispute, facts);
-  // Line items extracted via the shared builder so the PDF and HTML
-  // view show the same rows with the same shape validation.
   const lineItems: LineItem[] = buildLineItems(facts);
+  const chrono = chronologyEvents(
+    dispute,
+    facts,
+    lineItemsTotal(lineItems)?.amount ?? null,
+    narrative.timelineAdditions ?? [],
+    familyOmitsArrival(moduleKey ? familyKeyForModule(moduleKey as ReasonCodeModuleKey) : null),
+  );
+  const total = lineItemsTotal(lineItems);
+  const shipments = shipmentsOf(facts);
+  const multiParcel = shipments.length > 1;
+  // Same as the PDF: a single parcel's carrier record is a card, and the
+  // Evidence Basis leaves out what the card shows.
+  const single = multiParcel ? null : singleShipmentOf(facts, chrono, dispute?.orderName ?? null);
+  const shownOnCard = single ? deliveryFactIds(facts) : new Set<string>();
+  const evidenceBasis = buildEvidenceBasisRows(facts).filter((r) => !shownOnCard.has(r.factId));
+  const productNames = [...lineItems.map((it) => it.description), ...shipments.map(productsOf)];
+  const caseContext = {
+    orderName: dispute?.orderName ?? null,
+    disputeOpenedAt: dispute?.openedAt ?? null,
+    disputedAmount: disputedAmountDisplay(
+      dispute?.amount == null ? null : Number(dispute.amount),
+      dispute?.currencyCode ?? null,
+    ),
+  };
 
   const fulfillmentFallbackVisible =
     omitted.has("fulfillmentArgument") &&
-    (typeof dispute?.fulfillmentStatus === "string" && dispute.fulfillmentStatus.toUpperCase() === "FULFILLED");
+    typeof dispute?.fulfillmentStatus === "string" &&
+    dispute.fulfillmentStatus.toUpperCase() === "FULFILLED";
 
-  // Case Details rows come from the shared builder so the PDF and
-  // this HTML view show the same fields in the same order — no
-  // parallel implementation. `familyKey` drives the per-family row
-  // deny list (e.g. fraud disputes hide Fulfillment status so an
-  // UNFULFILLED value can't reach the bank-facing table and
-  // undermine the authentication argument).
+  // The PDF's label: the module's network code narrowed to the card used
+  // ("Visa 13.1"). Without a card network (BNPL) or a module, the Shopify
+  // reason in words — never the raw enum ("PRODUCT_NOT_RECEIVED").
+  const reason =
+    (dispute?.reasonCodeDisplay
+      ? reasonCodeForNetwork(dispute.reasonCodeDisplay, dispute?.cardNetwork ?? null)
+      : dispute?.cardNetwork && reasonModule
+        ? reasonCodeForNetwork(reasonModule.displayName, dispute.cardNetwork)
+        : null) ?? humanizeEnum(dispute?.reason);
+  const amount = formatMoneyDisplay(fmtAmount(dispute?.amount, dispute?.currencyCode));
+  const merchant = dispute?.merchantName ?? dispute?.shopName ?? t("defaultMerchant");
+
+  // Case Details rows come from the shared builder so the PDF and this view
+  // show the same fields in the same order. `familyKey` drives the per-family
+  // deny list (fraud disputes hide Fulfillment status).
   const caseRows = buildCaseDetailsRows({
     disputeIdShort: disputeIdShort(dispute?.disputeGid),
-    merchantName: dispute?.merchantName ?? dispute?.shopName ?? null,
+    merchantName: merchant,
     cardNetwork: dispute?.cardNetwork ?? null,
     transactionDateDisplay: fmtIso(dispute?.transactionDate),
-    amountDisplay: fmtAmount(dispute?.amount, dispute?.currencyCode),
-    reasonCodeDisplay: dispute?.reasonCodeDisplay ?? dispute?.reason ?? null,
-    claimType: null, // Workspace API doesn't expose claimType today; falls back to "—".
+    amountDisplay: amount,
+    reasonCodeDisplay: reason,
+    claimType: reasonModule?.claimType ?? null,
     orderName: dispute?.orderName ?? null,
     cardholderName: dispute?.cardholderName ?? null,
     cardLast4: dispute?.cardLast4 ?? null,
     paymentGateway: dispute?.paymentGateway ?? null,
     financialStatus: dispute?.financialStatus ?? null,
     fulfillmentStatus: dispute?.fulfillmentStatus ?? null,
-    familyKey: moduleKey
-      ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
-      : null,
+    familyKey: moduleKey ? familyKeyForModule(moduleKey as ReasonCodeModuleKey) : null,
   });
 
-  // Empty-card guard: if NONE of the body sources have content — no
-  // narrative section carries text, and there are no evidence-basis
-  // rows, chronology events, or line items — do not render a titled
-  // "Chargeback response preview" card with an empty body. That empty
-  // shell is worse than showing nothing (it implies a package exists
-  // when there's nothing to show). Case Details alone (identity fields)
-  // is not "body content" — a package needs at least one argument,
-  // evidence row, or line item to be worth previewing.
+  // Empty-card guard: no narrative text, evidence, events or line items →
+  // render nothing rather than an empty titled shell.
   const hasNarrativeText = SECTION_ORDER.some((key) => {
     const section = narrative[key as NarrativeSectionKey];
     return section && !omitted.has(key as NarrativeSectionKey) && section.text?.trim();
   });
-  const hasBodyContent =
-    hasNarrativeText ||
-    evidenceBasis.length > 0 ||
-    chrono.length > 0 ||
-    lineItems.length > 0;
-  if (!hasBodyContent) {
+  if (!(hasNarrativeText || evidenceBasis.length > 0 || chrono.length > 0 || lineItems.length > 0)) {
     return null;
   }
 
+  const visible = (key: NarrativeSectionKey) =>
+    isSectionShown(narrative, key, moduleKey) && !omitted.has(key) && narrative[key]?.text?.trim()
+      ? narrative[key].text.trim()
+      : null;
+
+  // Numbered in the order sections actually render, as in the PDF.
+  let n = 0;
+  const num = () => String(++n).padStart(2, "0");
+
+  const prose = (key: NarrativeSectionKey) => {
+    const body = visible(key);
+    if (!body) return null;
+    // Counsel v2: the model-written punchline replaces the templated headline, as in the PDF.
+    const thesis =
+      key === "executiveSummary" && narrative.headline !== undefined
+        ? narrative.headline.trim() || null
+        : thesisFor(key, moduleKey, mode, facts, caseContext);
+    return (
+      <Section key={key} number={num()} title={sectionTitleFor(key, facts)}>
+        {thesis ? <p style={css.thesis}>{thesis}</p> : null}
+        {/* Product names are bolded where they tell parcels and items apart
+            (shipping, line items). The summary and conclusion argue the case,
+            and bold names there pull the eye to the least important words
+            (maintainer, #360980, 2026-09-26). */}
+        <Prose text={body} emphasise={key === "executiveSummary" || key === "conclusion" ? [] : productNames} />
+      </Section>
+    );
+  };
+
+  const conclusionBody = visible("conclusion");
+  // The request line stands alone when the body is empty (record-built letters).
+  const conclusionThesis = thesisFor("conclusion", moduleKey, mode, facts, caseContext);
+  const chronologyBody = visible("chronologyArgument");
+  const lineItemsArgument =
+    narrative.transactionOverviewArgument?.source === "record" && lineItems.length > 0
+      ? visible("transactionOverviewArgument")
+      : null;
+
   return (
     <Card padding="500">
-      <BlockStack gap="400">
-        <BlockStack gap="100">
-          <Text as="span" variant="bodySm" tone="subdued">
-            {t("chargebackOverline")}
-          </Text>
-          <Text as="h2" variant="headingMd">
-            {t("previewTitle")}
-          </Text>
-          <Text as="p" tone="subdued" variant="bodySm">
-            {t("preparedFor", {
-              merchant:
-                dispute?.merchantName ?? dispute?.shopName ?? t("defaultMerchant"),
-            })}
-          </Text>
-        </BlockStack>
+      <div style={css.doc}>
+        <div style={css.bar} />
+        <div style={css.metaRow}>
+          <span style={css.eyebrow}>Chargeback response</span>
+          <span style={css.metaRight}>{fmtIso(row.generated_at)}</span>
+        </div>
+        <div style={css.title}>Dispute {disputeIdShort(dispute?.disputeGid)}</div>
+        <div style={css.subtitle}>
+          {[
+            dispute?.orderName ? `Order ${dispute.orderName}` : null,
+            [reason, reasonModule?.claimType].filter(Boolean).join(" — ") || null,
+            amount,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+        <div style={css.onBehalf}>
+          Submitted on behalf of <strong style={{ color: C.accent, fontWeight: 600 }}>{merchant}</strong>
+        </div>
 
-        <Divider />
+        <div style={css.factGrid}>
+          {[
+            ["Disputed amount", amount ?? "—"],
+            ["Reason code", reason ?? "—"],
+            ["Claim type", reasonModule?.claimType ? reasonModule.claimType.replace(/\s+claim$/i, "") : "—"],
+          ].map(([label, value]) => (
+            <div key={label} style={css.factCard}>
+              <div style={css.factLabel}>{label}</div>
+              <div style={css.factValue}>{value}</div>
+            </div>
+          ))}
+        </div>
 
-        {/* Case Details (collapsible — collapsed by default; merchant
-            expands to verify the metadata) */}
-        <CaseDetailsSection rows={caseRows} />
+        <div style={css.plainHeading}>Case Details</div>
+        <ZebraTable
+          head={["Field", "Detail"]}
+          widths={["38%", "62%"]}
+          rows={caseRows.map(([k, v]) => [
+            k,
+            (k === "Financial status" || k === "Fulfillment status") && v !== "—" ? (
+              <Pill tone={statusPillTone(v)} label={v} />
+            ) : (
+              v
+            ),
+          ])}
+        />
 
-        {/* LLM-authored sections. Per-module section deny list is
-            consulted at render time (see lib/defence/sectionVisibility.ts)
-            so stale narrative_json rows never surface a section that's
-            been ruled out for the reason code. */}
-        {SECTION_ORDER.filter(
-          (key) => !isSectionDeniedForModule(key, moduleKey),
-        ).map((key) => {
-          if (key === "chronologyArgument") {
-            // Chronology has its own bullet list below the paragraph.
-            const section = narrative[key];
-            if (omitted.has(key) || !section.text.trim()) return null;
-            const thesis = thesisFor(key, moduleKey, mode, facts);
-            return (
-              <BlockStack key={key} gap="200">
-                <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
-                {thesis && <ThesisBox text={thesis} />}
-                <Text as="p" variant="bodyMd">{section.text}</Text>
-                {chrono.length > 0 && (
-                  <BlockStack gap="100">
-                    {chrono.map((e, i) => (
-                      <InlineStack key={`${e.at}-${i}`} gap="200" wrap={false}>
-                        <Text as="span" variant="bodySm" fontWeight="semibold">
-                          {formatChronologyTimestamp(e.at)}
-                        </Text>
-                        <Text as="span" variant="bodySm">{e.text}</Text>
-                      </InlineStack>
-                    ))}
-                  </BlockStack>
-                )}
-              </BlockStack>
-            );
-          }
+        {prose("executiveSummary")}
+        {/* A record-built overview argues the line items: it prints under
+            the table instead, as in the PDF. */}
+        {lineItemsArgument ? null : prose("transactionOverviewArgument")}
+        {prose("paymentAuthenticationArgument")}
 
-          if (key === "fulfillmentArgument") {
-            // Either the LLM-authored body, or the minimal deterministic
-            // fallback when only fulfillmentStatus=FULFILLED is on file.
-            const section = narrative[key];
-            const hasBody = !omitted.has(key) && section.text.trim();
-            if (hasBody) {
-              const thesis = thesisFor(key, moduleKey, mode, facts);
-              return (
-                <BlockStack key={key} gap="200">
-                  <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
-                  {thesis && <ThesisBox text={thesis} />}
-                  <Text as="p" variant="bodyMd">{section.text}</Text>
-                </BlockStack>
-              );
-            }
-            if (fulfillmentFallbackVisible) {
-              return (
-                <BlockStack key={key} gap="200">
-                  <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
-                  <Text as="p" variant="bodyMd">
-                    The merchant&apos;s order record marks the order as fulfilled. No
-                    separate delivery, access-use, or service-completion claim is made
-                    in this section unless supported by approved evidence.
-                  </Text>
-                </BlockStack>
-              );
-            }
-            return null;
-          }
-
-          if (key === "conclusion") {
-            // Render the conclusion with a framed call-out.
-            const section = narrative[key];
-            if (omitted.has(key) || !section.text.trim()) return null;
-            const thesis = thesisFor(key, moduleKey, mode, facts);
-            return (
-              <BlockStack key={key} gap="200">
-                <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
-                {thesis && <ThesisBox text={thesis} />}
-                <Box background="bg-surface-secondary" borderRadius="200" padding="300">
-                  <Text as="p" variant="bodyMd">{section.text}</Text>
-                </Box>
-              </BlockStack>
-            );
-          }
-
-          return (
-            <SectionBlock
-              key={key}
-              title={SECTION_TITLES[key]}
-              thesis={thesisFor(key, moduleKey, mode, facts)}
-              section={narrative[key]}
-              omitted={omitted.has(key)}
-            />
-          );
-        })}
-
-        {/* Order Line Items (deterministic) */}
-        {lineItems.length > 0 && (
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">{t("orderLineItems")}</Text>
-            <BlockStack gap="100">
-              {lineItems.map((it, i) => (
-                <InlineStack key={i} gap="400" align="space-between" wrap={false}>
-                  <Text as="span" variant="bodySm">
-                    {it.description} (×{it.quantity})
-                  </Text>
-                  <Text as="span" variant="bodySm" fontWeight="semibold">{it.price}</Text>
-                </InlineStack>
+        {multiParcel ? (
+          <Section number={num()} title="Shipping, Delivery & Evidence">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+              {shipmentCards(shipments, chrono).map((card) => (
+                <ShipmentCardView key={card.index} card={card} />
               ))}
-            </BlockStack>
-          </BlockStack>
-        )}
+            </div>
+            {/* Counsel v2 multi-parcel letters, as in the PDF: the addresses
+                and the record-built prose under the cards. */}
+            {addressCard(narrative.addressExhibit) ? (
+              <div style={{ marginTop: 12 }}>
+                <ShipmentCardView card={addressCard(narrative.addressExhibit)!} wide />
+              </div>
+            ) : null}
+            {narrative.fulfillmentArgument?.source === "record" && visible("fulfillmentArgument") ? (
+              <div style={{ marginTop: 16 }}>
+                <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />
+              </div>
+            ) : null}
+          </Section>
+        ) : single ? (
+          <Section number={num()} title={sectionTitleFor("fulfillmentArgument", facts)}>
+            {shipmentCards([single], chrono).map((card) => (
+              <ShipmentCardView key={card.index} card={card} wide />
+            ))}
+            {addressCard(narrative.addressExhibit) ? (
+              <div style={{ marginTop: 12 }}>
+                <ShipmentCardView card={addressCard(narrative.addressExhibit)!} wide />
+              </div>
+            ) : null}
+            {visible("fulfillmentArgument") ? (
+              <div style={{ marginTop: 16 }}>
+                <Prose text={visible("fulfillmentArgument") as string} emphasise={productNames} />
+              </div>
+            ) : null}
+          </Section>
+        ) : visible("fulfillmentArgument") ? (
+          prose("fulfillmentArgument")
+        ) : fulfillmentFallbackVisible ? (
+          <Section number={num()} title={sectionTitleFor("fulfillmentArgument", facts)}>
+            <p style={css.paragraph}>
+              The merchant&apos;s order record marks the order as shipped. No separate delivery,
+              access-use, or service-completion claim is made in this section unless supported by
+              approved evidence.
+            </p>
+          </Section>
+        ) : null}
 
-        {/* Evidence Basis (deterministic, from approved facts).
-            Caption removed — mirrors the bank PDF so the merchant
-            preview reflects exactly what the reviewer sees. The prior
-            "Approved bank-facing facts used to ground this package"
-            line leaked internal terminology onto the bank submission;
-            keeping the same removal here means the preview is no
-            longer a richer view than what we send. */}
-        <BlockStack gap="200">
-          <Text as="h3" variant="headingMd">{t("evidenceBasis")}</Text>
-          {evidenceBasis.length === 0 ? (
-            <Text as="p" variant="bodyMd">{t("noBankEligibleFacts")}</Text>
-          ) : (
-            <Box background="bg-surface-secondary" borderRadius="200" padding="300">
-              {/* Two-column grid: fixed-width label column + flexible
-                  value column that wraps naturally. The prior
-                  InlineStack with align="space-between" pushed the
-                  label hard-left and the value hard-right, producing
-                  a giant empty gap on short rows and an awkward right-
-                  aligned wrap on long rows (e.g. the fraud-screening
-                  row that now lists every Shopify ACCEPT signal). */}
+        {prose("communicationArgument")}
+        {prose("policyArgument")}
+
+        {/* The PDF prints no Evidence Basis without rows; neither does the
+            preview when a shipment card already shows the record. */}
+        {!multiParcel && !(single && evidenceBasis.length === 0) ? (
+          <Section number={num()} title={t("evidenceBasis")}>
+            {evidenceBasis.length === 0 ? (
+              <p style={css.paragraph}>{t("noBankEligibleFacts")}</p>
+            ) : (
+              <ZebraTable
+                head={["Record", "Detail"]}
+                widths={["38%", "62%"]}
+                rows={evidenceBasis.map((r) => [
+                  <span key="l" style={{ fontWeight: 600 }}>{r.label}</span>,
+                  <span key="v">
+                    {r.value}
+                    {r.link ? (
+                      <>
+                        {" · "}
+                        <a href={r.link.url} target="_blank" rel="noopener noreferrer" style={css.link}>
+                          {r.link.label}
+                        </a>
+                      </>
+                    ) : null}
+                  </span>,
+                ])}
+              />
+            )}
+          </Section>
+        ) : null}
+
+        {prose("manualEvidenceArgument")}
+
+        {lineItems.length > 0 ? (
+          <Section number={num()} title={t("orderLineItems")}>
+            {orderPlacedLine(dispute?.orderName, dispute?.transactionDate) ? (
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+                {orderPlacedLine(dispute?.orderName, dispute?.transactionDate)}
+              </div>
+            ) : null}
+            <ZebraTable
+              head={["Description", "Qty", "Price"]}
+              widths={["70%", "10%", "20%"]}
+              align={["left", "right", "right"]}
+              rows={lineItems.map((it) => [it.description, it.kind === "adjustment" ? "" : String(it.quantity), it.price])}
+            />
+            {total ? (
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(180px, 220px) 1fr",
-                  columnGap: 16,
-                  rowGap: 8,
-                  alignItems: "start",
+                  gridTemplateColumns: "70% 10% 20%",
+                  borderTop: `2px solid ${C.ink}`,
+                  marginTop: 6,
+                  paddingTop: 10,
+                  color: C.accent,
+                  fontWeight: 700,
                 }}
               >
-                {evidenceBasis.map((r, i) => (
-                  <Fragment key={i}>
-                    <Text as="span" variant="bodySm" fontWeight="semibold">{r.label}</Text>
-                    {/* Same structured link the PDF renders as an annotation —
-                        one builder, two renderers, no parallel URL parsing.
-                        Anchored on carrier + number so the raw URL is never
-                        shown; `link` is null on rows without a citable URL. */}
-                    <Text as="span" variant="bodySm">
-                      {r.value}
-                      {r.link ? (
-                        <>
-                          {" · "}
-                          <a
-                            href={r.link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {r.link.label}
-                          </a>
-                        </>
-                      ) : null}
-                    </Text>
-                  </Fragment>
-                ))}
+                <span style={{ padding: "0 12px" }}>Total</span>
+                <span style={{ padding: "0 12px", textAlign: "right" }}>{total.quantity}</span>
+                <span style={{ padding: "0 12px", textAlign: "right" }}>{total.amount}</span>
               </div>
-            </Box>
-          )}
-        </BlockStack>
+            ) : null}
+            {lineItemsArgument ? (
+              <div style={{ marginTop: 16 }}>
+                <Prose text={lineItemsArgument} emphasise={productNames} />
+              </div>
+            ) : null}
+            {laterOrderCard(narrative.laterOrderExhibit) ? (
+              <div style={{ marginTop: 24 }}>
+                <ShipmentCardView card={laterOrderCard(narrative.laterOrderExhibit)!} wide />
+              </div>
+            ) : null}
+          </Section>
+        ) : null}
 
-        {/* Package Metadata block intentionally NOT rendered here.
-            That section (Package ID / Evidence hash / Prompt family /
-            Prompt version / Reason-code module / LLM model / Generated)
-            is admin/operator audit data and must not appear on the
-            merchant-facing embedded review page — same content surfaces
-            in /admin/defence-package/runs/[id] for ops. Removed
-            2026-05-16 after operator review caught it leaking. */}
-      </BlockStack>
+        {chrono.length > 0 || chronologyBody ? (
+          <Section number={num()} title={SECTION_TITLES.chronologyArgument}>
+            {chronologyBody ? (
+              <div style={{ marginBottom: 20 }}>
+                <Prose text={chronologyBody} />
+              </div>
+            ) : null}
+            {chrono.length > 0 ? <ChronologyView events={chrono} shipments={shipments} /> : null}
+          </Section>
+        ) : null}
+
+        {conclusionBody || conclusionThesis ? (
+          <Section number={num()} title={SECTION_TITLES.conclusion}>
+            <div style={{ background: C.accentSoft, borderRadius: 12, padding: "22px 26px" }}>
+              {/* The reasoning, then the request, as in the PDF. */}
+              {conclusionBody ? (
+                <div style={{ fontSize: 15, color: C.ink, marginBottom: conclusionThesis ? 12 : 0 }}>{conclusionBody}</div>
+              ) : null}
+              {conclusionThesis ? (
+                <div style={{ fontSize: 18, fontWeight: 600, color: C.accent, lineHeight: 1.4 }}>{conclusionThesis}</div>
+              ) : null}
+            </div>
+          </Section>
+        ) : null}
+
+        {/* Package Metadata intentionally NOT rendered: operator audit data,
+            surfaced in /admin/defence-package/runs/[id] only. */}
+      </div>
     </Card>
   );
 }
-
-function SectionBlock({
-  title,
-  thesis,
-  section,
-  omitted,
-}: {
-  title: string;
-  thesis: string | null;
-  section: NarrativeSection;
-  omitted: boolean;
-}) {
-  if (omitted || !section.text.trim()) return null;
-  return (
-    <BlockStack gap="200">
-      <Text as="h3" variant="headingMd">{title}</Text>
-      {thesis && <ThesisBox text={thesis} />}
-      <Text as="p" variant="bodyMd">{section.text}</Text>
-    </BlockStack>
-  );
-}
-
-/**
- * Lead-paragraph callout that opens every section in the PDF preview.
- * Matches the design's `.DocPreview .doc-lead` style: grey background,
- * Polaris-blue 3px left accent, italic body text, rounded right corners.
- * Same visual rhyme as the bank-facing PDF so the merchant's preview
- * and the bank's PDF read identically.
- */
-function ThesisBox({ text }: { text: string }) {
-  return (
-    <Box
-      background="bg-surface-secondary"
-      borderInlineStartWidth="050"
-      borderColor="border-emphasis"
-      padding="300"
-      borderRadius="200"
-    >
-      <Text as="p" variant="bodySm" tone="subdued">
-        <span style={{ fontStyle: "italic" }}>{text}</span>
-      </Text>
-    </Box>
-  );
-}
-
-function CaseDetailsSection({
-  rows,
-}: {
-  rows: ReadonlyArray<readonly [string, string]>;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <BlockStack gap="200">
-      <Button
-        onClick={() => setOpen((v) => !v)}
-        ariaExpanded={open}
-        ariaControls="defence-pkg-case-details"
-        disclosure={open ? "up" : "down"}
-        variant="plain"
-        textAlign="left"
-      >
-        Case Details
-      </Button>
-      <Collapsible
-        id="defence-pkg-case-details"
-        open={open}
-        transition={{ duration: "150ms", timingFunction: "ease-in-out" }}
-        expandOnPrint
-      >
-        <Box
-          background="bg-surface-secondary"
-          borderRadius="200"
-          padding="300"
-        >
-          <BlockStack gap="100">
-            {rows.map(([k, v]) => (
-              <InlineStack key={k} gap="400" align="space-between" wrap={false}>
-                <Text as="span" variant="bodySm" tone="subdued">{k}</Text>
-                <Text as="span" variant="bodySm">{v}</Text>
-              </InlineStack>
-            ))}
-          </BlockStack>
-        </Box>
-      </Collapsible>
-    </BlockStack>
-  );
-}
-
-// MetaRow helper removed alongside the Package Metadata block — it had
-// no other callers.

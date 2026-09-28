@@ -31,7 +31,7 @@ describe("renderThesis", () => {
         approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
       expect(text).toContain("AVS and CVV match");
-      expect(text).toContain("consistent with a cardholder-authorized transaction");
+      expect(text).toContain("These records support a cardholder-authorized transaction");
     });
 
     it("renders with 3-D Secure when threeDS=true", () => {
@@ -95,8 +95,8 @@ describe("renderThesis", () => {
         packageMode: "narrow",
         approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
-      // narrow-mode template uses "available records" phrasing
-      expect(text).toContain("available records");
+      // narrow-mode template states the records without a qualifier (rule 10)
+      expect(text).toContain("The records on this chargeback are set out below");
     });
 
     it("falls back to (family, any) when (family, mode) is absent", () => {
@@ -106,10 +106,13 @@ describe("renderThesis", () => {
         familyKey: "item_not_received",
         packageMode: "full",
         approvedFacts: [
-          fact({ category: "delivery_proof", value: { proofType: "delivered" } }),
+          fact({
+            category: "delivery_proof",
+            value: { proofType: "delivered_confirmed", carrier: "Stallion Express", trackingNumber: "260702441A", deliveredAt: "2026-07-06T19:53:02Z" },
+          }),
         ],
       });
-      expect(text).toContain("item-not-received");
+      expect(text).toContain("recorded the shipment");
     });
 
     it("falls back to (any, any) for an unmatched family", () => {
@@ -158,16 +161,20 @@ describe("renderThesis", () => {
     });
 
     it("uses (any, any) when no family-specific template exists for the section", () => {
-      // transactionOverviewArgument only has (any, any). With no
-      // approved facts, paymentAuthMethod is null — but it's optional
-      // there, so the template still renders the required text.
+      // transactionOverviewArgument only has (any, any). With no approved
+      // facts its only token (paymentAuthMethod) is null, so the thesis
+      // states no fact of this case and is suppressed as filler
+      // (2026-09-23). The conclusion's request line is the one exception.
       const text = renderThesis({
         sectionKey: "transactionOverviewArgument",
         familyKey: "unauthorized_fraud",
         packageMode: "full",
         approvedFacts: [],
       });
-      expect(text).toContain("internally consistent with cardholder-initiated activity");
+      expect(text).toBe("");
+      expect(
+        renderThesis({ sectionKey: "conclusion", familyKey: "unauthorized_fraud", packageMode: "full", approvedFacts: [] }),
+      ).toContain("respectfully requests reversal");
     });
   });
 });

@@ -20,6 +20,8 @@
  *     variant). Triggered the moment Shopify's `finalized_on` flips
  *     null → timestamp. Effect-level dedup ensures the email fires
  *     exactly once even if cron + webhook both observe the transition.
+ *   - RESPONSE_CYCLE_REOPENED: evaluateRules → runAutomationPipeline for
+ *     the new cycle (the previous cycle's packs are already archived).
  *   - STATUS_CHANGED, DUE_DATE_CHANGED, DISPUTE_CLOSED: no per-event
  *     effects today; the dispute_events ledger entry is already
  *     written by the diff engine. (DISPUTE_CLOSED always fires
@@ -42,8 +44,14 @@ import {
   sendOutcomePostedAlert,
   type OutcomeVariant,
 } from "@/lib/email/sendOutcomePostedAlert";
+import {
+  DECIDED_VIEW_DISPUTE_COLUMNS,
+  loadDecidedViewInputs,
+  type DecidedViewDisputeRow,
+} from "@/lib/disputes/loadDecidedResponse";
 import { enqueueGorgiasEnrichment } from "@/lib/integrations/gorgias/enqueueEnrichment";
 import { withEffectDedup } from "./dispatchOnce";
+import { raiseBankClaimIfNeeded } from "./raiseBankClaim";
 import { keyForEffect } from "./disputeEventKey";
 import type {
   ApplyDisputeSnapshotResult,
@@ -106,6 +114,18 @@ async function dispatchEvent(
   event: DisputeTransitionEvent,
   summary: DispatchSummary,
 ): Promise<void> {
+  // The bank's claim: any transition that can make a dispute start needing
+  // it (lib/disputes/bankClaim.ts). Runs alongside the per-event effect.
+  if (
+    !args.skipAutomation &&
+    !event.historicalImport &&
+    (event.type === "DISPUTE_OPENED" ||
+      event.type === "STATUS_CHANGED" ||
+      event.type === "DUE_DATE_CHANGED")
+  ) {
+    await dispatchBankClaimCheck(args, event, summary);
+  }
+
   switch (event.type) {
     case "DISPUTE_OPENED":
       await dispatchDisputeOpened(args, event, summary);
@@ -115,6 +135,12 @@ async function dispatchEvent(
       return;
     case "OUTCOME_DETECTED":
       await dispatchOutcomeDetected(args, event, summary);
+      return;
+    case "RESPONSE_CYCLE_REOPENED":
+      await dispatchResponseCycleReopened(args, event, summary);
+      // After the rebuild is queued: a reopened dispute always needs the
+      // bank's new claim before anything is filed.
+      if (!args.skipAutomation) await dispatchBankClaimCheck(args, event, summary);
       return;
     case "STATUS_CHANGED":
     case "DUE_DATE_CHANGED":
@@ -205,16 +231,7 @@ async function dispatchDisputeOpened(
         null;
       if (!args.skipAutomation && evalResult) {
         try {
-          if (resolvedMode === "review") {
-            const sb = args.client ?? getServiceClient();
-            await sb
-              .from("disputes")
-              .update({
-                needs_review: true,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", event.disputeId);
-          }
+          await syncNeedsReview(args.client ?? getServiceClient(), event.disputeId, resolvedMode);
 
           pipelineResult = await runAutomationPipeline({
             id: event.disputeId,
@@ -262,6 +279,128 @@ async function dispatchDisputeOpened(
 
   if (dedup.ran) summary.effectsRan++;
   else summary.effectsSkipped++;
+}
+
+/**
+ * A new response cycle opened (reopen, or an answered inquiry escalated to a
+ * chargeback). `reconcile_response_cycle` already archived the previous
+ * cycle's packs, so the pipeline's "existing pack" check passes and a fresh
+ * build is queued. What happens after the build follows the shop's automation
+ * mode exactly as for a new dispute (plan decision D-3): auto files, review
+ * parks for the merchant. No email here — the reopen email is plan D4.
+ */
+async function dispatchResponseCycleReopened(
+  args: DispatchArgs,
+  event: DisputeTransitionEvent,
+  summary: DispatchSummary,
+): Promise<void> {
+  summary.effectsAttempted++;
+
+  const effectName = "rebuild_for_new_response_cycle";
+  const dedup = await withEffectDedup({
+    shopId: args.shopId,
+    disputeId: event.disputeId,
+    eventKey: keyForEffect(event, effectName),
+    effectName,
+    context: {
+      source: args.source,
+      correlation_id: args.correlationId ?? null,
+      reason: event.context.reason,
+      phase: event.context.phase,
+      skip_automation: Boolean(args.skipAutomation),
+    },
+    client: args.client,
+    effect: async () => {
+      if (args.skipAutomation) return;
+      const phase = event.context.phase;
+      const phaseForRules =
+        phase === "inquiry" || phase === "chargeback" ? phase : null;
+
+      let evalResult: Awaited<ReturnType<typeof evaluateRules>> | null = null;
+      try {
+        evalResult = await evaluateRules({
+          id: event.disputeId,
+          shop_id: args.shopId,
+          reason: event.context.reason,
+          status: event.newStatus ?? null,
+          amount: event.context.amount,
+          phase: phaseForRules,
+        });
+      } catch (err) {
+        summary.errors.push(
+          `rules(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return;
+      }
+
+      try {
+        await syncNeedsReview(
+          args.client ?? getServiceClient(),
+          event.disputeId,
+          normalizeMode(evalResult.action.mode),
+        );
+        await runAutomationPipeline({
+          id: event.disputeId,
+          shop_id: args.shopId,
+          reason: event.context.reason,
+          phase: phaseForRules,
+          pack_template_id:
+            evalResult.packTemplateId ?? evalResult.action.pack_template_id ?? null,
+        });
+      } catch (err) {
+        summary.errors.push(
+          `automation(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    },
+  });
+
+  if (dedup.ran) summary.effectsRan++;
+  else summary.effectsSkipped++;
+}
+
+/**
+ * `needs_review` follows the CURRENT rule mode, both ways. It used to be set
+ * on review and never cleared on auto, so a shop that moved to auto-pilot
+ * kept the flag; `normalized_status` then read `needs_review` and the
+ * deadline cron skipped the dispute, so it was never filed (bank-claim plan
+ * F5: 16 Mein Maison disputes on 2026-09-28). A merchant's explicit decision
+ * lives in `review_state`, not here, so clearing this never overrides one.
+ */
+export async function syncNeedsReview(
+  sb: SupabaseClient,
+  disputeId: string,
+  mode: AutomationMode,
+): Promise<void> {
+  await sb
+    .from("disputes")
+    .update({ needs_review: mode === "review", updated_at: new Date().toISOString() })
+    .eq("id", disputeId)
+    .or(`needs_review.is.null,needs_review.neq.${mode === "review"}`);
+}
+
+/**
+ * Raise "add the bank's claim" (and email once per cycle) when the dispute
+ * needs it. Never throws into the dispatcher: a failure here must not block
+ * the pipeline or the other effects.
+ */
+async function dispatchBankClaimCheck(
+  args: DispatchArgs,
+  event: DisputeTransitionEvent,
+  summary: DispatchSummary,
+): Promise<void> {
+  try {
+    await raiseBankClaimIfNeeded({
+      shopId: args.shopId,
+      disputeId: event.disputeId,
+      suppressEmail: Boolean(event.suppressEmail),
+      client: args.client,
+    });
+  } catch (err) {
+    summary.errors.push(
+      `bank_claim(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 }
 
 /**
@@ -406,11 +545,24 @@ async function dispatchOutcomeDetected(
       // context doesn't carry it, but the row does.
       const { data: row } = await sb
         .from("disputes")
-        .select("order_name")
+        .select(`order_name, ${DECIDED_VIEW_DISPUTE_COLUMNS}`)
         .eq("id", event.disputeId)
         .maybeSingle();
       const orderName =
         (row as { order_name?: string | null } | null)?.order_name ?? null;
+      // The decided view's inputs — the SAME loader the Overview uses, so the
+      // email's summary, facts and "Next time" match the page exactly. The
+      // event's variant is authoritative for the outcome (the row may not
+      // have caught up yet). Null on a read error; the email then keeps its
+      // existing wording.
+      const decidedView =
+        (variant === "won" || variant === "lost") && row
+          ? await loadDecidedViewInputs(sb, {
+              ...(row as unknown as DecidedViewDisputeRow),
+              normalized_status: variant,
+            })
+          : null;
+      const decidedResponse = decidedView?.response ?? null;
       // The submitted defence package, when we built one. Presence — not
       // `submission_state` — is what says DisputeDesk defended this case;
       // that flag is also true on historical imports back-filled at
@@ -450,6 +602,8 @@ async function dispatchOutcomeDetected(
         // helper switches to "dispute"-worded copy for this phase.
         phase: event.context.phase === "inquiry" ? "inquiry" : "chargeback",
         defencePackage,
+        decidedResponse,
+        decidedView,
       });
     },
   });

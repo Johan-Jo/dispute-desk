@@ -809,6 +809,51 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
+  /** Record the bank's claim copied from Shopify Admin, or "Shopify shows
+   *  no claim" (lib/disputes/bankClaim.ts). The route clears the task and
+   *  queues a rebuild so the next letter answers the claim. */
+  const submitBankClaim = useCallback(
+    async (
+      text: string | null,
+      noClaimShown: boolean,
+      file?: File | null,
+    ): Promise<{ ok: boolean; error?: string; code?: string }> => {
+      if (!data?.pack) return { ok: false, error: "No pack", code: "NO_PACK" };
+      // A claim file goes as multipart; pasted text / "no claim" as JSON.
+      const init: RequestInit = file
+        ? (() => {
+            const form = new FormData();
+            form.append("file", file);
+            return { method: "POST", body: form };
+          })()
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, noClaimShown }),
+          };
+      const res = await fetch(`/api/packs/${data.pack.id}/bank-claim`, init);
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; code?: string }
+        | null;
+      fetchAll();
+      if (!res.ok) {
+        return { ok: false, error: body?.error ?? `Server error (${res.status})`, code: body?.code };
+      }
+      return { ok: true };
+    },
+    [data?.pack, fetchAll],
+  );
+
+  /** Withdraw the saved bank's claim ("Cancel" on the collapsed card):
+   *  the task and the filing hold come back, the letter is rebuilt. */
+  const withdrawBankClaim = useCallback(async (): Promise<{ ok: boolean; code?: string }> => {
+    if (!data?.pack) return { ok: false, code: "NO_PACK" };
+    const res = await fetch(`/api/packs/${data.pack.id}/bank-claim`, { method: "DELETE" });
+    const body = (await res.json().catch(() => null)) as { code?: string } | null;
+    fetchAll();
+    return res.ok ? { ok: true } : { ok: false, code: body?.code };
+  }, [data?.pack, fetchAll]);
+
   /** Toggle a merchant inclusion override for a single evidence field.
    *
    *  Value semantics:
@@ -1237,6 +1282,8 @@ export function useDisputeWorkspace(disputeId: string) {
       toggleInclusionOverride,
       submitCardholderAcknowledgement,
       submitParcelOutcome,
+      submitBankClaim,
+      withdrawBankClaim,
       submitToShopify,
       markJustSubmitted,
       exportPdf,

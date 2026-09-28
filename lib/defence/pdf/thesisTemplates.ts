@@ -60,8 +60,19 @@ import type { ThesisTemplate } from "../types";
  *      built before this constant existed carries NULL and is therefore
  *      treated as changed, giving the 27 cases killed by `representment`
  *      exactly one rebuild under the corrected template.
+ *   2  (2026-09-24) item-not-received opening line states the carrier record
+ *      and the dispute date; its fulfilment-section repeat removed.
+ *   3  (2026-09-25) item-not-received request line names the disputed amount.
+ *   4  (2026-09-25) opening line says "this order", not the order number.
+ *   5  (2026-09-28) not-as-described gets its own transaction-overview line
+ *      (the generic one argued cardholder-initiated activity, a fraud frame)
+ *      and a narrow conclusion without the "available evidence" hedge
+ *      (not-as-described plan PR 1, D5).
+ *   6  (2026-09-28) no "available evidence/records" qualifier anywhere; the
+ *      narrow conclusion asks for the chargeback to be reversed instead of
+ *      "requests review" (merchant's counsel: never undersell the case).
  */
-export const COMPOSITION_VERSION = 1;
+export const COMPOSITION_VERSION = 6;
 
 export const THESIS_TEMPLATES: ThesisTemplate[] = [
   // ── executiveSummary ─────────────────────────────────────────────
@@ -71,7 +82,7 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "unauthorized_fraud",
     packageMode: "full",
     template:
-      "The submitted records show that {{paymentAuthMethod}} aligned with the cardholder credentials on file[[, and {{priorOrderHistoryClause}}]][[. {{customerCommunicationClause}}]]. The available evidence is consistent with a cardholder-authorized transaction.",
+      "The submitted records show that {{paymentAuthMethod}} aligned with the cardholder credentials on file[[, and {{priorOrderHistoryClause}}]][[. {{customerCommunicationClause}}]]. These records support a cardholder-authorized transaction.",
     requiredTokens: ["paymentAuthMethod"],
     optionalTokens: ["priorOrderHistoryClause", "customerCommunicationClause"],
   },
@@ -81,7 +92,7 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "unauthorized_fraud",
     packageMode: "narrow",
     template:
-      "The available records on this chargeback are summarised below[[, including {{paymentAuthMethod}}]][[ and {{priorOrderHistoryClause}}]].",
+      "The records on this chargeback are set out below[[, including {{paymentAuthMethod}}]][[ and {{priorOrderHistoryClause}}]].",
     requiredTokens: [],
     optionalTokens: ["paymentAuthMethod", "priorOrderHistoryClause"],
   },
@@ -107,9 +118,14 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
        * Reworded rather than teaching the detector the verb sense: two
        * strings we control versus widening `ADDRESS_TERMS`, which is the
        * higher-risk edit and would earn its own false-negative guards. */
-      "The submitted records respond to the item-not-received claim[[: {{deliveryClause}}]][[. {{digitalAccessClause}}]].",
+      /* 2026-09-24: leads with the record itself — carrier, tracking,
+       * delivery date and, when delivery came first, the dispute date. The
+       * old opener ("The submitted records respond to the item-not-received
+       * claim") did no work (review of #352543). No "address" verb and no
+       * relation word between the two dates: they are stated, not argued. */
+      "[[{{deliveryRecordClause}}]][[; {{disputeOpenedClause}}]][[. {{digitalAccessClause}}]].",
     requiredTokens: [],
-    optionalTokens: ["deliveryClause", "digitalAccessClause"],
+    optionalTokens: ["deliveryRecordClause", "disputeOpenedClause", "digitalAccessClause"],
   },
   {
     key: "executiveSummary:credit_not_processed:any",
@@ -143,6 +159,29 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
   },
 
   // ── transactionOverviewArgument ──────────────────────────────────
+  {
+    key: "transactionOverviewArgument:item_not_received:any",
+    sectionKey: "transactionOverviewArgument",
+    familyKey: "item_not_received",
+    packageMode: "any",
+    template: "The transaction is set out in the case details.",
+    requiredTokens: [],
+    optionalTokens: [],
+  },
+  // Not as described: the claim is about what arrived, not who paid, so the
+  // generic "cardholder-initiated activity" line below is off-point and a
+  // hedge. This entry states no fact, so `renderThesis` renders nothing for
+  // the section — which is the point: it stops the fallback chain reaching
+  // `transactionOverviewArgument:any:any` for this family.
+  {
+    key: "transactionOverviewArgument:product_not_as_described:any",
+    sectionKey: "transactionOverviewArgument",
+    familyKey: "product_not_as_described",
+    packageMode: "any",
+    template: "The order record sets out the items and variants the customer ordered.",
+    requiredTokens: [],
+    optionalTokens: [],
+  },
   {
     key: "transactionOverviewArgument:any:any",
     sectionKey: "transactionOverviewArgument",
@@ -189,16 +228,9 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
   },
 
   // ── fulfillmentArgument ──────────────────────────────────────────
-  {
-    key: "fulfillmentArgument:item_not_received:any",
-    sectionKey: "fulfillmentArgument",
-    familyKey: "item_not_received",
-    packageMode: "any",
-    template:
-      "{{deliveryClause}}.",
-    requiredTokens: ["deliveryClause"],
-    optionalTokens: [],
-  },
+  // No item-not-received thesis here since 2026-09-24: it repeated the
+  // executive summary's opening line word for word (#352543). The generic
+  // template below states no fact, so it is not rendered.
   {
     key: "fulfillmentArgument:any:any",
     sectionKey: "fulfillmentArgument",
@@ -247,6 +279,28 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
   },
 
   // ── conclusion ───────────────────────────────────────────────────
+  // Item not received: the request names the amount, and follows the
+  // reasoning in the conclusion body (review of #352543, 2026-09-25).
+  {
+    key: "conclusion:item_not_received:full",
+    sectionKey: "conclusion",
+    familyKey: "item_not_received",
+    packageMode: "full",
+    template: "The merchant respectfully requests reversal of the[[ {{disputedAmount}}]] chargeback.",
+    requiredTokens: [],
+    optionalTokens: ["disputedAmount"],
+  },
+  // Not as described, narrow (D5): the merchant's counsel requests reversal
+  // on the record it filed; it does not apologise for the record's extent.
+  {
+    key: "conclusion:product_not_as_described:narrow",
+    sectionKey: "conclusion",
+    familyKey: "product_not_as_described",
+    packageMode: "narrow",
+    template: "The merchant respectfully requests reversal of the[[ {{disputedAmount}}]] chargeback.",
+    requiredTokens: [],
+    optionalTokens: ["disputedAmount"],
+  },
   {
     key: "conclusion:any:full",
     sectionKey: "conclusion",
@@ -263,7 +317,7 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "any",
     packageMode: "narrow",
     template:
-      "Based on the available evidence, the merchant respectfully requests review of this chargeback.",
+      "On the records set out above, the merchant requests that this chargeback be reversed in its favour.",
     requiredTokens: [],
     optionalTokens: [],
   },

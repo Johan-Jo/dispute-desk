@@ -272,7 +272,7 @@ describe("DefencePackageDocument", () => {
       (b) => b.sectionKey === "fulfillmentArgument",
     );
     expect(fulfillmentBlock).toBeDefined();
-    expect(fulfillmentBlock?.fallbackText).toContain("fulfilled");
+    expect(fulfillmentBlock?.fallbackText).toContain("shipped");
     const result = await renderDefencePdf(data);
     expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
   }, 30000);
@@ -362,5 +362,34 @@ describe("DefencePackageDocument", () => {
     const result = await renderDefencePdf(sampleData({ narrative: fullNarrative }));
     expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
     expect(result.buffer.length).toBeGreaterThan(2000);
+  }, 30000);
+});
+
+describe("product-listing exhibit (not-as-described PR 3b)", () => {
+  // 1×1 PNG.
+  const PNG =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  it("renders the exhibit with its image, and more pages than without it", async () => {
+    const without = await renderDefencePdf(sampleData());
+    const withExhibit = await renderDefencePdf(
+      sampleData({
+        meta: {
+          productListingExhibits: [
+            {
+              title: "Linen cushion cover",
+              variantLine: "Colour: Stone grey",
+              excerpt: "40 × 40 cm, stone grey, 100% linen.",
+              sourceUrl: "https://shop.example/products/cover",
+              sourceUrlDisplay: "shop.example/products/cover",
+              retrievedOn: "2026-09-28",
+              images: [PNG],
+            },
+          ],
+        },
+      }),
+    );
+    expect(withExhibit.buffer.slice(0, 5).toString()).toBe("%PDF-");
+    expect(withExhibit.buffer.length).toBeGreaterThan(without.buffer.length);
   }, 30000);
 });

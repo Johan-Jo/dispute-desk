@@ -106,10 +106,12 @@ export default function ReviewSubmitTab({ workspace }: Props) {
           before the supporting inclusion-review detail below. */}
       <CompleteDefencePackageCard
         packId={data?.pack?.id ?? null}
+        autoFilesOnDueDate={data?.held?.held === true}
         submittedToShopifyAt={view.submittedAt}
         shopifyAdminUrl={view.shopifyAdminUrl}
         presentationStatus={data?.presentationStatus}
         returnedToSender={derived.caseStrength?.returnedToSender?.triggered === true}
+        answeredBankClaim={!!data?.bankClaim?.answer && !data.bankClaim.answer.noClaimShown}
         evidenceSentOn={data?.dispute?.submittedAt ?? null}
         // Defence package rows lifted from the workspace endpoint
         // (2026-05-25). Pre-lift the card owned its own fetch and
@@ -151,13 +153,14 @@ export default function ReviewSubmitTab({ workspace }: Props) {
                 cardNetwork: data.dispute.cardNetwork ?? null,
                 cardLast4: data.dispute.cardLast4 ?? null,
                 transactionDate: data.dispute.transactionDate ?? null,
+                openedAt: data.dispute.openedAt ?? null,
                 paymentGateway: data.dispute.paymentGateway ?? null,
                 financialStatus: data.dispute.financialStatus ?? null,
                 fulfillmentStatus: data.dispute.fulfillmentStatus ?? null,
                 cardholderName:
                   data.dispute.cardholderName ?? data.dispute.customerName ?? null,
-                shopName: data.dispute.shopDomain ?? null,
-                merchantName: data.dispute.shopDomain ?? null,
+                shopName: data.dispute.merchantDomain ?? data.dispute.shopDomain ?? null,
+                merchantName: data.dispute.merchantDomain ?? data.dispute.shopDomain ?? null,
                 dueAt: data.dispute.dueAt ?? null,
                 // Rich Shopify Order.events timeline — the SAME array
                 // the PDF builder threads through meta.timelineEvents.

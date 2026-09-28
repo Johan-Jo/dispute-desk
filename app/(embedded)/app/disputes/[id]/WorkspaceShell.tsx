@@ -10,6 +10,7 @@ import { useDisputeWorkspace } from "./hooks/useDisputeWorkspace";
 import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
 import ReviewSubmitTab from "./tabs/ReviewSubmitTab";
+import DecidedWorkspace from "./DecidedWorkspace";
 import { TAB_INDEX } from "./workspace-components/types";
 import {
   ATTENTION_CHIP,
@@ -21,6 +22,7 @@ import { resolveStrength } from "@/lib/disputes/presentation/resolveStrength";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
+import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
 
 const PILL_STYLE = {
   padding: "2px 8px",
@@ -168,11 +170,19 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
       tokens: LIFECYCLE_CHIP[presentation.lifecycle],
     });
   }
-  headerChips.push({
-    key: "strength",
-    label: t(`presentation.strength.detail.${strength}`),
-    tokens: STRENGTH_CHIP[strength],
-  });
+  // Strength is a live-case verdict — "how good is the case we are about to
+  // file". Once the bank has ruled it answers nothing, and on a case whose
+  // assessment went stale it read "Not yet assessed" on a dispute assessed
+  // four times (order #360499).
+  const isDecided =
+    presentation?.lifecycle === "won" || presentation?.lifecycle === "lost";
+  if (!isDecided) {
+    headerChips.push({
+      key: "strength",
+      label: t(`presentation.strength.detail.${strength}`),
+      tokens: STRENGTH_CHIP[strength],
+    });
+  }
   // A recorded merchant review decision OVERRIDES the raw attention pill:
   // once the merchant has approved (scheduled) / conceded / held, the
   // heading must reflect that standing decision instead of still saying
@@ -233,6 +243,33 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     { label: t("disputes.workspaceShell.facts.disputeReason"), value: reasonLabel },
   ];
 
+  /* A decided dispute gets its own layout (Claude Design "Decided Dispute
+   * View", plan docs/plans/decided-dispute-view.plan.md PR 2): the live-case
+   * header, hero and filing controls answer questions a closed case no longer
+   * has. The Evidence and Review tabs still render their normal bodies. */
+  if (data.decidedView) {
+    return (
+      <DecidedWorkspace
+        dispute={dispute}
+        inputs={data.decidedView}
+        reasonLabel={reasonLabel}
+        backUrl={withShopParams("/app/disputes", searchParams)}
+        orderUrl={orderName ? orderUrl : null}
+        shopifyAdminUrl={shopifyAdminUrl}
+        tabs={tabs}
+        activeTab={clientState.activeTab}
+        onTabChange={(index) => actions.setActiveTab(index)}
+        renderTab={(index) =>
+          index === TAB_INDEX.reviewForward ? (
+            <ReviewSubmitTab workspace={workspace} />
+          ) : index === TAB_INDEX.evidence ? (
+            <EvidenceTab workspace={workspace} />
+          ) : null
+        }
+      />
+    );
+  }
+
   return (
     <Page
       backAction={{
@@ -289,6 +326,17 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                   flexWrap: "wrap",
                 }}
               >
+                {/* Inquiry / Chargeback — the same pill the disputes list shows. */}
+                <span
+                  data-testid="dispute-phase-pill"
+                  style={{
+                    ...PILL_STYLE,
+                    background: phasePillColors(dispute.phase ?? null).bg,
+                    color: phasePillColors(dispute.phase ?? null).color,
+                  }}
+                >
+                  {phaseLabel(dispute.phase ?? null, t)}
+                </span>
                 {headerChips.map((chip) => (
                   <span
                     key={chip.key}

@@ -511,6 +511,28 @@ export function identifyTrackingLinkCarrier(
 }
 
 /**
+ * Is `number` a parcel identifier for `company` — something a carrier could
+ * resolve to ONE shipment — rather than a batch or label reference?
+ *
+ * The same two checks the link builder applies (rule 1), exposed once so the
+ * evidence classifier and the link builder cannot disagree (non-receipt plan
+ * §4.1(b)): the generic `isPlausibleIdentifier`, and the carrier-specific
+ * known-bad-shape list. The generic check alone is not enough —
+ * `260914OET4`, a shipping-app batch reference printed as a USPS number
+ * (blume-box #360980), is 10 alphanumerics and passes it.
+ */
+export function isParcelIdentifier(
+  company: string | null | undefined,
+  number: string | null | undefined,
+): boolean {
+  const n = (number ?? "").trim();
+  if (!n || !isPlausibleIdentifier(n)) return false;
+  const carrier = identifyTrackingLinkCarrier(company, null);
+  if (carrier === "usps" && !couldBeUspsIdentifier(n)) return false;
+  return true;
+}
+
+/**
  * Repair a merchant URL we are going to fall back to: force https (35% of
  * prod rows are http) and rewrite USPS's dead `TrackConfirmAction*` query
  * endpoints onto the path form that actually resolves. Conservative — it

@@ -144,6 +144,7 @@ describe("derivePlanForCase is an adapter, not a classifier", () => {
         "./planInputHash",
         // The canonical owners, one per classification the plan consumes.
         "@/lib/defence/alwaysAdmissible", // claim admission
+        "@/lib/defence/reasonCodes/familyRegistry", // module → claim family (admission denial)
         "@/lib/defence/types", // types only
         "@/lib/evidence/model/derive", // existence, validity, citation
         "@/lib/pipeline/contracts", // types only

@@ -93,4 +93,11 @@ export interface BuildContext {
   disputeCurrency: string | null;
   /** `disputes.phase` — `inquiry` | `chargeback`. */
   disputePhase: string | null;
+  /**
+   * The family the case is argued as (`effectiveFamilyForDispute`, the
+   * resolver the letter build uses), set once the network reason code is
+   * resolved. Collectors that serve one family only (productSource) read it,
+   * so the collector and the letter cannot disagree on the family.
+   */
+  caseFamily?: string | null;
 }

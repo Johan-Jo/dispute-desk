@@ -43,7 +43,19 @@ try {
 try {
   const ReactModule = await import("react");
   const React = ReactModule.default ?? ReactModule;
-  const { renderToBuffer } = await import("@react-pdf/renderer");
+  const { renderToBuffer, Font } = await import("@react-pdf/renderer");
+
+  // Inter — the typeface of the "Chargeback Response v2" design (2026-09-24).
+  // The files sit beside this worker, which every route that renders a
+  // defence PDF already traces (`outputFileTracingIncludes: scripts/pdf-worker/**`).
+  // SIL Open Font License — see ./fonts/LICENSE-OFL.txt.
+  const { fileURLToPath } = await import("node:url");
+  const fontPath = (w) =>
+    fileURLToPath(new URL(`./fonts/inter-latin-${w}-normal.woff`, import.meta.url));
+  Font.register({
+    family: "Inter",
+    fonts: [400, 500, 600, 700].map((w) => ({ src: fontPath(w), fontWeight: w })),
+  });
   const { DefencePackageDocument } = await import(
     "./defence-package-document.bundle.mjs"
   );

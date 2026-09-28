@@ -51,6 +51,7 @@ const BLOCKING_ATTENTION_REASONS = new Set([
   "payment_failed",
   "missing_required_evidence",
   "auto_build_off",
+  "bank_claim_needed",
 ]);
 
 /** attention_reason values that are an explicit ask without halting
@@ -96,6 +97,10 @@ export interface AttentionInput {
    *  mode 'review' AND status 'ready' AND approvedForSaveAt null). */
   packStatus: string | null;
   approvedForSaveAt: string | null;
+  /** The latest defence package was skipped because no letter-eligible
+   *  evidence exists (`no_bank_eligible_facts`). There is then no letter to
+   *  approve: the merchant's lever is adding evidence, not approving. */
+  letterSkippedNoEvidence?: boolean;
   /** Server-side concrete-contribution signal (derived from
    *  pack_json.checklistV2 via the canMerchantUpload predicate —
    *  a specific addable item, never generic improvement copy).
@@ -122,7 +127,8 @@ export type BlockingReason =
   | "feature_blocked"
   | "subscription_expired"
   | "payment_failed"
-  | "auto_build_off";
+  | "auto_build_off"
+  | "bank_claim_needed";
 
 export interface AttentionResult {
   attention: MerchantAttention;
@@ -194,6 +200,12 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
     };
   }
   if (approvalGate) {
+    // Nothing to approve when the letter was skipped for lack of evidence —
+    // "approval required" there sends the merchant to a button that files
+    // nothing (Sura Svenne test dispute, 2026-09-28).
+    if (input.letterSkippedNoEvidence === true) {
+      return { attention: "blocking", blockingReason: "missing_required_evidence", internalIssue };
+    }
     return { attention: "blocking", blockingReason: "approval_gate", internalIssue };
   }
 

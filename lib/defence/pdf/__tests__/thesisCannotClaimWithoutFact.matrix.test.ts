@@ -41,7 +41,7 @@ const GUARDED_PHRASES: GuardedPhrase[] = [
   {
     pattern: /\b(?:was\s+)?delivered\b/i,
     description: "delivery claim",
-    guardingToken: "deliveryClause",
+    guardingToken: "deliveryRecordClause",
   },
   {
     pattern: /\bprior\s+(?:undisputed\s+)?orders?\b/i,

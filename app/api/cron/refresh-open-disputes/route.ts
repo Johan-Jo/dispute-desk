@@ -26,13 +26,13 @@ import { cronEnvGate } from "@/lib/cron/envGate";
 import { normalizeOrderIngest } from "@/lib/shopify/orderIngest";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { OPEN_DISPUTE_STATUSES } from "@/lib/disputes/rebuildOnCarrierUpdate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Dispute statuses still worth refreshing — evidence can still change the
- *  outcome. Terminal states (won/lost/accepted/closed) are excluded. */
-const OPEN_STATUSES = ["needs_response", "new", "in_progress", "under_review"];
+/** Shared with the fulfillment webhooks (real-time path). */
+const OPEN_STATUSES = OPEN_DISPUTE_STATUSES;
 
 /** Cap per run so a single nightly invocation stays within the function
  *  budget. Oldest-refreshed first (see order-by) so coverage rotates. */

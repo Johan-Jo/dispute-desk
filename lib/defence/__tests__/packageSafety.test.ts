@@ -435,3 +435,51 @@ describe("packageBlockSummary", () => {
     expect(msg).not.toMatch(/AVS|CVV|\bY\b|\bN\b/);
   });
 });
+
+/* The shapes the letter writers persist beside the nine sections. Unknown to
+ * this reader until 2026-09-26, which made every record-built and counsel v2
+ * letter "cannot be reviewed automatically" and unfileable (#352543 v11–v13). */
+describe("record-built and counsel v2 letters", () => {
+  const counselLetter = () => {
+    const n = narrativeJson({ executiveSummary: "The carrier recorded delivery of the complete order on 6 July 2026." }) as Record<string, unknown>;
+    for (const k of ["executiveSummary", "fulfillmentArgument", "conclusion"]) (n[k] as Record<string, unknown>).source = "record";
+    return {
+      ...n,
+      headline: "",
+      addressExhibit: { shipping: ["1 Main St", "Toronto, ON M5V 1A1", "Canada"], billing: ["1 Main St", "Toronto, ON M5V 1A1", "Canada"], avs: null },
+      laterOrderExhibit: { name: "#363341", placedAt: "2026-09-05T03:04:27Z", total: "CAD 109.67", cardLast4: "3627", wallet: "Apple Pay", deliveredAt: null },
+      timelineAdditions: [{ at: "2026-09-05T03:04:27Z", text: "The same customer placed order #363341 for CAD 109.67." }],
+      counsel: { inputHash: "abc", summary: ["The carrier recorded delivery of the complete order on 6 July 2026."] },
+    };
+  };
+
+  it("reads a counsel letter with record-built sections, exhibits and a reuse hash", () => {
+    const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: counselLetter() });
+    expect(v.reasons).toEqual([]);
+    expect(v.safe).toBe(true);
+  });
+
+  it("still fails closed on a wrong shape in any of them", () => {
+    const bad: Array<Record<string, unknown>> = [
+      { ...counselLetter(), counsel: { inputHash: "abc", summary: "not an array" } },
+      { ...counselLetter(), laterOrderExhibit: { name: "#1", placedAt: "x", extra: "?" } },
+      { ...counselLetter(), timelineAdditions: [{ at: "x" }] },
+      { ...counselLetter(), headline: 42 },
+      { ...counselLetter(), somethingNew: {} },
+    ];
+    const wrongSource = counselLetter() as unknown as Record<string, Record<string, unknown>>;
+    wrongSource.conclusion.source = "model";
+    for (const n of [...bad, wrongSource]) {
+      expect(assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: n }).reasons).toContain("unreadable_narrative_json");
+    }
+  });
+
+  it("judges the issuer-facing prose outside the sections: headline and timeline rows", () => {
+    for (const n of [
+      { ...counselLetter(), headline: "The parcel was delivered to the cardholder's verified address." },
+      { ...counselLetter(), timelineAdditions: [{ at: "x", text: "The parcel was delivered to the cardholder's verified address." }] },
+    ]) {
+      expect(assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: n }).reasons).toContain("affirmative_address_delivery_claim");
+    }
+  });
+});

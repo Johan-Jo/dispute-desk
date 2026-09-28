@@ -206,6 +206,20 @@ export type ReasonCodeFamilyKey =
   | "authorization_error"
   | "fallback";
 
+/** A bank phrase allowed only when a fact predicate holds. */
+export interface GuardedBankPhrase {
+  pattern: RegExp;
+  requires: FactPredicateId;
+  /**
+   * Evaluate the predicate against the shipment the SENTENCE names, not the
+   * whole case (non-receipt plan §4.1(b), rev 5). One valid GOFO transit fact
+   * must not license "the USPS shipment is in transit". A matching sentence
+   * that names no shipment passes only on a single-shipment order, or when
+   * every shipment satisfies the predicate.
+   */
+  shipmentScoped?: boolean;
+}
+
 export interface ReasonCodeFamily {
   key: ReasonCodeFamilyKey;
   displayName: string;
@@ -238,7 +252,7 @@ export interface ReasonCodeFamily {
    *  substitution when they aren't (e.g. "online transaction",
    *  "ecommerce transaction" gated by an on-record channel signal).
    *  v2.2+. */
-  guardedBankPhrases: readonly { pattern: RegExp; requires: FactPredicateId }[];
+  guardedBankPhrases: readonly GuardedBankPhrase[];
   version: number;
 }
 
@@ -293,6 +307,11 @@ export type NarrativeSectionKey =
 export interface NarrativeSection {
   text: string;
   usedFactIds: string[];
+  /** "record" when the text was written from the records
+   *  (lib/defence/shipmentRecordSections.ts), not by the model. A section
+   *  deny-listed for the family still renders when record-built: the deny
+   *  list exists to hide MODEL restatement (sectionVisibility.ts). */
+  source?: "record";
 }
 
 export interface OmittedSection {
@@ -335,6 +354,11 @@ export interface NarrativeInput {
   internalOnlyFactIds: string[];
   /** Sent for omission decisions only. Never quoted in narrative. */
   missingEvidence: MissingEvidence[];
+  /** The bank's claim (Shopify's issuer claim) the merchant copied from
+   *  Shopify Admin (lib/disputes/bankClaim.ts). CONTEXT ONLY: it tells the
+   *  writer what the response has to answer. It is not a fact, is never
+   *  cited, and is never quoted or restated to the bank. */
+  bankClaim?: { text: string | null; noClaimShown: boolean } | null;
 }
 
 // ── Strategy submodules (Phase 3+) ───────────────────────────────────
@@ -399,6 +423,11 @@ export interface StrategySubmodule {
 
 export type FactPredicateId =
   | "delivery_confirmed"
+  /** The cited shipment is in the carrier's possession, with a named carrier
+   *  and a parcel identifier, and is bank-citable as shipment context
+   *  (non-receipt plan §4.1(b), §6.4). Licenses "in transit with {carrier}"
+   *  — never delivery or receipt. */
+  | "shipment_in_carrier_possession"
   | "signature_captured"
   | "digital_access_used"
   | "digital_access_granted"
@@ -453,6 +482,25 @@ export interface FactPredicate {
 }
 
 /** What the LLM returns. Validated by `validateNarrative`. */
+/** Two addresses from the order record, formatted as printed lines. */
+export interface AddressExhibit {
+  shipping: string[];
+  billing: string[];
+  /** The card issuer's AVS result on the billing address, when it is a
+   *  citable full match (avsCodeMap.ts `isCeItem3Citable`). */
+  avs?: { code: string; network: string } | null;
+}
+
+/** The same customer's later order (Admin API read), shown as an exhibit. */
+export interface LaterOrderExhibit {
+  name: string;
+  placedAt: string;
+  total: string | null;
+  cardLast4: string | null;
+  wallet: string | null;
+  deliveredAt: string | null;
+}
+
 export interface DefenceNarrativeOutput {
   executiveSummary: NarrativeSection;
   transactionOverviewArgument: NarrativeSection;
@@ -463,6 +511,26 @@ export interface DefenceNarrativeOutput {
   policyArgument: NarrativeSection;
   manualEvidenceArgument: NarrativeSection;
   conclusion: NarrativeSection;
+  /** Counsel v2 (docs/plans/defence-counsel): the punchline, written by the
+   *  model and checked by code, printed in the pull-quote above the summary
+   *  instead of the templated headline. Absent on every other letter. */
+  headline?: string;
+  /** Counsel v2: the shipping and billing addresses, printed side by side in
+   *  the Shipping section. Present only when the letter claims they are
+   *  identical (claimLedger.ts, `shipping_matches_billing`): an address
+   *  claim is never made without the addresses shown (maintainer,
+   *  2026-09-25). */
+  addressExhibit?: AddressExhibit;
+  /** Counsel v2: the customer's later order, printed as a card in the
+   *  Chronology section when the letter relies on it (Grok review). */
+  laterOrderExhibit?: LaterOrderExhibit;
+  /** Counsel v2: rows the letter adds to the Chronology exhibit (the later
+   *  order), merged into the timeline by both renderers. */
+  timelineAdditions?: Array<{ at: string; text: string }>;
+  /** Counsel v2: the hash of the letter's inputs and the model-written
+   *  summary. A rebuild with the same hash reuses the summary and calls no
+   *  model (counsel/run.ts, cost refactor §3.6). */
+  counsel?: { inputHash: string; summary: string[] };
   omittedSections: OmittedSection[];
   /** Free-text warnings from the model — informational; validation may
    *  promote them to errors. */
@@ -480,6 +548,8 @@ export type ValidationErrorRule =
   | "unauthorized_claim"
   | "unknown_fact_id"
   | "omitted_section_inconsistent"
+  /** The letter repeats the bank's claim word for word (bank-claim plan F3). */
+  | "bank_claim_quoted"
   | "narrow_mode_aggressive_conclusion"
   | "internal_only_fact_referenced"
   /** Every fact the section declares as support is one the Evidence Basis will
@@ -592,6 +662,16 @@ export interface GuardFailure {
 
 export type ThesisTokenName = string;
 
+/** Case identifiers a thesis may state beside the facts: the order the
+ *  dispute is about and when the dispute was opened. Never evidence —
+ *  a token still needs its fact to resolve. */
+export interface ThesisContext {
+  orderName?: string | null;
+  disputeOpenedAt?: string | null;
+  /** "CAD 120.75" — the disputed amount, for the request line. */
+  disputedAmount?: string | null;
+}
+
 export interface ThesisToken {
   name: ThesisTokenName;
   description: string;
@@ -600,7 +680,7 @@ export interface ThesisToken {
   predicateId: FactPredicateId | null;
   /** Pure function over approvedFacts. Internal-only facts are never
    *  passed in — extractors physically cannot see them. */
-  extract: (facts: EvidenceFact[]) => string | null;
+  extract: (facts: EvidenceFact[], ctx?: ThesisContext) => string | null;
 }
 
 export interface ThesisTemplate {
@@ -648,6 +728,9 @@ export interface ComposedDocumentBlock {
   llmText: string;
   fallbackText: string;
   usedFactIds: string[];
+  /** Written from the records (NarrativeSection.source === "record"). A
+   *  record-built transaction overview prints under Order Line Items. */
+  recordBuilt?: boolean;
 }
 
 // ── Evidence Basis row ───────────────────────────────────────────────
