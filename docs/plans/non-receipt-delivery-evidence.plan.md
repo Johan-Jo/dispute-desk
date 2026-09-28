@@ -1,7 +1,45 @@
 # Non-receipt disputes — in transit, delivered, and what the letter may claim
 
-**Status:** PLAN ONLY (**v5.2, 2026-09-23**; cleared for implementation). Not started. **Contains two time-boxed live
-exposures — §0. Read that first.**
+**Status:** IN IMPLEMENTATION. P0 and P1a are in prod; P1b is next (on `develop` only). Plan text below is
+**v5.2, 2026-09-23**, unchanged except for this status section. The §0 live exposures are resolved or on
+schedule (see the table).
+
+## Status as of 2026-09-28
+
+Checked against `gh pr view` and the code on `develop` @ `606ca7be`. "Prod" = merged to `master`.
+
+| Plan item | State | Where |
+|---|---|---|
+| P0 (a) claim-family-aware admission (`deniedForFamilies`; `no_return_initiated` denied on INR) | Done, prod | #768 → #770 |
+| P0 (b) `in_transit` proof state; `isCitableShipmentContext`; `isParcelIdentifier` | Done, prod | #769 → #770; in-transit tiering fix #773 → #772 |
+| P0 (c) validator: no-return arguments, refund-request denials, collector/identity claims banned on INR | Done, prod (`VALIDATOR_VERSION` 5 then onward) | #768 → #770 |
+| P0 (d) "no return" conditional on the **refund** family (`return_not_initiated` licence narrowed) | **Not done.** The predicate description in `factPredicates.ts` still asserts the "no refund was owed" licence. Partly overtaken by base rule 8c (#872: the only permitted return sentence is "No return has been recorded in Shopify for this order.") — that bans contact-absence wording in every family, but does not narrow the refund argument itself | open |
+| P0 (e) harmful-material filter (late-window policy/interval excluded) | **Partly, by other means.** No dispute date and no fulfilment date reach the writer; relating a fulfilment to the order/dispute date is banned (#788, #789, #791); policies are cited only as "published on the store" with no terms (#886, rule 8d). **Gap:** on a case that missed the published window, the shipping-policy link can still be cited. The per-case helpful/harmful check is P3 (§8.1) | #788, #789, #791, #886 |
+| P0 (f) one coherent cited shipment per fact; hash-only `shipmentIndex`; record-key hash sort | Done, prod (deviation: one fact per field, not per shipment — see #769) | #769 → #770 |
+| P0 (g) hashing (`carrierStatusObservedAt` excluded) and versions | Done, prod. `PLAN_POLICY_VERSION` deliberately **not** bumped (it stops the deadline cron — see #768) | #769 → #770 |
+| §6.6 raw enum ban in every family | Done, prod | #768 → #770 |
+| P1a: `delivered_confirmed` → moderate; signature covering all goods → strong; partial/unknown coverage → moderate at most | Done, prod (`SCORING_POLICY_VERSION` 4) | #785 → #787 |
+| P1a: timing safeguard `strength_upgraded_timing_held` + `overallBeforeRev5` (persisted) | Done, prod. Was inert until #791 persisted `overallBeforeRev5` into `pack_json.case_strength` | #785 → #787; #791 → #790 |
+| D4 hint: `decisiveHint.delivery` drops billing/IP; `moderateOnly` agrees in number | Done, prod | #785 → #787 |
+| D4 `weak.deliveryInTransit` re-keyed on shipment state | **Not done** | P1b |
+| D5 cardholder-acknowledgement subtitle says "for fraud disputes" on every family | **Not done** | P1b |
+| D6 `titleCollected` / `titleCollectedOn` ("Collected by customer") and `factsCollected` ("— ID required at collection") | **Not done** in merchant copy (bank prose is already guarded by P0 (c)) | P1b |
+| QFD → `delivered_final_verified` → strong (§6.1.1–§6.1.3) with corroborated provenance (Q-8) | **Not done.** No `delivered_final_verified` member exists yet (only the §6.6 enum-ban regex names it) | P1b |
+| Letter quality for INR (not a plan phase; found on the live cases) | Done, prod: per-parcel carrier-record scoping (#777, #779, #781, #783, #775), "shipped" vs "delivered" wording (#805), record-built multi-parcel sections (#792, #794, #810, #817, #819/#820, #822/#823, #825), no negated delivery (#837), counsel v2 (#832–#851) | as listed |
+| Failed letters never retried after an infrastructure fix (Cay #14784 sat on `llm_error` 09-24 → 09-28) | Fix on `develop`: daily bounded self-heal for `llm_error` / `daily_cap_reached` in the deadline-rebuild cron | #908 (not in prod) |
+| P2 communications classification (§7, D7) | Not started | — |
+| P3 delivery-commitment resolver (§8) | Not started. Q-5 (fulfillment-order scopes) open | — |
+| P4 evidence monitoring + event history (§9, D8) | Not started; depends on `tracking-app-delivery-signals.plan.md` phases 2–4 | — |
+| P5 remediation of unsubmitted drafts | Not started; P1 must be in prod first. Never rewrites submitted history | — |
+
+**The two §0 cases, 2026-09-28.** Case B, cay #14784 (due 10-01, `review_state = approved`, files via the
+deadline cron): v5 and v6 failed on `llm_error` (the five-`cache_control`-block API refusal, fixed by #798),
+rebuilt by hand 09-28 → v7 `draft`, validation `ok`, PDF present. Case A, blume-box #360980 (due 10-03):
+v26 valid.
+
+**Decisions still open:** Q-4 (P3 before or after P4), Q-5 (fulfillment-order scopes), Q-6 (document-specific
+approval), Q-7 (let newly-strong cases auto-file — the ladder branch stays until then). Q-8 (provenance) is
+decided as an investigation; its outcome is recorded in §11 when P1b lands.
 
 > **Rev 5.1: three targeted corrections to §6.1.**
 > **(1)** Carrier-style text on a Shopify fulfillment event is **not** proof of carrier
