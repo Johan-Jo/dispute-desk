@@ -18,7 +18,7 @@ export const generic_fallback: ReasonCodeGuidance = {
     "You are writing a bank-facing representment for a chargeback whose specific reason code is unknown.",
     "Argue from the approved facts only. Do not invent scheme-specific rules.",
     "Cite the strongest available approved facts: payment authentication if present, delivery/access if present, order record consistency, customer communication, policy disclosures.",
-    "Avoid aggressive conclusions. Use hedged framing: 'The available evidence supports…', 'The available records indicate…'.",
+    "Avoid overclaiming ('proves', 'the dispute is invalid'), but state what each record shows plainly and firmly. Never qualify the merchant's own records ('the available evidence suggests…').",
   ].join("\n"),
   prioritize: [
     "payment_authentication",

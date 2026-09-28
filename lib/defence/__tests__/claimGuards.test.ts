@@ -398,8 +398,9 @@ describe("claimGuards", () => {
 
 describe("claimGuards — negated statements are not claims (validator 4)", () => {
   // Verbatim conclusion from cay-collective #13195 (prod, 2026-08-18):
-  // the credit_not_processed_no_return strategy INSTRUCTS this sentence,
-  // and validator 3 failed it as an affirmative refund claim.
+  // the credit_not_processed_no_return strategy v1 INSTRUCTED this sentence
+  // (v2, 2026-09-28, no longer does), and validator 3 failed it as an
+  // affirmative refund claim.
   const CAY_13195_CONCLUSION =
     "The available records indicate that no return was initiated by the " +
     "customer, and no refund was issued. The submitted evidence is " +
@@ -416,8 +417,9 @@ describe("claimGuards — negated statements are not claims (validator 4)", () =
     });
     expect(result.failures.filter((f) => f.guardId === "refund_processed")).toEqual([]);
     // Since Fix C (2026-09-27) this letter's "no return was initiated by the
-    // customer" is itself banned — see the return-absence suite below.
-    expect(result.failures.map((f) => f.guardId)).toEqual(["return_claim_beyond_record"]);
+    // customer" is itself banned — see the return-absence suite below — and
+    // since rule 10 (2026-09-28) so is opening with "the available records".
+    expect(result.failures.map((f) => f.guardId).sort()).toEqual(["return_claim_beyond_record", "undersells_case"]);
   });
 
   it("an affirmative refund claim still fires with the same fact set", () => {
@@ -655,5 +657,42 @@ describe("policy and record bans (base prompt rule 8d, bank-claim plan F1)", () 
     "The customer accepted the merchant's refund policy at checkout.",
   ])("passes what the record supports: %s", (text) => {
     expect(ids(text)).toEqual([]);
+  });
+});
+
+describe("underselling the merchant's case is banned (base prompt rule 10)", () => {
+  const ids = (text: string) =>
+    runClaimGuards({ narrativeSections: narrative({ conclusion: { text } }), approvedFacts: [] }).failures.map(
+      (f) => f.guardId,
+    );
+
+  it.each([
+    "The available evidence supports that the order was delivered.",
+    "However, the merchant acknowledges that documentation on product conformity is limited.",
+    "Evidence on this point is limited, and the response is framed accordingly.",
+    "This response presents the documented record as submitted.",
+    "Despite limited evidence, the carrier confirmed delivery.",
+  ])("fails: %s", (text) => {
+    expect(ids(text)).toContain("undersells_case");
+  });
+
+  it.each([
+    "The carrier confirmed delivery on 21 July 2026.",
+    "These records support a cardholder-authorized transaction.",
+    "The merchant requests that this chargeback be reversed in its favour.",
+  ])("passes: %s", (text) => {
+    expect(ids(text)).not.toContain("undersells_case");
+  });
+});
+
+describe("policy terms described without the word 'policy'", () => {
+  it("fails 'under the merchant's published terms'", () => {
+    const failures = runClaimGuards({
+      narrativeSections: narrative({
+        executiveSummary: { text: "Without a completed return, no refund obligation has arisen under the merchant's published terms." },
+      }),
+      approvedFacts: [],
+    }).failures.map((f) => f.guardId);
+    expect(failures).toContain("policy_terms_beyond_record");
   });
 });

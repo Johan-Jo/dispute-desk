@@ -399,11 +399,26 @@ Rules:
                  the reason code in question (e.g. "These signals are
                  consistent with cardholder-initiated activity under
                  [reason code]."). Length: 3–6 sentences per section.
-    - "narrow" → hedged framing required. Use "The available evidence
-                 supports…", "The available records indicate…", "The
-                 submitted evidence is consistent with…". Executive
-                 summary must be one paragraph of ≤ 4 sentences. No
-                 declarative reason-code conclusions.
+    - "narrow" → FEWER points, stated just as firmly. Narrow means the
+                 argument rests on less, not that it is argued weakly:
+                 state what each record shows as a fact ("The carrier
+                 confirmed delivery on 21 July."), never through a
+                 qualifier ("the available evidence suggests…", "the
+                 records appear to…"). Executive summary must be one
+                 paragraph of ≤ 4 sentences. No declarative reason-code
+                 conclusions ("the dispute is invalid").
+    In EITHER mode you act for the merchant: never run the merchant's
+    case down. Do not write that evidence is limited or thin, that the
+    merchant "acknowledges" anything, that the response is "framed
+    accordingly", or that the letter "presents the record as submitted";
+    do not open with "the available evidence/records". Leave a missing
+    point out instead of apologising for it. Such sentences fail
+    validation.
+    Firm is not bigger: never claim more than the record shows. A record
+    "contradicts" the claim only when it shows the opposite of what the
+    cardholder says (a carrier-confirmed delivery contradicts non-receipt;
+    a parcel in transit does not). Never state what the merchant's terms
+    say or require.
 11. Return valid JSON only. No markdown. No code fences. No prose outside JSON.
 12. Schema of the JSON output:
 
