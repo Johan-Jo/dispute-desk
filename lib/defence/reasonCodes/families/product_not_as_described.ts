@@ -34,6 +34,8 @@ export const product_not_as_described: ReasonCodeFamily = {
     "",
     "WHAT THE RECORDS CAN AND CANNOT SHOW. The order record shows what the customer ordered: the items, the variants and the price. A product listing shows what the merchant advertised, not what arrived. A delivery record shows that the parcel arrived, not what it contained or its condition. So never assert that the delivered item agreed with the listing or its description, lacked defects, or arrived in a particular condition, and never date the listing to the purchase: the listing on record is the one retrieved when this response was prepared.",
     "",
+    "STAY ON THE RECORD. Never describe the buyer's conduct by what it lacks (a return, contact with the merchant, evidence given to the bank): Shopify records only returns made through Shopify, and the bank's file is not in front of you. The only sentence about returns remains the one rule 8c permits. Never label the claim as lacking support. Two records of one carrier event are one record; never present them as confirming each other.",
+    "",
     "The reason code names the cardholder's claim category. You may restate that claim (\"the cardholder states the item was not as described\"); never adopt it or concede it.",
   ].join("\n"),
   familyAvoid: [],
@@ -56,6 +58,20 @@ export const product_not_as_described: ReasonCodeFamily = {
     // 5. Payment-authentication signals answer who paid, not what arrived.
     //    Excluded structurally by the module's allow-list; this is the net.
     /\b(?:IP\s+address|AVS|CVV2?|CVC|3-?D\s*Secure|address\s+verification)\b/i,
+    // 6. What the buyer did not do or submit. Shopify records only Shopify
+    //    returns, and the issuer's file is not ours to see, so these are beyond
+    //    the record. Found in the PR 1 comparison letters (#100411): "no
+    //    product listing or customer communication evidence has been submitted
+    //    to support the buyer's assertion", "The buyer has not, on the
+    //    available record, engaged a return or resolution process".
+    /\b(?:buyer|cardholder|customer|purchaser)\s+(?:has|have|had|did|does)\s*(?:not\b|n['’]t\b)/i,
+    /\bno\s+[^.;]{0,80}?\b(?:evidence|documentation|communication|listing|proof)\b[^.;]{0,40}?\b(?:has|have|was|were|is|are)\s+(?:been\s+)?(?:submitted|provided|presented|produced|offered)\b/i,
+    /\b(?:unsupported|unsubstantiated)\s+(?:claim|assertion|allegation)\b|\bwithout\s+(?:any\s+)?(?:evidence|substantiation)\b/i,
+    /\babsence\s+of\s+(?:any\s+)?(?!recorded\b)(?:return|complaint|contact|communication|evidence)\b/i,
+    // 7. One carrier event is one record: two fulfilment rows carrying the same
+    //    tracking number do not corroborate each other (as item_not_received v9).
+    /\bcorroborat\w*\b/i,
+    /\bindependent(?:ly)?\s+(?:confirm\w*|support\w*|establish\w*|record\w*)\b/i,
   ],
   guardedBankPhrases: [],
   version: 2,
