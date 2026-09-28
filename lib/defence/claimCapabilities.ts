@@ -652,6 +652,39 @@ export function findAddressDeliveryClaimSentence(
 }
 
 /**
+ * Delete every sentence the detector rates `affirmative` or `ambiguous`,
+ * leaving every other sentence byte-for-byte as written.
+ *
+ * This is the edit the validator's retry feedback ASKS the model to make
+ * ("Delete it or rewrite it…"), performed by code for when the model does not.
+ * blume-box #353605 (2026-08-11) failed that retry on three builds running and
+ * reached its deadline with a package nobody could file, although the carrier,
+ * tracking number and delivery date — all still permitted — were right there.
+ * Uses the same `sentences` split and `classifySentence` verdict as the
+ * detector, so a sentence it removes is exactly a sentence the gate refuses.
+ */
+export function removeAddressDeliveryClaimSentences(text: string): {
+  text: string;
+  removed: string[];
+} {
+  if (!text || !text.trim()) return { text, removed: [] };
+  const removed = sentences(text).filter((s) => {
+    const verdict = classifySentence(s);
+    return verdict === "affirmative" || verdict === "ambiguous";
+  });
+  if (removed.length === 0) return { text, removed };
+  let out = text;
+  for (const s of removed) out = out.replace(s, "");
+  out = out
+    .split("\n")
+    .map((line) => line.replace(/[ \t]{2,}/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { text: out, removed };
+}
+
+/**
  * The authorization check itself: is this prose permitted, given the
  * capabilities the case actually holds?
  */

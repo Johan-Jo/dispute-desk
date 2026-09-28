@@ -9088,6 +9088,30 @@ response body gains a `blockedByDecision` counter, distinct from
 `finalizeRefused`: a P-6 refusal is the gate working, not a retriable
 transaction failure.
 
+**Admin alert on every no-file exit (2026-09-28).** Every path through this route
+that ends with nothing submitted for a scanned dispute — P-6 refusal, stale
+response cycle, missing bank claim, finalize/enqueue refused, no pack, the
+fail-closed arm, or an exception — also calls `sendDeadlineNoFileAdminAlert`
+(`lib/email/sendDeadlineNoFileAdminAlert.ts`) to `ADMIN_NOTIFY_EMAIL`, subject
+*"Deadline today — DisputeDesk filed nothing: <shop> <order>"*, naming the refusal
+and package. The merchant email alone let blume-box #353605 (2026-08-11) go to
+Shopify's own scrape unnoticed. The dark `legacyRoute.ts` is not wired.
+
+### Address-claim sentences are removed, not left to fail the package
+
+`address_delivery` is a capability no case holds, so a sentence saying *where* the
+parcel went fails `validateNarrative` and the selection-time
+`assessPackageCandidateSafety`. When the model's retry still contains one, the
+build job used to mark the package `failed`, and the dispute filed nothing at the
+deadline. `buildDefencePackageJob` now runs `stripAddressDeliveryClaims`
+(`lib/defence/stripAddressDeliveryClaims.ts`) on the final narrative — every
+section, the headline, timeline additions and the counsel summary — deleting only
+the sentences `classifyAddressDeliveryClaim` rates affirmative/ambiguous (the same
+deletion the retry feedback asks the model for), then re-validates. Carrier,
+tracking and delivery-date sentences are untouched. An emptied section is added to
+`omittedSections`. Removals are audited as `defence_package_address_claim_removed`
+with the removed sentences and `validationOkAfter`.
+
 ### Branch boundary
 
 Automation decides what to DO; the argument decides what to SAY. Nothing under
