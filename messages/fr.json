@@ -2329,6 +2329,51 @@
       "editClaim": "Modifier la réclamation",
       "portalBody": "DisputeDesk n'enverra pas de réponse pour ce litige tant que la réclamation de la banque n'est pas ajoutée. Elle n'est visible que dans Shopify et s'ajoute dans l'application DisputeDesk de l'administration Shopify.",
       "portalCta": "L'ajouter dans Shopify"
+    },
+    "overviewDecision": {
+      "evidence": {
+        "title": "Preuves",
+        "addHintDelivery": "Téléversez une preuve de livraison avant l'échéance.",
+        "addHint": "Téléversez des preuves complémentaires avant l'échéance.",
+        "saveHint": "Conserver le dossier tel quel, avec des preuves limitées."
+      },
+      "decision": {
+        "submit": "Envoyer à l'échéance",
+        "hold": "Mettre en attente",
+        "none": "Ne pas répondre",
+        "submitHint": "Enregistré automatiquement dans Shopify le {date}.",
+        "submitHintNoDate": "Enregistré automatiquement dans Shopify à l'échéance.",
+        "holdHint": "Si vous ne faites rien d'autre, votre règle d'automatisation s'appliquera à l'échéance.",
+        "noneHint": "DisputeDesk n'ajoutera pas de dossier de défense à ce litige."
+      },
+      "next": {
+        "submit": "Enregistré automatiquement dans Shopify le {date}",
+        "submitNoDate": "Enregistré automatiquement dans Shopify à l'échéance",
+        "hold": "En attente de votre examen — si vous ne faites rien d'autre, votre règle d'automatisation s'appliquera à l'échéance",
+        "none": "Aucun dossier de défense ne sera ajouté",
+        "undecided": "Décidez de ce qui se passe à l'échéance"
+      },
+      "upload": {
+        "title": "Ajouter les preuves manquantes",
+        "descriptionDelivery": "Téléversez une preuve que le colis est bien parvenu à {customer}. Elle est ajoutée au dossier de défense avant l'échéance du {date}.",
+        "descriptionDeliveryNoDate": "Téléversez une preuve que le colis est bien parvenu à {customer}. Elle est ajoutée au dossier de défense avant l'échéance.",
+        "description": "Téléversez des preuves qui appuient votre dossier. Elles sont ajoutées au dossier de défense avant l'échéance du {date}.",
+        "descriptionNoDate": "Téléversez des preuves qui appuient votre dossier. Elles sont ajoutées au dossier de défense avant l'échéance.",
+        "customerFallback": "le client",
+        "drop": "Déposez les fichiers ici ou",
+        "browse": "parcourez",
+        "formats": "PDF, PNG ou JPG · jusqu'à 10 Mo chacun",
+        "tooLarge": "Les fichiers de plus de 10 Mo ont été ignorés.",
+        "helpsTitle": "Ce qui aide le plus pour {reason}",
+        "helps": {
+          "trackingDelivered": "Page de suivi du transporteur indiquant « Livré »",
+          "signature": "Confirmation de signature du transporteur",
+          "deliveryRecord": "Relevé de livraison du transporteur avec numéro de suivi",
+          "customerAck": "Accusé de réception du client"
+        },
+        "cancel": "Annuler",
+        "add": "Ajouter au dossier"
+      }
     }
   },
   "disputeReasons": {
