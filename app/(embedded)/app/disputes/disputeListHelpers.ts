@@ -33,6 +33,10 @@ export interface Dispute {
   submission_state?: string | null;
   final_outcome?: string | null;
   closed_at?: string | null;
+  /** Response cycle (1 = first round) and a reopen after an outcome: drive
+   *  the "Reopened" badge (lib/disputes/reopenAfterClose.ts). */
+  response_cycle?: number | null;
+  reopened_after_close_at?: string | null;
   submitted_at?: string | null;
   outcome_amount_recovered?: number | null;
   outcome_amount_lost?: number | null;

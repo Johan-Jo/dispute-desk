@@ -922,6 +922,8 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 - Emits per-change `dispute_events` ledger entries (already idempotent via `dedupe_key`).
 - Returns an `events: DisputeTransitionEvent[]` array that downstream effects key off.
 
+**Reopened after an outcome (2026-09-29, `lib/disputes/reopenAfterClose.ts`).** Shopify can reopen a *decided* dispute (won/lost/accepted/refunded → `needs_response` or `under_review`): a won inquiry that becomes a chargeback, or a won chargeback the bank takes further. `applyDisputeSnapshot` used to reject this as a "terminal-state downgrade" and keep the old outcome, so the dispute stayed "won" in DisputeDesk while Shopify showed it open (Mein Maison #94534, #94448, #99123, #92590). Stale snapshots are already rejected by `shopify_updated_at`, so a non-final status on a fresh snapshot is now treated as a reopen: `final_outcome`, `closed_at` and the `outcome_*` columns are cleared, the previous outcome is kept in `disputes.previous_final_outcome`, `reopened_after_close_at` is stamped with Shopify's time, the status is written, a `dispute_reopened_after_close` event goes on the timeline, and the response-cycle logic below may open a new cycle (it previously required no outcome). A later second outcome gets its own `OUTCOME_DETECTED` / `DISPUTE_CLOSED` keys (suffix `:after_reopen_<ts>`, `outcomeKeySuffix`), so it is recorded and emailed instead of deduplicated against the first. The manual resync route (`/api/disputes/[id]/resync`) applies the same rule. **Reopened badge:** `isReopenedOpenDispute` (open dispute with `response_cycle ≥ 2` or `reopened_after_close_at`) shows a "Reopened" pill (`disputes.reopenedBadge`) next to the inquiry/chargeback pill in the desktop list, the mobile card and the dispute header.
+
 **Response cycles — reopens and inquiry → chargeback escalations (2026-09-27, plan `docs/plans/mein-maison-status-and-no-return.plan.md` Fix B).** Shopify can ask for a new response after one was given: `needs_response → under_review` (answered) and later `under_review → needs_response` with a fresh `evidence_due_by` (reopened, or an answered inquiry escalated to a chargeback). The first response's "sent" state used to survive this, so the dispute showed "Under review" with a live deadline and neither the deadline cron nor the reminders picked it up (Mein Maison #99142/#99348).
 
 - **Ledger:** `dispute_response_cycles` holds one row per cycle after the first, `unique (dispute_id, anchor_key)`. The anchor is the prior response the cycle follows, `resp:{UTC second}`, from `responseAnchorKey` (`lib/disputes/responseCycle.ts`) with a fixed precedence: `submitted_at` → `evidence_saved_to_shopify_at` → `shopify_updated_at` of an `under_review`-with-deadline row. Every path that discovers a cycle MUST use that helper, or one cycle becomes two rows.
@@ -3715,6 +3717,20 @@ Address rule:
   (`documentModel.ts` `laterOrderCard`). Its delivery date is shown only when the order arrived within the
   merchant's delivery period (`deliveryPeriodDays`: a published delivery window, else the dispatch window plus
   the disputed order's transit, else 10 days); a long order-to-delivery span is left out.
+- **Timing only when it helps (2026-09-29).** The single-parcel item-not-received ledger offers
+  `shipped_promptly` only for same/next-day dispatch or dispatch inside the published window, and `transit_days`
+  only when the whole order → delivery span sits inside the merchant's delivery period (`deliveryPeriodDays`
+  without a ship date: published delivery window, else 10 days). Outside those the ledger carries no timing, so
+  the writer cannot state it (the fact-check refuses unsupported intervals). Trigger: Mein Maison #100463's
+  letter said delivery came "twenty-six days after the merchant shipped the order". Pinned by
+  `lib/defence/counsel/__tests__/timingOnlyWhenItHelps.test.ts`.
+- **Delivered after the dispute was opened (2026-09-29, non-receipt plan §10 test 17).** The delivery leads and
+  the filing date is not cited. The `delivered_after_dispute_opened` claim keeps its id (the theory of the case)
+  but carries no dispute date and a mustNot against placing the delivery before or after the dispute;
+  `addDisputeOpenedRow` adds no chronology row in that case; and `buildChronologyEvents`
+  (`withoutOpeningBeforeDelivery`, both renderers) drops Shopify's own opening line when any recorded delivery
+  is later than it. When every delivery precedes the dispute, the full sequence stays. Pinned by
+  `lib/defence/counsel/__tests__/deliveredAfterDisputeOpened.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then

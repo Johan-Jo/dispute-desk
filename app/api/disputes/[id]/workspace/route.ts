@@ -493,6 +493,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // not been answered for this cycle.
     responseCycle: (row.response_cycle as number | null) ?? 1,
     reopenedAt: row.reopened_at ?? null,
+    reopenedAfterCloseAt: (row.reopened_after_close_at as string | null) ?? null,
     escalatedFromInquiryAt: row.escalated_from_inquiry_at ?? null,
   };
 
