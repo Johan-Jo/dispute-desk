@@ -1038,6 +1038,8 @@ UPDATE shops s
 
 The cron route (`CLAIM_BATCH = 200`) is bounded regardless of tenant count. At 100k shops with 1-hour cadence → ~140 shops/5-min tick, well under the cap.
 
+**Claim grace (2026-09-29, migration `20260929160000`).** `claim_due_shops` claims shops whose `next_reconcile_at` is at most 5 minutes in the future. It used to claim only those strictly due, and `next_reconcile_at` is set from the claim time, a few seconds after the :00 tick. So a shop was always about 45 s short at the next tick and skipped, and an hourly shop synced every two hours.
+
 **Adaptive cadence** (`lib/disputes/reconcileSchedule.ts`): after each `syncDisputes` run, `recordReconcileOutcome()` adjusts the shop's interval:
 
 - drift detected (`created > 0 || changed > 0`) → halve, floor 1 h. `changed` counts disputes whose apply outcome was `applied`: a status, due-date, submission, response-cycle or escalation transition. Until 2026-09-29 it was `updated > 0`, which counts every re-applied dispute, so any shop with an open dispute stayed at the 1 h floor.
