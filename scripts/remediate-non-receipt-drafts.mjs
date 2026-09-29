@@ -14,6 +14,15 @@
  *   - merchant-conceded disputes (`review_state = conceded`).
  *   - disputes past their deadline.
  *   - packs already derived at or after CUTOFF (nothing to re-derive).
+ *   - drafts whose latest defence package is FILEABLE (counsel v2, validated).
+ *     A rebuild whose evidence hash moved calls the writer again, and the
+ *     writer may refuse — turning a fileable letter into a failed package days
+ *     before the deadline (canary 2026-09-29: #103052's rebuild ended
+ *     `no_counsel_letter`). The P1b/P2 changes alter merchant copy and the
+ *     Gorgias filter, not what a fileable letter says, so that risk buys
+ *     nothing. Template-writer letters are refused at filing
+ *     (`retired_template_writer`), so rebuilding those can only help.
+ *     `--include-fileable` overrides, for a deliberate re-letter.
  *
  * WHAT IT DOES. Enqueues `build_pack` at priority 90 (the nightly-refresh
  * tier, below interactive work). The rebuilt pack chains its own defence
@@ -50,6 +59,7 @@ if (limitArg && (!Number.isInteger(LIMIT) || LIMIT <= 0)) {
   console.error("--limit must be a positive integer");
   process.exit(1);
 }
+const INCLUDE_FILEABLE = args.includes("--include-fileable");
 const ONLY = args.find((a) => a.startsWith("--only="))?.slice(7).split(",").filter(Boolean) ?? null;
 
 /** The P2 prod release (#929 merged 2026-09-29T12:08:46Z). Anything derived
@@ -147,19 +157,40 @@ const open = (disputes ?? []).filter(
 );
 const packs = await latestPacks(open.map((d) => d.id));
 
+const { data: pkgRows, error: pkgErr } = await sb
+  .from("defence_packages")
+  .select("dispute_id, prompt_family, validation_status, status, created_at")
+  .in("dispute_id", open.map((d) => d.id))
+  .order("created_at", { ascending: false });
+if (pkgErr) {
+  console.error("Package query failed:", pkgErr.message);
+  process.exit(1);
+}
+const latestPkg = new Map();
+for (const r of pkgRows ?? []) if (!latestPkg.has(r.dispute_id)) latestPkg.set(r.dispute_id, r);
+const isFileable = (r) =>
+  !!r && r.prompt_family === "counsel_v2" && r.validation_status === "ok" && r.status !== "failed" && r.status !== "stale";
+
+const held = [];
 const targets = [];
 for (const d of open) {
   const p = packs.get(d.id);
   if (!p || p.status !== "ready") continue;
   const c = classification(p.pack_json);
   if (c.computedAt && c.computedAt >= CUTOFF) continue;
+  if (!INCLUDE_FILEABLE && isFileable(latestPkg.get(d.id))) {
+    held.push(d);
+    continue;
+  }
   targets.push({ d, p, c });
 }
 targets.sort((a, b) => (a.d.due_at < b.d.due_at ? 1 : -1)); // furthest deadline first: canary on the most slack
 const chosen = LIMIT ? targets.slice(0, LIMIT) : targets;
 
 console.log(`open unsubmitted INR disputes : ${open.length}`);
-console.log(`derived before ${CUTOFF} : ${targets.length}`);
+console.log(`held (fileable counsel letter) : ${held.length}`);
+for (const d of held) console.log(`  held ${d.shops.shop_domain} ${d.order_name}  due ${d.due_at.slice(0, 10)}`);
+console.log(`to re-derive (before ${CUTOFF}) : ${targets.length}`);
 for (const t of chosen) {
   console.log(
     `  ${t.d.shops.shop_domain} ${t.d.order_name}  due ${t.d.due_at.slice(0, 10)}  ${t.d.normalized_status}` +
