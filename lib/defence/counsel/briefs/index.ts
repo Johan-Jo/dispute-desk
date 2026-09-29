@@ -50,6 +50,10 @@ export interface Brief {
   claims: string[];
   theories: Array<{ name: string; claimIds: string[] }>;
   minimumClaims: string[];
+  /** At least ONE of these must be in the ledger (in addition to every
+   *  `minimumClaims`). Item-not-received argues from a single delivery, a
+   *  set of parcels, or a shipment the carrier shows in transit. */
+  minimumAnyOf?: string[];
   ceilingClaims: string[];
   sections: BriefSection[];
   limits: BriefLimit[];
@@ -70,6 +74,7 @@ export const ITEM_NOT_RECEIVED_BRIEF: Brief = {
     "claim_is_non_receipt", ...SEQUENCE, "signed_for", "carrier_is_third_party", "whole_order_in_shipment",
     "full_amount_covered", "within_shipping_policy", "delivery_notice_same_day", "later_order",
     "shipping_matches_billing", "billing_address_verified", "order_in_parcels", "all_parcels_delivered", "some_parcel_delivered",
+    "shipment_in_transit",
   ],
   theories: [
     { name: "every_parcel_delivered", claimIds: ["all_parcels_delivered", "order_in_parcels"] },
@@ -78,9 +83,11 @@ export const ITEM_NOT_RECEIVED_BRIEF: Brief = {
     { name: "delivered_and_notified", claimIds: ["carrier_delivered", "delivery_notice_same_day", "dispute_after_delivery"] },
     { name: "whole_order_one_parcel", claimIds: ["carrier_delivered", "whole_order_in_shipment"] },
     { name: "delivered_after_dispute_opened", claimIds: ["delivered_after_dispute_opened"] },
+    { name: "shipped_in_transit", claimIds: ["shipment_in_transit"] },
     { name: "delivered", claimIds: ["carrier_delivered"] },
   ],
-  minimumClaims: ["carrier_delivered"],
+  minimumClaims: [],
+  minimumAnyOf: ["carrier_delivered", "all_parcels_delivered", "some_parcel_delivered", "shipment_in_transit"],
   ceilingClaims: [],
   sections: [
     {
@@ -88,7 +95,7 @@ export const ITEM_NOT_RECEIVED_BRIEF: Brief = {
       title: "Shipping & Delivery",
       exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates) and the carrier's tracking link",
       question: "Does the carrier's own record show the delivery the customer denies?",
-      claimIds: ["carrier_delivered", "signed_for", "carrier_is_third_party", "whole_order_in_shipment", "order_in_parcels", "all_parcels_delivered", "some_parcel_delivered"],
+      claimIds: ["carrier_delivered", "signed_for", "carrier_is_third_party", "whole_order_in_shipment", "order_in_parcels", "all_parcels_delivered", "some_parcel_delivered", "shipment_in_transit"],
     },
   ],
   limits: [
