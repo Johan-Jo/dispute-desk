@@ -32,6 +32,7 @@ interface SupabaseSpies {
   disputesUpdate: ReturnType<typeof vi.fn>;
   packsUpdate: ReturnType<typeof vi.fn>;
   auditInsert: ReturnType<typeof vi.fn>;
+  snapshotsDeleteIn: ReturnType<typeof vi.fn>;
 }
 
 function setupSupabase(opts: {
@@ -42,6 +43,7 @@ function setupSupabase(opts: {
   const disputesUpdate = vi.fn();
   const packsUpdate = vi.fn();
   const auditInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+  const snapshotsDeleteIn = vi.fn().mockResolvedValue({ data: null, error: null });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fromImpl = (table: string): any => {
@@ -108,6 +110,9 @@ function setupSupabase(opts: {
       });
       return chain;
     }
+    if (table === "shopify_evidence_snapshots") {
+      return { delete: vi.fn(() => ({ in: snapshotsDeleteIn })) };
+    }
     if (table === "shopify_order_risk_signals") {
       return {
         update: vi.fn(() => ({
@@ -121,7 +126,7 @@ function setupSupabase(opts: {
   };
 
   mockGetServiceClient.mockReturnValue({ from: fromImpl } as never);
-  return { disputesUpdate, packsUpdate, auditInsert };
+  return { disputesUpdate, packsUpdate, auditInsert, snapshotsDeleteIn };
 }
 
 const PAYLOAD = JSON.stringify({
@@ -230,6 +235,9 @@ describe("POST /api/webhooks/customers/redact", () => {
       customer_email: null,
       customer_display_name: null,
     });
+
+    // retained-evidence snapshots of the matched disputes are deleted
+    expect(spies.snapshotsDeleteIn).toHaveBeenCalledWith("dispute_id", ["dispute-1", "dispute-2"]);
 
     // packs update was called once (for pack-1 only)
     expect(spies.packsUpdate).toHaveBeenCalledTimes(1);
