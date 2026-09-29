@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { WRITER_SYSTEM } from "../constitution";
-import { GENERAL_BRIEF, ITEM_NOT_RECEIVED_BRIEF, NOT_AS_DESCRIBED_BRIEF } from "../briefs";
+import { GENERAL_BRIEF, ITEM_NOT_RECEIVED_BRIEF, NOT_AS_DESCRIBED_BRIEF, sectionApplies } from "../briefs";
 
 const beforeExamples = WRITER_SYSTEM.slice(0, WRITER_SYSTEM.indexOf("EXAMPLES ("));
 
@@ -41,5 +41,17 @@ describe("T2 — briefs are data, never instructions", () => {
     for (const t of brief.theories) expect(Object.keys(t).sort()).toEqual(["claimIds", "name"]);
     // Limits only forbid.
     for (const l of brief.limits) expect(l.rule).toMatch(/^No\b/);
+  });
+});
+
+describe("a section needs its lead claim (#93254)", () => {
+  const policy = NOT_AS_DESCRIBED_BRIEF.sections.find((s) => s.key === "policy")!;
+  const shipping = NOT_AS_DESCRIBED_BRIEF.sections.find((s) => s.key === "shipping")!;
+  it("no Return Route section when the return window has closed", () => {
+    expect(sectionApplies(policy, new Set(["no_return_recorded", "carrier_delivered"]))).toBe(false);
+    expect(sectionApplies(shipping, new Set(["no_return_recorded", "carrier_delivered"]))).toBe(true);
+  });
+  it("the Return Route section when the route is open", () => {
+    expect(sectionApplies(policy, new Set(["return_route_open", "no_return_recorded"]))).toBe(true);
   });
 });
