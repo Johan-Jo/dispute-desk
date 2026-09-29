@@ -3744,6 +3744,12 @@ Address rule:
   `responseTitle(frame)` ("Dispute response" for PayPal/Klarna) and Case Details gets `paymentMethodLabel`, so a
   non-card dispute shows "Payment method: PayPal" instead of "Card network —". Pinned by
   `lib/defence/__tests__/htmlViewDisputeFrame.test.ts`.
+- **Generation guard: writer change (2026-09-29).** `evaluateGenerationGuard` adds retry basis `writer_changed`:
+  a failed row whose recorded `prompt_family` differs from the current writer (`COUNSEL_PROMPT_FAMILY`) is a new
+  attempt. Both callers (`maybeEnqueueDefencePackage`, the worker's prior-row re-check) pass `writerFamily`. A NULL
+  `prompt_family` (a counsel refusal) does not count, so the loop stays bounded. Trigger: Mein Maison #102193, failed
+  under the template writer on 09-28 and blocked `human_action_required` with no path to clear it. Pinned in
+  `tests/unit/latestPackageGenerationGuard.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
