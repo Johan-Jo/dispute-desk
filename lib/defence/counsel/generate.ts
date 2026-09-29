@@ -215,6 +215,14 @@ export function draftFromWriter(raw: string, argued: Brief["sections"]): Counsel
   };
 }
 
+const LENGTH_ISSUE = /^summary: \d+ words, the limit is \d+/;
+
+export const SHORTEN_SYSTEM = `You shorten the executive summary of a response to a payment dispute. Return ONLY the rewritten paragraph, no quotes, no comment.
+- At most 70 words.
+- Keep the first sentence (the customer's claim) and the last sentence (the request) word for word.
+- Keep every fact the paragraph relies on; remove only restated clauses, a second mention of the same fact, and supporting detail.
+- Add nothing: no new fact, date, number or word of emphasis.`;
+
 /** The whole letter's prose, for the review call. */
 function letterProse(d: CounselDraft, brief: Brief): string {
   const title = (k: string) => brief.sections.find((s) => s.key === k)?.title ?? k;
@@ -288,6 +296,29 @@ export async function writeLetter(args: {
     });
     draft = draftFromWriter(lastRaw, argued);
     issues = await issuesOf(draft);
+  }
+  // Length alone left: one call that only shortens the summary. The whole-
+  // letter corrections keep missing the count by a few words (#100705 in
+  // prod, 92 of 90, 2026-09-29); a paragraph-only rewrite does not.
+  const blocking = issues.filter((i) => !i.startsWith("unclear:"));
+  if (blocking.length > 0 && blocking.every((i) => LENGTH_ISSUE.test(i))) {
+    const text = (
+      await args.call({
+        stage: "correction",
+        system: SHORTEN_SYSTEM,
+        user: draft.summary.paragraphs.join("\n\n"),
+        temperature: 0,
+        maxTokens: 600,
+      })
+    ).trim();
+    if (text) {
+      const shortened: CounselDraft = { ...draft, summary: { ...draft.summary, paragraphs: [text] } };
+      const after = await issuesOf(shortened);
+      if (after.filter((i) => !i.startsWith("unclear:")).length === 0) {
+        draft = shortened;
+        issues = after;
+      }
+    }
   }
   log(`first ${firstIssues.length} issue(s)${corrected ? `, after correction ${issues.length}` : ""}`);
   // After the corrections, a reviewer clarity note or a summary a few words

@@ -69,10 +69,16 @@ function isOrderMatched(m: StoredMessageForConstraints): boolean {
   return m.ticketMatchStatus === "proposed_match" && m.ticketConfidence === "high";
 }
 
+/** Does this text ask for money back (refund / reimbursement / compensation)?
+ *  The one definition, shared with the analyzer's category policy (P2). */
+export function textAsksForMoneyBack(text: string | null | undefined): boolean {
+  const t = text ?? "";
+  return REFUND_REQUEST_TEXT.some((re) => re.test(t));
+}
+
 function asksForMoneyBack(m: StoredMessageForConstraints): boolean {
   if (m.evidenceCategory === "refund_history") return true;
-  const text = m.messageText ?? "";
-  return REFUND_REQUEST_TEXT.some((re) => re.test(text));
+  return textAsksForMoneyBack(m.messageText);
 }
 
 /** Pure. Exported for tests. */
