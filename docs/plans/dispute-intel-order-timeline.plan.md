@@ -1,8 +1,8 @@
 # Dispute intel from the order timeline: what happened, outside DisputeDesk
 
-**Status:** rev 3.1, 2026-09-29. Research complete (read-only, prod). Critic round 1: REVISE (12 findings,
+**Status:** rev 3.2, 2026-09-29. Research complete (read-only, prod). Critic round 1: REVISE (12 findings,
 §10). Critic round 2: fine to present, not yet approved to implement (5 findings, all addressed in
-rev 3; §10.2). Critic round 3: basis for implementation once 4 points fixed (all fixed in rev 3.1; §10.3). No implementation. **Step 0 is gated on §4.1.1; P1 is gated on PR #940 (G1, §1.4).**
+rev 3; §10.2). Critic round 3: basis for implementation once 4 points fixed (all fixed in rev 3.1; §10.3). Review of rev 3.1: **Step 0 approved** (preservation only; P0–P3 and any prod release not approved), with two fixes made in rev 3.2 (§10.4). No implementation yet. **Step 0 is gated on §4.1.1; P1 is gated on PR #940 (G1, §1.4).**
 **Origin:** Mein Maison #99445, an inquiry that showed "lost". The Shopify order timeline showed the
 real story: the merchant's support app, then a staff member, refunded the customer ("wrong goods
 delivered"), and Shopify closed the inquiry as refunded. None of that was visible in DisputeDesk.
@@ -187,7 +187,12 @@ dispute: an order can carry several disputes and several cycles. The link to a d
 
 ### 4.1.1 Seed custody and import (Step 0)
 
-**Manifest.** Measured on the file itself on 2026-09-29. The import must reproduce every line.
+**Manifest (version 1).** Measured on the file itself on 2026-09-29. The manifest is **versioned**: it
+lives as `survey-2026-09-29.manifest.json` beside each seed copy, holding every version in order.
+Version 1 is the table below. A redaction (§4.6) never edits a version; it appends version *n*+1 with
+the new sha256, size, rows, orders, unique events and per-shop counts, plus the redaction log entry
+that produced it (request id, the order GIDs removed, lines and events removed, applied by, applied
+at). The import and T0 check against the **latest** version, never against version 1 by default.
 
 | Field | Value |
 |---|---|
@@ -208,22 +213,31 @@ dispute: an order can carry several disputes and several cycles. The link to a d
 one. The file is the **only** copy and contains personal data (customer and staff names), so it is
 never committed to git. Before the import runs, a **second copy** goes to a private Supabase Storage
 bucket in **prod** (`ops-private`, service role only; same data class and region as the table it
-feeds), and its sha256 is re-checked after upload. Once T0 passes, both file copies are deleted within
-30 days. From then on the table is the record, under D5 retention and the redaction paths in §4.6.
+feeds), and its sha256 is re-checked after upload. **The local copy is deleted the same day**, as soon
+as the bucket copy's hash is verified and T0 passes, so the maintainer's machine holds personal data
+for hours, not weeks. The bucket copy is kept at most 30 days (for a re-import if Step 0 needs a fix),
+then deleted. From then on the table is the record, under D5 retention and the redaction paths in
+§4.6.
 
 **Import** (`scripts/timeline/import-seed.mjs`; takes an explicit `--env-file` and runs the prod guard
 per CLAUDE.md):
-1. Refuse unless the file's sha256 equals the manifest.
-2. Parse every line. Refuse on any parse error, any row with API errors, or a row count other than 692.
-3. Compute `content_key` and `occurrence` per event. Count occurrences **within one line**; across
+1. Load the manifest and validate its chain: version 1's sha256 equals the one recorded in this plan
+   (`95791ff2…f80b`); each later version's counts equal the previous version's minus exactly what
+   its log entry removed. Refuse on a broken chain.
+2. Refuse unless the file's sha256 equals the **latest** version's. A file matching an older version
+   (redaction not applied to this copy) is refused by name.
+3. Parse every line. Refuse on any parse error, any row with API errors, or a row count other than
+   the latest version's (692 at version 1).
+4. Compute `content_key` and `occurrence` per event. Count occurrences **within one line**; across
    lines, take the maximum occurrence per key for each order, so an order fetched twice is not
    doubled.
-4. Dry run prints rows, orders, fetched events, unique events and per-shop counts. Stop unless they
-   equal the manifest.
-5. Upsert with `source='survey_2026-09-29'` and `source_sha256`. A re-run inserts 0 rows.
-6. Post-check SQL (`scripts/sql/timeline_seed_verify.sql`, via `db:query:prod`): 7,788 rows with the
-   seed source, 663 distinct orders, per-shop counts, min and max `occurred_at`. The PR records the
-   output.
+5. Dry run prints rows, orders, fetched events, unique events and per-shop counts. Stop unless they
+   equal the latest manifest version.
+6. Upsert with `source='survey_2026-09-29'`, `source_sha256` = the file's hash, and
+   `manifest_version`. A re-run inserts 0 rows.
+7. Post-check SQL (`scripts/sql/timeline_seed_verify.sql`, via `db:query:prod`): rows with the seed
+   source, distinct orders, per-shop counts, min and max `occurred_at`, each equal to the latest
+   manifest version (7,788 / 663 at version 1). The PR records the output and the version checked.
 
 ### 4.2 Collector
 
@@ -352,17 +366,29 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 - Staff names and IPs: stored only in `raw`/`actor_name`; shown to the merchant's own users only;
   removed with the shop.
 - Privacy and data-retention pages list the new category (all locales).
-- **The seed file copies** (the maintainer's machine and the `ops-private` bucket, §4.1.1) are
-  personal data until deleted. While they exist, every `customers/redact` or `shop/redact` received
-  for a shop in the seed is also applied to them: the affected lines are removed from both copies,
-  the manifest is re-issued with the new sha256 and counts (the original hash stays recorded as the
-  import's source), and the redaction is logged. If the copies are already deleted, nothing to do.
+- **The seed file copies** (the maintainer's machine for hours, the `ops-private` bucket for at most
+  30 days; §4.1.1) are personal data until deleted. The production webhook cannot reach a file on the
+  maintainer's machine, so redaction of the copies runs through a queue and a named person:
+  - **Detect (automatic).** While a `seed_copies_present` flag is set, the `customers/redact` and
+    `shop/redact` handlers, for a shop in the seed, insert a `seed_redaction_requests` row (request
+    id, shop, order GIDs, received at) and send an ops email to support@disputedesk.app. The table
+    rows themselves are redacted by the normal path at once.
+  - **Apply (the maintainer, within 7 days; Shopify allows 30).** `scripts/timeline/redact-seed.mjs
+    --request <id>` removes the lines of those orders from **every copy that still exists** (local
+    file if present, bucket copy), re-hashes each, checks all copies now have the same hash, appends
+    the manifest version (§4.1.1) to each copy's manifest, and marks the request applied with the
+    version number. If a copy is gone, the script records that instead.
+  - **Close.** When the last copy is deleted, the flag is cleared and any open requests are closed
+    as "copies deleted". An open request older than 7 days raises an Admin health alert.
+  - Deleting the local copy on Step 0 day (§4.1.1) keeps the manual window to hours.
 
 ## 5. Phases
 
 - **Step 0 — Preserve (this week; July events are expiring daily).** Second copy of the seed
-  (§4.1.1), migration, and the import with the manifest checks; the PR records the post-check SQL
-  output. Nothing else. Done when T0 and T8 pass.
+  (§4.1.1), versioned manifest, migration (table + `seed_redaction_requests`), the import with the
+  manifest checks, the redaction queue in the two redact handlers and `redact-seed.mjs` (§4.6), and
+  deleting the local copy. The PR records the post-check SQL output. Nothing else. Done when T0, T0b,
+  T8 and T12 pass.
 - **P0 — Collect and classify.** Collector with the retention rule, classifier, backfill of what
   Shopify still holds, Admin-only view, drift counter, DB-vs-timeline status check (§1.4 class).
   Acceptance: §1.3 reproduces from seed + live data, per shop.
@@ -397,9 +423,13 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 
 ## 8. Acceptance tests
 
-- T0 The import refuses a file whose sha256 differs from the manifest, a file with a parse error, and
-  a file whose row count is not 692. On the real file: 7,788 rows with `source='survey_2026-09-29'`,
-  663 orders, and per-shop counts and event range equal to the manifest (§4.1.1).
+- T0 The import refuses: a file whose sha256 differs from the latest manifest version; a file that
+  matches an older version; a broken manifest chain; a parse error; a row count other than the
+  latest version's. On the real file: rows with `source='survey_2026-09-29'`, orders, per-shop counts
+  and event range equal the latest version (7,788 / 663 at version 1).
+- T0b Redacted path, on a fixture seed: redact one multi-dispute order → version 2 is appended with
+  counts reduced by exactly its lines and events; the import accepts the redacted file against
+  version 2, refuses the unredacted file, and the post-check matches version 2.
 - T8 A re-run of the import inserts 0 rows. A live fetch of a seed order adopts the seed rows (fills
   `event_gid`, adds no rows). Two events identical in every field within one fetch are both kept, as
   `occurrence` 1 and 2.
@@ -412,8 +442,11 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 - T11 A dispute whose timeline shows a reopen missing from the ledger: its later lifecycle events are
   `cycle_missing`, its `outcomeCause` is `pending_cycle_repair`, and the earlier cycle's outcome is
   unchanged. After the ledger is repaired, linking re-runs and the new cycle gets the outcome.
-- T12 A `customers/redact` for a seed order while the seed copies exist removes its lines from both
-  copies and re-issues the manifest.
+- T12 A `customers/redact` for a seed order while `seed_copies_present` is set creates a
+  `seed_redaction_requests` row and an ops email, and redacts the table rows at once. Running
+  `redact-seed.mjs` on it removes the lines from every existing copy, leaves all copies with one hash,
+  appends one manifest version, and marks the request applied. With the flag cleared, the handler
+  creates no request.
 - T3 Per shop: 117 `merchant_refunded` (Mein Maison), 22 `customer_closed_inquiry`, 18 `resolved_in_favour`
   (Cay), 164 `bank_decided` lost, 6 `merchant_accepted`, 31 `unknown_events_expired`.
 - T4 Nothing in this plan changes a build or filing decision (gate inventory test unchanged).
@@ -475,6 +508,13 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | R3-2 | A missing cycle fed the last known cycle's outcome | §4.3.1: events stay unassigned, `pending_cycle_repair`, re-link after ledger repair; T11 |
 | R3-3 | "Refund triggered response" claims causation from timing | renamed `response_after_refund` everywhere; §1.3, §2.4, §4.3, §4.4; T2 |
 | R3-4 | The seed backup holds personal data until deleted | §4.6 redaction applies to both seed copies; T12 |
+
+### 10.4 Review of rev 3.1 → rev 3.2 (Step 0 approved, P0–P3 not)
+
+| # | Finding | Change |
+|---|---|---|
+| R4-1 | Redaction reissues the manifest, but import and T0 still required the original hash and counts | §4.1.1 versioned manifest with a validated chain; import and T0 check the latest version; T0b tests the redacted path |
+| R4-2 | No one named to redact the local copy; the webhook cannot reach it | §4.6 queue (`seed_redaction_requests` + ops email), the maintainer applies with `redact-seed.mjs` within 7 days; local copy deleted on Step 0 day; T12 |
 
 ## 11. Open questions
 
