@@ -104,6 +104,9 @@ export interface SyncResult {
   /** Closed disputes skipped because Shopify's node is unchanged (see
    *  `isUnchangedClosedDispute`). Not counted in `synced`. */
   skippedUnchanged?: number;
+  /** Disputes the diff engine actually changed (new, or outcome "applied":
+   *  a status, due-date, submission, cycle or escalation transition). */
+  changed?: number;
   /** Set when synced === 0 to help diagnose "no disputes" (no tokens or PII). */
   debug?: { shop_domain: string; first_page_edges: number };
 }
@@ -154,6 +157,16 @@ export function isUnchangedClosedDispute(
   if (!stored.last_synced_at || nowMs - new Date(stored.last_synced_at).getTime() >= FULL_RESYNC_MS) return false;
   if (stored.raw_snapshot == null) return false;
   return stableStringify(stored.raw_snapshot) === stableStringify(redactedNode);
+}
+
+/**
+ * Real changes only. `updated` counts every re-applied dispute, so any shop
+ * with an open dispute always read as drifting and the reconcile cadence
+ * never left its 1 h floor. Webhooks carry live changes; the sync is the
+ * safety net, so a quiet shop may drift toward the 6 h ceiling.
+ */
+export function syncDriftDetected(result: Pick<SyncResult, "created" | "changed">): boolean {
+  return result.created > 0 || (result.changed ?? 0) > 0;
 }
 
 function redactPII(node: DisputeListNode): Record<string, unknown> {
@@ -332,6 +345,9 @@ export async function syncDisputes(
         }
 
         result.synced++;
+        if (applyResult.created || applyResult.outcome === "applied") {
+          result.changed = (result.changed ?? 0) + 1;
+        }
         if (applyResult.localDisputeId) {
           snapshotCandidates.push({
             disputeId: applyResult.localDisputeId,
@@ -479,6 +495,7 @@ export async function syncDisputes(
       updated: result.updated,
       errors: result.errors.length,
       skipped_unchanged: result.skippedUnchanged ?? 0,
+      changed: result.changed ?? 0,
       evidence_snapshots: evidenceSnapshotStats,
       correlation_id: opts?.correlationId,
     },
@@ -487,7 +504,7 @@ export async function syncDisputes(
   // Adaptive cadence: tighten on drift, loosen on clean runs.
   await recordReconcileOutcome({
     shopId,
-    driftDetected: result.created > 0 || result.updated > 0,
+    driftDetected: syncDriftDetected(result),
     hadErrors: result.errors.length > 0,
   });
 
