@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
 
-import { isUnchangedClosedDispute, stableStringify } from "../syncDisputes";
+import { isUnchangedClosedDispute, stableStringify, syncDriftDetected } from "../syncDisputes";
 
 const NOW = Date.parse("2026-09-29T12:00:00Z");
 const node = { id: "gid://shopify/ShopifyPaymentsDispute/1", status: "WON", amount: { amount: "10.0", currencyCode: "EUR" }, evidenceSentOn: "2026-08-01" };
@@ -42,5 +42,14 @@ describe("isUnchangedClosedDispute", () => {
   it("applies when nothing was stored", () => {
     expect(isUnchangedClosedDispute(undefined, node, NOW)).toBe(false);
     expect(isUnchangedClosedDispute({ status: "won", raw_snapshot: null, last_synced_at: fresh }, node, NOW)).toBe(false);
+  });
+});
+
+describe("syncDriftDetected", () => {
+  it("counts only new disputes and real transitions, not re-applied ones", () => {
+    expect(syncDriftDetected({ created: 0, changed: 0 })).toBe(false);
+    expect(syncDriftDetected({ created: 0 })).toBe(false);
+    expect(syncDriftDetected({ created: 1, changed: 0 })).toBe(true);
+    expect(syncDriftDetected({ created: 0, changed: 2 })).toBe(true);
   });
 });

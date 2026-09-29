@@ -1040,7 +1040,7 @@ The cron route (`CLAIM_BATCH = 200`) is bounded regardless of tenant count. At 1
 
 **Adaptive cadence** (`lib/disputes/reconcileSchedule.ts`): after each `syncDisputes` run, `recordReconcileOutcome()` adjusts the shop's interval:
 
-- drift detected (`created > 0 || updated > 0`) → halve, floor 1 h
+- drift detected (`created > 0 || changed > 0`) → halve, floor 1 h. `changed` counts disputes whose apply outcome was `applied`: a status, due-date, submission, response-cycle or escalation transition. Until 2026-09-29 it was `updated > 0`, which counts every re-applied dispute, so any shop with an open dispute stayed at the 1 h floor.
 - clean reconcile (no drift, no errors) → multiply by 1.5, ceiling 6 h
 - errors present → leave interval alone (the circuit-breaker handles repeated failures)
 
