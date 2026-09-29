@@ -40,7 +40,9 @@
  *   node scripts/remediate-non-receipt-drafts.mjs --limit=3 --apply  # canary
  *   node scripts/remediate-non-receipt-drafts.mjs --apply            # the rest
  *   node scripts/remediate-non-receipt-drafts.mjs --report           # before/after
- *   --only=<dispute uuid>[,<uuid>…] restricts the set (canary by hand).
+ *   --only=<dispute uuid>[,<uuid>…] restricts the set (canary by hand) and
+ *     ignores the already-derived cutoff for those disputes.
+ *   --tag=<name> gives a deliberate second pass its own dedupe key.
  *
  * ALWAYS canary first and READ the resulting letters before the full set.
  * PROD-ONLY: loads .env.production.local and refuses any other project.
@@ -60,6 +62,9 @@ if (limitArg && (!Number.isInteger(LIMIT) || LIMIT <= 0)) {
   process.exit(1);
 }
 const INCLUDE_FILEABLE = args.includes("--include-fileable");
+/** A deliberate second pass (e.g. after a writer fix) needs its own dedupe
+ *  key — the first pass's succeeded job still holds `non-receipt-p5:<pack>`. */
+const TAG = args.find((a) => a.startsWith("--tag="))?.slice(6) ?? null;
 const ONLY = args.find((a) => a.startsWith("--only="))?.slice(7).split(",").filter(Boolean) ?? null;
 
 /** The P2 prod release (#929 merged 2026-09-29T12:08:46Z). Anything derived
@@ -177,7 +182,7 @@ for (const d of open) {
   const p = packs.get(d.id);
   if (!p || p.status !== "ready") continue;
   const c = classification(p.pack_json);
-  if (c.computedAt && c.computedAt >= CUTOFF) continue;
+  if (!ONLY && c.computedAt && c.computedAt >= CUTOFF) continue;
   if (!INCLUDE_FILEABLE && isFileable(latestPkg.get(d.id))) {
     held.push(d);
     continue;
@@ -216,7 +221,7 @@ for (const t of chosen) {
     job_type: "build_pack",
     entity_id: t.p.id,
     priority: 90,
-    dedupe_key: `non-receipt-p5:${t.p.id}`,
+    dedupe_key: TAG ? `non-receipt-p5:${TAG}:${t.p.id}` : `non-receipt-p5:${t.p.id}`,
   });
   if (jobErr && jobErr.code !== "23505") {
     console.error(`  FAILED ${t.d.order_name}: ${jobErr.message}`);
