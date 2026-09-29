@@ -204,10 +204,28 @@ A follow-up on the Hanad thread asks whether an app can download a readable copy
 1. ✅ Read-only measurement.
 2. **Test-store checks (approved).**
 
-   **Status 2026-09-29: blocked.**
-   - Sura Svenne has no open dispute. It has 24, all `UNDER_REVIEW`/`LOST`.
-   - Creating one means a storefront test-mode checkout with the disputed-transaction card (`scripts/seed-real-disputes.mjs`). The storefront is password-protected, and the password is not in any env file.
-   - **Test-mode disputes never reopen or escalate.** So the three reopen/escalation checks below can't be run on a test store at all. They will be answered from the prod snapshots (Rollout 3) the first time a real dispute reopens.
+   **Results, 2026-09-29.** The test dispute is Sura Svenne `11328028729`, created by a test-mode checkout (confirmation MYA2GVIK9, due 2026-10-06 23:00 UTC). The probe script is `scripts/shopify/probe-evidence-write-semantics.mjs`.
+
+   | Check | Result |
+   |---|---|
+   | `""` clears a text field | **Yes.** The readback is `""` |
+   | `null` clears a text field | **Yes.** The readback is `null` |
+   | `submitEvidence: false` write leaves `status`, `evidenceSentOn`, `submitted` unchanged | **Yes**, on every write (`NEEDS_RESPONSE`, `null`, `false`) |
+   | PDF in `serviceDocumentationFile` (second slot) accepted | **Yes.** It persists and REST lists it |
+   | Replacing `uncategorizedFile` detaches the old upload | **Yes.** The new id is in the slot, and the old id is no longer referenced |
+   | A file slot can be cleared (`uncategorizedFile: null`) | **No.** Shopify answers `INTERNAL_SERVER_ERROR` and the file stays. A round-1 file in another slot can't be removed (accepted leftover, §4) |
+   | `submitEvidence: true` sends immediately | **No.** The dispute stayed `NEEDS_RESPONSE` with `evidenceSentOn: null` for 5+ minutes after two submits |
+   | Evidence editable after `submitEvidence: true` | **Yes.** Text written and cleared after the submit both persisted |
+   | Is a second-slot PDF part of what Shopify sends? What does the deadline auto-file send? | **Pending.** The test dispute is left with text in `uncategorizedText` and PDFs in two slots. It is parked (`needs_review=true`) and Sura Svenne auto-save is off, so our deadline cron leaves it alone. Read it after 2026-10-06 23:00 UTC, then restore Sura Svenne's `auto_save_enabled=true` |
+   | Upload id kept across a reopen; evidence across an escalation | **Can't be tested:** test-mode disputes never reopen. This will be answered from prod snapshots |
+
+   **Prod confirms the timing.** On blume-box, across 92 disputes we saved in the last 120 days, Shopify's `evidence_sent_on` is a median **7 h after the deadline** and 79 h after our save. None fell within 10 minutes of our save. **Shopify sends the evidence at the deadline, not when we call `submitEvidence: true`. Until then it can be edited.**
+
+   **What this changes in the plan:**
+   - **§5:** the card stays interactive until Shopify sends (`evidenceSentOn` set), not merely until we save. After our save, Keep, Put it back and Replace remain real actions that write the change.
+   - **§3a:** a clear made in our save **can be undone until the deadline**. The before value is a remedy while `evidenceSentOn` is null, not just a record.
+   - **Race:** the merchant (or another app) can change the evidence in Shopify Admin after our save and before the deadline. The last-write-wins race window is hours, not one request. The snapshot's daily read shows such edits. Acting on them is a later decision.
+   - **One-off (D2):** its gate is met for text. A `submitEvidence: false` clear persists and changes neither `status` nor `evidenceSentOn`. Our reopen detection keys on exactly those, so it is unaffected.
 
    Record the results here:
    - Does `""` or `null` clear a field?
