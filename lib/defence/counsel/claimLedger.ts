@@ -280,13 +280,23 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
         ],
       });
     } else {
+      /* Delivery came AFTER the dispute was opened (non-receipt plan §10
+       * test 17, maintainer 2026-09-29). The delivery leads and the filing
+       * date is not cited: putting "opened on 19 September" beside "delivered
+       * on 28 September" tells the issuer the parcel arrived after the
+       * complaint. The claim keeps its id (the theory of the case still
+       * turns on it) but carries no dispute date, and the chronology row for
+       * the dispute's opening is dropped (addDisputeOpenedRow). */
       add({
         id: "delivered_after_dispute_opened",
-        statement: `The carrier recorded delivery on ${deliveredOn}, after the dispute was opened on ${longDate(opened)}.`,
-        specifics: { disputeOpenedOn: longDate(opened)! },
+        statement: `The carrier's record now shows the order delivered on ${deliveredOn}.`,
+        specifics: {},
         weight: "core",
-        sources: ["dispute.initiated_at", ...factIds],
-        mustNot: [],
+        sources: [...factIds],
+        mustNot: [
+          "Never state or imply when the dispute was opened, and never place the delivery before or after it.",
+          "Never say the goods arrived late or after the complaint.",
+        ],
       });
     }
   }
