@@ -42,6 +42,7 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logSetupEvent } from "@/lib/setup/events";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import type { EvidenceSection, BuildContext } from "../types";
 
 /** Test seam: inject the persistence loader + event logger. */
@@ -198,16 +199,38 @@ export const BANK_EXCLUDED_EVIDENCE_CATEGORIES: ReadonlySet<string> = new Set([
   "cancellation_history",
 ]);
 
+/**
+ * Item-not-received (non-receipt plan §7(4), merchant's-counsel stance): the
+ * only CUSTOMER messages that help the merchant are the ones that undercut
+ * "I never received it" — acknowledging receipt, or describing use of the
+ * product. Every other customer message on such a case restates the
+ * complaint ("I ordered on the 1st and it never came", "still waiting") and
+ * is kept for review and the validators but never quoted to the bank.
+ * Merchant messages keep the ordinary rule (merchant review decides).
+ */
+export const INR_BANK_CUSTOMER_CATEGORIES: ReadonlySet<string> = new Set([
+  "delivery_recognition",
+  "product_usage",
+]);
+
 /** Inclusion guard — plan §5 + non-disclosure category block. */
 export function isIncludableMessage(
   ticket: PersistedGorgiasTicket,
   m: PersistedGorgiasMessage,
+  disputeReason?: string | null,
 ): boolean {
   // Hard non-disclosure block: a self-incriminating category can never enter
   // a bank-facing pack, even if a merchant approved it (layer-two guard).
   if (
     m.evidenceCategory !== null &&
     BANK_EXCLUDED_EVIDENCE_CATEGORIES.has(m.evidenceCategory)
+  ) {
+    return false;
+  }
+  if (
+    m.senderType === "customer" &&
+    resolveReasonFamily(disputeReason) === "delivery" &&
+    !(m.evidenceCategory !== null && INR_BANK_CUSTOMER_CATEGORIES.has(m.evidenceCategory))
   ) {
     return false;
   }
@@ -223,9 +246,10 @@ export function isIncludableMessage(
 export function derivesCustomerConfirmsOrder(
   ticket: PersistedGorgiasTicket,
   m: PersistedGorgiasMessage,
+  disputeReason?: string | null,
 ): boolean {
   return (
-    isIncludableMessage(ticket, m) &&
+    isIncludableMessage(ticket, m, disputeReason) &&
     m.senderType === "customer" &&
     m.evidenceCategory === "transaction_recognition" &&
     ticket.confidence !== "low" &&
@@ -236,12 +260,12 @@ export function derivesCustomerConfirmsOrder(
 
 export function buildSnapshotSection(
   persisted: PersistedGorgiasEvidence,
-  ctx: Pick<BuildContext, "packId">,
+  ctx: Pick<BuildContext, "packId"> & Partial<Pick<BuildContext, "disputeReason">>,
 ): EvidenceSection | null {
   const conversations = persisted.tickets
     .map((t) => ({
       ticket: t,
-      included: t.messages.filter((m) => isIncludableMessage(t, m)),
+      included: t.messages.filter((m) => isIncludableMessage(t, m, ctx.disputeReason)),
     }))
     .filter((c) => c.included.length > 0);
 
@@ -259,7 +283,7 @@ export function buildSnapshotSection(
     ).length;
     if (!confirmsOrder) {
       confirmsOrder = included.some((m) =>
-        derivesCustomerConfirmsOrder(ticket, m),
+        derivesCustomerConfirmsOrder(ticket, m, ctx.disputeReason),
       );
     }
     return {
