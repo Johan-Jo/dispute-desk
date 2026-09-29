@@ -3566,7 +3566,10 @@ code-built claim ledger.
   the whole letter, up to two corrections; a reviewer clarity note alone does not block after them. Rules the
   checks enforce for every letter: reasons before the request; English only; each date or number once, or twice
   when the second use is in the section that owns it; numbers inside the ordered item's description exempt;
-  summary ≤ 80 words (≤ 90 when three or more sections argue); no page positions. `counselEnabled` is true for
+  summary ≤ 80 words (≤ 90 when three or more sections argue); no page positions. A summary at most
+  `SUMMARY_SLACK_WORDS` (15) over its limit is a soft issue (`length:` prefix): it is still sent to the corrections
+  and still fact-checked, but after the corrections it does not block the letter — #100705 (92/90) and #99296
+  (95/90) lost their only letters to it on 2026-09-29. Further over still blocks. `counselEnabled` is true for
   every module; a type without its own brief, or whose minimum claims are missing, gets the general brief.
   Not-as-described adds `order_specified` (the order's own item description, translated), `shipped_as_ordered`
   (fulfilment covers every line item) and `return_route_open` (return window verified from the refund policy by

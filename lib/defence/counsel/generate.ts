@@ -12,7 +12,7 @@
  * (Anthropic client) and the offline eval harness.
  */
 
-import { checkDraft, type CheckContext } from "./checks";
+import { checkDraft, isSoftLengthIssue, type CheckContext } from "./checks";
 import {
   correctionUserPrompt,
   REVIEW_SYSTEM,
@@ -248,7 +248,9 @@ export async function writeLetter(args: {
 
   const issuesOf = async (draft: CounselDraft): Promise<string[]> => {
     const code = checkDraft(draft, args.check);
-    if (code.length) return code;
+    // A summary slightly over its word limit is still fact-checked: after the
+    // corrections it no longer blocks the letter, so the review must have run.
+    if (code.some((i) => !isSoftLengthIssue(i))) return code;
     const res = parseJson<{
       errors?: Array<{ sentence?: string; problem?: string }>;
       unclear?: Array<{ sentence?: string; problem?: string }>;
@@ -262,6 +264,7 @@ export async function writeLetter(args: {
       }),
     );
     return [
+      ...code,
       ...(res.errors ?? []).map((e) => `fact-check: "${e.sentence ?? ""}" — ${e.problem ?? ""}`),
       ...(res.unclear ?? []).map((e) => `unclear: "${e.sentence ?? ""}" — ${e.problem ?? "rewrite it plainly"}`),
     ];
@@ -287,7 +290,11 @@ export async function writeLetter(args: {
     issues = await issuesOf(draft);
   }
   log(`first ${firstIssues.length} issue(s)${corrected ? `, after correction ${issues.length}` : ""}`);
-  // After the corrections, a reviewer clarity note alone does not cost the
-  // dispute its letter: code checks and fact-check errors still block.
-  return { theory, draft, firstIssues, issues, corrected, ok: issues.filter((i) => !i.startsWith("unclear:")).length === 0 };
+  // After the corrections, a reviewer clarity note or a summary a few words
+  // over its limit does not cost the dispute its letter: every other code
+  // check and every fact-check error still blocks.
+  return {
+    theory, draft, firstIssues, issues, corrected,
+    ok: issues.filter((i) => !i.startsWith("unclear:") && !isSoftLengthIssue(i)).length === 0,
+  };
 }
