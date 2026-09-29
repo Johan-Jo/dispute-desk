@@ -86,7 +86,7 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
       str(v.carrier) && str(v.trackingNumber) && longDate(str(v.deliveredAt))
     );
   });
-  if (!fact) return null;
+  if (!fact) return buildInTransitLedger(input, delivery);
   const v = obj(fact.value)!;
   const carrier = str(v.carrier)!;
   const tracking = str(v.trackingNumber)!;
@@ -542,6 +542,73 @@ function laterOrder(
       )
       .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))[0] ?? null
   );
+}
+
+/* ── One parcel, in transit ───────────────────────────────────────────────
+ *
+ * Mein Maison #102083 / #103213 / #100537 (2026-09-29): a single YunExpress
+ * parcel the carrier shows in transit, no delivery yet. With no ledger the
+ * letter fell to the general brief — "The customer disputes this
+ * transaction" — and never said the order was shipped. The in-transit fact is
+ * bank-citable (non-receipt plan P0(b)); this states it the way the
+ * multi-parcel path states an in-transit parcel: the carrier's record,
+ * undated, never related to the order date or the dispute, never implying
+ * delivery, receipt or loss.
+ */
+function buildInTransitLedger(
+  input: LedgerInput,
+  delivery: readonly LedgerInput["facts"][number][],
+): LedgerClaim[] | null {
+  const fact = delivery.find((f) => {
+    const v = obj(f.value) ?? {};
+    return v.proofType === "in_transit" && str(v.carrier) && str(v.trackingNumber);
+  });
+  if (!fact) return null;
+  const v = obj(fact.value)!;
+  const carrier = str(v.carrier)!;
+  const tracking = str(v.trackingNumber)!;
+  const factIds = delivery.map((f) => f.id);
+  const sections = input.packSections;
+  const timeline = ((obj(sections.find((s) => s?.type === "access_log")?.data)?.timelineEvents as unknown[]) ?? [])
+    .map(obj)
+    .filter((e): e is Obj => !!e && typeof e.createdAt === "string" && typeof e.message === "string")
+    .map((e) => ({ at: e.createdAt as string, text: e.message as string }));
+  const noTiming = "Never relate the shipment to the order date or the dispute, and never count days between them.";
+  const claims: LedgerClaim[] = [
+    {
+      id: "claim_is_non_receipt",
+      statement: "The cardholder claims the order was not received (Visa 13.1 / Mastercard 4855).",
+      specifics: {},
+      weight: "core",
+      sources: ["dispute.reason"],
+      mustNot: [],
+    },
+    {
+      id: "shipment_in_transit",
+      statement: `The merchant shipped the order in one tracked shipment with ${carrier}, and the carrier's tracking record shows the shipment in transit.`,
+      specifics: { carrier },
+      weight: "core",
+      sources: factIds,
+      mustNot: [
+        "Never say or imply the shipment was delivered, received, collected or lost, and never say what its record lacks.",
+        noTiming,
+        "Do not print the tracking number or the URL; the letter prints them.",
+      ],
+    },
+  ];
+  const coverage = fulfilmentCoverage(sections, tracking, timeline);
+  if (coverage?.kind === "verified") {
+    const n = coverage.itemCount;
+    claims.push({
+      id: "whole_order_in_shipment",
+      statement: `All ${numberWord(n)} purchased items, each in the quantity ordered, were in that one tracked shipment (verified item by item against the order's line items). There was no other shipment.`,
+      specifics: { itemCount: String(n), itemCountWord: numberWord(n) },
+      weight: "core",
+      sources: ["pack.order.lineItems", "pack.shipping.fulfillments.items"],
+      mustNot: ["Never say the items were delivered or received."],
+    });
+  }
+  return claims;
 }
 
 /* ── Two or more parcels ─────────────────────────────────────────────────
