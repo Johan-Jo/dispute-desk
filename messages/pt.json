@@ -2329,6 +2329,51 @@
       "editClaim": "Editar reclamação",
       "portalBody": "A DisputeDesk não enviará uma resposta para esta disputa até que a reclamação do banco seja adicionada. Ela só aparece na Shopify e é adicionada no app DisputeDesk, no painel da Shopify.",
       "portalCta": "Adicionar na Shopify"
+    },
+    "overviewDecision": {
+      "evidence": {
+        "title": "Evidências",
+        "addHintDelivery": "Envie um comprovante de entrega antes do prazo.",
+        "addHint": "Envie evidências de apoio antes do prazo.",
+        "saveHint": "Manter o pacote como está, com evidências limitadas."
+      },
+      "decision": {
+        "submit": "Enviar no prazo",
+        "hold": "Manter em análise",
+        "none": "Não responder",
+        "submitHint": "Salvo no Shopify automaticamente em {date}.",
+        "submitHintNoDate": "Salvo no Shopify automaticamente no prazo.",
+        "holdHint": "Se não tomar nenhuma outra ação, sua regra de automação será aplicada no prazo.",
+        "noneHint": "O DisputeDesk não adicionará um pacote de defesa a esta disputa."
+      },
+      "next": {
+        "submit": "Salvo no Shopify automaticamente em {date}",
+        "submitNoDate": "Salvo no Shopify automaticamente no prazo",
+        "hold": "Em análise — se não tomar nenhuma outra ação, sua regra de automação será aplicada no prazo",
+        "none": "Não será adicionado nenhum pacote de defesa",
+        "undecided": "Decida o que acontece no prazo"
+      },
+      "upload": {
+        "title": "Adicionar evidências faltantes",
+        "descriptionDelivery": "Envie um comprovante de que o pacote chegou a {customer}. Ele é adicionado ao pacote de defesa antes do prazo de {date}.",
+        "descriptionDeliveryNoDate": "Envie um comprovante de que o pacote chegou a {customer}. Ele é adicionado ao pacote de defesa antes do prazo.",
+        "description": "Envie evidências que apoiem seu caso. Elas são adicionadas ao pacote de defesa antes do prazo de {date}.",
+        "descriptionNoDate": "Envie evidências que apoiem seu caso. Elas são adicionadas ao pacote de defesa antes do prazo.",
+        "customerFallback": "o cliente",
+        "drop": "Solte os arquivos aqui ou",
+        "browse": "procure",
+        "formats": "PDF, PNG ou JPG · até 10 MB cada",
+        "tooLarge": "Arquivos acima de 10 MB foram deixados de fora.",
+        "helpsTitle": "O que mais ajuda em {reason}",
+        "helps": {
+          "trackingDelivered": "Página de rastreamento da transportadora mostrando \"Entregue\"",
+          "signature": "Confirmação de assinatura da transportadora",
+          "deliveryRecord": "Registro de entrega da transportadora com código de rastreamento",
+          "customerAck": "Confirmação de recebimento pelo cliente"
+        },
+        "cancel": "Cancelar",
+        "add": "Adicionar ao pacote"
+      }
     }
   },
   "disputeReasons": {

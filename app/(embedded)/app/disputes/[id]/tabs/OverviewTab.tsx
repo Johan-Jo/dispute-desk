@@ -67,6 +67,11 @@ import {
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
 import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
+import {
+  MANUAL_UPLOAD_FIELD,
+  OverviewDecisionPanel,
+  type DecisionKey,
+} from "./sections/OverviewDecisionPanel";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -205,6 +210,15 @@ function formatDate(iso: string | null): string {
   }
 }
 
+/** "Oct 11" — the deadline as the decision toggles name it. */
+function formatShortDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  } catch {
+    return "—";
+  }
+}
+
 /** Map a Shopify dispute reason to the family id used by /app/rules. */
 function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (!reason) return "general";
@@ -235,11 +249,19 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // EvidenceLineItem.reasonToken at the internal-only row caption boundary.
   const tRoot = useTranslations();
   const tp = useTranslations("presentation");
+  const tDecision = useTranslations("disputes.overviewDecision");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
 
   const { dispute, appliedRule } = data;
+  // Same merchant-facing reason label the header shows.
+  const reasonLabel = (() => {
+    const key = `disputes.workspaceShell.merchantReasonLabel.${(dispute.reason ?? "").toUpperCase().replace(/\s+/g, "_")}`;
+    return dispute.reason && tRoot.has(key)
+      ? tRoot(key)
+      : tRoot("disputes.workspaceShell.merchantReasonLabel.fallback");
+  })();
   // Workspace API exposes presentationStatus on every fetch. Default to
   // DRAFT for the brief render window before the first response lands.
   const presentationStatus: PresentationStatus =
@@ -477,9 +499,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // creates alarm or a green "ready" glow). Calm indigo default; green
   // for won; red only for lost. Shopify Protect coverage keeps its
   // distinct cool-blue "no action" hero (coverage gate — CLAUDE.md).
+  // Calm palette per `Dispute Page.dc.html` (2026-09-29).
   const HERO_TONE_CALM = {
-    bg: "#F8FAFF", border: "#D6E0F5", iconBg: "#E0E7FF", iconColor: "#3730A3",
-    titleColor: "#1F2A5B", bodyColor: "#3F4A5C", pillBg: "#E0E7FF", pillColor: "#3730A3",
+    bg: "#F7F9FD", border: "#D5DDEC", iconBg: "#E3E8F8", iconColor: "#3B4A7A",
+    titleColor: "#1E2A4A", bodyColor: "#667085", pillBg: "#E0E7FF", pillColor: "#3730A3",
   };
   // Merchant-resolvable technical problem (e.g. expired Gorgias/OAuth
   // connection — plan §12V's one `technical_error` signal). The design's
@@ -513,6 +536,34 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     lifecycle,
     dispute.reviewState ?? null,
   );
+  /* The decision toggle row (`Dispute Page.dc.html`, variant 2a) stays on
+   * the page after a decision is recorded — the selected segment IS the
+   * standing decision, and the "Next:" line states what it means. So while
+   * the row is showing, the hero keeps its lifecycle headline instead of
+   * being taken over by the decision copy. */
+  const showDecisionRow =
+    !isReadOnly && !isDecided && (showApprovalDecide || reviewDecision !== null);
+  const showEvidenceRow = (!!autoSaveBlock || !!held?.held) && !isReadOnly && !isDecided;
+  const decisionKey: DecisionKey | null =
+    reviewDecision === "approved"
+      ? "submit"
+      : reviewDecision === "in_review"
+        ? "hold"
+        : reviewDecision === "conceded"
+          ? "none"
+          : null;
+  const decisionOverridesHero = reviewDecision !== null && !showDecisionRow;
+  const deadlineShort = dispute.dueAt ? formatShortDate(dispute.dueAt) : null;
+  const decisionNextLine =
+    decisionKey === "submit"
+      ? deadlineShort
+        ? tDecision("next.submit", { date: deadlineShort })
+        : tDecision("next.submitNoDate")
+      : decisionKey === "hold"
+        ? tDecision("next.hold")
+        : decisionKey === "none"
+          ? tDecision("next.none")
+          : tDecision("next.undecided");
   const HERO_TONE_TECH = {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",
@@ -549,7 +600,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  covered headline. Terminal titles reuse the existing translated
    *  `hero.title.closed.*` keys. */
   function resolveHeroTitle(): string {
-    if (reviewDecision) {
+    if (reviewDecision && decisionOverridesHero) {
       return tp(`hero.reviewDecision.${reviewDecision}.title`);
     }
     if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
@@ -627,7 +678,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  copy); terminal + covered messages reuse the existing translated
    *  keys. */
   function resolveHeroSubtitle(): string | null {
-    if (reviewDecision) {
+    if (reviewDecision && decisionOverridesHero) {
       // approved/in_review name the deadline; conceded has no date.
       return reviewDecision === "conceded"
         ? tp("hero.reviewDecision.conceded.message")
@@ -681,7 +732,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // is no decision to make, and the two decisions the merchant can record
   // (approve, hold) both end in the same submission anyway.
   const heroNextStep =
-    reviewDecision // decision message already states what happens next
+    showDecisionRow
+      ? decisionNextLine
+      : reviewDecision // decision message already states what happens next
       ? null
       : heroVariant !== "covered" &&
           lifecycle !== "won" &&
@@ -966,7 +1019,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       ? tExtra("appliedMode.automaticHeldHelp")
       : tExtra("appliedMode.automaticHelp");
 
-  const goToReview = () => actions.setActiveTab(TAB_INDEX.reviewForward);
   const goToEvidence = () => actions.setActiveTab(TAB_INDEX.evidence);
   // Evidence tab + scroll-to + pulse the Gorgias review card (the
   // "highlight"), so the "Review communication" CTA lands the merchant
@@ -1013,15 +1065,27 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           duplicated the hero, which now carries the decision headline +
           body + Undo when reviewState is set. One block, not two. */}
 
-      {/* O1: Hero — minimal per Figma: label + confidence pill + 1-line summary.
-          Recommendation / improvement / helper / deadline copy moves to the
-          dedicated Recommendation card below. */}
+      {/* O1: Hero — `Dispute Page.dc.html` (Claude Design, 2026-09-29),
+          variant 2a "Toggles". Three stacked blocks, 16px apart:
+            1. headline · message · attention pill · "Next:"
+            2. Evidence assessment (divided off)
+            3. the Evidence / Decide toggle panel + settings hint
+
+          History kept from the previous hero:
+          - The standalone amber "Auto-submit paused" banner was removed
+            2026-07-30 (it replayed a stored audit row forever and claimed a
+            hand-off the deadline cron never makes). Its two actions became
+            the Evidence row of the toggle panel.
+          - "Add missing evidence" is relabelled to the cardholder
+            acknowledgement on a held case whose only open contribution is
+            that acknowledgement (2026-08-02), and routes to that card.
+          - Neither row renders on a decided case (order #360499). */}
       <div
         data-help-guide="detail-overview-hero"
         style={{
           background: heroTone.bg,
-          border: `2px solid ${heroTone.border}`,
-          borderRadius: 8,
+          border: `1px solid ${heroTone.border}`,
+          borderRadius: 10,
           padding: 24,
           display: "flex",
           alignItems: "flex-start",
@@ -1038,25 +1102,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         >
           <Icon source={isTechProblem ? AlertCircleIcon : ShieldCheckMarkIcon} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 24, fontWeight: 700, color: heroTone.titleColor, lineHeight: 1.2 }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 24, fontWeight: 600, color: heroTone.titleColor, lineHeight: 1.25 }}>
               {strengthLabel}
-            </span>
-          </div>
-          {heroSubtitle && (
-            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
-              {heroSubtitle}
-            </p>
-          )}
-          {/* Merchant status pill — the attention dimension (grey "No
-              action required" when none). Emphasis colors only when a
-              genuine action exists. Suppressed once a review decision is
-              recorded (the decision drives the hero copy + heading pill). */}
-          {presentation && !reviewDecision && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+            </div>
+            {heroSubtitle && (
+              <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5 }}>
+                {heroSubtitle}
+              </p>
+            )}
+            {/* Merchant status pill — the attention dimension (grey "No
+                action required" when none). Suppressed only while a
+                recorded decision has taken the hero over. */}
+            {presentation && !decisionOverridesHero && (
               <span
                 style={{
+                  alignSelf: "flex-start",
                   display: "inline-flex", alignItems: "center", gap: 5,
                   padding: "2px 9px", borderRadius: 999, fontSize: 11.5,
                   fontWeight: 600, lineHeight: 1.5, whiteSpace: "nowrap",
@@ -1072,43 +1134,37 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 />
                 {tRoot(attentionLabelKey(presentation))}
               </span>
-            </div>
-          )}
-          {/* Next milestone — Monitoring ≠ Done: active states always
-              name what happens next. */}
-          {heroNextStep && (
-            <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
-              <span style={{ fontWeight: 600, color: "#4B5563" }}>{tp("hero.nextLabel")}</span>{" "}
-              {heroNextStep}
-            </p>
-          )}
-          {/* Internal-issue transparency — neutral, no merchant action
-              implied (plan §3.1 internal failures). */}
-          {presentation?.internalIssue && (
-            <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
-              {tp("internalIssue")}
-            </p>
-          )}
-          {/* Undo the standing decision — placed directly under the
-              decision copy it reverses (NOT below the Evidence assessment,
-              where it read as undoing the assessment). A discreet button
-              (not a link — the app doesn't use hyperlinks for actions). */}
-          {reviewDecision && !isReadOnly && (
-            <div style={{ marginTop: 10 }}>
-              <Button
-                size="slim"
-                disabled={actions.reviewSaving === true}
-                onClick={() => actions.setReviewDecision("clear")}
-              >
-                {tExtra("review.undo")}
-              </Button>
-            </div>
-          )}
-          {/* Evidence assessment — folded INTO the hero (2026-07-27):
-              strength grade pill + the rules-engine's explanation, on a
-              subtle divider. Assessment copy only — strength never becomes
-              an operational callout (plan §8). The standalone card below
-              is suppressed so this shows once. */}
+            )}
+            {/* Next milestone — Monitoring ≠ Done: active states always
+                name what happens next. With the decision row showing, it
+                states what the selected decision means. */}
+            {heroNextStep && (
+              <p style={{ fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.5 }}>
+                <span style={{ fontWeight: 600, color: "#0B1220" }}>{tp("hero.nextLabel")}</span>{" "}
+                {heroNextStep}
+              </p>
+            )}
+            {/* Internal-issue transparency — neutral, no merchant action
+                implied (plan §3.1 internal failures). */}
+            {presentation?.internalIssue && (
+              <p style={{ fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.5 }}>
+                {tp("internalIssue")}
+              </p>
+            )}
+            {/* Undo — only when the decision copy has taken the hero over
+                (no toggle row to switch it from). */}
+            {decisionOverridesHero && !isReadOnly && (
+              <div>
+                <Button
+                  size="slim"
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("clear")}
+                >
+                  {tExtra("review.undo")}
+                </Button>
+              </div>
+            )}
+          </div>
           {isDecided ? (
             /* Decided: one sentence saying what we filed and the likely
                deciding factor. No strength pill and no `strengthReasonText`
@@ -1116,8 +1172,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                ungated sentinel that printed "No evidence available." on
                cases we had fully defended. */
             outcomeExplanationText ? (
-              <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${heroTone.border}` }}>
-                <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: 0, lineHeight: 1.55, maxWidth: 760 }}>
+              <div style={{ paddingTop: 16, borderTop: `1px solid ${heroTone.border}` }}>
+                <p style={{ fontSize: 13, color: heroTone.bodyColor, margin: 0, lineHeight: 1.6, maxWidth: 760 }}>
                   {outcomeExplanationText}
                 </p>
                 {outcomeLearningList.length > 0 ? (
@@ -1145,127 +1201,94 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </div>
             ) : null
           ) : (
-          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${heroTone.border}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: heroTone.titleColor }}>
-                {tp("assessmentCard.title")}
-              </span>
-              {(() => {
-                /* `not_assessed` when the gate says so, whatever the sentinel
-                 * says. The old expression reached `not_assessed` only via
-                 * `overall === "insufficient"`, which is ALSO a real verdict —
-                 * so a genuinely insufficient case and an unassessed one were
-                 * indistinguishable, and a stale assessment with any other
-                 * band rendered that band as current. */
-                const strengthKey = !assessed
-                  ? "not_assessed"
-                  : presentation?.strength
-                  ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
-                const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
-                return (
-                  <span
-                    style={{
-                      display: "inline-flex", alignItems: "center", padding: "2px 9px",
-                      borderRadius: 999, fontSize: 11.5, fontWeight: 600,
-                      background: tokens.bg, color: tokens.fg,
-                    }}
-                  >
-                    {tRoot(`presentation.strength.detail.${strengthKey}`)}
-                  </span>
-                );
-              })()}
-            </div>
-            {strengthReasonText ? (
-              <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: "6px 0 0", lineHeight: 1.55, maxWidth: 760 }}>
-                {strengthReasonText}
-              </p>
-            ) : null}
-          </div>
-          )}
-          {/* Gate actions — the two buttons the removed amber banner carried,
-              relocated into the card per `Dispute Case v2.dc.html`. The design
-              INVERTS the old emphasis: "Add missing evidence" is the primary
-              and submitting anyway is the quiet secondary, so the default pull
-              is toward strengthening the case rather than firing it off. The
-              old banner had that the other way round.
-
-              The one line of prose that IS here (2026-08-02) names the single
-              contribution a held case can still take: a cardholder
-              acknowledgement. It renders only when
-              `CardholderAcknowledgementCard` would render too — both gate on
-              `canOfferCardholderAcknowledgement` — so the page never invites
-              an action it then hides. "Add missing evidence" is not a truthful
-              primary on a held fraud case: everything else on it is gateway-,
-              carrier- or Shopify-derived, so the button is relabelled to the
-              thing that actually exists.
-
-              The block renders on `held` as well as on the stored
-              `auto_save_blocked` event: the pipeline's PARK branch writes
-              `parked_for_review`, not `auto_save_blocked`, so keying only on
-              the audit row made the ask depend on which path happened to
-              evaluate the pack.
-
-              Never on a decided case: `isReadOnly` only turns true once
-              DisputeDesk saved, so a case we held and then lost kept offering
-              "Add missing evidence" / "Save anyway" after the bank had ruled
-              (order #360499). */}
-          {(autoSaveBlock || held?.held) && !isReadOnly && !isDecided && (
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${heroTone.border}` }}>
-              {held?.offer === "cardholder_acknowledgement" && (
-                <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: "0 0 10px", lineHeight: 1.55, maxWidth: 760 }}>
-                  {held.offerFlipsToStrong
-                    ? tExtra("held.askFlipsToStrong")
-                    : tExtra("held.ask")}
+            <div
+              style={{
+                display: "flex", flexDirection: "column", gap: 8,
+                paddingTop: 16, borderTop: "1px solid #E1E6F0",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#1E2A4A" }}>
+                  {tp("assessmentCard.title")}
+                </span>
+                {(() => {
+                  /* `not_assessed` when the gate says so, whatever the sentinel
+                   * says. The old expression reached `not_assessed` only via
+                   * `overall === "insufficient"`, which is ALSO a real verdict —
+                   * so a genuinely insufficient case and an unassessed one were
+                   * indistinguishable, and a stale assessment with any other
+                   * band rendered that band as current. */
+                  const strengthKey = !assessed
+                    ? "not_assessed"
+                    : presentation?.strength
+                    ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
+                  const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
+                  return (
+                    <span
+                      style={{
+                        display: "inline-flex", alignItems: "center", padding: "2px 9px",
+                        borderRadius: 999, fontSize: 11.5, fontWeight: 600,
+                        background: tokens.bg, color: tokens.fg,
+                      }}
+                    >
+                      {tRoot(`presentation.strength.detail.${strengthKey}`)}
+                    </span>
+                  );
+                })()}
+              </div>
+              {strengthReasonText ? (
+                <p
+                  style={{
+                    fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.6, maxWidth: 760,
+                    textWrap: "pretty",
+                  } as React.CSSProperties}
+                >
+                  {strengthReasonText}
                 </p>
-              )}
-              <InlineStack gap="200" blockAlign="center">
-                <Button variant="primary" onClick={goToEvidence}>
-                  {held?.offer === "cardholder_acknowledgement"
-                    ? tExtra("held.addAcknowledgement")
-                    : tExtra("addMissingEvidence")}
-                </Button>
-                <Button onClick={goToReview}>{tExtra("submitAnyway")}</Button>
-              </InlineStack>
+              ) : null}
             </div>
           )}
 
-          {/* "Decide what to do" — approval-required state ONLY, inside the
-              hero below "Next:", divided off by a top border (design). */}
-          {showApprovalDecide && (
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #D6E0F5" }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "#1F2A5B", margin: "0 0 4px" }}>
-                {tExtra("review.title")}
-              </p>
-              <p style={{ fontSize: 12.5, color: "#3F4A5C", margin: "0 0 10px", lineHeight: 1.5, maxWidth: 700 }}>
-                {tExtra("review.prompt")}
-              </p>
-              <InlineStack gap="200" blockAlign="center">
-                <Button
-                  variant="primary"
-                  disabled={actions.reviewSaving === true}
-                  onClick={() => actions.setReviewDecision("approve")}
-                >
-                  {tExtra("review.approve")}
-                </Button>
-                <Button
-                  disabled={actions.reviewSaving === true}
-                  onClick={() => actions.setReviewDecision("hold")}
-                >
-                  {tExtra("review.hold")}
-                </Button>
-                <Button
-                  variant="plain"
-                  tone="critical"
-                  disabled={actions.reviewSaving === true}
-                  onClick={() => actions.setReviewDecision("concede")}
-                >
-                  {tExtra("review.concede")}
-                </Button>
-              </InlineStack>
-              <p style={{ fontSize: 12, color: "#6D7175", margin: "10px 0 0" }}>
+          {(showEvidenceRow || showDecisionRow) && (
+            <>
+              <OverviewDecisionPanel
+                showEvidence={showEvidenceRow}
+                evidenceLabels={{
+                  add: tExtra("addMissingEvidence"),
+                  save: tExtra("submitAnyway"),
+                }}
+                showDecision={showDecisionRow}
+                decision={decisionKey}
+                deciding={actions.reviewSaving === true}
+                onDecide={(k) =>
+                  actions.setReviewDecision(
+                    k === "submit" ? "approve" : k === "hold" ? "hold" : "concede",
+                  )
+                }
+                deadlineShort={deadlineShort}
+                deliveryFamily={resolveReasonFamily(dispute.reason ?? null) === "delivery"}
+                customerName={dispute.customerName ?? null}
+                reasonLabel={reasonLabel}
+                missingLabels={derived.missingItems.map((m) => m.label).filter(Boolean)}
+                acknowledgement={
+                  held?.offer === "cardholder_acknowledgement"
+                    ? {
+                        label: tExtra("held.addAcknowledgement"),
+                        ask: held.offerFlipsToStrong
+                          ? tExtra("held.askFlipsToStrong")
+                          : tExtra("held.ask"),
+                        open: goToEvidence,
+                      }
+                    : null
+                }
+                upload={actions.uploadEvidence}
+                uploading={clientState.uploadingField === MANUAL_UPLOAD_FIELD}
+                uploadError={clientState.failedFields.get(MANUAL_UPLOAD_FIELD) ?? null}
+              />
+              <p style={{ fontSize: 12, color: "#64748B", margin: 0 }}>
                 {tExtra("review.settingsHint")}
               </p>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -1326,31 +1349,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           style={{
             background: "#EFF6FF",
             border: "1px solid #BFDBFE",
-            borderRadius: 12,
-            padding: 16,
+            borderRadius: 10,
+            padding: "16px 20px",
             display: "flex",
             alignItems: "flex-start",
-            gap: 12,
+            gap: 14,
           }}
         >
           <span
             style={{
-              width: 20,
-              height: 20,
+              width: 16,
+              height: 16,
               color: "#1D4ED8",
               flexShrink: 0,
-              marginTop: 2,
+              marginTop: 1,
               display: "inline-flex",
             }}
           >
             <Icon source={ShieldCheckMarkIcon} />
           </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
             <p
               style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: "#1E3A8A",
+                color: "#1E2A4A",
                 margin: 0,
                 lineHeight: 1.4,
               }}
@@ -1363,9 +1386,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               style={{
                 fontSize: 13,
                 color: "#1E40AF",
-                margin: "4px 0 0",
-                lineHeight: 1.5,
-              }}
+                margin: 0,
+                lineHeight: 1.55,
+                textWrap: "pretty",
+              } as React.CSSProperties}
             >
               {deliveryConfirmed
                 ? dispute.dueAt
