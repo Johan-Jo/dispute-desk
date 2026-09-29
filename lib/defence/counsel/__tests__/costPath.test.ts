@@ -105,7 +105,35 @@ const runArgs = {
   merchantName: "Blume",
 };
 
+// Over the length limit and wrong in no other way.
+const LONG_ONLY = `${V12_SUMMARY} The carrier's record and the order record agree with each other, and the record of the later order agrees with both of them.`;
+
 describe("runCounsel", () => {
+  it("shortens the summary in one extra call when only its length is still wrong (#100705)", async () => {
+    const long = summaryJson(LONG_ONLY);
+    callClaudeMessages
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(V12_SUMMARY))
+      .mockResolvedValueOnce(reply(CLEAN));
+    const res = await runCounsel(runArgs);
+    expect(callClaudeMessages).toHaveBeenCalledTimes(5);
+    expect(res?.narrative.executiveSummary.text).toBe(V12_SUMMARY);
+  });
+
+  it("keeps the refusal when the shortened summary still fails", async () => {
+    const long = summaryJson(LONG_ONLY);
+    callClaudeMessages
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(LONG_ONLY));
+    const res = await runCounsel(runArgs);
+    expect(callClaudeMessages).toHaveBeenCalledTimes(4);
+    expect(res).toBeNull();
+  });
+
   it("caches the static constitution, reviews on the review model, and records per-call usage", async () => {
     callClaudeMessages
       .mockResolvedValueOnce(reply(summaryJson(V12_SUMMARY), { promptTokens: 1400, cacheWriteTokens: 1200 }))
