@@ -345,7 +345,7 @@ export function buildChronologyEvents(
         `[chronology] dropped ${droppedUnknown.length} non-evidentiary timeline line(s); shapes: ${shapes.slice(0, 10).join(" | ")}`,
       );
     }
-    return withShipmentEvents(kept, facts);
+    return withoutOpeningBeforeDelivery(withShipmentEvents(kept, facts), facts);
   }
 
   // Path 2: synthetic fallback. Only fires when the pack lacks captured events.
@@ -380,7 +380,43 @@ export function buildChronologyEvents(
       }
     }
   }
-  return withShipmentEvents(events.sort((a, b) => a.at.localeCompare(b.at)), facts);
+  return withoutOpeningBeforeDelivery(
+    withShipmentEvents(events.sort((a, b) => a.at.localeCompare(b.at)), facts),
+    facts,
+  );
+}
+
+/**
+ * Delivery recorded AFTER the dispute was opened (non-receipt plan §10 test
+ * 17, maintainer 2026-09-29): the filing date is not cited. A dated "the
+ * customer opened a dispute" row beside a later delivery row tells the issuer
+ * the parcel arrived after the complaint. The counsel ledger already leaves
+ * that row out of its additions; this drops Shopify's own opening line
+ * ("opened a chargeback …") on the same condition, for both renderers. When
+ * every delivery precedes the dispute, the full sequence stays (maintainer,
+ * 2026-09-28: "What about opening the chargeback?").
+ */
+function withoutOpeningBeforeDelivery(events: ChronologyEvent[], facts: EvidenceFact[]): ChronologyEvent[] {
+  const openings = events.filter((e) => classifyChronologyEvent(e.text) === "chargeback");
+  if (openings.length === 0) return events;
+  const opened = Math.min(...openings.map((e) => Date.parse(e.at)).filter((t) => !Number.isNaN(t)));
+  if (!Number.isFinite(opened)) return events;
+  const deliveries: number[] = events
+    .filter((e) => classifyChronologyEvent(e.text) === "carrier_delivery")
+    .map((e) => Date.parse(e.at));
+  for (const f of facts) {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") continue;
+    const v = f.value as Record<string, unknown> | null | undefined;
+    if (v?.proofType !== "delivered_confirmed" && v?.proofType !== "signature_confirmed") continue;
+    if (typeof v.deliveredAt === "string") deliveries.push(Date.parse(v.deliveredAt));
+    for (const sh of Array.isArray(v.shipments) ? (v.shipments as Array<Record<string, unknown>>) : []) {
+      if ((sh.proofType === "delivered_confirmed" || sh.proofType === "signature_confirmed") && typeof sh.deliveredAt === "string") {
+        deliveries.push(Date.parse(sh.deliveredAt));
+      }
+    }
+  }
+  const deliveredAfter = deliveries.some((t) => !Number.isNaN(t) && t > opened);
+  return deliveredAfter ? events.filter((e) => classifyChronologyEvent(e.text) !== "chargeback") : events;
 }
 
 /**

@@ -3724,6 +3724,13 @@ Address rule:
   the writer cannot state it (the fact-check refuses unsupported intervals). Trigger: Mein Maison #100463's
   letter said delivery came "twenty-six days after the merchant shipped the order". Pinned by
   `lib/defence/counsel/__tests__/timingOnlyWhenItHelps.test.ts`.
+- **Delivered after the dispute was opened (2026-09-29, non-receipt plan §10 test 17).** The delivery leads and
+  the filing date is not cited. The `delivered_after_dispute_opened` claim keeps its id (the theory of the case)
+  but carries no dispute date and a mustNot against placing the delivery before or after the dispute;
+  `addDisputeOpenedRow` adds no chronology row in that case; and `buildChronologyEvents`
+  (`withoutOpeningBeforeDelivery`, both renderers) drops Shopify's own opening line when any recorded delivery
+  is later than it. When every delivery precedes the dispute, the full sequence stays. Pinned by
+  `lib/defence/counsel/__tests__/deliveredAfterDisputeOpened.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
