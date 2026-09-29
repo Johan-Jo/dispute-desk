@@ -25,6 +25,17 @@ export interface BriefSection {
   question: string;
   claimIds: string[];
   exhibitOnly?: boolean;
+  /** The section is written only when this claim is in the ledger; without
+   *  it the section's other claims have nothing to argue from (#93254: the
+   *  return window had closed, "no return recorded" alone opened a Return
+   *  Route section and the writer invented an open route). */
+  requiresClaimId?: string;
+}
+
+/** Whether a brief section applies to this case's ledger. */
+export function sectionApplies(s: BriefSection, inLedger: ReadonlySet<string>): boolean {
+  if (s.requiresClaimId && !inLedger.has(s.requiresClaimId)) return false;
+  return s.claimIds.some((id) => inLedger.has(id));
 }
 
 export interface BriefLimit {
@@ -122,7 +133,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
       title: "Shipping & Delivery",
       exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates)",
       question: "When did the goods reach the customer?",
-      claimIds: ["carrier_delivered", "dispute_after_delivery"],
+      claimIds: ["carrier_delivered", "dispute_after_delivery", "no_return_recorded"],
     },
     {
       key: "policy",
@@ -130,6 +141,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
       exhibit: "a one-line summary of the store's refund policy with a link to the published policy",
       question: "What remedy did the store offer, and was it open at the dispute?",
       claimIds: ["return_route_open", "no_return_recorded"],
+      requiresClaimId: "return_route_open",
     },
   ],
   limits: [
