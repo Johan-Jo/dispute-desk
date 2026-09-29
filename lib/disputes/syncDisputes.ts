@@ -30,6 +30,12 @@ import { recordReconcileOutcome } from "./reconcileSchedule";
 import { normalizeGraphQLDispute } from "./disputeSnapshot";
 import { applyDisputeSnapshot } from "./applyDisputeSnapshot";
 import { dispatchDisputeEffects } from "./disputeEffectsDispatcher";
+import {
+  evidenceSnapshotsEnabled,
+  recordEvidenceSnapshots,
+  type SnapshotCandidate,
+} from "./evidenceSnapshots";
+import { readEvidenceRecord } from "@/lib/shopify/evidenceRecord";
 
 const KNOWN_REASONS = new Set<string>(ALL_DISPUTE_REASONS);
 
@@ -160,6 +166,7 @@ export async function syncDisputes(
   let hasNextPage = true;
   let after: string | null = null;
   let firstPageEdgesCount: number | null = null;
+  const snapshotCandidates: SnapshotCandidate[] = [];
 
   while (hasNextPage) {
     const variables: Record<string, unknown> = { first: 50, after };
@@ -250,6 +257,12 @@ export async function syncDisputes(
         }
 
         result.synced++;
+        if (applyResult.localDisputeId) {
+          snapshotCandidates.push({
+            disputeId: applyResult.localDisputeId,
+            status: d.status?.toLowerCase() ?? null,
+          });
+        }
         if (applyResult.created) result.created++;
         else result.updated++;
 
@@ -357,6 +370,29 @@ export async function syncDisputes(
     };
   }
 
+  // Observe-only evidence snapshots (retained-evidence plan §1). After the
+  // page loop, so every reopen in this run is already reconciled. Failures
+  // are reported in the audit, never counted as sync errors (they must not
+  // tighten the reconcile cadence).
+  let evidenceSnapshotStats: { read: number; inserted: number; confirmed: number; errors: number } | null = null;
+  if (evidenceSnapshotsEnabled() && snapshotCandidates.length > 0) {
+    try {
+      const snap = await recordEvidenceSnapshots(sb, shopId, snapshotCandidates, {
+        read: (disputeEvidenceGid) =>
+          readEvidenceRecord({
+            shopDomain: shop.shop_domain,
+            accessToken,
+            disputeEvidenceGid,
+            correlationId: opts?.correlationId,
+          }),
+      });
+      evidenceSnapshotStats = { read: snap.read, inserted: snap.inserted, confirmed: snap.confirmed, errors: snap.errors.length };
+      if (snap.errors.length) console.warn("[syncDisputes] evidence snapshots", snap.errors.slice(0, 5));
+    } catch (err) {
+      console.warn("[syncDisputes] evidence snapshots failed", err instanceof Error ? err.message : String(err));
+    }
+  }
+
   // Audit the sync
   await sb.from("audit_events").insert({
     shop_id: shopId,
@@ -367,6 +403,7 @@ export async function syncDisputes(
       created: result.created,
       updated: result.updated,
       errors: result.errors.length,
+      evidence_snapshots: evidenceSnapshotStats,
       correlation_id: opts?.correlationId,
     },
   });

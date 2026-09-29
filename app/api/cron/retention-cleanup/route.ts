@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - retentionDays);
 
+    // Retained-evidence snapshots not confirmed within the retention period
+    // belong to disputes long closed (open disputes are re-confirmed daily).
+    await sb
+      .from("shopify_evidence_snapshots")
+      .delete()
+      .eq("shop_id", shop.id)
+      .lt("last_confirmed_at", cutoff.toISOString());
+
     const { data: packs } = await sb
       .from("evidence_packs")
       .select("id, pdf_path")
