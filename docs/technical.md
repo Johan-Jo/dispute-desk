@@ -5574,6 +5574,8 @@ rebuild spends no merchant credits, and jobs are queued at `priority: 90` so
 they sit below interactive work. Verify with
 `scripts/sql/policy-v2-verify.sql`.
 
+**Non-receipt P5 remediation (`scripts/remediate-non-receipt-drafts.mjs`, 2026-09-29).** Same shape as the policy-v2 rebuild: dry run by default, `--limit=N --apply` canary (furthest deadline first), `--only=<uuid,…>`, prod-only guard. Selects open item-not-received disputes that are unsubmitted (`submitted_at` and `evidence_saved_to_shopify_at` null, `normalized_status` not filed/decided), not `conceded`, not past due, whose latest ready pack's `case_assessment.freshness.computedAt` predates the P2 release (2026-09-29T12:08:46Z), and enqueues `build_pack` at priority 90 with `dedupe_key = non-receipt-p5:<packId>`. `--apply` snapshots each draft's `overall` / `overallBeforeRev5` / strength-reason key / `deliveryInTransit` to `scripts/.snapshots/non-receipt-p5-before.json` (git-ignored); `--report` re-reads the packs and lists every classification that moved — the review list. Side effects are the normal rebuild's: the evidence-needed email is once per dispute, the case-strengthened email only on a new high, and the defence package regenerates only when the evidence hash moved.
+
 Scope: the bump touches only the workspace read path. The filing selector
 compares `plan.policyVersion` (`caseSelectionContext.ts:227`) and the
 automation decision carries its own `AUTOMATION_POLICY_VERSION`, so neither is
