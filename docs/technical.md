@@ -3570,6 +3570,9 @@ code-built claim ledger.
   `verifiedPolicyTerms` lets the stated window through the `policy_terms_beyond_record` guard. Timeline rows for
   order placed and dispute opened are added from the order and dispute records when Shopify's events lack them.
   Reuse of stored summaries is off until reuse stores every part.
+  When the corrections leave only the summary's length wrong, one more call (`SHORTEN_SYSTEM`, summary only,
+  ≤ 70 words, first and last sentence kept) rewrites it; the result is re-checked and reviewed, and kept only
+  if it passes (#100705, 2026-09-29: 92 of 90 words after two corrections left the dispute without a letter).
 - **The template writer is retired (2026-09-28).** The maintainer switched it off permanently after it wrote the
   Mein Maison #101111 not-as-described letter (German product title in the summary; shipping, delivery and the
   dispute's opening dropped from the sequence). `buildDefencePackageJob` no longer calls `generateNarrative`: when
