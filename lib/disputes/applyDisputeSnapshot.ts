@@ -14,8 +14,11 @@
  * Monotonic guards:
  *   - Stale snapshot: snapshot.shopifyUpdatedAt older than existing → reject.
  *   - evidence_sent_on walk-back: timestamp → null → preserved, warning emitted.
- *   - Terminal-state downgrade: final_outcome set + snapshot pre-terminal →
- *     preserved, warning emitted.
+ *   - Reopen after close: final_outcome set + a fresh snapshot with a
+ *     non-final status is a real reopen (stale snapshots are rejected
+ *     above), so the outcome is cleared and kept in previous_final_outcome
+ *     (lib/disputes/reopenAfterClose.ts). It used to be "downgrade rejected",
+ *     which left reopened disputes showing "won".
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -31,7 +34,9 @@ import {
   SUBMISSION_CONFIRMED,
   RESPONSE_CYCLE_REOPENED,
   ESCALATED_TO_CHARGEBACK,
+  DISPUTE_REOPENED_AFTER_CLOSE,
 } from "@/lib/disputeEvents/eventTypes";
+import { isReopenAfterClose, outcomeKeySuffix, reopenAfterCloseUpdate } from "./reopenAfterClose";
 import type { DisputeSnapshot } from "./disputeSnapshot";
 import {
   opensNewResponseCycle,
@@ -186,6 +191,7 @@ export async function applyDisputeSnapshot(
     response_cycle?: number | null;
     reopened_at?: string | null;
     escalated_from_inquiry_at?: string | null;
+    reopened_after_close_at?: string | null;
   }
 
   const existingQuery = await sb
@@ -194,7 +200,7 @@ export async function applyDisputeSnapshot(
       "id, status, due_at, submitted_at, final_outcome, submission_state, " +
         "new_dispute_alert_sent_at, shopify_updated_at, dispute_evidence_gid, " +
         "phase, evidence_saved_to_shopify_at, response_cycle, reopened_at, " +
-        "escalated_from_inquiry_at",
+        "escalated_from_inquiry_at, reopened_after_close_at",
     )
     .eq("shop_id", shopId)
     .eq("dispute_gid", snapshot.disputeGid)
@@ -236,9 +242,13 @@ export async function applyDisputeSnapshot(
   // given). This is the ONE transition allowed to clear `submitted_at`: the
   // reset happens in `reconcile_response_cycle` below, and the walk-back
   // guard stays in force for every other evidence_sent_on → null.
+  // Shopify reopened a decided dispute (see reopenAfterClose.ts).
+  const reopensAfterClose =
+    existing != null &&
+    isReopenAfterClose({ existingFinalOutcome: existing.final_outcome, newStatus: snapshot.status });
   const opensCycle =
     existing != null &&
-    !existing.final_outcome &&
+    (!existing.final_outcome || reopensAfterClose) &&
     opensNewResponseCycle({
       existing,
       newStatus: snapshot.status ?? null,
@@ -260,18 +270,6 @@ export async function applyDisputeSnapshot(
     );
   }
 
-  const snapshotIsTerminal = snapshot.status
-    ? TERMINAL_STATUSES.has(snapshot.status)
-    : false;
-  if (
-    existing?.final_outcome &&
-    snapshot.status &&
-    !snapshotIsTerminal
-  ) {
-    guardWarnings.push(
-      `terminal-state downgrade rejected (final_outcome=${existing.final_outcome}, snapshot status=${snapshot.status})`,
-    );
-  }
 
   // For new disputes, optionally resolve missing display + identity fields
   // via a targeted GraphQL fallback. The REST webhook payload carries the
@@ -362,17 +360,6 @@ export async function applyDisputeSnapshot(
   }
   if (customerEmail) {
     upsertRow.customer_email = customerEmail;
-  }
-
-  // Guard: terminal-downgrade — don't overwrite a terminal status with a
-  // pre-terminal one. We do still allow status writes when the snapshot is
-  // terminal or matches.
-  if (
-    existing?.final_outcome &&
-    snapshot.status &&
-    !snapshotIsTerminal
-  ) {
-    delete upsertRow.status;
   }
 
   const { data: upserted, error: upsertErr } = await sb
@@ -531,6 +518,30 @@ export async function applyDisputeSnapshot(
   // new cycle is always newer than the cycle start.
   const shopifyAt = snapshot.shopifyUpdatedAt ?? nowIso;
 
+  // Reopened after an outcome: clear the outcome (kept in
+  // previous_final_outcome) so the dispute is open again everywhere, before
+  // the cycle and status handling below.
+  let reopenedAfterCloseAt = existing.reopened_after_close_at ?? null;
+  if (reopensAfterClose && existing.final_outcome) {
+    anyChange = true;
+    reopenedAfterCloseAt = shopifyAt;
+    await sb
+      .from("disputes")
+      .update(reopenAfterCloseUpdate(existing.final_outcome, shopifyAt))
+      .eq("id", disputeId);
+    void emitDisputeEvent({
+      disputeId,
+      shopId,
+      eventType: DISPUTE_REOPENED_AFTER_CLOSE,
+      description: `Reopened by Shopify after ${existing.final_outcome} (${existing.status ?? "?"} → ${newStatus})`,
+      eventAt: shopifyAt,
+      actorType: "shopify",
+      sourceType: sourceTypeForEvent,
+      metadataJson: { previous_final_outcome: existing.final_outcome, old_status: existing.status, new_status: newStatus },
+      dedupeKey: `${disputeId}:${DISPUTE_REOPENED_AFTER_CLOSE}:${shopifyAt}`,
+    });
+  }
+
   // Inquiry → chargeback. Recorded once per dispute, whether or not the same
   // snapshot also opens a new response cycle.
   const escalatedNow =
@@ -670,7 +681,7 @@ export async function applyDisputeSnapshot(
           amount,
           currency_code: snapshot.currency,
         },
-        dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${outcome}`,
+        dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${outcome}${outcomeKeySuffix(reopenedAfterCloseAt)}`,
       });
       void emitDisputeEvent({
         disputeId,
@@ -679,7 +690,7 @@ export async function applyDisputeSnapshot(
         eventAt: at,
         actorType: "shopify",
         sourceType: sourceTypeForEvent,
-        dedupeKey: `${disputeId}:${DISPUTE_CLOSED}`,
+        dedupeKey: `${disputeId}:${DISPUTE_CLOSED}${outcomeKeySuffix(reopenedAfterCloseAt)}`,
       });
       await sb
         .from("disputes")
@@ -690,7 +701,7 @@ export async function applyDisputeSnapshot(
         disputeId,
         shopId,
         eventAt: at,
-        eventKey: `${disputeId}:OUTCOME_DETECTED:${outcome}`,
+        eventKey: `${disputeId}:OUTCOME_DETECTED:${outcome}${outcomeKeySuffix(reopenedAfterCloseAt)}`,
         newStatus,
         context: { ...ctxBase, finalOutcome: outcome },
       });
@@ -699,7 +710,7 @@ export async function applyDisputeSnapshot(
         disputeId,
         shopId,
         eventAt: at,
-        eventKey: `${disputeId}:DISPUTE_CLOSED`,
+        eventKey: `${disputeId}:DISPUTE_CLOSED${outcomeKeySuffix(reopenedAfterCloseAt)}`,
         newStatus,
         context: { ...ctxBase, finalOutcome: outcome },
       });

@@ -100,6 +100,8 @@ export interface WorkspaceDispute {
    *  answered dispute or an answered inquiry escalated. */
   responseCycle?: number;
   reopenedAt?: string | null;
+  /** Shopify reopened this dispute after an outcome (lib/disputes/reopenAfterClose.ts). */
+  reopenedAfterCloseAt?: string | null;
   escalatedFromInquiryAt?: string | null;
   /** Review-lifecycle state (2026-07-23). Gates + reflects the
    *  Hold/Approve/Concede action row on a parked/weak dispute. */

@@ -46,6 +46,9 @@ export function phasePillColors(
   return { bg: "#FEF3C7", color: "#92400E" };
 }
 
+/** Colours of the "Reopened" pill, next to the phase pill. */
+export const REOPENED_PILL_COLORS = { bg: "#FDE8E4", color: "#9A2B16" } as const;
+
 /** Label for phase badge. Null defaults to "Chargeback" (safer assumption). */
 export function phaseLabel(
   phase: DisputePhase | null,

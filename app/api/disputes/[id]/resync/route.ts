@@ -15,7 +15,9 @@ import {
   OUTCOME_DETECTED,
   DISPUTE_CLOSED,
   DISPUTE_RESYNCED,
+  DISPUTE_REOPENED_AFTER_CLOSE,
 } from "@/lib/disputeEvents/eventTypes";
+import { isReopenAfterClose, outcomeKeySuffix, reopenAfterCloseUpdate } from "@/lib/disputes/reopenAfterClose";
 
 export const runtime = "nodejs";
 
@@ -119,6 +121,23 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       const terminalMap: Record<string, string> = {
         won: "won", lost: "lost", charge_refunded: "refunded", accepted: "accepted",
       };
+      // Shopify reopened a decided dispute: clear the outcome (kept in
+      // previous_final_outcome), as the sync does (reopenAfterClose.ts).
+      if (isReopenAfterClose({ existingFinalOutcome: row.final_outcome as string | null, newStatus })) {
+        Object.assign(update, reopenAfterCloseUpdate(String(row.final_outcome), now));
+        refreshedFields.push("final_outcome", "closed_at");
+        void emitDisputeEvent({
+          disputeId,
+          shopId: dispute.shop_id,
+          eventType: DISPUTE_REOPENED_AFTER_CLOSE,
+          description: `Reopened by Shopify after ${String(row.final_outcome)} (${String(row.status)} → ${newStatus})`,
+          eventAt: now,
+          actorType: "shopify",
+          sourceType: "shopify_sync",
+          metadataJson: { previous_final_outcome: row.final_outcome, old_status: row.status, new_status: newStatus, trigger: "resync" },
+          dedupeKey: `${disputeId}:${DISPUTE_REOPENED_AFTER_CLOSE}:${now}`,
+        });
+      }
       if (newStatus && newStatus in terminalMap && !row.final_outcome) {
         update.final_outcome = terminalMap[newStatus];
         const amount = Number(row.amount) || 0;
@@ -137,7 +156,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           actorType: "shopify",
           sourceType: "shopify_sync",
           metadataJson: { final_outcome: terminalMap[newStatus], trigger: "resync" },
-          dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${terminalMap[newStatus]}`,
+          dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${terminalMap[newStatus]}${outcomeKeySuffix(row.reopened_after_close_at as string | null)}`,
         });
 
         void emitDisputeEvent({
@@ -147,7 +166,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           eventAt: d.finalizedOn ?? now,
           actorType: "shopify",
           sourceType: "shopify_sync",
-          dedupeKey: `${disputeId}:${DISPUTE_CLOSED}`,
+          dedupeKey: `${disputeId}:${DISPUTE_CLOSED}${outcomeKeySuffix(row.reopened_after_close_at as string | null)}`,
         });
       }
     } else {

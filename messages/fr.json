@@ -485,6 +485,7 @@
     "inquiryTitle": "Demande {id}",
     "caseTitle": "Dossier {id}",
     "inquiryBadge": "Demande",
+    "reopenedBadge": "Rouvert",
     "chargebackBadge": "Rétrofacturation",
     "phaseUnknown": "Inconnu",
     "phaseLabel": "Phase",
@@ -3748,7 +3749,7 @@
       },
       "bankClaim": {
         "title": "Pourquoi DisputeDesk demande la réclamation de la banque",
-        "body": "Pour la plupart des litiges, le code motif indique à DisputeDesk ce que le client conteste, et la réponse est construite à partir de celui-ci. Deux types de litige sont différents :\n\n• Litiges rouverts : Shopify a remis à « réponse requise » un litige auquel vous aviez déjà répondu. La banque demande une nouvelle réponse, et la précédente ne le règle plus.\n• Litiges « généraux » sans code motif du réseau : la banque n'a pas précisé de quel type de litige il s'agit.\n\nDans les deux cas, la seule indication de ce que la banque attend est sa réclamation (Shopify l'appelle réclamation de l'émetteur). Shopify l'affiche dans les détails de la rétrofacturation sur la page de la commande dans votre administration, mais ne la partage pas avec les applications : DisputeDesk ne peut donc pas la lire seul.\n\nQue faire :\n1. Ouvrez le litige dans DisputeDesk et utilisez « Ouvrir la commande dans Shopify ».\n2. Trouvez la réclamation de la banque dans les détails de la rétrofacturation et téléchargez-la (généralement un PDF), ou copiez son texte.\n3. Téléversez le fichier ou collez le texte dans la carte « Ajoutez la réclamation de la banque » et enregistrez. Si Shopify n'affiche aucune réclamation, cochez « Shopify n'affiche aucune réclamation pour ce litige » : les banques n'en fournissent pas toujours.\n\nDisputeDesk reconstruit alors la réponse pour qu'elle traite la réclamation. Celle-ci sert uniquement à décider à quoi la réponse doit répondre ; elle n'est jamais citée ni renvoyée à la banque.\n\nTant qu'elle n'est pas ajoutée, DisputeDesk n'enverra aucune réponse pour ce litige, y compris à l'échéance. Nous vous envoyons aussi un e-mail lorsqu'un litige commence à en avoir besoin."
+        "body": "Pour la plupart des litiges, le code motif indique à DisputeDesk ce que le client conteste, et la réponse est construite à partir de celui-ci. Deux types de litige sont différents :\n\n• Litiges rouverts : Shopify a remis à « réponse requise » un litige auquel vous aviez déjà répondu. La banque demande une nouvelle réponse, et la précédente ne le règle plus.\n• Litiges « généraux » sans code motif du réseau : la banque n'a pas précisé de quel type de litige il s'agit.\n\nDans les deux cas, la seule indication de ce que la banque attend est sa réclamation (Shopify l'appelle réclamation de l'émetteur). Shopify l'affiche dans les détails de la rétrofacturation sur la page de la commande dans votre administration, mais ne la partage pas avec les applications : DisputeDesk ne peut donc pas la lire seul.\n\nQue faire :\n1. Ouvrez le litige dans DisputeDesk et utilisez « Ouvrir la commande dans Shopify ».\n2. Trouvez la réclamation de la banque dans les détails de la rétrofacturation et téléchargez-la (généralement un PDF), ou copiez son texte.\n3. Téléversez le fichier ou collez le texte dans la carte « Ajoutez la réclamation de la banque » et enregistrez. Si Shopify n'affiche aucune réclamation, cochez « Shopify n'affiche aucune réclamation pour ce litige » : les banques n'en fournissent pas toujours.\n\nDisputeDesk reconstruit alors la réponse pour qu'elle traite la réclamation. Celle-ci sert uniquement à décider à quoi la réponse doit répondre ; elle n'est jamais citée ni renvoyée à la banque.\n\nTant qu'elle n'est pas ajoutée, DisputeDesk n'enverra aucune réponse pour ce litige, y compris à l'échéance. Nous vous envoyons aussi un e-mail lorsqu'un litige commence à en avoir besoin.\n\nLes litiges rouverts portent le badge « Rouvert » dans la liste des litiges et sur la page du litige, y compris lorsque Shopify rouvre un litige déjà tranché."
       }
     },
     "embedded": {
@@ -5014,6 +5015,7 @@
       "admin_override_cleared": "Ajustement du support annulé",
       "dispute_resynced": "Litige actualisé depuis Shopify",
       "response_cycle_reopened": "Rouvert — nouvelle réponse nécessaire",
+      "dispute_reopened_after_close": "Rouvert par Shopify après une décision",
       "escalated_to_chargeback": "Passé de demande à rétrofacturation"
     },
     "actors": {

@@ -485,6 +485,7 @@
     "inquiryTitle": "Förfrågan {id}",
     "caseTitle": "Ärende {id}",
     "inquiryBadge": "Förfrågan",
+    "reopenedBadge": "Återöppnad",
     "chargebackBadge": "Återkrav",
     "phaseUnknown": "Okänd",
     "phaseLabel": "Fas",
@@ -3748,7 +3749,7 @@
       },
       "bankClaim": {
         "title": "Varför DisputeDesk ber om bankens anspråk",
-        "body": "För de flesta tvister talar orsakskoden om för DisputeDesk vad kunden bestrider, och svaret byggs utifrån den. Två sorters tvister är annorlunda:\n\n• Återöppnade tvister: Shopify har satt en tvist som du redan besvarat tillbaka till \"behöver svar\". Banken begär ett nytt svar, och ditt tidigare svar avgör den inte längre.\n• \"Allmänna\" tvister utan nätverkets orsakskod: banken angav inte vilken sorts tvist det är.\n\nI båda fallen är bankens anspråk (Shopify kallar det utfärdarens anspråk) det enda som säger vad banken vill ha besvarat. Shopify visar det i återkravsdetaljerna på ordersidan i din Shopify-admin, men delar det inte med appar, så DisputeDesk kan inte läsa det själv.\n\nSå gör du:\n1. Öppna tvisten i DisputeDesk och använd \"Öppna ordern i Shopify\".\n2. Hitta bankens anspråk i återkravsdetaljerna och ladda ner det (oftast en PDF) eller kopiera texten.\n3. Ladda upp filen eller klistra in texten i kortet \"Lägg till bankens anspråk\" och spara. Om Shopify inte visar något anspråk, kryssa i \"Shopify visar inget anspråk för den här tvisten\" i stället – banker lämnar inte alltid ett.\n\nDisputeDesk bygger sedan om svaret så att det bemöter anspråket. Anspråket används bara för att avgöra vad svaret måste ta upp; det citeras aldrig och skickas aldrig tillbaka till banken.\n\nTills anspråket har lagts till skickar DisputeDesk inget svar för den tvisten, inte heller vid tidsfristen. Vi mejlar dig också när en tvist börjar behöva det."
+        "body": "För de flesta tvister talar orsakskoden om för DisputeDesk vad kunden bestrider, och svaret byggs utifrån den. Två sorters tvister är annorlunda:\n\n• Återöppnade tvister: Shopify har satt en tvist som du redan besvarat tillbaka till \"behöver svar\". Banken begär ett nytt svar, och ditt tidigare svar avgör den inte längre.\n• \"Allmänna\" tvister utan nätverkets orsakskod: banken angav inte vilken sorts tvist det är.\n\nI båda fallen är bankens anspråk (Shopify kallar det utfärdarens anspråk) det enda som säger vad banken vill ha besvarat. Shopify visar det i återkravsdetaljerna på ordersidan i din Shopify-admin, men delar det inte med appar, så DisputeDesk kan inte läsa det själv.\n\nSå gör du:\n1. Öppna tvisten i DisputeDesk och använd \"Öppna ordern i Shopify\".\n2. Hitta bankens anspråk i återkravsdetaljerna och ladda ner det (oftast en PDF) eller kopiera texten.\n3. Ladda upp filen eller klistra in texten i kortet \"Lägg till bankens anspråk\" och spara. Om Shopify inte visar något anspråk, kryssa i \"Shopify visar inget anspråk för den här tvisten\" i stället – banker lämnar inte alltid ett.\n\nDisputeDesk bygger sedan om svaret så att det bemöter anspråket. Anspråket används bara för att avgöra vad svaret måste ta upp; det citeras aldrig och skickas aldrig tillbaka till banken.\n\nTills anspråket har lagts till skickar DisputeDesk inget svar för den tvisten, inte heller vid tidsfristen. Vi mejlar dig också när en tvist börjar behöva det.\n\nÅteröppnade tvister har märket ”Återöppnad” i tvistlistan och på tvistsidan, även när Shopify återöppnar en tvist som redan var avgjord."
       }
     },
     "embedded": {
@@ -5014,6 +5015,7 @@
       "admin_override_cleared": "Supportjustering återställd",
       "dispute_resynced": "Tvist uppdaterad från Shopify",
       "response_cycle_reopened": "Återöppnad – nytt svar behövs",
+      "dispute_reopened_after_close": "Återöppnad av Shopify efter ett beslut",
       "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav"
     },
     "actors": {
