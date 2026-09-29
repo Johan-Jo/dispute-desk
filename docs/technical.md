@@ -3731,6 +3731,14 @@ Address rule:
   (`withoutOpeningBeforeDelivery`, both renderers) drops Shopify's own opening line when any recorded delivery
   is later than it. When every delivery precedes the dispute, the full sequence stays. Pinned by
   `lib/defence/counsel/__tests__/deliveredAfterDisputeOpened.test.ts`.
+- **Brief selection for item-not-received (2026-09-29).** `ledgerForBrief`'s `within` keeps parcel claims
+  (`parcel_N`, which carry a `parcel` block) and the brief's minimum is `minimumAnyOf` = `carrier_delivered` |
+  `all_parcels_delivered` | `some_parcel_delivered` | `shipment_in_transit`. **Regression fixed:** from the single-writer
+  release (#917) until this change every multi-parcel ledger (blume-box #360980) fell to the general brief ("The
+  customer disputes the transaction"). **Single parcel in transit:** `buildInTransitLedger` states the carrier's
+  in-transit record undated (`shipment_in_transit`), plus `whole_order_in_shipment` when coverage is verified — never
+  delivery, receipt or loss, never related to the order date or the dispute. No carrier record at all still reaches
+  the general brief. Pinned by `lib/defence/counsel/__tests__/briefSelection.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
