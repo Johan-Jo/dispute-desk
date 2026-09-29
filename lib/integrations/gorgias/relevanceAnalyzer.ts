@@ -31,9 +31,13 @@ import {
   callClaudeMessages,
   type ClaudeSystemBlock,
 } from "@/lib/defence/anthropicClient";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { textAsksForMoneyBack } from "./internalNarrativeConstraints";
 
 export const ANALYZER_PROMPT_FAMILY = "gorgias_relevance";
-export const ANALYZER_PROMPT_VERSION = 1;
+/** v2 (non-receipt plan P2, D7): family allow-list in the payload, the
+ *  restated-complaint non-example, money-back requests are refund_history. */
+export const ANALYZER_PROMPT_VERSION = 2;
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 const DAILY_RUN_CAP = Number(process.env.GORGIAS_ANALYSIS_DAILY_CAP ?? "200");
@@ -56,6 +60,26 @@ export const EVIDENCE_CATEGORIES = [
   "contradiction",
 ] as const;
 export type EvidenceCategory = (typeof EVIDENCE_CATEGORIES)[number];
+
+/**
+ * Categories a message may take, by dispute family (non-receipt plan §7, D7).
+ *
+ * On item-not-received, `contradiction` is not available: the only customer
+ * statement that genuinely conflicts with "I never received it" is an
+ * acknowledgement of receipt, and that is `delivery_recognition`. Live defect
+ * (blume-box #360980): "I have been waiting over 2 weeks" was classified a
+ * contradiction — it is the complaint itself. Every other family keeps the
+ * full list (a fraud claim beside a customer discussing their own purchase is
+ * a real contradiction).
+ */
+export function allowedCategoriesFor(
+  disputeReason: string | null | undefined,
+): readonly EvidenceCategory[] {
+  if (resolveReasonFamily(disputeReason) === "delivery") {
+    return EVIDENCE_CATEGORIES.filter((c) => c !== "contradiction");
+  }
+  return EVIDENCE_CATEGORIES;
+}
 
 // ── Input / output shapes ────────────────────────────────────────────────────
 
@@ -91,7 +115,9 @@ export interface AnalyzerCaseInput {
 export interface AnalyzedProposal {
   id: string;
   category: EvidenceCategory;
-  explanation: string;
+  /** Null only when the category policy re-routed the proposal and the
+   *  model's sentence no longer describes it. */
+  explanation: string | null;
   confidence: number;
 }
 
@@ -137,7 +163,11 @@ Categories (enum — use EXACTLY one of these strings, nothing else):
 - resolution_attempt: the merchant offered help, tracking, replacement, or
   asked for information; or the customer stopped responding after help.
 - contradiction: the message contradicts the given dispute reason (e.g. a
-  fraud claim despite the customer discussing their own purchase).
+  fraud claim despite the customer discussing their own purchase). NOT a
+  contradiction: the customer restating or elaborating their own dispute
+  reason — including how long they have waited, that the order has not
+  arrived, or that they are frustrated. That is the complaint, not evidence
+  against it.
 
 Rules:
 1. Classify ONLY messages that are genuinely useful chargeback evidence for
@@ -151,6 +181,10 @@ Rules:
 4. NEVER invent message ids. Use only ids present in the input. Emit at most
    one entry per id.
 5. confidence: integer 0-100.
+5a. Use ONLY a category listed in the payload's "allowedCategories". A
+   category missing from that list does not apply to this dispute type.
+5b. A customer asking for a refund, reimbursement, money back or
+   compensation is refund_history — never contradiction.
 6. Some messages are marked truncated:true — you are seeing an incomplete
    source. Do not draw conclusions that depend on unseen text; lower your
    confidence accordingly.
@@ -255,6 +289,7 @@ export function buildAnalyzerPayload(input: AnalyzerCaseInput): {
   return {
     payload: {
       disputeReason: input.disputeReason,
+      allowedCategories: allowedCategoriesFor(input.disputeReason),
       networkReasonCode: input.networkReasonCode,
       explanationLocale: input.explanationLocale,
       order: {
@@ -346,6 +381,55 @@ export function normalizeAnalyzerOutput(
   }
 
   return { proposals, rejectedCount };
+}
+
+// ── Family category policy (pure, deterministic, post-model) ─────────────────
+
+/**
+ * Applied to the model's proposals BEFORE anything is written — the prompt
+ * alone is not the guard (non-receipt plan §7).
+ *
+ * Item-not-received family:
+ *   1. A customer message that asks for money back is recorded as
+ *      `refund_history`, whatever the model said. Same six-locale pattern as
+ *      the P0 internal constraint (`textAsksForMoneyBack`), so the two agree.
+ *      `refund_history` never reaches the bank (BANK_EXCLUDED_EVIDENCE_CATEGORIES).
+ *   2. Any other proposal outside the family allow-list is dropped and
+ *      counted in `rejectedCount`.
+ * Other families: proposals pass unchanged.
+ */
+export function applyFamilyCategoryPolicy(
+  proposals: readonly AnalyzedProposal[],
+  disputeReason: string | null | undefined,
+  messages: ReadonlyMap<string, Pick<AnalyzerMessageInput, "senderType" | "text">>,
+): { proposals: AnalyzedProposal[]; rejectedCount: number; reroutedCount: number } {
+  if (resolveReasonFamily(disputeReason) !== "delivery") {
+    return { proposals: [...proposals], rejectedCount: 0, reroutedCount: 0 };
+  }
+  const allowed = new Set<string>(allowedCategoriesFor(disputeReason));
+  const out: AnalyzedProposal[] = [];
+  let rejectedCount = 0;
+  let reroutedCount = 0;
+  for (const p of proposals) {
+    const m = messages.get(p.id);
+    if (
+      m?.senderType === "customer" &&
+      p.category !== "refund_history" &&
+      textAsksForMoneyBack(m.text)
+    ) {
+      // The model's sentence argued a different category ("contradicts a
+      // pure non-receipt claim…") — never show it beside the corrected one.
+      out.push({ ...p, category: "refund_history", explanation: null });
+      reroutedCount++;
+      continue;
+    }
+    if (!allowed.has(p.category)) {
+      rejectedCount++;
+      continue;
+    }
+    out.push(p);
+  }
+  return { proposals: out, rejectedCount, reroutedCount };
 }
 
 // ── Daily cap ────────────────────────────────────────────────────────────────

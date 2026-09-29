@@ -323,3 +323,50 @@ describe("customerConfirmsOrder derivation", () => {
     ).toBe("supporting");
   });
 });
+
+describe("item-not-received bank inclusion (non-receipt plan §7(4))", () => {
+  const t = persistedTicket();
+  const inr = "PRODUCT_NOT_RECEIVED";
+
+  it("quotes a customer acknowledgement of receipt or product use", () => {
+    expect(isIncludableMessage(t, persistedMsg({ evidenceCategory: "delivery_recognition" }), inr)).toBe(true);
+    expect(isIncludableMessage(t, persistedMsg({ evidenceCategory: "product_usage" }), inr)).toBe(true);
+  });
+
+  it("never quotes a customer message that restates the complaint", () => {
+    for (const c of ["transaction_recognition", "resolution_attempt", "contradiction", null]) {
+      expect(isIncludableMessage(t, persistedMsg({ evidenceCategory: c as never }), inr)).toBe(false);
+    }
+  });
+
+  it("merchant messages keep the ordinary rule", () => {
+    expect(
+      isIncludableMessage(t, persistedMsg({ senderType: "merchant", evidenceCategory: "resolution_attempt" }), inr),
+    ).toBe(true);
+  });
+
+  it("other families are unchanged", () => {
+    expect(isIncludableMessage(t, persistedMsg({ evidenceCategory: "transaction_recognition" }), "FRAUDULENT")).toBe(true);
+  });
+
+  it("the built section drops the complaint on an INR pack", () => {
+    const section = buildSnapshotSection(
+      {
+        matchSummary: null,
+        tickets: [
+          {
+            ...t,
+            messages: [
+              persistedMsg({ id: "a", evidenceCategory: "transaction_recognition" }),
+              persistedMsg({ id: "b", evidenceCategory: "delivery_recognition" }),
+            ],
+          },
+        ],
+      } as unknown as PersistedGorgiasEvidence,
+      { packId: "p1", disputeReason: inr },
+    );
+    const ids = (section!.data as { conversations: Array<{ messages: Array<{ evidenceMessageId: string }> }> })
+      .conversations[0].messages.map((m) => m.evidenceMessageId);
+    expect(ids).toEqual(["b"]);
+  });
+});

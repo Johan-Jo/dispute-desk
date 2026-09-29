@@ -449,6 +449,137 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
     );
   });
 
+  it("non-receipt P2: the family category policy runs where proposals are written", async () => {
+    const gorgiasTicket: GorgiasTicket = {
+      id: 42,
+      status: "closed",
+      channel: "email",
+      spam: false,
+      subject: "Where is my order #1066?",
+      customer: { id: 7, email: "anna@example.com" },
+      trashed_datetime: null,
+      created_datetime: "2026-03-10T09:00:00Z",
+      updated_datetime: null,
+      messages: [
+        {
+          id: 9001,
+          public: true,
+          channel: "email",
+          from_agent: false,
+          stripped_text: "I got order #1066 yesterday, looks great",
+          body_text: null,
+          body_html: null,
+          sent_datetime: "2026-03-10T10:00:00Z",
+          created_datetime: null,
+        },
+        {
+          id: 9002,
+          public: false, // internal note — must never be persisted
+          channel: "internal-note",
+          from_agent: true,
+          stripped_text: "just refund this sketchy customer",
+          body_text: null,
+          body_html: null,
+          sent_datetime: null,
+          created_datetime: null,
+        },
+      ],
+    };
+
+    const { sb, calls } = makeSb({
+      gorgias_enrichment_runs: [
+        { data: ACTIVE_RUN },
+        { data: null }, // attempt_count update
+        { data: [{ id: "run-1" }] }, // → resolving_customer
+        { data: [{ id: "run-1" }] }, // → searching_tickets
+        { data: [{ id: "run-1" }] }, // → fetching_messages
+        { data: [{ id: "run-1" }] }, // → analyzing
+        { data: null }, // finishRun (ready_for_review)
+        { data: null, count: 0 }, // first-enriched count
+      ],
+      disputes: [
+        { data: DISPUTE_ROW }, // loadOrderSignals
+        { data: { reason: "PRODUCT_NOT_RECEIVED", network_reason_code: "13.1", order_name: "#1066" } }, // analysis
+        { data: null }, // attention update
+        { data: { reason: "PRODUCT_NOT_RECEIVED", amount: "110.89", currency_code: "USD" } }, // evidence-ready email meta
+      ],
+      shopify_orders: [{ data: ORDER_ROW }],
+      shops: [{ data: { locale: "en" } }],
+      gorgias_matched_tickets: [
+        { data: [] }, // existing rows
+        { data: { id: "mt-1" } }, // insert → select single
+        {
+          data: [
+            {
+              id: "mt-1",
+              gorgias_ticket_id: 42,
+              ticket_snapshot: { subject: "Where is my order #1066?", channel: "email" },
+            },
+          ],
+        }, // analyzable tickets
+        { data: null }, // analyzed_at stamp
+      ],
+      gorgias_evidence_messages: [
+        { data: [] }, // existing messages
+        { data: null }, // insert
+        {
+          data: [
+            {
+              id: "gem-1",
+              matched_ticket_id: "mt-1",
+              sender_type: "customer",
+              sent_at: "2026-03-10T10:00:00Z",
+              message_text: "Waiting over 2 weeks for #1066. Please reimburse me.",
+              content_truncated: false,
+            },
+          ],
+        }, // candidates
+        { data: [{ id: "gem-1" }] }, // proposal update → select
+      ],
+    });
+    mockGetServiceClient.mockReturnValue(sb);
+
+    const analyze = vi.fn(async () => ({
+      proposals: [
+        {
+          id: "gem-1",
+          category: "contradiction" as const,
+          explanation: "Waiting two weeks contradicts a pure non-receipt claim.",
+          confidence: 90,
+        },
+      ],
+      rejectedCount: 0,
+      overflowCount: 0,
+      model: "claude-haiku-4-5",
+      promptVersion: 1,
+      tokens: { prompt: 800, completion: 60, cached: 0 },
+      durationMs: 400,
+      capReached: false,
+      error: null,
+    }));
+
+    const res = await handleEnrichGorgiasComms(makeJob(), {
+      loadConnection: async () => CONN,
+      createClient: () =>
+        fakeClient({
+          listCustomerTickets: vi.fn(async () => [gorgiasTicket]),
+        }),
+      analyze,
+    });
+
+    expect(res).toEqual({ ok: true });
+    expect(analyze).toHaveBeenCalledTimes(1);
+
+    expect(res).toEqual({ ok: true });
+    const proposalUpdate = calls
+      .filter((c) => c.table === "gorgias_evidence_messages" && c.op === "update")
+      .find((c) => (c.args[0] as Record<string, unknown>).review_status === "proposed");
+    expect(proposalUpdate).toBeTruthy();
+    const patch = proposalUpdate!.args[0] as Record<string, unknown>;
+    expect(patch.evidence_category).toBe("refund_history");
+    expect(patch.relevance_explanation).toBeNull();
+  });
+
   it("LLM cap reached → analysis_deferred with next_retry_at, never no_matches", async () => {
     const gorgiasTicket: GorgiasTicket = {
       id: 42,
