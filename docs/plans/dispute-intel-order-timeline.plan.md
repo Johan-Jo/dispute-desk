@@ -1,8 +1,8 @@
 # Dispute intel from the order timeline: what happened, outside DisputeDesk
 
-**Status:** rev 3.2, 2026-09-29. Research complete (read-only, prod). Critic round 1: REVISE (12 findings,
+**Status:** rev 3.3, 2026-09-29. Research complete (read-only, prod). Critic round 1: REVISE (12 findings,
 §10). Critic round 2: fine to present, not yet approved to implement (5 findings, all addressed in
-rev 3; §10.2). Critic round 3: basis for implementation once 4 points fixed (all fixed in rev 3.1; §10.3). Review of rev 3.1: **Step 0 approved** (preservation only; P0–P3 and any prod release not approved), with two fixes made in rev 3.2 (§10.4). No implementation yet. **Step 0 is gated on §4.1.1; P1 is gated on PR #940 (G1, §1.4).**
+rev 3; §10.2). Critic round 3: basis for implementation once 4 points fixed (all fixed in rev 3.1; §10.3). Review of rev 3.1: **Step 0 approved** (preservation only; P0–P3 and any prod release not approved), with two fixes made in rev 3.2 (§10.4). Critic round 4 on rev 3.1: REVISE (3 major, 14 minor; all addressed in rev 3.3, §10.5). No implementation yet. **Step 0 is gated on §4.1.1; P1 is gated on PR #940 (G1, §1.4).**
 **Origin:** Mein Maison #99445, an inquiry that showed "lost". The Shopify order timeline showed the
 real story: the merchant's support app, then a staff member, refunded the customer ("wrong goods
 delivered"), and Shopify closed the inquiry as refunded. None of that was visible in DisputeDesk.
@@ -35,7 +35,7 @@ journey, metafields. Scripts are copied next to the seed file. Nothing was writt
 
 | # | Source (API) | What it holds | Scope | Read today |
 |---|---|---|---|---|
-| S1 | **Order timeline** `Order.events` (`BasicEvent`, `CommentEvent`) | Each action with time, `action` code, acting app (`appTitle`, `attributeToApp`), staff flag (`attributeToUser`; the name is in the message), and `additionalContent` with the details: refund reason, cancel reason, return items and reason, note text, the inquiry "View chat" link, payout amounts | `read_orders` | `orders.ts:135` fetches the **oldest** 30 with actor flags (for `customerCommSource`); `disputes.ts:231` the newest 30 (message, app) for the chronology. Nothing is stored; actions and details are dropped |
+| S1 | **Order timeline** `Order.events` (`BasicEvent`, `CommentEvent`) | Each action with time, `action` code, acting app (`appTitle`, `attributeToApp`), staff flag (`attributeToUser`; the name is in the message), and `additionalContent` with the details: refund reason, cancel reason, return items and reason, note text, the inquiry "View chat" link, payout amounts | `read_orders` | `orders.ts:135` fetches the **oldest** 30 with actor flags; they feed `customerCommSource` **and**, via `orderSource.ts:284`, the bank letter chronology. `disputes.ts:231` (`DISPUTE_PROFILE_QUERY`, the dispute profile route) fetches the newest 30. Nothing is stored; actions and details are dropped |
 | S2 | **Shop-wide feed** `QueryRoot.events` | The same events across all orders | `read_orders` | No. `subject_type:ORDER` verified; `action:`/subject-id filters **not yet verified** |
 | S3 | Refunds and transactions | Refund note, amounts, failed refunds with the processor's error | `read_orders` | Amounts |
 | S4 | Sales agreements `Order.agreements` | Every money change with reason and app | `read_orders` | No |
@@ -121,10 +121,17 @@ present a stale outcome as the explained truth.
    `merchant_accepted`, `customer_closed_inquiry`, `resolved_in_favour`, or `unknown_events_expired`.
    Reporting, the decided view, the outcome email and the intelligence engine stop counting settlements
    as verdicts, and show the gap where events expired instead of hiding it.
-2. **The refund record for the counsel argument.** A **confirmed** refund (successful refund
-   transaction, amount, currency, processed time; §4.4) feeds the stance's "credit already issued"
-   argument, the one positive bank-facing use (P3). `refund_created` records an attempt and never
-   qualifies on its own; the survey holds 24 failed refunds.
+2. **A stricter "credit already issued" check (P3).** The argument already exists:
+   `detectCreditAlreadyIssued` (`lib/automation/creditTiming.ts:85`), fed through
+   `orderSource.ts:219-227`. It counts only refunds created **before** the dispute opened
+   (`creditTiming.ts:104`). P3 tightens that function: a refund counts only with a `SUCCESS` refund
+   transaction, amount and currency from that transaction, processed before `initiated_at` of the
+   dispute's **first** cycle. `refund_created` records an attempt and never qualifies on its own; the
+   survey holds 24 failed refunds. **A refund made after the dispute opened is never cited to a bank
+   under this plan**: `fatalLoss.ts:117-135` and CLAUDE.md treat that as a confession. Changing that
+   waits for `merchant-counsel-stance.plan.md` (branch `docs/merchant-counsel-stance`, plan only) to
+   ship and CLAUDE.md to be amended. P3 reads `Order.refunds` and transactions, not the timeline
+   table.
 3. **The merchant sees what they and their tools did during the dispute**: refunds, cancels, returns,
    notes, with who did it, on the dispute page and in the outcome email.
 4. **Honest response facts.** "A response was sent through Shopify on …" and, where a refund came
@@ -138,8 +145,10 @@ present a stale outcome as the explained truth.
 - **P1 Record, then derive.** Store the raw event (jsonb) plus parsed columns; the classifier is
   versioned and re-runnable without a re-fetch.
 - **P2 Never a new reason to stand down.** Nothing in this plan stops building or filing. The only
-  reasons not to file stay those of `merchant-counsel-stance.plan.md` §1 (Shopify Protect coverage,
-  the merchant's Concede, the minimal verified response). A refund is argued as credit already issued;
+  reasons not to file stay those of `merchant-counsel-stance.plan.md` §1 (branch
+  `docs/merchant-counsel-stance`) (Shopify Protect coverage,
+  the merchant's Concede, the minimal verified response). A pre-dispute refund is argued as credit
+  already issued (§2.2);
   a fraud cancel on a shipped order is still defended. Accepted and refunded-inquiry disputes are
   already closed by the status sync.
 - **P3 Merchant's counsel.** Adverse intel (fraud tags, "wrong goods delivered", cancellations) informs
@@ -157,33 +166,48 @@ present a stale outcome as the explained truth.
 
 ### 4.1 Storage
 
-`order_timeline_events`: `order_gid`, `occurred_at`, `typename`, `action`, `app_title`,
-`attribute_to_app`, `attribute_to_user`, `raw jsonb` (the event as returned), parsed: `actor_name`,
-`message_text`, `details_json`, `category`, `category_version`; `source` (`live` |
-`survey_2026-09-29`), `source_sha256` (seed rows: the file's full hash), `first_seen_at`,
-`last_seen_at`, `deleted_at`. RLS enabled (service role only). Keyed on the order, **not** the
-dispute: an order can carry several disputes and several cycles. The link to a dispute and cycle is
-§4.3.1.
+`order_timeline_events`: `id`, `shop_id` (FK `shops`, `on delete cascade`, which covers
+`shop/redact`), `order_gid`, `occurred_at`, `typename`, `action`, `app_title`, `attribute_to_app`,
+`attribute_to_user`, `raw jsonb` (the event as returned), parsed: `actor_name`, `message_text`,
+`details_json`, `category`, `category_version`; `source` (`live` | `survey_2026-09-29`),
+`source_sha256` and `manifest_version` (seed rows), `first_seen_at`, `last_seen_at`, `deleted_at`.
+RLS enabled (service role only). Keyed on the order, **not** the dispute: an order can carry several
+disputes and several cycles.
+
+`order_timeline_event_links`: `event_id`, `dispute_id`, `link_status` (`linked` | `ambiguous` |
+`unlinked`), `link_rule` (which §4.3.1 rule decided), `cycle_open_event_id` (the timeline event that
+opened the cycle; null for cycle 1), `ledger_cycle_id` (the matching `dispute_response_cycles` row,
+when one exists; cross-check only), `linker_version`. A separate table because one merchant action
+can relate to several disputes on the order. It stores **no cycle number**: `reconcile_response_cycle`
+renumbers cycles when a late one is inserted (migration `20260927120000`, lines 142-147), so numbers
+are computed when read.
 
 **Identity: two keys, because the seed has no event IDs.** The survey query did not request `id`
 (`scripts/shopify/intel/survey-intel.mjs`); none of the 8,355 seed event rows has one. So:
 
-- `content_key`: sha256 of the canonical JSON array
-  `[order_gid, createdAt, __typename, action, message, additionalContent, rawMessage]`, with nulls
-  kept as `null` and every field exactly as the API returns it. Plus `occurrence` (1, 2, …) for
+- `content_key`: sha256 of the JSON array
+  `[order_gid, createdAt, __typename, action, message, additionalContent, rawMessage]`, computed by
+  **one module**, `lib/disputes/timeline/contentKey.ts`, used by both the seed import and the live
+  collector. Serialization is `JSON.stringify` of that array: nulls stay `null`; `additionalContent`
+  is hashed as the raw value the API returns (a JSON-encoded **string** on 2026-01), never parsed and
+  re-serialized, so key order inside it cannot change the hash. If the API ever returns it as an
+  object, the collector raises a drift alarm instead of hashing. Plus `occurrence` (1, 2, …) for
   events identical in every field within one fetch; the seed has exactly one such pair. Unique on
   `(shop_id, content_key, occurrence)`. Every row has it, seed and live.
 - `event_gid`: Shopify's `gid://shopify/BasicEvent/…` or `CommentEvent/…`. Nullable; unique on
   `(shop_id, event_gid)` where not null. Live fetches always request `id`.
-- **Live upsert:** match on `event_gid` first, else on `(content_key, occurrence)`. On a content
-  match, write `event_gid` into the seed row so the seed row is adopted, never duplicated. Otherwise
-  insert.
+- **Live upsert:** match on `event_gid` first. Otherwise match on `(content_key, occurrence)`, but
+  **only a row whose `event_gid` is null**; on such a match, write `event_gid` into it, so the seed
+  row is adopted, never duplicated. If the matching row already has a different `event_gid`, the live
+  event is a second identical event: insert it with the next free `occurrence`. Otherwise insert.
 - **Verified 2026-09-29 (read-only):** 7 seed orders across all 4 shops were re-fetched live. All 61
   events reproduced the same `content_key`, and all live IDs were unique. P0's backfill measures the
   match rate over every seed event that is still live (August onward, live until about November). It
   also reports seed rows still lacking an `event_gid` whose events should still exist. A match rate
   below 100% blocks P0 sign-off until explained; the likely cause would be changed message text, such
-  as a redacted customer name.
+  as a renamed or redacted customer (Q5: whether Shopify renders messages at read time is not yet
+  known). A seed row that never gets an `event_gid` keeps its content identity; it is never merged by
+  guess.
 
 ### 4.1.1 Seed custody and import (Step 0)
 
@@ -212,15 +236,20 @@ at). The import and T0 check against the **latest** version, never against versi
 `C:\Users\johan\DisputeDesk-private\intel-seed\`. Rev 2 recorded a wrong path; this is the corrected
 one. The file is the **only** copy and contains personal data (customer and staff names), so it is
 never committed to git. Before the import runs, a **second copy** goes to a private Supabase Storage
-bucket in **prod** (`ops-private`, service role only; same data class and region as the table it
-feeds), and its sha256 is re-checked after upload. **The local copy is deleted the same day**, as soon
+bucket in **prod**, `ops-private`, and its sha256 is re-checked after upload. **The bucket does not
+exist yet**: Step 0's migration creates it (`public = false`, no storage policies at all so only the
+service role can reach it, `file_size_limit` 50 MB). **The local copy is deleted the same day**, as soon
 as the bucket copy's hash is verified and T0 passes, so the maintainer's machine holds personal data
 for hours, not weeks. The bucket copy is kept at most 30 days (for a re-import if Step 0 needs a fix),
 then deleted. From then on the table is the record, under D5 retention and the redaction paths in
 §4.6.
 
-**Import** (`scripts/timeline/import-seed.mjs`; takes an explicit `--env-file` and runs the prod guard
-per CLAUDE.md):
+**Import** (`scripts/timeline/import-seed.mjs`). **Target guard:** the script writes through the env
+file's `SUPABASE_URL` and service role key, not through the Supabase CLI link, so the CLI guard alone
+would not protect it. The script takes `--env prod --env-file <path>`, parses the project ref from
+that file's `SUPABASE_URL`, and refuses unless it equals `aokhplydttxtebvbeuzc`. It also runs
+`scripts/guard-db-target.mjs prod`, so the post-check SQL (step 7, via `db:query:prod`) reads the same
+database the import wrote to. Both refs are printed next to the result.
 1. Load the manifest and validate its chain: version 1's sha256 equals the one recorded in this plan
    (`95791ff2…f80b`); each later version's counts equal the previous version's minus exactly what
    its log entry removed. Refuse on a broken chain.
@@ -245,9 +274,14 @@ per CLAUDE.md):
 - **Retention rule:** a disputed order's timeline is fetched within one day of the dispute opening and
   on every lifecycle change, so nothing expires before we hold it.
 - **Triggers:** `disputes/create` and `disputes/update` webhooks and the `refresh-open-disputes` cron
-  (lifecycle events); `orders/updated` for an order with an open or recently decided dispute (refunds,
-  notes, cancels). Upsert on `event_gid`; `last_seen_at` refresh; a comment that disappears is marked
-  `deleted_at`, not removed.
+  (02:30 UTC daily) for lifecycle events; `orders/updated` for an order with an open dispute or one
+  decided in the last 30 days (refunds, notes, cancels). The dispute and order webhooks are registered
+  in code (`registerDisputeWebhooks.ts`, `registerOrderWebhooks.ts`), not in the TOML files. Upsert per
+  §4.1; `last_seen_at` refresh.
+- **Disappearance.** An event missing from a later fetch is marked `deleted_at` only if it is inside
+  both the fetch window (newer than the oldest event returned, when the fetch hit its page limit) and
+  the 90-day retention horizon. Otherwise it simply aged out or fell outside the page, and nothing is
+  marked. Rows are never removed by the collector.
 - **Pre-dispute history:** orders older than ~90 days at dispute time have already lost their early
   events. Decision D4: capture events at order ingest for all orders (volume) or accept the gap.
 - **S2 shop-wide feed:** used only after its filters are verified (Q2). Without an `action:` filter it
@@ -275,8 +309,12 @@ any field, with one exception: `dispute_inquiry_lost` and `dispute_inquiry_close
 link, `…/admin/payments/disputes/<id>/chat`, in `additionalContent`. That covers 211 of the 2,652
 dispute event rows in the seed. The action prefix gives the type (inquiry or chargeback), and the
 message gives the amount. When an inquiry escalates to a chargeback, Shopify keeps the same dispute
-ID; our DB keeps one `disputes` row and records the escalation as cycle 2 in
-`dispute_response_cycles` (`trigger='escalation'`).
+ID and our DB keeps one `disputes` row. **Our cycle ledger is incomplete by design:**
+`applyDisputeSnapshot.ts:565-567` and `responseCycleHistory.ts:127-128` write no
+`dispute_response_cycles` row for an escalation or reopen that follows no recorded response (the
+ledger key is the prior response). Unanswered inquiries that escalated therefore have no cycle 2 in
+the ledger. So cycles are taken from the timeline itself (Step B), and the ledger is only a
+cross-check.
 
 **Step A: event to dispute.** Applies to lifecycle events (`dispute_*`, `dispute_inquiry_*`,
 `seller_protection_*`). The first rule that yields exactly one dispute wins.
@@ -290,30 +328,39 @@ ID; our DB keeps one `disputes` row and records the escalation as cycle 2 in
      reopen after a close.
    - Keep those whose kind fits the action. `dispute_inquiry_*` fits a dispute that is or was an
      inquiry. `dispute_*` fits a chargeback, including an escalated inquiry after its escalation time.
-   - Keep those whose amount equals the amount parsed from the message, in the same currency. If
-     parsing fails, this filter is skipped; it never guesses.
+   - Keep those whose amount equals the amount parsed from the message. If parsing fails, or the
+     message currency differs from `disputes.currency_code` (25 prod disputes are denominated
+     differently from their order; `creditTiming.ts:88-92`), this filter is **skipped**, never used to
+     exclude; it never guesses.
 4. **Still more than one, or none:** `link_status` is `'ambiguous'` or `'unlinked'`. The event is
    counted on the Admin health page and feeds **no** derivation. It is never assigned by guess.
 
-**Step B: event to cycle** within the dispute. Cycle 1 starts at `initiated_at`; cycle *n* ≥ 2 starts
-at the ledger's `started_at`. An event belongs to the cycle whose `[start, next start)` contains
-`occurred_at`.
-- **Boundary.** The event that opens a cycle (`dispute_inquiry_escalated`, or the
-  `dispute_needs_response` of a reopen) belongs to the **new** cycle. Our `started_at` can lag
-  Shopify's timestamp, so such an event up to 10 minutes **before** a ledger `started_at` is placed in
-  the new cycle.
-- **Missing cycle.** If the timeline shows a reopen or escalation that the ledger lacks, that event
-  and every later lifecycle event of the dispute stay **unassigned** (`link_status='cycle_missing'`)
-  and a drift row is written. They feed no outcome: the dispute's `outcomeCause` is
-  `pending_cycle_repair` (never shown to merchants as a cause; readers fall back to today's
-  display) until the ledger is repaired through `reconcile_response_cycle`, after which linking
-  re-runs. Putting them in the last known cycle would give that cycle a later cycle's ending, the
-  exact wrong-headline error this plan exists to fix. This is the §1.4 class, and P0's status check
-  catches it.
+**Step B: event to cycle**, from the dispute's own linked lifecycle events in time order. Cycle 1
+opens at the first lifecycle event (or `initiated_at`). A new cycle opens at:
+- a `dispute_inquiry_escalated` event; or
+- a reopen: any `dispute_needs_response`, `dispute_created` or `dispute_pending` that comes **after**
+  a terminal event (§ outcome table) of the current cycle.
+
+The opening event belongs to the new cycle; every later event belongs to it until the next opening
+event. Because both the boundaries and the events come from the same timeline, no clock tolerance is
+needed. The link row stores `cycle_open_event_id`, never a number.
+
+- **Ledger cross-check.** Each timeline cycle ≥ 2 is matched to a `dispute_response_cycles` row with
+  the same trigger whose `started_at` is within 36 hours after the opening event (history cycles use
+  webhook `received_at` or `dispute_events.event_at`, and a reopen seen only by the 02:30 cron can lag
+  by up to a day). A match stores `ledger_cycle_id`. A timeline cycle without a ledger row, or a
+  ledger row without a timeline cycle, writes a drift row for the response-cycle owners. **This plan
+  never writes to the ledger:** `reconcile_response_cycle` retires packs and clears approvals, a
+  filing side effect that principle P2 rules out.
+- **Earlier cycles are never changed by a later one.** A later cycle's events cannot fall into an
+  earlier cycle, because any lifecycle event after a terminal event opens a new cycle. If the
+  lifecycle events of a dispute cannot be ordered into cycles (e.g. two terminal events with the same
+  timestamp), the dispute's cause is `ambiguous` (never shown to merchants; readers fall back to
+  today's display) and a drift row is written.
 
 **Merchant actions** (refunds, cancels, returns, notes, edits) stay at order level. A reader shows an
 action against every dispute on the order whose window contains it, tagged `before_dispute`,
-`during_cycle_<n>` or `after_decision`. Actions never set an outcome.
+`during_cycle_<n>` or `after_decision`, computed when read. Actions never set an outcome.
 
 **Outcome precedence per cycle.** Only the lifecycle events linked to that cycle count.
 
@@ -329,10 +376,13 @@ action against every dispute on the order whose window contains it, tagged `befo
 | `dispute_won` or `dispute_lost` | `bank_decided` (won or lost) |
 | `dispute_prevented` (1 in the seed; message "A … refund is pending") | `unknown_text` until a fixture proves what it means |
 | Several terminal events in one cycle, other than accepted followed by lost | the latest wins; the earlier ones are logged as drift |
-| None; the cycle is decided in our DB and started more than 90 days before the first fetch | `unknown_events_expired` |
-| None; the cycle is decided and its events should still exist | `unknown_missing`: a drift alert, never shown to merchants as a cause |
+| None, and a lifecycle event on the order within this dispute's window is `ambiguous` or `unlinked` | `ambiguous`: never shown to merchants; a failed link must not look like expiry |
+| None; the dispute's terminal date (`finalized_on`) is more than 90 days before the order's first fetch | `unknown_events_expired` |
+| None; the terminal date is within 90 days of a fetch, so the events should exist | `unknown_missing`: a drift alert, never shown to merchants as a cause |
+| None; the order was redacted | the cause persisted before redaction (§4.6); no alert |
 
-`seller_protection_dispute_not_covered` is informational and never terminal. A dispute's headline
+`seller_protection_dispute_not_covered` is informational and never terminal. Whether a
+`…_covered` counterpart exists, and what it maps to, is Q6. A dispute's headline
 cause is its **last** cycle's cause; earlier cycles stay visible in the decided view.
 
 ### 4.4 Derivations (`lib/disputes/timeline/derive.ts`), per dispute cycle
@@ -342,11 +392,9 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
   No app or person is ever named as the responder; no cause is ever attached.
 - `merchantActions[]`: refunds (amount, actor, reason, status: attempted / succeeded / failed),
   cancels (reason, actor), returns, notes.
-- `confirmedRefundBeforeFiling`: the refund record the counsel argument uses. Qualifies only if all
-  hold: the `Refund` has a refund transaction with status `SUCCESS` (read from `Order.refunds` /
-  transactions, not from the event text); amount and currency from that transaction; its processed
-  time before the filing. A `refund_created` without a matching success, a `refund_failure`, or a
-  pending transaction does not qualify. Otherwise the field is null and the argument is not made.
+- The bank-facing refund record is **not** derived here. It stays in `detectCreditAlreadyIssued`
+  (§2.2, P3), which reads `Order.refunds` and transactions. This module only shows the merchant what
+  happened (refund status attempted / succeeded / failed).
 
 ### 4.5 Readers
 
@@ -355,14 +403,17 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | Decided view, outcome email (`decidedResponse.ts`, `decidedView.ts`) | `outcomeCause`, merchant actions | No |
 | Dispute page, new section "During this dispute" | merchant actions, response events | No |
 | Intelligence engine | `outcomeCause` → `withdrawn` / adjudicated split | No |
-| Counsel "credit already issued" | `confirmedRefundBeforeFiling` (successful transaction only) | Yes, allow-listed |
-| Letter chronology | may move onto the table later; the existing allow-list (`chronology.ts`) applies unchanged | Yes, allow-listed |
+| Counsel "credit already issued" (`creditTiming.ts`, P3) | `Order.refunds` + transactions: `SUCCESS`, before the first cycle's `initiated_at`; not this table | Yes, allow-listed |
+| Letter chronology (`orderSource.ts:284`) | today reads the **oldest** 30 events (`orders.ts:135`), so on long timelines the bank chronology misses the newest events (Q3); may move onto the table later; the existing allow-list (`chronology.ts`) applies unchanged | Yes, allow-listed |
 | Fix A (`responded_via_shopify`) | `responseEvents` as a corroborating signal only | No |
 
 ### 4.6 Personal data
 
-- `customers/redact`: delete events of the redacted orders (`orders_to_redact`) — add the table to
-  `app/api/webhooks/customers-redact/route.ts`; `shop/redact` and `retention-cleanup` likewise.
+- `customers/redact`: the existing route (`app/api/webhooks/customers-redact/route.ts`) anonymizes and
+  **never reads `orders_to_redact`**. This plan adds that: for each redacted order, first persist the
+  derived cause per dispute cycle (a row with no personal data), then delete the order's events and
+  links. Redacted orders are exempt from the `unknown_missing` alert. `shop/redact` is covered by the
+  `on delete cascade` from `shops`; `retention-cleanup` covers the table under D5.
 - Staff names and IPs: stored only in `raw`/`actor_name`; shown to the merchant's own users only;
   removed with the shop.
 - Privacy and data-retention pages list the new category (all locales).
@@ -384,11 +435,12 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 
 ## 5. Phases
 
-- **Step 0 — Preserve (this week; July events are expiring daily).** Second copy of the seed
-  (§4.1.1), versioned manifest, migration (table + `seed_redaction_requests`), the import with the
+- **Step 0 — Preserve (this week; July events are expiring daily).** Migration (the events table,
+  the links table empty, `seed_redaction_requests`, the `ops-private` bucket), `contentKey.ts`, the
+  second copy of the seed and its versioned manifest (§4.1.1), the import with its target guard and
   manifest checks, the redaction queue in the two redact handlers and `redact-seed.mjs` (§4.6), and
-  deleting the local copy. The PR records the post-check SQL output. Nothing else. Done when T0, T0b,
-  T8 and T12 pass.
+  deleting the local copy. The PR records the post-check SQL output. Nothing else: no linking, no
+  collector. Done when T0, T0b, T8a, T12 and T13 pass.
 - **P0 — Collect and classify.** Collector with the retention rule, classifier, backfill of what
   Shopify still holds, Admin-only view, drift counter, DB-vs-timeline status check (§1.4 class).
   Acceptance: §1.3 reproduces from seed + live data, per shop.
@@ -396,7 +448,10 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
   **Gated on G1 (§1.4):** PR #940 released to prod and verified, and zero outcome-after-reopen
   disagreements.
 - **P2 — Merchant section "During this dispute"** (six locales), incl. response facts (§2.4).
-- **P3 — Refund record into the counsel "credit already issued" argument.**
+- **P3 — Tighten `detectCreditAlreadyIssued`** (`creditTiming.ts`): `SUCCESS` refund transaction,
+  amount and currency from it, before the first cycle's `initiated_at` (§2.2). No post-dispute refund
+  reaches a bank while CLAUDE.md's Fatal-loss rule stands.
+- **Own fix, outside this plan (Q3):** the letter chronology reads the oldest 30 events.
 - **P4 — Wider sources (decisions):** `read_returns`, helpdesk connectors, the other dispute tool (Q1).
 
 ## 6. One model: how this plugs into what exists
@@ -406,9 +461,10 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | `lib/disputes/decidedResponse.ts` (responder `we/shopify/sent_before_install/none`, `holdReason`) | `derive.ts` feeds it; responder values unchanged; `outcomeCause` added as input to the explanation |
 | `decided-dispute-view.plan.md` §5.1 `refunded_after_decision`, `cancelled_after_dispute` | computed from the table instead of order snapshots |
 | `historical-intelligence-engine.plan.md` (`withdrawn` excluded from adjudication; "no timestamped refund-event table" gap) | `outcomeCause` fills `withdrawn`; the table closes the named gap |
-| Fix A (`mein-maison-status-and-no-return.plan.md`) | response events corroborate; the API still cannot tell Admin from Shopify, so Fix A's actor stays "Shopify" |
-| `lib/automation/fatalLoss.ts` | unchanged |
-| `customerCommSource.ts` (oldest 30 events) | its truncation is a bug in itself (Q3); moves to the table in P0 |
+| Fix A (`mein-maison-status-and-no-return.plan.md`, branch `docs/mein-maison-fixes-plan`) | response events corroborate; the API still cannot tell Admin from Shopify, so Fix A's actor stays "Shopify" |
+| `lib/automation/fatalLoss.ts` | unchanged; its "never cite a post-dispute refund" rule bounds P3 |
+| `lib/automation/creditTiming.ts` `detectCreditAlreadyIssued`, fed by `orderSource.ts:219-227` | **the** "credit already issued" argument; P3 tightens it, nothing new is built beside it |
+| `customerCommSource.ts` and the letter chronology (both on the oldest 30 events, `orders.ts:135`) | the truncation is a bug in itself (Q3, own fix); both may move onto the table after P0 |
 
 ## 7. Decisions needed
 
@@ -420,6 +476,12 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 - **D4** Capture timeline at order ingest for all orders (keeps pre-dispute history) or only for
   disputed orders (accept the gap). Needs a volume measurement first.
 - **D5** Retention: same as orders. Recommend yes.
+- **D6** Intelligence-engine mapping. Recommend: `customer_closed_inquiry` → `withdrawn` (excluded
+  from adjudication, per `historical-intelligence-engine.plan.md`, branch
+  `feat/intelligence-engine-phases-b-e`); `merchant_refunded`, `merchant_accepted` → settled
+  (excluded from the win rate, counted separately); `bank_decided`, `resolved_in_favour` →
+  adjudicated; `inquiry_lost_other` → adjudicated lost; `escalated` → not an outcome; `ambiguous`,
+  `unknown_*` → excluded and counted.
 
 ## 8. Acceptance tests
 
@@ -430,28 +492,43 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 - T0b Redacted path, on a fixture seed: redact one multi-dispute order → version 2 is appended with
   counts reduced by exactly its lines and events; the import accepts the redacted file against
   version 2, refuses the unredacted file, and the post-check matches version 2.
-- T8 A re-run of the import inserts 0 rows. A live fetch of a seed order adopts the seed rows (fills
-  `event_gid`, adds no rows). Two events identical in every field within one fetch are both kept, as
-  `occurrence` 1 and 2.
+- T8a (Step 0) A re-run of the import inserts 0 rows. Two events identical in every field within one
+  line are both kept, as `occurrence` 1 and 2. Import and a unit test of `contentKey.ts` give the same
+  key for the same fixture event.
+- T8b (P0) A live fetch of a seed order adopts the seed rows (fills `event_gid`, adds no rows). A live
+  event identical to a row that already has a different `event_gid` is inserted with the next
+  `occurrence`, not merged.
+- T13 (Step 0) The import refuses when the env file's `SUPABASE_URL` ref is not the prod ref, and when
+  the CLI guard fails; it prints both refs.
 - T1 Every action seen in the survey classifies; an unseen action increments the drift counter.
 - T2 #99445 → `outcomeCause = merchant_refunded`; response event on 29 Sep is `response_after_refund`;
   no responder names Inbox Unity; no field or copy says the refund caused the response.
-- T10 `confirmedRefundBeforeFiling` is null for: a `refund_created` with no successful transaction; a
-  `refund_failure` (fixture from the 24 in the survey); a pending transaction. It is set, with amount
-  and currency from the transaction, only for a `SUCCESS` refund transaction processed before filing.
-- T11 A dispute whose timeline shows a reopen missing from the ledger: its later lifecycle events are
-  `cycle_missing`, its `outcomeCause` is `pending_cycle_repair`, and the earlier cycle's outcome is
-  unchanged. After the ledger is repaired, linking re-runs and the new cycle gets the outcome.
+- T10 (P3) `detectCreditAlreadyIssued` does not trigger for: a refund with no `SUCCESS` transaction; a
+  failed refund (fixture from the 24 in the survey); a pending transaction; a successful refund
+  processed after the first cycle's `initiated_at` (including a cycle-1 inquiry refund on a cycle-2
+  chargeback). It triggers, with amount and currency from the transaction, only for a `SUCCESS`
+  refund processed before that time. `fatalLoss.ts` tests unchanged.
+- T11 An unanswered inquiry that escalated (no ledger row): the timeline gives cycle 2, its
+  `dispute_lost` is cycle 2's `bank_decided`, cycle 1 is `escalated`, a drift row is written, and the
+  ledger is not written. A won dispute that reopened: cycle 1 stays won, cycle 2 carries the new
+  outcome. A late ledger insert that renumbers cycles changes no stored link.
 - T12 A `customers/redact` for a seed order while `seed_copies_present` is set creates a
   `seed_redaction_requests` row and an ops email, and redacts the table rows at once. Running
   `redact-seed.mjs` on it removes the lines from every existing copy, leaves all copies with one hash,
   appends one manifest version, and marks the request applied. With the flag cleared, the handler
   creates no request.
-- T3 Per shop: 117 `merchant_refunded` (Mein Maison), 22 `customer_closed_inquiry`, 18 `resolved_in_favour`
-  (Cay), 164 `bank_decided` lost, 6 `merchant_accepted`, 31 `unknown_events_expired`.
+- T3 Per shop and per cause, on the seed plus live data, every cause in the outcome table
+  including `bank_decided` won, `inquiry_lost_other`, `ambiguous` and `escalated`. Survey anchors to
+  reproduce: 117 `merchant_refunded` (Mein Maison), 22 `customer_closed_inquiry`, 18
+  `resolved_in_favour` (Cay), 164 `bank_decided` lost, 6 `merchant_accepted`, 31
+  `unknown_events_expired`. The full per-shop table is produced by P0 and reviewed before P1; the
+  five unanswered lost Mein Maison inquiries on record must come out as `inquiry_lost_other` or
+  expired, never `merchant_refunded`. A difference from the anchors is explained, not tuned away.
 - T4 Nothing in this plan changes a build or filing decision (gate inventory test unchanged).
 - T5 Only allow-listed fields reach a bank artifact (static test over writer and chronology inputs).
-- T6 `customers/redact` and `shop/redact` remove the events; retention cleanup covers the table.
+- T6 `customers/redact` persists each redacted order's derived causes, then removes its events and
+  links, and raises no `unknown_missing` for it; `shop/redact` removes them by cascade; retention
+  cleanup covers the table.
 - T7 Text-derived fields parse the real strings in the fixtures (English; unknown text → `unknown`, never a guess).
 - T9 Linking, on fixtures built from real seed orders:
   - two disputes on one order with different amounts: each event reaches the right dispute;
@@ -468,6 +545,8 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 - Retention: a stalled collector loses data permanently. Alert when an open dispute's timeline is older
   than 24 h.
 - Shopify UI text changes: text-derived fields fall back to `unknown`, never a wrong value.
+- A decided dispute whose terminal event was never stored raises `unknown_missing` within a day of
+  the next fetch (the 24 h alert above covers only open disputes).
 - The shop-wide feed may not filter as hoped (Q2); per-order fetch is the default.
 
 ## 10. Critic rounds
@@ -504,8 +583,8 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 
 | # | Finding | Change |
 |---|---|---|
-| R3-1 | `refund_created` is an attempt, not a credit; bank argument needs a confirmed refund | §2.2, §4.4 `confirmedRefundBeforeFiling` (SUCCESS transaction, amount, currency, processed time); §4.5; T10 |
-| R3-2 | A missing cycle fed the last known cycle's outcome | §4.3.1: events stay unassigned, `pending_cycle_repair`, re-link after ledger repair; T11 |
+| R3-1 | `refund_created` is an attempt, not a credit; bank argument needs a confirmed refund | §2.2, §4.4 `confirmedRefundBeforeFiling` (SUCCESS transaction, amount, currency, processed time); §4.5; T10 (superseded in rev 3.3: §10.5 C4-1) |
+| R3-2 | A missing cycle fed the last known cycle's outcome | §4.3.1: events stay unassigned, `pending_cycle_repair`, re-link after ledger repair; T11 (superseded in rev 3.3: §10.5 C4-2) |
 | R3-3 | "Refund triggered response" claims causation from timing | renamed `response_after_refund` everywhere; §1.3, §2.4, §4.3, §4.4; T2 |
 | R3-4 | The seed backup holds personal data until deleted | §4.6 redaction applies to both seed copies; T12 |
 
@@ -516,9 +595,22 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | R4-1 | Redaction reissues the manifest, but import and T0 still required the original hash and counts | §4.1.1 versioned manifest with a validated chain; import and T0 check the latest version; T0b tests the redacted path |
 | R4-2 | No one named to redact the local copy; the webhook cannot reach it | §4.6 queue (`seed_redaction_requests` + ops email), the maintainer applies with `redact-seed.mjs` within 7 days; local copy deleted on Step 0 day; T12 |
 
+### 10.5 Critic round 4 → rev 3.3
+
+| # | Finding | Change |
+|---|---|---|
+| C4-1 | Bank refund rule admitted post-dispute refunds (a confession under `fatalLoss.ts`/CLAUDE.md) and duplicated `creditTiming.ts` | §2.2, §4.4, §4.5, §6, P3: tighten `detectCreditAlreadyIssued`, keep "before the first cycle's `initiated_at`"; T10 |
+| C4-2 | Ledger has no row for escalations/reopens with no prior response; ledger repair has filing side effects; cycle numbers renumber | §4.3.1 Step B: cycles from the timeline, ledger as cross-check only, never written; link stores the opening event, not a number; T11 |
+| C4-3 | Import guard checked the CLI link, not the env file it writes through | §4.1.1 target guard on the env file's ref plus the CLI guard; T13 |
+| minor | bucket missing; T8 needed P0; identical live events; one hashing module; S1 attribution; expiry keyed on terminal date + `ambiguous`; currency skip; 10-min tolerance; disappearance; decided-dispute alert; redaction vs evidence; schema gaps; T3; branch citations | §4.1, §4.1.1, §4.2, §4.3.1, §4.6, §1.2, D6, T3, T6, T8a/b, §9, §6 |
+
 ## 11. Open questions
 
 - **Q1** Which tool writes `ai-response.pdf` / `static-response.pdf` on Mein Maison disputes?
 - **Q2** Does `QueryRoot.events` support `action:` and subject-id filters on 2026-01?
-- **Q3** `orders.ts:135` fetches the oldest 30 events: a separate bug in `customerCommSource`?
+- **Q3** `orders.ts:135` fetches the oldest 30 events. Confirmed to feed both `customerCommSource` and
+  the bank letter chronology (`orderSource.ts:284`): own fix, own PR, not in this plan.
+- **Q5** Does Shopify render event messages at read time (so a customer or staff rename changes
+  `content_key` for seed rows that never get an `event_gid`)? P0's match-rate report answers it.
+- **Q6** Is there a `seller_protection_dispute_covered` event, and what does it map to?
 - **Q4** Is retention exactly 90 days for every event type? One probe on an old order.
