@@ -459,6 +459,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // null when the pack lacks the data (e.g. payment gateway on a
     // non-Shopify-Payments order).
     cardNetwork: orderContext.cardNetwork,
+    /* Payment provider for the document mirror's frame (title + "Payment
+     * method" row) — the same `pack_json.payment_context` the defence job
+     * hands `disputeFrame` for the PDF. Without it a PayPal dispute's HTML
+     * view printed "Chargeback response" and "Card network —" (Mein Maison
+     * #102083, 2026-09-29). */
+    paymentFamily:
+      ((packRow?.pack_json as { payment_context?: { family?: string | null } } | null)?.payment_context?.family as string | null | undefined) ?? null,
+    paymentLabel:
+      ((packRow?.pack_json as { payment_context?: { label?: string | null } } | null)?.payment_context?.label as string | null | undefined) ?? null,
     cardLast4: orderContext.cardLast4,
     transactionDate: orderContext.transactionDate,
     paymentGateway: orderContext.paymentGateway,

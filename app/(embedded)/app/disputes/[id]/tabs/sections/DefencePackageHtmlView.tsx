@@ -44,6 +44,7 @@ import {
 } from "@/lib/defence/render/lineItems";
 import type { ReasonCodeModuleKey } from "@/lib/defence/types";
 import { formatMoneyDisplay, humanizeEnum, reasonCodeForNetwork } from "@/lib/defence/render/formatting";
+import { disputeFrame, responseTitle } from "@/lib/defence/counsel/frame";
 import { DOCUMENT_COLORS } from "@/lib/defence/render/documentTheme";
 import {
   dateParts,
@@ -145,6 +146,12 @@ export interface DisputeContextLike {
   amount?: number | string | null;
   currencyCode?: string | null;
   cardNetwork?: string | null;
+  /** Payment family / label / phase — the same inputs `disputeFrame` gets
+   *  for the PDF, so the title and the "Payment method" row agree with the
+   *  document the bank or provider receives. */
+  paymentFamily?: string | null;
+  paymentLabel?: string | null;
+  phase?: string | null;
   cardLast4?: string | null;
   paymentGateway?: string | null;
   financialStatus?: string | null;
@@ -540,7 +547,13 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   // Case Details rows come from the shared builder so the PDF and this view
   // show the same fields in the same order. `familyKey` drives the per-family
   // deny list (fraud disputes hide Fulfillment status).
+  const frame = disputeFrame({
+    paymentFamily: dispute?.paymentFamily ?? null,
+    paymentLabel: dispute?.paymentLabel ?? null,
+    phase: dispute?.phase ?? null,
+  });
   const caseRows = buildCaseDetailsRows({
+    paymentMethodLabel: frame.provider === "card" ? null : frame.providerName,
     disputeIdShort: disputeIdShort(dispute?.disputeGid),
     merchantName: merchant,
     cardNetwork: dispute?.cardNetwork ?? null,
@@ -610,7 +623,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
       <div style={css.doc}>
         <div style={css.bar} />
         <div style={css.metaRow}>
-          <span style={css.eyebrow}>Chargeback response</span>
+          <span style={css.eyebrow}>{responseTitle(frame)}</span>
           <span style={css.metaRight}>{fmtIso(row.generated_at)}</span>
         </div>
         <div style={css.title}>Dispute {disputeIdShort(dispute?.disputeGid)}</div>

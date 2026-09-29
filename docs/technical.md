@@ -3739,6 +3739,11 @@ Address rule:
   in-transit record undated (`shipment_in_transit`), plus `whole_order_in_shipment` when coverage is verified — never
   delivery, receipt or loss, never related to the order date or the dispute. No carrier record at all still reaches
   the general brief. Pinned by `lib/defence/counsel/__tests__/briefSelection.test.ts`.
+- **HTML view frame (2026-09-29).** `DefencePackageHtmlView` builds the same `disputeFrame` as the PDF from
+  `paymentFamily` / `paymentLabel` (the workspace API reads `pack_json.payment_context`) and `phase`: the eyebrow is
+  `responseTitle(frame)` ("Dispute response" for PayPal/Klarna) and Case Details gets `paymentMethodLabel`, so a
+  non-card dispute shows "Payment method: PayPal" instead of "Card network —". Pinned by
+  `lib/defence/__tests__/htmlViewDisputeFrame.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then

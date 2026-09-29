@@ -125,6 +125,10 @@ export interface WorkspaceDispute {
    *  embedded Review & Submit tab so it matches the PDF rendering.
    *  Each field can still be null when the pack lacks the data. */
   cardNetwork?: string | null;
+  /** `pack_json.payment_context` — drives the document frame (PayPal /
+   *  Klarna disputes are not "chargebacks" and have no card network). */
+  paymentFamily?: string | null;
+  paymentLabel?: string | null;
   cardLast4?: string | null;
   transactionDate?: string | null;
   paymentGateway?: string | null;
