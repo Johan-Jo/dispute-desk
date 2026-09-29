@@ -482,17 +482,17 @@ describe("applyDisputeSnapshot", () => {
     expect(updateCalls.find((u) => "submission_state" in u)).toBeUndefined();
   });
 
-  it("11. terminal-state downgrade attempt — status not overwritten, warning emitted", async () => {
-    const { client, upsertCalls } = setupClient({
+  it("11. reopened after an outcome — status written, outcome cleared and kept (Mein Maison #94534)", async () => {
+    const { client, upsertCalls, updateCalls } = setupClient({
       existing: {
         id: "dispute-1",
-        status: "lost",
+        status: "won",
         due_at: null,
         submitted_at: null,
-        final_outcome: "lost",
+        final_outcome: "won",
         submission_state: null,
         new_dispute_alert_sent_at: null,
-        shopify_updated_at: null,
+        shopify_updated_at: "2026-08-26T07:48:00Z",
         dispute_evidence_gid: null,
       },
       upsertedId: "dispute-1",
@@ -500,13 +500,49 @@ describe("applyDisputeSnapshot", () => {
 
     const result = await applyDisputeSnapshot({
       shopId: "shop-1",
-      source: "webhook",
-      snapshot: { ...BASE_SNAPSHOT, status: "needs_response" },
+      source: "cron",
+      snapshot: { ...BASE_SNAPSHOT, status: "under_review", shopifyUpdatedAt: "2026-09-22T00:00:00Z" },
       client,
     });
 
-    expect(result.guardWarnings.join("|")).toMatch(/terminal/);
-    expect(upsertCalls[0]).not.toHaveProperty("status");
+    expect(result.guardWarnings.join("|")).not.toMatch(/downgrade/);
+    expect(upsertCalls[0].status).toBe("under_review");
+    const reopen = updateCalls.find((u) => "previous_final_outcome" in u);
+    expect(reopen).toMatchObject({
+      final_outcome: null,
+      closed_at: null,
+      previous_final_outcome: "won",
+      reopened_after_close_at: "2026-09-22T00:00:00Z",
+    });
+    expect(mockEmit).toHaveBeenCalledWith(expect.objectContaining({ eventType: "dispute_reopened_after_close" }));
+  });
+
+  it("11b. a second outcome after a reopen gets its own outcome event (not deduplicated against the first)", async () => {
+    const { client } = setupClient({
+      existing: {
+        id: "dispute-1",
+        status: "under_review",
+        due_at: null,
+        submitted_at: null,
+        final_outcome: null,
+        submission_state: null,
+        new_dispute_alert_sent_at: null,
+        shopify_updated_at: "2026-09-22T00:00:00Z",
+        dispute_evidence_gid: null,
+        reopened_after_close_at: "2026-09-22T00:00:00Z",
+      } as never,
+      upsertedId: "dispute-1",
+    });
+
+    const result = await applyDisputeSnapshot({
+      shopId: "shop-1",
+      source: "cron",
+      snapshot: { ...BASE_SNAPSHOT, status: "won", finalizedOn: "2026-10-20T00:00:00Z", shopifyUpdatedAt: "2026-10-20T00:00:00Z" },
+      client,
+    });
+
+    const outcome = result.events.find((e) => e.type === "OUTCOME_DETECTED");
+    expect(outcome?.eventKey).toBe("dispute-1:OUTCOME_DETECTED:won:after_reopen_2026-09-22T00:00:00Z");
   });
 
   it("12. unknown shopId (empty) → skipped_unknown_shop", async () => {

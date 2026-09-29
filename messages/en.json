@@ -486,6 +486,7 @@
     "inquiryTitle": "Inquiry {id}",
     "caseTitle": "Case {id}",
     "inquiryBadge": "Inquiry",
+    "reopenedBadge": "Reopened",
     "chargebackBadge": "Chargeback",
     "phaseUnknown": "Unknown",
     "phaseLabel": "Phase",
@@ -3747,7 +3748,7 @@
       },
       "bankClaim": {
         "title": "Why DisputeDesk asks for the bank's claim",
-        "body": "For most disputes, the reason code tells DisputeDesk what the customer is disputing, and the response is built from that. Two kinds of dispute are different:\n\n• Reopened disputes: Shopify has put a dispute you already answered back to \"needs response\". The bank is asking for a new response, and your earlier one no longer settles it.\n• \"General\" disputes with no network reason code: the bank didn't say which kind of dispute it is.\n\nIn both cases, the only statement of what the bank wants answered is the bank's claim (Shopify calls it the issuer claim). Shopify shows it in the chargeback details on the order page in your Shopify admin, but doesn't share it with apps, so DisputeDesk can't read it on its own.\n\nWhat to do:\n1. Open the dispute in DisputeDesk and use \"Open the order in Shopify\".\n2. Find the bank's claim in the chargeback details and download it (usually a PDF), or copy its text.\n3. Upload the file or paste the text in the \"Add the bank's claim\" card and save. If Shopify shows no claim for the dispute, tick \"Shopify shows no claim for this dispute\" instead — banks don't always provide one.\n\nDisputeDesk then rebuilds the response so it answers the claim. The claim is only used to decide what the response must address; it is never quoted or sent back to the bank.\n\nUntil the claim is added, DisputeDesk won't send a response for that dispute, including on the deadline. We also email you when a dispute starts needing it."
+        "body": "For most disputes, the reason code tells DisputeDesk what the customer is disputing, and the response is built from that. Two kinds of dispute are different:\n\n• Reopened disputes: Shopify has put a dispute you already answered back to \"needs response\". The bank is asking for a new response, and your earlier one no longer settles it.\n• \"General\" disputes with no network reason code: the bank didn't say which kind of dispute it is.\n\nIn both cases, the only statement of what the bank wants answered is the bank's claim (Shopify calls it the issuer claim). Shopify shows it in the chargeback details on the order page in your Shopify admin, but doesn't share it with apps, so DisputeDesk can't read it on its own.\n\nWhat to do:\n1. Open the dispute in DisputeDesk and use \"Open the order in Shopify\".\n2. Find the bank's claim in the chargeback details and download it (usually a PDF), or copy its text.\n3. Upload the file or paste the text in the \"Add the bank's claim\" card and save. If Shopify shows no claim for the dispute, tick \"Shopify shows no claim for this dispute\" instead — banks don't always provide one.\n\nDisputeDesk then rebuilds the response so it answers the claim. The claim is only used to decide what the response must address; it is never quoted or sent back to the bank.\n\nUntil the claim is added, DisputeDesk won't send a response for that dispute, including on the deadline. We also email you when a dispute starts needing it.\n\nReopened disputes carry a \"Reopened\" badge in the disputes list and on the dispute page, including a dispute Shopify reopens after it was decided."
       }
     },
     "embedded": {
@@ -5201,6 +5202,7 @@
       "admin_override_cleared": "Support adjustment reverted",
       "dispute_resynced": "Dispute refreshed from Shopify",
       "response_cycle_reopened": "Reopened — new response needed",
+      "dispute_reopened_after_close": "Reopened by Shopify after a decision",
       "escalated_to_chargeback": "Escalated from inquiry to chargeback"
     },
     "eventDescriptions": {
