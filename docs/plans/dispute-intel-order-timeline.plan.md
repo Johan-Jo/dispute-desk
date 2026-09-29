@@ -1,8 +1,8 @@
 # Dispute intel from the order timeline: what happened, outside DisputeDesk
 
-**Status:** rev 3, 2026-09-29. Research complete (read-only, prod). Critic round 1: REVISE (12 findings,
+**Status:** rev 3.1, 2026-09-29. Research complete (read-only, prod). Critic round 1: REVISE (12 findings,
 §10). Critic round 2: fine to present, not yet approved to implement (5 findings, all addressed in
-rev 3; §10.2). No implementation. **Step 0 is gated on §4.1.1; P1 is gated on PR #940 (G1, §1.4).**
+rev 3; §10.2). Critic round 3: basis for implementation once 4 points fixed (all fixed in rev 3.1; §10.3). No implementation. **Step 0 is gated on §4.1.1; P1 is gated on PR #940 (G1, §1.4).**
 **Origin:** Mein Maison #99445, an inquiry that showed "lost". The Shopify order timeline showed the
 real story: the merchant's support app, then a staff member, refunded the customer ("wrong goods
 delivered"), and Shopify closed the inquiry as refunded. None of that was visible in DisputeDesk.
@@ -78,7 +78,7 @@ The cause is read from the event, never from `disputes.status`.
 | Finding | Count |
 |---|---|
 | Orders refunded after the dispute opened | 193 disputes (order-level; 28 orders carry 2–3 disputes) |
-| Inquiry "response sent" within 10 min after a refund (Shopify's response on a refund, not messaging) | 97 of 245 inquiries with a response event |
+| Inquiry "response sent" within 10 min after a refund (a timing correlation; the data does not show that the refund caused the response) | 97 of 245 inquiries with a response event |
 | Refund blocked on an open chargeback (`refund_failure`) | 24. **No verified double loss among the candidates checked.** Method: a `refund_success` after a chargeback opened, on a chargeback later lost: 2 candidates, both verified as refunds that closed the case with no chargeback deduction. This covers those 2, not the population: refunds outside the survey window, on expired timelines (31 disputes) or by another path were not checked |
 | Cancelled after the dispute, with reason | 18: 9 Mein Maison "Customer changed", 4 Blume "Fraudulent order" (3 of those 4 had been fulfilled) |
 | Customer tagged by merchant's fraud tooling (`fraud-order-detected`) | ≥ 8 lost Blume chargebacks |
@@ -121,12 +121,15 @@ present a stale outcome as the explained truth.
    `merchant_accepted`, `customer_closed_inquiry`, `resolved_in_favour`, or `unknown_events_expired`.
    Reporting, the decided view, the outcome email and the intelligence engine stop counting settlements
    as verdicts, and show the gap where events expired instead of hiding it.
-2. **The refund record for the counsel argument.** Timestamps of `refund_created` (with actor) feed the
-   stance's "credit already issued" argument, the one positive bank-facing use (P3).
+2. **The refund record for the counsel argument.** A **confirmed** refund (successful refund
+   transaction, amount, currency, processed time; §4.4) feeds the stance's "credit already issued"
+   argument, the one positive bank-facing use (P3). `refund_created` records an attempt and never
+   qualifies on its own; the survey holds 24 failed refunds.
 3. **The merchant sees what they and their tools did during the dispute**: refunds, cancels, returns,
    notes, with who did it, on the dispute page and in the outcome email.
-4. **Honest response facts.** "A response was sent through Shopify on …" with, where true, "right after
-   the refund on …". Not who sent it (§0.2).
+4. **Honest response facts.** "A response was sent through Shopify on …" and, where a refund came
+   shortly before, the two facts side by side in time order ("Refund on …", "Response on …"). Never who
+   sent it (§0.2), and never that the refund caused it (§4.3).
 5. **Signals for later:** the other dispute tool, inquiry-refund patterns per merchant, merchant fraud
    tags.
 
@@ -240,8 +243,10 @@ per CLAUDE.md):
 
 ### 4.3 Classifier (`lib/disputes/timeline/classify.ts`, versioned)
 
-Categories: `dispute_lifecycle`, `response_sent`, `refund_triggered_response` (a response event within
-10 min after a `refund_success`), `refund` (created/success/failure; actor from `refund_created`),
+Categories: `dispute_lifecycle`, `response_sent`, `response_after_refund` (a response event within
+10 min after a `refund_success`: a timing fact only; no event type or message seen so far proves the
+refund caused the response, and no field or copy may claim it unless one is found and pinned by a
+fixture), `refund` (created/success/failure; actor from `refund_created`),
 `cancel`, `return`, `note`, `staff_comment`, `customer_email`, `fulfilment`, `fulfilment_request`,
 `order_edit`, `payout`, `risk`, `other`.
 **Text-derived fields (pinned by tests on real strings):** cancel reason (from `additionalContent`),
@@ -283,9 +288,14 @@ at the ledger's `started_at`. An event belongs to the cycle whose `[start, next 
   `dispute_needs_response` of a reopen) belongs to the **new** cycle. Our `started_at` can lag
   Shopify's timestamp, so such an event up to 10 minutes **before** a ledger `started_at` is placed in
   the new cycle.
-- **Missing cycle.** If the timeline shows a reopen or escalation that the ledger lacks, the event
-  goes to the last known cycle and a `cycle_missing` drift row is written. This is the §1.4 class,
-  and P0's status check catches it.
+- **Missing cycle.** If the timeline shows a reopen or escalation that the ledger lacks, that event
+  and every later lifecycle event of the dispute stay **unassigned** (`link_status='cycle_missing'`)
+  and a drift row is written. They feed no outcome: the dispute's `outcomeCause` is
+  `pending_cycle_repair` (never shown to merchants as a cause; readers fall back to today's
+  display) until the ledger is repaired through `reconcile_response_cycle`, after which linking
+  re-runs. Putting them in the last known cycle would give that cycle a later cycle's ending, the
+  exact wrong-headline error this plan exists to fix. This is the §1.4 class, and P0's status check
+  catches it.
 
 **Merchant actions** (refunds, cancels, returns, notes, edits) stay at order level. A reader shows an
 action against every dispute on the order whose window contains it, tagged `before_dispute`,
@@ -314,10 +324,15 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 ### 4.4 Derivations (`lib/disputes/timeline/derive.ts`), per dispute cycle
 
 - `outcomeCause` (§2.1), from lifecycle events only.
-- `responseEvents[]`: `{ at, via: 'disputedesk' (our save record) | 'through_shopify', afterRefund: bool }`.
-  No app or person is ever named as the responder.
-- `merchantActions[]`: refunds (amount, actor, reason), cancels (reason, actor), returns, notes.
-- `refundBeforeFiling`: the timestamped refund record the counsel argument uses.
+- `responseEvents[]`: `{ at, via: 'disputedesk' (our save record) | 'through_shopify', afterRefundWithin10Min: bool }`.
+  No app or person is ever named as the responder; no cause is ever attached.
+- `merchantActions[]`: refunds (amount, actor, reason, status: attempted / succeeded / failed),
+  cancels (reason, actor), returns, notes.
+- `confirmedRefundBeforeFiling`: the refund record the counsel argument uses. Qualifies only if all
+  hold: the `Refund` has a refund transaction with status `SUCCESS` (read from `Order.refunds` /
+  transactions, not from the event text); amount and currency from that transaction; its processed
+  time before the filing. A `refund_created` without a matching success, a `refund_failure`, or a
+  pending transaction does not qualify. Otherwise the field is null and the argument is not made.
 
 ### 4.5 Readers
 
@@ -326,7 +341,7 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | Decided view, outcome email (`decidedResponse.ts`, `decidedView.ts`) | `outcomeCause`, merchant actions | No |
 | Dispute page, new section "During this dispute" | merchant actions, response events | No |
 | Intelligence engine | `outcomeCause` → `withdrawn` / adjudicated split | No |
-| Counsel "credit already issued" | `refundBeforeFiling` | Yes, allow-listed |
+| Counsel "credit already issued" | `confirmedRefundBeforeFiling` (successful transaction only) | Yes, allow-listed |
 | Letter chronology | may move onto the table later; the existing allow-list (`chronology.ts`) applies unchanged | Yes, allow-listed |
 | Fix A (`responded_via_shopify`) | `responseEvents` as a corroborating signal only | No |
 
@@ -337,6 +352,11 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 - Staff names and IPs: stored only in `raw`/`actor_name`; shown to the merchant's own users only;
   removed with the shop.
 - Privacy and data-retention pages list the new category (all locales).
+- **The seed file copies** (the maintainer's machine and the `ops-private` bucket, §4.1.1) are
+  personal data until deleted. While they exist, every `customers/redact` or `shop/redact` received
+  for a shop in the seed is also applied to them: the affected lines are removed from both copies,
+  the manifest is re-issued with the new sha256 and counts (the original hash stays recorded as the
+  import's source), and the redaction is logged. If the copies are already deleted, nothing to do.
 
 ## 5. Phases
 
@@ -384,8 +404,16 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
   `event_gid`, adds no rows). Two events identical in every field within one fetch are both kept, as
   `occurrence` 1 and 2.
 - T1 Every action seen in the survey classifies; an unseen action increments the drift counter.
-- T2 #99445 → `outcomeCause = merchant_refunded`; response event on 29 Sep is `refund_triggered_response`;
-  no responder names Inbox Unity.
+- T2 #99445 → `outcomeCause = merchant_refunded`; response event on 29 Sep is `response_after_refund`;
+  no responder names Inbox Unity; no field or copy says the refund caused the response.
+- T10 `confirmedRefundBeforeFiling` is null for: a `refund_created` with no successful transaction; a
+  `refund_failure` (fixture from the 24 in the survey); a pending transaction. It is set, with amount
+  and currency from the transaction, only for a `SUCCESS` refund transaction processed before filing.
+- T11 A dispute whose timeline shows a reopen missing from the ledger: its later lifecycle events are
+  `cycle_missing`, its `outcomeCause` is `pending_cycle_repair`, and the earlier cycle's outcome is
+  unchanged. After the ledger is repaired, linking re-runs and the new cycle gets the outcome.
+- T12 A `customers/redact` for a seed order while the seed copies exist removes its lines from both
+  copies and re-issues the manifest.
 - T3 Per shop: 117 `merchant_refunded` (Mein Maison), 22 `customer_closed_inquiry`, 18 `resolved_in_favour`
   (Cay), 164 `bank_decided` lost, 6 `merchant_accepted`, 31 `unknown_events_expired`.
 - T4 Nothing in this plan changes a build or filing decision (gate inventory test unchanged).
@@ -418,7 +446,7 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | C1 | 90-day retention; survey is the only copy | §0.1, Step 0, retention rule, T0, seed preserved |
 | C2 | P3 gates re-created stand-down paths | removed; P2 principle; D3 rewritten; T4 inverted |
 | M3 | outcome breakdown misread | §1.3 rebuilt from events; expired bucket; per shop; T3 |
-| M4 | responder attribution unsupported | §0.2; responders cut to disputedesk / through_shopify; `refund_triggered_response` |
+| M4 | responder attribution unsupported | §0.2; responders cut to disputedesk / through_shopify; `refund_triggered_response` (renamed `response_after_refund` in rev 3.1) |
 | M5 | "229 unattributed" mostly attributable | §1.3 file families; Q1 |
 | M6 | duplicates existing models | §6 |
 | M7 | chronology contradiction; S1 wrong | §1.2 corrected; §4.5 allow-list; T5 |
@@ -438,6 +466,15 @@ cause is its **last** cycle's cause; earlier cycles stay visible in the decided 
 | R2-3 | Seed custody and import were not verifiable | §4.1.1 manifest (full sha256, bytes, rows, events, errors), holder, second copy, corrected path, import refusals; T0 |
 | R2-4 | "No merchant paid twice" was overstated | §1.3 narrowed to the 2 candidates checked |
 | R2-5 | The reopened-case fix must land before P1 | §1.4 facts corrected (#99123 has no evidence after the reopen), PR #940 status, gate G1 |
+
+### 10.3 Critic round 3 → rev 3.1
+
+| # | Finding | Change |
+|---|---|---|
+| R3-1 | `refund_created` is an attempt, not a credit; bank argument needs a confirmed refund | §2.2, §4.4 `confirmedRefundBeforeFiling` (SUCCESS transaction, amount, currency, processed time); §4.5; T10 |
+| R3-2 | A missing cycle fed the last known cycle's outcome | §4.3.1: events stay unassigned, `pending_cycle_repair`, re-link after ledger repair; T11 |
+| R3-3 | "Refund triggered response" claims causation from timing | renamed `response_after_refund` everywhere; §1.3, §2.4, §4.3, §4.4; T2 |
+| R3-4 | The seed backup holds personal data until deleted | §4.6 redaction applies to both seed copies; T12 |
 
 ## 11. Open questions
 
