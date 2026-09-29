@@ -485,6 +485,7 @@
     "inquiryTitle": "Consulta {id}",
     "caseTitle": "Caso {id}",
     "inquiryBadge": "Consulta",
+    "reopenedBadge": "Reabierta",
     "chargebackBadge": "Contracargo",
     "phaseUnknown": "Desconocido",
     "phaseLabel": "Fase",
@@ -3748,7 +3749,7 @@
       },
       "bankClaim": {
         "title": "Por qué DisputeDesk pide la reclamación del banco",
-        "body": "En la mayoría de las disputas, el código de motivo le indica a DisputeDesk qué disputa el cliente, y la respuesta se crea a partir de él. Hay dos tipos de disputa distintos:\n\n• Disputas reabiertas: Shopify ha devuelto a \"requiere respuesta\" una disputa que ya respondiste. El banco pide una nueva respuesta y la anterior ya no la resuelve.\n• Disputas \"generales\" sin código de motivo de la red: el banco no indicó de qué tipo de disputa se trata.\n\nEn ambos casos, lo único que indica qué quiere el banco es su reclamación (Shopify la llama reclamación del emisor). Shopify la muestra en los detalles del contracargo en la página del pedido de tu administrador de Shopify, pero no la comparte con las aplicaciones, así que DisputeDesk no puede leerla por sí mismo.\n\nQué hacer:\n1. Abre la disputa en DisputeDesk y usa \"Abrir el pedido en Shopify\".\n2. Busca la reclamación del banco en los detalles del contracargo y descárgala (normalmente un PDF) o copia su texto.\n3. Sube el archivo o pega el texto en la tarjeta \"Añade la reclamación del banco\" y guarda. Si Shopify no muestra ninguna reclamación, marca \"Shopify no muestra ninguna reclamación para esta disputa\": los bancos no siempre la proporcionan.\n\nDisputeDesk vuelve a crear entonces la respuesta para que conteste a la reclamación. La reclamación solo se usa para decidir qué debe tratar la respuesta; nunca se cita ni se devuelve al banco.\n\nHasta que se añada, DisputeDesk no enviará ninguna respuesta para esa disputa, tampoco en la fecha límite. También te enviamos un correo cuando una disputa empieza a necesitarla."
+        "body": "En la mayoría de las disputas, el código de motivo le indica a DisputeDesk qué disputa el cliente, y la respuesta se crea a partir de él. Hay dos tipos de disputa distintos:\n\n• Disputas reabiertas: Shopify ha devuelto a \"requiere respuesta\" una disputa que ya respondiste. El banco pide una nueva respuesta y la anterior ya no la resuelve.\n• Disputas \"generales\" sin código de motivo de la red: el banco no indicó de qué tipo de disputa se trata.\n\nEn ambos casos, lo único que indica qué quiere el banco es su reclamación (Shopify la llama reclamación del emisor). Shopify la muestra en los detalles del contracargo en la página del pedido de tu administrador de Shopify, pero no la comparte con las aplicaciones, así que DisputeDesk no puede leerla por sí mismo.\n\nQué hacer:\n1. Abre la disputa en DisputeDesk y usa \"Abrir el pedido en Shopify\".\n2. Busca la reclamación del banco en los detalles del contracargo y descárgala (normalmente un PDF) o copia su texto.\n3. Sube el archivo o pega el texto en la tarjeta \"Añade la reclamación del banco\" y guarda. Si Shopify no muestra ninguna reclamación, marca \"Shopify no muestra ninguna reclamación para esta disputa\": los bancos no siempre la proporcionan.\n\nDisputeDesk vuelve a crear entonces la respuesta para que conteste a la reclamación. La reclamación solo se usa para decidir qué debe tratar la respuesta; nunca se cita ni se devuelve al banco.\n\nHasta que se añada, DisputeDesk no enviará ninguna respuesta para esa disputa, tampoco en la fecha límite. También te enviamos un correo cuando una disputa empieza a necesitarla.\n\nLas disputas reabiertas llevan la etiqueta «Reabierta» en la lista de disputas y en la página de la disputa, también cuando Shopify reabre una disputa ya resuelta."
       }
     },
     "embedded": {
@@ -5014,6 +5015,7 @@
       "admin_override_cleared": "Ajuste de soporte revertido",
       "dispute_resynced": "Disputa actualizada desde Shopify",
       "response_cycle_reopened": "Reabierta: se necesita una nueva respuesta",
+      "dispute_reopened_after_close": "Reabierta por Shopify tras una decisión",
       "escalated_to_chargeback": "Escalada de consulta a contracargo"
     },
     "actors": {
