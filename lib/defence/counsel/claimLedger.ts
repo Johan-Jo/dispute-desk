@@ -591,6 +591,10 @@ function buildInTransitLedger(
       sources: factIds,
       mustNot: [
         "Never say or imply the shipment was delivered, received, collected or lost, and never say what its record lacks.",
+        // #102083 v4 (2026-09-29): "The carrier's record directly contradicts
+        // the non-receipt claim." False — a parcel in transit is consistent
+        // with "not received". Every sentence true (merchant's counsel).
+        "Never say the carrier's record contradicts, refutes, disproves or answers the claim, or that the claim is unsupported: an in-transit record shows the order was shipped and is moving, not that it arrived. Tie the facts back to the claim with what the record does show, e.g. \"The order was shipped as purchased and is in the carrier's hands.\"",
         noTiming,
         "Do not print the tracking number or the URL; the letter prints them.",
       ],
