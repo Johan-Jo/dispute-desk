@@ -62,12 +62,23 @@ const write = (call: ModelCall) =>
   });
 
 describe("summary length slack (#100705)", () => {
-  it("keeps the letter when the summary stays a few words over after the corrections", async () => {
+  it("uses the shortened summary when the shortener gets it under the limit", async () => {
     const over = draftJson(summaryOf(LIMIT + 2));
-    const s = scripted([over, CLEAN, over, CLEAN, over, CLEAN]);
+    const short = V12_SUMMARY; // 75 words, under the limit
+    const s = scripted([over, CLEAN, over, CLEAN, over, CLEAN, short, CLEAN]);
     const r = await write(s.call);
-    // Still corrected twice, and every draft is fact-checked.
-    expect(s.stages).toEqual(["write", "review", "correction", "review", "correction", "review"]);
+    // Two corrections, then the summary-only shortener; every draft fact-checked.
+    expect(s.stages).toEqual(["write", "review", "correction", "review", "correction", "review", "correction", "review"]);
+    expect(r.draft.summary.paragraphs).toEqual([short]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("keeps the letter when the shortener also misses by a few words", async () => {
+    const overText = summaryOf(LIMIT + 2);
+    const over = draftJson(overText);
+    const s = scripted([over, CLEAN, over, CLEAN, over, CLEAN, summaryOf(LIMIT + 1), CLEAN]);
+    const r = await write(s.call);
+    expect(r.draft.summary.paragraphs).toEqual([overText]);
     expect(r.issues.every(isSoftLengthIssue)).toBe(true);
     expect(r.ok).toBe(true);
   });
@@ -77,14 +88,16 @@ describe("summary length slack (#100705)", () => {
     const bad = JSON.stringify({ errors: [{ sentence: "x", problem: "not in the ledger" }], unclear: [] });
     const s = scripted([over, bad, over, bad, over, bad]);
     const r = await write(s.call);
+    // A fact error is not a length issue: no shortener call.
+    expect(s.stages).toEqual(["write", "review", "correction", "review", "correction", "review"]);
     expect(r.ok).toBe(false);
   });
 
-  it("still blocks a summary more than the slack over the limit, without a review", async () => {
+  it("still blocks a summary more than the slack over the limit", async () => {
     const far = draftJson(summaryOf(LIMIT + SUMMARY_SLACK_WORDS + 1));
-    const s = scripted([far, far, far]);
+    const s = scripted([far, far, far, summaryOf(LIMIT + SUMMARY_SLACK_WORDS + 1)]);
     const r = await write(s.call);
-    expect(s.stages).toEqual(["write", "correction", "correction"]);
+    expect(s.stages).toEqual(["write", "correction", "correction", "correction"]);
     expect(r.ok).toBe(false);
   });
 });

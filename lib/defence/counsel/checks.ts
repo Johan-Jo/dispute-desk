@@ -154,8 +154,10 @@ function parts(d: CounselDraft, productNames: readonly string[] = []): Array<{ w
  * It is still reported, so the corrections try to fix it, but it does not
  * block the fact-check or, once the corrections have run, the letter
  * (#100705, 2026-09-29: a 92-word summary against a 90 limit cost the dispute
- * its only letter). A summary more than SUMMARY_SLACK_WORDS over still blocks. */
-export const SUMMARY_SLACK_WORDS = 15;
+ * its only letter; #99296, 95/90, the same day). It is the fallback behind
+ * the summary-only shortener in `writeLetter`. More than SUMMARY_SLACK_WORDS
+ * over still blocks. */
+export const SUMMARY_SLACK_WORDS = 10;
 export const SUMMARY_OVER_PREFIX = "length: ";
 export const isSoftLengthIssue = (issue: string): boolean => issue.startsWith(SUMMARY_OVER_PREFIX);
 

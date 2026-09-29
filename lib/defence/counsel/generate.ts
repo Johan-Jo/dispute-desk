@@ -215,7 +215,8 @@ export function draftFromWriter(raw: string, argued: Brief["sections"]): Counsel
   };
 }
 
-const LENGTH_ISSUE = /^summary: \d+ words, the limit is \d+/;
+// Soft (a few words over, `length:` prefix) or hard: both go to the shortener.
+const LENGTH_ISSUE = /^(length: )?summary: \d+ words, the limit is \d+/;
 
 export const SHORTEN_SYSTEM = `You shorten the executive summary of a response to a payment dispute. Return ONLY the rewritten paragraph, no quotes, no comment.
 - At most 70 words.
@@ -314,6 +315,8 @@ export async function writeLetter(args: {
     if (text) {
       const shortened: CounselDraft = { ...draft, summary: { ...draft.summary, paragraphs: [text] } };
       const after = await issuesOf(shortened);
+      // Used only when fully clean. Otherwise the draft before it stands: a
+      // summary a few words over (soft) still gets its letter below.
       if (after.filter((i) => !i.startsWith("unclear:")).length === 0) {
         draft = shortened;
         issues = after;
@@ -321,9 +324,9 @@ export async function writeLetter(args: {
     }
   }
   log(`first ${firstIssues.length} issue(s)${corrected ? `, after correction ${issues.length}` : ""}`);
-  // After the corrections, a reviewer clarity note or a summary a few words
-  // over its limit does not cost the dispute its letter: every other code
-  // check and every fact-check error still blocks.
+  // After the corrections and the shortener, a reviewer clarity note or a
+  // summary a few words over its limit does not cost the dispute its letter:
+  // every other code check and every fact-check error still blocks.
   return {
     theory, draft, firstIssues, issues, corrected,
     ok: issues.filter((i) => !i.startsWith("unclear:") && !isSoftLengthIssue(i)).length === 0,
