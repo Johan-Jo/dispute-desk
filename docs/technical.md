@@ -922,6 +922,8 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 - Emits per-change `dispute_events` ledger entries (already idempotent via `dedupe_key`).
 - Returns an `events: DisputeTransitionEvent[]` array that downstream effects key off.
 
+**Reopened after an outcome (2026-09-29, `lib/disputes/reopenAfterClose.ts`).** Shopify can reopen a *decided* dispute (won/lost/accepted/refunded → `needs_response` or `under_review`): a won inquiry that becomes a chargeback, or a won chargeback the bank takes further. `applyDisputeSnapshot` used to reject this as a "terminal-state downgrade" and keep the old outcome, so the dispute stayed "won" in DisputeDesk while Shopify showed it open (Mein Maison #94534, #94448, #99123, #92590). Stale snapshots are already rejected by `shopify_updated_at`, so a non-final status on a fresh snapshot is now treated as a reopen: `final_outcome`, `closed_at` and the `outcome_*` columns are cleared, the previous outcome is kept in `disputes.previous_final_outcome`, `reopened_after_close_at` is stamped with Shopify's time, the status is written, a `dispute_reopened_after_close` event goes on the timeline, and the response-cycle logic below may open a new cycle (it previously required no outcome). A later second outcome gets its own `OUTCOME_DETECTED` / `DISPUTE_CLOSED` keys (suffix `:after_reopen_<ts>`, `outcomeKeySuffix`), so it is recorded and emailed instead of deduplicated against the first. The manual resync route (`/api/disputes/[id]/resync`) applies the same rule. **Reopened badge:** `isReopenedOpenDispute` (open dispute with `response_cycle ≥ 2` or `reopened_after_close_at`) shows a "Reopened" pill (`disputes.reopenedBadge`) next to the inquiry/chargeback pill in the desktop list, the mobile card and the dispute header.
+
 **Response cycles — reopens and inquiry → chargeback escalations (2026-09-27, plan `docs/plans/mein-maison-status-and-no-return.plan.md` Fix B).** Shopify can ask for a new response after one was given: `needs_response → under_review` (answered) and later `under_review → needs_response` with a fresh `evidence_due_by` (reopened, or an answered inquiry escalated to a chargeback). The first response's "sent" state used to survive this, so the dispute showed "Under review" with a live deadline and neither the deadline cron nor the reminders picked it up (Mein Maison #99142/#99348).
 
 - **Ledger:** `dispute_response_cycles` holds one row per cycle after the first, `unique (dispute_id, anchor_key)`. The anchor is the prior response the cycle follows, `resp:{UTC second}`, from `responseAnchorKey` (`lib/disputes/responseCycle.ts`) with a fixed precedence: `submitted_at` → `evidence_saved_to_shopify_at` → `shopify_updated_at` of an `under_review`-with-deadline row. Every path that discovers a cycle MUST use that helper, or one cycle becomes two rows.
@@ -1038,9 +1040,11 @@ UPDATE shops s
 
 The cron route (`CLAIM_BATCH = 200`) is bounded regardless of tenant count. At 100k shops with 1-hour cadence → ~140 shops/5-min tick, well under the cap.
 
+**Claim grace (2026-09-29, migration `20260929160000`).** `claim_due_shops` claims shops whose `next_reconcile_at` is at most 5 minutes in the future. It used to claim only those strictly due, and `next_reconcile_at` is set from the claim time, a few seconds after the :00 tick. So a shop was always about 45 s short at the next tick and skipped, and an hourly shop synced every two hours.
+
 **Adaptive cadence** (`lib/disputes/reconcileSchedule.ts`): after each `syncDisputes` run, `recordReconcileOutcome()` adjusts the shop's interval:
 
-- drift detected (`created > 0 || updated > 0`) → halve, floor 1 h
+- drift detected (`created > 0 || changed > 0`) → halve, floor 1 h. `changed` counts disputes whose apply outcome was `applied`: a status, due-date, submission, response-cycle or escalation transition. Until 2026-09-29 it was `updated > 0`, which counts every re-applied dispute, so any shop with an open dispute stayed at the 1 h floor.
 - clean reconcile (no drift, no errors) → multiply by 1.5, ceiling 6 h
 - errors present → leave interval alone (the circuit-breaker handles repeated failures)
 
@@ -1050,6 +1054,15 @@ Active shops settle near 1-2 h, dormant shops drift toward 6 h. Bounds widened o
 
 1. **No-session skip:** if the shop has no offline `shop_sessions` row, skip enqueue with `reason: "no_offline_session"`. Prevents enqueueing work that can only fail.
 2. **Circuit-breaker:** if the last 5 terminal `sync_disputes` jobs for the shop all failed, skip with `reason: "circuit_breaker_open"` until an admin clears the streak.
+
+**Keeping the sync under the worker's time limit (2026-09-29).** Two changes:
+- **Unchanged closed disputes are skipped.** Every scheduled run used to re-apply every dispute a shop ever had. At ~0.4 s of DB round trips each, that meant 614 disputes, about 270 s, on 6a8848-dd, against the worker's 300 s `maxDuration`, and 2–3 of the 4 hourly sync jobs lost their lock every hour.
+  - The scheduled job (`syncDisputesJob`, `skipUnchangedClosed: true`) now reads, per page, the rows it stored last time.
+  - It skips a dispute when `isUnchangedClosedDispute` holds: Shopify's node is closed (won, lost, charge_refunded or accepted), our row is closed, the node equals the stored `raw_snapshot` ignoring key order, and the row was synced within 24 h.
+  - Open disputes are never skipped, and every closed dispute is still re-applied once a day.
+  - A merchant's manual sync (`/api/disputes/sync`) re-applies everything.
+  - The skip count is logged as `skipped_unchanged` in the `disputes_synced` audit.
+- **The worker starts no job after 150 s** (`START_BUDGET_MS` in `app/api/jobs/worker/route.ts`). Jobs in a batch run one after another. The rest of the batch goes back to the queue via `releaseJob`, which also restores the attempt the claim used, and the next 2-minute tick picks it up. Before this, a batch holding two long jobs was killed mid-job and resumed only when its 10-minute lock expired.
 
 Job retention: terminal jobs (`succeeded` | `failed`) older than 30 days are pruned by `/api/cron/retention-cleanup` (weekly, `0 3 * * 0`). Job rows are operational telemetry, not audit data — `dispute_events` is the audit source.
 
@@ -3704,6 +3717,20 @@ Address rule:
   (`documentModel.ts` `laterOrderCard`). Its delivery date is shown only when the order arrived within the
   merchant's delivery period (`deliveryPeriodDays`: a published delivery window, else the dispatch window plus
   the disputed order's transit, else 10 days); a long order-to-delivery span is left out.
+- **Timing only when it helps (2026-09-29).** The single-parcel item-not-received ledger offers
+  `shipped_promptly` only for same/next-day dispatch or dispatch inside the published window, and `transit_days`
+  only when the whole order → delivery span sits inside the merchant's delivery period (`deliveryPeriodDays`
+  without a ship date: published delivery window, else 10 days). Outside those the ledger carries no timing, so
+  the writer cannot state it (the fact-check refuses unsupported intervals). Trigger: Mein Maison #100463's
+  letter said delivery came "twenty-six days after the merchant shipped the order". Pinned by
+  `lib/defence/counsel/__tests__/timingOnlyWhenItHelps.test.ts`.
+- **Delivered after the dispute was opened (2026-09-29, non-receipt plan §10 test 17).** The delivery leads and
+  the filing date is not cited. The `delivered_after_dispute_opened` claim keeps its id (the theory of the case)
+  but carries no dispute date and a mustNot against placing the delivery before or after the dispute;
+  `addDisputeOpenedRow` adds no chronology row in that case; and `buildChronologyEvents`
+  (`withoutOpeningBeforeDelivery`, both renderers) drops Shopify's own opening line when any recorded delivery
+  is later than it. When every delivery precedes the dispute, the full sequence stays. Pinned by
+  `lib/defence/counsel/__tests__/deliveredAfterDisputeOpened.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then

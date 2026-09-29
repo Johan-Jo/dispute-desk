@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claimJobs, markJobSucceeded, markJobFailed } from "@/lib/jobs/claimJobs";
+import { claimJobs, markJobSucceeded, markJobFailed, releaseJob } from "@/lib/jobs/claimJobs";
 import { handleBuildPack } from "@/lib/jobs/handlers/buildPackJob";
 import { handleRenderPdf } from "@/lib/jobs/handlers/renderPdfJob";
 import { handleSyncDisputes } from "@/lib/jobs/handlers/syncDisputesJob";
@@ -22,6 +22,16 @@ export const runtime = "nodejs";
 // typically finish in <10s. 300s leaves headroom for retries on slow
 // Shopify responses without leaking into the worker's 2-min cadence.
 export const maxDuration = 300;
+
+/**
+ * No new job starts after this much of the invocation has passed; the rest of
+ * the batch goes back to the queue for the next tick (2 min). Jobs run one
+ * after another, so without it a batch holding two long jobs (e.g. two
+ * sync_disputes of ~4 min) was killed at 300 s mid-job and only resumed when
+ * its lock expired 10 min later — every hour (2026-09-29: 2-3 of 4 sync jobs
+ * reclaimed per hour, some only finishing on their last attempt).
+ */
+const START_BUDGET_MS = 150_000;
 
 /**
  * POST|GET /api/jobs/worker
@@ -62,8 +72,16 @@ async function runWorker(req: NextRequest) {
   const claimed = await claimJobs(workerId, 10);
 
   const results: Array<{ jobId: string; status: string; error?: string }> = [];
+  const startedAt = Date.now();
 
-  for (const job of claimed) {
+  for (const [index, job] of claimed.entries()) {
+    if (index > 0 && Date.now() - startedAt > START_BUDGET_MS) {
+      for (const rest of claimed.slice(index)) {
+        await releaseJob(rest.id, workerId, rest.attempts);
+        results.push({ jobId: rest.id, status: "released" });
+      }
+      break;
+    }
     try {
       // Handlers return either `void` (legacy) or a `JobResult` (Phase
       // 2.6+). When a handler explicitly returns `{ ok: false, ... }`,

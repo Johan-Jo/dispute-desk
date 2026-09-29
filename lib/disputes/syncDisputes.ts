@@ -101,6 +101,12 @@ export interface SyncResult {
   created: number;
   updated: number;
   errors: string[];
+  /** Closed disputes skipped because Shopify's node is unchanged (see
+   *  `isUnchangedClosedDispute`). Not counted in `synced`. */
+  skippedUnchanged?: number;
+  /** Disputes the diff engine actually changed (new, or outcome "applied":
+   *  a status, due-date, submission, cycle or escalation transition). */
+  changed?: number;
   /** Set when synced === 0 to help diagnose "no disputes" (no tokens or PII). */
   debug?: { shop_domain: string; first_page_edges: number };
 }
@@ -109,6 +115,60 @@ export interface SyncResult {
  * Redact PII from the raw dispute snapshot before storage.
  * Strips email, cardholder name, keeps last-4 of card if present.
  */
+const CLOSED_STATUSES = new Set(["won", "lost", "charge_refunded", "accepted"]);
+const FULL_RESYNC_MS = 24 * 60 * 60 * 1000;
+
+/** JSON with sorted keys: jsonb does not keep key order. */
+export function stableStringify(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  if (v !== null && typeof v === "object") {
+    return `{${Object.keys(v as Record<string, unknown>)
+      .filter((k) => (v as Record<string, unknown>)[k] !== undefined)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stableStringify((v as Record<string, unknown>)[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(v ?? null);
+}
+
+export interface StoredDisputeRow {
+  status: string | null;
+  raw_snapshot: unknown;
+  last_synced_at: string | null;
+}
+
+/**
+ * A closed dispute whose Shopify node is byte-identical (key order aside) to
+ * the one this sync stored last time has nothing to apply. Re-applying it
+ * cost ~0.4 s of DB round trips per dispute, every hour, for every dispute
+ * a shop ever had (614 on 6a8848-dd) — that pushed the sync job to the
+ * worker's 300 s limit. Open disputes are never skipped, and every closed
+ * dispute is still fully re-applied once a day.
+ */
+export function isUnchangedClosedDispute(
+  stored: StoredDisputeRow | undefined,
+  redactedNode: Record<string, unknown>,
+  nowMs: number,
+): boolean {
+  if (!stored) return false;
+  const nodeStatus = String(redactedNode.status ?? "").toLowerCase();
+  if (!CLOSED_STATUSES.has(nodeStatus)) return false;
+  if (!CLOSED_STATUSES.has(String(stored.status ?? "").toLowerCase())) return false;
+  if (!stored.last_synced_at || nowMs - new Date(stored.last_synced_at).getTime() >= FULL_RESYNC_MS) return false;
+  if (stored.raw_snapshot == null) return false;
+  return stableStringify(stored.raw_snapshot) === stableStringify(redactedNode);
+}
+
+/**
+ * Real changes only. `updated` counts every re-applied dispute, so any shop
+ * with an open dispute always read as drifting and the reconcile cadence
+ * never left its 1 h floor. Webhooks carry live changes; the sync is the
+ * safety net, so a quiet shop may drift toward the 6 h ceiling.
+ */
+export function syncDriftDetected(result: Pick<SyncResult, "created" | "changed">): boolean {
+  return result.created > 0 || (result.changed ?? 0) > 0;
+}
+
 function redactPII(node: DisputeListNode): Record<string, unknown> {
   const snapshot: Record<string, unknown> = { ...node };
   // Remove order email if leaked into snapshot
@@ -127,10 +187,17 @@ function redactPII(node: DisputeListNode): Record<string, unknown> {
  */
 export async function syncDisputes(
   shopId: string,
-  opts?: { triggerAutomation?: boolean; correlationId?: string }
+  opts?: {
+    triggerAutomation?: boolean;
+    correlationId?: string;
+    /** Scheduled job only: skip closed disputes Shopify has not changed.
+     *  A merchant's manual sync always re-applies everything. */
+    skipUnchangedClosed?: boolean;
+  }
 ): Promise<SyncResult> {
   const sb = getServiceClient();
   const triggerAutomation = opts?.triggerAutomation ?? true;
+  const skipUnchangedClosed = opts?.skipUnchangedClosed ?? false;
 
   const { data: shop } = await sb
     .from("shops")
@@ -200,9 +267,30 @@ export async function syncDisputes(
       break;
     }
 
+    // One read per page of the rows this sync stored last time, so unchanged
+    // closed disputes can be skipped without a per-dispute round trip.
+    const storedByGid = new Map<string, StoredDisputeRow>();
+    if (skipUnchangedClosed) {
+      const gids = edges.map((e) => e.node.id);
+      const { data: storedRows } = await sb
+        .from("disputes")
+        .select("dispute_gid, status, raw_snapshot, last_synced_at")
+        .eq("shop_id", shopId)
+        .in("dispute_gid", gids);
+      for (const r of (storedRows ?? []) as Array<StoredDisputeRow & { dispute_gid: string }>) {
+        storedByGid.set(r.dispute_gid, r);
+      }
+    }
+    const pageNowMs = Date.now();
+
     for (const edge of edges) {
       const d = edge.node;
       try {
+        if (skipUnchangedClosed && isUnchangedClosedDispute(storedByGid.get(d.id), redactPII(d), pageNowMs)) {
+          result.skippedUnchanged = (result.skippedUnchanged ?? 0) + 1;
+          after = edge.cursor;
+          continue;
+        }
         // Per-dispute redaction snapshot for the disputes.raw_snapshot column
         // (the shared engine doesn't touch this field; we still store it for
         // forensic + admin tooling).
@@ -257,6 +345,9 @@ export async function syncDisputes(
         }
 
         result.synced++;
+        if (applyResult.created || applyResult.outcome === "applied") {
+          result.changed = (result.changed ?? 0) + 1;
+        }
         if (applyResult.localDisputeId) {
           snapshotCandidates.push({
             disputeId: applyResult.localDisputeId,
@@ -403,6 +494,8 @@ export async function syncDisputes(
       created: result.created,
       updated: result.updated,
       errors: result.errors.length,
+      skipped_unchanged: result.skippedUnchanged ?? 0,
+      changed: result.changed ?? 0,
       evidence_snapshots: evidenceSnapshotStats,
       correlation_id: opts?.correlationId,
     },
@@ -411,7 +504,7 @@ export async function syncDisputes(
   // Adaptive cadence: tighten on drift, loosen on clean runs.
   await recordReconcileOutcome({
     shopId,
-    driftDetected: result.created > 0 || result.updated > 0,
+    driftDetected: syncDriftDetected(result),
     hadErrors: result.errors.length > 0,
   });
 

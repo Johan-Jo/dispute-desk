@@ -25,7 +25,8 @@ import {
   type FigmaDueStatus,
   type FigmaOutcome,
 } from "./disputeListHelpers";
-import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
+import { phaseLabel, phasePillColors, REOPENED_PILL_COLORS } from "@/lib/disputes/phaseUtils";
+import { isReopenedOpenDispute } from "@/lib/disputes/reopenAfterClose";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 /** 8-column grid shared by the header + every row. */
@@ -265,8 +266,9 @@ export function DesktopDisputesTable({
                 </div>
               </div>
 
-              {/* Type (inquiry / chargeback) */}
-              <div style={{ minWidth: 0 }}>
+              {/* Type (inquiry / chargeback), plus "Reopened" when Shopify
+                  reopened it */}
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
                 <span
                   style={{
                     ...PILL_STYLE,
@@ -275,6 +277,11 @@ export function DesktopDisputesTable({
                 >
                   {phaseLabel(d.phase as DisputePhase | null, t)}
                 </span>
+                {isReopenedOpenDispute(d) ? (
+                  <span data-testid="dispute-reopened-pill" style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}>
+                    {t("disputes.reopenedBadge")}
+                  </span>
+                ) : null}
               </div>
 
               {/* Case strength + review-decision chip — stacked: the
