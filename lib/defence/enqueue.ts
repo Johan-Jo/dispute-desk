@@ -23,6 +23,7 @@ import { computeEvidenceHash } from "./computeEvidenceHash";
 import { CURRENT_PROMPT_VERSION } from "./narrativeWriter";
 import { VALIDATOR_VERSION } from "./validateNarrative";
 import { COMPOSITION_VERSION } from "./pdf/thesisTemplates";
+import { COUNSEL_PROMPT_FAMILY } from "./counsel/run";
 import { classifyFacts } from "./factClassifier";
 import {
   resolveReasonCodeModule,
@@ -180,7 +181,7 @@ export async function maybeEnqueueDefencePackage(
   const { data: latest } = await sb
     .from("defence_packages")
     .select(
-      "id, version, status, evidence_hash, validation_status, failure_code, prompt_version, validator_version, composition_version",
+      "id, version, status, evidence_hash, validation_status, failure_code, prompt_version, validator_version, composition_version, prompt_family",
     )
     .eq("dispute_id", pack.dispute_id)
     .order("version", { ascending: false })
@@ -211,6 +212,7 @@ export async function maybeEnqueueDefencePackage(
     validatorVersion: VALIDATOR_VERSION,
     compositionVersion: COMPOSITION_VERSION,
     evidenceHash,
+    writerFamily: COUNSEL_PROMPT_FAMILY,
   });
   if (!guard.blocked && guard.retryBasis.length > 0) {
     /* A failed package is being retried. Audited explicitly — this is the one
