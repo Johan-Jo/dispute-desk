@@ -150,6 +150,17 @@ function parts(d: CounselDraft, productNames: readonly string[] = []): Array<{ w
   ];
 }
 
+/* A summary a few words over its limit is a style miss, not a wrong letter.
+ * It is still reported, so the corrections try to fix it, but it does not
+ * block the fact-check or, once the corrections have run, the letter
+ * (#100705, 2026-09-29: a 92-word summary against a 90 limit cost the dispute
+ * its only letter; #99296, 95/90, the same day). It is the fallback behind
+ * the summary-only shortener in `writeLetter`. More than SUMMARY_SLACK_WORDS
+ * over still blocks. */
+export const SUMMARY_SLACK_WORDS = 10;
+export const SUMMARY_OVER_PREFIX = "length: ";
+export const isSoftLengthIssue = (issue: string): boolean => issue.startsWith(SUMMARY_OVER_PREFIX);
+
 export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const issues: string[] = [];
   const byId = new Map(ctx.ledger.map((c) => [c.id, c]));
@@ -205,7 +216,8 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const summaryLimit = ctx.brief && (d.evidenceSections?.length ?? 0) >= 3 ? 90 : 80;
   if (words(summaryText) > summaryLimit) {
     issues.push(
-      `summary: ${words(summaryText)} words, the limit is ${summaryLimit} — rewrite it to about ${summaryLimit - 15} words. ` +
+      `${words(summaryText) - summaryLimit <= SUMMARY_SLACK_WORDS ? SUMMARY_OVER_PREFIX : ""}` +
+        `summary: ${words(summaryText)} words, the limit is ${summaryLimit} — rewrite it to about ${summaryLimit - 15} words. ` +
         "Name the item in a few words (its kind, and colour or size only when they matter; the table below carries the full description); " +
         "drop a supporting detail (a notification, dispatch timing, a date that repeats an interval) or a clause that restates another; " +
         "keep the claim, each reason, and the request.",
