@@ -26,7 +26,8 @@ import {
   type FigmaOutcome,
   type TabId,
 } from "./disputeListHelpers";
-import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
+import { phaseLabel, phasePillColors, REOPENED_PILL_COLORS } from "@/lib/disputes/phaseUtils";
+import { isReopenedOpenDispute } from "@/lib/disputes/reopenAfterClose";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 function shortDate(iso: string | null, locale: string): string {
@@ -233,10 +234,15 @@ export function MobileDisputeCard({
           >
             {translateReason(d.reason, t)}
           </p>
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
             <span style={{ ...PILL_STYLE, ...phasePillColors(d.phase as DisputePhase | null) }}>
               {phaseLabel(d.phase as DisputePhase | null, t)}
             </span>
+            {isReopenedOpenDispute(d) ? (
+              <span data-testid="dispute-reopened-pill" style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}>
+                {t("disputes.reopenedBadge")}
+              </span>
+            ) : null}
           </div>
         </div>
         <span

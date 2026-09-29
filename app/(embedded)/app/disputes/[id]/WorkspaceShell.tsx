@@ -22,7 +22,8 @@ import { resolveStrength } from "@/lib/disputes/presentation/resolveStrength";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
-import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
+import { phaseLabel, phasePillColors, REOPENED_PILL_COLORS } from "@/lib/disputes/phaseUtils";
+import { isReopenedOpenDispute } from "@/lib/disputes/reopenAfterClose";
 
 const PILL_STYLE = {
   padding: "2px 8px",
@@ -337,6 +338,19 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                 >
                   {phaseLabel(dispute.phase ?? null, t)}
                 </span>
+                {isReopenedOpenDispute({
+                  final_outcome: dispute.finalOutcome,
+                  closed_at: dispute.closedAt ?? null,
+                  response_cycle: dispute.responseCycle ?? 1,
+                  reopened_after_close_at: dispute.reopenedAfterCloseAt ?? null,
+                }) ? (
+                  <span
+                    data-testid="dispute-reopened-pill"
+                    style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}
+                  >
+                    {t("disputes.reopenedBadge")}
+                  </span>
+                ) : null}
                 {headerChips.map((chip) => (
                   <span
                     key={chip.key}

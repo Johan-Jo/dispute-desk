@@ -485,6 +485,7 @@
     "inquiryTitle": "Anfrage {id}",
     "caseTitle": "Fall {id}",
     "inquiryBadge": "Anfrage",
+    "reopenedBadge": "Wieder eröffnet",
     "chargebackBadge": "Rückbuchung",
     "phaseUnknown": "Unbekannt",
     "phaseLabel": "Phase",
@@ -3748,7 +3749,7 @@
       },
       "bankClaim": {
         "title": "Warum DisputeDesk nach der Begründung der Bank fragt",
-        "body": "Bei den meisten Rückbuchungen sagt der Grundcode DisputeDesk, was der Kunde beanstandet, und die Antwort wird darauf aufgebaut. Zwei Arten sind anders:\n\n• Wieder geöffnete Rückbuchungen: Shopify hat eine Rückbuchung, die Sie bereits beantwortet haben, wieder auf „Antwort erforderlich“ gesetzt. Die Bank verlangt eine neue Antwort, und Ihre frühere Antwort erledigt sie nicht mehr.\n• „Allgemeine“ Rückbuchungen ohne Netzwerk-Grundcode: Die Bank hat nicht angegeben, um welche Art von Rückbuchung es sich handelt.\n\nIn beiden Fällen sagt nur die Begründung der Bank (Shopify nennt sie Begründung des Kartenausstellers), worauf die Bank eine Antwort erwartet. Shopify zeigt sie in den Rückbuchungsdetails auf der Bestellseite in Ihrem Shopify-Adminbereich an, gibt sie aber nicht an Apps weiter. DisputeDesk kann sie daher nicht selbst lesen.\n\nSo gehen Sie vor:\n1. Öffnen Sie die Rückbuchung in DisputeDesk und nutzen Sie „Bestellung in Shopify öffnen“.\n2. Suchen Sie die Begründung der Bank in den Rückbuchungsdetails und laden Sie sie herunter (meist ein PDF) oder kopieren Sie den Text.\n3. Laden Sie die Datei hoch oder fügen Sie den Text in die Karte „Begründung der Bank hinzufügen“ ein und speichern Sie. Wenn Shopify keine Begründung anzeigt, setzen Sie stattdessen das Häkchen bei „Shopify zeigt für diese Rückbuchung keine Begründung an“ – Banken liefern nicht immer eine.\n\nDisputeDesk erstellt die Antwort dann neu, sodass sie auf die Begründung eingeht. Die Begründung dient nur dazu, zu entscheiden, worauf die Antwort eingehen muss; sie wird nie zitiert oder an die Bank zurückgeschickt.\n\nBis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort, auch nicht zur Frist. Wir benachrichtigen Sie außerdem per E-Mail, sobald eine Rückbuchung sie benötigt."
+        "body": "Bei den meisten Rückbuchungen sagt der Grundcode DisputeDesk, was der Kunde beanstandet, und die Antwort wird darauf aufgebaut. Zwei Arten sind anders:\n\n• Wieder geöffnete Rückbuchungen: Shopify hat eine Rückbuchung, die Sie bereits beantwortet haben, wieder auf „Antwort erforderlich“ gesetzt. Die Bank verlangt eine neue Antwort, und Ihre frühere Antwort erledigt sie nicht mehr.\n• „Allgemeine“ Rückbuchungen ohne Netzwerk-Grundcode: Die Bank hat nicht angegeben, um welche Art von Rückbuchung es sich handelt.\n\nIn beiden Fällen sagt nur die Begründung der Bank (Shopify nennt sie Begründung des Kartenausstellers), worauf die Bank eine Antwort erwartet. Shopify zeigt sie in den Rückbuchungsdetails auf der Bestellseite in Ihrem Shopify-Adminbereich an, gibt sie aber nicht an Apps weiter. DisputeDesk kann sie daher nicht selbst lesen.\n\nSo gehen Sie vor:\n1. Öffnen Sie die Rückbuchung in DisputeDesk und nutzen Sie „Bestellung in Shopify öffnen“.\n2. Suchen Sie die Begründung der Bank in den Rückbuchungsdetails und laden Sie sie herunter (meist ein PDF) oder kopieren Sie den Text.\n3. Laden Sie die Datei hoch oder fügen Sie den Text in die Karte „Begründung der Bank hinzufügen“ ein und speichern Sie. Wenn Shopify keine Begründung anzeigt, setzen Sie stattdessen das Häkchen bei „Shopify zeigt für diese Rückbuchung keine Begründung an“ – Banken liefern nicht immer eine.\n\nDisputeDesk erstellt die Antwort dann neu, sodass sie auf die Begründung eingeht. Die Begründung dient nur dazu, zu entscheiden, worauf die Antwort eingehen muss; sie wird nie zitiert oder an die Bank zurückgeschickt.\n\nBis sie hinzugefügt ist, sendet DisputeDesk für diese Rückbuchung keine Antwort, auch nicht zur Frist. Wir benachrichtigen Sie außerdem per E-Mail, sobald eine Rückbuchung sie benötigt.\n\nWieder eröffnete Streitfälle tragen in der Streitfallliste und auf der Streitfallseite die Kennzeichnung „Wieder eröffnet“, auch wenn Shopify einen bereits entschiedenen Streitfall wieder eröffnet."
       }
     },
     "embedded": {
@@ -5014,6 +5015,7 @@
       "admin_override_cleared": "Support-Anpassung zurückgenommen",
       "dispute_resynced": "Streitfall aus Shopify aktualisiert",
       "response_cycle_reopened": "Wieder eröffnet – neue Antwort erforderlich",
+      "dispute_reopened_after_close": "Von Shopify nach einer Entscheidung wieder eröffnet",
       "escalated_to_chargeback": "Von Anfrage zu Rückbuchung eskaliert"
     },
     "actors": {

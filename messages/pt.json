@@ -485,6 +485,7 @@
     "inquiryTitle": "Consulta {id}",
     "caseTitle": "Caso {id}",
     "inquiryBadge": "Consulta",
+    "reopenedBadge": "Reaberta",
     "chargebackBadge": "Chargeback",
     "phaseUnknown": "Desconhecido",
     "phaseLabel": "Fase",
@@ -3748,7 +3749,7 @@
       },
       "bankClaim": {
         "title": "Por que o DisputeDesk pede a reclamação do banco",
-        "body": "Na maioria das disputas, o código de motivo diz ao DisputeDesk o que o cliente está contestando, e a resposta é montada a partir dele. Dois tipos de disputa são diferentes:\n\n• Disputas reabertas: a Shopify colocou de volta em \"precisa de resposta\" uma disputa que você já respondeu. O banco pede uma nova resposta, e a anterior não a resolve mais.\n• Disputas \"gerais\" sem código de motivo da rede: o banco não disse de que tipo é a disputa.\n\nNos dois casos, a única indicação do que o banco quer que seja respondido é a reclamação do banco (a Shopify a chama de reclamação do emissor). A Shopify a mostra nos detalhes do estorno na página do pedido no seu admin, mas não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho.\n\nO que fazer:\n1. Abra a disputa no DisputeDesk e use \"Abrir o pedido na Shopify\".\n2. Encontre a reclamação do banco nos detalhes do estorno e baixe-a (geralmente um PDF) ou copie o texto.\n3. Envie o arquivo ou cole o texto no cartão \"Adicione a reclamação do banco\" e salve. Se a Shopify não mostrar nenhuma reclamação, marque \"A Shopify não mostra nenhuma reclamação para esta disputa\" — os bancos nem sempre fornecem uma.\n\nO DisputeDesk então reconstrói a resposta para responder à reclamação. A reclamação só é usada para decidir o que a resposta deve tratar; nunca é citada nem devolvida ao banco.\n\nAté que seja adicionada, o DisputeDesk não enviará resposta para essa disputa, nem no prazo final. Também enviamos um e-mail quando uma disputa passa a precisar dela."
+        "body": "Na maioria das disputas, o código de motivo diz ao DisputeDesk o que o cliente está contestando, e a resposta é montada a partir dele. Dois tipos de disputa são diferentes:\n\n• Disputas reabertas: a Shopify colocou de volta em \"precisa de resposta\" uma disputa que você já respondeu. O banco pede uma nova resposta, e a anterior não a resolve mais.\n• Disputas \"gerais\" sem código de motivo da rede: o banco não disse de que tipo é a disputa.\n\nNos dois casos, a única indicação do que o banco quer que seja respondido é a reclamação do banco (a Shopify a chama de reclamação do emissor). A Shopify a mostra nos detalhes do estorno na página do pedido no seu admin, mas não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho.\n\nO que fazer:\n1. Abra a disputa no DisputeDesk e use \"Abrir o pedido na Shopify\".\n2. Encontre a reclamação do banco nos detalhes do estorno e baixe-a (geralmente um PDF) ou copie o texto.\n3. Envie o arquivo ou cole o texto no cartão \"Adicione a reclamação do banco\" e salve. Se a Shopify não mostrar nenhuma reclamação, marque \"A Shopify não mostra nenhuma reclamação para esta disputa\" — os bancos nem sempre fornecem uma.\n\nO DisputeDesk então reconstrói a resposta para responder à reclamação. A reclamação só é usada para decidir o que a resposta deve tratar; nunca é citada nem devolvida ao banco.\n\nAté que seja adicionada, o DisputeDesk não enviará resposta para essa disputa, nem no prazo final. Também enviamos um e-mail quando uma disputa passa a precisar dela.\n\nAs disputas reabertas têm a etiqueta «Reaberta» na lista de disputas e na página da disputa, incluindo quando o Shopify reabre uma disputa já decidida."
       }
     },
     "embedded": {
@@ -5014,6 +5015,7 @@
       "admin_override_cleared": "Ajuste do suporte revertido",
       "dispute_resynced": "Disputa atualizada do Shopify",
       "response_cycle_reopened": "Reaberta — nova resposta necessária",
+      "dispute_reopened_after_close": "Reaberta pelo Shopify após uma decisão",
       "escalated_to_chargeback": "Escalada de consulta para estorno"
     },
     "actors": {
