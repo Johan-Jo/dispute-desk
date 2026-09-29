@@ -99,6 +99,13 @@ export async function POST(req: NextRequest) {
       .select("id");
     if (!error && matched) {
       disputesAnonymized = matched.length;
+      // Retained-evidence snapshots hold the customer's free text verbatim.
+      if (matched.length > 0) {
+        await db
+          .from("shopify_evidence_snapshots")
+          .delete()
+          .in("dispute_id", matched.map((m) => m.id));
+      }
     }
   }
 
