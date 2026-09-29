@@ -47,6 +47,7 @@ import {
   reconcileDeliveryState,
   type DeliverySignal,
 } from "@/lib/carriers/reconcile";
+import { isParcelIdentifier } from "@/lib/carriers/trackingLinkUrl";
 
 /** Signee name from a fulfillment's native carrier events (message like
  *  "Delivered, signed by ANNA ANDERSSON"). This is the ONLY signature
@@ -171,7 +172,7 @@ function existingSignalsFor(
 
 /** Per-fulfillment resolved delivery state after cross-source
  *  reconciliation (Shopify-native + tracking-app + carrier API). */
-interface FulfillmentDeliveryState {
+export interface FulfillmentDeliveryState {
   /** Newest sufficiently reliable terminal signal, or null (in transit /
    *  no signal — which is NEVER treated as "not delivered"). */
   current: DeliverySignal | null;
@@ -628,6 +629,72 @@ function resolveDeliveryCoverage(
   return deliveredQty >= orderQty ? "complete" : "partial";
 }
 
+/**
+ * Qualified final delivery (non-receipt plan §6.1.1, P1b). True when the
+ * disputed goods are covered by shipments whose final delivery or completed
+ * collection meets ALL FIVE conditions:
+ *
+ *   1. Corroborated carrier provenance — the terminal event came from OUR OWN
+ *      carrier lookup (`carrier_api_*`). Carrier-style text on a Shopify
+ *      fulfillment event is NOT proof of carrier origin (any app can write
+ *      it), and no tracking-app source has a verified carrier-origin contract
+ *      yet, so `shopify_native` and `tracking_app_*` never qualify alone
+ *      (§11 Q-8: 344,165 `shopify_native` delivered rows exist with no
+ *      adapter). Cay #14784's PostNord `DELIVERED` is therefore NOT a QFD.
+ *   2. An event timestamp — the carrier event's own time, never a read time.
+ *   3. Association — the shipment is on the disputed order and carries a
+ *      tracking identifier that passes `isParcelIdentifier`.
+ *   4. Coverage — the QUALIFYING shipments alone carry at least the ordered
+ *      quantity. `unknown` (no line items) never qualifies.
+ *   5. No contradiction — the reconciled state agrees with the carrier (no
+ *      source conflict on the shipment), and no shipment on the order was
+ *      returned.
+ *
+ * Availability for collection (`DeliveredToPickup`) is never a final
+ * delivery. The flag licenses nothing new in the letter — the carrier's
+ * record is cited exactly as for `delivered_confirmed`; it only lets the
+ * item-not-received rollup rate the case `strong` (`caseStrength.ts`).
+ *
+ * Deliberate deviation from the plan text: a payload flag on the existing
+ * `delivered_confirmed` proof type rather than a new `DeliveryProofType`
+ * member. `delivered_confirmed` is switched on at 60+ sites (letter, PDF,
+ * validator, presentation); a new member would silently miss every one that
+ * compares by equality, while a flag changes only the rating.
+ */
+export function resolveFinalDeliveryVerified(
+  order: Pick<OrderDetailNode, "fulfillments" | "lineItems">,
+  states: ReadonlyMap<string, FulfillmentDeliveryState>,
+): boolean {
+  const orderQty = (order.lineItems?.edges ?? []).reduce(
+    (sum, e) => sum + (e.node.quantity ?? 0),
+    0,
+  );
+  if (!orderQty) return false;
+
+  let qualifiedQty = 0;
+  for (const f of order.fulfillments) {
+    const s = states.get(f.id) ?? { current: null, conflict: false, signedBy: null, carrier: null };
+    // Condition 5, order-wide: a returned or contested shipment anywhere on
+    // the order withholds the upgrade until a newer record resolves it.
+    if (s.current?.status === "Returned" || s.conflict) return false;
+
+    const carrierSignal = s.carrier?.signal ?? null;
+    const final =
+      carrierSignal?.status === "Delivered" || carrierSignal?.status === "CollectedAtPickup";
+    if (!carrierSignal || !final) continue;
+    if (!carrierSignal.source.startsWith("carrier_api")) continue; // 1
+    if (!carrierSignal.at) continue; // 2
+    if (s.current?.status !== carrierSignal.status) continue; // 5 (per shipment)
+    if (!f.trackingInfo.some((t) => isParcelIdentifier(t.company, t.number))) continue; // 3
+
+    qualifiedQty += f.fulfillmentLineItems.edges.reduce(
+      (sum, e) => sum + (e.node.quantity ?? 0),
+      0,
+    );
+  }
+  return qualifiedQty >= orderQty; // 4
+}
+
 /* RETIRED 2026-08-07 (PR-C1) — `resolveCollectedByCustomer` is deleted.
  *
  * It set a STRONG upgrade from `state.current.status === "CollectedAtPickup"`
@@ -706,6 +773,9 @@ export async function collectFulfillmentEvidence(
         // §5.6 — complete | partial | none | unknown. Package-level rows
         // below stay citable when only part of the order is confirmed.
         deliveryCoverage: coverage,
+        // §6.1.1 qualified final delivery. Written only when true, so every
+        // other pack's payload (and evidence hash) is unchanged.
+        ...(resolveFinalDeliveryVerified(order, states) ? { finalDeliveryVerified: true } : {}),
         // §5.7 — any shipment whose sources disagreed (admin provenance).
         sourceConflict: order.fulfillments.some((f) => stateOf(states, f).conflict),
         fulfillments: order.fulfillments.map((f) =>
