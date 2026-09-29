@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { needsRead, recordEvidenceSnapshots } from "../evidenceSnapshots";
+import { MAX_READS_PER_RUN, needsRead, recordEvidenceSnapshots } from "../evidenceSnapshots";
 import {
   clearableFieldHashes,
   evidenceContentHash,
@@ -127,5 +127,19 @@ describe("recordEvidenceSnapshots", () => {
     expect(res.read).toBe(1);
     expect(res.errors[0]).toMatch(/boom/);
     expect(inserted).toHaveLength(0);
+  });
+
+  it("caps reads per run and reads status changes first", async () => {
+    const many = Array.from({ length: MAX_READS_PER_RUN + 5 }, (_, i) => ({ ...dispute, id: `n${i}`, dispute_evidence_gid: `gid://e/n${i}` }));
+    const moved = { ...dispute, id: "moved", status: "needs_response", response_cycle: 2, dispute_evidence_gid: "gid://e/moved" };
+    const prev = { id: "s", dispute_id: "moved", observed_status: "under_review", content_hash: "h", cycle: 1, last_confirmed_at: new Date(NOW - 1000).toISOString() };
+    const { sb } = fakeDb([...many, moved], [prev]);
+    const readGids: string[] = [];
+    const res = await recordEvidenceSnapshots(sb, "shop", [...many, moved].map((d) => ({ disputeId: d.id, status: d.status })), {
+      read: async (gid) => { readGids.push(gid); return { ok: true, record: record() }; },
+      now: () => NOW,
+    });
+    expect(res.read).toBe(MAX_READS_PER_RUN);
+    expect(readGids[0]).toBe("gid://e/moved");
   });
 });

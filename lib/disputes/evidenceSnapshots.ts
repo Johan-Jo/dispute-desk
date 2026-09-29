@@ -17,6 +17,14 @@ import {
 } from "@/lib/shopify/evidenceRecord";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Reads per sync run. The sync job already runs close to the worker's 300 s
+ * limit on the largest shops; the first prod run (2026-09-29) read 50
+ * disputes on one shop and two shops only finished on their last attempt.
+ * Anything over the cap is read on the next hourly run.
+ */
+export const MAX_READS_PER_RUN = 15;
 const OPEN_STATUSES = new Set(["needs_response", "under_review"]);
 
 export function evidenceSnapshotsEnabled(): boolean {
@@ -84,13 +92,22 @@ export async function recordEvidenceSnapshots(
     if (!latest.has(r.dispute_id)) latest.set(r.dispute_id, r);
   }
 
+  // Priority: status moved (a reopen needs its row now), then never
+  // snapshotted, then oldest confirmation.
+  const due: { d: Record<string, unknown>; gid: string; status: string; prev: LatestRow | undefined; rank: number; age: number }[] = [];
   for (const d of disputes ?? []) {
     const status = String(d.status ?? "").toLowerCase();
     const gid = d.dispute_evidence_gid as string | null;
     if (!gid || !OPEN_STATUSES.has(status)) continue;
     const prev = latest.get(d.id as string);
     if (!needsRead(prev, status, now)) continue;
+    const rank = prev && prev.observed_status !== status ? 0 : !prev ? 1 : 2;
+    const age = prev ? new Date(prev.last_confirmed_at).getTime() : 0;
+    due.push({ d, gid, status, prev, rank, age });
+  }
+  due.sort((a, b) => a.rank - b.rank || a.age - b.age);
 
+  for (const { d, gid, status, prev } of due.slice(0, MAX_READS_PER_RUN)) {
     const res = await deps.read(gid);
     out.read++;
     if (!res.ok) {

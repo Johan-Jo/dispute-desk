@@ -53,6 +53,8 @@ describe("handleSyncDisputes", () => {
     expect(mockSyncDisputes).toHaveBeenCalledWith("shop-42", {
       triggerAutomation: true,
       correlationId: "job-job-xyz",
+      // The scheduled job skips unchanged closed disputes; manual sync does not.
+      skipUnchangedClosed: true,
     });
   });
 
