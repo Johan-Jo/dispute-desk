@@ -44,6 +44,7 @@ import {
 import type { OrderMatchSignals } from "@/lib/integrations/gorgias/matchScoring";
 import {
   analyzeGorgiasRelevance,
+  applyFamilyCategoryPolicy,
   type AnalyzerCaseInput,
   type AnalyzerResult,
 } from "@/lib/integrations/gorgias/relevanceAnalyzer";
@@ -806,10 +807,23 @@ async function runAnalysisPhase(
     };
   }
 
+  // Family category policy, deterministic and post-model (non-receipt plan
+  // §7): on item-not-received, `contradiction` is unavailable and a customer's
+  // money-back request is recorded as refund_history. Applied here, where
+  // proposals are written, so no analyzer implementation can bypass it.
+  const messageById = new Map(
+    candidates.map((c) => [c.id, { senderType: c.sender_type, text: c.message_text }]),
+  );
+  const policed = applyFamilyCategoryPolicy(
+    result.proposals,
+    input.disputeReason,
+    messageById,
+  );
+
   // Write proposals — HARD RULE: only candidate → proposed. The guarded
   // WHERE keeps the analyzer from ever touching merchant-decided rows.
   let proposalCount = 0;
-  for (const p of result.proposals) {
+  for (const p of policed.proposals) {
     const { data: updated } = await sb
       .from("gorgias_evidence_messages")
       .update({
@@ -837,7 +851,7 @@ async function runAnalysisPhase(
   return {
     deferred: false,
     proposalCount,
-    rejectedCount: result.rejectedCount,
+    rejectedCount: result.rejectedCount + policed.rejectedCount,
     model: result.model,
     promptVersion: result.promptVersion,
     tokens: result.tokens,
