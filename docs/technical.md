@@ -1051,6 +1051,15 @@ Active shops settle near 1-2 h, dormant shops drift toward 6 h. Bounds widened o
 1. **No-session skip:** if the shop has no offline `shop_sessions` row, skip enqueue with `reason: "no_offline_session"`. Prevents enqueueing work that can only fail.
 2. **Circuit-breaker:** if the last 5 terminal `sync_disputes` jobs for the shop all failed, skip with `reason: "circuit_breaker_open"` until an admin clears the streak.
 
+**Keeping the sync under the worker's time limit (2026-09-29).** Two changes:
+- **Unchanged closed disputes are skipped.** Every scheduled run used to re-apply every dispute a shop ever had. At ~0.4 s of DB round trips each, that meant 614 disputes, about 270 s, on 6a8848-dd, against the worker's 300 s `maxDuration`, and 2–3 of the 4 hourly sync jobs lost their lock every hour.
+  - The scheduled job (`syncDisputesJob`, `skipUnchangedClosed: true`) now reads, per page, the rows it stored last time.
+  - It skips a dispute when `isUnchangedClosedDispute` holds: Shopify's node is closed (won, lost, charge_refunded or accepted), our row is closed, the node equals the stored `raw_snapshot` ignoring key order, and the row was synced within 24 h.
+  - Open disputes are never skipped, and every closed dispute is still re-applied once a day.
+  - A merchant's manual sync (`/api/disputes/sync`) re-applies everything.
+  - The skip count is logged as `skipped_unchanged` in the `disputes_synced` audit.
+- **The worker starts no job after 150 s** (`START_BUDGET_MS` in `app/api/jobs/worker/route.ts`). Jobs in a batch run one after another. The rest of the batch goes back to the queue via `releaseJob`, which also restores the attempt the claim used, and the next 2-minute tick picks it up. Before this, a batch holding two long jobs was killed mid-job and resumed only when its 10-minute lock expired.
+
 Job retention: terminal jobs (`succeeded` | `failed`) older than 30 days are pruned by `/api/cron/retention-cleanup` (weekly, `0 3 * * 0`). Job rows are operational telemetry, not audit data — `dispute_events` is the audit source.
 
 ### Admin overview job counts

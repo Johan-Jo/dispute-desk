@@ -127,6 +127,31 @@ export async function markJobFailed(
 /**
  * Enqueue a new job. Returns the job ID.
  */
+/**
+ * Hand a claimed-but-never-started job back to the queue. The claim
+ * incremented `attempts`; a job that never ran must not burn one, or a
+ * worker that runs out of time repeatedly would push jobs to `failed`
+ * without ever executing them. Scoped to this worker's own lock.
+ */
+export async function releaseJob(
+  jobId: string,
+  workerId: string,
+  attemptsAfterClaim: number,
+): Promise<void> {
+  const db = getServiceClient();
+  await db
+    .from("jobs")
+    .update({
+      status: "queued",
+      locked_at: null,
+      locked_by: null,
+      attempts: Math.max(0, attemptsAfterClaim - 1),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("locked_by", workerId);
+}
+
 export async function enqueueJob(params: {
   shopId: string;
   jobType: string;

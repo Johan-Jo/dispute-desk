@@ -11,6 +11,7 @@ export async function handleSyncDisputes(job: ClaimedJob): Promise<void> {
   const result = await syncDisputes(job.shopId, {
     triggerAutomation: true,
     correlationId: `job-${job.id}`,
+    skipUnchangedClosed: true,
   });
 
   // syncDisputes COLLECTS errors rather than throwing: a failed Shopify
