@@ -115,6 +115,7 @@ describe("ledgerForBrief — item not received", () => {
     expect(c.statement).toMatch(/in transit/);
     expect(c.statement).not.toMatch(/deliver|receiv|\d{4}/i);
     expect(JSON.stringify(r.ledger)).not.toMatch(/September/);
+    expect(c.mustNot.join(" ")).toMatch(/contradicts, refutes, disproves/);
   });
 
   it("no carrier record at all still falls to the general brief", () => {
