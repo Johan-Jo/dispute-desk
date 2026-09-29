@@ -202,7 +202,14 @@ A follow-up on the Hanad thread asks whether an app can download a readable copy
 ## Rollout
 
 1. ✅ Read-only measurement.
-2. **Test-store checks (approved).** Record the results here:
+2. **Test-store checks (approved).**
+
+   **Status 2026-09-29: blocked.**
+   - Sura Svenne has no open dispute. It has 24, all `UNDER_REVIEW`/`LOST`.
+   - Creating one means a storefront test-mode checkout with the disputed-transaction card (`scripts/seed-real-disputes.mjs`). The storefront is password-protected, and the password is not in any env file.
+   - **Test-mode disputes never reopen or escalate.** So the three reopen/escalation checks below can't be run on a test store at all. They will be answered from the prod snapshots (Rollout 3) the first time a real dispute reopens.
+
+   Record the results here:
    - Does `""` or `null` clear a field?
    - Does a `submitEvidence: false` write persist, leaving `status`, `evidenceSentOn` and the reopen detection unchanged?
    - What does the deadline auto-file send?
@@ -211,6 +218,12 @@ A follow-up on the Hanad thread asks whether an app can download a readable copy
    - Does an upload keep its `id` across a reopen?
    - Does inquiry evidence survive an escalation to a chargeback?
 3. **Observe-only snapshots (approved):** develop, then prod, with the rev 5.1 table (`observed_status`, `last_confirmed_at`). They start building round-1 references now.
+
+   **Status 2026-09-29:** built in PR #920 (develop). The migration is applied to dev. Prod is waiting on approval.
+   - The snapshot is written after the sync page loop.
+   - New rows are written only when the status, cycle or content changes.
+   - At most one read per dispute per day.
+   - The kill switch is `EVIDENCE_SNAPSHOTS=off`.
 4. The Mein Maison one-off (above), per your go.
 5. **Live clearing (§3), the file rules (§4), D7 (§9), annex removal and the card.** Not approved yet. Develop first, then prod with per-change approval once the test results are recorded.
 
