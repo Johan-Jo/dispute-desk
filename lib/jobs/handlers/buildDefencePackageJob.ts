@@ -225,7 +225,7 @@ export async function handleBuildDefencePackage(
   const { data: priorLatest } = await sb
     .from("defence_packages")
     .select(
-      "id, version, status, validation_status, failure_code, prompt_version, validator_version, composition_version, evidence_hash",
+      "id, version, status, validation_status, failure_code, prompt_version, validator_version, composition_version, evidence_hash, prompt_family",
     )
     .eq("dispute_id", pkg.dispute_id)
     .neq("id", pkg.id)
@@ -239,6 +239,7 @@ export async function handleBuildDefencePackage(
     /* The draft under construction carries the hash the enqueue site computed,
      * so the comparison is against the same evidence that decision used. */
     evidenceHash: typeof pkg.evidence_hash === "string" ? pkg.evidence_hash : null,
+    writerFamily: COUNSEL_PROMPT_FAMILY,
   });
   if (priorGuard.blocked) {
     await logAuditEvent({
