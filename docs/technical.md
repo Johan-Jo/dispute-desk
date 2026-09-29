@@ -3580,6 +3580,9 @@ code-built claim ledger.
   When the corrections leave only the summary's length wrong, one more call (`SHORTEN_SYSTEM`, summary only,
   ≤ 70 words, first and last sentence kept) rewrites it; the result is re-checked and reviewed, and kept only
   if it passes (#100705, 2026-09-29: 92 of 90 words after two corrections left the dispute without a letter).
+  A brief section may name a `requiresClaimId`: it is written only when that claim is in the ledger
+  (`sectionApplies`). Not-as-described's Return Route requires `return_route_open`; when the return window has
+  closed, "no return recorded" moves to the shipping section (#93254, 2026-09-29).
 - **The template writer is retired (2026-09-28).** The maintainer switched it off permanently after it wrote the
   Mein Maison #101111 not-as-described letter (German product title in the summary; shipping, delivery and the
   dispute's opening dropped from the sequence). `buildDefencePackageJob` no longer calls `generateNarrative`: when
