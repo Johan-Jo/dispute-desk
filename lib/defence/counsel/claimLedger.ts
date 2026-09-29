@@ -185,28 +185,46 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     }
   }
 
+  /* Timing is cited only when it HELPS (merchant's counsel: bury what hurts).
+   * Mein Maison #100463 (2026-09-29): the ledger offered "The carrier
+   * recorded delivery twenty-six days after the merchant shipped the order"
+   * unconditionally, and the writer used it — telling PayPal the parcel took
+   * almost a month. Now:
+   *   - shipping: only when prompt (same or next day) or inside the merchant's
+   *     published dispatch window;
+   *   - transit: only when the whole order → delivery span sits inside the
+   *     merchant's delivery period (published delivery window, else 10 days —
+   *     `deliveryPeriodDays` without a ship date, the rule the later-order
+   *     claim already uses).
+   * Outside those, the ledger says nothing about timing, so the writer cannot
+   * either (the fact-check refuses any interval no claim supports). */
   if (shippedAt && orderCreatedAt) {
     const d = calendarDays(orderCreatedAt, shippedAt);
     const interval = d === 0 ? "the same day" : `${numberWord(d)} day${d === 1 ? "" : "s"} after the order`;
-    add({
-      id: "shipped_promptly",
-      statement: `The merchant shipped the order ${d === 0 ? "the same day it was placed and paid for" : `${interval}`}.`,
-      specifics: {
-        shipInterval: interval,
-        orderPlacedOn: longDate(orderCreatedAt)!.replace(/ \d{4}$/, ""),
-        shippedOn: longDate(shippedAt)!.replace(/ \d{4}$/, ""),
-        ...(d > 0 ? { shipDays: String(d) } : {}),
-      },
-      weight: "strong",
-      sources: ["pack.order.createdAt", "pack.shipping.fulfillments.createdAt"],
-      mustNot: ["Shipping is the merchant's own record; it is not delivery."],
-    });
 
     const policy = ((obj(sections.find((s) => s?.type === "shipping_policy")?.data)?.policies as unknown[]) ?? [])
       .map(obj)
       .find((p) => str(p?.textPreview));
     const m = str(policy?.textPreview)?.match(/ship\w*\s+within\s+(\d+)\s*(?:-|–|to)\s*(\d+)\s+business\s+days/i);
-    if (m && businessDays(orderCreatedAt, shippedAt) <= Number(m[2])) {
+    const withinDispatchPolicy = !!m && businessDays(orderCreatedAt, shippedAt) <= Number(m[2]);
+
+    if (d <= 1 || withinDispatchPolicy) {
+      add({
+        id: "shipped_promptly",
+        statement: `The merchant shipped the order ${d === 0 ? "the same day it was placed and paid for" : `${interval}`}.`,
+        specifics: {
+          shipInterval: interval,
+          orderPlacedOn: longDate(orderCreatedAt)!.replace(/ \d{4}$/, ""),
+          shippedOn: longDate(shippedAt)!.replace(/ \d{4}$/, ""),
+          ...(d > 0 ? { shipDays: String(d) } : {}),
+        },
+        weight: "strong",
+        sources: ["pack.order.createdAt", "pack.shipping.fulfillments.createdAt"],
+        mustNot: ["Shipping is the merchant's own record; it is not delivery."],
+      });
+    }
+
+    if (m && withinDispatchPolicy) {
       add({
         id: "within_shipping_policy",
         statement: `The order shipped within the merchant's published shipping policy (dispatch within ${m[1]}–${m[2]} business days).`,
@@ -218,7 +236,9 @@ export function buildItemNotReceivedLedger(input: LedgerInput): LedgerClaim[] | 
     }
 
     const transit = calendarDays(shippedAt, deliveredAt);
-    if (transit >= 0) {
+    const deliveredWithinPeriod =
+      calendarDays(orderCreatedAt, deliveredAt) <= deliveryPeriodDays(sections, orderCreatedAt, null, deliveredAt);
+    if (transit >= 0 && deliveredWithinPeriod) {
       add({
         id: "transit_days",
         statement: `The carrier recorded delivery ${numberWord(transit)} day${transit === 1 ? "" : "s"} after the merchant shipped the order.`,

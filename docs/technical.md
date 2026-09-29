@@ -3715,6 +3715,13 @@ Address rule:
   (`documentModel.ts` `laterOrderCard`). Its delivery date is shown only when the order arrived within the
   merchant's delivery period (`deliveryPeriodDays`: a published delivery window, else the dispatch window plus
   the disputed order's transit, else 10 days); a long order-to-delivery span is left out.
+- **Timing only when it helps (2026-09-29).** The single-parcel item-not-received ledger offers
+  `shipped_promptly` only for same/next-day dispatch or dispatch inside the published window, and `transit_days`
+  only when the whole order → delivery span sits inside the merchant's delivery period (`deliveryPeriodDays`
+  without a ship date: published delivery window, else 10 days). Outside those the ledger carries no timing, so
+  the writer cannot state it (the fact-check refuses unsupported intervals). Trigger: Mein Maison #100463's
+  letter said delivery came "twenty-six days after the merchant shipped the order". Pinned by
+  `lib/defence/counsel/__tests__/timingOnlyWhenItHelps.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
