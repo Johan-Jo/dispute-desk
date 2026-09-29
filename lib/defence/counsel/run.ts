@@ -138,7 +138,10 @@ export function addDisputeOpenedRow(
         ? "The cardholder opened an inquiry."
         : "The cardholder opened a chargeback.";
   const row = { at: openedAt, text };
-  const holder = ledger.find((c) => c.id === "dispute_after_delivery" || c.id === "delivered_after_dispute_opened");
+  // Delivered after the dispute opened: the filing date is not cited, in the
+  // prose or the chronology (see the claim in claimLedger.ts).
+  if (ledger.some((c) => c.id === "delivered_after_dispute_opened")) return;
+  const holder = ledger.find((c) => c.id === "dispute_after_delivery");
   if (holder) {
     holder.timelineEvent = holder.timelineEvent ?? row;
     return;
