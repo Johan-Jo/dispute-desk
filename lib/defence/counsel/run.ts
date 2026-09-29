@@ -79,11 +79,19 @@ export function ledgerForBrief(
     ];
     return { brief: GENERAL_BRIEF, ledger };
   };
+  /* Parcel claims (`parcel_1`, `parcel_2`, …) carry their own `parcel` block
+   * and are always kept — `pickBriefTheory` appends them to the theory. Before
+   * 2026-09-29 this filter dropped them, and `carrier_delivered` was the only
+   * minimum, so EVERY multi-parcel item-not-received ledger (blume-box
+   * #360980) fell through to the general brief: "The customer disputes the
+   * transaction." */
   const within = (l: LedgerClaim[] | null, b: Brief) => {
     if (!l) return null;
-    const kept = l.filter((c) => b.claims.includes(c.id));
+    const kept = l.filter((c) => b.claims.includes(c.id) || !!c.parcel);
     const ids = new Set(kept.map((c) => c.id));
-    return b.minimumClaims.every((id) => ids.has(id)) ? { brief: b, ledger: kept } : null;
+    const minimum = b.minimumClaims.every((id) => ids.has(id));
+    const anyOf = !b.minimumAnyOf || b.minimumAnyOf.some((id) => ids.has(id));
+    return minimum && anyOf ? { brief: b, ledger: kept } : null;
   };
   if (brief.type === "item_not_received") return within(buildItemNotReceivedLedger(input), brief) ?? general();
   if (brief.type === "product_not_as_described") return within(buildNotAsDescribedLedger(input, { constraints, ...extras }), brief) ?? general();
