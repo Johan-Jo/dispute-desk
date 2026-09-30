@@ -143,6 +143,50 @@ describe("evaluateGenerationGuard", () => {
   });
 });
 
+/* The writer itself was replaced (template → counsel v2, 2026-09-28). Mein
+ * Maison #102193 failed under the template writer on 09-28 and was blocked
+ * `human_action_required` from then on: the template's prompt_version never
+ * moves again, so nothing the guard could see had changed. */
+describe("evaluateGenerationGuard — writer change", () => {
+  const SAME = { promptVersion: 16, validatorVersion: 4, compositionVersion: 2, evidenceHash: "hash-a" };
+  const FAILED = {
+    status: "failed",
+    validation_status: "failed",
+    failure_code: "validation_failed",
+    prompt_version: 16,
+    validator_version: 4,
+    composition_version: 2,
+    evidence_hash: "hash-a",
+  };
+
+  it("a failure by the retired template writer is a new attempt under counsel", () => {
+    const v = evaluateGenerationGuard(
+      { ...FAILED, prompt_family: "defence_package_narrative" },
+      { ...SAME, writerFamily: "counsel_v2" },
+    );
+    expect(v.blocked).toBe(false);
+    expect(v.retryBasis).toEqual(["writer_changed"]);
+  });
+
+  it("a counsel failure under counsel still blocks (the loop stays bounded)", () => {
+    const v = evaluateGenerationGuard({ ...FAILED, prompt_family: "counsel_v2" }, { ...SAME, writerFamily: "counsel_v2" });
+    expect(v.blocked).toBe(true);
+  });
+
+  it("a counsel refusal (no prompt_family recorded) is NOT treated as a writer change", () => {
+    const v = evaluateGenerationGuard(
+      { ...FAILED, failure_code: "no_counsel_letter", prompt_family: null },
+      { ...SAME, writerFamily: "counsel_v2" },
+    );
+    expect(v.blocked).toBe(true);
+  });
+
+  it("a caller that does not name the writer keeps the old behaviour", () => {
+    const v = evaluateGenerationGuard({ ...FAILED, prompt_family: "defence_package_narrative" }, SAME);
+    expect(v.blocked).toBe(true);
+  });
+});
+
 /* ── 2. The REAL entry point, and its side effects ───────────────────── */
 
 interface Harness {

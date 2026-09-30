@@ -72,6 +72,9 @@ export interface LatestPackageRow {
   composition_version?: number | null;
   /** The evidence the failure was produced from. */
   evidence_hash?: string | null;
+  /** The WRITER that produced the failure (`defence_package_narrative` =
+   *  the retired template writer, `counsel_v2`). NULL on a counsel refusal. */
+  prompt_family?: string | null;
 }
 
 /**
@@ -88,6 +91,9 @@ export interface CurrentGenerationInputs {
   compositionVersion: number;
   /** The hash of the evidence a rebuild would run against. */
   evidenceHash: string | null;
+  /** The writer a rebuild would run (`COUNSEL_PROMPT_FAMILY`). Optional so a
+   *  caller that does not pass it keeps the previous behaviour. */
+  writerFamily?: string | null;
 }
 
 /** Which input moved since the failure. Empty when nothing did. */
@@ -95,7 +101,8 @@ export type GenerationRetryBasis =
   | "prompt_version_changed"
   | "validator_version_changed"
   | "composition_version_changed"
-  | "evidence_changed";
+  | "evidence_changed"
+  | "writer_changed";
 
 export interface GenerationGuardVerdict {
   /** True when an automatic generation must not proceed. */
@@ -214,6 +221,20 @@ export function evaluateGenerationGuard(
       (latest.evidence_hash == null || latest.evidence_hash !== current.evidenceHash)
     ) {
       retryBasis.push("evidence_changed");
+    }
+    /* The writer itself was replaced (template → counsel v2, 2026-09-28).
+     * The template writer's prompt_version never moves again, so a letter it
+     * failed looked like "the same attempt" forever — Mein Maison #102193,
+     * blocked `human_action_required` with no path for anyone to clear it.
+     * Only a RECORDED, different writer counts: a counsel refusal stores no
+     * prompt_family, and treating NULL as changed would re-run the model on
+     * every rebuild. */
+    if (
+      current.writerFamily &&
+      typeof latest.prompt_family === "string" &&
+      latest.prompt_family !== current.writerFamily
+    ) {
+      retryBasis.push("writer_changed");
     }
     if (retryBasis.length > 0) {
       return { ...ALLOWED, retryBasis };

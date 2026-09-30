@@ -3744,6 +3744,12 @@ Address rule:
   `responseTitle(frame)` ("Dispute response" for PayPal/Klarna) and Case Details gets `paymentMethodLabel`, so a
   non-card dispute shows "Payment method: PayPal" instead of "Card network —". Pinned by
   `lib/defence/__tests__/htmlViewDisputeFrame.test.ts`.
+- **Generation guard: writer change (2026-09-29).** `evaluateGenerationGuard` adds retry basis `writer_changed`:
+  a failed row whose recorded `prompt_family` differs from the current writer (`COUNSEL_PROMPT_FAMILY`) is a new
+  attempt. Both callers (`maybeEnqueueDefencePackage`, the worker's prior-row re-check) pass `writerFamily`. A NULL
+  `prompt_family` (a counsel refusal) does not count, so the loop stays bounded. Trigger: Mein Maison #102193, failed
+  under the template writer on 09-28 and blocked `human_action_required` with no path to clear it. Pinned in
+  `tests/unit/latestPackageGenerationGuard.test.ts`.
 - **Letter shape (Grok review, 2026-09-25).** Summary ends with a sentence naming the delivery record and the
   later purchase, then the request. Shipping states the item count in one tracked shipment, no partial or
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
@@ -6112,9 +6118,16 @@ candidate, **bypassing the burnt effect claim** rather than trying to un-burn it
   non-archived pack. A dispute past its deadline cannot be helped by a pack, and the tight scope
   is what keeps the sweep from re-running over resolved history.
 - **The sweep decides nothing itself.** `runAutomationPipeline` already guards terminal status,
-  auto-build-off, existing packs and quota, and clears stale billing attention on the way
+  auto-build-off, existing packs and quota, and clears stale gate attention on the way
   through; the sweep only selects candidates and re-invokes it. A dispute the pipeline declines
   keeps its attention flag — clearing it would hide a real blocker.
+- **Stale gate attention is cleared once BOTH pre-build gates pass.** `clearStaleGateAttention`
+  (`lib/automation/pipeline.ts`) runs after the auto-build switch and the quota check and clears
+  any `attention_reason` in `PIPELINE_GATE_ATTENTION_REASONS` (`auto_build_off` + the billing
+  reasons). Before 2026-09-25 it cleared billing reasons only, so a dispute first blocked while
+  auto-build was off kept its "Automation paused" banner after auto-build was turned on and the
+  pack built (6a8848-dd #93670). Merchant tasks (Gorgias review, approval, errors) are never in
+  the set.
 - **Capped** at `REPLAY_CANDIDATE_CAP = 200` per sweep, ordered by soonest deadline, and the
   handler logs when the cap is hit rather than silently truncating.
 - **Deferred while the order backfill runs.** Pack evidence is computed *from* `shopify_orders` —
