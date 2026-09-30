@@ -101,9 +101,15 @@ function setupClient(setup: MockSetup) {
       }),
       update: vi.fn().mockImplementation((row: Record<string, unknown>) => {
         updateCalls.push(row);
-        return {
-          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-        };
+        // Thenable filter chain: `.eq(...)` alone, or `.eq(...).in(...)` /
+        // `.eq(...).eq(...)` for the guarded Fix A state writes.
+        const c: Record<string, unknown> = {};
+        c.eq = vi.fn(() => c);
+        c.in = vi.fn(() => c);
+        c.is = vi.fn(() => c);
+        c.then = (res: (v: unknown) => unknown) =>
+          Promise.resolve({ data: null, error: null }).then(res);
+        return c;
       }),
     };
   };

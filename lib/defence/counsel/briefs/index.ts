@@ -115,7 +115,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
   },
   claims: [
     "claim_is_not_as_described", ...SEQUENCE, "order_specified", "shipped_as_ordered", "listing_published",
-    "return_route_open", "no_return_recorded", "later_order",
+    "return_route_open", "no_return_recorded", "merchant_confirmed_no_request", "later_order",
   ],
   theories: [
     { name: "specified_shipped_return_open", claimIds: ["order_specified", "shipped_as_ordered", "carrier_delivered", "return_route_open"] },
@@ -140,7 +140,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
       title: "Shipping & Delivery",
       exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates)",
       question: "When did the goods reach the customer?",
-      claimIds: ["carrier_delivered", "dispute_after_delivery", "no_return_recorded"],
+      claimIds: ["carrier_delivered", "dispute_after_delivery", "no_return_recorded", "merchant_confirmed_no_request"],
     },
     {
       key: "policy",

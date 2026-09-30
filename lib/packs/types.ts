@@ -100,4 +100,14 @@ export interface BuildContext {
    * so the collector and the letter cannot disagree on the family.
    */
   caseFamily?: string | null;
+  /**
+   * Fix C4/C4b: the shop takes return requests outside Shopify, and the
+   * merchant's per-dispute answer (current cycle). `orderSource` stamps both
+   * on the no-return fact — or drops it when the customer DID ask — so every
+   * scorer and the letter read one persisted verdict. Absent = setting off.
+   */
+  returnScope?: {
+    returnsOutsideShopify: boolean;
+    answer: "no_request_received" | "request_received" | "not_sure" | null;
+  };
 }

@@ -26,7 +26,7 @@ import {
   type FigmaOutcome,
 } from "./disputeListHelpers";
 import { phaseLabel, phasePillColors, REOPENED_PILL_COLORS } from "@/lib/disputes/phaseUtils";
-import { isReopenedOpenDispute } from "@/lib/disputes/reopenAfterClose";
+import { isEscalatedFromInquiry, showReopenedPill } from "@/lib/disputes/escalation";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 /** 8-column grid shared by the header + every row. */
@@ -277,7 +277,12 @@ export function DesktopDisputesTable({
                 >
                   {phaseLabel(d.phase as DisputePhase | null, t)}
                 </span>
-                {isReopenedOpenDispute(d) ? (
+                {isEscalatedFromInquiry(d) ? (
+                  <span data-testid="dispute-escalated-pill" style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}>
+                    {t("disputes.escalatedBadge")}
+                  </span>
+                ) : null}
+                {showReopenedPill(d) ? (
                   <span data-testid="dispute-reopened-pill" style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}>
                     {t("disputes.reopenedBadge")}
                   </span>

@@ -37,6 +37,8 @@ interface S {
   heading: string;
   introReopened: (p: { order: string; amount: string }) => string;
   introGeneral: (p: { order: string; amount: string }) => string;
+  /** An answered inquiry the buyer escalated to a chargeback (plan D4). */
+  introEscalated: (p: { order: string; amount: string }) => string;
   why: string;
   steps: string[];
   holdNote: string;
@@ -54,6 +56,8 @@ const STRINGS: Record<Locale, S> = {
       `Shopify has reopened the dispute on order <strong>${order}</strong> (${amount}) after an earlier response. The bank is asking for a new response.`,
     introGeneral: ({ order, amount }) =>
       `The dispute on order <strong>${order}</strong> (${amount}) came in without a specific reason from the bank.`,
+    introEscalated: ({ order, amount }) =>
+      `The inquiry on order <strong>${order}</strong> (${amount}) has been escalated to a chargeback. The response sent for the inquiry does not carry over, and the bank is asking for a new response.`,
     why: "The bank's explanation of what the customer is disputing is only shown in your Shopify admin. Shopify doesn't share it with apps, so DisputeDesk can't read it on its own. Without it, a response can't answer what the bank actually asked.",
     steps: [
       "Open the order in Shopify and find the bank's claim in the chargeback details.",
@@ -73,6 +77,8 @@ const STRINGS: Record<Locale, S> = {
       `Shopify ha reabierto la disputa del pedido <strong>${order}</strong> (${amount}) tras una respuesta anterior. El banco pide una nueva respuesta.`,
     introGeneral: ({ order, amount }) =>
       `La disputa del pedido <strong>${order}</strong> (${amount}) llegó sin un motivo concreto del banco.`,
+    introEscalated: ({ order, amount }) =>
+      `La consulta del pedido <strong>${order}</strong> (${amount}) se ha escalado a contracargo. La respuesta enviada para la consulta no se traslada y el banco pide una nueva respuesta.`,
     why: "La explicación del banco sobre lo que disputa el cliente solo se muestra en tu administrador de Shopify. Shopify no la comparte con las aplicaciones, así que DisputeDesk no puede leerla por sí mismo. Sin ella, la respuesta no puede contestar lo que el banco preguntó realmente.",
     steps: [
       "Abre el pedido en Shopify y busca la reclamación del banco en los detalles del contracargo.",
@@ -92,6 +98,8 @@ const STRINGS: Record<Locale, S> = {
       `A Shopify reabriu a disputa do pedido <strong>${order}</strong> (${amount}) após uma resposta anterior. O banco pede uma nova resposta.`,
     introGeneral: ({ order, amount }) =>
       `A disputa do pedido <strong>${order}</strong> (${amount}) chegou sem um motivo específico do banco.`,
+    introEscalated: ({ order, amount }) =>
+      `A consulta do pedido <strong>${order}</strong> (${amount}) foi escalada para estorno. A resposta enviada para a consulta não se aplica e o banco pede uma nova resposta.`,
     why: "A explicação do banco sobre o que o cliente está contestando só aparece no seu admin da Shopify. A Shopify não a compartilha com apps, então o DisputeDesk não consegue lê-la sozinho. Sem ela, a resposta não consegue responder ao que o banco realmente perguntou.",
     steps: [
       "Abra o pedido na Shopify e encontre a reclamação do banco nos detalhes do estorno.",
@@ -111,6 +119,8 @@ const STRINGS: Record<Locale, S> = {
       `Shopify a rouvert le litige de la commande <strong>${order}</strong> (${amount}) après une première réponse. La banque demande une nouvelle réponse.`,
     introGeneral: ({ order, amount }) =>
       `Le litige de la commande <strong>${order}</strong> (${amount}) est arrivé sans motif précis de la banque.`,
+    introEscalated: ({ order, amount }) =>
+      `La demande concernant la commande <strong>${order}</strong> (${amount}) est passée en rétrofacturation. La réponse envoyée pour la demande n'est pas reprise et la banque demande une nouvelle réponse.`,
     why: "L'explication de la banque sur ce que le client conteste n'apparaît que dans votre administration Shopify. Shopify ne la partage pas avec les applications, DisputeDesk ne peut donc pas la lire seul. Sans elle, la réponse ne peut pas répondre à ce que la banque a réellement demandé.",
     steps: [
       "Ouvrez la commande dans Shopify et trouvez la réclamation de la banque dans les détails de la rétrofacturation.",
@@ -130,6 +140,8 @@ const STRINGS: Record<Locale, S> = {
       `Shopify hat die Rückbuchung zur Bestellung <strong>${order}</strong> (${amount}) nach einer früheren Antwort wieder geöffnet. Die Bank verlangt eine neue Antwort.`,
     introGeneral: ({ order, amount }) =>
       `Die Rückbuchung zur Bestellung <strong>${order}</strong> (${amount}) kam ohne konkreten Grund von der Bank.`,
+    introEscalated: ({ order, amount }) =>
+      `Die Anfrage zur Bestellung <strong>${order}</strong> (${amount}) wurde zu einer Rückbuchung eskaliert. Die Antwort auf die Anfrage gilt nicht weiter, und die Bank verlangt eine neue Antwort.`,
     why: "Die Begründung der Bank, was der Kunde beanstandet, wird nur in Ihrem Shopify-Adminbereich angezeigt. Shopify gibt sie nicht an Apps weiter, daher kann DisputeDesk sie nicht selbst lesen. Ohne sie kann die Antwort nicht auf das eingehen, was die Bank tatsächlich gefragt hat.",
     steps: [
       "Öffnen Sie die Bestellung in Shopify und suchen Sie die Begründung der Bank in den Rückbuchungsdetails.",
@@ -149,6 +161,8 @@ const STRINGS: Record<Locale, S> = {
       `Shopify har öppnat tvisten för order <strong>${order}</strong> (${amount}) igen efter ett tidigare svar. Banken begär ett nytt svar.`,
     introGeneral: ({ order, amount }) =>
       `Tvisten för order <strong>${order}</strong> (${amount}) kom in utan något specifikt skäl från banken.`,
+    introEscalated: ({ order, amount }) =>
+      `Förfrågan för order <strong>${order}</strong> (${amount}) har eskalerats till ett återkrav. Svaret på förfrågan gäller inte längre, och banken begär ett nytt svar.`,
     why: "Bankens förklaring av vad kunden bestrider visas bara i din Shopify-admin. Shopify delar den inte med appar, så DisputeDesk kan inte läsa den själv. Utan den kan svaret inte bemöta det banken faktiskt frågade.",
     steps: [
       "Öppna ordern i Shopify och hitta bankens anspråk i återkravsdetaljerna.",
@@ -182,6 +196,8 @@ function formatCurrency(amount: number | null, code: string | null): string {
 export function renderBankClaimNeededEmail(args: {
   locale: Locale;
   trigger: BankClaimTrigger;
+  /** The reopen is an answered inquiry escalated to a chargeback. */
+  escalated?: boolean;
   orderName: string;
   amount: string;
   dueDate: string | null;
@@ -191,7 +207,9 @@ export function renderBankClaimNeededEmail(args: {
   const s = STRINGS[args.locale];
   const intro =
     args.trigger === "reopened"
-      ? s.introReopened({ order: args.orderName, amount: args.amount })
+      ? args.escalated
+        ? s.introEscalated({ order: args.orderName, amount: args.amount })
+        : s.introReopened({ order: args.orderName, amount: args.amount })
       : s.introGeneral({ order: args.orderName, amount: args.amount });
   const subject = `[DisputeDesk] ${s.subject({ order: args.orderName })}`;
   const stepsHtml = s.steps
@@ -275,7 +293,7 @@ export async function sendBankClaimNeededAlert(
       sb.from("shops").select("shop_domain").eq("id", ctx.shopId).single(),
       sb
         .from("disputes")
-        .select("order_name, amount, currency_code, due_at, order_gid")
+        .select("order_name, amount, currency_code, due_at, order_gid, response_cycle, escalated_from_inquiry_at, phase")
         .eq("id", ctx.disputeId)
         .single(),
     ]);
@@ -292,6 +310,13 @@ export async function sendBankClaimNeededAlert(
     const { subject, html, text } = renderBankClaimNeededEmail({
       locale,
       trigger: ctx.trigger,
+      // Cycle 2 on an escalated dispute is the escalation itself (plan D4);
+      // a later reopen is a plain reopen.
+      escalated:
+        ctx.trigger === "reopened" &&
+        dispute?.escalated_from_inquiry_at != null &&
+        dispute?.phase !== "inquiry" &&
+        Number(dispute?.response_cycle ?? 1) === 2,
       orderName: (dispute?.order_name as string | null) ?? "—",
       amount: formatCurrency(
         dispute?.amount != null ? Number(dispute.amount) : null,

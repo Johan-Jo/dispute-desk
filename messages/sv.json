@@ -486,6 +486,15 @@
     "caseTitle": "Ärende {id}",
     "inquiryBadge": "Förfrågan",
     "reopenedBadge": "Återöppnad",
+    "escalatedBadge": "Eskalerad från förfrågan",
+    "escalationBanner": {
+      "escalatedTitle": "Eskalerad från förfrågan till återkrav",
+      "reopenedTitle": "Återöppnad – nytt svar behövs",
+      "escalatedOn": "Detta började som en förfrågan och eskalerades till ett återkrav den {date}.",
+      "reopenedOn": "Shopify återöppnade tvisten den {date} efter ett tidigare svar.",
+      "responseDue": "Ett svar ska lämnas senast {date}.",
+      "inquiryResponseDoesNotCarry": "Svaret på förfrågan gäller inte längre."
+    },
     "chargebackBadge": "Återkrav",
     "phaseUnknown": "Okänd",
     "phaseLabel": "Fas",
@@ -1615,6 +1624,27 @@
         "errorGeneric": "Det gick inte att spara bekräftelsen ({code}). Försök igen.",
         "charCount": "{count}/{max}"
       },
+      "returnRequest": {
+        "ctaEyebrow": "Returer utanför Shopify",
+        "title": "Bad den här kunden om retur eller återbetalning?",
+        "subtitle": "Shopify registrerar bara returer som görs via Shopify. Eftersom dina kunder hör av sig via e-post, chatt eller telefon kan bara du säga om kunden bad om det innan tvisten öppnades.",
+        "answerLabel": "Innan tvisten har kunden …",
+        "choosePlaceholder": "Välj ett svar",
+        "answer": {
+          "no_request_received": "inte bett oss om retur eller återbetalning",
+          "request_received": "bett oss om retur eller återbetalning",
+          "not_sure": "Jag är inte säker"
+        },
+        "answerHint": "”Inte bett” läggs till i svaret som din bekräftelse. ”Bett” visas aldrig för banken.",
+        "noteLabel": "Anteckning (valfri)",
+        "noteHint": "Bara för dina egna anteckningar. Den stannar i DisputeDesk.",
+        "submit": "Spara svar",
+        "submitting": "Sparar…",
+        "change": "Ändra svar",
+        "answered": "Ditt svar: {answer}",
+        "errorWindowClosed": "Shopify har redan skickat svaret, så uppgiften kan inte längre läggas till.",
+        "errorGeneric": "Svaret kunde inte sparas ({code})."
+      },
       "parcelOutcome": {
         "ctaEyebrow": "Behövs för svaret · bara du kan svara på detta",
         "title": "Berätta varför paketet kom tillbaka",
@@ -2407,6 +2437,7 @@
       "order": "Beställning {orderName}",
       "refundHistory": "Chargebackhistorik",
       "noReturnInitiated": "Ingen retur påbörjad",
+      "noReturnRecordedInShopify": "Ingen retur registrerad i Shopify",
       "customerActivityLog": "Kundens aktivitetslogg",
       "customerAccountDetails": "Kundkontoinformation",
       "shopifyProtect": "Shopify Protect-täckning",
@@ -3095,6 +3126,8 @@
     "reviewDesc": "Parkera paket i granskningskö för godkännande innan sparning till Shopify",
     "blockerLabel": "Kräv noll blockeringar",
     "blockerDesc": "Blockera autosparning om obligatoriska bevismaterial saknas",
+    "returnsOutsideShopifyLabel": "Kunder begär returer utanför Shopify",
+    "returnsOutsideShopifyDesc": "Slå på detta om kunder ber om returer eller återbetalningar via e-post, chatt eller telefon i stället för via Shopify. Du bekräftar sedan, per tvist, om en begäran kom in.",
     "minScore": "Minsta fullständighetspoäng för autosparning",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Paket under denna poäng sparas inte automatiskt (0–100)",
@@ -3644,7 +3677,7 @@
       },
       "evidenceChecklist": {
         "title": "Bevischecklistan förklarad",
-        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod.\n\nInte som beskrivet: DisputeDesk hämtar produktinformationen automatiskt från din butik (titel, beskrivning, upp till tre bilder och den valda varianten) och lägger till den i försvaret. Det är din produktinformation som den ser ut i dag; Shopify sparar inte hur den såg ut när beställningen gjordes. Om den inte kan hämtas (till exempel för att produkten har tagits bort) anger checklistan varför."
+        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod.\n\nInte som beskrivet: DisputeDesk hämtar produktinformationen automatiskt från din butik (titel, beskrivning, upp till tre bilder och den valda varianten) och lägger till den i försvaret. Det är din produktinformation som den ser ut i dag; Shopify sparar inte hur den såg ut när beställningen gjordes. Om den inte kan hämtas (till exempel för att produkten har tagits bort) anger checklistan varför.\n\nReturer utanför Shopify: Shopify registrerar bara returer som görs via Shopify. Om dina kunder ber om returer eller återbetalningar via e-post, chatt eller telefon, slå på ”Kunder begär returer utanför Shopify” under Inställningar → Automatisering. ”Ingen retur registrerad i Shopify” stärker då inte längre ett ärende på egen hand, och varje tvist om vara som inte stämmer med beskrivningen, återbetalning eller utebliven leverans frågar dig på fliken Bevis om kunden bad om retur eller återbetalning före tvisten. ”Inte bett” läggs till i svaret som din bekräftelse; ”bett” visas aldrig för banken."
       },
       "defenseLetterRebuttal": {
         "title": "Försvarsbreve och automatisk motsvarotext",
@@ -3824,7 +3857,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Visa och filtrera tvister",
-          "body": "Tabellen **Tvister** har **samma kolumner** som de senaste tvisterna på instrumentpanelen: **Order** (länk till Shopify Admin när den finns), **ID** (kort internt id), **Kund**, **Belopp**, **Anledning**, **Status**, **Deadline** (månad och dag) och **Visa detaljer** för att öppna tvisten i DisputeDesk.\n\nVerktygsrad: **Sök** (order, ID, kund, anledning), **Filtrera** efter status, **Exportera** CSV, **Synka nu**.\n\n**Ingen separat granskningskö-flik**: tvister för manuell granskning visas i samma lista. Använd **Visa detaljer** och sedan **Godkänn och spara** på detaljsidan."
+          "body": "Tabellen **Tvister** har **samma kolumner** som de senaste tvisterna på instrumentpanelen: **Order** (länk till Shopify Admin när den finns), **ID** (kort internt id), **Kund**, **Belopp**, **Anledning**, **Status**, **Deadline** (månad och dag) och **Visa detaljer** för att öppna tvisten i DisputeDesk.\n\nVerktygsrad: **Sök** (order, ID, kund, anledning), **Filtrera** efter status, **Exportera** CSV, **Synka nu**.\n\n**Ingen separat granskningskö-flik**: tvister för manuell granskning visas i samma lista. Använd **Visa detaljer** och sedan **Godkänn och spara** på detaljsidan.\n\n**Besvarad i Shopify:** när en tvist besvaras direkt i Shopify-admin ser DisputeDesk att Shopify sätter den under granskning och visar ”Ett svar skickades via Shopify”. Den räknas då inte längre som väntande på svar, och inget bevispaket byggs för den. Om kunden eller banken frågar igen behöver den ett svar igen.\n\n**Eskalerad från förfrågan:** en förfrågan som blev ett återkrav märks ”Eskalerad från förfrågan”, och du kan filtrera listan på det. Tvistsidan visar när den eskalerades och, så länge Shopify begär ett svar, när svaret ska lämnas."
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
@@ -5059,7 +5092,8 @@
       "dispute_resynced": "Tvist uppdaterad från Shopify",
       "response_cycle_reopened": "Återöppnad – nytt svar behövs",
       "dispute_reopened_after_close": "Återöppnad av Shopify efter ett beslut",
-      "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav"
+      "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav",
+      "response_sent_via_shopify": "Ett svar skickades via Shopify"
     },
     "actors": {
       "merchant_user": "Du",
@@ -6373,6 +6407,14 @@
       "under_review": {
         "title": "Kortnätverket granskar tvisten",
         "message": "Svaret har skickats och kan inte längre ändras. DisputeDesk följer tvisten tills utfallet kommer."
+      },
+      "underReviewViaShopify": {
+        "title": "Ett svar skickades via Shopify",
+        "message": "Shopify visar tvisten som under granskning efter att ett svar skickats via Shopify. DisputeDesk skickade inget svar och följer tvisten tills beslut fattas."
+      },
+      "underReviewUnattributed": {
+        "title": "Under granskning i Shopify",
+        "message": "Shopify visar tvisten som under granskning. DisputeDesk skickade inget svar och följer tvisten tills beslut fattas."
       },
       "next": {
         "building_evidence": "Bevispaket förberett — vanligtvis inom några timmar",

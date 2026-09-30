@@ -41,6 +41,10 @@ export const MERCHANT_ACTIVITY_EVENT_TYPES: readonly string[] = [
   "outcome_detected",
   "support_note_added",
   "dispute_resynced",
+  "response_cycle_reopened",
+  "dispute_reopened_after_close",
+  "escalated_to_chargeback",
+  "response_sent_via_shopify",
 ];
 
 /** Translate a raw Shopify/normalized status token to a merchant label.

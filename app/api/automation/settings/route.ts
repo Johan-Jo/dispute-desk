@@ -10,6 +10,7 @@ import {
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { scheduleBlockedBuildReplay } from "@/lib/billing/replayBlockedBuilds";
 import { verifyImpersonation } from "@/lib/admin/impersonation";
+import { requeueOpenPackBuilds } from "@/lib/disputes/requeueOpenPackBuilds";
 
 /**
  * GET /api/automation/settings?shop_id=...
@@ -66,6 +67,7 @@ export async function PATCH(req: NextRequest) {
     "auto_build_enabled",
     "auto_save_min_score",
     "enforce_no_blockers",
+    "returns_outside_shopify",
   ];
   const filtered = Object.fromEntries(
     Object.entries(updates).filter(([k]) => allowed.includes(k))
@@ -136,6 +138,24 @@ export async function PATCH(req: NextRequest) {
      * time) does not sweep. Fire-and-forget — `scheduleBlockedBuildReplay`
      * swallows its own errors, because a failed sweep must never roll back a
      * saved setting. */
+    // Fix C4: the setting changes how the no-return fact scores, so the
+    // shop's open, not-yet-sent packs are rebuilt. A small set; listed in
+    // the audit payload.
+    if (changes.returns_outside_shopify) {
+      try {
+        const requeuedPackIds = await requeueOpenPackBuilds(shop_id);
+        await logAuditEvent({
+          shopId: shop_id,
+          actorType: imp ? "system" : "merchant",
+          actorId: imp?.adminUserId ?? null,
+          eventType: "returns_outside_shopify_changed",
+          eventPayload: { to: changes.returns_outside_shopify.to, requeuedPackIds },
+        });
+      } catch (err) {
+        console.error("[automation-settings] returns-outside-Shopify requeue failed", err);
+      }
+    }
+
     if (changes.auto_build_enabled?.to === true) {
       void scheduleBlockedBuildReplay({
         shopId: shop_id,

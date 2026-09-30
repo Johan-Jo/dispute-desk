@@ -12,6 +12,7 @@
  * in buildPack.ts.
  */
 
+import { noReturnFactScope } from "@/lib/disputes/returnRequestConfirmation";
 import type { EvidenceSection, BuildContext } from "../types";
 import { classifyDeliveryEvent } from "@/lib/shopify/deliveryEventClassifier";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
@@ -264,14 +265,25 @@ export async function collectOrderEvidence(
   const totalRefundedAll = Number.parseFloat(
     order.totalRefundedSet.shopMoney.amount,
   );
-  if (order.returnStatus === "NO_RETURN" && !(totalRefundedAll > 0)) {
+  // Fix C1/C4b: the fact is named by its source — "no return recorded in
+  // Shopify", nothing more — and carries the shop's returns setting and the
+  // merchant's answer. When the merchant says the customer DID ask, it is
+  // not emitted at all (that answer never reaches the bank).
+  const returnScope = noReturnFactScope({
+    returnsOutsideShopify: ctx.returnScope?.returnsOutsideShopify === true,
+    answer: ctx.returnScope?.answer ?? null,
+  });
+  if (order.returnStatus === "NO_RETURN" && !(totalRefundedAll > 0) && returnScope.emit) {
     sections.push({
       type: "order",
-      labelToken: { key: "packs.section.noReturnInitiated" },
+      labelToken: { key: "packs.section.noReturnRecordedInShopify" },
       source: "shopify_order",
       fieldsProvided: ["no_return_initiated"],
       data: {
         returnStatus: order.returnStatus,
+        source: "shopify_returns",
+        ...(returnScope.returnsOutsideShopify ? { returnsOutsideShopify: true } : {}),
+        ...(returnScope.merchantConfirmedNoRequest ? { merchantConfirmedNoRequest: true } : {}),
       },
     });
   }

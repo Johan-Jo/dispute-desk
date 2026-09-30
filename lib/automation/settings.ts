@@ -6,6 +6,8 @@ export interface ShopSettings {
   auto_save_enabled: boolean;
   auto_save_min_score: number;
   enforce_no_blockers: boolean;
+  /** Fix C4: customers ask for returns/refunds by email, chat or phone. */
+  returns_outside_shopify: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +31,7 @@ export async function updateShopSettings(
       | "auto_save_enabled"
       | "auto_save_min_score"
       | "enforce_no_blockers"
+      | "returns_outside_shopify"
     >
   >
 ): Promise<ShopSettings> {

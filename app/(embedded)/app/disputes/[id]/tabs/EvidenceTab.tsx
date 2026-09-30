@@ -38,6 +38,7 @@ import { MissingOrWeakSection } from "./sections/MissingOrWeakSection";
 import { RegeneratePromptModal } from "./sections/RegeneratePromptModal";
 import { CardholderAcknowledgementCard } from "./sections/CardholderAcknowledgementCard";
 import { ParcelOutcomeCard } from "./sections/ParcelOutcomeCard";
+import { ReturnRequestCard } from "./sections/ReturnRequestCard";
 import { GorgiasCommsReviewSection } from "./sections/GorgiasCommsReviewSection";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -303,6 +304,7 @@ export default function EvidenceTab({ workspace }: Props) {
           an acknowledgement that the customer placed the order does not
           help a case whose problem is that they never received it. */}
       <ParcelOutcomeCard workspace={workspace} />
+      <ReturnRequestCard workspace={workspace} />
       <CardholderAcknowledgementCard workspace={workspace} />
 
       {/* §3 — Evidence in your defence package.
