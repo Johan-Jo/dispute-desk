@@ -2339,17 +2339,15 @@
       },
       "decision": {
         "submit": "Enviar no prazo",
-        "hold": "Manter em análise",
         "none": "Não responder",
         "submitHint": "Salvo no Shopify automaticamente em {date}.",
         "submitHintNoDate": "Salvo no Shopify automaticamente no prazo.",
-        "holdHint": "Se não tomar nenhuma outra ação, sua regra de automação será aplicada no prazo.",
-        "noneHint": "O DisputeDesk não adicionará um pacote de defesa a esta disputa."
+        "noneHint": "O DisputeDesk não adicionará um pacote de defesa a esta disputa.",
+        "prompt": "Este caso precisa da sua decisão antes do prazo. Agende o envio automático no prazo ou diga ao DisputeDesk para não adicionar um pacote de defesa."
       },
       "next": {
         "submit": "Salvo no Shopify automaticamente em {date}",
         "submitNoDate": "Salvo no Shopify automaticamente no prazo",
-        "hold": "Em análise — se não tomar nenhuma outra ação, sua regra de automação será aplicada no prazo",
         "none": "Não será adicionado nenhum pacote de defesa",
         "undecided": "Decida o que acontece no prazo"
       },
