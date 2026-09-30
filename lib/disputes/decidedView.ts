@@ -253,7 +253,9 @@ function factsSection(
     items.push({ title, source, clause, tone, weighted: false });
 
   if (!won) {
-    const deliveryMatters = c.family === "delivery" || c.family === "product" || c.family === "fraud";
+    // Not on a not-as-described claim: the customer has the goods, so delivery
+    // is uncontested (not-as-described-defence-package.plan.md PR 1b).
+    const deliveryMatters = c.family === "delivery" || c.family === "fraud";
     if (c.neverFulfilled) {
       push(tk("facts.title.neverShipped"), tk("facts.source.unfulfilled"), tk("summary.clause.neverShipped"));
     } else if (c.fulfilledAfterOpen && input.order?.fulfilledAt) {
@@ -352,7 +354,7 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
       rows = [
         had("productDescription", c.has("product_description")),
         had("refundPolicy", c.has("refund_policy"), "missing", "policy"),
-        had("deliveryConfirmation", c.deliveryConfirmed),
+        had("noReturn", c.has("no_return_initiated") || c.has("returned_parcel_outcome")),
         comms,
       ];
       break;
@@ -478,7 +480,7 @@ function timelineSection(
   if (input.firstPackAt && resp?.responder !== "before_install") {
     const deliveryMissing =
       input.outcome === "lost" &&
-      (c.family === "delivery" || c.family === "product") &&
+      c.family === "delivery" &&
       !c.deliveryConfirmed &&
       !c.hasTracking;
     steps.push({
