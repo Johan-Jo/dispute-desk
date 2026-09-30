@@ -47,6 +47,18 @@ export function outcomeKeySuffix(reopenedAfterCloseAt: string | null | undefined
 }
 
 /**
+ * Whether Shopify has already decided the dispute (won / lost / accepted…).
+ * A reopen clears both fields (see above), so a decided dispute is never one
+ * Shopify is still waiting on — nothing can be filed for it.
+ */
+export function isDecidedDispute(d: {
+  final_outcome?: string | null;
+  closed_at?: string | null;
+}): boolean {
+  return (d.final_outcome != null && d.final_outcome !== "pending") || d.closed_at != null;
+}
+
+/**
  * Whether an open dispute shows the "Reopened" badge: Shopify reopened it
  * after an outcome, or asked for a new response after one was given
  * (response cycle 2+). A decided dispute never shows it.
@@ -57,6 +69,6 @@ export function isReopenedOpenDispute(d: {
   response_cycle?: number | null;
   reopened_after_close_at?: string | null;
 }): boolean {
-  if ((d.final_outcome && d.final_outcome !== "pending") || d.closed_at) return false;
+  if (isDecidedDispute(d)) return false;
   return (d.response_cycle ?? 1) >= 2 || d.reopened_after_close_at != null;
 }
