@@ -2339,17 +2339,15 @@
       },
       "decision": {
         "submit": "Zur Frist einreichen",
-        "hold": "Zur Prüfung zurückhalten",
         "none": "Nicht antworten",
         "submitHint": "Wird am {date} automatisch in Shopify gespeichert.",
         "submitHintNoDate": "Wird zur Frist automatisch in Shopify gespeichert.",
-        "holdHint": "Wenn Sie nichts weiter unternehmen, wird zur Frist Ihre Automatisierungsregel angewendet.",
-        "noneHint": "DisputeDesk fügt diesem Fall kein Verteidigungspaket hinzu."
+        "noneHint": "DisputeDesk fügt diesem Fall kein Verteidigungspaket hinzu.",
+        "prompt": "Dieser Fall braucht vor der Frist Ihre Entscheidung. Planen Sie die automatische Einreichung zur Frist, oder teilen Sie DisputeDesk mit, kein Verteidigungspaket hinzuzufügen."
       },
       "next": {
         "submit": "Wird am {date} automatisch in Shopify gespeichert",
         "submitNoDate": "Wird zur Frist automatisch in Shopify gespeichert",
-        "hold": "Zur Prüfung zurückgehalten — wenn Sie nichts weiter unternehmen, wird zur Frist Ihre Automatisierungsregel angewendet",
         "none": "Es wird kein Verteidigungspaket hinzugefügt",
         "undecided": "Entscheiden Sie, was zur Frist passiert"
       },

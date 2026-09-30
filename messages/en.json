@@ -2339,17 +2339,15 @@
       },
       "decision": {
         "submit": "Submit on deadline",
-        "hold": "Hold for review",
         "none": "Don't respond",
         "submitHint": "Saved to Shopify automatically on {date}.",
         "submitHintNoDate": "Saved to Shopify automatically on the deadline.",
-        "holdHint": "If you take no further action, your automation rule applies at the deadline.",
-        "noneHint": "DisputeDesk won't add a defence package to this dispute."
+        "noneHint": "DisputeDesk won't add a defence package to this dispute.",
+        "prompt": "This case needs your call before the deadline. Schedule it to be sent automatically on the deadline, or tell DisputeDesk not to add a defence package."
       },
       "next": {
         "submit": "Saved to Shopify automatically on {date}",
         "submitNoDate": "Saved to Shopify automatically on the deadline",
-        "hold": "Held for your review — if you take no further action, your automation rule applies at the deadline",
         "none": "No defence package will be added",
         "undecided": "Decide what happens on the deadline"
       },

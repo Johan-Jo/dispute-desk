@@ -9,7 +9,12 @@
  * rule:
  *
  *   Evidence                 [ Add missing evidence | Save anyway ]
- *   Decide what to do …      [ Submit on deadline | Hold for review | Don't respond ]
+ *   Decide what to do …      [ Submit on deadline | Don't respond ]
+ *
+ * "Hold for review" from the design is deliberately absent (2026-09-29,
+ * maintainer decision): `in_review` changes nothing at the deadline — the
+ * deadline cron treats it exactly like no decision — so it was a third
+ * option with no effect. The API still accepts `hold` for existing rows.
  *
  * Either row renders on its own when only one applies; the divider only
  * sits between two rows.
@@ -29,7 +34,7 @@ import { useTranslations } from "next-intl";
  *  surfaces may not import a scoring module (CP-A invariant). */
 export const MANUAL_UPLOAD_FIELD = "supporting_documents";
 
-export type DecisionKey = "submit" | "hold" | "none";
+export type DecisionKey = "submit" | "none";
 
 const TEXT = "#0B1220";
 const TEXT_SUBTLE = "#667085";
@@ -185,7 +190,6 @@ export function OverviewDecisionPanel(props: OverviewDecisionPanelProps) {
 
   const decOptions: SegmentOption<DecisionKey>[] = [
     { key: "submit", label: t("decision.submit") },
-    { key: "hold", label: t("decision.hold") },
     { key: "none", label: t("decision.none"), danger: true },
   ];
   const decHint =
@@ -193,11 +197,9 @@ export function OverviewDecisionPanel(props: OverviewDecisionPanelProps) {
       ? props.deadlineShort
         ? t("decision.submitHint", { date: props.deadlineShort })
         : t("decision.submitHintNoDate")
-      : props.decision === "hold"
-        ? t("decision.holdHint")
-        : props.decision === "none"
-          ? t("decision.noneHint")
-          : "";
+      : props.decision === "none"
+        ? t("decision.noneHint")
+        : "";
 
   const pickEvidence = (key: "add" | "save") => {
     setEv(key);
@@ -230,7 +232,7 @@ export function OverviewDecisionPanel(props: OverviewDecisionPanelProps) {
         {props.showDecision && (
           <Row
             title={tReview("title")}
-            body={tReview("prompt")}
+            body={t("decision.prompt")}
             hint={decHint}
             control={
               <Segmented
