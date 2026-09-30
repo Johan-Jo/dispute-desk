@@ -3165,6 +3165,7 @@ A win with no recorded facts uses "DisputeDesk filed your evidence…", never "t
 This replaces the one-size template, which claimed "the card network accepted your defence package" even on cases DisputeDesk never filed. If the view fails to load, the template is used as before. `accepted` is unchanged.
 
 **Rules that are load-bearing:**
+- **A not-as-described loss never turns on delivery** (2026-09-30, dev seed #9011). The customer has the goods, so delivery is uncontested, as in the letter (`not-as-described-defence-package.plan.md` PR 1b). No "no tracking" fact, no delivery clause in the summary, no "no delivery" timeline detail; the product checklist's delivery row is replaced by "No return was received".
 - **Checklist rows are observations.** No evidence items → the checklist is hidden, not marked Missing everywhere (#347615). "Delivery to the billing address" needs a confirmed delivery **and** shipping = billing **and** an AVS match (#349145). The AVS row is dropped when no AVS exists (PayPal, Klarna).
 - **"Next time" fires only on a data trigger:**
   - never shipped → ship or cancel, with the real days unshipped
