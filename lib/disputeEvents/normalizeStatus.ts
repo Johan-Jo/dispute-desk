@@ -1,3 +1,4 @@
+import { isAwaitingShopifyDeadline } from "@/lib/disputes/respondedViaShopify";
 import type {
   NormalizedStatus,
   NormalizedStatusResult,
@@ -15,6 +16,9 @@ export function deriveNormalizedStatus(
   packStatus: string | null,
   submissionState: SubmissionState,
   needsReview: boolean,
+  /** `disputes.due_at`. `undefined` = caller did not load it (legacy
+   *  behaviour: every `under_review` is `submitted_to_bank`). */
+  dueAt?: string | null,
 ): NormalizedStatusResult {
   // Terminal Shopify statuses
   if (shopifyStatus === "won") {
@@ -30,6 +34,47 @@ export function deriveNormalizedStatus(
     return result(
       "accepted_not_contested",
       "Dispute accepted / not contested",
+      null,
+      null,
+      false,
+    );
+  }
+
+  // Shopify's creation state: `under_review` before any deadline exists.
+  // Nothing has been answered (Fix A1).
+  if (
+    dueAt !== undefined &&
+    isAwaitingShopifyDeadline({ status: shopifyStatus, dueAt })
+  ) {
+    return result(
+      "new",
+      "Awaiting Shopify's response deadline",
+      null,
+      null,
+      false,
+    );
+  }
+
+  // Answered through Shopify — observed as a status, never as our save.
+  if (
+    shopifyStatus === "under_review" &&
+    submissionState === "responded_via_shopify"
+  ) {
+    return result(
+      "submitted_to_bank",
+      "A response was sent through Shopify",
+      null,
+      null,
+      false,
+    );
+  }
+  if (
+    shopifyStatus === "under_review" &&
+    submissionState === "under_review_unattributed"
+  ) {
+    return result(
+      "submitted_to_bank",
+      "Under review in Shopify",
       null,
       null,
       false,

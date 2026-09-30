@@ -53,6 +53,7 @@ import {
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
+import { isShopifyObservedResponseState } from "@/lib/disputes/respondedViaShopify";
 
 import {
   AUTO_BUILD_TRIGGERED,
@@ -374,7 +375,8 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     | "skipped_auto_build_off"
     | "existing_pack"
     | "quota_exceeded"
-    | "skipped_terminal";
+    | "skipped_terminal"
+    | "skipped_responded_via_shopify";
 }> {
   // Terminal-status guard: never auto-build (or emit a blocked event, or spend
   // a credit) for a dispute with nothing left to submit. A closed / won / lost /
@@ -386,7 +388,7 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     const sb0 = getServiceClient();
     const { data: row } = await sb0
       .from("disputes")
-      .select("final_outcome, closed_at, normalized_status")
+      .select("final_outcome, closed_at, normalized_status, status, submission_state")
       .eq("id", dispute.id)
       .maybeSingle();
     const outcome = (row?.final_outcome as string | null) ?? null;
@@ -400,6 +402,15 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
       ns === "closed_other";
     if (isTerminal) {
       return { action: "skipped_terminal" };
+    }
+    // Answered through Shopify, or under review with the responder unknown
+    // (Fix A): there is nothing to respond to, so no build and no credit.
+    // A re-ask resets the state and brings the dispute back here.
+    if (
+      row?.status === "under_review" &&
+      isShopifyObservedResponseState(row?.submission_state as string | null)
+    ) {
+      return { action: "skipped_responded_via_shopify" };
     }
   }
 

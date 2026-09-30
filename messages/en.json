@@ -487,6 +487,15 @@
     "caseTitle": "Case {id}",
     "inquiryBadge": "Inquiry",
     "reopenedBadge": "Reopened",
+    "escalatedBadge": "Escalated from inquiry",
+    "escalationBanner": {
+      "escalatedTitle": "Escalated from inquiry to chargeback",
+      "reopenedTitle": "Reopened — new response needed",
+      "escalatedOn": "This started as an inquiry and was escalated to a chargeback on {date}.",
+      "reopenedOn": "Shopify reopened this dispute on {date} after an earlier response.",
+      "responseDue": "A response is due by {date}.",
+      "inquiryResponseDoesNotCarry": "The response sent for the inquiry does not carry over."
+    },
     "chargebackBadge": "Chargeback",
     "phaseUnknown": "Unknown",
     "phaseLabel": "Phase",
@@ -3839,7 +3848,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** page uses Polaris **Page** with a toolbar and a table inside **Card**. The toolbar has **Search** (dispute ID, order, reason, or customer name), **Filter** (status popover), **Export** (CSV download), and **More actions** ⋯ for **Sync now**.\n\nThe table matches the dashboard **Recent Disputes** columns: **Order** (links to Shopify Admin when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status** (badge), **Deadline**, and **Actions** with **View details** to open the dispute. The order link opens Shopify Admin without leaving the list.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
+          "body": "The **Disputes** page uses Polaris **Page** with a toolbar and a table inside **Card**. The toolbar has **Search** (dispute ID, order, reason, or customer name), **Filter** (status popover), **Export** (CSV download), and **More actions** ⋯ for **Sync now**.\n\nThe table matches the dashboard **Recent Disputes** columns: **Order** (links to Shopify Admin when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status** (badge), **Deadline**, and **Actions** with **View details** to open the dispute. The order link opens Shopify Admin without leaving the list.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready.\n\n**Answered in Shopify:** when a dispute is answered directly in Shopify Admin, DisputeDesk sees Shopify move it to under review and shows \"A response was sent through Shopify\". It no longer counts as waiting for a response, and no evidence pack is built for it. If the customer or the bank asks again, it goes back to needing a response.\n\n**Escalated from inquiry:** an inquiry that became a chargeback carries an \"Escalated from inquiry\" badge, and you can filter the list by it. The dispute page says when it was escalated and, while Shopify asks for a response, when that response is due."
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
@@ -5262,7 +5271,8 @@
       "dispute_resynced": "Dispute refreshed from Shopify",
       "response_cycle_reopened": "Reopened — new response needed",
       "dispute_reopened_after_close": "Reopened by Shopify after a decision",
-      "escalated_to_chargeback": "Escalated from inquiry to chargeback"
+      "escalated_to_chargeback": "Escalated from inquiry to chargeback",
+      "response_sent_via_shopify": "A response was sent through Shopify"
     },
     "eventDescriptions": {
       "submission_confirmed": "Submission confirmed by Shopify",
@@ -6398,6 +6408,14 @@
       "under_review": {
         "title": "The card network is reviewing the dispute",
         "message": "The response has been sent and can no longer be changed. DisputeDesk is tracking the dispute for an outcome."
+      },
+      "underReviewViaShopify": {
+        "title": "A response was sent through Shopify",
+        "message": "Shopify shows this dispute as under review after a response was sent through Shopify. DisputeDesk did not send one and is tracking the dispute for an outcome."
+      },
+      "underReviewUnattributed": {
+        "title": "Under review in Shopify",
+        "message": "Shopify shows this dispute as under review. DisputeDesk did not send a response and is tracking the dispute for an outcome."
       },
       "technicalProblem": {
         "title": "Monitoring needs attention",

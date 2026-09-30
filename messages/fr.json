@@ -486,6 +486,15 @@
     "caseTitle": "Dossier {id}",
     "inquiryBadge": "Demande",
     "reopenedBadge": "Rouvert",
+    "escalatedBadge": "Passé de demande à rétrofacturation",
+    "escalationBanner": {
+      "escalatedTitle": "Passé de demande à rétrofacturation",
+      "reopenedTitle": "Rouvert — nouvelle réponse nécessaire",
+      "escalatedOn": "Ce litige a commencé comme une demande et est passé en rétrofacturation le {date}.",
+      "reopenedOn": "Shopify a rouvert ce litige le {date} après une réponse précédente.",
+      "responseDue": "Une réponse est attendue avant le {date}.",
+      "inquiryResponseDoesNotCarry": "La réponse envoyée pour la demande n’est pas reprise."
+    },
     "chargebackBadge": "Rétrofacturation",
     "phaseUnknown": "Inconnu",
     "phaseLabel": "Phase",
@@ -3840,7 +3849,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Afficher et filtrer les litiges",
-          "body": "Le tableau **Litiges** reprend **les mêmes colonnes** que les litiges récents du tableau de bord : **Commande** (lien Admin Shopify si disponible), **ID** (identifiant interne court), **Client**, **Montant**, **Motif**, **Statut**, **Échéance** (mois et jour) et **Voir les détails** pour ouvrir le litige dans DisputeDesk.\n\nBarre : **Recherche** (commande, ID, client, motif), **Filtrer** par statut, **Exporter** CSV, **Synchroniser maintenant**.\n\n**Pas d'onglet séparé « file d'attente de révision »** : les litiges en révision manuelle apparaissent dans cette liste. Utilisez **Voir les détails** puis **Approuver et enregistrer** sur la page de détail."
+          "body": "Le tableau **Litiges** reprend **les mêmes colonnes** que les litiges récents du tableau de bord : **Commande** (lien Admin Shopify si disponible), **ID** (identifiant interne court), **Client**, **Montant**, **Motif**, **Statut**, **Échéance** (mois et jour) et **Voir les détails** pour ouvrir le litige dans DisputeDesk.\n\nBarre : **Recherche** (commande, ID, client, motif), **Filtrer** par statut, **Exporter** CSV, **Synchroniser maintenant**.\n\n**Pas d'onglet séparé « file d'attente de révision »** : les litiges en révision manuelle apparaissent dans cette liste. Utilisez **Voir les détails** puis **Approuver et enregistrer** sur la page de détail.\n\n**Répondu dans Shopify :** lorsqu’un litige reçoit une réponse directement dans l’administration Shopify, DisputeDesk voit Shopify le passer en cours d’examen et affiche « Une réponse a été envoyée via Shopify ». Il n’est plus compté comme en attente de réponse et aucun dossier de preuves n’est préparé. Si le client ou la banque redemande, il a de nouveau besoin d’une réponse.\n\n**Passé de demande à rétrofacturation :** une demande devenue rétrofacturation porte ce badge et vous pouvez filtrer la liste avec. La page du litige indique quand le passage a eu lieu et, tant que Shopify demande une réponse, sa date limite."
         },
         "disputeDetailPage": {
           "title": "Détail du litige dans cette application",
@@ -5075,7 +5084,8 @@
       "dispute_resynced": "Litige actualisé depuis Shopify",
       "response_cycle_reopened": "Rouvert — nouvelle réponse nécessaire",
       "dispute_reopened_after_close": "Rouvert par Shopify après une décision",
-      "escalated_to_chargeback": "Passé de demande à rétrofacturation"
+      "escalated_to_chargeback": "Passé de demande à rétrofacturation",
+      "response_sent_via_shopify": "Une réponse a été envoyée via Shopify"
     },
     "actors": {
       "merchant_user": "Vous",
@@ -6389,6 +6399,14 @@
       "under_review": {
         "title": "Le réseau de cartes examine le litige",
         "message": "La réponse a été envoyée et ne peut plus être modifiée. DisputeDesk suit le litige jusqu'au résultat."
+      },
+      "underReviewViaShopify": {
+        "title": "Une réponse a été envoyée via Shopify",
+        "message": "Shopify indique que ce litige est en cours d’examen après l’envoi d’une réponse via Shopify. DisputeDesk n’en a pas envoyé et suit le litige jusqu’à la décision."
+      },
+      "underReviewUnattributed": {
+        "title": "En cours d’examen dans Shopify",
+        "message": "Shopify indique que ce litige est en cours d’examen. DisputeDesk n’a pas envoyé de réponse et suit le litige jusqu’à la décision."
       },
       "next": {
         "building_evidence": "Dossier de preuves préparé — généralement en quelques heures",

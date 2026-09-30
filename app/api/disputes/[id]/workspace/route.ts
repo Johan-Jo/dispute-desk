@@ -504,6 +504,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     reopenedAt: row.reopened_at ?? null,
     reopenedAfterCloseAt: (row.reopened_after_close_at as string | null) ?? null,
     escalatedFromInquiryAt: row.escalated_from_inquiry_at ?? null,
+    shopifyStatus: (row.status as string | null) ?? null,
   };
 
   const bankClaimCycle = (row.response_cycle as number | null) ?? 1;

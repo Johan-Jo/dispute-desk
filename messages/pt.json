@@ -486,6 +486,15 @@
     "caseTitle": "Caso {id}",
     "inquiryBadge": "Consulta",
     "reopenedBadge": "Reaberta",
+    "escalatedBadge": "Escalada de consulta",
+    "escalationBanner": {
+      "escalatedTitle": "Escalada de consulta para estorno",
+      "reopenedTitle": "Reaberta — nova resposta necessária",
+      "escalatedOn": "Começou como uma consulta e foi escalada para estorno em {date}.",
+      "reopenedOn": "A Shopify reabriu esta disputa em {date} após uma resposta anterior.",
+      "responseDue": "É necessária uma resposta até {date}.",
+      "inquiryResponseDoesNotCarry": "A resposta enviada para a consulta não se aplica."
+    },
     "chargebackBadge": "Chargeback",
     "phaseUnknown": "Desconhecido",
     "phaseLabel": "Fase",
@@ -3840,7 +3849,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Ver e filtrar disputas",
-          "body": "A tabela **Disputas** usa as **mesmas colunas** das disputas recentes do painel: **Pedido** (link para o Admin da Shopify quando disponível), **ID** (id interno curto), **Cliente**, **Valor**, **Motivo**, **Status**, **Prazo** (mês e dia) e **Ver detalhes** para abrir a disputa no DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por status, **Exportar** CSV, **Sincronizar agora**.\n\n**Não há aba separada de fila de revisão**: disputas enviadas para revisão manual aparecem nesta lista. Use **Ver detalhes** e depois **Aprovar e salvar** na página de detalhe."
+          "body": "A tabela **Disputas** usa as **mesmas colunas** das disputas recentes do painel: **Pedido** (link para o Admin da Shopify quando disponível), **ID** (id interno curto), **Cliente**, **Valor**, **Motivo**, **Status**, **Prazo** (mês e dia) e **Ver detalhes** para abrir a disputa no DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por status, **Exportar** CSV, **Sincronizar agora**.\n\n**Não há aba separada de fila de revisão**: disputas enviadas para revisão manual aparecem nesta lista. Use **Ver detalhes** e depois **Aprovar e salvar** na página de detalhe.\n\n**Respondida na Shopify:** quando uma disputa é respondida diretamente no admin da Shopify, a DisputeDesk vê a Shopify colocá-la em análise e mostra «Foi enviada uma resposta através da Shopify». Deixa de contar como à espera de resposta e não é preparado nenhum pacote de evidências. Se o cliente ou o banco voltarem a pedir, volta a precisar de resposta.\n\n**Escalada de consulta:** uma consulta que se tornou estorno tem a etiqueta «Escalada de consulta» e pode filtrar a lista por ela. A página da disputa indica quando foi escalada e, enquanto a Shopify pedir uma resposta, até quando."
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
@@ -5075,7 +5084,8 @@
       "dispute_resynced": "Disputa atualizada do Shopify",
       "response_cycle_reopened": "Reaberta — nova resposta necessária",
       "dispute_reopened_after_close": "Reaberta pelo Shopify após uma decisão",
-      "escalated_to_chargeback": "Escalada de consulta para estorno"
+      "escalated_to_chargeback": "Escalada de consulta para estorno",
+      "response_sent_via_shopify": "Foi enviada uma resposta através da Shopify"
     },
     "actors": {
       "merchant_user": "Você",
@@ -6389,6 +6399,14 @@
       "under_review": {
         "title": "A rede do cartão está analisando a disputa",
         "message": "A resposta foi enviada e não pode mais ser alterada. O DisputeDesk acompanha a disputa até o resultado."
+      },
+      "underReviewViaShopify": {
+        "title": "Foi enviada uma resposta através da Shopify",
+        "message": "A Shopify mostra esta disputa em análise depois de uma resposta ter sido enviada através da Shopify. A DisputeDesk não enviou nenhuma e acompanha a disputa até à decisão."
+      },
+      "underReviewUnattributed": {
+        "title": "Em análise na Shopify",
+        "message": "A Shopify mostra esta disputa em análise. A DisputeDesk não enviou nenhuma resposta e acompanha a disputa até à decisão."
       },
       "next": {
         "building_evidence": "Pacote de provas preparado — geralmente em poucas horas",

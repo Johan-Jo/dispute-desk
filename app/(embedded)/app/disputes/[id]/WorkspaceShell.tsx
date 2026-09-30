@@ -1,6 +1,6 @@
 "use client";
 
-import { Page, Spinner, BlockStack } from "@shopify/polaris";
+import { Page, Spinner, BlockStack, Banner, Text } from "@shopify/polaris";
 import { useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -23,7 +23,7 @@ import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { phaseLabel, phasePillColors, REOPENED_PILL_COLORS } from "@/lib/disputes/phaseUtils";
-import { isReopenedOpenDispute } from "@/lib/disputes/reopenAfterClose";
+import { escalationBanner, isEscalatedFromInquiry, showReopenedPill } from "@/lib/disputes/escalation";
 
 const PILL_STYLE = {
   padding: "2px 8px",
@@ -271,6 +271,21 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     );
   }
 
+  // Escalation / reopen flags (plan D2/D3) — one shared rule for list,
+  // header and banner.
+  const escalationInput = {
+    status: dispute.shopifyStatus ?? null,
+    phase: dispute.phase ?? null,
+    due_at: dispute.dueAt ?? null,
+    final_outcome: dispute.finalOutcome,
+    closed_at: dispute.closedAt ?? null,
+    response_cycle: dispute.responseCycle ?? 1,
+    reopened_at: dispute.reopenedAt ?? null,
+    reopened_after_close_at: dispute.reopenedAfterCloseAt ?? null,
+    escalated_from_inquiry_at: dispute.escalatedFromInquiryAt ?? null,
+  };
+  const banner = escalationBanner(escalationInput);
+
   return (
     <Page
       backAction={{
@@ -338,12 +353,15 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                 >
                   {phaseLabel(dispute.phase ?? null, t)}
                 </span>
-                {isReopenedOpenDispute({
-                  final_outcome: dispute.finalOutcome,
-                  closed_at: dispute.closedAt ?? null,
-                  response_cycle: dispute.responseCycle ?? 1,
-                  reopened_after_close_at: dispute.reopenedAfterCloseAt ?? null,
-                }) ? (
+                {isEscalatedFromInquiry(escalationInput) ? (
+                  <span
+                    data-testid="dispute-escalated-pill"
+                    style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}
+                  >
+                    {t("disputes.escalatedBadge")}
+                  </span>
+                ) : null}
+                {showReopenedPill(escalationInput) ? (
                   <span
                     data-testid="dispute-reopened-pill"
                     style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}
@@ -459,6 +477,22 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
             </div>
           </div>
         </div>
+
+        {banner ? (
+          <div data-testid={`dispute-${banner.kind}-banner`}>
+            <Banner tone="warning" title={t(`disputes.escalationBanner.${banner.kind}Title`)}>
+              <BlockStack gap="100">
+                {banner.lines.map((line) => (
+                  <Text as="p" key={line.key}>
+                    {"date" in line
+                      ? t(`disputes.escalationBanner.${line.key}`, { date: formatDate(line.date, locale) })
+                      : t(`disputes.escalationBanner.${line.key}`)}
+                  </Text>
+                ))}
+              </BlockStack>
+            </Banner>
+          </div>
+        ) : null}
 
         {/* Figma-style tab strip: connected white card, blue underline on
             active tab. Replaces Polaris <Tabs> so the tab bar visually

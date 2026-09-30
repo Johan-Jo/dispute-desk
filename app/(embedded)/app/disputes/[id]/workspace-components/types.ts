@@ -103,6 +103,9 @@ export interface WorkspaceDispute {
   /** Shopify reopened this dispute after an outcome (lib/disputes/reopenAfterClose.ts). */
   reopenedAfterCloseAt?: string | null;
   escalatedFromInquiryAt?: string | null;
+  /** Shopify's own dispute status (`needs_response`, `under_review`, …).
+   *  Drives the escalation/reopen banner's "response is due" line. */
+  shopifyStatus?: string | null;
   /** Review-lifecycle state (2026-07-23). Gates + reflects the
    *  Hold/Approve/Concede action row on a parked/weak dispute. */
   needsReview?: boolean;
