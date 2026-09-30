@@ -2329,6 +2329,49 @@
       "editClaim": "Edit claim",
       "portalBody": "DisputeDesk won't send a response for this dispute until the bank's claim is added. The claim is only visible in Shopify, and you add it in the DisputeDesk app in Shopify Admin.",
       "portalCta": "Add it in Shopify"
+    },
+    "overviewDecision": {
+      "evidence": {
+        "title": "Evidence",
+        "addHintDelivery": "Upload delivery proof before the deadline.",
+        "addHint": "Upload supporting evidence before the deadline.",
+        "saveHint": "Keep the package as is, with limited evidence."
+      },
+      "decision": {
+        "submit": "Submit on deadline",
+        "none": "Don't respond",
+        "submitHint": "Saved to Shopify automatically on {date}.",
+        "submitHintNoDate": "Saved to Shopify automatically on the deadline.",
+        "noneHint": "DisputeDesk won't add a defence package to this dispute.",
+        "prompt": "This case needs your call before the deadline. Schedule it to be sent automatically on the deadline, or tell DisputeDesk not to add a defence package."
+      },
+      "next": {
+        "submit": "Saved to Shopify automatically on {date}",
+        "submitNoDate": "Saved to Shopify automatically on the deadline",
+        "none": "No defence package will be added",
+        "undecided": "Decide what happens on the deadline"
+      },
+      "upload": {
+        "title": "Add missing evidence",
+        "descriptionDelivery": "Upload proof that the parcel reached {customer}. It's added to the defence package before the {date} deadline.",
+        "descriptionDeliveryNoDate": "Upload proof that the parcel reached {customer}. It's added to the defence package before the deadline.",
+        "description": "Upload evidence that supports your case. It's added to the defence package before the {date} deadline.",
+        "descriptionNoDate": "Upload evidence that supports your case. It's added to the defence package before the deadline.",
+        "customerFallback": "the customer",
+        "drop": "Drop files here or",
+        "browse": "browse",
+        "formats": "PDF, PNG or JPG · up to 10 MB each",
+        "tooLarge": "Files over 10 MB were left out.",
+        "helpsTitle": "What helps most for {reason}",
+        "helps": {
+          "trackingDelivered": "Carrier tracking page showing \"Delivered\"",
+          "signature": "Carrier signature confirmation",
+          "deliveryRecord": "Carrier delivery record with tracking number",
+          "customerAck": "Customer acknowledgement of receipt"
+        },
+        "cancel": "Cancel",
+        "add": "Add to package"
+      }
     }
   },
   "disputeReasons": {

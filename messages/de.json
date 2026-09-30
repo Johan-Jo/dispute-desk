@@ -2329,6 +2329,49 @@
       "editClaim": "Begründung bearbeiten",
       "portalBody": "DisputeDesk reicht für diese Rückbuchung keine Antwort ein, bis die Begründung der Bank hinzugefügt ist. Sie ist nur in Shopify sichtbar und wird in der DisputeDesk-App im Shopify-Admin hinzugefügt.",
       "portalCta": "In Shopify hinzufügen"
+    },
+    "overviewDecision": {
+      "evidence": {
+        "title": "Beweise",
+        "addHintDelivery": "Laden Sie vor der Frist einen Zustellnachweis hoch.",
+        "addHint": "Laden Sie vor der Frist unterstützende Beweise hoch.",
+        "saveHint": "Das Paket bleibt unverändert, mit begrenzten Beweisen."
+      },
+      "decision": {
+        "submit": "Zur Frist einreichen",
+        "none": "Nicht antworten",
+        "submitHint": "Wird am {date} automatisch in Shopify gespeichert.",
+        "submitHintNoDate": "Wird zur Frist automatisch in Shopify gespeichert.",
+        "noneHint": "DisputeDesk fügt diesem Fall kein Verteidigungspaket hinzu.",
+        "prompt": "Dieser Fall braucht vor der Frist Ihre Entscheidung. Planen Sie die automatische Einreichung zur Frist, oder teilen Sie DisputeDesk mit, kein Verteidigungspaket hinzuzufügen."
+      },
+      "next": {
+        "submit": "Wird am {date} automatisch in Shopify gespeichert",
+        "submitNoDate": "Wird zur Frist automatisch in Shopify gespeichert",
+        "none": "Es wird kein Verteidigungspaket hinzugefügt",
+        "undecided": "Entscheiden Sie, was zur Frist passiert"
+      },
+      "upload": {
+        "title": "Fehlende Beweise hinzufügen",
+        "descriptionDelivery": "Laden Sie einen Nachweis hoch, dass das Paket {customer} erreicht hat. Er wird vor der Frist am {date} dem Verteidigungspaket hinzugefügt.",
+        "descriptionDeliveryNoDate": "Laden Sie einen Nachweis hoch, dass das Paket {customer} erreicht hat. Er wird vor der Frist dem Verteidigungspaket hinzugefügt.",
+        "description": "Laden Sie Beweise hoch, die Ihren Fall stützen. Sie werden vor der Frist am {date} dem Verteidigungspaket hinzugefügt.",
+        "descriptionNoDate": "Laden Sie Beweise hoch, die Ihren Fall stützen. Sie werden vor der Frist dem Verteidigungspaket hinzugefügt.",
+        "customerFallback": "den Kunden",
+        "drop": "Dateien hier ablegen oder",
+        "browse": "durchsuchen",
+        "formats": "PDF, PNG oder JPG · bis zu 10 MB pro Datei",
+        "tooLarge": "Dateien über 10 MB wurden ausgelassen.",
+        "helpsTitle": "Was bei {reason} am meisten hilft",
+        "helps": {
+          "trackingDelivered": "Sendungsverfolgungsseite des Versanddienstleisters mit Status „Zugestellt“",
+          "signature": "Unterschriftsbestätigung des Versanddienstleisters",
+          "deliveryRecord": "Zustellnachweis des Versanddienstleisters mit Sendungsnummer",
+          "customerAck": "Empfangsbestätigung des Kunden"
+        },
+        "cancel": "Abbrechen",
+        "add": "Zum Paket hinzufügen"
+      }
     }
   },
   "disputeReasons": {

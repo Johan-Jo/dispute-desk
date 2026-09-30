@@ -2329,6 +2329,49 @@
       "editClaim": "Editar reclamación",
       "portalBody": "DisputeDesk no enviará una respuesta a esta disputa hasta que se añada la reclamación del banco. Solo se ve en Shopify y se añade en la app DisputeDesk dentro del panel de Shopify.",
       "portalCta": "Añadirla en Shopify"
+    },
+    "overviewDecision": {
+      "evidence": {
+        "title": "Evidencia",
+        "addHintDelivery": "Sube una prueba de entrega antes de la fecha límite.",
+        "addHint": "Sube evidencia de apoyo antes de la fecha límite.",
+        "saveHint": "Mantener el paquete tal como está, con evidencia limitada."
+      },
+      "decision": {
+        "submit": "Enviar en la fecha límite",
+        "none": "No responder",
+        "submitHint": "Se guarda en Shopify automáticamente el {date}.",
+        "submitHintNoDate": "Se guarda en Shopify automáticamente en la fecha límite.",
+        "noneHint": "DisputeDesk no añadirá un paquete de defensa a esta disputa.",
+        "prompt": "Este caso necesita su decisión antes de la fecha límite. Programe el envío automático en la fecha límite o indique a DisputeDesk que no añada un paquete de defensa."
+      },
+      "next": {
+        "submit": "Se guarda en Shopify automáticamente el {date}",
+        "submitNoDate": "Se guarda en Shopify automáticamente en la fecha límite",
+        "none": "No se añadirá ningún paquete de defensa",
+        "undecided": "Decida qué pasa en la fecha límite"
+      },
+      "upload": {
+        "title": "Añadir evidencia faltante",
+        "descriptionDelivery": "Sube una prueba de que el paquete llegó a {customer}. Se añade al paquete de defensa antes de la fecha límite del {date}.",
+        "descriptionDeliveryNoDate": "Sube una prueba de que el paquete llegó a {customer}. Se añade al paquete de defensa antes de la fecha límite.",
+        "description": "Sube evidencia que respalde tu caso. Se añade al paquete de defensa antes de la fecha límite del {date}.",
+        "descriptionNoDate": "Sube evidencia que respalde tu caso. Se añade al paquete de defensa antes de la fecha límite.",
+        "customerFallback": "el cliente",
+        "drop": "Suelta los archivos aquí o",
+        "browse": "explora",
+        "formats": "PDF, PNG o JPG · hasta 10 MB cada uno",
+        "tooLarge": "Se omitieron los archivos de más de 10 MB.",
+        "helpsTitle": "Lo que más ayuda en {reason}",
+        "helps": {
+          "trackingDelivered": "Página de seguimiento del transportista con el estado «Entregado»",
+          "signature": "Confirmación de firma del transportista",
+          "deliveryRecord": "Registro de entrega del transportista con número de seguimiento",
+          "customerAck": "Confirmación de recepción del cliente"
+        },
+        "cancel": "Cancelar",
+        "add": "Añadir al paquete"
+      }
     }
   },
   "disputeReasons": {

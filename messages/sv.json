@@ -2329,6 +2329,49 @@
       "editClaim": "Redigera anspråk",
       "portalBody": "DisputeDesk skickar inget svar för den här tvisten förrän bankens anspråk har lagts till. Anspråket syns bara i Shopify och läggs till i DisputeDesk-appen i Shopify Admin.",
       "portalCta": "Lägg till det i Shopify"
+    },
+    "overviewDecision": {
+      "evidence": {
+        "title": "Bevis",
+        "addHintDelivery": "Ladda upp leveransbevis före tidsfristen.",
+        "addHint": "Ladda upp stödjande bevis före tidsfristen.",
+        "saveHint": "Behåll paketet som det är, med begränsade bevis."
+      },
+      "decision": {
+        "submit": "Skicka in vid tidsfristen",
+        "none": "Svara inte",
+        "submitHint": "Sparas automatiskt i Shopify den {date}.",
+        "submitHintNoDate": "Sparas automatiskt i Shopify vid tidsfristen.",
+        "noneHint": "DisputeDesk lägger inte till något försvarspaket i den här tvisten.",
+        "prompt": "Det här ärendet behöver ditt beslut före tidsfristen. Schemalägg att det skickas automatiskt vid tidsfristen, eller be DisputeDesk att inte lägga till ett försvarspaket."
+      },
+      "next": {
+        "submit": "Sparas automatiskt i Shopify den {date}",
+        "submitNoDate": "Sparas automatiskt i Shopify vid tidsfristen",
+        "none": "Inget försvarspaket läggs till",
+        "undecided": "Bestäm vad som händer vid tidsfristen"
+      },
+      "upload": {
+        "title": "Lägg till saknade bevis",
+        "descriptionDelivery": "Ladda upp bevis på att paketet nådde {customer}. Det läggs till i försvarspaketet före tidsfristen den {date}.",
+        "descriptionDeliveryNoDate": "Ladda upp bevis på att paketet nådde {customer}. Det läggs till i försvarspaketet före tidsfristen.",
+        "description": "Ladda upp bevis som stödjer ditt ärende. De läggs till i försvarspaketet före tidsfristen den {date}.",
+        "descriptionNoDate": "Ladda upp bevis som stödjer ditt ärende. De läggs till i försvarspaketet före tidsfristen.",
+        "customerFallback": "kunden",
+        "drop": "Släpp filer här eller",
+        "browse": "bläddra",
+        "formats": "PDF, PNG eller JPG · upp till 10 MB per fil",
+        "tooLarge": "Filer över 10 MB utelämnades.",
+        "helpsTitle": "Det som hjälper mest vid {reason}",
+        "helps": {
+          "trackingDelivered": "Transportörens spårningssida som visar ”Levererad”",
+          "signature": "Transportörens signaturbekräftelse",
+          "deliveryRecord": "Transportörens leveransregister med spårningsnummer",
+          "customerAck": "Kundens bekräftelse av mottagande"
+        },
+        "cancel": "Avbryt",
+        "add": "Lägg till i paketet"
+      }
     }
   },
   "disputeReasons": {
