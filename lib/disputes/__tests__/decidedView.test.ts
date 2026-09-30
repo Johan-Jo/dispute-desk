@@ -7,6 +7,7 @@ import { buildDecidedView, type DecidedViewInputs } from "@/lib/disputes/decided
 import { decidedSummaryParagraph } from "@/lib/disputes/decidedViewText";
 import { decidedEmailSections } from "@/lib/email/sendOutcomePostedAlert";
 import type { I18nToken } from "@/lib/i18n/token";
+import type { StorePatterns } from "@/lib/disputes/storePatterns";
 
 const t = createTranslator({ locale: "en", messages: enMessages });
 const r = (tok: I18nToken) => resolveToken(t as never, tok) as string;
@@ -225,6 +226,35 @@ describe("decidedView — guards", () => {
     expect(v.checklist.find((c) => c.item.key.endsWith("deliveryToBilling"))!.state).toBe("missing");
   });
 
+  it("a not-as-described loss never turns on delivery (dev seed #9011)", () => {
+    const v = buildDecidedView(
+      inputs360499({
+        reason: "PRODUCT_UNACCEPTABLE",
+        fatalLossReason: null,
+        order: { ...inputs360499().order!, fulfillmentStatus: "FULFILLED", fulfilledAt: "2026-08-20T00:00:00Z" },
+        facts: { order_confirmation: {}, refund_policy: { policyType: "refund" } },
+        events: [],
+        response: {
+          responder: "we",
+          filedAt: "2026-09-05T00:00:00Z",
+          sentAt: null,
+          closedAt: "2026-09-17T11:20:31Z",
+          decidedBeforeDeadline: false,
+          holdReason: null,
+        },
+      }),
+      fmt,
+    );
+    const text = JSON.stringify([
+      v.facts.items.map((f) => r(f.title)),
+      v.checklist.map((c) => r(c.item)),
+      v.timeline.map((s) => (s.detail ? r(s.detail) : "")),
+      decidedSummaryParagraph(v, r, "en"),
+    ]);
+    expect(text).not.toMatch(/deliver|tracking/i);
+    expect(v.checklist.map((c) => r(c.item))).toContain("No return was received");
+  });
+
   it("no evidence items hides the checklist instead of marking every row Missing (prod #347615)", () => {
     expect(buildDecidedView(inputs360499({ outcome: "won", reason: "FRAUDULENT", facts: {} }), fmt).checklist).toEqual([]);
   });
@@ -275,7 +305,15 @@ describe("decidedView — guards", () => {
     const reasons = ["FRAUDULENT", "PRODUCT_NOT_RECEIVED", "PRODUCT_UNACCEPTABLE", "SUBSCRIPTION_CANCELLED", "DUPLICATE", "CREDIT_NOT_PROCESSED", "GENERAL"];
     for (const reason of reasons) {
       for (const outcome of ["won", "lost"] as const) {
-        const v = buildDecidedView(inputs360499({ reason, outcome }), fmt);
+        const v = buildDecidedView(
+          inputs360499({
+            reason,
+            outcome,
+            order: { ...inputs360499().order!, riskRecommendation: "CANCEL" },
+            storePatterns: STORE,
+          }),
+          fmt,
+        );
         const tokens: I18nToken[] = [
           v.outcome.title, v.outcome.claim, v.outcome.amountLabel, v.outcome.chip,
           v.summary.claim, v.summary.response, ...v.summary.clauses,
@@ -283,12 +321,71 @@ describe("decidedView — guards", () => {
           v.facts.title, v.facts.sub,
           ...v.facts.items.flatMap((f) => [f.title, f.source]),
           ...v.checklist.flatMap((c) => [c.item, c.label]),
-          ...v.nextTime.flatMap((n) => [n.title, ...(n.detail ? [n.detail] : [])]),
+          ...v.nextTime.flatMap((n) => [n.title, ...(n.detail ? [n.detail] : []), ...(n.stat ? [n.stat] : [])]),
+          ...(v.storeRate ? [v.storeRate] : []),
           ...v.timeline.flatMap((s) => [s.title, ...(s.detail ? [s.detail] : [])]),
         ];
         for (const tok of tokens) expect(r(tok), `${reason}/${outcome} ${tok.key}`).not.toContain("disputes.");
         expect(decidedSummaryParagraph(v, r, "en")).not.toContain("disputes.");
       }
+    }
+  });
+});
+
+/** blume-box's own numbers, prod 2026-09-30 (scripts/sql/store-patterns-by-shop.sql). */
+const STORE: StorePatterns = {
+  baseRate: { won: 11, decided: 66 },
+  patterns: {
+    unshipped_at_open: { count: 40, lost: 55 },
+    high_risk_shipped: { count: 181, lost: 299 },
+  },
+};
+
+describe("decidedView — store patterns (PR 3)", () => {
+  it("#360499: the ship-or-cancel step carries the store's unshipped count", () => {
+    const v = buildDecidedView(inputs360499({ storePatterns: STORE }), fmt);
+    expect(r(v.nextTime[0].stat!)).toBe(
+      "On your store, 40 of 55 lost chargebacks of this type were orders that hadn't shipped when the customer disputed.",
+    );
+  });
+
+  it("the base rate sits with 'What wins this type of dispute', per phase", () => {
+    expect(r(buildDecidedView(inputs360499({ storePatterns: STORE }), fmt).storeRate!)).toBe(
+      "On your store, 17% of decided chargebacks of this type were won (11 of 66).",
+    );
+    expect(
+      r(buildDecidedView(inputs360499({ storePatterns: STORE, phase: "inquiry" }), fmt).storeRate!),
+    ).toContain("decided inquiries");
+  });
+
+  it("a pattern only follows a recommendation the case itself triggered", () => {
+    const fraud = (risk: string) =>
+      buildDecidedView(
+        inputs360499({
+          reason: "FRAUDULENT",
+          fatalLossReason: null,
+          storePatterns: STORE,
+          order: { ...inputs360499().order!, fulfillmentStatus: "FULFILLED", fulfilledAt: "2026-08-20T00:00:00Z", riskRecommendation: risk },
+        }),
+        fmt,
+      );
+    // Shopify said ACCEPT: no hold-high-risk step, so no count anywhere.
+    expect(fraud("ACCEPT").nextTime.every((n) => n.stat === null)).toBe(true);
+    expect(r(fraud("CANCEL").nextTime[0].stat!)).toBe(
+      "On your store, 181 of 299 lost chargebacks of this type were orders Shopify had flagged as high risk that shipped anyway.",
+    );
+  });
+
+  it("no store numbers without store data", () => {
+    const v = buildDecidedView(inputs360499(), fmt);
+    expect(v.storeRate).toBeNull();
+    expect(v.nextTime[0].stat).toBeNull();
+  });
+
+  it("the email carries the same count under the same step, in every locale", async () => {
+    for (const loc of ["en", "de", "es", "fr", "pt", "sv"] as const) {
+      const s = (await decidedEmailSections(loc, inputs360499({ storePatterns: STORE })))!;
+      expect(s.next[0].stat, loc).toMatch(/40\D+55/);
     }
   });
 });

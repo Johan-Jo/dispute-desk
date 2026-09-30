@@ -3164,6 +3164,7 @@ A win with no recorded facts uses "DisputeDesk filed your evidence…", never "t
 This replaces the one-size template, which claimed "the card network accepted your defence package" even on cases DisputeDesk never filed. If the view fails to load, the template is used as before. `accepted` is unchanged.
 
 **Rules that are load-bearing:**
+- **A not-as-described loss never turns on delivery** (2026-09-30, dev seed #9011). The customer has the goods, so delivery is uncontested, as in the letter (`not-as-described-defence-package.plan.md` PR 1b). No "no tracking" fact, no delivery clause in the summary, no "no delivery" timeline detail; the product checklist's delivery row is replaced by "No return was received".
 - **Checklist rows are observations.** No evidence items → the checklist is hidden, not marked Missing everywhere (#347615). "Delivery to the billing address" needs a confirmed delivery **and** shipping = billing **and** an AVS match (#349145). The AVS row is dropped when no AVS exists (PayPal, Klarna).
 - **"Next time" fires only on a data trigger:**
   - never shipped → ship or cancel, with the real days unshipped
@@ -3176,6 +3177,26 @@ This replaces the one-size template, which claimed "the card network accepted yo
   At most three. Never on a win.
 - **Timeline steps come only from stored timestamps.** Nothing but the decision may be dated after the decision; a pack rebuilt afterwards is dropped (dev seed #9010). `pack_created` audit rows mostly lack `dispute_id`, so "Evidence gathered" uses the first `evidence_packs.created_at`.
 - **Merchant-facing only.** None of these strings may reach the bank-facing package.
+
+#### Store patterns on the decided view (PR 3, 2026-09-30)
+
+Two aggregates over the shop's own decided disputes of the **same reason family and phase** (chargeback vs inquiry), pre-install history included:
+
+- **Base rate** (`storeRate`), a caption in "What wins this type of dispute": "On your store, 17% of decided chargebacks of this type were won (11 of 66)."
+- **Pattern count** (`nextTime[].stat`), a caption under a "Next time" step, **only on a step the case itself triggered**:
+  - ship-or-cancel → `unshipped_at_open`: lost disputes whose order had no `fulfilled_at`, or first shipped after `initiated_at`
+  - hold-high-risk → `high_risk_shipped`: lost disputes whose order had `risk_recommendation_initial` CANCEL/INVESTIGATE and a `fulfilled_at`
+
+**Code:** `lib/disputes/storePatterns.ts` (pure, thresholds) and `loadStorePatterns` in `lib/disputes/loadDecidedResponse.ts` (reads `disputes` paged by 1000, then `shopify_orders` for the lost rows in chunks of 100). `loadDecidedViewInputs` calls it, so the page and the outcome email carry the same numbers. The email prints the count under its "Next time" step; it has no checklist, so no base rate.
+
+**Rules:**
+- **Aggregates, never an explanation of this case.** Copy says "On your store…", never "you lost because".
+- **Small samples show nothing:** base rate needs ≥ 10 decided; a pattern needs ≥ 5 lost with a readable order and ≥ 2 matches.
+- A dispute with no order row is left out of the pattern's count, not counted either way. A `FULFILLED` order with no `fulfilled_at` (2 in prod) is an ingest gap, not "unshipped".
+- Never built on `delivery_status`: its correlation with outcome runs backwards (`lost-dispute-explanation.plan.md` §3).
+- A read failure → `storePatterns: null` → no numbers; the rest of the view still renders.
+
+**Design:** DecidedView3 has no slot for these lines. Both reuse its 12px subtle caption style, and the design is otherwise unchanged. Evidence SQL: `scripts/sql/store-patterns-by-shop.sql`, `store-patterns-unshipped-check.sql`, `store-patterns-canary.sql`.
 
 ### Returned-to-sender Gate (2026-08-20)
 

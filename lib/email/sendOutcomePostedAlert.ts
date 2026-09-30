@@ -765,7 +765,7 @@ export interface DecidedEmailSections {
   factsTitle: string;
   facts: Array<{ title: string; source: string }>;
   nextTitle: string;
-  next: Array<{ title: string; detail: string | null }>;
+  next: Array<{ title: string; detail: string | null; stat: string | null }>;
   chip: string;
 }
 
@@ -797,7 +797,11 @@ export async function decidedEmailSections(
       factsTitle: r(view.facts.title),
       facts: view.facts.items.slice(0, 4).map((f) => ({ title: r(f.title), source: r(f.source) })),
       nextTitle: r({ key: "disputes.decidedView.next.title" }),
-      next: view.nextTime.map((n) => ({ title: r(n.title), detail: n.detail ? r(n.detail) : null })),
+      next: view.nextTime.map((n) => ({
+        title: r(n.title),
+        detail: n.detail ? r(n.detail) : null,
+        stat: n.stat ? r(n.stat) : null,
+      })),
       chip: r(view.outcome.chip),
     };
   } catch {
@@ -977,6 +981,8 @@ export async function sendOutcomePostedAlert(
                   (n, i) =>
                     `<div style="background:#F6F8FB;border:1px solid #E8ECF2;border-radius:8px;padding:10px 12px;margin:0 0 6px"><div style="font-size:13px;font-weight:600;color:#202223">${i + 1}. ${escapeHtml(n.title)}</div>${
                       n.detail ? `<div style="font-size:12px;color:#5C5F62;margin-top:2px">${escapeHtml(n.detail)}</div>` : ""
+                    }${
+                      n.stat ? `<div style="font-size:12px;color:#5C5F62;margin-top:2px">${escapeHtml(n.stat)}</div>` : ""
                     }</div>`,
                 )
                 .join("")

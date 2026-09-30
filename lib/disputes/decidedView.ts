@@ -9,7 +9,8 @@
  *   outcome   — title, product · claim, amount, who responded
  *   facts     — "What we saw in the record" (lost) / "What carried the case" (won)
  *   checklist — "What wins this type of dispute", had / missing for THIS case
- *   nextTime  — lost only; each recommendation needs a trigger in the data
+ *   nextTime  — lost only; each recommendation needs a trigger in the data,
+ *               and may carry a store-pattern count (PR 3, `storePatterns.ts`)
  *   timeline  — "What happened", past tense, from stored timestamps
  *
  * Rules carried from `outcomeExplanation.ts`, all load-bearing:
@@ -31,6 +32,7 @@ import {
   type DecidedResponse,
   type HoldReason,
 } from "@/lib/disputes/decidedResponse";
+import type { StorePatternKind, StorePatterns } from "@/lib/disputes/storePatterns";
 
 const K = "disputes.decidedView";
 const tk = (key: string, params?: I18nToken["params"]): I18nToken => ({
@@ -67,6 +69,9 @@ export interface DecidedViewInputs {
   firstPackAt: string | null;
   /** Dispute-level audit rows, ascending. */
   events: DecidedAuditEvent[];
+  /** This store's decided disputes of the same type (PR 3). Null or absent
+   *  when unread or failed — the view then shows no store numbers. */
+  storePatterns?: StorePatterns | null;
 }
 
 export type ChecklistState = "had" | "missing" | "none";
@@ -111,7 +116,12 @@ export interface DecidedView {
   who: { first: I18nToken; second: I18nToken | null } | null;
   facts: { title: I18nToken; sub: I18nToken; items: ViewFact[]; note: I18nToken | null };
   checklist: Array<{ item: I18nToken; state: ChecklistState; label: I18nToken }>;
-  nextTime: Array<{ title: I18nToken; detail: I18nToken | null }>;
+  /** "{pct}% of decided chargebacks of this type on your store were won" —
+   *  an aggregate over the store, never an explanation of this case. */
+  storeRate: I18nToken | null;
+  /** `stat` counts how many of the store's lost disputes of this type share
+   *  the recommendation's trigger. Present only when the case triggered it. */
+  nextTime: Array<{ title: I18nToken; detail: I18nToken | null; stat: I18nToken | null }>;
   timeline: Array<{ at: string; title: I18nToken; detail: I18nToken | null; tone: TimelineTone }>;
 }
 
@@ -243,7 +253,9 @@ function factsSection(
     items.push({ title, source, clause, tone, weighted: false });
 
   if (!won) {
-    const deliveryMatters = c.family === "delivery" || c.family === "product" || c.family === "fraud";
+    // Not on a not-as-described claim: the customer has the goods, so delivery
+    // is uncontested (not-as-described-defence-package.plan.md PR 1b).
+    const deliveryMatters = c.family === "delivery" || c.family === "fraud";
     if (c.neverFulfilled) {
       push(tk("facts.title.neverShipped"), tk("facts.source.unfulfilled"), tk("summary.clause.neverShipped"));
     } else if (c.fulfilledAfterOpen && input.order?.fulfilledAt) {
@@ -342,7 +354,7 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
       rows = [
         had("productDescription", c.has("product_description")),
         had("refundPolicy", c.has("refund_policy"), "missing", "policy"),
-        had("deliveryConfirmation", c.deliveryConfirmed),
+        had("noReturn", c.has("no_return_initiated") || c.has("returned_parcel_outcome")),
         comms,
       ];
       break;
@@ -385,6 +397,10 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
 function nextTimeSection(input: DecidedViewInputs, c: CaseFacts): DecidedView["nextTime"] {
   if (input.outcome !== "lost") return [];
   const out: DecidedView["nextTime"] = [];
+  const stat = (kind: StorePatternKind): I18nToken | null => {
+    const p = input.storePatterns?.patterns[kind];
+    return p ? tk(`store.pattern.${kind}.${input.phase}`, { count: p.count, lost: p.lost }) : null;
+  };
   const created = t(input.order?.createdAt);
   const opened = t(input.openedAt);
   const days = created !== null && opened !== null ? Math.max(0, Math.round((opened - created) / DAY_MS)) : null;
@@ -393,32 +409,51 @@ function nextTimeSection(input: DecidedViewInputs, c: CaseFacts): DecidedView["n
     out.push({
       title: tk("next.shipOrCancel.title"),
       detail: days !== null ? tk(`next.shipOrCancel.detail.${input.phase}`, { days }) : null,
+      stat: stat("unshipped_at_open"),
     });
   } else if (c.family === "delivery" && c.fulfilledAfterOpen) {
-    out.push({ title: tk("next.shipOrCancel.title"), detail: tk("next.shipOrCancel.detailLate") });
+    out.push({
+      title: tk("next.shipOrCancel.title"),
+      detail: tk("next.shipOrCancel.detailLate"),
+      stat: stat("unshipped_at_open"),
+    });
   }
   if (c.family === "delivery" && !c.neverFulfilled && !c.hasTracking) {
-    out.push({ title: tk("next.shareTracking.title"), detail: tk("next.shareTracking.detail") });
+    out.push({ title: tk("next.shareTracking.title"), detail: tk("next.shareTracking.detail"), stat: null });
   }
   if (c.family === "fraud") {
     const risk = (input.order?.riskRecommendation ?? "").toUpperCase();
     if ((risk === "CANCEL" || risk === "INVESTIGATE") && !c.neverFulfilled) {
-      out.push({ title: tk("next.holdHighRisk.title"), detail: tk("next.holdHighRisk.detail") });
+      out.push({
+        title: tk("next.holdHighRisk.title"),
+        detail: tk("next.holdHighRisk.detail"),
+        stat: stat("high_risk_shipped"),
+      });
     }
     if (!c.has("tds_authentication")) {
-      out.push({ title: tk("next.threeDs.title"), detail: tk("next.threeDs.detail") });
+      out.push({ title: tk("next.threeDs.title"), detail: tk("next.threeDs.detail"), stat: null });
     }
   }
   if (c.family === "subscription") {
-    out.push({ title: tk("next.selfServeCancel.title"), detail: tk("next.selfServeCancel.detail") });
+    out.push({ title: tk("next.selfServeCancel.title"), detail: tk("next.selfServeCancel.detail"), stat: null });
   }
   if (c.family === "product") {
-    out.push({ title: tk("next.describeProduct.title"), detail: tk("next.describeProduct.detail") });
+    out.push({ title: tk("next.describeProduct.title"), detail: tk("next.describeProduct.detail"), stat: null });
   }
   if (c.family === "refund") {
-    out.push({ title: tk("next.confirmRefunds.title"), detail: tk("next.confirmRefunds.detail") });
+    out.push({ title: tk("next.confirmRefunds.title"), detail: tk("next.confirmRefunds.detail"), stat: null });
   }
   return out.slice(0, 3);
+}
+
+function storeRateToken(input: DecidedViewInputs): I18nToken | null {
+  const b = input.storePatterns?.baseRate;
+  if (!b || b.decided === 0) return null;
+  return tk(`store.baseRate.${input.phase}`, {
+    pct: Math.round((100 * b.won) / b.decided),
+    won: b.won,
+    decided: b.decided,
+  });
 }
 
 function timelineSection(
@@ -445,7 +480,7 @@ function timelineSection(
   if (input.firstPackAt && resp?.responder !== "before_install") {
     const deliveryMissing =
       input.outcome === "lost" &&
-      (c.family === "delivery" || c.family === "product") &&
+      c.family === "delivery" &&
       !c.deliveryConfirmed &&
       !c.hasTracking;
     steps.push({
@@ -626,6 +661,7 @@ export function buildDecidedView(input: DecidedViewInputs, fmt: DecidedViewForma
     who: whoSection(input, fmt.date),
     facts,
     checklist,
+    storeRate: storeRateToken(input),
     nextTime,
     timeline: timelineSection(input, claim, fmt.short, fmt.money, c),
   };

@@ -554,6 +554,13 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                           <span key={i} style={{ flex: 1, borderRadius: 4, background: STATE[c.state].bar }} />
                         ))}
                       </div>
+                      {/* Store pattern (plan PR 3) — not in the design; reuses its
+                          12px subtle caption style. */}
+                      {view.storeRate ? (
+                        <span style={{ fontSize: 12, color: DD.subtle, lineHeight: 1.5, ...pretty }}>
+                          {r(view.storeRate)}
+                        </span>
+                      ) : null}
                     </div>
                     {view.checklist.map((c, i) => (
                       <div
@@ -630,6 +637,12 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                           {n.detail ? (
                             <span style={{ fontSize: 12, color: DD.subtle, lineHeight: 1.5, ...pretty }}>
                               {r(n.detail)}
+                            </span>
+                          ) : null}
+                          {/* Store pattern (plan PR 3) — same caption style as the detail. */}
+                          {n.stat ? (
+                            <span style={{ fontSize: 12, color: DD.subtle, lineHeight: 1.5, ...pretty }}>
+                              {r(n.stat)}
                             </span>
                           ) : null}
                         </div>
