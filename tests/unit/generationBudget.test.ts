@@ -34,6 +34,7 @@ import {
   readGenerationBudget,
   describeBudget,
   fitBatchToBudget,
+  budgetFromUsage,
   DAILY_GENERATION_CAP,
   DAILY_TOKEN_CAP,
 } from "@/lib/defence/generationBudget";
@@ -119,7 +120,8 @@ describe("a failed read fails OPEN", () => {
     withRuns(null, "connection reset");
     const b = await readGenerationBudget("shop-1");
     expect(b.exhausted).toBe(false);
-    expect(b.remaining).toBe(DAILY_GENERATION_CAP);
+    // A fresh day's budget — which counsel's daily run cap now bounds.
+    expect(b.remaining).toBe(budgetFromUsage({ generations: 0, inputTokens: 0, counselRuns: 0 }).remaining);
   });
 });
 
@@ -128,7 +130,7 @@ describe("fitBatchToBudget reports the deferral rather than truncating silently"
 
   it("splits the batch at the remaining budget", () => {
     const { batch, deferred } = fitBatchToBudget(ten, {
-      generationsUsed: 0, tokensUsed: 0, remaining: 4, exhausted: false, bindingLimit: "tokens",
+      generationsUsed: 0, tokensUsed: 0, counselRunsUsed: 0, remaining: 4, exhausted: false, bindingLimit: "tokens",
     });
     expect(batch).toHaveLength(4);
     expect(deferred).toHaveLength(6);
@@ -138,7 +140,7 @@ describe("fitBatchToBudget reports the deferral rather than truncating silently"
 
   it("defers everything when the budget is exhausted", () => {
     const { batch, deferred } = fitBatchToBudget(ten, {
-      generationsUsed: 44, tokensUsed: 51026, remaining: 0, exhausted: true, bindingLimit: "tokens",
+      generationsUsed: 44, tokensUsed: 51026, counselRunsUsed: 0, remaining: 0, exhausted: true, bindingLimit: "tokens",
     });
     expect(batch).toEqual([]);
     expect(deferred).toEqual(ten);
@@ -150,7 +152,7 @@ describe("describeBudget says the number out loud", () => {
     /* The failure mode looked like silence — packages failing one at a time
      * with no operator signal — so the message has to say what happens next. */
     const msg = describeBudget({
-      generationsUsed: 44, tokensUsed: 51026, remaining: 0, exhausted: true, bindingLimit: "tokens",
+      generationsUsed: 44, tokensUsed: 51026, counselRunsUsed: 0, remaining: 0, exhausted: true, bindingLimit: "tokens",
     });
     expect(msg).toMatch(/exhausted/i);
     expect(msg).toMatch(/fail without generating/i);
@@ -159,7 +161,7 @@ describe("describeBudget says the number out loud", () => {
 
   it("a healthy budget names the count and the binding limit", () => {
     const msg = describeBudget({
-      generationsUsed: 5, tokensUsed: 6000, remaining: 31, exhausted: false, bindingLimit: "tokens",
+      generationsUsed: 5, tokensUsed: 6000, counselRunsUsed: 0, remaining: 31, exhausted: false, bindingLimit: "tokens",
     });
     expect(msg).toContain("31");
     expect(msg).toContain("tokens");

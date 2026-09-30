@@ -140,16 +140,17 @@ export async function PATCH(req: NextRequest) {
      * saved setting. */
     // Fix C4: the setting changes how the no-return fact scores, so the
     // shop's open, not-yet-sent packs are rebuilt. A small set; listed in
-    // the audit payload.
+    // the audit payload. Sized to the day's letter budget: the rest are
+    // queued for the following days (`deferredPacks`).
     if (changes.returns_outside_shopify) {
       try {
-        const requeuedPackIds = await requeueOpenPackBuilds(shop_id);
+        const { queued: requeuedPackIds, deferred: deferredPacks } = await requeueOpenPackBuilds(shop_id);
         await logAuditEvent({
           shopId: shop_id,
           actorType: imp ? "system" : "merchant",
           actorId: imp?.adminUserId ?? null,
           eventType: "returns_outside_shopify_changed",
-          eventPayload: { to: changes.returns_outside_shopify.to, requeuedPackIds },
+          eventPayload: { to: changes.returns_outside_shopify.to, requeuedPackIds, deferredPacks },
         });
       } catch (err) {
         console.error("[automation-settings] returns-outside-Shopify requeue failed", err);

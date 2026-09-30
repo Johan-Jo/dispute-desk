@@ -39,6 +39,8 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { checkDailyCap } from "./narrativeWriter";
+import { COUNSEL_DAILY_RUN_CAP } from "./counsel/run";
 
 /** Mirrors `narrativeWriter`'s constants — same env vars, same defaults. */
 export const DAILY_GENERATION_CAP = Number(
@@ -60,19 +62,22 @@ const ESTIMATED_TOKENS_PER_GENERATION = 1_400;
 export interface GenerationBudget {
   /** Generations already spent in the shop's current daily bucket. */
   generationsUsed: number;
-  /** Prompt tokens already spent in that bucket. */
+  /** Template-writer prompt tokens spent in that bucket (counsel runs excluded, as the cap does). */
   tokensUsed: number;
-  /** Generations still affordable — the binding of the two limits. Never < 0. */
+  /** Counsel v2 runs spent in that bucket. */
+  counselRunsUsed: number;
+  /** Generations still affordable — the binding of the limits. Never < 0. */
   remaining: number;
   /** True when nothing further can be generated today. */
   exhausted: boolean;
   /** Which limit binds. `null` when there is headroom. */
-  bindingLimit: "generations" | "tokens" | null;
+  bindingLimit: "generations" | "tokens" | "counsel_runs" | null;
 }
 
 const UNKNOWN: GenerationBudget = {
   generationsUsed: 0,
   tokensUsed: 0,
+  counselRunsUsed: 0,
   remaining: DAILY_GENERATION_CAP,
   exhausted: false,
   bindingLimit: null,
@@ -81,43 +86,46 @@ const UNKNOWN: GenerationBudget = {
 /**
  * Read the remaining budget for one shop.
  *
+ * Counts through `checkDailyCap`, the same read the build job refuses on, so
+ * the advisory and the enforcement cannot disagree. Counsel v2 is the only
+ * letter writer since 2026-09-28 and has its own per-day run cap
+ * (`COUNSEL_DAILY_RUN_CAP`, 25): that is the limit a rebuild actually meets.
+ * Mein Maison 2026-09-30: a settings toggle re-queued ~20 open packs, the
+ * counsel cap ran out and two packages failed `daily_cap_reached` — while
+ * this read, which knew only the template writer's caps, reported headroom.
+ *
  * SOFT-FAILS OPEN, matching `checkDailyCap`. A failed count query must not
- * block a rebuild — `narrativeWriter` still enforces the real cap, so the
- * worst case of an optimistic read here is the behaviour we have today.
+ * block a rebuild — the build job still enforces the real cap, so the worst
+ * case of an optimistic read here is the behaviour we have today.
  */
 export async function readGenerationBudget(shopId: string): Promise<GenerationBudget> {
   const sb = getServiceClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await sb
-    .from("defence_package_runs")
-    .select("prompt_tokens")
-    .eq("shop_id", shopId)
-    .eq("daily_bucket", today);
-
-  if (error) {
-    console.warn("[defence] generation-budget query failed", error.message);
+  let used: Awaited<ReturnType<typeof checkDailyCap>>;
+  try {
+    used = await checkDailyCap(sb, shopId);
+  } catch (err) {
+    console.warn("[defence] generation-budget query failed", err instanceof Error ? err.message : String(err));
     return UNKNOWN;
   }
+  return budgetFromUsage(used);
+}
 
-  const generationsUsed = data?.length ?? 0;
-  const tokensUsed = (data ?? []).reduce(
-    (sum, r) => sum + ((r as { prompt_tokens?: number | null }).prompt_tokens ?? 0),
-    0,
-  );
-
-  const byGenerations = Math.max(0, DAILY_GENERATION_CAP - generationsUsed);
-  const byTokens = Math.max(
-    0,
-    Math.floor((DAILY_TOKEN_CAP - tokensUsed) / ESTIMATED_TOKENS_PER_GENERATION),
-  );
-  const remaining = Math.min(byGenerations, byTokens);
-
+/** The budget arithmetic, separated from the read for tests. */
+export function budgetFromUsage(used: { generations: number; inputTokens: number; counselRuns: number }): GenerationBudget {
+  const limits = {
+    generations: Math.max(0, DAILY_GENERATION_CAP - used.generations),
+    tokens: Math.max(0, Math.floor((DAILY_TOKEN_CAP - used.inputTokens) / ESTIMATED_TOKENS_PER_GENERATION)),
+    counsel_runs: Math.max(0, COUNSEL_DAILY_RUN_CAP - used.counselRuns),
+  } as const;
+  const binding = (Object.keys(limits) as Array<keyof typeof limits>).reduce((a, b) => (limits[b] < limits[a] ? b : a));
+  const remaining = limits[binding];
   return {
-    generationsUsed,
-    tokensUsed,
+    generationsUsed: used.generations,
+    tokensUsed: used.inputTokens,
+    counselRunsUsed: used.counselRuns,
     remaining,
     exhausted: remaining <= 0,
-    bindingLimit: remaining <= 0 || byTokens < byGenerations ? "tokens" : "generations",
+    bindingLimit: remaining < DAILY_GENERATION_CAP ? binding : null,
   };
 }
 
@@ -130,9 +138,9 @@ export async function readGenerationBudget(shopId: string): Promise<GenerationBu
  */
 export function describeBudget(b: GenerationBudget): string {
   if (b.exhausted) {
-    return `Daily generation budget exhausted (${b.generationsUsed}/${DAILY_GENERATION_CAP} generations, ${b.tokensUsed}/${DAILY_TOKEN_CAP} tokens). Rebuilds enqueued now will fail without generating. Resets at 00:00 UTC.`;
+    return `Daily generation budget exhausted (${b.generationsUsed}/${DAILY_GENERATION_CAP} generations, ${b.tokensUsed}/${DAILY_TOKEN_CAP} tokens, ${b.counselRunsUsed}/${COUNSEL_DAILY_RUN_CAP} counsel runs). Rebuilds enqueued now will fail without generating. Resets at 00:00 UTC.`;
   }
-  return `Budget remaining: ~${b.remaining} generation${b.remaining === 1 ? "" : "s"} (used ${b.generationsUsed}/${DAILY_GENERATION_CAP} generations, ${b.tokensUsed}/${DAILY_TOKEN_CAP} tokens; ${b.bindingLimit} is the binding limit).`;
+  return `Budget remaining: ~${b.remaining} generation${b.remaining === 1 ? "" : "s"} (used ${b.generationsUsed}/${DAILY_GENERATION_CAP} generations, ${b.tokensUsed}/${DAILY_TOKEN_CAP} tokens, ${b.counselRunsUsed}/${COUNSEL_DAILY_RUN_CAP} counsel runs; ${b.bindingLimit} is the binding limit).`;
 }
 
 /**
