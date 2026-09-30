@@ -2339,17 +2339,15 @@
       },
       "decision": {
         "submit": "Enviar en la fecha límite",
-        "hold": "Poner en revisión",
         "none": "No responder",
         "submitHint": "Se guarda en Shopify automáticamente el {date}.",
         "submitHintNoDate": "Se guarda en Shopify automáticamente en la fecha límite.",
-        "holdHint": "Si no realiza ninguna otra acción, se aplicará su regla de automatización en la fecha límite.",
-        "noneHint": "DisputeDesk no añadirá un paquete de defensa a esta disputa."
+        "noneHint": "DisputeDesk no añadirá un paquete de defensa a esta disputa.",
+        "prompt": "Este caso necesita su decisión antes de la fecha límite. Programe el envío automático en la fecha límite o indique a DisputeDesk que no añada un paquete de defensa."
       },
       "next": {
         "submit": "Se guarda en Shopify automáticamente el {date}",
         "submitNoDate": "Se guarda en Shopify automáticamente en la fecha límite",
-        "hold": "En revisión — si no realiza ninguna otra acción, se aplicará su regla de automatización en la fecha límite",
         "none": "No se añadirá ningún paquete de defensa",
         "undecided": "Decida qué pasa en la fecha límite"
       },

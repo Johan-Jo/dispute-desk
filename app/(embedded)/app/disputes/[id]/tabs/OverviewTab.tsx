@@ -547,9 +547,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const decisionKey: DecisionKey | null =
     reviewDecision === "approved"
       ? "submit"
-      : reviewDecision === "in_review"
-        ? "hold"
-        : reviewDecision === "conceded"
+      : reviewDecision === "conceded"
           ? "none"
           : null;
   const decisionOverridesHero = reviewDecision !== null && !showDecisionRow;
@@ -559,11 +557,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       ? deadlineShort
         ? tDecision("next.submit", { date: deadlineShort })
         : tDecision("next.submitNoDate")
-      : decisionKey === "hold"
-        ? tDecision("next.hold")
-        : decisionKey === "none"
-          ? tDecision("next.none")
-          : tDecision("next.undecided");
+      : decisionKey === "none"
+        ? tDecision("next.none")
+        : tDecision("next.undecided");
   const HERO_TONE_TECH = {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",
@@ -1262,7 +1258,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 deciding={actions.reviewSaving === true}
                 onDecide={(k) =>
                   actions.setReviewDecision(
-                    k === "submit" ? "approve" : k === "hold" ? "hold" : "concede",
+                    k === "submit" ? "approve" : "concede",
                   )
                 }
                 deadlineShort={deadlineShort}

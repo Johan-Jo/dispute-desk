@@ -2339,17 +2339,15 @@
       },
       "decision": {
         "submit": "Skicka in vid tidsfristen",
-        "hold": "Pausa för granskning",
         "none": "Svara inte",
         "submitHint": "Sparas automatiskt i Shopify den {date}.",
         "submitHintNoDate": "Sparas automatiskt i Shopify vid tidsfristen.",
-        "holdHint": "Om du inte vidtar någon ytterligare åtgärd tillämpas din automatiseringsregel vid tidsfristen.",
-        "noneHint": "DisputeDesk lägger inte till något försvarspaket i den här tvisten."
+        "noneHint": "DisputeDesk lägger inte till något försvarspaket i den här tvisten.",
+        "prompt": "Det här ärendet behöver ditt beslut före tidsfristen. Schemalägg att det skickas automatiskt vid tidsfristen, eller be DisputeDesk att inte lägga till ett försvarspaket."
       },
       "next": {
         "submit": "Sparas automatiskt i Shopify den {date}",
         "submitNoDate": "Sparas automatiskt i Shopify vid tidsfristen",
-        "hold": "Pausad för din granskning — om du inte vidtar någon ytterligare åtgärd tillämpas din automatiseringsregel vid tidsfristen",
         "none": "Inget försvarspaket läggs till",
         "undecided": "Bestäm vad som händer vid tidsfristen"
       },
