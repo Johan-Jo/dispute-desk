@@ -226,6 +226,35 @@ describe("decidedView — guards", () => {
     expect(v.checklist.find((c) => c.item.key.endsWith("deliveryToBilling"))!.state).toBe("missing");
   });
 
+  it("a not-as-described loss never turns on delivery (dev seed #9011)", () => {
+    const v = buildDecidedView(
+      inputs360499({
+        reason: "PRODUCT_UNACCEPTABLE",
+        fatalLossReason: null,
+        order: { ...inputs360499().order!, fulfillmentStatus: "FULFILLED", fulfilledAt: "2026-08-20T00:00:00Z" },
+        facts: { order_confirmation: {}, refund_policy: { policyType: "refund" } },
+        events: [],
+        response: {
+          responder: "we",
+          filedAt: "2026-09-05T00:00:00Z",
+          sentAt: null,
+          closedAt: "2026-09-17T11:20:31Z",
+          decidedBeforeDeadline: false,
+          holdReason: null,
+        },
+      }),
+      fmt,
+    );
+    const text = JSON.stringify([
+      v.facts.items.map((f) => r(f.title)),
+      v.checklist.map((c) => r(c.item)),
+      v.timeline.map((s) => (s.detail ? r(s.detail) : "")),
+      decidedSummaryParagraph(v, r, "en"),
+    ]);
+    expect(text).not.toMatch(/deliver|tracking/i);
+    expect(v.checklist.map((c) => r(c.item))).toContain("No return was received");
+  });
+
   it("no evidence items hides the checklist instead of marking every row Missing (prod #347615)", () => {
     expect(buildDecidedView(inputs360499({ outcome: "won", reason: "FRAUDULENT", facts: {} }), fmt).checklist).toEqual([]);
   });
