@@ -1773,6 +1773,22 @@
         "lostDetail": "{amount} não foram devolvidos.",
         "won": "Ganha",
         "wonDetail": "{amount} recuperados."
+      },
+      "store": {
+        "baseRate": {
+          "chargeback": "Na sua loja, {pct}% dos chargebacks decididos deste tipo foram ganhos ({won} de {decided}).",
+          "inquiry": "Na sua loja, {pct}% dos pedidos de informação decididos deste tipo foram ganhos ({won} de {decided})."
+        },
+        "pattern": {
+          "unshipped_at_open": {
+            "chargeback": "Na sua loja, {count} de {lost} chargebacks perdidos deste tipo eram encomendas que ainda não tinham sido enviadas quando o cliente contestou.",
+            "inquiry": "Na sua loja, {count} de {lost} pedidos de informação perdidos deste tipo eram encomendas que ainda não tinham sido enviadas quando o cliente contestou."
+          },
+          "high_risk_shipped": {
+            "chargeback": "Na sua loja, {count} de {lost} chargebacks perdidos deste tipo eram encomendas que a Shopify tinha assinalado como de alto risco e que foram enviadas mesmo assim.",
+            "inquiry": "Na sua loja, {count} de {lost} pedidos de informação perdidos deste tipo eram encomendas que a Shopify tinha assinalado como de alto risco e que foram enviadas mesmo assim."
+          }
+        }
       }
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",
@@ -3861,7 +3877,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
-          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros."
+          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso."
         },
         "reviewQueue": {
           "title": "A fila de revisão",

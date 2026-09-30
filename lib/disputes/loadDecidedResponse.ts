@@ -15,6 +15,8 @@ import {
   type DecidedResponse,
 } from "@/lib/disputes/decidedResponse";
 import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { computeStorePatterns, type StorePatternRow, type StorePatterns } from "@/lib/disputes/storePatterns";
 
 export interface DecidedDisputeRow {
   id: string;
@@ -178,7 +180,8 @@ export async function loadDecidedViewInputs(
     row.normalized_status === "won" || row.normalized_status === "lost" ? row.normalized_status : null;
   if (!outcome) return null;
   try {
-    const [ctx, packRes] = await Promise.all([
+    const phase = row.phase === "inquiry" ? "inquiry" : "chargeback";
+    const [ctx, packRes, storePatterns] = await Promise.all([
       loadDecidedContext(sb, row, { withOrder: true }),
       sb
         .from("evidence_packs")
@@ -187,6 +190,7 @@ export async function loadDecidedViewInputs(
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      loadStorePatterns(sb, row.shop_id, { reason: row.reason ?? null, phase }),
     ]);
     if (!ctx || packRes.error) return null;
     const pack = packRes.data as { id: string; pack_json: unknown } | null;
@@ -218,7 +222,7 @@ export async function loadDecidedViewInputs(
 
     return {
       outcome,
-      phase: row.phase === "inquiry" ? "inquiry" : "chargeback",
+      phase,
       reason: row.reason ?? null,
       amount: Number.isFinite(amount) ? amount : 0,
       currency: row.currency_code ?? "USD",
@@ -234,7 +238,88 @@ export async function loadDecidedViewInputs(
       fatalLossReason: fatal?.reason ?? null,
       firstPackAt: ctx.firstPackAt,
       events: ctx.events,
+      storePatterns,
     };
+  } catch {
+    return null;
+  }
+}
+
+const PAGE = 1000; // PostgREST caps an un-ranged select at 1000 rows.
+const ORDER_CHUNK = 100;
+
+/**
+ * The shop's decided disputes of the current type and phase, with the linked
+ * order's shipping and risk columns — the rows `computeStorePatterns` reads.
+ * Null on any read failure: the view then shows no store numbers, never a
+ * number built from a partial read.
+ */
+export async function loadStorePatterns(
+  sb: SupabaseClient,
+  shopId: string,
+  current: { reason: string | null; phase: "inquiry" | "chargeback" },
+): Promise<StorePatterns | null> {
+  try {
+    const family = resolveReasonFamily(current.reason);
+    const disputes: Array<{
+      reason: string | null;
+      phase: string | null;
+      normalized_status: string;
+      initiated_at: string | null;
+      order_gid: string | null;
+    }> = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await sb
+        .from("disputes")
+        .select("reason, phase, normalized_status, initiated_at, order_gid")
+        .eq("shop_id", shopId)
+        .in("normalized_status", ["won", "lost"])
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) return null;
+      disputes.push(...((data ?? []) as typeof disputes));
+      if (!data || data.length < PAGE) break;
+    }
+    const same = disputes.filter(
+      (d) =>
+        (d.phase === "inquiry" ? "inquiry" : "chargeback") === current.phase &&
+        resolveReasonFamily(d.reason) === family,
+    );
+
+    // Orders only for the lost rows — the patterns never read a win.
+    const gids = [...new Set(same.filter((d) => d.normalized_status === "lost" && d.order_gid).map((d) => d.order_gid as string))];
+    const orders = new Map<string, StorePatternRow["order"]>();
+    for (let i = 0; i < gids.length; i += ORDER_CHUNK) {
+      const { data, error } = await sb
+        .from("shopify_orders")
+        .select("shopify_order_id, fulfillment_status, fulfilled_at, risk_recommendation_initial")
+        .eq("shop_id", shopId)
+        .in("shopify_order_id", gids.slice(i, i + ORDER_CHUNK));
+      if (error) return null;
+      for (const o of (data ?? []) as Array<{
+        shopify_order_id: string;
+        fulfillment_status: string | null;
+        fulfilled_at: string | null;
+        risk_recommendation_initial: string | null;
+      }>) {
+        orders.set(o.shopify_order_id, {
+          fulfillmentStatus: o.fulfillment_status,
+          fulfilledAt: o.fulfilled_at,
+          riskRecommendation: o.risk_recommendation_initial,
+        });
+      }
+    }
+
+    return computeStorePatterns(
+      same.map((d) => ({
+        reason: d.reason,
+        phase: current.phase,
+        outcome: d.normalized_status === "won" ? "won" : "lost",
+        openedAt: d.initiated_at,
+        order: d.order_gid ? orders.get(d.order_gid) ?? null : null,
+      })),
+      current,
+    );
   } catch {
     return null;
   }
