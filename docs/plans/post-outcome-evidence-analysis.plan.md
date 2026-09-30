@@ -1597,3 +1597,11 @@ the Evidence Basis will list.
 That number is the argument for plan §17. An unreviewed finding is a hypothesis,
 and on this evidence a hypothesis from this analyser is wrong about four times in
 ten.
+
+## 28. Status 2026-09-30: automatic trigger and review backlog
+
+- **§6.3 event trigger, first bullet: BUILT.** It is a daily sweep, `/api/cron/post-outcome-analysis`, rather than a hook on the won/lost write, because the outcome is written from several places (sync, webhook, refresh cron, reopen reconciliation). It selects decided disputes that have a submitted package and either no current analysis or a changed outcome. It never re-analyses an unchanged outcome. Until this shipped, nothing had written an analysis since the manual `--persist` backfill of 2026-09-01; the first sweep added 32 analyses (54 findings, 0 failures).
+- **§23 step 14: DONE.** The admin page is in production with findings pending review.
+- **Steps 16 and 17: BLOCKED on human review.** On prod, 1 analysis carries a review (CONFIRMED) and there are 0 learning actions. §27.4 measured roughly 40% of unreviewed findings as wrong, so neither step can start from unreviewed rows.
+- **The IP-tier decision (§26.3) is closed.** `same_country` moved to moderate in #641 (2026-08-31), followed by the policy bump in #747 (2026-09-20).
+
