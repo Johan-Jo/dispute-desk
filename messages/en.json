@@ -1100,6 +1100,22 @@
         "lostDetail": "{amount} was not returned.",
         "won": "Won",
         "wonDetail": "{amount} recovered."
+      },
+      "store": {
+        "baseRate": {
+          "chargeback": "On your store, {pct}% of decided chargebacks of this type were won ({won} of {decided}).",
+          "inquiry": "On your store, {pct}% of decided inquiries of this type were won ({won} of {decided})."
+        },
+        "pattern": {
+          "unshipped_at_open": {
+            "chargeback": "On your store, {count} of {lost} lost chargebacks of this type were orders that hadn't shipped when the customer disputed.",
+            "inquiry": "On your store, {count} of {lost} lost inquiries of this type were orders that hadn't shipped when the customer disputed."
+          },
+          "high_risk_shipped": {
+            "chargeback": "On your store, {count} of {lost} lost chargebacks of this type were orders Shopify had flagged as high risk that shipped anyway.",
+            "inquiry": "On your store, {count} of {lost} lost inquiries of this type were orders Shopify had flagged as high risk that shipped anyway."
+          }
+        }
       }
     },
     "improvementHint": "Add {label} to strengthen your case.",
@@ -3827,7 +3843,7 @@
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
-          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records."
+          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case."
         },
         "reviewQueue": {
           "title": "The review queue",

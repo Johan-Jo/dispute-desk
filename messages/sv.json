@@ -1106,6 +1106,22 @@
         "lostDetail": "{amount} återbetalades inte.",
         "won": "Vunnen",
         "wonDetail": "{amount} återvunnet."
+      },
+      "store": {
+        "baseRate": {
+          "chargeback": "I din butik vanns {pct} % av de avgjorda återbetalningskraven av den här typen ({won} av {decided}).",
+          "inquiry": "I din butik vanns {pct} % av de avgjorda förfrågningarna av den här typen ({won} av {decided})."
+        },
+        "pattern": {
+          "unshipped_at_open": {
+            "chargeback": "I din butik gällde {count} av {lost} förlorade återbetalningskrav av den här typen ordrar som inte hade skickats när kunden bestred köpet.",
+            "inquiry": "I din butik gällde {count} av {lost} förlorade förfrågningar av den här typen ordrar som inte hade skickats när kunden bestred köpet."
+          },
+          "high_risk_shipped": {
+            "chargeback": "I din butik gällde {count} av {lost} förlorade återbetalningskrav av den här typen ordrar som Shopify hade flaggat som hög risk och som ändå skickades.",
+            "inquiry": "I din butik gällde {count} av {lost} förlorade förfrågningar av den här typen ordrar som Shopify hade flaggat som hög risk och som ändå skickades."
+          }
+        }
       }
     },
     "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
@@ -3828,7 +3844,7 @@
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
-          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag."
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet."
         },
         "reviewQueue": {
           "title": "Granskningskön",

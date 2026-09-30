@@ -1,6 +1,6 @@
 # Decided disputes get their own view: what happened, what mattered, what to change
 
-**Status:** v1.2, 2026-09-26. **PR 1 and PR 2 implemented** on `feat/decided-dispute-view` (PR #844). PR 2 follows the Claude Design "Decided Dispute View" (D-1 fixed copy, D-2 no fee, D-3 Shopify Admin pointer, D-4 design: all resolved by the design). PR 3 needs separate approval.
+**Status:** v1.2, 2026-09-26. **PR 1 and PR 2 implemented** on `feat/decided-dispute-view` (PR #844). PR 2 follows the Claude Design "Decided Dispute View" (D-1 fixed copy, D-2 no fee, D-3 Shopify Admin pointer, D-4 design: all resolved by the design). **PR 3 (store patterns) approved 2026-09-30 and implemented** on `feat/decided-store-patterns`; see §6. All five design-vs-data questions from PR 2 are closed (2026-09-30: undesigned-state copy accepted, order link kept on the title, page background left as is).
 **Builds on:** `docs/plans/lost-dispute-explanation.plan.md` (shipped 2026-08-29, `62459a25` + `c45699af`). That plan added one sentence and a "learning" list to the hero. This plan replaces the live-case layout on a decided dispute with a dedicated decided-case view.
 **Evidence:** prod `aokhplydttxtebvbeuzc`, queried 2026-09-26.
 
@@ -196,6 +196,8 @@ No recommendation fires without its trigger. Zero is a valid result, and the car
 **PR 2: the decided view (after D-4 design).** §3 layout, §5.1–5.4 engines, read-only Evidence/Review tabs, 6 locales, `docs/technical.md` § *Decided-dispute view*, help article (`lib/help/`): what we can and can't know about a bank's decision, and why Shopify's own "Help me understand why I lost" link has the issuer's words.
 
 **PR 3: store patterns (Phase 2 of the earlier plan).** Per-shop, per-reason base rates and the "12% of your not-received losses were unshipped orders" line, from the 466-case historical corpus (`lost-dispute-explanation.plan.md` §8). Aggregates only, never shown as a per-case explanation.
+
+*As built (2026-09-30):* both numbers are per reason family **and** phase. The base rate is a caption in "What wins this type of dispute". The pattern count is a caption under the "Next time" step it belongs to, and only when this case triggered that step. Two patterns: `unshipped_at_open` (ship-or-cancel) and `high_risk_shipped` (hold high-risk orders). Thresholds: ≥ 10 decided for a rate; ≥ 5 lost with an order and ≥ 2 matches for a pattern. The outcome email carries the pattern count. Prod, blume-box: not-received chargebacks were won 17% (11 of 66); 40 of 55 lost ones hadn't shipped when disputed; 181 of 299 lost fraud chargebacks were Shopify-flagged high-risk orders that shipped anyway (`scripts/sql/store-patterns-by-shop.sql`). Neither caption is in DecidedView3; both reuse its caption style.
 
 Verify each: `npm test`, `npx tsc --noEmit`, `npm run build`, `scripts/verify-i18n-parity.mjs`, then check the result on a prod case at 393/375/320px.
 
