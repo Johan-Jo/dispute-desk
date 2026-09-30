@@ -332,9 +332,22 @@ export interface WorkspaceBankClaim {
   } | null;
 }
 
+/** Fix C4b: "did the customer ask for a return?" — asked only when the shop
+ *  takes returns outside Shopify and the reason family makes it matter. */
+export interface WorkspaceReturnRequest {
+  applies: boolean;
+  answer: {
+    answer: "no_request_received" | "request_received" | "not_sure";
+    note: string | null;
+    cycle: number;
+    answeredAt: string;
+  } | null;
+}
+
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
   bankClaim?: WorkspaceBankClaim;
+  returnRequest?: WorkspaceReturnRequest;
   pack: WorkspacePack | null;
   /** Gorgias evidence core (null when the shop has no Gorgias
    *  integration — the review section self-hides). */

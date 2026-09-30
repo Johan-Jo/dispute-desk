@@ -19,6 +19,7 @@
  *   - **Deduplication uses `signalId`**, not `evidenceFieldKey`. (P2.4)
  */
 
+import { noReturnCountsForStrength } from "@/lib/disputes/returnRequestConfirmation";
 import type { I18nKey } from "@/lib/i18n/token";
 import {
   gradePaymentVerification,
@@ -727,6 +728,15 @@ export function categorizeEvidenceField(
       return "strong";
     }
     return "moderate";
+  }
+
+  // ── no_return_initiated (Fix C3) ──
+  // A shop that takes return requests outside Shopify: the Shopify record
+  // alone is not evidence that the customer never asked, so it is cited as
+  // context but does not move the score — until the merchant confirms, on
+  // this dispute, that no request came in.
+  if (fieldKey === "no_return_initiated") {
+    return noReturnCountsForStrength(p) ? spec.category : "supporting";
   }
 
   // Unknown conditional field — fall back to the default category.

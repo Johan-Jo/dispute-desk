@@ -55,6 +55,8 @@ interface AutomationSettings {
   auto_save_enabled?: boolean;
   auto_save_min_score: number;
   enforce_no_blockers: boolean;
+  /** Fix C4: customers ask for returns by email, chat or phone. */
+  returns_outside_shopify: boolean;
 }
 
 type Involvement = "hands_off" | "stay_involved";
@@ -178,6 +180,7 @@ export default function EmbeddedSettingsPage() {
     auto_build_enabled: false,
     auto_save_min_score: 80,
     enforce_no_blockers: true,
+    returns_outside_shopify: false,
   });
   const [minScoreInput, setMinScoreInput] = useState("80");
   const [automationSaving, setAutomationSaving] = useState(false);
@@ -345,6 +348,7 @@ export default function EmbeddedSettingsPage() {
         auto_build_enabled: automation.auto_build_enabled,
         auto_save_min_score: score,
         enforce_no_blockers: automation.enforce_no_blockers,
+        returns_outside_shopify: automation.returns_outside_shopify,
       }),
     });
     setAutomationSaving(false);
@@ -760,6 +764,22 @@ export default function EmbeddedSettingsPage() {
                         label=""
                         checked={automation.enforce_no_blockers}
                         onChange={(v) => setAutomation((a) => ({ ...a, enforce_no_blockers: v }))}
+                        labelHidden
+                      />
+                    </InlineStack>
+                  </div>
+
+                  {/* Returns handled outside Shopify (Fix C4) */}
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("returnsOutsideShopifyLabel")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("returnsOutsideShopifyDesc")}</Text>
+                      </BlockStack>
+                      <Checkbox
+                        label=""
+                        checked={automation.returns_outside_shopify}
+                        onChange={(v) => setAutomation((a) => ({ ...a, returns_outside_shopify: v }))}
                         labelHidden
                       />
                     </InlineStack>

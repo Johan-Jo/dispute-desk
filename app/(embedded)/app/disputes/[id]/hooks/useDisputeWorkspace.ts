@@ -809,6 +809,23 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
+  /** Fix C4b: record whether the customer asked for a return or refund.
+   *  The route stores it per response cycle and queues a rebuild. */
+  const submitReturnRequestConfirmation = useCallback(
+    async (answer: string, note: string | null): Promise<{ ok: boolean; code?: string }> => {
+      if (!data?.pack) return { ok: false, code: "NO_PACK" };
+      const res = await fetch(`/api/packs/${data.pack.id}/return-request-confirmation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer, note }),
+      });
+      const body = (await res.json().catch(() => null)) as { code?: string } | null;
+      fetchAll();
+      return res.ok ? { ok: true } : { ok: false, code: body?.code ?? String(res.status) };
+    },
+    [data?.pack, fetchAll],
+  );
+
   /** Record the bank's claim copied from Shopify Admin, or "Shopify shows
    *  no claim" (lib/disputes/bankClaim.ts). The route clears the task and
    *  queues a rebuild so the next letter answers the claim. */
@@ -1282,6 +1299,7 @@ export function useDisputeWorkspace(disputeId: string) {
       toggleInclusionOverride,
       submitCardholderAcknowledgement,
       submitParcelOutcome,
+      submitReturnRequestConfirmation,
       submitBankClaim,
       withdrawBankClaim,
       submitToShopify,

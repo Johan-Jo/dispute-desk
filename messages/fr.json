@@ -900,6 +900,27 @@
         "errorGeneric": "Impossible d’enregistrer la reconnaissance ({code}). Veuillez réessayer.",
         "charCount": "{count}/{max}"
       },
+      "returnRequest": {
+        "ctaEyebrow": "Retours en dehors de Shopify",
+        "title": "Ce client a-t-il demandé un retour ou un remboursement ?",
+        "subtitle": "Shopify n’enregistre que les retours effectués via Shopify. Vos clients demandant par e-mail, chat ou téléphone, vous seul pouvez dire si ce client a fait une demande avant d’ouvrir le litige.",
+        "answerLabel": "Avant le litige, le client…",
+        "choosePlaceholder": "Choisissez une réponse",
+        "answer": {
+          "no_request_received": "ne nous a demandé ni retour ni remboursement",
+          "request_received": "nous a demandé un retour ou un remboursement",
+          "not_sure": "Je ne suis pas sûr"
+        },
+        "answerHint": "« N’a rien demandé » est ajouté à la réponse comme votre confirmation. « A demandé » n’est jamais montré à la banque.",
+        "noteLabel": "Note (facultatif)",
+        "noteHint": "Uniquement pour vos propres dossiers. Elle reste dans DisputeDesk.",
+        "submit": "Enregistrer la réponse",
+        "submitting": "Enregistrement…",
+        "change": "Modifier la réponse",
+        "answered": "Votre réponse : {answer}",
+        "errorWindowClosed": "Shopify a déjà envoyé cette réponse, l’information ne peut plus être ajoutée.",
+        "errorGeneric": "Impossible d’enregistrer la réponse ({code})."
+      },
       "parcelOutcome": {
         "ctaEyebrow": "Nécessaire pour répondre · vous seul pouvez le dire",
         "title": "Dites-nous pourquoi ce colis est revenu",
@@ -2416,6 +2437,7 @@
       "order": "Commande {orderName}",
       "refundHistory": "Historique des remboursements",
       "noReturnInitiated": "Aucun retour initié",
+      "noReturnRecordedInShopify": "Aucun retour enregistré dans Shopify",
       "customerActivityLog": "Journal d'activité du client",
       "customerAccountDetails": "Détails du compte client",
       "shopifyProtect": "Couverture Shopify Protect",
@@ -3103,6 +3125,8 @@
     "reviewDesc": "Placer les dossiers en file d'examen pour approbation",
     "blockerLabel": "Exiger zéro blocage",
     "blockerDesc": "Bloquer l'enregistrement auto si des preuves obligatoires manquent",
+    "returnsOutsideShopifyLabel": "Les clients demandent les retours en dehors de Shopify",
+    "returnsOutsideShopifyDesc": "Activez cette option si les clients demandent des retours ou des remboursements par e-mail, chat ou téléphone plutôt que via Shopify. Vous confirmerez ensuite, pour chaque litige, si une demande a été reçue.",
     "minScore": "Score de complétude minimum pour l'enregistrement auto",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Les dossiers en dessous de ce score ne seront pas enregistrés automatiquement (0–100)",
@@ -3653,7 +3677,7 @@
       },
       "evidenceChecklist": {
         "title": "La liste de contrôle des preuves expliquée",
-        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige.\n\nNon conforme à la description : DisputeDesk récupère automatiquement la fiche produit dans votre boutique (le titre, la description, jusqu'à trois images et la variante choisie) et l'ajoute à la défense. C'est votre fiche telle qu'elle est aujourd'hui ; Shopify ne conserve pas son état au moment de la commande. Si elle ne peut pas être récupérée (par exemple parce que le produit a été supprimé), la liste de contrôle en indique la raison."
+        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige.\n\nNon conforme à la description : DisputeDesk récupère automatiquement la fiche produit dans votre boutique (le titre, la description, jusqu'à trois images et la variante choisie) et l'ajoute à la défense. C'est votre fiche telle qu'elle est aujourd'hui ; Shopify ne conserve pas son état au moment de la commande. Si elle ne peut pas être récupérée (par exemple parce que le produit a été supprimé), la liste de contrôle en indique la raison.\n\nRetours en dehors de Shopify : Shopify n’enregistre que les retours effectués via Shopify. Si vos clients demandent des retours ou des remboursements par e-mail, chat ou téléphone, activez « Les clients demandent les retours en dehors de Shopify » dans Paramètres → Automatisation. « Aucun retour enregistré dans Shopify » ne renforce alors plus un dossier à lui seul, et chaque litige pour produit non conforme, remboursement ou non-réception vous demande dans l’onglet Preuves si le client a demandé un retour ou un remboursement avant le litige. « N’a rien demandé » est ajouté à la réponse comme votre confirmation ; « a demandé » n’est jamais montré à la banque."
       },
       "defenseLetterRebuttal": {
         "title": "Lettre de défense et texte de réponse automatique",
