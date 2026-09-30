@@ -243,6 +243,14 @@ export async function seedReadyPackForUser(
       conclusion: { text: "", usedFactIds: [] },
       omittedSections: [],
       warnings: [],
+      // The counsel block every letter carries since the template writer was
+      // retired (2026-09-28). Without it `assessPackageSafety` refuses the
+      // package as `retired_template_writer` and the happy path 422s. Shape
+      // mirrors lib/defence/counsel/run.ts.
+      counsel: {
+        inputHash: "e2e-seed",
+        summary: ["The carrier confirmed delivery of the order on 12 May 2026."],
+      },
     },
   });
   if (dpErr) {
