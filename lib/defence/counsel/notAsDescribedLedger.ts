@@ -14,6 +14,7 @@
  * or anything about the customer's state of mind.
  */
 
+import { MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE } from "@/lib/disputes/returnRequestConfirmation";
 import { addLaterOrder, calendarDays, longDate, numberWord } from "./claimLedger";
 import { fulfilmentCoverage } from "../fulfilmentCoverage";
 import type { InternalNarrativeConstraints } from "../internalConstraints";
@@ -201,6 +202,21 @@ export function buildNotAsDescribedLedger(input: LedgerInput, extras: NotAsDescr
         "Never say the customer did not return, did not try to return or never asked to return.",
       ],
     });
+    // Fix C4b: the merchant confirmed on this dispute that no request came
+    // in. Code-owned, verbatim, attributed to the merchant.
+    const confirmed = sections.some((s) => obj(s?.data)?.merchantConfirmedNoRequest === true);
+    if (confirmed) {
+      add({
+        id: "merchant_confirmed_no_request",
+        statement: MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE,
+        specifics: {},
+        weight: "strong",
+        sources: ["dispute_return_request_confirmations.answer"],
+        mustNot: [
+          "State it once, verbatim, right after the no-return sentence. Never paraphrase it, never extend it to other channels or times.",
+        ],
+      });
+    }
   }
 
   // ── The store's return route, open when the dispute came (D9) ──

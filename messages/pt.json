@@ -900,6 +900,27 @@
         "errorGeneric": "Não foi possível salvar o reconhecimento ({code}). Tente novamente.",
         "charCount": "{count}/{max}"
       },
+      "returnRequest": {
+        "ctaEyebrow": "Devoluções fora da Shopify",
+        "title": "Este cliente pediu uma devolução ou reembolso?",
+        "subtitle": "A Shopify só regista devoluções feitas através da Shopify. Como os seus clientes pedem por email, chat ou telefone, só você pode dizer se este cliente pediu antes de abrir a disputa.",
+        "answerLabel": "Antes da disputa, o cliente…",
+        "choosePlaceholder": "Escolha uma resposta",
+        "answer": {
+          "no_request_received": "não nos pediu devolução nem reembolso",
+          "request_received": "pediu-nos uma devolução ou reembolso",
+          "not_sure": "Não tenho a certeza"
+        },
+        "answerHint": "«Não pediu» é adicionado à resposta como a sua confirmação. «Pediu» nunca é mostrado ao banco.",
+        "noteLabel": "Nota (opcional)",
+        "noteHint": "Apenas para os seus registos. Fica na DisputeDesk.",
+        "submit": "Guardar resposta",
+        "submitting": "A guardar…",
+        "change": "Alterar resposta",
+        "answered": "A sua resposta: {answer}",
+        "errorWindowClosed": "A Shopify já enviou esta resposta, por isso já não é possível adicioná-la.",
+        "errorGeneric": "Não foi possível guardar a resposta ({code})."
+      },
       "parcelOutcome": {
         "ctaEyebrow": "Necessário para responder · só você pode responder",
         "title": "Diga-nos por que esta encomenda voltou",
@@ -2432,6 +2453,7 @@
       "order": "Pedido {orderName}",
       "refundHistory": "Histórico de reembolsos",
       "noReturnInitiated": "Nenhuma devolução iniciada",
+      "noReturnRecordedInShopify": "Nenhuma devolução registada na Shopify",
       "customerActivityLog": "Registro de atividade do cliente",
       "customerAccountDetails": "Detalhes da conta do cliente",
       "shopifyProtect": "Cobertura do Shopify Protect",
@@ -3119,6 +3141,8 @@
     "reviewDesc": "Mantém pacotes na fila de revisão para aprovação antes de salvar no Shopify",
     "blockerLabel": "Exigir zero bloqueios",
     "blockerDesc": "Bloqueia o salvamento automático se houver itens de evidência obrigatórios ausentes",
+    "returnsOutsideShopifyLabel": "Os clientes pedem devoluções fora da Shopify",
+    "returnsOutsideShopifyDesc": "Ative se os clientes pedem devoluções ou reembolsos por email, chat ou telefone em vez de através da Shopify. Depois confirma, em cada disputa, se chegou um pedido.",
     "minScore": "Pontuação mínima de completude para salvamento automático",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Pacotes abaixo desta pontuação não serão salvos automaticamente (0–100)",
@@ -3669,7 +3693,7 @@
       },
       "evidenceChecklist": {
         "title": "Checklist de evidências explicado",
-        "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático.\n\nNão conforme a descrição: a DisputeDesk obtém automaticamente a ficha do produto da sua loja (o título, a descrição, até três imagens e a variante escolhida) e a adiciona à defesa. É a ficha como está hoje; a Shopify não guarda como era quando o pedido foi feito. Se não for possível obtê-la (por exemplo, porque o produto foi excluído), a lista de verificação informa o motivo."
+        "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático.\n\nNão conforme a descrição: a DisputeDesk obtém automaticamente a ficha do produto da sua loja (o título, a descrição, até três imagens e a variante escolhida) e a adiciona à defesa. É a ficha como está hoje; a Shopify não guarda como era quando o pedido foi feito. Se não for possível obtê-la (por exemplo, porque o produto foi excluído), a lista de verificação informa o motivo.\n\nDevoluções fora da Shopify: a Shopify só regista devoluções feitas através da Shopify. Se os seus clientes pedem devoluções ou reembolsos por email, chat ou telefone, ative «Os clientes pedem devoluções fora da Shopify» em Definições → Automação. «Nenhuma devolução registada na Shopify» deixa de reforçar um caso sozinha, e cada disputa de produto não conforme, reembolso ou não recebido pergunta-lhe no separador Evidências se o cliente pediu uma devolução ou reembolso antes da disputa. «Não pediu» é adicionado à resposta como a sua confirmação; «pediu» nunca é mostrado ao banco."
       },
       "defenseLetterRebuttal": {
         "title": "Carta de defesa e contestação automática",

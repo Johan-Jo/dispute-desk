@@ -1640,6 +1640,27 @@
         "errorGeneric": "Det gick inte att spara bekräftelsen ({code}). Försök igen.",
         "charCount": "{count}/{max}"
       },
+      "returnRequest": {
+        "ctaEyebrow": "Returer utanför Shopify",
+        "title": "Bad den här kunden om retur eller återbetalning?",
+        "subtitle": "Shopify registrerar bara returer som görs via Shopify. Eftersom dina kunder hör av sig via e-post, chatt eller telefon kan bara du säga om kunden bad om det innan tvisten öppnades.",
+        "answerLabel": "Innan tvisten har kunden …",
+        "choosePlaceholder": "Välj ett svar",
+        "answer": {
+          "no_request_received": "inte bett oss om retur eller återbetalning",
+          "request_received": "bett oss om retur eller återbetalning",
+          "not_sure": "Jag är inte säker"
+        },
+        "answerHint": "”Inte bett” läggs till i svaret som din bekräftelse. ”Bett” visas aldrig för banken.",
+        "noteLabel": "Anteckning (valfri)",
+        "noteHint": "Bara för dina egna anteckningar. Den stannar i DisputeDesk.",
+        "submit": "Spara svar",
+        "submitting": "Sparar…",
+        "change": "Ändra svar",
+        "answered": "Ditt svar: {answer}",
+        "errorWindowClosed": "Shopify har redan skickat svaret, så uppgiften kan inte längre läggas till.",
+        "errorGeneric": "Svaret kunde inte sparas ({code})."
+      },
       "parcelOutcome": {
         "ctaEyebrow": "Behövs för svaret · bara du kan svara på detta",
         "title": "Berätta varför paketet kom tillbaka",
@@ -2432,6 +2453,7 @@
       "order": "Beställning {orderName}",
       "refundHistory": "Chargebackhistorik",
       "noReturnInitiated": "Ingen retur påbörjad",
+      "noReturnRecordedInShopify": "Ingen retur registrerad i Shopify",
       "customerActivityLog": "Kundens aktivitetslogg",
       "customerAccountDetails": "Kundkontoinformation",
       "shopifyProtect": "Shopify Protect-täckning",
@@ -3120,6 +3142,8 @@
     "reviewDesc": "Parkera paket i granskningskö för godkännande innan sparning till Shopify",
     "blockerLabel": "Kräv noll blockeringar",
     "blockerDesc": "Blockera autosparning om obligatoriska bevismaterial saknas",
+    "returnsOutsideShopifyLabel": "Kunder begär returer utanför Shopify",
+    "returnsOutsideShopifyDesc": "Slå på detta om kunder ber om returer eller återbetalningar via e-post, chatt eller telefon i stället för via Shopify. Du bekräftar sedan, per tvist, om en begäran kom in.",
     "minScore": "Minsta fullständighetspoäng för autosparning",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Paket under denna poäng sparas inte automatiskt (0–100)",
@@ -3669,7 +3693,7 @@
       },
       "evidenceChecklist": {
         "title": "Bevischecklistan förklarad",
-        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod.\n\nInte som beskrivet: DisputeDesk hämtar produktinformationen automatiskt från din butik (titel, beskrivning, upp till tre bilder och den valda varianten) och lägger till den i försvaret. Det är din produktinformation som den ser ut i dag; Shopify sparar inte hur den såg ut när beställningen gjordes. Om den inte kan hämtas (till exempel för att produkten har tagits bort) anger checklistan varför."
+        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod.\n\nInte som beskrivet: DisputeDesk hämtar produktinformationen automatiskt från din butik (titel, beskrivning, upp till tre bilder och den valda varianten) och lägger till den i försvaret. Det är din produktinformation som den ser ut i dag; Shopify sparar inte hur den såg ut när beställningen gjordes. Om den inte kan hämtas (till exempel för att produkten har tagits bort) anger checklistan varför.\n\nReturer utanför Shopify: Shopify registrerar bara returer som görs via Shopify. Om dina kunder ber om returer eller återbetalningar via e-post, chatt eller telefon, slå på ”Kunder begär returer utanför Shopify” under Inställningar → Automatisering. ”Ingen retur registrerad i Shopify” stärker då inte längre ett ärende på egen hand, och varje tvist om vara som inte stämmer med beskrivningen, återbetalning eller utebliven leverans frågar dig på fliken Bevis om kunden bad om retur eller återbetalning före tvisten. ”Inte bett” läggs till i svaret som din bekräftelse; ”bett” visas aldrig för banken."
       },
       "defenseLetterRebuttal": {
         "title": "Försvarsbreve och automatisk motsvarotext",

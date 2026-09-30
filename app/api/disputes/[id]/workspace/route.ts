@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getShopSettings } from "@/lib/automation/settings";
+import { loadReturnRequestConfirmation, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
 import path from "node:path";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
@@ -1223,9 +1225,28 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       : null;
   const decidedResponse = decidedView?.response ?? null;
 
+  // Fix C4b: asked only for a shop that takes returns outside Shopify.
+  let returnRequest: { applies: boolean; answer: Awaited<ReturnType<typeof loadReturnRequestConfirmation>> } = {
+    applies: false,
+    answer: null,
+  };
+  try {
+    const shopSettings = await getShopSettings(row.shop_id as string);
+    returnRequest = {
+      applies: returnQuestionApplies({
+        returnsOutsideShopify: shopSettings.returns_outside_shopify === true,
+        reasonFamily: resolveReasonFamily(effectiveReason),
+      }),
+      answer: await loadReturnRequestConfirmation(sb, disputeId, bankClaimCycle),
+    };
+  } catch (err) {
+    console.warn("[workspace] return-request read failed", err instanceof Error ? err.message : err);
+  }
+
   return NextResponse.json({
     dispute,
     bankClaim,
+    returnRequest,
     pack,
     gorgiasComms,
     argumentMap,
