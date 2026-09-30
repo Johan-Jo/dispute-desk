@@ -96,6 +96,13 @@ export function writerUserPrompt(args: {
   exhibitOnly: Brief["sections"];
 }): string {
   const provider = args.frame.provider === "paypal" ? "paypal" : args.frame.provider === "klarna" ? "klarna" : "card";
+  // A section lists only the claims this case's ledger holds. The brief's
+  // list is the type's full vocabulary; offering a claim the ledger lacks
+  // invites the writer to cite it, and the checker then fails the letter on
+  // an unknown claim (#100017, 2026-09-30: merchant_confirmed_no_request,
+  // which exists only after the merchant confirms).
+  const inLedger = new Set(args.ledger.map((c) => c.id));
+  const sectionClaims = (s: Brief["sections"][number]) => s.claimIds.filter((id) => inLedger.has(id)).join(", ");
   return [
     `FRAME: ${frameRule(args.frame)}`,
     `MERCHANT: "${args.merchantName}" (name it at most once).`,
@@ -104,7 +111,7 @@ export function writerUserPrompt(args: {
     `THEORY OF THE CASE (${args.theory.name}): built on ${args.theory.claims.join(", ")}.`,
     `SECTIONS TO ARGUE (key — exhibit it sits under — the question it answers — claims it may use). A section may state a date or number again only if it belongs to that section's own claims, and then only once; any other date or number stays in the summary, and the section refers to the event (\"the delivery\", \"the item\"):\n` +
       (args.argued.length
-        ? args.argued.map((s) => `- ${s.key} — ${s.exhibit} — ${s.question} — ${s.claimIds.join(", ")}`).join("\n")
+        ? args.argued.map((s) => `- ${s.key} — ${s.exhibit} — ${s.question} — ${sectionClaims(s)}`).join("\n")
         : "- none"),
     args.exhibitOnly.length
       ? `EXHIBIT-ONLY (printed with no prose; do not write a section for them, and do not argue from them): ${args.exhibitOnly.map((s) => `${s.key} (${s.exhibit})`).join("; ")}`
