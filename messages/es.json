@@ -486,6 +486,15 @@
     "caseTitle": "Caso {id}",
     "inquiryBadge": "Consulta",
     "reopenedBadge": "Reabierta",
+    "escalatedBadge": "Escalada desde consulta",
+    "escalationBanner": {
+      "escalatedTitle": "Escalada de consulta a contracargo",
+      "reopenedTitle": "Reabierta: se necesita una nueva respuesta",
+      "escalatedOn": "Empezó como una consulta y se escaló a contracargo el {date}.",
+      "reopenedOn": "Shopify reabrió esta disputa el {date} después de una respuesta anterior.",
+      "responseDue": "Hay que responder antes del {date}.",
+      "inquiryResponseDoesNotCarry": "La respuesta enviada para la consulta no se traslada."
+    },
     "chargebackBadge": "Contracargo",
     "phaseUnknown": "Desconocido",
     "phaseLabel": "Fase",
@@ -3824,7 +3833,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Ver y filtrar disputas",
-          "body": "La tabla **Disputas** usa **las mismas columnas** que las disputas recientes del panel: **Pedido** (enlace al Admin de Shopify si está disponible), **ID** (id interno corto), **Cliente**, **Importe**, **Motivo**, **Estado**, **Plazo** (mes y día) y **Ver detalles** para abrir la disputa en DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por estado, **Exportar** CSV, **Sincronizar ahora**.\n\n**No hay pestaña separada de cola de revisión**: las disputas para revisión manual aparecen en esta lista. Use **Ver detalles** y luego **Aprobar y guardar** en la página de detalle."
+          "body": "La tabla **Disputas** usa **las mismas columnas** que las disputas recientes del panel: **Pedido** (enlace al Admin de Shopify si está disponible), **ID** (id interno corto), **Cliente**, **Importe**, **Motivo**, **Estado**, **Plazo** (mes y día) y **Ver detalles** para abrir la disputa en DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por estado, **Exportar** CSV, **Sincronizar ahora**.\n\n**No hay pestaña separada de cola de revisión**: las disputas para revisión manual aparecen en esta lista. Use **Ver detalles** y luego **Aprobar y guardar** en la página de detalle.\n\n**Respondida en Shopify:** cuando una disputa se responde directamente en el administrador de Shopify, DisputeDesk ve que Shopify la pasa a revisión y muestra «Se envió una respuesta a través de Shopify». Deja de contar como pendiente de respuesta y no se prepara ningún paquete de evidencia para ella. Si el cliente o el banco vuelven a preguntar, vuelve a necesitar una respuesta.\n\n**Escalada desde consulta:** una consulta que se convirtió en contracargo lleva la etiqueta «Escalada desde consulta» y puedes filtrar la lista por ella. La página de la disputa indica cuándo se escaló y, mientras Shopify pida una respuesta, hasta cuándo hay plazo."
         },
         "disputeDetailPage": {
           "title": "Detalle de disputa en esta aplicación",
@@ -5059,7 +5068,8 @@
       "dispute_resynced": "Disputa actualizada desde Shopify",
       "response_cycle_reopened": "Reabierta: se necesita una nueva respuesta",
       "dispute_reopened_after_close": "Reabierta por Shopify tras una decisión",
-      "escalated_to_chargeback": "Escalada de consulta a contracargo"
+      "escalated_to_chargeback": "Escalada de consulta a contracargo",
+      "response_sent_via_shopify": "Se envió una respuesta a través de Shopify"
     },
     "actors": {
       "merchant_user": "Usted",
@@ -6373,6 +6383,14 @@
       "under_review": {
         "title": "La red de tarjetas está revisando la disputa",
         "message": "La respuesta se ha enviado y ya no se puede modificar. DisputeDesk sigue la disputa hasta conocer el resultado."
+      },
+      "underReviewViaShopify": {
+        "title": "Se envió una respuesta a través de Shopify",
+        "message": "Shopify muestra esta disputa en revisión después de que se enviara una respuesta a través de Shopify. DisputeDesk no envió ninguna y sigue la disputa hasta su resolución."
+      },
+      "underReviewUnattributed": {
+        "title": "En revisión en Shopify",
+        "message": "Shopify muestra esta disputa en revisión. DisputeDesk no envió ninguna respuesta y sigue la disputa hasta su resolución."
       },
       "next": {
         "building_evidence": "Paquete de pruebas preparado — normalmente en pocas horas",

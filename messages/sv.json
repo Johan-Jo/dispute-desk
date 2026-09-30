@@ -486,6 +486,15 @@
     "caseTitle": "Ärende {id}",
     "inquiryBadge": "Förfrågan",
     "reopenedBadge": "Återöppnad",
+    "escalatedBadge": "Eskalerad från förfrågan",
+    "escalationBanner": {
+      "escalatedTitle": "Eskalerad från förfrågan till återkrav",
+      "reopenedTitle": "Återöppnad – nytt svar behövs",
+      "escalatedOn": "Detta började som en förfrågan och eskalerades till ett återkrav den {date}.",
+      "reopenedOn": "Shopify återöppnade tvisten den {date} efter ett tidigare svar.",
+      "responseDue": "Ett svar ska lämnas senast {date}.",
+      "inquiryResponseDoesNotCarry": "Svaret på förfrågan gäller inte längre."
+    },
     "chargebackBadge": "Återkrav",
     "phaseUnknown": "Okänd",
     "phaseLabel": "Fas",
@@ -3824,7 +3833,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Visa och filtrera tvister",
-          "body": "Tabellen **Tvister** har **samma kolumner** som de senaste tvisterna på instrumentpanelen: **Order** (länk till Shopify Admin när den finns), **ID** (kort internt id), **Kund**, **Belopp**, **Anledning**, **Status**, **Deadline** (månad och dag) och **Visa detaljer** för att öppna tvisten i DisputeDesk.\n\nVerktygsrad: **Sök** (order, ID, kund, anledning), **Filtrera** efter status, **Exportera** CSV, **Synka nu**.\n\n**Ingen separat granskningskö-flik**: tvister för manuell granskning visas i samma lista. Använd **Visa detaljer** och sedan **Godkänn och spara** på detaljsidan."
+          "body": "Tabellen **Tvister** har **samma kolumner** som de senaste tvisterna på instrumentpanelen: **Order** (länk till Shopify Admin när den finns), **ID** (kort internt id), **Kund**, **Belopp**, **Anledning**, **Status**, **Deadline** (månad och dag) och **Visa detaljer** för att öppna tvisten i DisputeDesk.\n\nVerktygsrad: **Sök** (order, ID, kund, anledning), **Filtrera** efter status, **Exportera** CSV, **Synka nu**.\n\n**Ingen separat granskningskö-flik**: tvister för manuell granskning visas i samma lista. Använd **Visa detaljer** och sedan **Godkänn och spara** på detaljsidan.\n\n**Besvarad i Shopify:** när en tvist besvaras direkt i Shopify-admin ser DisputeDesk att Shopify sätter den under granskning och visar ”Ett svar skickades via Shopify”. Den räknas då inte längre som väntande på svar, och inget bevispaket byggs för den. Om kunden eller banken frågar igen behöver den ett svar igen.\n\n**Eskalerad från förfrågan:** en förfrågan som blev ett återkrav märks ”Eskalerad från förfrågan”, och du kan filtrera listan på det. Tvistsidan visar när den eskalerades och, så länge Shopify begär ett svar, när svaret ska lämnas."
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
@@ -5059,7 +5068,8 @@
       "dispute_resynced": "Tvist uppdaterad från Shopify",
       "response_cycle_reopened": "Återöppnad – nytt svar behövs",
       "dispute_reopened_after_close": "Återöppnad av Shopify efter ett beslut",
-      "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav"
+      "escalated_to_chargeback": "Eskalerad från förfrågan till återkrav",
+      "response_sent_via_shopify": "Ett svar skickades via Shopify"
     },
     "actors": {
       "merchant_user": "Du",
@@ -6373,6 +6383,14 @@
       "under_review": {
         "title": "Kortnätverket granskar tvisten",
         "message": "Svaret har skickats och kan inte längre ändras. DisputeDesk följer tvisten tills utfallet kommer."
+      },
+      "underReviewViaShopify": {
+        "title": "Ett svar skickades via Shopify",
+        "message": "Shopify visar tvisten som under granskning efter att ett svar skickats via Shopify. DisputeDesk skickade inget svar och följer tvisten tills beslut fattas."
+      },
+      "underReviewUnattributed": {
+        "title": "Under granskning i Shopify",
+        "message": "Shopify visar tvisten som under granskning. DisputeDesk skickade inget svar och följer tvisten tills beslut fattas."
       },
       "next": {
         "building_evidence": "Bevispaket förberett — vanligtvis inom några timmar",

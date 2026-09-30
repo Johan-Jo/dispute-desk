@@ -34,6 +34,14 @@ const RESPONDED_SUBMISSION_STATES = new Set([
   "submitted_confirmed",
   "saved_to_shopify",
   "responded_via_shopify",
+  "under_review_unattributed",
+]);
+
+/** Responses we only observed as a Shopify status (Fix A). Kept literal here
+ *  so this module does not import `respondedViaShopify.ts`, which imports it. */
+const STATUS_OBSERVED_STATES = new Set([
+  "responded_via_shopify",
+  "under_review_unattributed",
 ]);
 
 export interface PriorResponseRow {
@@ -82,7 +90,24 @@ export function opensNewResponseCycle(args: {
   if (args.newStatus !== "needs_response") return false;
   if (args.existing.status === "needs_response") return false;
   if (!hasRealDeadline(args.newDueAt)) return false;
-  return hasPriorResponse(args.existing);
+  if (!hasPriorResponse(args.existing)) return false;
+  // A response we only observed as a status (Fix A) is re-asked with the SAME
+  // deadline whenever an inquiry's buyer writes back (#99143). That is not a
+  // reopen: the dispute returns to "needs response" in the same cycle
+  // (applyDisputeSnapshot resets the state). Only a new deadline is a reopen.
+  const e = args.existing;
+  const onlyObserved =
+    !e.submitted_at &&
+    !e.evidence_saved_to_shopify_at &&
+    e.submission_state != null &&
+    STATUS_OBSERVED_STATES.has(e.submission_state);
+  if (onlyObserved && sameDeadline(e.due_at, args.newDueAt)) return false;
+  return true;
+}
+
+function sameDeadline(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return !a && !b;
+  return new Date(a).getTime() === new Date(b).getTime();
 }
 
 /** Second precision, UTC — the same instant always yields the same key. */

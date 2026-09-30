@@ -35,6 +35,7 @@ import {
   RESPONSE_CYCLE_REOPENED,
   ESCALATED_TO_CHARGEBACK,
   DISPUTE_REOPENED_AFTER_CLOSE,
+  RESPONSE_SENT_VIA_SHOPIFY,
 } from "@/lib/disputeEvents/eventTypes";
 import { isReopenAfterClose, outcomeKeySuffix, reopenAfterCloseUpdate } from "./reopenAfterClose";
 import type { DisputeSnapshot } from "./disputeSnapshot";
@@ -43,6 +44,13 @@ import {
   reconcileResponseCycle,
   responseAnchorKey,
 } from "./responseCycle";
+import {
+  RESPONDED_VIA_SHOPIFY,
+  UNDER_REVIEW_UNATTRIBUTED,
+  isSameCycleAskAgain,
+  isUnattributedUnderReview,
+  observesResponseViaShopify,
+} from "./respondedViaShopify";
 
 const TERMINAL_STATUSES = new Set([
   "won",
@@ -65,7 +73,10 @@ export type DisputeTransitionEventType =
   | "SUBMISSION_CONFIRMED"
   | "OUTCOME_DETECTED"
   | "DISPUTE_CLOSED"
-  | "RESPONSE_CYCLE_REOPENED";
+  | "RESPONSE_CYCLE_REOPENED"
+  /** Shopify asks again, same deadline, after a response it observed (Fix A).
+   *  Same cycle; the dispatcher makes sure a pack exists. */
+  | "RESPONSE_REQUESTED_AGAIN";
 
 export interface DisputeTransitionEvent {
   type: DisputeTransitionEventType;
@@ -500,6 +511,23 @@ export async function applyDisputeSnapshot(
       });
     }
 
+    // First seen already under review with a deadline and no submission
+    // signal: under review in Shopify, responder unknown (Fix A2).
+    if (
+      !(newStatus && TERMINAL_STATUSES.has(newStatus)) &&
+      isUnattributedUnderReview({
+        status: newStatus,
+        dueAt: snapshot.evidenceDueBy,
+        evidenceSentOn: snapshot.evidenceSentOn,
+      })
+    ) {
+      await sb
+        .from("disputes")
+        .update({ submission_state: UNDER_REVIEW_UNATTRIBUTED })
+        .eq("id", disputeId)
+        .eq("submission_state", "not_saved");
+    }
+
     void updateNormalizedStatus(disputeId);
 
     return {
@@ -715,6 +743,68 @@ export async function applyDisputeSnapshot(
         context: { ...ctxBase, finalOutcome: outcome },
       });
     }
+  }
+
+  // A response sent through Shopify (Fix A2): the only observation we get
+  // for an inquiry answered in Shopify Admin is this transition.
+  const closedNow =
+    (newStatus != null && TERMINAL_STATUSES.has(newStatus)) ||
+    (existing.final_outcome != null && !reopensAfterClose);
+  if (
+    observesResponseViaShopify({
+      oldStatus: existing.status,
+      newStatus,
+      newDueAt: snapshot.evidenceDueBy,
+      submissionState: existing.submission_state,
+      closed: closedNow,
+    }) &&
+    !snapshot.evidenceSentOn
+  ) {
+    anyChange = true;
+    await sb
+      .from("disputes")
+      .update({ submission_state: RESPONDED_VIA_SHOPIFY })
+      .eq("id", disputeId)
+      .in("submission_state", ["not_saved", UNDER_REVIEW_UNATTRIBUTED]);
+    void emitDisputeEvent({
+      disputeId,
+      shopId,
+      eventType: RESPONSE_SENT_VIA_SHOPIFY,
+      description: "A response was sent through Shopify",
+      eventAt: shopifyAt,
+      actorType: "shopify",
+      sourceType: sourceTypeForEvent,
+      metadataJson: { response_cycle: currentCycle, phase },
+      dedupeKey: `${disputeId}:${RESPONSE_SENT_VIA_SHOPIFY}:c${currentCycle}`,
+    });
+  } else if (
+    !opensCycle &&
+    isSameCycleAskAgain({
+      submissionState: existing.submission_state,
+      oldDueAt: existing.due_at,
+      newStatus,
+      newDueAt: snapshot.evidenceDueBy,
+    })
+  ) {
+    // Asked again with the same deadline (an inquiry's buyer wrote back):
+    // the observed response no longer settles it. Same cycle, needs a
+    // response again, and a pack must exist for it.
+    anyChange = true;
+    await sb
+      .from("disputes")
+      .update({ submission_state: "not_saved" })
+      .eq("id", disputeId)
+      .in("submission_state", [RESPONDED_VIA_SHOPIFY, UNDER_REVIEW_UNATTRIBUTED]);
+    events.push({
+      type: "RESPONSE_REQUESTED_AGAIN",
+      disputeId,
+      shopId,
+      eventAt: shopifyAt,
+      eventKey: `${disputeId}:RESPONSE_REQUESTED_AGAIN:${shopifyAt}`,
+      oldStatus: existing.status ?? null,
+      newStatus,
+      context: ctxBase,
+    });
   }
 
   // Due date change — compare by epoch ms to tolerate timezone-only changes.

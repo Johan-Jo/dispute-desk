@@ -41,6 +41,15 @@ const RECOGNIZED_SUBMISSION_STATES = new Set([
   "submitted_confirmed",
   "submission_uncertain",
   "manual_submission_reported",
+  "responded_via_shopify",
+  "under_review_unattributed",
+]);
+
+/** Observed as a Shopify status (Fix A): Shopify says the dispute is under
+ *  review and DisputeDesk sent nothing. The dispute is not pending. */
+const SHOPIFY_OBSERVED_UNDER_REVIEW = new Set([
+  "responded_via_shopify",
+  "under_review_unattributed",
 ]);
 
 /** Pack statuses that mean a build is in progress. */
@@ -107,6 +116,14 @@ export function isTransmissionConfirmed(input: {
 }): boolean {
   // Our own save state is the direct observation and outranks the inference.
   if (input.submissionState === "submitted_confirmed") return true;
+  // A response observed through Shopify (Fix A). Only while Shopify still
+  // reports it under review: a re-ask resets the state to `not_saved`.
+  if (
+    input.submissionState != null &&
+    SHOPIFY_OBSERVED_UNDER_REVIEW.has(input.submissionState)
+  ) {
+    return input.normalizedStatus === "submitted_to_bank";
+  }
 
   /* `normalized_status = 'submitted_to_bank'` is an INFERENCE, not an
    * observation. It comes from Shopify status `under_review`

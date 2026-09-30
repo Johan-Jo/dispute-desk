@@ -37,6 +37,8 @@ export interface Dispute {
    *  the "Reopened" badge (lib/disputes/reopenAfterClose.ts). */
   response_cycle?: number | null;
   reopened_after_close_at?: string | null;
+  /** Inquiry escalated to a chargeback (plan D2): drives the escalation chip. */
+  escalated_from_inquiry_at?: string | null;
   submitted_at?: string | null;
   outcome_amount_recovered?: number | null;
   outcome_amount_lost?: number | null;
