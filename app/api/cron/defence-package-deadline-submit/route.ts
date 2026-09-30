@@ -66,6 +66,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { runDeadlineSubmitLegacy } from "./legacyRoute";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import { isDecidedDispute } from "@/lib/disputes/reopenAfterClose";
 import { bankClaimBlocksFiling, bankClaimInputFromRow, bankClaimTrigger } from "@/lib/disputes/bankClaim";
 
 export const runtime = "nodejs";
@@ -243,6 +244,14 @@ export async function GET(req: NextRequest) {
       // (2026-07-23 review lifecycle; lib/disputes/reviewState.ts.)
       if (d.review_state === "conceded") {
         summary.scanned--; // don't count a deliberately-skipped dispute
+        continue;
+      }
+
+      // Shopify already decided it (e.g. lost before its due date passed).
+      // Nothing can be filed, so there is nothing to refuse or alert on —
+      // #100411 (2026-09-30) paged "filed nothing" three days after it lost.
+      if (isDecidedDispute(d)) {
+        summary.scanned--;
         continue;
       }
 
