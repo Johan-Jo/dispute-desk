@@ -73,7 +73,13 @@ export type SubmissionState =
   | "saved_to_shopify"
   | "submitted_confirmed"
   | "submission_uncertain"
-  | "manual_submission_reported";
+  | "manual_submission_reported"
+  /** A response observed as `needs_response → under_review` in Shopify,
+   *  with nothing sent by DisputeDesk (Fix A). */
+  | "responded_via_shopify"
+  /** First seen `under_review` with a deadline and no submission signal:
+   *  under review in Shopify, responder unknown (Fix A). */
+  | "under_review_unattributed";
 
 /** Final outcome values. */
 export type FinalOutcome =

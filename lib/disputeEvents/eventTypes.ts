@@ -16,6 +16,9 @@ export const ESCALATED_TO_CHARGEBACK = "escalated_to_chargeback";
 /** Shopify reopened a decided dispute (won/lost/… → needs_response or
  *  under_review). The outcome is cleared; the previous one is kept. */
 export const DISPUTE_REOPENED_AFTER_CLOSE = "dispute_reopened_after_close";
+/** Shopify moved the dispute `needs_response → under_review` and DisputeDesk
+ *  sent nothing: a response went in through Shopify. Once per cycle. */
+export const RESPONSE_SENT_VIA_SHOPIFY = "response_sent_via_shopify";
 
 // Evidence pack
 export const PACK_CREATED = "pack_created";

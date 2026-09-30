@@ -486,6 +486,15 @@
     "caseTitle": "Dossier {id}",
     "inquiryBadge": "Demande",
     "reopenedBadge": "Rouvert",
+    "escalatedBadge": "Passé de demande à rétrofacturation",
+    "escalationBanner": {
+      "escalatedTitle": "Passé de demande à rétrofacturation",
+      "reopenedTitle": "Rouvert — nouvelle réponse nécessaire",
+      "escalatedOn": "Ce litige a commencé comme une demande et est passé en rétrofacturation le {date}.",
+      "reopenedOn": "Shopify a rouvert ce litige le {date} après une réponse précédente.",
+      "responseDue": "Une réponse est attendue avant le {date}.",
+      "inquiryResponseDoesNotCarry": "La réponse envoyée pour la demande n’est pas reprise."
+    },
     "chargebackBadge": "Rétrofacturation",
     "phaseUnknown": "Inconnu",
     "phaseLabel": "Phase",
@@ -890,6 +899,27 @@
         "errorWindowClosed": "Shopify a déjà transféré ce litige à la banque, donc aucune nouvelle reconnaissance ne peut être ajoutée.",
         "errorGeneric": "Impossible d’enregistrer la reconnaissance ({code}). Veuillez réessayer.",
         "charCount": "{count}/{max}"
+      },
+      "returnRequest": {
+        "ctaEyebrow": "Retours en dehors de Shopify",
+        "title": "Ce client a-t-il demandé un retour ou un remboursement ?",
+        "subtitle": "Shopify n’enregistre que les retours effectués via Shopify. Vos clients demandant par e-mail, chat ou téléphone, vous seul pouvez dire si ce client a fait une demande avant d’ouvrir le litige.",
+        "answerLabel": "Avant le litige, le client…",
+        "choosePlaceholder": "Choisissez une réponse",
+        "answer": {
+          "no_request_received": "ne nous a demandé ni retour ni remboursement",
+          "request_received": "nous a demandé un retour ou un remboursement",
+          "not_sure": "Je ne suis pas sûr"
+        },
+        "answerHint": "« N’a rien demandé » est ajouté à la réponse comme votre confirmation. « A demandé » n’est jamais montré à la banque.",
+        "noteLabel": "Note (facultatif)",
+        "noteHint": "Uniquement pour vos propres dossiers. Elle reste dans DisputeDesk.",
+        "submit": "Enregistrer la réponse",
+        "submitting": "Enregistrement…",
+        "change": "Modifier la réponse",
+        "answered": "Votre réponse : {answer}",
+        "errorWindowClosed": "Shopify a déjà envoyé cette réponse, l’information ne peut plus être ajoutée.",
+        "errorGeneric": "Impossible d’enregistrer la réponse ({code})."
       },
       "parcelOutcome": {
         "ctaEyebrow": "Nécessaire pour répondre · vous seul pouvez le dire",
@@ -2423,6 +2453,7 @@
       "order": "Commande {orderName}",
       "refundHistory": "Historique des remboursements",
       "noReturnInitiated": "Aucun retour initié",
+      "noReturnRecordedInShopify": "Aucun retour enregistré dans Shopify",
       "customerActivityLog": "Journal d'activité du client",
       "customerAccountDetails": "Détails du compte client",
       "shopifyProtect": "Couverture Shopify Protect",
@@ -3110,6 +3141,8 @@
     "reviewDesc": "Placer les dossiers en file d'examen pour approbation",
     "blockerLabel": "Exiger zéro blocage",
     "blockerDesc": "Bloquer l'enregistrement auto si des preuves obligatoires manquent",
+    "returnsOutsideShopifyLabel": "Les clients demandent les retours en dehors de Shopify",
+    "returnsOutsideShopifyDesc": "Activez cette option si les clients demandent des retours ou des remboursements par e-mail, chat ou téléphone plutôt que via Shopify. Vous confirmerez ensuite, pour chaque litige, si une demande a été reçue.",
     "minScore": "Score de complétude minimum pour l'enregistrement auto",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Les dossiers en dessous de ce score ne seront pas enregistrés automatiquement (0–100)",
@@ -3660,7 +3693,7 @@
       },
       "evidenceChecklist": {
         "title": "La liste de contrôle des preuves expliquée",
-        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige.\n\nNon conforme à la description : DisputeDesk récupère automatiquement la fiche produit dans votre boutique (le titre, la description, jusqu'à trois images et la variante choisie) et l'ajoute à la défense. C'est votre fiche telle qu'elle est aujourd'hui ; Shopify ne conserve pas son état au moment de la commande. Si elle ne peut pas être récupérée (par exemple parce que le produit a été supprimé), la liste de contrôle en indique la raison."
+        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige.\n\nNon conforme à la description : DisputeDesk récupère automatiquement la fiche produit dans votre boutique (le titre, la description, jusqu'à trois images et la variante choisie) et l'ajoute à la défense. C'est votre fiche telle qu'elle est aujourd'hui ; Shopify ne conserve pas son état au moment de la commande. Si elle ne peut pas être récupérée (par exemple parce que le produit a été supprimé), la liste de contrôle en indique la raison.\n\nRetours en dehors de Shopify : Shopify n’enregistre que les retours effectués via Shopify. Si vos clients demandent des retours ou des remboursements par e-mail, chat ou téléphone, activez « Les clients demandent les retours en dehors de Shopify » dans Paramètres → Automatisation. « Aucun retour enregistré dans Shopify » ne renforce alors plus un dossier à lui seul, et chaque litige pour produit non conforme, remboursement ou non-réception vous demande dans l’onglet Preuves si le client a demandé un retour ou un remboursement avant le litige. « N’a rien demandé » est ajouté à la réponse comme votre confirmation ; « a demandé » n’est jamais montré à la banque."
       },
       "defenseLetterRebuttal": {
         "title": "Lettre de défense et texte de réponse automatique",
@@ -3840,7 +3873,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Afficher et filtrer les litiges",
-          "body": "Le tableau **Litiges** reprend **les mêmes colonnes** que les litiges récents du tableau de bord : **Commande** (lien Admin Shopify si disponible), **ID** (identifiant interne court), **Client**, **Montant**, **Motif**, **Statut**, **Échéance** (mois et jour) et **Voir les détails** pour ouvrir le litige dans DisputeDesk.\n\nBarre : **Recherche** (commande, ID, client, motif), **Filtrer** par statut, **Exporter** CSV, **Synchroniser maintenant**.\n\n**Pas d'onglet séparé « file d'attente de révision »** : les litiges en révision manuelle apparaissent dans cette liste. Utilisez **Voir les détails** puis **Approuver et enregistrer** sur la page de détail."
+          "body": "Le tableau **Litiges** reprend **les mêmes colonnes** que les litiges récents du tableau de bord : **Commande** (lien Admin Shopify si disponible), **ID** (identifiant interne court), **Client**, **Montant**, **Motif**, **Statut**, **Échéance** (mois et jour) et **Voir les détails** pour ouvrir le litige dans DisputeDesk.\n\nBarre : **Recherche** (commande, ID, client, motif), **Filtrer** par statut, **Exporter** CSV, **Synchroniser maintenant**.\n\n**Pas d'onglet séparé « file d'attente de révision »** : les litiges en révision manuelle apparaissent dans cette liste. Utilisez **Voir les détails** puis **Approuver et enregistrer** sur la page de détail.\n\n**Répondu dans Shopify :** lorsqu’un litige reçoit une réponse directement dans l’administration Shopify, DisputeDesk voit Shopify le passer en cours d’examen et affiche « Une réponse a été envoyée via Shopify ». Il n’est plus compté comme en attente de réponse et aucun dossier de preuves n’est préparé. Si le client ou la banque redemande, il a de nouveau besoin d’une réponse.\n\n**Passé de demande à rétrofacturation :** une demande devenue rétrofacturation porte ce badge et vous pouvez filtrer la liste avec. La page du litige indique quand le passage a eu lieu et, tant que Shopify demande une réponse, sa date limite."
         },
         "disputeDetailPage": {
           "title": "Détail du litige dans cette application",
@@ -5075,7 +5108,8 @@
       "dispute_resynced": "Litige actualisé depuis Shopify",
       "response_cycle_reopened": "Rouvert — nouvelle réponse nécessaire",
       "dispute_reopened_after_close": "Rouvert par Shopify après une décision",
-      "escalated_to_chargeback": "Passé de demande à rétrofacturation"
+      "escalated_to_chargeback": "Passé de demande à rétrofacturation",
+      "response_sent_via_shopify": "Une réponse a été envoyée via Shopify"
     },
     "actors": {
       "merchant_user": "Vous",
@@ -6389,6 +6423,14 @@
       "under_review": {
         "title": "Le réseau de cartes examine le litige",
         "message": "La réponse a été envoyée et ne peut plus être modifiée. DisputeDesk suit le litige jusqu'au résultat."
+      },
+      "underReviewViaShopify": {
+        "title": "Une réponse a été envoyée via Shopify",
+        "message": "Shopify indique que ce litige est en cours d’examen après l’envoi d’une réponse via Shopify. DisputeDesk n’en a pas envoyé et suit le litige jusqu’à la décision."
+      },
+      "underReviewUnattributed": {
+        "title": "En cours d’examen dans Shopify",
+        "message": "Shopify indique que ce litige est en cours d’examen. DisputeDesk n’a pas envoyé de réponse et suit le litige jusqu’à la décision."
       },
       "next": {
         "building_evidence": "Dossier de preuves préparé — généralement en quelques heures",

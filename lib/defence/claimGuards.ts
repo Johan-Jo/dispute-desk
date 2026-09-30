@@ -13,6 +13,7 @@
  * Tests cover every row (see __tests__/claimGuards.test.ts).
  */
 
+import { MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE } from "@/lib/disputes/returnRequestConfirmation";
 import { FACT_PREDICATES } from "./factPredicates";
 import type {
   ClaimGuard,
@@ -486,6 +487,12 @@ const POLICY_AND_RECORD_REQUIRED =
 const RETURN_ABSENCE_REQUIRED =
   'none — absence and contact-history claims are banned outright. The only permitted sentence is "No return has been recorded in Shopify for this order."';
 
+function merchantConfirmedNoRequest(facts: EvidenceFact[]): boolean {
+  return facts.some(
+    (f) => f.category === "no_return_initiated" && f.value?.merchantConfirmedNoRequest === true,
+  );
+}
+
 export function runClaimGuards(input: RunClaimGuardsInput): {
   failures: GuardFailure[];
 } {
@@ -521,10 +528,17 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
     }
 
     // Unconditional: no fact satisfies an absence claim (RETURN_ABSENCE_BANS).
+    // One exemption (Fix C4b): the merchant's own attested sentence, verbatim,
+    // when the no-return fact carries the merchant's confirmation. It states
+    // what the merchant confirmed, not what the customer did. Any other
+    // absence wording still fails.
+    const absenceText = merchantConfirmedNoRequest(input.approvedFacts)
+      ? text.split(MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE).join(" ")
+      : text;
     const seen = new Set<string>();
     for (const ban of RETURN_ABSENCE_BANS) {
       if (seen.has(ban.id)) continue;
-      const m = text.match(ban.pattern);
+      const m = absenceText.match(ban.pattern);
       if (!m) continue;
       seen.add(ban.id);
       failures.push({

@@ -486,6 +486,15 @@
     "caseTitle": "Fall {id}",
     "inquiryBadge": "Anfrage",
     "reopenedBadge": "Wieder eröffnet",
+    "escalatedBadge": "Aus Anfrage eskaliert",
+    "escalationBanner": {
+      "escalatedTitle": "Von Anfrage zu Rückbuchung eskaliert",
+      "reopenedTitle": "Wieder eröffnet – neue Antwort erforderlich",
+      "escalatedOn": "Dies begann als Anfrage und wurde am {date} zu einer Rückbuchung eskaliert.",
+      "reopenedOn": "Shopify hat diesen Streitfall am {date} nach einer früheren Antwort wieder eröffnet.",
+      "responseDue": "Eine Antwort ist bis {date} fällig.",
+      "inquiryResponseDoesNotCarry": "Die Antwort auf die Anfrage gilt nicht weiter."
+    },
     "chargebackBadge": "Rückbuchung",
     "phaseUnknown": "Unbekannt",
     "phaseLabel": "Phase",
@@ -1011,6 +1020,27 @@
         "secondaryAction": "Nur Datei behalten"
       },
       "windowClosedError": "Shopify hat die Streitbeweise bereits an die Bank weitergeleitet, daher können keine neuen Dateien mehr hinzugefügt werden.",
+      "returnRequest": {
+        "ctaEyebrow": "Rücksendungen außerhalb von Shopify",
+        "title": "Hat dieser Kunde eine Rücksendung oder Erstattung angefragt?",
+        "subtitle": "Shopify erfasst nur Rücksendungen über Shopify. Da Ihre Kunden per E-Mail, Chat oder Telefon anfragen, können nur Sie sagen, ob dieser Kunde vor dem Streitfall angefragt hat.",
+        "answerLabel": "Vor dem Streitfall hat der Kunde …",
+        "choosePlaceholder": "Antwort wählen",
+        "answer": {
+          "no_request_received": "keine Rücksendung oder Erstattung bei uns angefragt",
+          "request_received": "eine Rücksendung oder Erstattung bei uns angefragt",
+          "not_sure": "Ich bin nicht sicher"
+        },
+        "answerHint": "„Nicht angefragt“ wird der Antwort als Ihre Bestätigung hinzugefügt. „Angefragt“ wird der Bank nie gezeigt.",
+        "noteLabel": "Notiz (optional)",
+        "noteHint": "Nur für Ihre eigenen Unterlagen. Sie bleibt in DisputeDesk.",
+        "submit": "Antwort speichern",
+        "submitting": "Wird gespeichert…",
+        "change": "Antwort ändern",
+        "answered": "Ihre Antwort: {answer}",
+        "errorWindowClosed": "Shopify hat diese Antwort bereits gesendet, die Angabe kann nicht mehr hinzugefügt werden.",
+        "errorGeneric": "Die Antwort konnte nicht gespeichert werden ({code})."
+      },
       "parcelOutcome": {
         "ctaEyebrow": "Für die Antwort nötig · nur Sie können das beantworten",
         "title": "Sagen Sie uns, warum dieses Paket zurückkam",
@@ -2423,6 +2453,7 @@
       "order": "Bestellung {orderName}",
       "refundHistory": "Erstattungsverlauf",
       "noReturnInitiated": "Keine Rücksendung veranlasst",
+      "noReturnRecordedInShopify": "Keine Rücksendung in Shopify erfasst",
       "customerActivityLog": "Kundenaktivitätsprotokoll",
       "customerAccountDetails": "Kundenkontodetails",
       "shopifyProtect": "Shopify-Protect-Abdeckung",
@@ -3110,6 +3141,8 @@
     "reviewDesc": "Pakete in der Warteschlange zur Genehmigung parken",
     "blockerLabel": "Null Blockierungen erzwingen",
     "blockerDesc": "Auto-Speicherung blockieren, wenn Pflichtbeweise fehlen",
+    "returnsOutsideShopifyLabel": "Kunden fordern Rücksendungen außerhalb von Shopify an",
+    "returnsOutsideShopifyDesc": "Aktivieren Sie dies, wenn Kunden Rücksendungen oder Erstattungen per E-Mail, Chat oder Telefon statt über Shopify anfragen. Sie bestätigen dann pro Streitfall, ob eine Anfrage eingegangen ist.",
     "minScore": "Mindest-Vollständigkeitspunktzahl für Auto-Speicherung",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Pakete unter dieser Punktzahl werden nicht automatisch gespeichert (0–100)",
@@ -3660,7 +3693,7 @@
       },
       "evidenceChecklist": {
         "title": "Die Beweischeckliste erklärt",
-        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten.\n\nNicht wie beschrieben: DisputeDesk übernimmt die Produktinformation automatisch aus Ihrem Shop (Titel, Beschreibung, bis zu drei Bilder und die gewählte Variante) und fügt sie der Verteidigung hinzu. Es ist Ihre Produktinformation in der heutigen Fassung; Shopify speichert nicht, wie sie bei der Bestellung aussah. Kann sie nicht übernommen werden (etwa weil das Produkt gelöscht wurde), nennt die Checkliste den Grund."
+        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten.\n\nNicht wie beschrieben: DisputeDesk übernimmt die Produktinformation automatisch aus Ihrem Shop (Titel, Beschreibung, bis zu drei Bilder und die gewählte Variante) und fügt sie der Verteidigung hinzu. Es ist Ihre Produktinformation in der heutigen Fassung; Shopify speichert nicht, wie sie bei der Bestellung aussah. Kann sie nicht übernommen werden (etwa weil das Produkt gelöscht wurde), nennt die Checkliste den Grund.\n\nRücksendungen außerhalb von Shopify: Shopify erfasst nur Rücksendungen über Shopify. Wenn Ihre Kunden Rücksendungen oder Erstattungen per E-Mail, Chat oder Telefon anfragen, aktivieren Sie „Kunden fordern Rücksendungen außerhalb von Shopify an“ unter Einstellungen → Automatisierung. „Keine Rücksendung in Shopify erfasst“ stärkt einen Fall dann nicht mehr allein, und jeder Streitfall wegen nicht wie beschrieben, Erstattung oder nicht erhalten fragt Sie im Tab Beweise, ob der Kunde vorher eine Rücksendung oder Erstattung angefragt hat. „Nicht angefragt“ wird der Antwort als Ihre Bestätigung hinzugefügt; „angefragt“ wird der Bank nie gezeigt."
       },
       "defenseLetterRebuttal": {
         "title": "Verteidigungsschreiben und automatischer Widerredestext",
@@ -3840,7 +3873,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Streitfälle anzeigen und filtern",
-          "body": "Die Tabelle **Streitfälle** hat **dieselben Spalten** wie die letzten Streitfälle im Dashboard: **Bestellung** (Link zum Shopify Admin wenn möglich), **ID** (kurze interne ID), **Kunde**, **Betrag**, **Grund**, **Status**, **Frist** (Monat und Tag) und **Details anzeigen** zum Öffnen in DisputeDesk.\n\nLeiste: **Suche** (Bestellung, ID, Kunde, Grund), **Filter** nach Status, **Export** CSV, **Jetzt synchronisieren**.\n\n**Kein separater Tab „Prüfungswarteschlange“**: Streitfälle zur manuellen Prüfung erscheinen in derselben Liste. Nutzen Sie **Details anzeigen**, dann **Genehmigen und speichern** auf der Detailseite."
+          "body": "Die Tabelle **Streitfälle** hat **dieselben Spalten** wie die letzten Streitfälle im Dashboard: **Bestellung** (Link zum Shopify Admin wenn möglich), **ID** (kurze interne ID), **Kunde**, **Betrag**, **Grund**, **Status**, **Frist** (Monat und Tag) und **Details anzeigen** zum Öffnen in DisputeDesk.\n\nLeiste: **Suche** (Bestellung, ID, Kunde, Grund), **Filter** nach Status, **Export** CSV, **Jetzt synchronisieren**.\n\n**Kein separater Tab „Prüfungswarteschlange“**: Streitfälle zur manuellen Prüfung erscheinen in derselben Liste. Nutzen Sie **Details anzeigen**, dann **Genehmigen und speichern** auf der Detailseite.\n\n**In Shopify beantwortet:** Wird ein Streitfall direkt im Shopify-Admin beantwortet, sieht DisputeDesk, dass Shopify ihn auf „in Prüfung“ setzt, und zeigt „Es wurde eine Antwort über Shopify gesendet“. Er zählt dann nicht mehr als offen, und es wird kein Beweispaket dafür erstellt. Fragt der Kunde oder die Bank erneut nach, braucht er wieder eine Antwort.\n\n**Aus Anfrage eskaliert:** Eine Anfrage, die zu einer Rückbuchung wurde, trägt die Markierung „Aus Anfrage eskaliert“, und Sie können die Liste danach filtern. Die Streitfallseite zeigt, wann eskaliert wurde und, solange Shopify eine Antwort verlangt, bis wann sie fällig ist."
         },
         "disputeDetailPage": {
           "title": "Streitfall-Detail in dieser App",
@@ -5075,7 +5108,8 @@
       "dispute_resynced": "Streitfall aus Shopify aktualisiert",
       "response_cycle_reopened": "Wieder eröffnet – neue Antwort erforderlich",
       "dispute_reopened_after_close": "Von Shopify nach einer Entscheidung wieder eröffnet",
-      "escalated_to_chargeback": "Von Anfrage zu Rückbuchung eskaliert"
+      "escalated_to_chargeback": "Von Anfrage zu Rückbuchung eskaliert",
+      "response_sent_via_shopify": "Es wurde eine Antwort über Shopify gesendet"
     },
     "actors": {
       "merchant_user": "Sie",
@@ -6389,6 +6423,14 @@
       "under_review": {
         "title": "Das Kartennetzwerk prüft den Disput",
         "message": "Die Antwort wurde gesendet und kann nicht mehr geändert werden. DisputeDesk verfolgt den Disput bis zum Ergebnis."
+      },
+      "underReviewViaShopify": {
+        "title": "Es wurde eine Antwort über Shopify gesendet",
+        "message": "Shopify zeigt diesen Streitfall als in Prüfung, nachdem eine Antwort über Shopify gesendet wurde. DisputeDesk hat keine gesendet und verfolgt den Streitfall bis zur Entscheidung."
+      },
+      "underReviewUnattributed": {
+        "title": "In Prüfung bei Shopify",
+        "message": "Shopify zeigt diesen Streitfall als in Prüfung. DisputeDesk hat keine Antwort gesendet und verfolgt den Streitfall bis zur Entscheidung."
       },
       "next": {
         "building_evidence": "Beweispaket erstellt — meist innerhalb weniger Stunden",

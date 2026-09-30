@@ -204,7 +204,13 @@ export type EventType =
   // built — there was no way to tell who turned it off, when, or whether it
   // was the merchant or someone on our side using impersonation. `updated_at`
   // covers the whole row, so it could not even confirm WHICH field changed.
-  | "automation_settings_changed";
+  | "automation_settings_changed"
+  // Fix C4b: the merchant answered "did the customer ask for a return?"
+  // Payload `{ answer, cycle, answeredAt }` (the note stays on the row).
+  | "return_request_confirmation_recorded"
+  // Fix C4: open disputes re-queued after the returns setting changed.
+  // Payload `{ to, requeuedPackIds }`.
+  | "returns_outside_shopify_changed";
 
 /**
  * WHO acted. Widened from `"merchant" | "system"` on 2026-09-15 (migration

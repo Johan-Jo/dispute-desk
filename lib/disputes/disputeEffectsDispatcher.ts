@@ -136,6 +136,11 @@ async function dispatchEvent(
     case "OUTCOME_DETECTED":
       await dispatchOutcomeDetected(args, event, summary);
       return;
+    case "RESPONSE_REQUESTED_AGAIN":
+      // Same cycle, asked again after a response observed in Shopify: make
+      // sure a pack exists (the pipeline no-ops when one does).
+      await dispatchResponseCycleReopened(args, event, summary);
+      return;
     case "RESPONSE_CYCLE_REOPENED":
       await dispatchResponseCycleReopened(args, event, summary);
       // After the rebuild is queued: a reopened dispute always needs the

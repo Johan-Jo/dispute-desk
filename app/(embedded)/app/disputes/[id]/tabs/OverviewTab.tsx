@@ -595,6 +595,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  resolved lifecycle; Shopify Protect coverage keeps its dedicated
    *  covered headline. Terminal titles reuse the existing translated
    *  `hero.title.closed.*` keys. */
+  // A response observed as a Shopify status (Fix A): never claim who sent
+  // it, and never say DisputeDesk sent it.
+  const shopifyObservedKey =
+    dispute.submissionState === "responded_via_shopify"
+      ? "underReviewViaShopify"
+      : dispute.submissionState === "under_review_unattributed"
+        ? "underReviewUnattributed"
+        : null;
   function resolveHeroTitle(): string {
     if (reviewDecision && decisionOverridesHero) {
       return tp(`hero.reviewDecision.${reviewDecision}.title`);
@@ -663,6 +671,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         return t("hero.title.closed.lost");
       case "closed":
         return t("hero.title.closed.unknown");
+      case "under_review":
+        // Observed as a Shopify status, not sent by us (Fix A).
+        if (shopifyObservedKey) return tp(`hero.${shopifyObservedKey}.title`);
+        return tp("hero.under_review.title");
       default:
         return tp(`hero.${lifecycle}.title`);
     }
@@ -704,6 +716,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           outcome: dispute.finalOutcome ?? "—",
         });
       case "under_review":
+        if (shopifyObservedKey) return tp(`hero.${shopifyObservedKey}.message`);
         if (submittedAt) {
           return t("hero.subtitle.submittedToNetworkWithDate", {
             submittedDate: formatDate(submittedAt),

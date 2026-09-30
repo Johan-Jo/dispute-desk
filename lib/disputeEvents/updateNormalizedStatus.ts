@@ -19,7 +19,7 @@ export async function updateNormalizedStatus(
     const { data: dispute, error: dErr } = await db
       .from("disputes")
       .select(
-        "id, status, needs_review, submission_state, amount",
+        "id, status, needs_review, submission_state, amount, due_at",
       )
       .eq("id", disputeId)
       .single();
@@ -50,6 +50,7 @@ export async function updateNormalizedStatus(
       pack?.status?.toLowerCase() ?? null,
       submissionState,
       dispute.needs_review ?? false,
+      (dispute.due_at as string | null) ?? null,
     );
 
     const update: Record<string, unknown> = {

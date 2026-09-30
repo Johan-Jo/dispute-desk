@@ -89,6 +89,11 @@ export async function GET(req: NextRequest) {
     query = query.eq("phase", phaseFilter);
   }
 
+  // Inquiries escalated to a chargeback (plan D2).
+  if (sp.get("escalated") === "true") {
+    query = query.not("escalated_from_inquiry_at", "is", null);
+  }
+
   const statusFilter = sp.get("status");
   if (statusFilter) {
     const statuses = statusFilter.split(",").map((s) => s.trim());

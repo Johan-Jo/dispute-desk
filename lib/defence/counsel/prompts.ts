@@ -159,10 +159,10 @@ export function summaryUserPrompt(args: {
       `MERCHANT: "${args.merchantName}" (name it at most once).`,
       `ADDRESSES: ${addressRule(args.ledger)}`,
       `THEORY OF THE CASE: ${args.theory.name}: ${args.theory.shape}`,
-      `THE SUMMARY MUST CARRY: ${args.theory.claims.join(", ")}. Never no_return_recorded (code writes it).`,
+      `THE SUMMARY MUST CARRY: ${args.theory.claims.join(", ")}. Never no_return_recorded or merchant_confirmed_no_request (code writes them).`,
       `PRINTED ON THE PAGE AROUND THE LETTER (do not repeat):\n${args.pageContext}`,
       `WRITTEN BY CODE BELOW THE SUMMARY (do not restate):\n${args.recordText}`,
-      `CLAIM LEDGER (the only facts you may use):\n${ledgerBlock(args.ledger.filter((c) => c.id !== "no_return_recorded"))}`,
+      `CLAIM LEDGER (the only facts you may use):\n${ledgerBlock(args.ledger.filter((c) => c.id !== "no_return_recorded" && c.id !== "merchant_confirmed_no_request"))}`,
     ].join("\n\n");
   }
   return [

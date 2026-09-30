@@ -103,6 +103,9 @@ export interface WorkspaceDispute {
   /** Shopify reopened this dispute after an outcome (lib/disputes/reopenAfterClose.ts). */
   reopenedAfterCloseAt?: string | null;
   escalatedFromInquiryAt?: string | null;
+  /** Shopify's own dispute status (`needs_response`, `under_review`, …).
+   *  Drives the escalation/reopen banner's "response is due" line. */
+  shopifyStatus?: string | null;
   /** Review-lifecycle state (2026-07-23). Gates + reflects the
    *  Hold/Approve/Concede action row on a parked/weak dispute. */
   needsReview?: boolean;
@@ -329,9 +332,22 @@ export interface WorkspaceBankClaim {
   } | null;
 }
 
+/** Fix C4b: "did the customer ask for a return?" — asked only when the shop
+ *  takes returns outside Shopify and the reason family makes it matter. */
+export interface WorkspaceReturnRequest {
+  applies: boolean;
+  answer: {
+    answer: "no_request_received" | "request_received" | "not_sure";
+    note: string | null;
+    cycle: number;
+    answeredAt: string;
+  } | null;
+}
+
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
   bankClaim?: WorkspaceBankClaim;
+  returnRequest?: WorkspaceReturnRequest;
   pack: WorkspacePack | null;
   /** Gorgias evidence core (null when the shop has no Gorgias
    *  integration — the review section self-hides). */

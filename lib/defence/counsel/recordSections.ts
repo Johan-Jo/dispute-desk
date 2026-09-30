@@ -12,6 +12,7 @@
  * the theory.
  */
 
+import { MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE } from "@/lib/disputes/returnRequestConfirmation";
 import type { CounselSection, EvidenceSectionKey, LedgerClaim, Playbook } from "./types";
 export type { Playbook };
 
@@ -203,6 +204,10 @@ function buildNotAsDescribedSections(ledger: readonly LedgerClaim[]): RecordSect
   if (has("no_return_recorded")) {
     delivery.push("No return has been recorded in Shopify for this order.");
     deliveryIds.push("no_return_recorded");
+    if (has("merchant_confirmed_no_request")) {
+      delivery.push(MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE);
+      deliveryIds.push("merchant_confirmed_no_request");
+    }
   }
   if (delivery.length) sections.push({ key: "shipping", paragraphs: [delivery.join(" ")], claimIds: deliveryIds });
 

@@ -989,6 +989,11 @@ function extractValue(
       return {
         returnInitiated: false,
         returnStatus: typeof p.returnStatus === "string" ? p.returnStatus : null,
+        // Fix C1/C4b: the record is Shopify's returns only; the merchant's
+        // confirmation (never its opposite, which drops the fact) licenses
+        // the one attributed sentence (claimGuards exemption).
+        recordScope: "shopify_returns",
+        ...(p.merchantConfirmedNoRequest === true ? { merchantConfirmedNoRequest: true } : {}),
       };
     case "returned_parcel_outcome": {
       /* TWO AUDIENCES, ONE FACT.
@@ -1159,7 +1164,7 @@ const FIELD_LABEL_EN: Record<string, string> = {
   supporting_documents: "Supplementary documents",
   refund_policy: "Refund policy",
   refund_record: "Refund record",
-  no_return_initiated: "No return initiated",
+  no_return_initiated: "No return recorded in Shopify",
   returned_parcel_outcome: "Returned parcel outcome",
   shipping_policy: "Shipping policy",
   cancellation_policy: "Cancellation policy",

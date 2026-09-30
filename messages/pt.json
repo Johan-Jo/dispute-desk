@@ -486,6 +486,15 @@
     "caseTitle": "Caso {id}",
     "inquiryBadge": "Consulta",
     "reopenedBadge": "Reaberta",
+    "escalatedBadge": "Escalada de consulta",
+    "escalationBanner": {
+      "escalatedTitle": "Escalada de consulta para estorno",
+      "reopenedTitle": "Reaberta — nova resposta necessária",
+      "escalatedOn": "Começou como uma consulta e foi escalada para estorno em {date}.",
+      "reopenedOn": "A Shopify reabriu esta disputa em {date} após uma resposta anterior.",
+      "responseDue": "É necessária uma resposta até {date}.",
+      "inquiryResponseDoesNotCarry": "A resposta enviada para a consulta não se aplica."
+    },
     "chargebackBadge": "Chargeback",
     "phaseUnknown": "Desconhecido",
     "phaseLabel": "Fase",
@@ -890,6 +899,27 @@
         "errorWindowClosed": "O Shopify já encaminhou esta disputa ao banco, então novos reconhecimentos não podem mais ser adicionados.",
         "errorGeneric": "Não foi possível salvar o reconhecimento ({code}). Tente novamente.",
         "charCount": "{count}/{max}"
+      },
+      "returnRequest": {
+        "ctaEyebrow": "Devoluções fora da Shopify",
+        "title": "Este cliente pediu uma devolução ou reembolso?",
+        "subtitle": "A Shopify só regista devoluções feitas através da Shopify. Como os seus clientes pedem por email, chat ou telefone, só você pode dizer se este cliente pediu antes de abrir a disputa.",
+        "answerLabel": "Antes da disputa, o cliente…",
+        "choosePlaceholder": "Escolha uma resposta",
+        "answer": {
+          "no_request_received": "não nos pediu devolução nem reembolso",
+          "request_received": "pediu-nos uma devolução ou reembolso",
+          "not_sure": "Não tenho a certeza"
+        },
+        "answerHint": "«Não pediu» é adicionado à resposta como a sua confirmação. «Pediu» nunca é mostrado ao banco.",
+        "noteLabel": "Nota (opcional)",
+        "noteHint": "Apenas para os seus registos. Fica na DisputeDesk.",
+        "submit": "Guardar resposta",
+        "submitting": "A guardar…",
+        "change": "Alterar resposta",
+        "answered": "A sua resposta: {answer}",
+        "errorWindowClosed": "A Shopify já enviou esta resposta, por isso já não é possível adicioná-la.",
+        "errorGeneric": "Não foi possível guardar a resposta ({code})."
       },
       "parcelOutcome": {
         "ctaEyebrow": "Necessário para responder · só você pode responder",
@@ -2423,6 +2453,7 @@
       "order": "Pedido {orderName}",
       "refundHistory": "Histórico de reembolsos",
       "noReturnInitiated": "Nenhuma devolução iniciada",
+      "noReturnRecordedInShopify": "Nenhuma devolução registada na Shopify",
       "customerActivityLog": "Registro de atividade do cliente",
       "customerAccountDetails": "Detalhes da conta do cliente",
       "shopifyProtect": "Cobertura do Shopify Protect",
@@ -3110,6 +3141,8 @@
     "reviewDesc": "Mantém pacotes na fila de revisão para aprovação antes de salvar no Shopify",
     "blockerLabel": "Exigir zero bloqueios",
     "blockerDesc": "Bloqueia o salvamento automático se houver itens de evidência obrigatórios ausentes",
+    "returnsOutsideShopifyLabel": "Os clientes pedem devoluções fora da Shopify",
+    "returnsOutsideShopifyDesc": "Ative se os clientes pedem devoluções ou reembolsos por email, chat ou telefone em vez de através da Shopify. Depois confirma, em cada disputa, se chegou um pedido.",
     "minScore": "Pontuação mínima de completude para salvamento automático",
     "minScorePlaceholder": "80",
     "minScoreHelp": "Pacotes abaixo desta pontuação não serão salvos automaticamente (0–100)",
@@ -3660,7 +3693,7 @@
       },
       "evidenceChecklist": {
         "title": "Checklist de evidências explicado",
-        "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático.\n\nNão conforme a descrição: a DisputeDesk obtém automaticamente a ficha do produto da sua loja (o título, a descrição, até três imagens e a variante escolhida) e a adiciona à defesa. É a ficha como está hoje; a Shopify não guarda como era quando o pedido foi feito. Se não for possível obtê-la (por exemplo, porque o produto foi excluído), a lista de verificação informa o motivo."
+        "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático.\n\nNão conforme a descrição: a DisputeDesk obtém automaticamente a ficha do produto da sua loja (o título, a descrição, até três imagens e a variante escolhida) e a adiciona à defesa. É a ficha como está hoje; a Shopify não guarda como era quando o pedido foi feito. Se não for possível obtê-la (por exemplo, porque o produto foi excluído), a lista de verificação informa o motivo.\n\nDevoluções fora da Shopify: a Shopify só regista devoluções feitas através da Shopify. Se os seus clientes pedem devoluções ou reembolsos por email, chat ou telefone, ative «Os clientes pedem devoluções fora da Shopify» em Definições → Automação. «Nenhuma devolução registada na Shopify» deixa de reforçar um caso sozinha, e cada disputa de produto não conforme, reembolso ou não recebido pergunta-lhe no separador Evidências se o cliente pediu uma devolução ou reembolso antes da disputa. «Não pediu» é adicionado à resposta como a sua confirmação; «pediu» nunca é mostrado ao banco."
       },
       "defenseLetterRebuttal": {
         "title": "Carta de defesa e contestação automática",
@@ -3840,7 +3873,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Ver e filtrar disputas",
-          "body": "A tabela **Disputas** usa as **mesmas colunas** das disputas recentes do painel: **Pedido** (link para o Admin da Shopify quando disponível), **ID** (id interno curto), **Cliente**, **Valor**, **Motivo**, **Status**, **Prazo** (mês e dia) e **Ver detalhes** para abrir a disputa no DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por status, **Exportar** CSV, **Sincronizar agora**.\n\n**Não há aba separada de fila de revisão**: disputas enviadas para revisão manual aparecem nesta lista. Use **Ver detalhes** e depois **Aprovar e salvar** na página de detalhe."
+          "body": "A tabela **Disputas** usa as **mesmas colunas** das disputas recentes do painel: **Pedido** (link para o Admin da Shopify quando disponível), **ID** (id interno curto), **Cliente**, **Valor**, **Motivo**, **Status**, **Prazo** (mês e dia) e **Ver detalhes** para abrir a disputa no DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por status, **Exportar** CSV, **Sincronizar agora**.\n\n**Não há aba separada de fila de revisão**: disputas enviadas para revisão manual aparecem nesta lista. Use **Ver detalhes** e depois **Aprovar e salvar** na página de detalhe.\n\n**Respondida na Shopify:** quando uma disputa é respondida diretamente no admin da Shopify, a DisputeDesk vê a Shopify colocá-la em análise e mostra «Foi enviada uma resposta através da Shopify». Deixa de contar como à espera de resposta e não é preparado nenhum pacote de evidências. Se o cliente ou o banco voltarem a pedir, volta a precisar de resposta.\n\n**Escalada de consulta:** uma consulta que se tornou estorno tem a etiqueta «Escalada de consulta» e pode filtrar a lista por ela. A página da disputa indica quando foi escalada e, enquanto a Shopify pedir uma resposta, até quando."
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
@@ -5075,7 +5108,8 @@
       "dispute_resynced": "Disputa atualizada do Shopify",
       "response_cycle_reopened": "Reaberta — nova resposta necessária",
       "dispute_reopened_after_close": "Reaberta pelo Shopify após uma decisão",
-      "escalated_to_chargeback": "Escalada de consulta para estorno"
+      "escalated_to_chargeback": "Escalada de consulta para estorno",
+      "response_sent_via_shopify": "Foi enviada uma resposta através da Shopify"
     },
     "actors": {
       "merchant_user": "Você",
@@ -6389,6 +6423,14 @@
       "under_review": {
         "title": "A rede do cartão está analisando a disputa",
         "message": "A resposta foi enviada e não pode mais ser alterada. O DisputeDesk acompanha a disputa até o resultado."
+      },
+      "underReviewViaShopify": {
+        "title": "Foi enviada uma resposta através da Shopify",
+        "message": "A Shopify mostra esta disputa em análise depois de uma resposta ter sido enviada através da Shopify. A DisputeDesk não enviou nenhuma e acompanha a disputa até à decisão."
+      },
+      "underReviewUnattributed": {
+        "title": "Em análise na Shopify",
+        "message": "A Shopify mostra esta disputa em análise. A DisputeDesk não enviou nenhuma resposta e acompanha a disputa até à decisão."
       },
       "next": {
         "building_evidence": "Pacote de provas preparado — geralmente em poucas horas",

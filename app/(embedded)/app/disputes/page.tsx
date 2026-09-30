@@ -316,7 +316,10 @@ export default function DisputesListPage() {
   const buildFilterParams = useCallback(() => {
     const params = new URLSearchParams();
     if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
-    if (phaseFilter.length === 1) params.set("phase", phaseFilter[0]);
+    // "escalated" is a flag, not a phase (plan D2): it narrows independently.
+    const phases = phaseFilter.filter((p) => p !== "escalated");
+    if (phases.length === 1) params.set("phase", phases[0]);
+    if (phaseFilter.includes("escalated")) params.set("escalated", "true");
     if (normalizedStatusFilter.length > 0)
       params.set("normalized_status", normalizedStatusFilter.join(","));
     const outcomes = outcomeFilter.length > 0 ? outcomeFilter : outcomeDropdownFilter;
@@ -646,6 +649,7 @@ export default function DisputesListPage() {
             choices={[
               { label: t("disputes.inquiryBadge"), value: "inquiry" },
               { label: t("disputes.chargebackBadge"), value: "chargeback" },
+              { label: t("disputes.escalatedBadge"), value: "escalated" },
             ]}
             selected={phaseFilter}
             onChange={(v) => {
