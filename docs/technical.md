@@ -9318,12 +9318,17 @@ transaction failure.
 
 **Admin alert on every no-file exit (2026-09-28).** Every path through this route
 that ends with nothing submitted for a scanned dispute — P-6 refusal, stale
-response cycle, missing bank claim, finalize/enqueue refused, no pack, the
-fail-closed arm, or an exception — also calls `sendDeadlineNoFileAdminAlert`
+response cycle, finalize/enqueue refused, no pack, the fail-closed arm, or an
+exception — also calls `sendDeadlineNoFileAdminAlert`
 (`lib/email/sendDeadlineNoFileAdminAlert.ts`) to `ADMIN_NOTIFY_EMAIL`, subject
 *"Deadline today — DisputeDesk filed nothing: <shop> <order>"*, naming the refusal
 and package. The merchant email alone let blume-box #353605 (2026-08-11) go to
 Shopify's own scrape unnoticed. The dark `legacyRoute.ts` is not wired.
+
+**Exception — missing bank claim (2026-10-01).** The `bank_claim_missing` refusal
+sends no admin alert. Nothing failed: the merchant has the "Action required" task
+and is the only one who can read the claim in Shopify Admin. The audit event
+`deadline_submit_refused_bank_claim_missing` still records it.
 
 ### Address-claim sentences are removed, not left to fail the package
 
