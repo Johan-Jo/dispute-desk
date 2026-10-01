@@ -14,6 +14,9 @@ interface Dispute {
   id: string;
   shop_id: string;
   shop_domain: string | null;
+  /** The merchant's store name; the domain alone ("6a8848-dd.myshopify.com")
+   *  does not say whose dispute a row is. */
+  shop_name: string | null;
   order_name: string | null;
   reason: string | null;
   phase: string | null;
@@ -163,8 +166,13 @@ export default function AdminDisputesPage() {
               <tbody>
                 {disputes.map((d) => (
                   <tr key={d.id} className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC]">
-                    <td className="px-4 py-3 text-[#0F172A] font-medium truncate max-w-[160px]">
-                      {d.shop_domain ?? d.shop_id.slice(0, 8)}
+                    <td className="px-4 py-3 max-w-[180px]" title={d.shop_domain ?? undefined}>
+                      <div className="text-[#0F172A] font-medium truncate">
+                        {d.shop_name ?? d.shop_domain ?? d.shop_id.slice(0, 8)}
+                      </div>
+                      {d.shop_name && d.shop_domain ? (
+                        <div className="text-xs text-[#94A3B8] truncate">{d.shop_domain}</div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-[#0F172A]">{d.order_name ?? "—"}</td>
                     <td className="px-4 py-3 text-[#64748B]">
