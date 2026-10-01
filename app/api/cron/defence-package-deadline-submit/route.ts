@@ -312,7 +312,9 @@ export async function GET(req: NextRequest) {
             eventType: "deadline_submit_refused_bank_claim_missing",
             eventPayload: { trigger: bankClaimTrigger(claimInput), cycle: d.response_cycle ?? 1 },
           });
-          await alertAdminNoFile(d, "bank_claim_missing", { trigger: bankClaimTrigger(claimInput) });
+          // No admin alert: nothing failed. The merchant has the "Action
+          // required" task and is the only one who can see the claim; a
+          // system-error email for their pending answer is noise (2026-10-01).
           continue;
         }
       }
