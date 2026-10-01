@@ -120,7 +120,7 @@ function setup(opts: {
     network_reason_code: null,
     amount: 100,
     currency_code: "USD",
-    due_at: opts.dueAt ?? new Date().toISOString(),
+    due_at: opts.dueAt ?? new Date(Date.now() + 3600_000).toISOString(),
     status: "needs_response",
     normalized_status: "in_progress",
     review_state: null,
