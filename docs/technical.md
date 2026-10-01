@@ -9214,7 +9214,8 @@ The decision may carry the **absolute** evidence due date. It may never carry,
 or be derived from, a **relative** time state — time remaining, window
 open/closed, days to deadline. Executors compute window state from the absolute
 due date at execution, in `lib/automation/decision/deadlineWindow.ts`, the only
-module in the branch that reads a clock.
+module in the branch that reads a clock — using the deadline cron's own rolling
+window (`lib/cron/deadlineWindow.ts`), never a second definition.
 
 `freshness.computedAt` is audit-only and is excluded from the input hash by
 construction. Pinned by `decisionTimeInvariance.test.ts`: identical inputs at two
@@ -9269,6 +9270,19 @@ Two invariants the helper must keep, both pinned in
    top of 24h), so every deadline is seen by at least one run before it expires
    and a late or skipped run does not open a hole. Re-selection is harmless —
    both routes filter on `evidence_saved_to_shopify_at IS NULL`.
+
+**The second copy (fixed 2026-10-01).** The 09-16 fix moved the cron's *query*
+to the rolling window but left the execution adapter's window —
+`resolveDeadlineWindow` in `lib/automation/decision/deadlineWindow.ts`, which
+`selectForDeadline` consults before filing — on the calendar day. A pre-08:00
+deadline was therefore *scanned* by the run the day before and then refused as
+`before_window` (`selectionReason: deadline_only_not_yet_due`), and the next run
+still fired after expiry: the 09-16 bug, one layer down. Found via 6a8848-dd
+#101350 (due 10-02 03:00 UTC, refused at 10-01 08:00). `resolveDeadlineWindow`
+now derives its state from `deadlineWindow(now, SUBMIT_WINDOW_MARGIN_MS)` — the
+query and the adapter share one definition — and
+`lib/automation/decision/__tests__/deadlineWindow.test.ts` asserts, at every hour
+of the day, that every due date the query can select reads `in_window`.
 
 `REBUILD_WINDOW_MARGIN_MS` (4h) deliberately **leads** the submit margin, so
 anything the submit cron will consider has already had a rebuild pass. This

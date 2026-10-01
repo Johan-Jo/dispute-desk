@@ -9,19 +9,29 @@
  * decision instead, the stored hash would drift every day and every consumer
  * would silently disagree about staleness.
  *
- * The window matches the deadline cron's existing scan exactly — the UTC day on
- * which `due_at` falls — so the adapter and the query that feeds it cannot
- * disagree about which cases are in scope.
+ * The window IS the deadline submit cron's scan — `deadlineWindow(now,
+ * SUBMIT_WINDOW_MARGIN_MS)` from `lib/cron/deadlineWindow.ts`, the ONE
+ * definition — so the adapter and the query that feeds it cannot disagree
+ * about which cases are in scope.
+ *
+ * It used to be a second, private definition: "the UTC day on which `due_at`
+ * falls". PR #736 moved the cron's QUERY to a rolling window and left this one
+ * on the calendar day, so a deadline before 08:00 UTC was scanned by the run
+ * the day before and then refused here as `before_window` — and the next run
+ * fires after it expires. 2026-10-01: 6a8848-dd #101350, due 10-02 03:00 UTC,
+ * scanned at 10-01 08:00, refused `deadline_only_not_yet_due`.
  */
+
+import { deadlineWindow, SUBMIT_WINDOW_MARGIN_MS } from "@/lib/cron/deadlineWindow";
 
 export type DeadlineWindowState =
   /** No due date recorded. The deadline trigger has nothing to act on. */
   | "unknown"
-  /** The due date is on a later UTC day. Nothing files yet. */
+  /** The due date is beyond this run's horizon. A later run files it. */
   | "before_window"
-  /** `now` falls on the same UTC day as the due date. The window is open. */
+  /** The due date is within `[now, now + 24h + margin)`. The window is open. */
   | "in_window"
-  /** The due date's UTC day has passed. Too late to file. */
+  /** The due date has passed. Too late to file. */
   | "past_window";
 
 export interface DeadlineWindow {
@@ -38,11 +48,9 @@ export function resolveDeadlineWindow(
   const due = new Date(evidenceDueAt);
   if (Number.isNaN(due.getTime())) return { state: "unknown", dueAt: null };
 
-  const dueDay = utcDayStart(due);
-  const nowDay = utcDayStart(now);
-
-  if (nowDay < dueDay) return { state: "before_window", dueAt: evidenceDueAt };
-  if (nowDay > dueDay) return { state: "past_window", dueAt: evidenceDueAt };
+  const { from, to } = deadlineWindow(now, SUBMIT_WINDOW_MARGIN_MS);
+  if (due < from) return { state: "past_window", dueAt: evidenceDueAt };
+  if (due >= to) return { state: "before_window", dueAt: evidenceDueAt };
   return { state: "in_window", dueAt: evidenceDueAt };
 }
 
@@ -51,8 +59,4 @@ export function isDeadlineWindowOpen(
   now: Date,
 ): boolean {
   return resolveDeadlineWindow(evidenceDueAt, now).state === "in_window";
-}
-
-function utcDayStart(d: Date): number {
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
