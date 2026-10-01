@@ -208,7 +208,7 @@ function harness(opts: {
     currency_code: "USD",
     status: "needs_response",
     phase: "chargeback",
-    due_at: new Date().toISOString(),
+    due_at: new Date(Date.now() + 3600_000).toISOString(),
     customer_display_name: "A Customer",
     normalized_status: "in_progress",
     review_state: null,
