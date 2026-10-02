@@ -25,12 +25,23 @@ import {
   type FigmaDueStatus,
   type FigmaOutcome,
 } from "./disputeListHelpers";
-import { phaseLabel, phasePillColors, REOPENED_PILL_COLORS } from "@/lib/disputes/phaseUtils";
+import { phaseLabel } from "@/lib/disputes/phaseUtils";
 import { isEscalatedFromInquiry, showReopenedPill } from "@/lib/disputes/escalation";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
-/** 8-column grid shared by the header + every row. */
-const GRID_COLUMNS = "2.6fr 1fr 1.8fr 1.8fr 1fr 1.4fr 1.6fr 1fr";
+/** 9-column grid shared by the header + every row (Disputes Table design).
+ *  The Type column carries the escalated / reopened / review tags, so it
+ *  needs a real minimum width — at 1fr the nowrap tags spilled into the
+ *  Case strength column. The table scrolls horizontally below TABLE_MIN_WIDTH
+ *  instead of letting columns collide. */
+const GRID_COLUMNS =
+  "minmax(200px,1.6fr) minmax(190px,1.3fr) 120px minmax(170px,1.3fr) 90px 90px 100px 90px 24px";
+const GRID_GAP = 20;
+const TABLE_MIN_WIDTH = 1080;
+
+/** Tag colors — the design system Badge `warning` / `danger` variants. */
+const ESCALATED_TAG_COLORS = { background: "#FEF3C7", color: "#92400E" } as const;
+const REOPENED_TAG_COLORS = { background: "#FEE2E2", color: "#991B1B" } as const;
 
 /** Short dispute date (from initiated_at). "—" when absent. */
 function formatDisputeDate(iso: string | null, locale: string): string {
@@ -44,7 +55,6 @@ function formatDisputeDate(iso: string | null, locale: string): string {
   });
 }
 
-/** Compact inquiry/chargeback pill. */
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 interface Props {
@@ -112,7 +122,7 @@ const COL_HEADER_STYLE: CSSProperties = {
   fontWeight: 500,
   color: "#6D7175",
   textTransform: "uppercase",
-  letterSpacing: "0.05em",
+  letterSpacing: "0.06em",
 };
 
 export function DesktopDisputesTable({
@@ -129,18 +139,19 @@ export function DesktopDisputesTable({
         background: "#ffffff",
         border: "1px solid #C9CCCF",
         borderRadius: 8,
-        overflow: "hidden",
+        overflowX: "auto",
       }}
     >
+      <div style={{ minWidth: TABLE_MIN_WIDTH }}>
       {/* Header row */}
       <div
         style={{
           background: "#F6F8FB",
           borderBottom: "1px solid #E1E3E5",
-          padding: "12px 16px",
+          padding: "14px 20px",
           display: "grid",
           gridTemplateColumns: GRID_COLUMNS,
-          gap: 16,
+          gap: GRID_GAP,
           alignItems: "center",
         }}
       >
@@ -152,6 +163,7 @@ export function DesktopDisputesTable({
         <div style={COL_HEADER_STYLE}>{t("table.date")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colDueDate")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colOutcome")}</div>
+        <div />
       </div>
 
       {/* Rows */}
@@ -179,10 +191,10 @@ export function DesktopDisputesTable({
           const rowStyle: CSSProperties = {
             display: "grid",
             gridTemplateColumns: GRID_COLUMNS,
-            gap: 16,
+            gap: GRID_GAP,
             alignItems: "center",
-            padding: "16px",
-            paddingLeft: chrome.stripeColor ? 12 : 16,
+            padding: "16px 20px",
+            paddingLeft: 16,
             borderBottom: "1px solid #E1E3E5",
             borderLeft: chrome.stripeColor
               ? `4px solid ${chrome.stripeColor}`
@@ -266,33 +278,41 @@ export function DesktopDisputesTable({
                 </div>
               </div>
 
-              {/* Type (inquiry / chargeback), plus "Reopened" when Shopify
-                  reopened it */}
-              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                <span
+              {/* Type (inquiry / chargeback) as text, with the escalated /
+                  reopened / review-decision tags wrapping on a row below it. */}
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+                <div
                   style={{
-                    ...PILL_STYLE,
-                    ...phasePillColors(d.phase as DisputePhase | null),
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: d.phase === "inquiry" ? "#075985" : "#B45309",
                   }}
                 >
                   {phaseLabel(d.phase as DisputePhase | null, t)}
-                </span>
-                {isEscalatedFromInquiry(d) ? (
-                  <span data-testid="dispute-escalated-pill" style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}>
-                    {t("disputes.escalatedBadge")}
-                  </span>
-                ) : null}
-                {showReopenedPill(d) ? (
-                  <span data-testid="dispute-reopened-pill" style={{ ...PILL_STYLE, background: REOPENED_PILL_COLORS.bg, color: REOPENED_PILL_COLORS.color }}>
-                    {t("disputes.reopenedBadge")}
-                  </span>
+                </div>
+                {isEscalatedFromInquiry(d) || showReopenedPill(d) || reviewChip ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: "100%" }}>
+                    {isEscalatedFromInquiry(d) ? (
+                      <span data-testid="dispute-escalated-pill" style={{ ...PILL_STYLE, ...ESCALATED_TAG_COLORS }}>
+                        {t("disputes.escalatedBadge")}
+                      </span>
+                    ) : null}
+                    {showReopenedPill(d) ? (
+                      <span data-testid="dispute-reopened-pill" style={{ ...PILL_STYLE, ...REOPENED_TAG_COLORS }}>
+                        {t("disputes.reopenedBadge")}
+                      </span>
+                    ) : null}
+                    {reviewChip ? (
+                      <span style={{ ...PILL_STYLE, background: reviewChip.bg, color: reviewChip.color }}>
+                        {reviewChip.label}
+                      </span>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
 
-              {/* Case strength + review-decision chip — stacked: the
-                  decision chip (e.g. "Scheduled") sits BELOW the strength
-                  pill, not to its right. */}
-              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+              {/* Case strength */}
+              <div style={{ whiteSpace: "nowrap" }}>
                 {strength ? (
                   <span
                     style={{
@@ -304,18 +324,6 @@ export function DesktopDisputesTable({
                   </span>
                 ) : (
                   <span style={{ fontSize: 14, color: "#6D7175" }}>—</span>
-                )}
-                {reviewChip && (
-                  <span
-                    style={{
-                      ...PILL_STYLE,
-                      background: reviewChip.bg,
-                      color: reviewChip.color,
-                      display: "inline-flex",
-                    }}
-                  >
-                    {reviewChip.label}
-                  </span>
                 )}
               </div>
 
@@ -375,16 +383,8 @@ export function DesktopDisputesTable({
                 {due.label}
               </div>
 
-              {/* Outcome + chevron */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                  minWidth: 0,
-                }}
-              >
+              {/* Outcome */}
+              <div style={{ whiteSpace: "nowrap" }}>
                 <span
                   style={{
                     ...PILL_STYLE,
@@ -394,21 +394,23 @@ export function DesktopDisputesTable({
                 >
                   {outcomePill.label}
                 </span>
-                <span
-                  style={{
-                    width: 20,
-                    height: 20,
-                    color: "#6D7175",
-                    flexShrink: 0,
-                    display: "inline-flex",
-                  }}
-                >
-                  <Icon source={ChevronRightIcon} />
-                </span>
               </div>
+
+              {/* Chevron */}
+              <span
+                style={{
+                  width: 20,
+                  height: 20,
+                  color: "#6D7175",
+                  display: "inline-flex",
+                }}
+              >
+                <Icon source={ChevronRightIcon} />
+              </span>
             </Link>
           );
         })}
+      </div>
       </div>
     </div>
   );
