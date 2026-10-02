@@ -15,6 +15,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
+// These tests exercise the enabled path; the suspension is covered by
+// insightsDigestGate.test.ts.
+vi.mock("@/lib/email/insightsDigestGate", () => ({ insightsDigestsEnabled: () => true }));
 vi.mock("@/lib/email/sendOnboardingAnalysisDigest", () => ({
   sendOnboardingAnalysisDigest: vi.fn(),
 }));
