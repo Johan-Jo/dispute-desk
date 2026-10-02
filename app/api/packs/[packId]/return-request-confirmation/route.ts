@@ -24,7 +24,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
-import { isReturnRequestAnswer, RETURN_REQUEST_ANSWERS } from "@/lib/disputes/returnRequestConfirmation";
+import { isReturnRequestAnswer, packShowsReturnOrRefund, RETURN_REQUEST_ANSWERS } from "@/lib/disputes/returnRequestConfirmation";
 
 export const runtime = "nodejs";
 
@@ -70,7 +70,7 @@ export async function POST(
 
   const { data: pack, error: packErr } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, status")
+    .select("id, shop_id, dispute_id, status, pack_json")
     .eq("id", packId)
     .eq("shop_id", shopId)
     .single();
@@ -80,6 +80,18 @@ export async function POST(
   if (pack.status === "building" || pack.status === "queued") {
     return NextResponse.json(
       { error: "Cannot add evidence while pack is building", code: "PACK_BUILDING" },
+      { status: 409 },
+    );
+  }
+
+  // Shopify already records a refund or return on the order: the question
+  // is not asked, and an answer could only contradict that record.
+  if (packShowsReturnOrRefund((pack.pack_json as { sections?: unknown } | null)?.sections)) {
+    return NextResponse.json(
+      {
+        error: "Shopify already records a refund or return on this order.",
+        code: "SHOPIFY_RECORDS_RETURN_OR_REFUND",
+      },
       { status: 409 },
     );
   }
