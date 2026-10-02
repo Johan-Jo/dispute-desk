@@ -20,6 +20,9 @@ vi.mock("@/lib/audit/logEvent", () => ({
 vi.mock("@/lib/email/sendDefenceDeadlineFallbackAlert", () => ({
   sendDefenceDeadlineFallbackAlert: vi.fn().mockResolvedValue({ ok: true }),
 }));
+vi.mock("@/lib/email/sendDeadlineNoFileAdminAlert", () => ({
+  sendDeadlineNoFileAdminAlert: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/featureFlags", () => ({ isDefencePackageBuilderEnabled: () => true }));
 vi.mock("@/lib/cron/envGate", () => ({ cronEnvGate: () => null }));
 vi.mock("@/lib/automation/settings", () => ({
@@ -34,6 +37,7 @@ vi.mock("@/lib/automation/settings", () => ({
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
+import { sendDeadlineNoFileAdminAlert } from "@/lib/email/sendDeadlineNoFileAdminAlert";
 import { GET } from "@/app/api/cron/defence-package-deadline-submit/route";
 import { NextRequest } from "next/server";
 import {
@@ -185,6 +189,13 @@ function setup(opts: {
       q.maybeSingle = vi.fn(async () => ({ data: null, error: null }));
       return q;
     }
+    if (table === "shops") {
+      const q: Record<string, unknown> = {};
+      q.select = vi.fn(() => q);
+      q.eq = vi.fn(() => q);
+      q.maybeSingle = vi.fn(async () => ({ data: { shop_domain: "s.myshopify.com" }, error: null }));
+      return q;
+    }
     throw new Error(`unexpected table: ${table}`);
   });
 
@@ -223,6 +234,7 @@ describe("deadline submit — a deadline relaxes NOTHING (P-6)", () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(body.enqueuedSubmit).toBe(0);
     expect(body.blockedByDecision).toBe(1);
+    expect(vi.mocked(sendDeadlineNoFileAdminAlert)).toHaveBeenCalled();
   });
 
   it("BANK CLAIM — a GENERAL dispute with no network code is not filed without the bank's claim", async () => {
@@ -231,6 +243,8 @@ describe("deadline submit — a deadline relaxes NOTHING (P-6)", () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(body.enqueuedSubmit).toBe(0);
     expect(body.blockedByDecision).toBe(1);
+    // Waiting on the merchant is not a system failure: no admin alert.
+    expect(vi.mocked(sendDeadlineNoFileAdminAlert)).not.toHaveBeenCalled();
   });
 
   it("COVERAGE — a Shopify-Protect case is not filed at the deadline", async () => {
