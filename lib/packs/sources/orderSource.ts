@@ -12,7 +12,7 @@
  * in buildPack.ts.
  */
 
-import { noReturnFactScope } from "@/lib/disputes/returnRequestConfirmation";
+import { noReturnFactScope, shopifyRecordsReturnOrRefund } from "@/lib/disputes/returnRequestConfirmation";
 import type { EvidenceSection, BuildContext } from "../types";
 import { classifyDeliveryEvent } from "@/lib/shopify/deliveryEventClassifier";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
@@ -197,6 +197,8 @@ export async function collectOrderEvidence(
           : null,
         cancelledAt: order.cancelledAt,
         channel: order.sourceName ?? null,
+        // Read back by the return-request question (packShowsReturnOrRefund).
+        returnStatus: order.returnStatus ?? null,
       },
     },
   ];
@@ -262,9 +264,6 @@ export async function collectOrderEvidence(
   // next to "we refunded"), and asserting it when a return IS in flight would
   // be false. Verified live 2026-07: Order.returnStatus is an Admin-2026-01
   // enum (NO_RETURN | RETURN_REQUESTED | IN_PROGRESS | RETURNED | …).
-  const totalRefundedAll = Number.parseFloat(
-    order.totalRefundedSet.shopMoney.amount,
-  );
   // Fix C1/C4b: the fact is named by its source — "no return recorded in
   // Shopify", nothing more — and carries the shop's returns setting and the
   // merchant's answer. When the merchant says the customer DID ask, it is
@@ -273,7 +272,14 @@ export async function collectOrderEvidence(
     returnsOutsideShopify: ctx.returnScope?.returnsOutsideShopify === true,
     answer: ctx.returnScope?.answer ?? null,
   });
-  if (order.returnStatus === "NO_RETURN" && !(totalRefundedAll > 0) && returnScope.emit) {
+  if (
+    order.returnStatus === "NO_RETURN" &&
+    !shopifyRecordsReturnOrRefund({
+      returnStatus: order.returnStatus,
+      totalRefunded: order.totalRefundedSet.shopMoney.amount,
+    }) &&
+    returnScope.emit
+  ) {
     sections.push({
       type: "order",
       labelToken: { key: "packs.section.noReturnRecordedInShopify" },
