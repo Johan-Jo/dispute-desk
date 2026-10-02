@@ -3786,6 +3786,22 @@ Address rule:
   second shipment (checked). Conclusion restates the two strongest facts with no dates or numbers, then
   "not supported by the record"; the fixed request line with the amount follows.
 
+#### Model JSON replies — one parser (2026-10-02)
+
+Every model call that answers in JSON goes through `parseJson` in
+`lib/defence/modelJson.ts`: the counsel writer, review and correction stages,
+`extractReturnWindow` (return-window extraction), `translateListing` and the
+bank-claim analysis. It takes the first balanced object, and when strict
+`JSON.parse` fails it escapes every `"` inside a string that is not followed by
+JSON structure (`,` `:` `}` `]`) and parses again. A reply that still fails
+throws with the excerpt it failed on.
+
+Before this, one unescaped quote in the writer's prose lost the whole letter:
+Mein Maison #100806 failed two builds in a row on `Expected ',' or ']' after
+array element` in the summary, and the alert never showed the text. The three
+sibling parsers each sliced `{…}` and returned null on any error, which silently
+dropped the return window, the listing translation or the bank-claim analysis.
+
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
 `lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude
