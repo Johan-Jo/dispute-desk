@@ -65,6 +65,7 @@ import {
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { runDeadlineSubmitLegacy } from "./legacyRoute";
+import { deadlineAwaitsMerchantApproval } from "@/lib/automation/merchantApprovalGate";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
 import { bankClaimBlocksFiling, bankClaimInputFromRow, bankClaimTrigger } from "@/lib/disputes/bankClaim";
 
@@ -84,6 +85,9 @@ interface Summary {
    *  filed at all. Counted separately from a transaction refusal, because
    *  nothing about them is retriable — they are the gate working. */
   blockedByDecision: number;
+  /** Review mode / "Require my approval" without a merchant approval:
+   *  never filed (lib/automation/merchantApprovalGate.ts). */
+  awaitingApproval: number;
   emailed: number;
   /** Saved-but-unconfirmed forwarding, by urgency. Reported, never acted on. */
   unconfirmedForwarding?: Record<"past_deadline" | "due_soon" | "watch", number>;
@@ -113,6 +117,7 @@ export async function GET(req: NextRequest) {
     enqueuedFallback: 0,
     finalizeRefused: 0,
     blockedByDecision: 0,
+    awaitingApproval: 0,
     emailed: 0,
     errors: [],
   };
@@ -137,7 +142,8 @@ export async function GET(req: NextRequest) {
   //
   // Review mode is a HARD gate: a dispute parked for merchant review
   // (`normalized_status = "needs_review"`) is NEVER auto-submitted on the
-  // deadline. Nothing is sent unless the merchant explicitly submits from
+  // deadline. The status filter alone did NOT hold it (parked cases can sit
+  // at `new`), so the per-dispute approval gate below is the real guard. Nothing is sent unless the merchant explicitly submits from
   // the workspace. This is a deliberate product decision (2026-07-06) —
   // review mode means "the merchant decides", so `needs_review` is
   // intentionally EXCLUDED from this list. (Auto mode still auto-submits;
@@ -163,7 +169,7 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, order_name, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state, response_cycle, closed_at, final_outcome",
+      "id, shop_id, dispute_gid, order_name, reason, network_reason_code, amount, currency_code, due_at, status, phase, normalized_status, review_state, response_cycle, closed_at, final_outcome",
     )
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
@@ -244,6 +250,38 @@ export async function GET(req: NextRequest) {
       if (d.review_state === "conceded") {
         summary.scanned--; // don't count a deliberately-skipped dispute
         continue;
+      }
+
+      // Merchant approval. "Require my approval before saving" (or a Review
+      // rule) means nothing is filed until the merchant approves — the
+      // deadline relaxes that no more than it relaxes a hard block. Derived
+      // from the setting + rule, never from normalized_status (2026-10-02,
+      // 16ece0c5 filed unapproved). lib/automation/merchantApprovalGate.ts.
+      {
+        let shopSettings = settingsByShop.get(d.shop_id as string);
+        if (!shopSettings) {
+          shopSettings = await getShopSettings(d.shop_id as string);
+          settingsByShop.set(d.shop_id as string, shopSettings);
+        }
+        const approval = await deadlineAwaitsMerchantApproval(
+          d as Parameters<typeof deadlineAwaitsMerchantApproval>[0],
+          shopSettings.auto_save_enabled,
+        );
+        if (approval.awaits) {
+          summary.awaitingApproval++;
+          await logAuditEvent({
+            shopId: d.shop_id as string,
+            disputeId: d.id as string,
+            actorType: "system",
+            eventType: "deadline_submit_refused_awaiting_approval",
+            eventPayload: {
+              ruleMode: approval.ruleMode,
+              autoSaveEnabled: shopSettings.auto_save_enabled,
+              reviewState: d.review_state ?? null,
+            },
+          });
+          continue;
+        }
       }
 
       // Find the latest pack for this dispute (the source pack for the

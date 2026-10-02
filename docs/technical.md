@@ -4385,7 +4385,7 @@ Surfaces: `POST /api/disputes/:id/review` `{ action: hold|approve|concede|clear 
 
 **Under Auto-pilot, a held case is not waiting for a merchant. It is waiting for a clock.**
 
-`evaluateAutoSubmitGuards` yields `park` (Moderate) or `block` (Weak, Insufficient, fatal-loss) — and **both** leave `defence_packages` at `status='draft'`, `validation_status='ok'` with a `pdf_path` (`buildDefencePackageJob.ts:679`). At 08:00 UTC on the due date the deadline cron flips exactly that shape to `final` and submits it. **The guards are a build-time filter, not a permanent veto**: nothing re-reads `case_strength`, `fatal_loss` or coverage at deadline time. The only escapes are `review_state='conceded'` and `normalized_status='needs_review'` (review mode, which never gets there).
+`evaluateAutoSubmitGuards` yields `park` (Moderate) or `block` (Weak, Insufficient, fatal-loss) — and **both** leave `defence_packages` at `status='draft'`, `validation_status='ok'` with a `pdf_path` (`buildDefencePackageJob.ts:679`). At 08:00 UTC on the due date the deadline cron flips exactly that shape to `final` and submits it. **The guards are a build-time filter, not a permanent veto**: nothing re-reads `case_strength`, `fatal_loss` or coverage at deadline time. The only escapes are `review_state='conceded'` and `normalized_status='needs_review'` (review mode, which never gets there). *(Superseded 2026-10-02: the `needs_review` exclusion did not hold — parked review-mode disputes sit at `new` — so the merchant-approval gate now decides from the setting and rule; see § The deadline path.)*
 
 Two exceptions that genuinely never submit, and are the only places absolute language is allowed:
 
@@ -4793,9 +4793,9 @@ Rule: every section must explain *why* something matters and guide the user towa
    - Case-strength chip (`caseStrength.overall` verbatim; `insufficient → Weak` is display-only).
    - Status chip — `Submitted | Needs attention | In progress`, derived from `derived.isReadOnly`, `derived.isFailed`, and `derived.readiness`.
    - Automation chip — `Automatic | Review required` from `data.appliedRule.mode` (the canonical two-mode rule from `feedback_two_automation_modes.md`; `null` defaults to Review-required).
-   - Next-step sentence — deadline-anchored copy driven by `readiness × automationMode`, rendered as the hero-row heading. Every non-blocked, non-submitted variant surfaces the auto-submit promise enforced by `/api/cron/defence-package-deadline-submit` (which auto-finalises and submits any non-blocked case with a validated defence package on the due date, regardless of automation mode). The previous fixed copy ("Submit now", "Ready — no action needed") read like a CTA the merchant couldn't take from this tab and hid the deadline safety net; the current six copies are anchored to `data.dispute.dueAt` and fall back to a "before the deadline" phrasing when the due date isn't known yet. Each `kind` has paired `WithDate` / `NoDate` entries under `disputes.evidenceTab.sections.summary.nextStep` interpolating `{dueDate}` via `Intl.DateTimeFormat`:
+   - Next-step sentence — deadline-anchored copy driven by `readiness × automationMode`, rendered as the hero-row heading. Every non-blocked, non-submitted variant surfaces the auto-submit promise enforced by `/api/cron/defence-package-deadline-submit` (which auto-finalises and submits any non-blocked case with a validated defence package on the due date — in **auto** mode, or in review mode only once the merchant chose *Submit on the deadline*; see *Merchant-approval gate* under § The deadline path). The previous fixed copy ("Submit now", "Ready — no action needed") read like a CTA the merchant couldn't take from this tab and hid the deadline safety net; the current six copies are anchored to `data.dispute.dueAt` and fall back to a "before the deadline" phrasing when the due date isn't known yet. Each `kind` has paired `WithDate` / `NoDate` entries under `disputes.evidenceTab.sections.summary.nextStep` interpolating `{dueDate}` via `Intl.DateTimeFormat`:
      - `ready_auto` → "We'll submit on {dueDate}" (`readiness === "ready"` AND automation = automatic).
-     - `ready_review` → "Ready — review and submit, or we'll send on {dueDate}" (`readiness === "ready"` AND automation = review).
+     - `ready_review` → "Ready — review and submit before {dueDate}" (nothing is sent without the merchant's approval) (`readiness === "ready"` AND automation = review).
      - `ready_with_warnings_auto` → "Ready with warnings — submitting on {dueDate} unless you change it".
      - `ready_with_warnings_review` → "Ready with warnings — review before {dueDate}".
      - `review_missing` → "Review missing evidence below" (`readiness === "blocked"`; no date — the cron skips blocked cases).
@@ -9300,6 +9300,16 @@ path that runs while `CANONICAL_PIPELINE` is off, so fixing only the canonical
 route would have left the live behaviour unchanged.
 
 ### The deadline path — P-6
+
+#### Merchant-approval gate (2026-10-02)
+
+Settings → Dispute handling → **Require my approval before saving** (`shop_settings.auto_save_enabled = false`) and any rule resolving to **Review** promise that nothing is saved to Shopify until the merchant approves. The deadline cron is the only path that saves without a merchant click, so it enforces that itself, per dispute, **before** the pack lookup:
+
+- `awaitsMerchantApproval` (`lib/automation/merchantApprovalGate.ts`) is true when `auto_save_enabled` is false **or** `evaluateRules` resolves the dispute to `review`, unless `review_state = 'approved'` (*Submit on the deadline*). A rules-lookup failure resolves to `review` (fails closed).
+- When true: nothing is filed, audit event `deadline_submit_refused_awaiting_approval` (`{ ruleMode, autoSaveEnabled, reviewState }`), summary counter `awaitingApproval`. No admin no-file alert — nothing failed; the merchant already has the approval-required task and email.
+- Both the canonical route and `legacyRoute.ts` call it.
+
+Why: the 2026-07-06 gate only excluded `normalized_status = 'needs_review'` from the cron's query, but the pipeline's review park does not reliably write that status. On 2026-10-01 dispute `16ece0c5` (6a8848-dd, *Require my approval*, never approved) sat at `new`, was auto-finalized (`deadline_cron_auto_finalize`) and filed. Pinned by `tests/api/cron/deadlineSubmitAwaitsApproval.test.ts`.
 
 `app/api/cron/defence-package-deadline-submit/route.ts` is the ACTUAL submitter.
 It previously consulted **no** strength, **no** completeness, **no** coverage and

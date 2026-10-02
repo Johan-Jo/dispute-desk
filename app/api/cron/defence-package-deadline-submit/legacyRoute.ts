@@ -38,6 +38,8 @@ import {
   parseFinalizeRpcResult,
 } from "@/lib/defence/finalizeRpc";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import { getShopSettings } from "@/lib/automation/settings";
+import { deadlineAwaitsMerchantApproval } from "@/lib/automation/merchantApprovalGate";
 import {
   deadlineWindow,
   SUBMIT_WINDOW_MARGIN_MS,
@@ -117,7 +119,7 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, normalized_status, review_state",
+      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, phase, normalized_status, review_state",
     )
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
@@ -147,6 +149,29 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
       if (d.review_state === "conceded") {
         summary.scanned--; // don't count a deliberately-skipped dispute
         continue;
+      }
+      // Merchant approval — same gate as the canonical route
+      // (lib/automation/merchantApprovalGate.ts).
+      {
+        const shopSettings = await getShopSettings(d.shop_id as string);
+        const approval = await deadlineAwaitsMerchantApproval(
+          d as Parameters<typeof deadlineAwaitsMerchantApproval>[0],
+          shopSettings.auto_save_enabled,
+        );
+        if (approval.awaits) {
+          await logAuditEvent({
+            shopId: d.shop_id as string,
+            disputeId: d.id as string,
+            actorType: "system",
+            eventType: "deadline_submit_refused_awaiting_approval",
+            eventPayload: {
+              ruleMode: approval.ruleMode,
+              autoSaveEnabled: shopSettings.auto_save_enabled,
+              reviewState: d.review_state ?? null,
+            },
+          });
+          continue;
+        }
       }
       // Find the latest pack for this dispute (the source pack for the
       // defence package, also the entity_id of save_to_shopify).

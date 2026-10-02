@@ -179,6 +179,9 @@ export type EventType =
   | "save_to_shopify_refused_merchant_file_present"
   | "save_to_shopify_merchant_file_annexed"
   | "deadline_submit_refused_bank_claim_missing"
+  /** Review mode / "Require my approval" and no merchant approval: the
+   *  deadline cron filed nothing (lib/automation/merchantApprovalGate.ts). */
+  | "deadline_submit_refused_awaiting_approval"
   // Merchant review lifecycle — POST /api/disputes/:id/review
   // (lib/disputes/reviewState.ts). actorType "merchant". Payload
   // `{ action, from, to }` where action ∈ hold|approve|concede|clear.
