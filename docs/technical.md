@@ -1636,11 +1636,13 @@ Rule-engine layer in `lib/insights/checkpoints.ts` that turns the already-comput
 
 **Not cited**: Visa CE3.0. CE3.0 is about *historical-footprint matching* (two prior transactions 120–365 days old, two matching data points incl. IP or device ID) — not about signature confirmation. Signature is general delivery evidence under traditional CNP rules and is cited as such, not as a CE3.0 requirement.
 
+**VAMP/ECM are judged on one calendar month (2026-10-02).** The two rules read `CheckpointInput.programme` — the statement month's `computeProgrammeBlock` output (see *One calendar month* under LSE-5 below), passed by the page as `programmeCheckpointInput(data.programmeMonth)`. No programme block → no VAMP/ECM checkpoint at all; the old 90-day inputs (`chargebackRate90d`, `cardChargebackRate90d`, the `count/3` ECM monthly estimate) are removed. Severity comes from `programmeThresholds.ts`; `info` uses the `…_below_floor_title|body` copy ("above the ratio, below the enforcement floor"). Values carry `month` as an ISO first-of-month; `OperationalCheckpoints.tsx` formats it in the viewer's locale and shows `fraudIntel.programmeFinal` / `programmeProvisional` / `programmeUnavailable` under the card title. The two digests pass `programme: undefined` (they are suspended until PR4).
+
 **Own-baseline observations** (DisputeDesk heuristics, not network rules): high-risk-fulfilled ≥50% → `consider`; signature-rate <30% → `consider`; 3-DS rate ≥25% → `healthy`, <10% → `consider`; Protect coverage <20% → `info`; median fulfillment regressed ≥12 h → `consider`, improved ≥6 h → `healthy`.
 
-**RECHECK_RULES**: Card networks refresh these thresholds periodically (VAMP changed materially in April 2025 and again April 2026). Schedule a quarterly source-recheck and update the constants in `lib/insights/checkpoints.ts` if any threshold moves. Last verified date is held in the file header.
+**RECHECK_RULES**: Card networks refresh these thresholds periodically (VAMP changed materially in April 2025 and again April 2026). The constants live only in `lib/insights/programmeThresholds.ts`; bump `THRESHOLDS_VERSION` when one moves. Recheck tracked as FU-1 of `docs/plans/insights-single-source.plan.md`.
 
-Tests: `lib/insights/__tests__/checkpoints.test.ts` — 19 cases covering boundary transitions, sort order, the top-5 cap, and a surasvenne dev-shop sanity test (must never emit a `breach` for realistic dev-shop numbers).
+Tests: `lib/insights/__tests__/checkpoints.test.ts` — boundary transitions on the monthly programme block (healthy / below-floor info / consider / breach, ECM lower-bound override, not-applicable for non-card books, no block → no verdict), sort order and the top-5 cap.
 
 ## Shopify Fraud Intelligence — Phase 2 (Structured Risk Signals)
 
@@ -2528,10 +2530,19 @@ Mastercard ratios partition by `network_reason_code` prefix `"48"`:
 - `mc_ecm_ratio` = MC chargebacks / settled
 - `mc_efm_ratio` = MC fraud-only chargebacks / settled
 
-### Thresholds ([`lib/liabilityShift/ratios/thresholds.ts`](../lib/liabilityShift/ratios/thresholds.ts))
-- VAMP standard 0.65%, excessive 1.50%
-- MC ECM 1.00%, MC EFM 0.50%
-- Yellow band: 80% of threshold
+### Thresholds ([`lib/insights/programmeThresholds.ts`](../lib/insights/programmeThresholds.ts) — the only table)
+`lib/liabilityShift/ratios/thresholds.ts` re-exports it; its old 0.65% / 1.00% / 0.50% values and the 80% yellow band are gone (they disagreed with the checkpoints on the same page). `THRESHOLDS_VERSION = "2026-10-a"`.
+- Visa VAMP: early warning 0.9%, Excessive 1.5%, enforced only from 1,500 disputes a month (`VAMP_COUNT_FLOOR`).
+- Mastercard ECM: 1.5% and 100+ chargebacks a month; High ECM 3.0% and 300+.
+- Severity (`vampSeverity` / `ecmSeverity`): below the threshold → `healthy`; above it with the count floor not met → `info` ("above the ratio, below the enforcement floor"), never a breach; floor met → `consider` / `breach`. While the ECM denominator is the all-card lower bound, ≥100 Mastercard chargebacks → at least `consider`.
+- No ratio below 50 card settled orders in the month (`PROGRAMME_MIN_SETTLED`) — `null`, never 0.
+- Every ratio is rounded once to 5 dp (`roundRatio`); no surface recomputes one from counts.
+- CI invariant `tests/unit/insightsProgrammeSingleSource.test.ts` (I4): VAMP/ECM numeric constants only in this file; no Insights/digest/ratios code filters `disputes` by `created_at`; no "newest `ratio_snapshots` row" month pick outside `lib/insights/period/months.ts`.
+
+### One calendar month: `computeProgrammeBlock` ([`lib/insights/period/computeProgrammeBlock.ts`](../lib/insights/period/computeProgrammeBlock.ts))
+The single computation for the card-programme figures of one shop and one month (2026-10-02, PR1 of `docs/plans/insights-single-source.plan.md`). Card dispute ratio = card-rail **chargebacks** (`phase='chargeback'`, inquiries excluded) **initiated** in M ÷ card-rail settled orders (`PAID|PARTIALLY_REFUNDED`) created in M. Visa/Mastercard counts by `network_reason_code` (`1[0-3].` / `48`). ECM = Mastercard chargebacks in M ÷ card settled in M−1 (`ecmIsLowerBound: true`). `cardFramingApplies` is decided from M's own disputes (card share ≥ 0.5 and ≥ 50 card orders; a month with no classified dispute falls back to the order floor). Read-only, paginated past the 1000-row cap, **throws on any query error**; `programmeMonthFor` turns a throw into `{status:"error"}`. Month selection lives in [`lib/insights/period/months.ts`](../lib/insights/period/months.ts): `statementMonth(now)` = the last complete month; it is `provisional` until the 8th of the next month 00:00 UTC, then `final` (`periodStateByDate`; PR2 replaces it with the persisted `stable_at`).
+
+Prod orientation (2026-10-02): blume-box Sep 4 / 2,686 = 0.149% healthy; Jul 75 / 3,166 = 2.37% → `info` (2 Visa, 71 Mastercard, both below their floors); Mein Maison and cay-collective `cardFramingApplies=false`; surasvenne 1 card order → `null`.
 
 ### Schema
 Migration `20260514160000_lse5_ratio_snapshots.sql`:
@@ -2539,8 +2550,8 @@ Migration `20260514160000_lse5_ratio_snapshots.sql`:
 - `ratio_alerts` — `vamp_yellow|red`, `ecm_yellow|red`, `efm_yellow|red`. Active-row dedup so a shop has one undismissed alert per type at a time.
 
 ### API
-- `GET /api/ratios/current` — last snapshot with threshold bands
-- `GET /api/ratios/trend?months=12` — chronological series for the trend chart
+- `GET /api/ratios/current` — the **statement month** (last complete calendar month) from `computeProgrammeBlock`, with severities from the one threshold table; impact counts (CE 3.0 / FPT exclusions, fees avoided) from that month's `ratio_snapshots` row. It used to return the newest row — the current, unfinished month (Mein Maison: 1 dispute on 32 October orders shown as 3.13% VAMP in red) — and turned NULL into 0. A programme failure is `200 {snapshot:null, status:"error"}`; the Liability-shift card renders `liabilityShift.impact.notMeasured` instead of vanishing. The EFM pill is removed.
+- `GET /api/ratios/trend?months=12` — chronological series for the trend chart. NULL ratios stay NULL.
 
 ### Cron
 The nightly `calculate_ratios` job runs `calculateRatiosForMonth` per shop for the current month (re-run for late-arriving data) and the previous month if it's the first 7 days of the new one. Wire to Vercel cron when ready to enable.

@@ -34,10 +34,9 @@
  *
  * ─── RECHECK_RULES ─────────────────────────────────────────────────
  *
- * Card networks refresh these thresholds periodically. Schedule
- * a quarterly source-recheck (next due 2026-08-11). If a threshold
- * changes, update the constant block below + the dates in this
- * header.
+ * Card networks refresh these thresholds periodically. The numbers
+ * live in `programmeThresholds.ts` (the only threshold table); a
+ * recheck is tracked as FU-1 of docs/plans/insights-single-source.plan.md.
  *
  * Last verified: 2026-05-11.
  */
@@ -47,24 +46,15 @@ import type {
   CheckpointInput,
   CheckpointSeverity,
 } from "./checkpoints.types";
-
-// ─── Network thresholds (last verified 2026-05-11) ────────────────
-
-/** Visa VAMP merchant Excessive ratio, effective April 1 2026. */
-export const VAMP_EXCESSIVE_PCT = 1.5;
-/** "Approaching" cutoff — VAMP doesn't publish an Above-Standard
- *  band for merchants, but operationally a rate north of 0.9% is
- *  the common industry "approaching VAMP" trigger. */
-export const VAMP_APPROACHING_PCT = 0.9;
-
-/** Mastercard ECM ratio threshold. ECM additionally requires
- *  100+ chargebacks per month. */
-export const MC_ECM_PCT = 1.5;
-export const MC_ECM_MIN_DISPUTES_PER_MONTH = 100;
-
-/** Mastercard HECM (High ECM) ratio + count. */
-export const MC_HECM_PCT = 3.0;
-export const MC_HECM_MIN_DISPUTES_PER_MONTH = 300;
+import {
+  MC_ECM_COUNT_FLOOR,
+  MC_ECM_RATIO,
+  VAMP_COUNT_FLOOR,
+  VAMP_EARLY_WARNING,
+  VAMP_EXCESSIVE,
+  ecmSeverity,
+  vampSeverity,
+} from "./programmeThresholds";
 
 // ─── Operational-attention thresholds (DisputeDesk heuristics) ────
 
@@ -115,29 +105,11 @@ function hours(v: number | null): string {
 
 // ─── Rules ────────────────────────────────────────────────────────
 
-/** Does card-network framing describe this merchant?
- *
- *  `undefined` means the caller has not been taught about rails yet — keep
- *  the previous unconditional behaviour rather than suppressing, so a
- *  card-only merchant never loses a real breach warning to a plumbing gap. */
-function cardProgrammesApply(input: CheckpointInput): boolean {
-  return input.cardFramingApplies !== false;
-}
-
-/** The rate a card programme should be judged on: the card-rail rate when we
- *  have it, else the legacy blended figure. Never mix the two silently — the
- *  blended one is what overstated a PayPal shop's exposure 8x. */
-function cardRate(input: CheckpointInput): number | null {
-  return input.cardChargebackRate90d !== undefined
-    ? input.cardChargebackRate90d
-    : input.chargebackRate90d;
-}
-
 /** Emitted in place of a VAMP/ECM verdict when the merchant's disputes are
- *  mostly not on a card network. This is the state that did not exist
- *  before: previously every merchant got healthy / consider / breach, and
- *  `healthy` was as wrong as `breach` for a Klarna or PayPal shop — it told
- *  them they were fine against a threshold they are not measured by. */
+ *  mostly not on a card network. Previously every merchant got healthy /
+ *  consider / breach, and `healthy` was as wrong as `breach` for a Klarna or
+ *  PayPal shop — it told them they were fine against a threshold they are
+ *  not measured by. */
 function notApplicable(
   id: string,
   cardDisputeShare: number | null | undefined,
@@ -154,65 +126,68 @@ function notApplicable(
   };
 }
 
+/** `info` = above the ratio, below the enforcement floor. Its copy lives in
+ *  `_below_floor_` keys; the other severities keep their own families. */
+function severityKey(severity: CheckpointSeverity): string {
+  return severity === "info" ? "below_floor" : severity;
+}
+
+/**
+ * Visa VAMP, judged on ONE calendar month (`input.programme`, computed by
+ * `computeProgrammeBlock`). No programme block → no verdict: a VAMP verdict
+ * from a rolling 90-day window, or from disputes counted by when we inserted
+ * them, is what told blume-box "5.31%, breach" in October 2026.
+ */
 function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
-  if (!cardProgrammesApply(input)) {
-    return notApplicable("chargeback_rate_vs_vamp", input.cardDisputeShare);
+  const p = input.programme;
+  if (!p) return null;
+  if (!p.cardFramingApplies) {
+    return notApplicable("chargeback_rate_vs_vamp", p.cardDisputeShare);
   }
-  const rate = cardRate(input);
-  if (rate === null) return null;
-  let severity: CheckpointSeverity;
-  if (rate >= VAMP_EXCESSIVE_PCT) severity = "breach";
-  else if (rate >= VAMP_APPROACHING_PCT) severity = "consider";
-  else severity = "healthy";
+  if (p.cardDisputeRatio === null) return null;
+  const severity = vampSeverity(p.cardDisputeRatio, p.visaChargebackCount);
+  const key = severityKey(severity);
   return {
     id: "chargeback_rate_vs_vamp",
     severity,
-    titleKey: `fraudIntel.checkpoint_chargeback_rate_vs_vamp_${severity}_title`,
-    bodyKey: `fraudIntel.checkpoint_chargeback_rate_vs_vamp_${severity}_body`,
+    titleKey: `fraudIntel.checkpoint_chargeback_rate_vs_vamp_${key}_title`,
+    bodyKey: `fraudIntel.checkpoint_chargeback_rate_vs_vamp_${key}_body`,
     values: {
-      current: pct(rate, 2),
-      vampExcessive: pct(VAMP_EXCESSIVE_PCT, 1),
-      vampApproaching: pct(VAMP_APPROACHING_PCT, 1),
+      month: p.periodMonth,
+      current: pct(p.cardDisputeRatio * 100, 2),
+      vampExcessive: pct(VAMP_EXCESSIVE * 100, 1),
+      vampApproaching: pct(VAMP_EARLY_WARNING * 100, 1),
+      visaCount: p.visaChargebackCount,
+      vampFloor: VAMP_COUNT_FLOOR,
     },
     source: SOURCES.vamp,
   };
 }
 
+/** Mastercard ECM for the same month: this month's Mastercard chargebacks
+ *  against last month's card settled orders (a lower bound until card-brand
+ *  denominators land), with the real monthly count — never a 90-day count
+ *  divided by three. */
 function ruleChargebackRateEcm(input: CheckpointInput): Checkpoint | null {
-  if (!cardProgrammesApply(input)) {
-    return notApplicable("chargeback_rate_vs_ecm", input.cardDisputeShare);
+  const p = input.programme;
+  if (!p) return null;
+  if (!p.cardFramingApplies) {
+    return notApplicable("chargeback_rate_vs_ecm", p.cardDisputeShare);
   }
-  const rate = cardRate(input);
-  // Count must come from the same rail as the rate. ECM's floor is 100
-  // card chargebacks a month; feeding it a blended count would re-create the
-  // rail mixing this whole change exists to remove.
-  const count =
-    input.cardChargebackCount90d !== undefined
-      ? input.cardChargebackCount90d
-      : input.chargebackCount90d;
-  if (rate === null) return null;
-  // ECM requires BOTH ratio AND ≥100 disputes/month. We have a 90-day
-  // count so we approximate monthly as count/3. If monthly is below
-  // the count floor, this rule emits a healthy/info observation that
-  // the count safety harbor is in play — never a breach.
-  const monthly = count / 3;
-  const ratioBreached = rate >= MC_ECM_PCT;
-  const countBreached = monthly >= MC_ECM_MIN_DISPUTES_PER_MONTH;
-  let severity: CheckpointSeverity;
-  if (ratioBreached && countBreached) severity = "breach";
-  else if (ratioBreached) severity = "consider"; // count harbor
-  else if (rate >= VAMP_APPROACHING_PCT) severity = "consider";
-  else severity = "healthy";
+  if (p.ecmRatio === null) return null;
+  const severity = ecmSeverity(p.ecmRatio, p.mcChargebackCount, p.ecmIsLowerBound);
+  const key = severityKey(severity);
   return {
     id: "chargeback_rate_vs_ecm",
     severity,
-    titleKey: `fraudIntel.checkpoint_chargeback_rate_vs_ecm_${severity}_title`,
-    bodyKey: `fraudIntel.checkpoint_chargeback_rate_vs_ecm_${severity}_body`,
+    titleKey: `fraudIntel.checkpoint_chargeback_rate_vs_ecm_${key}_title`,
+    bodyKey: `fraudIntel.checkpoint_chargeback_rate_vs_ecm_${key}_body`,
     values: {
-      current: pct(rate, 2),
-      ecmRatio: pct(MC_ECM_PCT, 1),
-      ecmCount: MC_ECM_MIN_DISPUTES_PER_MONTH,
-      monthlyEstimate: Math.round(monthly),
+      month: p.periodMonth,
+      current: pct(p.ecmRatio * 100, 2),
+      ecmRatio: pct(MC_ECM_RATIO * 100, 1),
+      ecmCount: MC_ECM_COUNT_FLOOR,
+      mcCount: p.mcChargebackCount,
     },
     source: SOURCES.mastercardEcm,
   };

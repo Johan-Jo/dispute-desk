@@ -3,7 +3,7 @@
 /**
  * Liability-shift impact card — LSE-5 surface on the Insights page.
  *
- * Renders DisputeDesk's contribution to the merchant's VAMP / ECM / EFM
+ * Renders DisputeDesk's contribution to the merchant's VAMP / ECM
  * compliance posture: counterfactual ("what would your ratio be without
  * DisputeDesk?"), monthly wins by program, fees avoided, revenue
  * recovered.
@@ -12,13 +12,14 @@
  * threshold-proximity alerts. This card is the "and here's what we
  * did about it" companion — the value-delivered narrative.
  *
- * Renders null until the nightly /api/cron/calculate-ratios job has
- * populated at least one ratio_snapshots row. No skeleton flash on
- * first install — disappears entirely.
+ * Figures are the statement month (last complete calendar month) from
+ * `/api/ratios/current`, which uses the same computation as the
+ * checkpoints — one VAMP number per page. A failed load renders an
+ * explicit "not measured" line, never a vanished card.
  */
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import {
   Card,
@@ -27,33 +28,49 @@ import {
   Text,
   Badge,
 } from "@shopify/polaris";
+import type { CheckpointSeverity } from "@/lib/insights/checkpoints.types";
 
-type Band = "green" | "yellow" | "red";
-
+/** `/api/ratios/current` — the statement month, computed by the same
+ *  `computeProgrammeBlock` as the checkpoints on this page. */
 interface CurrentSnapshot {
   periodMonth: string;
+  periodState: "final" | "provisional";
+  finalOn: string;
+  cardFramingApplies: boolean;
   vamp: {
-    ratio: number;
-    ratioWithoutDd: number;
-    band: Band;
-    thresholdStandard: number;
+    ratio: number | null;
+    ratioWithoutDd: number | null;
+    severity: CheckpointSeverity | null;
+    count: number;
+    countFloor: number;
+    thresholdEarlyWarning: number;
     thresholdExcessive: number;
   };
-  mcEcm: { ratio: number; band: Band; threshold: number };
-  mcEfm: { ratio: number; band: Band; threshold: number };
+  mcEcm: {
+    ratio: number | null;
+    severity: CheckpointSeverity | null;
+    lowerBound: boolean;
+    count: number;
+    countFloor: number;
+    threshold: number;
+  };
   impact: {
     ce30ExcludedCount: number;
     fptExcludedCount: number;
     estimatedFeesAvoidedUsd: number;
     estimatedRevenueRecoveredUsd: number;
   };
-  calculatedAt: string;
+  calculatedAt: string | null;
 }
 
-const BAND_TONE: Record<Band, "success" | "attention" | "warning"> = {
-  green: "success",
-  yellow: "attention",
-  red: "warning",
+const SEVERITY_TONE: Record<
+  CheckpointSeverity,
+  "success" | "info" | "attention" | "critical"
+> = {
+  healthy: "success",
+  info: "info",
+  consider: "attention",
+  breach: "critical",
 };
 
 function fmtPct(n: number, digits = 2): string {
@@ -65,11 +82,19 @@ function fmtUsd(n: number): string {
   return `$${Math.round(n).toLocaleString("en-US")}`;
 }
 
+/** Mid-month UTC noon, so no viewer time zone shifts the month. */
+function monthDate(iso: string): Date {
+  const [y, m] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, 15, 12));
+}
+
 export function LiabilityShiftImpact() {
   const t = useTranslations("liabilityShift.impact");
+  const format = useFormatter();
   const searchParams = useSearchParams();
   const shopId = searchParams.get("shop_id") ?? "";
   const [snapshot, setSnapshot] = useState<CurrentSnapshot | null>(null);
+  const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -83,23 +108,49 @@ export function LiabilityShiftImpact() {
       .then((data) => {
         if (cancelled) return;
         setSnapshot((data?.snapshot ?? null) as CurrentSnapshot | null);
+        setFailed(!data || data.status === "error");
         setLoaded(true);
       })
       .catch(() => {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) {
+          setFailed(true);
+          setLoaded(true);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [shopId]);
 
-  // Don't render until we've checked. Hide entirely when no snapshot
-  // (nightly cron hasn't populated yet on first install).
-  if (!loaded || !snapshot) return null;
+  if (!loaded) return null;
 
+  // A failed or empty load is an explicit state, never a vanished card.
+  if (failed || !snapshot) {
+    return (
+      <Card>
+        <BlockStack gap="200">
+          <Text as="h3" variant="headingMd">
+            {t("title")}
+          </Text>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {t("notMeasured")}
+          </Text>
+        </BlockStack>
+      </Card>
+    );
+  }
+
+  const month = format.dateTime(monthDate(snapshot.periodMonth), {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
   const totalWins =
     snapshot.impact.ce30ExcludedCount + snapshot.impact.fptExcludedCount;
-  const vampDelta = snapshot.vamp.ratioWithoutDd - snapshot.vamp.ratio;
+  const vampDelta =
+    snapshot.vamp.ratio !== null && snapshot.vamp.ratioWithoutDd !== null
+      ? snapshot.vamp.ratioWithoutDd - snapshot.vamp.ratio
+      : 0;
   const showImpactStrip = totalWins > 0 || vampDelta > 0;
 
   return (
@@ -115,35 +166,50 @@ export function LiabilityShiftImpact() {
             </Text>
           </BlockStack>
           <Text as="span" variant="bodySm" tone="subdued">
-            {t("periodLabel", { period: snapshot.periodMonth })}
+            {snapshot.periodState === "provisional"
+              ? t("periodLabelProvisional", {
+                  period: month,
+                  finalOn: format.dateTime(new Date(snapshot.finalOn), {
+                    day: "numeric",
+                    month: "long",
+                    timeZone: "UTC",
+                  }),
+                })
+              : t("periodLabel", { period: month })}
           </Text>
         </InlineStack>
 
-        {/* Ratio strip — three cards */}
-        <InlineStack gap="300" wrap>
-          <RatioPill
-            label={t("vamp.label")}
-            ratio={snapshot.vamp.ratio}
-            counterfactual={snapshot.vamp.ratioWithoutDd}
-            threshold={snapshot.vamp.thresholdStandard}
-            band={snapshot.vamp.band}
-            t={t}
-          />
-          <RatioPill
-            label={t("ecm.label")}
-            ratio={snapshot.mcEcm.ratio}
-            threshold={snapshot.mcEcm.threshold}
-            band={snapshot.mcEcm.band}
-            t={t}
-          />
-          <RatioPill
-            label={t("efm.label")}
-            ratio={snapshot.mcEfm.ratio}
-            threshold={snapshot.mcEfm.threshold}
-            band={snapshot.mcEfm.band}
-            t={t}
-          />
-        </InlineStack>
+        {/* Pills only when card-network framing describes this merchant in
+            this month — a green "healthy" for a PayPal book is as wrong as a
+            red one. */}
+        {snapshot.cardFramingApplies ? (
+          <InlineStack gap="300" wrap>
+            <RatioPill
+              label={t("vamp.label")}
+              ratio={snapshot.vamp.ratio}
+              counterfactual={snapshot.vamp.ratioWithoutDd}
+              thresholdText={t("threshold", {
+                value: fmtPct(snapshot.vamp.thresholdEarlyWarning, 1),
+              })}
+              severity={snapshot.vamp.severity}
+              t={t}
+            />
+            <RatioPill
+              label={t("ecm.label")}
+              ratio={snapshot.mcEcm.ratio}
+              thresholdText={t("threshold", {
+                value: fmtPct(snapshot.mcEcm.threshold, 1),
+              })}
+              qualifier={snapshot.mcEcm.lowerBound ? t("ecm.lowerBound") : undefined}
+              severity={snapshot.mcEcm.severity}
+              t={t}
+            />
+          </InlineStack>
+        ) : (
+          <Text as="p" variant="bodySm" tone="subdued">
+            {t("notApplicable")}
+          </Text>
+        )}
 
         {/* Counterfactual + impact strip — only when there's something to show */}
         {showImpactStrip && (
@@ -189,24 +255,25 @@ function RatioPill({
   label,
   ratio,
   counterfactual,
-  threshold,
-  band,
+  thresholdText,
+  qualifier,
+  severity,
   t,
 }: {
   label: string;
-  /** NULL when the period has no card volume. These are Visa/Mastercard
-   *  programme ratios, so a merchant whose disputes are PayPal or Klarna
-   *  has no such ratio — rendering 0.00% would assert a clean pass against
-   *  a programme that is not measuring them. */
+  /** NULL when the month has too little card volume to measure. Rendering
+   *  0.00% would assert a clean pass against a programme that is not
+   *  measuring this merchant. */
   ratio: number | null;
   counterfactual?: number | null;
-  threshold: number;
-  band: Band;
+  thresholdText: string;
+  qualifier?: string;
+  severity: CheckpointSeverity | null;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const notApplicable = ratio === null;
+  const notMeasured = ratio === null;
   const showCounterfactual =
-    !notApplicable &&
+    !notMeasured &&
     counterfactual !== undefined &&
     counterfactual !== null &&
     counterfactual > (ratio as number) + 0.00001;
@@ -225,20 +292,21 @@ function RatioPill({
           <Text as="span" variant="bodySm" tone="subdued">
             {label}
           </Text>
-          {/* No band badge when the programme does not apply — a green
-              "healthy" chip is as misleading as a red one here. */}
-          {notApplicable ? null : (
-            <Badge tone={BAND_TONE[band]}>{t(`band.${band}`)}</Badge>
+          {notMeasured || !severity ? null : (
+            <Badge tone={SEVERITY_TONE[severity]}>{t(`severity.${severity}`)}</Badge>
           )}
         </InlineStack>
-        <Text as="p" variant="headingLg" tone={notApplicable ? "subdued" : undefined}>
-          {notApplicable ? "—" : fmtPct(ratio as number)}
+        <Text as="p" variant="headingLg" tone={notMeasured ? "subdued" : undefined}>
+          {notMeasured ? "—" : fmtPct(ratio as number)}
         </Text>
         <Text as="span" variant="bodySm" tone="subdued">
-          {notApplicable
-            ? t("notApplicable")
-            : t("threshold", { value: fmtPct(threshold) })}
+          {notMeasured ? t("tooFewOrders") : thresholdText}
         </Text>
+        {qualifier && !notMeasured ? (
+          <Text as="span" variant="bodySm" tone="subdued">
+            {qualifier}
+          </Text>
+        ) : null}
         {showCounterfactual && (
           <Text as="span" variant="bodySm" tone="subdued">
             {t("withoutDd", { value: fmtPct(counterfactual!) })}

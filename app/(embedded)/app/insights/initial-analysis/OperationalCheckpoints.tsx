@@ -14,7 +14,7 @@
  * attention is amber, not crisis.
  */
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Card, BlockStack, Text, Badge, Icon } from "@shopify/polaris";
 import {
   AlertCircleIcon,
@@ -26,6 +26,7 @@ import type {
   Checkpoint,
   CheckpointSeverity,
 } from "@/lib/insights/checkpoints.types";
+import type { ProgrammeMonth } from "@/lib/insights/period/computeProgrammeBlock";
 import styles from "./initial-analysis.module.css";
 
 type BadgeTone =
@@ -67,14 +68,50 @@ const SEVERITY_ICON_CLASS: Record<CheckpointSeverity, string> = {
   breach: styles.checkpointIcon_breach,
 };
 
+/** Mid-month (or mid-day) UTC noon so no viewer time zone shifts a date. */
+function isoToDate(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d === 1 ? 15 : d!, 12));
+}
+
 export function OperationalCheckpoints({
   checkpoints,
+  programmeMonth,
 }: {
   checkpoints: Checkpoint[];
+  programmeMonth?: ProgrammeMonth;
 }) {
   const t = useTranslations();
+  const format = useFormatter();
+  const monthLabel = (iso: string) =>
+    format.dateTime(isoToDate(iso), { month: "long", year: "numeric", timeZone: "UTC" });
 
-  if (checkpoints.length === 0) return null;
+  // Which month the card-network figures describe, and whether they are
+  // final. An error is said out loud here instead of failing the page.
+  const programmeNote = !programmeMonth
+    ? null
+    : programmeMonth.status === "error"
+      ? t("fraudIntel.programmeUnavailable")
+      : programmeMonth.periodState === "provisional"
+        ? t("fraudIntel.programmeProvisional", {
+            month: monthLabel(programmeMonth.periodMonth),
+            finalOn: format.dateTime(new Date(programmeMonth.finalOn), {
+              day: "numeric",
+              month: "long",
+              timeZone: "UTC",
+            }),
+          })
+        : t("fraudIntel.programmeFinal", { month: monthLabel(programmeMonth.periodMonth) });
+
+  if (checkpoints.length === 0 && !programmeNote) return null;
+
+  // Checkpoint values carry ISO months; the month name is a locale decision
+  // made here, not in lib/.
+  const localized = checkpoints.map((c) =>
+    typeof c.values.month === "string"
+      ? { ...c, values: { ...c.values, month: monthLabel(c.values.month) } }
+      : c,
+  );
 
   const counts: Record<CheckpointSeverity, number> = {
     healthy: 0,
@@ -82,10 +119,10 @@ export function OperationalCheckpoints({
     consider: 0,
     breach: 0,
   };
-  for (const c of checkpoints) counts[c.severity] += 1;
+  for (const c of localized) counts[c.severity] += 1;
 
   // Render order: breaches first, then consider, then info, then healthy.
-  const sorted = [...checkpoints].sort(
+  const sorted = [...localized].sort(
     (a, b) => severityOrder(a.severity) - severityOrder(b.severity),
   );
 
@@ -99,6 +136,11 @@ export function OperationalCheckpoints({
           <Text as="p" variant="bodySm" tone="subdued">
             {t("fraudIntel.checkpointsSubtitle")}
           </Text>
+          {programmeNote ? (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {programmeNote}
+            </Text>
+          ) : null}
         </BlockStack>
 
         {/* Summary chips — one per non-empty severity bucket */}
