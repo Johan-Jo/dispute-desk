@@ -27,6 +27,7 @@
  * Fire-and-forget: never throws. A failed digest must never fail an import.
  */
 
+import { insightsDigestsEnabled } from "@/lib/email/insightsDigestGate";
 import { getServiceClient } from "@/lib/supabase/server";
 import { sendOnboardingAnalysisDigest } from "@/lib/email/sendOnboardingAnalysisDigest";
 import { railSegmentationFor } from "@/lib/insights/railSegmentation";
@@ -65,6 +66,10 @@ function median(xs: number[]): number | null {
 export async function triggerOnboardingDigest(
   shopId: string,
 ): Promise<{ sent: boolean; reason: string }> {
+  // Before any query and before the `onboarding_digest_sent_at` claim, so a
+  // shop whose import completes while digests are suspended keeps its
+  // onboarding email for when they come back.
+  if (!insightsDigestsEnabled()) return { sent: false, reason: "suspended" };
   try {
     const sb = getServiceClient();
 
