@@ -25,6 +25,7 @@
 
 import { callClaudeMessages } from "@/lib/defence/anthropicClient";
 import type { EvidenceFactCategory } from "@/lib/defence/types";
+import { parseJson } from "@/lib/defence/modelJson";
 
 export const BANK_CLAIM_REASONS = [
   "PRODUCT_NOT_RECEIVED",
@@ -67,11 +68,8 @@ const SYSTEM =
   "false if it says they did not; null if it does not say.";
 
 function parse(raw: string): Omit<BankClaimAnalysis, "model" | "analyzedAt"> | null {
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
   try {
-    const j = JSON.parse(raw.slice(start, end + 1)) as Record<string, unknown>;
+    const j = parseJson<Record<string, unknown>>(raw);
     const reason = BANK_CLAIM_REASONS.includes(j.reason as BankClaimReason)
       ? (j.reason as BankClaimReason)
       : "GENERAL";
