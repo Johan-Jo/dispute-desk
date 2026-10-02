@@ -39,8 +39,44 @@ const FAMILIES_THAT_ASK = new Set(["product", "refund", "delivery"]);
 export function returnQuestionApplies(args: {
   returnsOutsideShopify: boolean;
   reasonFamily: string | null | undefined;
+  /** Shopify already records a refund or a return on the order. */
+  shopifyRecordsReturnOrRefund?: boolean;
 }): boolean {
+  if (args.shopifyRecordsReturnOrRefund) return false;
   return args.returnsOutsideShopify && FAMILIES_THAT_ASK.has(args.reasonFamily ?? "");
+}
+
+/**
+ * Does Shopify's own record already show a refund or a return on the order?
+ * Then the no-return fact is never emitted (orderSource), the answer could
+ * change nothing, and the question is not asked: the record already says
+ * the customer was refunded or returned the item. Any return status other
+ * than NO_RETURN counts (RETURN_REQUESTED, IN_PROGRESS, RETURNED, …).
+ */
+export function shopifyRecordsReturnOrRefund(args: {
+  returnStatus: string | null | undefined;
+  totalRefunded: number | string | null | undefined;
+}): boolean {
+  const refunded = Number.parseFloat(String(args.totalRefunded ?? "0"));
+  if (Number.isFinite(refunded) && refunded > 0) return true;
+  return args.returnStatus != null && args.returnStatus !== "NO_RETURN";
+}
+
+/**
+ * The same verdict read from a persisted pack's sections: the order
+ * section's `totals.refunded` and `returnStatus` (the latter stamped from
+ * 2026-10-02; older packs answer from the refund alone until rebuilt).
+ */
+export function packShowsReturnOrRefund(sections: unknown): boolean {
+  if (!Array.isArray(sections)) return false;
+  const order = sections.find(
+    (s) => (s as { labelToken?: { key?: string } } | null)?.labelToken?.key === "packs.section.order",
+  ) as { data?: { totals?: { refunded?: unknown }; returnStatus?: unknown } } | undefined;
+  if (!order?.data) return false;
+  return shopifyRecordsReturnOrRefund({
+    returnStatus: typeof order.data.returnStatus === "string" ? order.data.returnStatus : null,
+    totalRefunded: (order.data.totals?.refunded as string | number | null | undefined) ?? null,
+  });
 }
 
 export interface ReturnRequestConfirmation {

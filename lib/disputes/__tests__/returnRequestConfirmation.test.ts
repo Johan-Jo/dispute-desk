@@ -9,7 +9,9 @@ import { categorizeEvidenceField } from "@/lib/argument/canonicalEvidence";
 import {
   MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE,
   noReturnFactScope,
+  packShowsReturnOrRefund,
   returnQuestionApplies,
+  shopifyRecordsReturnOrRefund,
 } from "@/lib/disputes/returnRequestConfirmation";
 import { runClaimGuards } from "@/lib/defence/claimGuards";
 import { buildNotAsDescribedLedger } from "@/lib/defence/counsel/notAsDescribedLedger";
@@ -92,6 +94,38 @@ function sections(text: string): Record<NarrativeSectionKey, { text: string }> {
     conclusion: { text: "" },
   } as Record<NarrativeSectionKey, { text: string }>;
 }
+
+describe("C4b: the question is not asked when Shopify already records a refund or return", () => {
+  // Live case 2026-10-02: PRODUCT_UNACCEPTABLE dispute opened two days after
+  // a €22.46 refund in Shopify; the card still asked "did the customer ask?".
+  const orderSection = (data: Record<string, unknown>) => ({
+    type: "order",
+    labelToken: { key: "packs.section.order", params: { orderName: "#1" } },
+    data,
+  });
+
+  it("a refund or any return status other than NO_RETURN counts", () => {
+    expect(shopifyRecordsReturnOrRefund({ returnStatus: "NO_RETURN", totalRefunded: "22.46" })).toBe(true);
+    expect(shopifyRecordsReturnOrRefund({ returnStatus: "RETURN_REQUESTED", totalRefunded: "0.00" })).toBe(true);
+    expect(shopifyRecordsReturnOrRefund({ returnStatus: "RETURNED", totalRefunded: 0 })).toBe(true);
+    expect(shopifyRecordsReturnOrRefund({ returnStatus: "NO_RETURN", totalRefunded: "0.00" })).toBe(false);
+    expect(shopifyRecordsReturnOrRefund({ returnStatus: null, totalRefunded: null })).toBe(false);
+  });
+
+  it("reads the persisted order section (older packs: refund only)", () => {
+    expect(packShowsReturnOrRefund([orderSection({ totals: { refunded: "22.46" } })])).toBe(true);
+    expect(packShowsReturnOrRefund([orderSection({ totals: { refunded: "0.00" }, returnStatus: "IN_PROGRESS" })])).toBe(true);
+    expect(packShowsReturnOrRefund([orderSection({ totals: { refunded: "0.00" }, returnStatus: "NO_RETURN" })])).toBe(false);
+    expect(packShowsReturnOrRefund([orderSection({ totals: { refunded: "0.00" } })])).toBe(false);
+    expect(packShowsReturnOrRefund(null)).toBe(false);
+  });
+
+  it("returnQuestionApplies is false whatever the setting and family", () => {
+    expect(
+      returnQuestionApplies({ returnsOutsideShopify: true, reasonFamily: "product", shopifyRecordsReturnOrRefund: true }),
+    ).toBe(false);
+  });
+});
 
 describe("C4b: the one attributed sentence", () => {
   const withSentence = `No return has been recorded in Shopify for this order. ${MERCHANT_CONFIRMED_NO_REQUEST_SENTENCE}`;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopSettings } from "@/lib/automation/settings";
-import { loadReturnRequestConfirmation, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
+import { loadReturnRequestConfirmation, packShowsReturnOrRefund, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
 import path from "node:path";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
@@ -1236,6 +1236,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       applies: returnQuestionApplies({
         returnsOutsideShopify: shopSettings.returns_outside_shopify === true,
         reasonFamily: resolveReasonFamily(effectiveReason),
+        // Shopify already shows a refund or return: nothing to ask.
+        shopifyRecordsReturnOrRefund: packShowsReturnOrRefund(packJsonSections),
       }),
       answer: await loadReturnRequestConfirmation(sb, disputeId, bankClaimCycle),
     };
