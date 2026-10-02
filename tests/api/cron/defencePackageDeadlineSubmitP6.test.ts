@@ -127,7 +127,9 @@ function setup(opts: {
     due_at: opts.dueAt ?? new Date(Date.now() + 3600_000).toISOString(),
     status: "needs_response",
     normalized_status: "in_progress",
-    review_state: null,
+    // Merchant-approved: these cases test the filing path behind the approval
+    // gate (tests/api/cron/deadlineSubmitAwaitsApproval.test.ts).
+    review_state: "approved",
     response_cycle: opts.disputeCycle ?? 1,
   };
 

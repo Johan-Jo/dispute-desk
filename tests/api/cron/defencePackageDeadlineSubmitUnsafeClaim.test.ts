@@ -69,7 +69,9 @@ const DISPUTE = {
   due_at: new Date(Date.now() + 3600_000).toISOString(),
   status: "needs_response",
   normalized_status: "in_progress",
-  review_state: null,
+  // Merchant-approved: these cases test the filing path behind the approval
+  // gate (tests/api/cron/deadlineSubmitAwaitsApproval.test.ts).
+  review_state: "approved",
 };
 
 const PACK_JSON = healthyPackJson();
