@@ -37,13 +37,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // NULL stays NULL: a month with no card volume has no ratio, and a 0
+  // would chart it as a clean pass.
+  const ratio = (v: unknown): number | null =>
+    v === null || v === undefined ? null : Number(v);
+
   // Return chronological order for chart consumption.
   const series = (data ?? []).reverse().map((row) => ({
     periodMonth: row.period_month,
-    vampActual: Number(row.vamp_ratio_calculated ?? 0),
-    vampWithoutDd: Number(row.vamp_ratio_without_dd ?? 0),
-    mcEcm: Number(row.mc_ecm_ratio ?? 0),
-    mcEfm: Number(row.mc_efm_ratio ?? 0),
+    vampActual: ratio(row.vamp_ratio_calculated),
+    vampWithoutDd: ratio(row.vamp_ratio_without_dd),
+    mcEcm: ratio(row.mc_ecm_ratio),
+    mcEfm: ratio(row.mc_efm_ratio),
     ce30Excluded: Number(row.ce30_excluded_count ?? 0),
     fptExcluded: Number(row.fpt_excluded_count ?? 0),
     feesAvoidedUsd: Number(row.estimated_fees_avoided_usd ?? 0),

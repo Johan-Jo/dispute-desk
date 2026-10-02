@@ -3828,8 +3828,8 @@
         "body": "Shopify regroupe tous les litiges en 14 grandes catégories. Mais Visa et Mastercard utilisent des codes plus précis en dessous : Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855. Le code spécifique réseau détermine comment la banque émettrice évalue vos preuves et quel type de langage de défense gagne.\n\nDisputeDesk résout automatiquement le code de motif réseau pour chaque litige. La résolution utilise plusieurs signaux par ordre de fiabilité : direct (champ typé sur le litige Shopify — non exposé actuellement, réservé à une évolution future de l'API), dérivé (extrait du reçu du gateway lorsque disponible, Shopify Payments uniquement), inféré (meilleure estimation à partir de l'enum Shopify + réseau + contexte), ou inconnu.\n\nLa page de détail affiche le code résolu (ex. « Visa 13.1 — Marchandises/Services non reçus ») avec un indicateur de confiance. Une résolution fiable permet de détecter l'éligibilité CE 3.0 (Visa 10.4) et FPT (Mastercard 4837 / 4863), de choisir des modèles de défense plus précis par code, et d'appliquer des listes de preuves adaptées.\n\nVous n'avez rien à faire — la résolution est automatique. Si le code reste « inconnu », DisputeDesk retombe sur le traitement standard de la catégorie Shopify."
       },
       "vampRatioExplained": {
-        "title": "VAMP, ECM et EFM — ce que signifient les chiffres",
-        "body": "Les réseaux de cartes surveillent trois ratios clés de chargeback pour chaque marchand. Le dépassement des seuils déclenche des frais, l'inscription à des programmes de surveillance et, dans les cas extrêmes, la résiliation du compte. Le tableau de bord des ratios DisputeDesk affiche vos estimations calculées plus l'impact contrefactuel des victoires de DisputeDesk.\n\nLes trois ratios :\n- Visa VAMP — litiges totaux / transactions réglées totales. Seuil standard : 0,65 %. Excessif : 1,50 %. Franchir l'excessif déclenche des frais d'application par transaction.\n- Mastercard ECM — chargebacks Mastercard / règlements Mastercard. Seuil : 1,00 %.\n- Mastercard EFM — chargebacks de fraude Mastercard / règlements Mastercard. Seuil : 0,50 %.\n\nDisputeDesk affiche une alerte jaune à 80 % du seuil et une alerte rouge en cas de dépassement, et envoie un e-mail lors des changements de zone.\n\nLa ligne contrefactuelle est l'élément clé : les victoires attribuées à DisputeDesk (CE 3.0 et FPT) sont retirées du numérateur VAMP. La ligne pointillée montre ce que serait votre ratio sans DisputeDesk — l'écart est la valeur livrée.\n\nImportant : ce sont des estimations calculées à partir de vos données Shopify, pas les chiffres officiels rapportés par votre acquéreur. Seul l'acquéreur a le ratio faisant autorité. DisputeDesk utilise la formule standard mais approxime les codes TC40 / TC15 / TC05 à partir des données de litiges et de commandes Shopify. Si le chiffre de votre acquéreur diffère, le sien fait foi pour la conformité.\n\nLe résumé mensuel d'impact affiche : litiges qualifiés, victoires par canal, transactions retirées du VAMP, frais estimés évités et revenus estimés récupérés."
+        "title": "VAMP et ECM : ce que signifient les chiffres",
+        "body": "Visa et Mastercard surveillent la part des paiements par carte d'un marchand qui se transforment en contestations. DisputeDesk affiche une estimation calculée pour les deux programmes, mois civil par mois civil.\n\nNotre calcul :\n- Mois : le dernier mois civil complet. Il reste provisoire jusqu'au 8 du mois suivant, car les contestations tardives continuent d'arriver pendant environ une semaine ; ensuite il est définitif.\n- Taux de contestation sur carte (estimation Visa VAMP) : contestations sur carte ouvertes dans le mois ÷ commandes par carte passées et payées dans le mois. Les demandes d'information ne sont pas comptées, pas plus que PayPal, Klarna ou les autres paiements hors carte.\n- Mastercard ECM : contestations Mastercard du mois ÷ commandes par carte du mois précédent. Tant que nous ne pouvons pas distinguer les commandes Mastercard des autres cartes, il s'agit d'une borne inférieure.\n- Avec moins de 50 commandes par carte dans le mois, nous n'affichons aucun taux, car un seul litige le ferait varier de plusieurs points.\n\nSeuils :\n- Visa VAMP : alerte précoce à 0,9 %, Excessive à 1,5 %. Visa n'applique le VAMP qu'à partir de 1 500 litiges par mois.\n- Mastercard ECM : 1,5 % et au moins 100 contestations par mois (High ECM : 3,0 % et 300).\n- Un mois au-dessus du ratio mais sous le seuil d'application est affiché comme une information, jamais comme un dépassement.\n\nSi la plupart de vos litiges passent par PayPal, Klarna ou un autre prestataire hors carte, ces programmes ne vous mesurent pas, et nous l'indiquons au lieu d'afficher un verdict.\n\nLa ligne contrefactuelle est l'élément clé : les victoires attribuées à DisputeDesk (CE 3.0 et FPT) sont retirées du numérateur VAMP. La ligne pointillée montre ce que serait votre ratio sans DisputeDesk — l'écart est la valeur livrée.\n\nImportant : ce sont des estimations calculées à partir de vos données Shopify, pas les chiffres officiels rapportés par votre acquéreur. Seul l'acquéreur a le ratio faisant autorité. DisputeDesk utilise la formule standard mais approxime les codes TC40 / TC15 / TC05 à partir des données de litiges et de commandes Shopify. Si le chiffre de votre acquéreur diffère, le sien fait foi pour la conformité.\n\nLe résumé mensuel d'impact affiche : litiges qualifiés, victoires par canal, transactions retirées du VAMP, frais estimés évités et revenus estimés récupérés."
       },
       "sessionCapture": {
         "title": "Capture de session storefront — ce que c'est et ce que nous stockons",
@@ -5441,17 +5441,17 @@
     "checkpointsSubtitle": "Votre position face aux règles des réseaux de cartes et à votre propre référence sur 30 jours.",
     "checkpointSourcePrefix": "Source",
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Sous la bande de surveillance de Visa.",
-    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Votre taux de contestation sur 90 jours est de {current}. Le seuil Excessive du VAMP de Visa est {vampExcessive} ; la bande opérationnelle « approche » commence vers {vampApproaching}.",
+    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "En {month}, votre taux de contestation sur carte était de {current}. Le niveau d'alerte précoce de Visa est {vampApproaching} ; le seuil Excessive du VAMP est {vampExcessive}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Approche du seuil VAMP de Visa.",
-    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Votre taux de contestation sur 90 jours est de {current} — dans la bande {vampApproaching}–{vampExcessive}. Les acquéreurs s'exposent à 8 USD par transaction contestée une fois le seuil Excessive ({vampExcessive}) atteint.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_title": "Au-dessus du seuil Excessive de VAMP.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Votre taux de contestation sur 90 jours est de {current}, à ou au-dessus du seuil Excessive de VAMP ({vampExcessive}). Les acquéreurs s'exposent à 8 USD par transaction contestée à ce niveau.",
+    "checkpoint_chargeback_rate_vs_vamp_consider_body": "En {month}, votre taux de contestation sur carte était de {current}, entre le niveau d'alerte précoce de Visa de {vampApproaching} et le seuil Excessive de {vampExcessive}, avec assez de litiges pour que le VAMP s'applique.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_title": "Au-dessus du seuil Excessive du VAMP de Visa.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_body": "En {month}, votre taux de contestation sur carte était de {current}, égal ou supérieur au seuil Excessive de Visa de {vampExcessive}, avec {visaCount} contestations Visa. À ce niveau, les acquéreurs paient 8 $ par transaction contestée.",
     "checkpoint_chargeback_rate_vs_ecm_healthy_title": "Sous le seuil ECM de Mastercard.",
-    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Votre taux de contestation sur 90 jours est de {current}, bien en dessous du ratio ECM de Mastercard de {ecmRatio} (qui exige aussi {ecmCount}+ contestations/mois).",
+    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "En {month}, les contestations Mastercard représentaient {current} des commandes par carte du mois précédent ({mcCount} contestations), sous le ratio ECM de {ecmRatio}, qui exige aussi {ecmCount}+ contestations par mois.",
     "checkpoint_chargeback_rate_vs_ecm_consider_title": "Approche du seuil ECM de Mastercard.",
-    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Votre taux de contestation sur 90 jours est de {current}. L'ECM de Mastercard s'active à {ecmRatio} et {ecmCount}+ contestations/mois (moyenne : ~{monthlyEstimate}).",
+    "checkpoint_chargeback_rate_vs_ecm_consider_body": "En {month}, vous avez eu {mcCount} contestations Mastercard, au seuil ECM de {ecmCount} par mois. Le ratio affiché, {current}, est mesuré sur toutes les commandes par carte : le vrai ratio Mastercard est donc plus élevé.",
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Au-dessus des seuils ECM de Mastercard.",
-    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Votre taux de contestation sur 90 jours est de {current} et vous totalisez ~{monthlyEstimate} contestations/mois. Les deux critères ECM ({ecmRatio} ratio, {ecmCount}+/mois) sont atteints.",
+    "checkpoint_chargeback_rate_vs_ecm_breach_body": "En {month}, les contestations Mastercard représentaient {current} des commandes par carte du mois précédent, avec {mcCount} contestations. Les deux critères ECM (ratio de {ecmRatio}, {ecmCount}+ par mois) sont remplis.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} des commandes à risque ÉLEVÉ ont été expédiées.",
     "checkpoint_high_risk_fulfilled_consider_body": "Chaque commande à risque ÉLEVÉ expédiée est une exposition absorbée — le modèle de Shopify l'a signalée sans la bloquer. Créez une règle Shopify Flow qui suspend l'exécution lorsqu'une commande est à risque Élevé et dépasse un seuil de valeur que vous définissez.",
     "checkpoint_signature_capture_low_consider_title": "Signature enregistrée sur {current} des livraisons confirmées.",
@@ -5490,7 +5490,14 @@
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Le programme Visa ne s'applique pas à vos litiges.",
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Seuls {cardShare} de vos litiges passent par un réseau de cartes. Le VAMP de Visa comptabilise les chargebacks de carte et ne mesure donc pas le reste de votre volume — il n'y a pas de verdict VAMP à vous donner ici.",
     "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Le programme Mastercard ne s'applique pas à vos litiges.",
-    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Seuls {cardShare} de vos litiges passent par un réseau de cartes. L'ECM de Mastercard comptabilise les chargebacks de carte ; vos autres litiges relèvent des règles du prestataire qui les a traités."
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Seuls {cardShare} de vos litiges passent par un réseau de cartes. L'ECM de Mastercard comptabilise les chargebacks de carte ; vos autres litiges relèvent des règles du prestataire qui les a traités.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_title": "Au-dessus du ratio de Visa, sous son seuil d'application.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_body": "En {month}, votre taux de contestation sur carte était de {current}, au-dessus du niveau d'alerte précoce de Visa de {vampApproaching}. Le VAMP ne s'applique qu'à partir de {vampFloor} litiges par mois ; vous avez eu {visaCount} contestations Visa.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_title": "Au-dessus du ratio de Mastercard, sous son seuil d'application.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_body": "En {month}, les contestations Mastercard représentaient {current} des commandes par carte du mois précédent, au-dessus du ratio ECM de {ecmRatio}. L'ECM ne s'applique qu'à partir de {ecmCount} contestations par mois ; vous en avez eu {mcCount}.",
+    "programmeFinal": "Les chiffres des réseaux de cartes portent sur {month}.",
+    "programmeProvisional": "Les chiffres des réseaux de cartes portent sur {month} et sont provisoires jusqu'au {finalOn}.",
+    "programmeUnavailable": "Les chiffres des réseaux de cartes sont temporairement indisponibles. Le reste de cette page est à jour."
   },
   "consent": {
     "ariaLabel": "Choix relatifs aux cookies et à la confidentialité",
@@ -5808,7 +5815,8 @@
         "label": "Visa VAMP"
       },
       "ecm": {
-        "label": "Mastercard ECM"
+        "label": "Mastercard ECM",
+        "lowerBound": "Borne inférieure : mesurée sur toutes les commandes par carte."
       },
       "efm": {
         "label": "Mastercard EFM"
@@ -5832,7 +5840,16 @@
         "fptWinsHelper": "Litiges Mastercard 4837 / 4863 gagnés via First-Party Trust"
       },
       "estimateNotice": "Les ratios sont des estimations calculées à partir de vos données Shopify. Votre acquéreur détient les chiffres faisant autorité pour l'application des règles.",
-      "notApplicable": "Aucun volume carte sur cette période — ce programme ne mesure pas vos litiges."
+      "notApplicable": "Aucun volume carte sur cette période — ce programme ne mesure pas vos litiges.",
+      "periodLabelProvisional": "Période : {period} · provisoire jusqu'au {finalOn}",
+      "notMeasured": "Impossible de charger les chiffres des réseaux de cartes de ce mois. Réessayez dans quelques minutes.",
+      "tooFewOrders": "Trop peu de commandes par carte ce mois-ci pour mesurer.",
+      "severity": {
+        "healthy": "Sain",
+        "info": "Au-dessus du ratio, sous le seuil",
+        "consider": "À examiner",
+        "breach": "Dépassé"
+      }
     }
   },
   "playbook": {
