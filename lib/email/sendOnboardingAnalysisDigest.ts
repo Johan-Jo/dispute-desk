@@ -105,12 +105,10 @@ export function renderOnboardingAnalysisDigest(
   // for the prior — the fulfillment-baseline rule self-suppresses.
   const checkpoints = evaluateCheckpoints(
     {
-      chargebackRate90d: cb,
-      chargebackCount90d: d.chargebackCount90d,
-      cardChargebackRate90d: d.rail?.cardRatePct,
-      cardChargebackCount90d: d.rail?.cardDisputes,
-      cardDisputeShare: d.rail?.cardDisputeShare,
-      cardFramingApplies: d.rail?.cardFramingApplies,
+      // No programme block: the digest's own 90-day figures are exactly what
+      // disagreed with the page. Suspended (insightsDigestGate) until PR4
+      // renders the stored month record instead.
+      programme: undefined,
       fraudDisputeRatePct: m.fraudDisputeRatePct,
       fulfilledHighRiskPct: m.fulfilledHighRiskPct,
       threeDsAuthRatePct: m.threeDsAuthRatePct,
