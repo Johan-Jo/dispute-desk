@@ -4,6 +4,16 @@
  * Called by the dispute-reminders cron. Checks the `beforeDue`
  * notification preference before sending.
  * Fire-and-forget — never throws.
+ *
+ * The email says what will happen at the deadline for THIS dispute. We know
+ * the shop's setting, so we never ask the merchant to go and check it
+ * (2026-10-02). `filingMode` is resolved by the cron through the same gate the
+ * deadline cron files through (lib/automation/merchantApprovalGate.ts):
+ *  - "auto": nothing to do, DisputeDesk files by the deadline; opening the
+ *    dispute is optional.
+ *  - "approved": the merchant approved it; it is filed on the deadline.
+ *  - "awaiting_approval": nothing is filed until the merchant approves.
+ * Every reminder also tells the merchant where to turn these reminders off.
  */
 
 import { Resend } from "resend";
@@ -13,6 +23,8 @@ import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
 const REPLY_TO = DEFAULT_REPLY_TO;
+
+export type DueReminderFilingMode = "auto" | "approved" | "awaiting_approval";
 
 export interface DueReminderContext {
   to: string;
@@ -27,6 +39,7 @@ export interface DueReminderContext {
   dueAt: string;
   orderName: string | null;
   packStatus: string | null;
+  filingMode: DueReminderFilingMode;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -35,14 +48,18 @@ interface S {
   subject: (p: { reason: string; hours: number }) => string;
   heading: (p: { hours: number }) => string;
   intro: (p: { shop: string; reason: string; amount: string }) => string;
-  packReady: string;
+  autoNoAction: string;
+  approvedNoAction: string;
+  awaitingApproval: string;
   packNotStarted: string;
-  packBuilding: string;
   packSaved: string;
   due: string;
   order: string;
   cta: string;
-  footer: string;
+  ctaOptional: string;
+  /** Sentence before the settings link; the setting's name is wrapped in <em>. */
+  turnOff: (p: { setting: string }) => string;
+  turnOffLink: string;
 }
 
 const STRINGS: Record<Locale, S> = {
@@ -50,80 +67,108 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, hours }) => `Reminder: ${reason} dispute due in ${hours}h`,
     heading: ({ hours }) => `Response due in ${hours} hours`,
     intro: ({ shop, reason, amount }) => `The <strong>${reason}</strong> dispute (${amount}) for ${shop} is approaching its deadline.`,
-    packReady: "Your evidence pack is ready. Review it before the deadline — what happens then depends on your automation setting.",
+    autoNoAction: "Your store is set to full automation, so you don't need to do anything. DisputeDesk will file this response with Shopify by the deadline. If you'd like to look it over first, you can open the dispute.",
+    approvedNoAction: "You've approved this response, so you don't need to do anything. DisputeDesk will file it with Shopify on the deadline.",
+    awaitingApproval: "Your store is set to require your approval, so nothing is filed until you approve it. Open the dispute to review and approve the response before the deadline — otherwise no response will be filed.",
     packNotStarted: "No evidence pack has been started yet. Open the dispute to build one.",
-    packBuilding: "An evidence pack is being built automatically.",
     packSaved: "Your response has already been submitted to Shopify for this dispute.",
     due: "Due",
     order: "Order",
     cta: "Open dispute →",
-    footer: "You received this because due-date reminders are enabled in DisputeDesk settings.",
+    ctaOptional: "Review dispute (optional) →",
+    turnOff: ({ setting }) => `Don't need these reminders? Turn off ${setting} under Notifications in`,
+    turnOffLink: "DisputeDesk settings",
   },
   es: {
     subject: ({ reason, hours }) => `Recordatorio: disputa ${reason} vence en ${hours}h`,
     heading: ({ hours }) => `Respuesta vence en ${hours} horas`,
     intro: ({ shop, reason, amount }) => `La disputa <strong>${reason}</strong> (${amount}) para ${shop} se acerca a su fecha límite.`,
-    packReady: "Tu paquete de evidencia está listo. Revísalo antes de la fecha límite: lo que ocurra después depende de tu configuración de automatización.",
+    autoNoAction: "Tu tienda está configurada con automatización completa, así que no necesitas hacer nada. DisputeDesk enviará esta respuesta a Shopify antes de la fecha límite. Si quieres revisarla antes, puedes abrir la disputa.",
+    approvedNoAction: "Ya aprobaste esta respuesta, así que no necesitas hacer nada. DisputeDesk la enviará a Shopify en la fecha límite.",
+    awaitingApproval: "Tu tienda está configurada para requerir tu aprobación, así que no se envía nada hasta que la apruebes. Abre la disputa para revisar y aprobar la respuesta antes de la fecha límite; de lo contrario, no se enviará ninguna respuesta.",
     packNotStarted: "Aún no se ha iniciado ningún paquete de evidencia. Abre la disputa para crear uno.",
-    packBuilding: "Se está generando un paquete de evidencia automáticamente.",
     packSaved: "Tu respuesta ya se ha enviado a Shopify para esta disputa.",
     due: "Vence",
     order: "Pedido",
     cta: "Abrir disputa →",
-    footer: "Recibiste esto porque los recordatorios de fecha límite están activados en DisputeDesk.",
+    ctaOptional: "Revisar disputa (opcional) →",
+    turnOff: ({ setting }) => `¿No necesitas estos recordatorios? Desactiva ${setting} en Notificaciones, en la`,
+    turnOffLink: "configuración de DisputeDesk",
   },
   pt: {
     subject: ({ reason, hours }) => `Lembrete: disputa ${reason} vence em ${hours}h`,
     heading: ({ hours }) => `Resposta devida em ${hours} horas`,
     intro: ({ shop, reason, amount }) => `A disputa <strong>${reason}</strong> (${amount}) para ${shop} está se aproximando do prazo.`,
-    packReady: "O seu pacote de evidências está pronto. Reveja-o antes do prazo — o que acontece depois depende da sua definição de automação.",
+    autoNoAction: "A sua loja está configurada com automação total, então você não precisa fazer nada. O DisputeDesk enviará esta resposta ao Shopify até o prazo. Se quiser revisá-la antes, pode abrir a disputa.",
+    approvedNoAction: "Você já aprovou esta resposta, então não precisa fazer nada. O DisputeDesk a enviará ao Shopify no prazo.",
+    awaitingApproval: "A sua loja está configurada para exigir a sua aprovação, então nada é enviado até você aprovar. Abra a disputa para revisar e aprovar a resposta antes do prazo — caso contrário, nenhuma resposta será enviada.",
     packNotStarted: "Nenhum pacote de evidência foi iniciado ainda. Abra a disputa para criar um.",
-    packBuilding: "Um pacote de evidência está sendo gerado automaticamente.",
     packSaved: "A sua resposta já foi enviada ao Shopify para esta disputa.",
     due: "Prazo",
     order: "Pedido",
     cta: "Abrir disputa →",
-    footer: "Você recebeu isto porque os lembretes de prazo estão ativados nas configurações do DisputeDesk.",
+    ctaOptional: "Revisar disputa (opcional) →",
+    turnOff: ({ setting }) => `Não precisa destes lembretes? Desative ${setting} em Notificações, nas`,
+    turnOffLink: "configurações do DisputeDesk",
   },
   fr: {
     subject: ({ reason, hours }) => `Rappel : litige ${reason} dû dans ${hours}h`,
     heading: ({ hours }) => `Réponse due dans ${hours} heures`,
     intro: ({ shop, reason, amount }) => `Le litige <strong>${reason}</strong> (${amount}) pour ${shop} approche de sa date limite.`,
-    packReady: "Votre dossier de preuves est prêt. Vérifiez-le avant la date limite — ce qui suit dépend de votre réglage d'automatisation.",
+    autoNoAction: "Votre boutique est en automatisation complète : vous n'avez rien à faire. DisputeDesk enverra cette réponse à Shopify avant la date limite. Si vous souhaitez la consulter avant, vous pouvez ouvrir le litige.",
+    approvedNoAction: "Vous avez approuvé cette réponse : vous n'avez rien à faire. DisputeDesk l'enverra à Shopify à la date limite.",
+    awaitingApproval: "Votre boutique exige votre approbation : rien n'est envoyé tant que vous n'avez pas approuvé. Ouvrez le litige pour vérifier et approuver la réponse avant la date limite — sinon, aucune réponse ne sera envoyée.",
     packNotStarted: "Aucun dossier de preuves n'a été commencé. Ouvrez le litige pour en créer un.",
-    packBuilding: "Un dossier de preuves est en cours de génération.",
     packSaved: "Votre réponse a déjà été envoyée à Shopify pour ce litige.",
     due: "Échéance",
     order: "Commande",
     cta: "Ouvrir le litige →",
-    footer: "Vous recevez ceci car les rappels de date limite sont activés dans les paramètres DisputeDesk.",
+    ctaOptional: "Consulter le litige (facultatif) →",
+    turnOff: ({ setting }) => `Vous n'avez pas besoin de ces rappels ? Désactivez ${setting} dans Notifications, dans les`,
+    turnOffLink: "paramètres DisputeDesk",
   },
   de: {
     subject: ({ reason, hours }) => `Erinnerung: Reklamation ${reason} fällig in ${hours}h`,
     heading: ({ hours }) => `Antwort fällig in ${hours} Stunden`,
     intro: ({ shop, reason, amount }) => `Die <strong>${reason}</strong>-Reklamation (${amount}) für ${shop} nähert sich der Frist.`,
-    packReady: "Ihr Beweispaket ist fertig. Prüfen Sie es vor der Frist — was dann passiert, hängt von Ihrer Automatisierungseinstellung ab.",
+    autoNoAction: "Ihr Shop ist auf vollständige Automatisierung eingestellt – Sie müssen nichts tun. DisputeDesk reicht diese Antwort fristgerecht bei Shopify ein. Wenn Sie sie vorher ansehen möchten, können Sie die Reklamation öffnen.",
+    approvedNoAction: "Sie haben diese Antwort freigegeben – Sie müssen nichts tun. DisputeDesk reicht sie zur Frist bei Shopify ein.",
+    awaitingApproval: "Ihr Shop verlangt Ihre Freigabe – ohne Freigabe wird nichts eingereicht. Öffnen Sie die Reklamation, um die Antwort vor der Frist zu prüfen und freizugeben. Andernfalls wird keine Antwort eingereicht.",
     packNotStarted: "Es wurde noch kein Beweispaket erstellt. Öffnen Sie die Reklamation, um eines zu erstellen.",
-    packBuilding: "Ein Beweispaket wird automatisch erstellt.",
     packSaved: "Ihre Antwort wurde für diese Reklamation bereits an Shopify übermittelt.",
     due: "Fällig",
     order: "Bestellung",
     cta: "Reklamation öffnen →",
-    footer: "Sie erhalten dies, weil Fristerinnerungen in den DisputeDesk-Einstellungen aktiviert sind.",
+    ctaOptional: "Reklamation ansehen (optional) →",
+    turnOff: ({ setting }) => `Sie brauchen diese Erinnerungen nicht? Deaktivieren Sie ${setting} unter Benachrichtigungen in den`,
+    turnOffLink: "DisputeDesk-Einstellungen",
   },
   sv: {
     subject: ({ reason, hours }) => `Påminnelse: tvist ${reason} förfaller om ${hours}h`,
     heading: ({ hours }) => `Svar förfaller om ${hours} timmar`,
     intro: ({ shop, reason, amount }) => `Tvisten <strong>${reason}</strong> (${amount}) för ${shop} närmar sig sin tidsfrist.`,
-    packReady: "Ditt bevispaket är klart. Granska det före deadline — vad som händer sedan beror på din automatiseringsinställning.",
+    autoNoAction: "Din butik har full automatisering, så du behöver inte göra något. DisputeDesk skickar in svaret till Shopify före deadline. Vill du titta på det först kan du öppna tvisten.",
+    approvedNoAction: "Du har godkänt svaret, så du behöver inte göra något. DisputeDesk skickar in det till Shopify på deadline.",
+    awaitingApproval: "Din butik kräver ditt godkännande, så inget skickas in förrän du godkänner. Öppna tvisten och granska och godkänn svaret före deadline – annars skickas inget svar in.",
     packNotStarted: "Inget bevispaket har skapats ännu. Öppna tvisten för att skapa ett.",
-    packBuilding: "Ett bevispaket skapas automatiskt.",
     packSaved: "Ditt svar har redan skickats till Shopify för den här tvisten.",
     due: "Förfaller",
     order: "Order",
     cta: "Öppna tvist →",
-    footer: "Du fick detta eftersom påminnelser om tidsfrister är aktiverade i DisputeDesk-inställningarna.",
+    ctaOptional: "Granska tvisten (valfritt) →",
+    turnOff: ({ setting }) => `Behöver du inte de här påminnelserna? Stäng av ${setting} under Aviseringar i`,
+    turnOffLink: "DisputeDesk-inställningarna",
   },
+};
+
+/** The reminder toggle's label in Settings → Notifications (messages/{locale}.json settings.notifBeforeDue). */
+const BEFORE_DUE_SETTING: Record<Locale, string> = {
+  en: "Before due date",
+  es: "Antes del vencimiento",
+  pt: "Antes do prazo",
+  fr: "Avant l'échéance",
+  de: "Vor Fälligkeit",
+  sv: "Innan förfallodatum",
 };
 
 function resolveLocale(raw: string | null | undefined): Locale {
@@ -147,18 +192,31 @@ function reasonLabel(reason: string | null): string {
   return reason.replace(/_/g, " ").toLowerCase();
 }
 
-function packStatusHint(s: S, status: string | null): string {
-  if (!status) return s.packNotStarted;
-  if (status === "ready") return s.packReady;
-  if (
-    status === "saved_to_shopify" ||
-    status === "saved_to_shopify_unverified" ||
-    status === "saved_to_shopify_verified"
-  ) {
-    return s.packSaved;
-  }
-  if (status === "queued" || status === "building") return s.packBuilding;
-  return s.packNotStarted;
+const SAVED_STATUSES = new Set([
+  "saved_to_shopify",
+  "saved_to_shopify_unverified",
+  "saved_to_shopify_verified",
+]);
+const PACK_IN_HAND = new Set(["ready", "queued", "building"]);
+
+/**
+ * What the merchant needs to know for this dispute, and whether they need to
+ * act. Exported for tests.
+ */
+export function dueReminderHint(
+  s: S,
+  status: string | null,
+  mode: DueReminderFilingMode,
+): { text: string; actionNeeded: boolean } {
+  if (status && SAVED_STATUSES.has(status)) return { text: s.packSaved, actionNeeded: false };
+  if (mode === "awaiting_approval") return { text: s.awaitingApproval, actionNeeded: true };
+  if (!status || !PACK_IN_HAND.has(status)) return { text: s.packNotStarted, actionNeeded: true };
+  if (mode === "approved") return { text: s.approvedNoAction, actionNeeded: false };
+  return { text: s.autoNoAction, actionNeeded: false };
+}
+
+export function dueReminderStrings(locale: string | null | undefined): S {
+  return STRINGS[resolveLocale(locale)];
 }
 
 export async function sendDueReminder(ctx: DueReminderContext): Promise<boolean> {
@@ -168,11 +226,17 @@ export async function sendDueReminder(ctx: DueReminderContext): Promise<boolean>
     const locale = resolveLocale(ctx.locale);
     const s = STRINGS[locale];
     const disputeUrl = getEmbeddedAppUrl(ctx.shopDomain ?? null, `disputes/${ctx.disputeId}`);
+    const settingsUrl = getEmbeddedAppUrl(ctx.shopDomain ?? null, "settings");
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
     const reason = reasonLabel(ctx.reason);
     const hoursLeft = Math.max(0, Math.round((new Date(ctx.dueAt).getTime() - Date.now()) / (1000 * 60 * 60)));
     const dueDate = new Date(ctx.dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    const hint = packStatusHint(s, ctx.packStatus);
+    const hint = dueReminderHint(s, ctx.packStatus, ctx.filingMode);
+    const cta = hint.actionNeeded ? s.cta : s.ctaOptional;
+    const box = hint.actionNeeded
+      ? { bg: "#FEF3C7", border: "#FCD34D", fg: "#92400E" }
+      : { bg: "#ECFDF5", border: "#A7F3D0", fg: "#065F46" };
+    const setting = BEFORE_DUE_SETTING[locale];
 
     const subject = `[DisputeDesk] ${s.subject({ reason, hours: hoursLeft })}`;
 
@@ -202,15 +266,15 @@ export async function sendDueReminder(ctx: DueReminderContext): Promise<boolean>
         <tr><td style="padding:6px 0;font-size:13px;color:#6D7175">${s.due}</td><td style="padding:6px 0;font-size:14px;color:#202223;font-weight:600">${dueDate} (${hoursLeft}h)</td></tr>
       </table>
 
-      <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:20px">
-        <p style="font-size:13px;color:#92400E;margin:0;line-height:1.5">${hint}</p>
+      <div style="background:${box.bg};border:1px solid ${box.border};border-radius:8px;padding:12px 16px;margin-bottom:20px">
+        <p style="font-size:13px;color:${box.fg};margin:0;line-height:1.5">${hint.text}</p>
       </div>
 
       <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">
-        ${s.cta}
+        ${cta}
       </a>
     </div>
-    <p style="font-size:12px;color:#8C9196;text-align:center;margin:0">${s.footer}</p>
+    <p style="font-size:12px;color:#8C9196;text-align:center;margin:0;line-height:1.5">${s.turnOff({ setting: `<em>${setting}</em>` })} <a href="${settingsUrl}" style="color:#8C9196;text-decoration:underline">${s.turnOffLink}</a>.</p>
   </div>
 </body>
 </html>`;
@@ -221,12 +285,12 @@ ${reason} — ${amountStr}
 ${ctx.orderName ? `${s.order}: ${ctx.orderName}` : ""}
 ${s.due}: ${dueDate} (${hoursLeft}h)
 
-${hint}
+${hint.text}
 
-${s.cta.replace(" →", "")}: ${disputeUrl}
+${cta.replace(" →", "")}: ${disputeUrl}
 
 ---
-${s.footer}`;
+${s.turnOff({ setting: `"${setting}"` })} ${s.turnOffLink}: ${settingsUrl}`;
 
     const resend = new Resend(RESEND_API_KEY);
     const { error } = await resend.emails.send({
