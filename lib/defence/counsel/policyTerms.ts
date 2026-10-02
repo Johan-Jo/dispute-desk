@@ -9,6 +9,8 @@
  * window runs from delivery. Anything unverified builds no claim.
  */
 
+import { parseJson } from "../modelJson";
+
 export interface ReturnWindow {
   windowDays: number;
   /** The policy sentence the window was read from (original language). */
@@ -40,11 +42,8 @@ export function verifyReturnWindow(policyText: string, extracted: unknown): Retu
 
 export async function extractReturnWindow(policyText: string, model: ModelText): Promise<ReturnWindow | null> {
   const raw = await model(RETURN_WINDOW_SYSTEM, policyText.slice(0, 10_000));
-  const s = raw.indexOf("{");
-  const e = raw.lastIndexOf("}");
-  if (s < 0 || e < s) return null;
   try {
-    return verifyReturnWindow(policyText, JSON.parse(raw.slice(s, e + 1)));
+    return verifyReturnWindow(policyText, parseJson<unknown>(raw));
   } catch {
     return null;
   }

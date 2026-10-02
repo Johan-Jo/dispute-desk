@@ -14,6 +14,7 @@
  */
 
 import { englishOnlyIssues } from "./counsel/checks";
+import { parseJson } from "./modelJson";
 
 export interface ListingText {
   title: string | null;
@@ -58,12 +59,9 @@ export function translationIssues(original: ListingText, english: ListingText): 
 
 export async function translateListing(original: ListingText, call: TranslateCall): Promise<ListingText | null> {
   const raw = await call(LISTING_TRANSLATION_SYSTEM, JSON.stringify(original));
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start < 0 || end < start) return null;
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(raw.slice(start, end + 1)) as Record<string, unknown>;
+    parsed = parseJson<Record<string, unknown>>(raw);
   } catch {
     return null;
   }
