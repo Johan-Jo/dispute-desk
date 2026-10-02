@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { sendDueReminder } from "@/lib/email/sendDueReminder";
+import { sendDueReminder, type DueReminderFilingMode } from "@/lib/email/sendDueReminder";
 import { cronEnvGate } from "@/lib/cron/envGate";
 import { resurfaceHeldReviews } from "@/lib/disputes/resurfaceHeldReviews";
+import { getShopSettings } from "@/lib/automation/settings";
+import { deadlineAwaitsMerchantApproval } from "@/lib/automation/merchantApprovalGate";
+import { REVIEW_STATES } from "@/lib/disputes/reviewState";
 
 /**
  * GET /api/cron/dispute-reminders
@@ -10,6 +13,11 @@ import { resurfaceHeldReviews } from "@/lib/disputes/resurfaceHeldReviews";
  * Called by Vercel Cron once daily (9 AM UTC). For each dispute due within 48h
  * that hasn't had a reminder sent yet, sends a due-date reminder email
  * to the merchant's team email (if the beforeDue preference is enabled).
+ *
+ * The email states what the deadline cron will do with the dispute, resolved
+ * through the same approval gate it files through — so an auto-mode shop is
+ * told there is nothing to do, and a review-mode shop is told nothing is filed
+ * until it approves. Never "depends on your automation setting".
  */
 export async function GET(req: NextRequest) {
   const gate = cronEnvGate(req);
@@ -36,7 +44,7 @@ export async function GET(req: NextRequest) {
   ];
   const { data: disputes, error } = await sb
     .from("disputes")
-    .select("id, shop_id, reason, phase, amount, currency_code, due_at, order_name")
+    .select("id, shop_id, reason, status, phase, amount, currency_code, due_at, order_name, review_state")
     .gt("due_at", new Date().toISOString())
     .lte("due_at", cutoff)
     .is("reminder_sent_at", null)
@@ -68,9 +76,10 @@ export async function GET(req: NextRequest) {
 
   for (const [shopId, shopDisputes] of byShop) {
     // Load setup + shop data once per shop.
-    const [{ data: setup }, { data: shop }] = await Promise.all([
+    const [{ data: setup }, { data: shop }, shopSettings] = await Promise.all([
       sb.from("shop_setup").select("steps").eq("shop_id", shopId).single(),
       sb.from("shops").select("shop_domain").eq("id", shopId).single(),
+      getShopSettings(shopId),
     ]);
 
     const steps = setup?.steps as Record<
@@ -115,6 +124,12 @@ export async function GET(req: NextRequest) {
     }
 
     for (const d of shopDisputes) {
+      const approval = await deadlineAwaitsMerchantApproval(d, shopSettings.auto_save_enabled);
+      const filingMode: DueReminderFilingMode = approval.awaits
+        ? "awaiting_approval"
+        : d.review_state === REVIEW_STATES.APPROVED
+          ? "approved"
+          : "auto";
       const ok = await sendDueReminder({
         to: teamEmail,
         locale: storeLocale,
@@ -128,6 +143,7 @@ export async function GET(req: NextRequest) {
         dueAt: d.due_at!,
         orderName: d.order_name,
         packStatus: packByDispute.get(d.id) ?? null,
+        filingMode,
       });
 
       if (ok) {
