@@ -60,7 +60,9 @@ const DISPUTE = {
   due_at: new Date().toISOString(),
   status: "needs_response",
   normalized_status: "new",
-  review_state: null,
+  // Merchant-approved: these cases test the filing path behind the approval
+  // gate (tests/api/cron/deadlineSubmitAwaitsApproval.test.ts).
+  review_state: "approved",
 };
 
 /** The failed rebuild: no PDF, no validated narrative, no artifact of any kind. */

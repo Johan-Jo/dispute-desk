@@ -211,7 +211,9 @@ function harness(opts: {
     due_at: new Date(Date.now() + 3600_000).toISOString(),
     customer_display_name: "A Customer",
     normalized_status: "in_progress",
-    review_state: null,
+    // Merchant-approved: these cases test the filing path behind the approval
+    // gate (tests/api/cron/deadlineSubmitAwaitsApproval.test.ts).
+    review_state: "approved",
   };
 
   const rpc = vi.fn(async () => ({
