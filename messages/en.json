@@ -6545,7 +6545,7 @@
     "exposureTitle": "Card-network exposure · {month}",
     "thresholdsVerified": "Thresholds verified {date}",
     "headlineEstimate": "Card dispute ratio (estimate)",
-    "headlineDetail": "{n} chargebacks / {d} card orders",
+    "headlineDetail": "{n, plural, one {# chargeback} other {# chargebacks}} / {d} card orders",
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Estimate · all card orders",
     "vampThreshold": "Early warning at {pct}",

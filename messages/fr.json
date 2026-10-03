@@ -6546,7 +6546,7 @@
     "exposureTitle": "Exposition aux réseaux de cartes · {month}",
     "thresholdsVerified": "Seuils vérifiés le {date}",
     "headlineEstimate": "Taux de contestation sur carte (estimation)",
-    "headlineDetail": "{n} contestations / {d} commandes par carte",
+    "headlineDetail": "{n, plural, one {# contestation} other {# contestations}} / {d} commandes par carte",
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Estimation · toutes les commandes par carte",
     "vampThreshold": "Alerte précoce à {pct}",

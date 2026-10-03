@@ -132,7 +132,9 @@ describe("aggregateOrderCounts — Protect coverage value", () => {
     expect([...COVERED_STATUSES].sort()).toEqual(["ACTIVE", "PROTECTED"]);
   });
 
-  it("counts PROTECTED, ACTIVE, and PENDING toward eligibleProtectedValue", () => {
+  // blume-box, September 2026: 2,775 of 4,515 orders INACTIVE. Leaving them
+  // out of the denominator read "Shopify Protect 100%".
+  it("counts every order with a Protect status toward eligibleProtectedValue, INACTIVE included", () => {
     const out = aggregateOrderCounts([
       row({ fraud_protection_level: "PROTECTED", order_total: 100 }),
       row({ fraud_protection_level: "ACTIVE", order_total: 50 }),
@@ -140,7 +142,8 @@ describe("aggregateOrderCounts — Protect coverage value", () => {
       row({ fraud_protection_level: "INACTIVE", order_total: 999 }),
       row({ fraud_protection_level: "NOT_PROTECTED", order_total: 999 }),
     ]);
-    expect(out.eligibleProtectedValue).toBe(175);
+    expect(out.fullyProtectedValue).toBe(150);
+    expect(out.eligibleProtectedValue).toBe(2173);
   });
 
   it("excludes zero/negative/null totals and missing status", () => {

@@ -6546,7 +6546,7 @@
     "exposureTitle": "Kartennetzwerk-Exposition · {month}",
     "thresholdsVerified": "Schwellenwerte geprüft am {date}",
     "headlineEstimate": "Rückbuchungsquote für Kartenzahlungen (Schätzung)",
-    "headlineDetail": "{n} Rückbuchungen / {d} Kartenbestellungen",
+    "headlineDetail": "{n, plural, one {# Rückbuchung} other {# Rückbuchungen}} / {d} Kartenbestellungen",
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Schätzung · alle Kartenbestellungen",
     "vampThreshold": "Frühwarnung bei {pct}",

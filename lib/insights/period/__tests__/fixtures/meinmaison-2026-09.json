@@ -1,0 +1,270 @@
+{
+ "programme": {
+  "periodMonth": "2026-09-01",
+  "cardSettledCount": 1022,
+  "cardSettledPrevCount": 995,
+  "unknownSettledCount": 15,
+  "cardChargebackCount": 1,
+  "cardFraudChargebackCount": 0,
+  "visaChargebackCount": 0,
+  "mcChargebackCount": 0,
+  "mcFraudChargebackCount": 0,
+  "unknownNetworkChargebackCount": 1,
+  "ce30ExcludedCount": 0,
+  "fptExcludedCount": 0,
+  "revenueRecoveredUsd": 0,
+  "vampRatioWithoutDd": 0.00098,
+  "unresolvedRailDisputeCount": 0,
+  "cardDisputeRatio": 0.00098,
+  "vampRatioCalculated": 0.00098,
+  "ecmRatio": 0,
+  "ecmIsLowerBound": true,
+  "vampFloorMet": false,
+  "ecmFloorMet": false,
+  "vampSeverity": "healthy",
+  "ecmSeverity": "healthy",
+  "cardDisputeShare": 0.01087,
+  "cardFramingApplies": true,
+  "unknownPaymentShare": 0.01446
+ },
+ "operational": {
+  "threeDsShare": 0.00471,
+  "threeDsOrders": 5,
+  "threeDsEligible": 1061,
+  "signedForShare": null,
+  "signedForOrders": 0,
+  "signedForEligible": 0,
+  "protectShareByValue": 0.00043,
+  "protectedValue": 85.5,
+  "protectEligibleValue": 196966.62,
+  "highRiskFulfilledShare": null,
+  "medianFulfillmentHours": 18,
+  "winRate": 0.59124,
+  "wonCount": 81,
+  "decidedCount": 137,
+  "byPaymentMethod": [
+   {
+    "method": "paypal",
+    "brand": null,
+    "isCardNetwork": false,
+    "orders": 2718,
+    "chargebacks": 49,
+    "inquiries": 42,
+    "chargebackRate": 0.01803,
+    "disputeRate": 0.03348
+   },
+   {
+    "method": "card",
+    "brand": "Visa",
+    "isCardNetwork": true,
+    "orders": 331,
+    "chargebacks": 1,
+    "inquiries": 0,
+    "chargebackRate": 0.00302,
+    "disputeRate": 0.00302
+   },
+   {
+    "method": "card",
+    "brand": "Mastercard",
+    "isCardNetwork": true,
+    "orders": 416,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": 0,
+    "disputeRate": 0
+   },
+   {
+    "method": "apple_pay",
+    "brand": "Mastercard",
+    "isCardNetwork": true,
+    "orders": 113,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": 0,
+    "disputeRate": 0
+   },
+   {
+    "method": "apple_pay",
+    "brand": "Visa",
+    "isCardNetwork": true,
+    "orders": 106,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": 0,
+    "disputeRate": 0
+   },
+   {
+    "method": "card",
+    "brand": "American Express",
+    "isCardNetwork": true,
+    "orders": 16,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "unknown",
+    "brand": null,
+    "isCardNetwork": false,
+    "orders": 15,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "google_pay",
+    "brand": "Mastercard",
+    "isCardNetwork": true,
+    "orders": 13,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "google_pay",
+    "brand": "Visa",
+    "isCardNetwork": true,
+    "orders": 11,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "apple_pay",
+    "brand": "American Express",
+    "isCardNetwork": true,
+    "orders": 10,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "apple_pay",
+    "brand": null,
+    "isCardNetwork": true,
+    "orders": 3,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "shopify_pay",
+    "brand": "Mastercard",
+    "isCardNetwork": true,
+    "orders": 1,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "google_pay",
+    "brand": "American Express",
+    "isCardNetwork": true,
+    "orders": 1,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   },
+   {
+    "method": "shopify_pay",
+    "brand": "Visa",
+    "isCardNetwork": true,
+    "orders": 1,
+    "chargebacks": 0,
+    "inquiries": 0,
+    "chargebackRate": null,
+    "disputeRate": null
+   }
+  ]
+ },
+ "checkpoints": [
+  {
+   "id": "threeds_auth",
+   "severity": "consider",
+   "titleKey": "fraudIntel.checkpoint_threeds_auth_consider_title",
+   "bodyKey": "fraudIntel.checkpoint_threeds_auth_consider_body",
+   "values": {
+    "current": {
+     "value": 0.471,
+     "format": "pct1"
+    }
+   }
+  },
+  {
+   "id": "protect_coverage_low",
+   "severity": "info",
+   "titleKey": "fraudIntel.checkpoint_protect_coverage_low_info_title",
+   "bodyKey": "fraudIntel.checkpoint_protect_coverage_low_info_body",
+   "values": {
+    "current": {
+     "value": 0.043,
+     "format": "pct0"
+    }
+   }
+  },
+  {
+   "id": "chargeback_rate_vs_vamp",
+   "severity": "healthy",
+   "titleKey": "fraudIntel.checkpoint_chargeback_rate_vs_vamp_healthy_title",
+   "bodyKey": "fraudIntel.checkpoint_chargeback_rate_vs_vamp_healthy_body",
+   "values": {
+    "month": {
+     "value": "2026-09-01",
+     "format": "month"
+    },
+    "current": {
+     "value": 0.098,
+     "format": "pct2"
+    },
+    "vampExcessive": {
+     "value": 1.5,
+     "format": "pct1"
+    },
+    "vampApproaching": {
+     "value": 0.8999999999999999,
+     "format": "pct1"
+    },
+    "visaCount": 0,
+    "vampFloor": 1500
+   },
+   "source": {
+    "label": "Visa VAMP fact sheet (2025)",
+    "url": "https://corporate.visa.com/content/dam/VCOM/corporate/visa-perspectives/security-and-trust/documents/visa-acquirer-monitoring-program-fact-sheet-2025.pdf"
+   }
+  },
+  {
+   "id": "chargeback_rate_vs_ecm",
+   "severity": "healthy",
+   "titleKey": "fraudIntel.checkpoint_chargeback_rate_vs_ecm_healthy_title",
+   "bodyKey": "fraudIntel.checkpoint_chargeback_rate_vs_ecm_healthy_body",
+   "values": {
+    "month": {
+     "value": "2026-09-01",
+     "format": "month"
+    },
+    "current": {
+     "value": 0,
+     "format": "pct2"
+    },
+    "ecmRatio": {
+     "value": 1.5,
+     "format": "pct1"
+    },
+    "ecmCount": 100,
+    "mcCount": 0
+   },
+   "source": {
+    "label": "Mastercard ECP merchant guide",
+    "url": "https://www.jpmorgan.com/content/dam/jpm/merchant-services/payment-network-updates/documents/mastercard-excessive-chargeback-program-guide.pdf"
+   }
+  }
+ ]
+}

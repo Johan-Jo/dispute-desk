@@ -81,12 +81,27 @@ describe("computeOperationalMetrics", () => {
     expect(m.signedForShare).toBeNull();
   });
 
-  it("never reports the Protect share (definition under review)", async () => {
-    const sb = fakeSb({ shopify_orders: [], disputes: [], shopify_order_risk_signals: [], shopify_fulfillment_trackings: [],
-      shop_fraud_daily_metrics: [{ fully_protected_value: 100, eligible_protected_value: 100, orders_high: 4, orders_fulfilled_high_risk: 1 }] });
+  // blume-box September 2026: ACTIVE $145,620 vs INACTIVE $120,294 → ~55%,
+  // not the 100% the rollup's old denominator produced.
+  it("measures Protect coverage against every order with a Protect status, INACTIVE included", async () => {
+    const sb = fakeSb({
+      shopify_orders: [
+        order("x1", "card", { fraud_protection_level: "ACTIVE", order_total: 145620 }),
+        order("x2", "card", { fraud_protection_level: "INACTIVE", order_total: 120294 }),
+        order("x3", "paypal", { fraud_protection_level: null, order_total: 999 }),
+      ],
+      disputes: [], shopify_order_risk_signals: [], shopify_fulfillment_trackings: [],
+      shop_fraud_daily_metrics: [{ orders_high: 4, orders_fulfilled_high_risk: 1 }],
+    });
     const m = await computeOperationalMetrics(sb, "s", "2026-09-01");
-    expect(m.protectShareByValue).toBeNull();
+    expect(m.protectShareByValue).toBe(0.54762);
     expect(m.highRiskFulfilledShare).toBe(0.25);
+  });
+
+  it("returns no Protect share for a shop with no Protect status on any order", async () => {
+    const sb = fakeSb({ shopify_orders: [order("k1", "klarna", { fraud_protection_level: null, order_total: 500 })],
+      disputes: [], shopify_order_risk_signals: [], shopify_fulfillment_trackings: [], shop_fraud_daily_metrics: [] });
+    expect((await computeOperationalMetrics(sb, "s", "2026-09-01")).protectShareByValue).toBeNull();
   });
 });
 
