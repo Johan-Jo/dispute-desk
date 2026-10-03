@@ -6675,15 +6675,18 @@
       "NONCOMPLIANT": "No conforme",
       "UNKNOWN": "Sin motivo indicado"
     },
-    "trendTitleAll": "Tasa de contracargos por mes",
+    "trendTitleAll": "Contracargos por mes",
     "trendScopeLabel": "Métodos de pago en el gráfico",
     "trendScopeAll": "Todos los métodos",
     "trendScopeCards": "Solo tarjetas",
     "legendCards": "Tarjetas",
     "legendOther": "Otros métodos",
-    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# contracargo} other {# contracargos}} de {d} pedidos",
+    "trendSelectedAll": "{month} · {n, plural, one {# contracargo} other {# contracargos}} de {d} pedidos",
     "tipOrdersAll": "de {d} pedidos",
     "tipSplit": "{cards} con tarjeta · {other} con otros métodos",
-    "trendNoteAll": "Todos los métodos de pago. Visa y Mastercard solo miden los pagos con tarjeta; sus umbrales están en «Solo tarjetas»."
+    "trendNoteAll": "Todos los métodos de pago. Visa y Mastercard solo miden los pagos con tarjeta; sus umbrales están en «Solo tarjetas».",
+    "trendAverageAllDown": "Media de 3 meses: {now} al mes, baja desde {prev} en {month}",
+    "trendAverageAllUp": "Media de 3 meses: {now} al mes, sube desde {prev} en {month}",
+    "trendAverageAllOnly": "Media de 3 meses: {now} al mes"
   }
 }

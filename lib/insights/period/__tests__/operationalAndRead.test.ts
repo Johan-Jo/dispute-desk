@@ -74,6 +74,10 @@ describe("computeOperationalMetrics", () => {
       { reason: "PRODUCT_NOT_RECEIVED", disputes: 2 },
       { reason: "UNKNOWN", disputes: 1 },
     ]);
+    // The reasons card and the payment-method table count the same disputes.
+    expect(m.byReason!.reduce((n, r) => n + r.disputes, 0)).toBe(
+      m.byPaymentMethod.reduce((n, r) => n + r.chargebacks + r.inquiries, 0),
+    );
   });
 
   it("takes the card brand from the dispute's reason code when the order has none", async () => {

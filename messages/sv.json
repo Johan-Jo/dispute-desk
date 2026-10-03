@@ -6675,15 +6675,18 @@
       "NONCOMPLIANT": "Ej regelenlig",
       "UNKNOWN": "Ingen orsak angiven"
     },
-    "trendTitleAll": "Andel chargebacks per månad",
+    "trendTitleAll": "Chargebacks per månad",
     "trendScopeLabel": "Betalsätt i diagrammet",
     "trendScopeAll": "Alla betalsätt",
     "trendScopeCards": "Endast kort",
     "legendCards": "Kort",
     "legendOther": "Andra betalsätt",
-    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# chargeback} other {# chargebacks}} av {d} beställningar",
+    "trendSelectedAll": "{month} · {n, plural, one {# chargeback} other {# chargebacks}} av {d} beställningar",
     "tipOrdersAll": "av {d} beställningar",
     "tipSplit": "{cards} med kort · {other} med andra betalsätt",
-    "trendNoteAll": "Alla betalsätt. Visa och Mastercard mäter bara kortbetalningar; deras trösklar finns under ”Endast kort”."
+    "trendNoteAll": "Alla betalsätt. Visa och Mastercard mäter bara kortbetalningar; deras trösklar finns under ”Endast kort”.",
+    "trendAverageAllDown": "3-månaderssnitt {now} per månad, ned från {prev} i {month}",
+    "trendAverageAllUp": "3-månaderssnitt {now} per månad, upp från {prev} i {month}",
+    "trendAverageAllOnly": "3-månaderssnitt {now} per månad"
   }
 }

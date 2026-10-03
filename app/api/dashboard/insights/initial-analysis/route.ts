@@ -495,16 +495,32 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
 
-  // ── Live offline-session scopes ────────────────────────────────
-  const { data: sessionRow } = await sb
-    .from("shop_sessions")
-    .select("scopes")
-    .eq("shop_id", shopId)
-    .eq("session_type", "offline")
-    .is("user_id", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // The Insights page's view (`?view=period`): its two reads that need
+  // nothing from the shop row start now, alongside the shop row itself.
+  const started = Date.now();
+  const lean = req.nextUrl.searchParams.get("view") === "period";
+  const sel = selectPeriod(req.nextUrl.searchParams.get("period"), new Date());
+  const leanPeriod: Promise<InsightsPeriod> | null = !lean
+    ? null
+    : sel.requested > sel.currentMonth
+      ? Promise.resolve<InsightsPeriod>({ status: "not_available", periodMonth: sel.requested })
+      : readInsightsPeriod(sb, shopId, sel.requested, sel.kind);
+  const leanPrevious: Promise<PreviousReasons | null> | null = lean
+    ? readPreviousReasons(sb, shopId, sel.requested).catch(() => null)
+    : null;
+
+  // ── Live offline-session scopes (not part of the page's view) ──
+  const { data: sessionRow } = lean
+    ? { data: null }
+    : await sb
+        .from("shop_sessions")
+        .select("scopes")
+        .eq("shop_id", shopId)
+        .eq("session_type", "offline")
+        .is("user_id", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
   const currentScopeGrant = classifyScopeGrant(
     (sessionRow?.scopes as string | null) ?? null,
   );
@@ -545,23 +561,25 @@ export async function GET(req: NextRequest) {
   // full response took 12 s (Mein Maison) and 20 s (blume-box), of which
   // the page's own data was about 1 s. The dashboard strip and the scope
   // banner still read the full response.
-  if (req.nextUrl.searchParams.get("view") === "period") {
-    const sel = selectPeriod(req.nextUrl.searchParams.get("period"), new Date());
+  if (lean && leanPeriod && leanPrevious) {
     const [period, trend, previousReasons] = await Promise.all([
-      sel.requested > sel.currentMonth
-        ? Promise.resolve<InsightsPeriod>({ status: "not_available", periodMonth: sel.requested })
-        : readInsightsPeriod(sb, shopId, sel.requested, sel.kind),
+      leanPeriod,
       readTrendWindow(sb, shopId, (shopRow?.historical_import_since_date as string | null) ?? null).catch(() => []),
-      readPreviousReasons(sb, shopId, sel.requested).catch(() => null),
+      leanPrevious,
     ]);
-    return NextResponse.json({
-      historicalImportStatus: status,
-      historicalImportOrdersTotal: ordersTotal,
-      period,
-      trend,
-      liveState: null,
-      previousReasons,
-    });
+    return NextResponse.json(
+      {
+        historicalImportStatus: status,
+        historicalImportOrdersTotal: ordersTotal,
+        period,
+        trend,
+        liveState: null,
+        previousReasons,
+      },
+      // Shown in the browser's Network → Timing panel, so the time this
+      // handler takes can be told apart from the rest of the page load.
+      { headers: { "Server-Timing": `insights;dur=${Date.now() - started}` } },
+    );
   }
 
   // ── Pull the rollup tables once for the full 90-day window ─────
@@ -662,7 +680,7 @@ export async function GET(req: NextRequest) {
   // `?period=YYYY-MM` opens a closed month from its record; `?period=mtd`
   // the live month-to-date; no param = the statement month (last complete
   // month). Closed months are never recomputed on read.
-  const { requested, currentMonth, kind } = selectPeriod(req.nextUrl.searchParams.get("period"), new Date());
+  const { requested, currentMonth, kind } = sel;
   const period: InsightsPeriod =
     requested > currentMonth
       ? { status: "not_available", periodMonth: requested }
