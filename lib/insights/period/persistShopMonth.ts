@@ -10,20 +10,24 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { THRESHOLDS_VERSION, VAMP_PER_TRANSACTION_FEE_USD } from "@/lib/insights/programmeThresholds";
-import type { ProgrammeBlock } from "./computeProgrammeBlock";
+import type { ShopMonth } from "./computeShopMonth";
 import { canMarkStable, monthCoverage, type StabilityShop } from "./canMarkStable";
 
 /** v2 = card-rail chargebacks initiated in the month, inquiries excluded,
- *  rounded once (PR2). PR3a adds operational metrics + checkpoints (v3). */
-export const METRICS_VERSION = 2;
+ *  rounded once (PR2). v3 adds operational metrics, disputes by payment
+ *  method and the evaluated checkpoints (PR3a). */
+export const METRICS_VERSION = 3;
 
 /** The row payload: keys are `ratio_snapshots` column names. Legacy columns
  *  carry the v2 meaning (documented in docs/technical.md). */
 export function monthPayload(
-  block: ProgrammeBlock,
+  data: ShopMonth,
   coverage: "full" | "partial",
 ): Record<string, unknown> {
+  const block = data.programme;
   return {
+    operational_metrics: data.operational,
+    checkpoints: data.checkpoints,
     coverage,
     settled_count: block.cardSettledCount,
     tc40_count: block.cardFraudChargebackCount,
@@ -67,7 +71,7 @@ export async function persistShopMonth(
     shopId: string;
     shop: StabilityShop;
     month: string;
-    block: ProgrammeBlock;
+    data: ShopMonth;
     reason: string;
     now: Date;
   },
@@ -75,7 +79,7 @@ export async function persistShopMonth(
   const { data, error } = await sb.rpc("persist_shop_month", {
     p_shop_id: args.shopId,
     p_period_month: args.month,
-    p_values: monthPayload(args.block, monthCoverage(args.shop, args.month)),
+    p_values: monthPayload(args.data, monthCoverage(args.shop, args.month)),
     p_reason: args.reason,
     p_mark_stable: canMarkStable(args.shop, args.month, args.now),
     p_metrics_version: METRICS_VERSION,

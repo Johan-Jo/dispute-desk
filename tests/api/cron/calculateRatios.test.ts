@@ -1,17 +1,17 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
-vi.mock("@/lib/insights/period/computeProgrammeBlock", () => ({ computeProgrammeBlock: vi.fn() }));
-vi.mock("@/lib/insights/period/persistShopMonth", () => ({ persistShopMonth: vi.fn(), METRICS_VERSION: 2 }));
+vi.mock("@/lib/insights/period/computeShopMonth", () => ({ computeShopMonth: vi.fn() }));
+vi.mock("@/lib/insights/period/persistShopMonth", () => ({ persistShopMonth: vi.fn(), METRICS_VERSION: 3 }));
 vi.mock("@/lib/email/adminEmail", () => ({ sendAdminEmail: vi.fn() }));
 
 import { getServiceClient } from "@/lib/supabase/server";
-import { computeProgrammeBlock } from "@/lib/insights/period/computeProgrammeBlock";
+import { computeShopMonth } from "@/lib/insights/period/computeShopMonth";
 import { persistShopMonth } from "@/lib/insights/period/persistShopMonth";
 import { sendAdminEmail } from "@/lib/email/adminEmail";
 import { GET } from "@/app/api/cron/calculate-ratios/route";
 
-const mockCompute = vi.mocked(computeProgrammeBlock);
+const mockCompute = vi.mocked(computeShopMonth);
 const mockPersist = vi.mocked(persistShopMonth);
 const mockEmail = vi.mocked(sendAdminEmail);
 
@@ -37,9 +37,9 @@ function world(opts: { rows: Array<Record<string, unknown>>; firstOrder: string;
 const mockClient = () => vi.mocked(getServiceClient);
 
 const block = (month: string, cb = 1) =>
-  ({ periodMonth: month, cardChargebackCount: cb, visaChargebackCount: cb, mcChargebackCount: 0, cardDisputeRatio: 0.001, ecmRatio: 0, cardFramingApplies: true }) as never;
+  ({ programme: { periodMonth: month, cardChargebackCount: cb, visaChargebackCount: cb, mcChargebackCount: 0, cardDisputeRatio: 0.001, ecmRatio: 0, cardFramingApplies: true }, operational: {}, checkpoints: [] }) as never;
 const finalRow = (month: string, cb = 1) => ({
-  period_month: month, stable_at: "2026-01-01T00:00:00Z", metrics_version: 2, coverage: "full",
+  period_month: month, stable_at: "2026-01-01T00:00:00Z", metrics_version: 3, coverage: "full",
   card_chargeback_count: cb, visa_chargeback_count: cb, mc_chargeback_count: 0,
   card_dispute_ratio: 0.001, mc_ecm_ratio: 0, card_framing_applies: true,
 });
