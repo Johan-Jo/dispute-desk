@@ -138,10 +138,10 @@ describe("checkFeatureAccess", () => {
 interface MockState {
   shopPlan?: string | null;
   remainingPacks?: number;
+  /** `pack_balance.total_used` — usage charged to live grants. */
   usageCount?: number;
   existingUsageEvent?: Record<string, unknown> | null;
-  insertError?: { message: string } | null;
-  cycleStart?: string | null;
+  insertError?: { message: string; code?: string } | null;
 }
 
 function setupSupabase(state: MockState): {
@@ -175,54 +175,24 @@ function setupSupabase(state: MockState): {
         maybeSingle: vi.fn().mockResolvedValue({
           data: state.remainingPacks === undefined
             ? null
-            : { remaining_packs: state.remainingPacks },
+            : {
+                remaining_packs: state.remainingPacks,
+                total_used: state.usageCount ?? 0,
+              },
           error: null,
         }),
       };
     }
     if (table === "pack_usage_events") {
       return {
-        select: vi.fn((_cols, opts) => {
-          if (opts?.head) {
-            // Supabase `head:true, count:'exact'` returns the row count
-            // in `count` and leaves `data` null. The production code
-            // (post-fix) reads `count`; the chain also supports
-            // `.gte("created_at", cycleStart)` for cycle scoping.
-            const headResponse = {
-              data: null,
-              count: state.usageCount ?? 0,
-              error: null,
-            };
-            return {
-              eq: vi.fn().mockReturnValue({
-                gte: vi.fn().mockResolvedValue(headResponse),
-                then: (resolve: (value: typeof headResponse) => unknown) =>
-                  resolve(headResponse),
-              }),
-            };
-          }
-          return {
-            eq: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: state.existingUsageEvent ?? null,
-              error: null,
-            }),
-          };
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: state.existingUsageEvent ?? null,
+            error: null,
+          }),
         }),
         insert: insertSpy,
-      };
-    }
-    if (table === "plan_entitlements") {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data:
-            state.cycleStart === undefined
-              ? null
-              : { billing_cycle_started_at: state.cycleStart },
-          error: null,
-        }),
       };
     }
     if (table === "pack_credits_ledger") {
@@ -271,17 +241,16 @@ describe("checkPackQuota", () => {
     expect(r.plan).toBe("free");
   });
 
-  // Regression: the previous implementation read `data` from a
-  // `head:true, count:'exact'` query, where `data` is always null —
-  // so the merchant-facing "N of <limit> packs used" counter was
-  // permanently stuck at 0 even after pack consumption (real-world
-  // case: surasvenne.myshopify.com on Growth, 4 consumed, UI showed 0).
-  it("reports the consumed usage count, not zero, on paid plans", async () => {
+  // `used` is the usage charged to LIVE grants (`pack_balance.total_used`),
+  // so on a paid plan it is this cycle's usage and used + remaining adds up
+  // to the allowance. It once counted events since a cycle-start date that
+  // never advanced (blume-box, 2026-10-03: "19 of 100 used" in a cycle with
+  // no usage at all).
+  it("reports usage charged to live grants on paid plans", async () => {
     setupSupabase({
       shopPlan: "growth",
       remainingPacks: 96,
       usageCount: 4,
-      cycleStart: "2026-05-15T23:07:00Z",
     });
     const r = await checkPackQuota("shop-1");
     expect(r.used).toBe(4);
@@ -364,6 +333,52 @@ describe("consumePack — credit ledger", () => {
       expect(e.shopId).toBe("shop-9");
       expect(e.remaining).toBe(0);
     }
+  });
+});
+
+describe("consumePack — the database refuses or dedupes the insert", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("trigger refusal (no live grant with room) → PackLimitReachedError, not a silent success", async () => {
+    setupSupabase({
+      remainingPacks: 1,
+      existingUsageEvent: null,
+      insertError: {
+        message: "PACK_LIMIT_REACHED: shop shop-1 has no live pack grant with capacity",
+        code: "P0001",
+      },
+    });
+
+    await expect(
+      consumePack({ shopId: "shop-1", disputeId: "dispute-1", eventType: "finalize" }),
+    ).rejects.toBeInstanceOf(PackLimitReachedError);
+  });
+
+  it("unique violation from a concurrent caller → consumed:0", async () => {
+    setupSupabase({
+      remainingPacks: 4,
+      existingUsageEvent: null,
+      insertError: { message: "duplicate key value violates unique constraint", code: "23505" },
+    });
+
+    const r = await consumePack({
+      shopId: "shop-1",
+      disputeId: "dispute-1",
+      eventType: "finalize",
+    });
+    expect(r).toEqual({ ok: true, consumed: 0, remaining: 4 });
+  });
+
+  it("any other insert error is thrown, never reported as a consumed pack", async () => {
+    setupSupabase({
+      remainingPacks: 4,
+      existingUsageEvent: null,
+      insertError: { message: "connection reset" },
+    });
+
+    await expect(
+      consumePack({ shopId: "shop-1", disputeId: "dispute-1", eventType: "finalize" }),
+    ).rejects.toThrow("consumePack failed");
   });
 });
 

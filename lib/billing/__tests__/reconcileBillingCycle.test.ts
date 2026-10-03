@@ -48,6 +48,9 @@ interface SbState {
     shopify_subscription_gid: string | null;
   } | null;
   existingLedgerForReference: { id: string } | null;
+  /** A monthly grant already expiring near this cycle's end (the one the
+   *  subscribe callback wrote under its own reference). */
+  sameCycleLedger?: { id: string } | null;
   updates: Array<{ table: string; row: Record<string, unknown> }>;
   inserts: Array<{ table: string; row: Record<string, unknown> }>;
 }
@@ -114,6 +117,16 @@ function buildSb(state: SbState) {
                   maybeSingle: vi.fn().mockResolvedValue({
                     data: state.existingLedgerForReference,
                     error: null,
+                  }),
+                }),
+                gte: vi.fn().mockReturnValue({
+                  lte: vi.fn().mockReturnValue({
+                    limit: vi.fn().mockReturnValue({
+                      maybeSingle: vi.fn().mockResolvedValue({
+                        data: state.sameCycleLedger ?? null,
+                        error: null,
+                      }),
+                    }),
                   }),
                 }),
               }),
@@ -267,6 +280,10 @@ describe("reconcileBillingCycleForShop", () => {
       billing_cycle_ends_at: "2026-07-01T00:00:00Z",
       shopify_subscription_gid: "gid://shopify/AppSubscription/100",
     });
+    // The new cycle starts when its packs are granted.
+    expect(state.updates.map((u) => u.row)).toContainEqual({
+      billing_cycle_started_at: NOW.toISOString(),
+    });
   });
 
   it("duplicate run (existing ledger row) does not double-grant", async () => {
@@ -302,6 +319,35 @@ describe("reconcileBillingCycleForShop", () => {
     expect(auditTypes).not.toContain("monthly_credits_granted");
     // reference value verified via the SELECT path inside the SB mock
     expect(reference).toBe("monthly_shop-1_2026-07-01T00:00:00Z");
+  });
+
+  // blume-box, 2026-07-23: the subscribe callback had granted the first
+  // cycle as `monthly_growth_<chargeId>`; the reconciler's own reference
+  // did not match it and granted the same cycle again.
+  it("a monthly grant already covering this cycle (callback reference) is not granted again", async () => {
+    const state: SbState = {
+      shop: { uninstalled_at: null },
+      session: { id: "s1" },
+      entitlement: BASE_ENTITLEMENT,
+      existingLedgerForReference: null,
+      sameCycleLedger: { id: "ledger-from-callback" },
+      updates: [],
+      inserts: [],
+    };
+    mockGetClient.mockReturnValue(buildSb(state) as never);
+    mockRequest.mockResolvedValue(shopifyResponse("ACTIVE") as never);
+
+    const result = await reconcileBillingCycleForShop({
+      shopId: "shop-1",
+      now: NOW,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      action: "credits_duplicate",
+      state: "active",
+    });
+    expect(mockGrant).not.toHaveBeenCalled();
   });
 
   it("unique-violation on grant insert is treated as duplicate", async () => {

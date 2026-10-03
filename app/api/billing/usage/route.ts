@@ -40,25 +40,28 @@ export async function GET(req: NextRequest) {
     // silently missing (blume-box's 200 admin packs read as invisible,
     // 2026-07-27). Without this, granted credits appear nowhere beyond the
     // ledger.
+    //
+    // `remaining_packs` is what is LEFT of each grant, not what was
+    // granted — a 200-pack bundle with 80 used lists as +120.
     sb
-      .from("pack_credits_ledger")
-      .select("packs, expires_at, created_at, reference, source")
+      .from("pack_grant_balance")
+      .select("remaining_packs, expires_at, created_at, reference, source")
       .eq("shop_id", shopId)
+      .eq("live", true)
       .in("source", ["topup", "admin_adjustment"])
-      .gt("packs", 0)
-      .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
+      .gt("remaining_packs", 0)
       .order("expires_at", { ascending: true })
       .then((res) => res.data ?? []),
   ]);
 
   const topups = (topupRows as Array<{
-    packs: number;
+    remaining_packs: number;
     expires_at: string | null;
     created_at: string;
     reference: string | null;
     source: string;
   }>).map((row) => ({
-    packs: row.packs,
+    packs: row.remaining_packs,
     expiresAt: row.expires_at,
     purchasedAt: row.created_at,
     reference: row.reference,
