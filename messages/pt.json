@@ -6674,6 +6674,16 @@
       "INSUFFICIENT_FUNDS": "Fundos insuficientes",
       "NONCOMPLIANT": "Não conforme",
       "UNKNOWN": "Sem motivo informado"
-    }
+    },
+    "trendTitleAll": "Taxa de estornos por mês",
+    "trendScopeLabel": "Formas de pagamento no gráfico",
+    "trendScopeAll": "Todas as formas",
+    "trendScopeCards": "Só cartões",
+    "legendCards": "Cartões",
+    "legendOther": "Outras formas",
+    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# estorno} other {# estornos}} de {d} pedidos",
+    "tipOrdersAll": "de {d} pedidos",
+    "tipSplit": "{cards} em cartões · {other} em outras formas",
+    "trendNoteAll": "Todas as formas de pagamento. Visa e Mastercard só medem pagamentos com cartão; os limites delas estão em “Só cartões”."
   }
 }

@@ -6674,6 +6674,16 @@
       "INSUFFICIENT_FUNDS": "Otillräckliga medel",
       "NONCOMPLIANT": "Ej regelenlig",
       "UNKNOWN": "Ingen orsak angiven"
-    }
+    },
+    "trendTitleAll": "Andel chargebacks per månad",
+    "trendScopeLabel": "Betalsätt i diagrammet",
+    "trendScopeAll": "Alla betalsätt",
+    "trendScopeCards": "Endast kort",
+    "legendCards": "Kort",
+    "legendOther": "Andra betalsätt",
+    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# chargeback} other {# chargebacks}} av {d} beställningar",
+    "tipOrdersAll": "av {d} beställningar",
+    "tipSplit": "{cards} med kort · {other} med andra betalsätt",
+    "trendNoteAll": "Alla betalsätt. Visa och Mastercard mäter bara kortbetalningar; deras trösklar finns under ”Endast kort”."
   }
 }
