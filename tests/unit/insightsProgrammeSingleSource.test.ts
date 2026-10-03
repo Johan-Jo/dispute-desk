@@ -37,7 +37,7 @@ function walk(dir: string, out: string[] = []): string[] {
     if (e.isDirectory()) {
       if (e.name === "__tests__") continue;
       walk(full, out);
-    } else if (/\.(ts|tsx)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) {
+    } else if (/\.(ts|tsx|mjs)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) {
       out.push(full);
     }
   }
@@ -76,5 +76,23 @@ describe("I4 — Insights programme figures have one source", () => {
       return /ratio_snapshots[\s\S]{0,300}?order\(\s*"period_month"\s*,\s*\{\s*ascending:\s*false\s*\}\s*\)[\s\S]{0,80}?limit\(\s*1\s*\)/.test(src);
     });
     expect(offenders.map(rel)).toEqual([]);
+  });
+
+  // I6: one writer. A second writer is how four numbers for one month came
+  // to exist; persist_shop_month locks, hashes, logs and upserts together.
+  it("ratio_snapshots is written only through persistShopMonth", () => {
+    const all = ["lib", "app", "scripts"].flatMap((d) => walk(d));
+    const direct = all.filter((f) =>
+      /from\(\s*"ratio_snapshots"\s*\)[\s\S]{0,200}?\.(upsert|insert|update|delete)\(/.test(
+        fs.readFileSync(f, "utf8"),
+      ),
+    );
+    expect(direct.map(rel)).toEqual([]);
+    const rpc = all.filter(
+      (f) =>
+        rel(f) !== "lib/insights/period/persistShopMonth.ts" &&
+        /rpc\(\s*"persist_shop_month"/.test(fs.readFileSync(f, "utf8")),
+    );
+    expect(rpc.map(rel)).toEqual([]);
   });
 });

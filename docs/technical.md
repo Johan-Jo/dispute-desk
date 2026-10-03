@@ -2516,21 +2516,16 @@ Monthly per-shop calculated **VAMP** / **MC ECM** / **MC EFM** ratios with the c
 
 Source: [`docs/epics/EPIC-LSE-5-ratio-dashboard.md`](epics/EPIC-LSE-5-ratio-dashboard.md).
 
-### Calculation ([`lib/liabilityShift/ratios/calculate.ts`](../lib/liabilityShift/ratios/calculate.ts))
+### Calculation and storage (v2, 2026-10)
 
-```
-VAMP_ratio = (count(TC40_fraud) + count(TC15_other)) / count(TC05_settled)
-```
+`lib/liabilityShift/ratios/calculate.ts` and `scripts/backfill-ratio-snapshots.mjs` are **deleted** (they computed across all payment rails, counted inquiries as TC15 and turned an empty denominator into 0). The computation is `computeProgrammeBlock` (below); the record is `ratio_snapshots`, one correctable row per `(shop_id, period_month)`, written **only** by the SQL function `persist_shop_month` via `lib/insights/period/persistShopMonth.ts` (CI invariant I6 in `tests/unit/insightsProgrammeSingleSource.test.ts`).
 
-Approximations from Shopify data:
-- `TC40_fraud` ≈ disputes with `reason=fraudulent` AND `phase=chargeback`
-- `TC15_other` ≈ all other disputes
-- `TC05_settled` ≈ paid orders in the month, refunds/voids excluded
-- **Exclusion from numerator:** disputes with `final_outcome='won'` whose attributed evidence pack was `package_type='ce_30'` or `'fpt'` (drives the counterfactual)
-
-Mastercard ratios partition by `network_reason_code` prefix `"48"`:
-- `mc_ecm_ratio` = MC chargebacks / settled
-- `mc_efm_ratio` = MC fraud-only chargebacks / settled
+- **Migration `20261003100000_insights_period_rows.sql`** adds the v2 columns (`card_chargeback_count`, `visa_/mc_chargeback_count`, `unknown_network_chargeback_count`, `unresolved_rail_dispute_count`, `unknown_settled_count`, `ecm_denominator_count`, `card_dispute_ratio`, `card_dispute_share`, `vamp_floor_met`, `ecm_floor_met`, `card_framing_applies`, `coverage full|partial`, `stable_at`, `revised_at`, `revision`, `revision_reason`, `metrics_version`, `thresholds_version`, `operational_metrics`, `checkpoints`, `values_hash`), the log `ratio_snapshot_revisions` (every state of every row; **revision 0 = the pre-v2 backup** of all existing rows) and `insights_ops_alerts` (dedup for ops emails). Both new tables: RLS on, no policies, client roles revoked.
+- **`persist_shop_month(shop, month, values, reason, mark_stable, metrics_version, thresholds_version)`**: advisory lock per (shop, month) → coverage check → raises on any ratio with more than 5 decimals (one representation) → equal `md5(values)` = no new revision (only `stable_at` may be set) → otherwise log revision N+1 and upsert the row verbatim from `values`. `security definer`, execute revoked from `public`/`anon`/`authenticated`. Acceptance test: `scripts/sql/test_persist_shop_month.sql` (dev).
+- **Legacy columns, v2 meaning:** `settled_count` = card settled orders in M; `tc40_count` = card fraud chargebacks; `tc15_count` = other card chargebacks (inquiries never); `vamp_ratio_calculated` = after DisputeDesk CE 3.0/FPT exclusions; `vamp_ratio_without_dd` = `card_dispute_ratio`; `mc_ecm_ratio` = lower bound vs all card orders in M−1; `mc_settled_count` = 0 until card-brand denominators (PR5); `mc_efm_ratio` NULL (EFM no longer shown).
+- **Stability (`lib/insights/period/canMarkStable.ts`):** a month becomes `final` (eligible for the email and the default view) once it is past the 8th of the next month 00:00 UTC, the history import is `complete` with a `completed_at`, and the import's `since_date` is not after the month start (otherwise `coverage='partial'`, never final). The completion date does not bound stability. Final is not immutable: later corrections are new revisions.
+- **Read path (`lib/insights/period/readProgrammeMonth.ts`):** both the Insights route (`programmeMonth`) and `/api/ratios/current` read the `statementMonth(now)` row (`stable_at` → `final`, else `provisional`). No v2 row yet → the same computation live, labelled `provisional`. Read error → `{status:"error"}`.
+- **Recompute / rollback:** `scripts/recompute-insights-months.ts --expect-ref <ref> --shop <domain>|--all --reason <text> [--from YYYY-MM] [--to YYYY-MM] [--dry-run]`, or `--month YYYY-MM --restore-revision N` (writes revision N's values as a new revision). Refuses when the env file's Supabase URL does not contain `--expect-ref`.
 
 ### Thresholds ([`lib/insights/programmeThresholds.ts`](../lib/insights/programmeThresholds.ts) — the only table)
 `lib/liabilityShift/ratios/thresholds.ts` re-exports it; its old 0.65% / 1.00% / 0.50% values and the 80% yellow band are gone (they disagreed with the checkpoints on the same page). `THRESHOLDS_VERSION = "2026-10-a"`.
@@ -2556,7 +2551,7 @@ Migration `20260514160000_lse5_ratio_snapshots.sql`:
 - `GET /api/ratios/trend?months=12` — chronological series for the trend chart. NULL ratios stay NULL.
 
 ### Cron
-The nightly `calculate_ratios` job runs `calculateRatiosForMonth` per shop for the current month (re-run for late-arriving data) and the previous month if it's the first 7 days of the new one. Wire to Vercel cron when ready to enable.
+`/api/cron/calculate-ratios` (02:00 UTC, `cronEnvGate` first) maintains the month rows for every installed shop with a complete import: (1) last month recomputed nightly and marked final when `canMarkStable` allows; (2) self-heal — up to 3 missing or not-yet-final closed months of the trend window per run, oldest first, zero-dispute months included (12 months fill in ≤ 4 nights); (3) the 2 final months before last month are recomputed and revised (`late_data`) only when `driftIsMaterial` — a changed chargeback count, a headline that reads differently at 2 dp, or a framing change; refund churn below display precision writes nothing; (4) from the 9th, if last month is still not final, one email to support@disputedesk.app, deduped by `insights_ops_alerts`. The current, unfinished month is never written. 240 s budget; shops not reached are picked up the next night.
 
 ## Direct Network Submission (LSE-6) — schema stub only
 

@@ -27,7 +27,8 @@ import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendP
 import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 import { railSegmentationFor } from "@/lib/insights/railSegmentation";
-import { programmeMonthFor, type ProgrammeMonth } from "@/lib/insights/period/computeProgrammeBlock";
+import type { ProgrammeMonth } from "@/lib/insights/period/computeProgrammeBlock";
+import { readProgrammeMonth } from "@/lib/insights/period/readProgrammeMonth";
 import { statementMonth } from "@/lib/insights/period/months";
 
 export const runtime = "nodejs";
@@ -578,9 +579,10 @@ export async function GET(req: NextRequest) {
   );
 
   // ── Card-network programme, one calendar month ─────────────────
-  // VAMP/ECM are judged per calendar month, on the last complete month.
+  // VAMP/ECM are judged per calendar month, on the last complete month,
+  // read from the stored month row (the record the emails also read).
   // A failure here is a state, not a page failure.
-  const programmeMonth = await programmeMonthFor(
+  const programmeMonth = await readProgrammeMonth(
     sb,
     shopId,
     statementMonth(new Date()),
