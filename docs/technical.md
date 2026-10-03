@@ -1609,6 +1609,8 @@ The PRD's original "Your current chargeback health is At Risk" as the dominant o
 
 Removed: the Shopify risk hero and breakdown, the risk-vs-outcome chart, the 30-day KPI strips, the chargeback-health gauge and weekly sparkline, and the separate Liability-shift card (`LiabilityShiftImpact.tsx`, `OperationalCheckpoints.tsx` and `initial-analysis.module.css` deleted). The route still returns the legacy 90-day fields for the dashboard strip. Copy lives under `insightsPage.*` in all 6 locales.
 
+**Load time (2026-10-03).** The page requests `GET /api/dashboard/insights/initial-analysis?view=period[&period=YYYY-MM|mtd]`, which returns only what it renders (`historicalImportStatus`, `historicalImportOrdersTotal`, `period`, `trend`, `previousReasons`; `liveState` is `null`), read in parallel. The full response, still used by the dashboard strip and the scope banner, also builds the 90-day blocks, which page every order of the last 90 days twice: measured on prod it took 12 s (Mein Maison) and 20 s (blume-box), of which the page's own data was about 1 s. In the full response the two order scans and the conversion RPC now run together instead of one after the other. `tests/api/insightsPeriodView.test.ts` pins that the period view runs none of the 90-day work.
+
 Removed with the trend-first layout (2026-10-03): the **Right now** card (needs action, with the bank, nearest deadline) and the per-programme severity chips, neither of which is in the design. The route still returns `liveState`; the `insightsPage.live*` strings are kept until that is confirmed.
 
 ### Operational Checkpoints
