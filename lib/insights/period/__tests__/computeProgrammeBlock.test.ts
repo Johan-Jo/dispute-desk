@@ -160,17 +160,27 @@ describe("computeProgrammeBlock", () => {
     expect(b.cardDisputeRatio).toBe(0.00144);
   });
 
-  it("decides card framing from this month's disputes only", async () => {
-    // A PayPal-heavy September: card framing does not apply, whatever
-    // happened in earlier months.
+  // Mein Maison / cay-collective: most disputes are PayPal or Klarna, but
+  // they take ~1,000 / ~750 card orders a month. Visa and Mastercard measure
+  // those card payments, so the card verdict must show (0% here), never
+  // "not applicable".
+  it("applies the card programmes whenever there is card volume, whatever the dispute mix", async () => {
     const { sb } = fakeSb({
-      counts: { "card:2026-09-01": 200, "card:2026-08-01": 200 },
-      disputes: [cb(1), cb(2), cb(3)],
-      methodByGid: { o1: "paypal", o2: "paypal", o3: "card" },
+      counts: { "card:2026-09-01": 752, "card:2026-08-01": 512 },
+      disputes: [cb(1, { phase: "inquiry" }), cb(2, { phase: "inquiry" }), cb(3, { phase: "inquiry" })],
+      methodByGid: { o1: "klarna", o2: "klarna", o3: "klarna" },
     });
     const b = await computeProgrammeBlock(sb, "shop", SEP);
+    expect(b.cardFramingApplies).toBe(true);
+    expect(b.cardDisputeRatio).toBe(0);
+    expect(b.vampSeverity).toBe("healthy");
+    expect(b.cardDisputeShare).toBe(0);
+  });
+
+  it("does not apply below 50 card orders", async () => {
+    const { sb } = fakeSb({ counts: { "card:2026-09-01": 10, "card:2026-08-01": 10 }, disputes: [], methodByGid: {} });
+    const b = await computeProgrammeBlock(sb, "shop", SEP);
     expect(b.cardFramingApplies).toBe(false);
-    expect(b.cardDisputeShare).toBe(0.33333);
   });
 });
 

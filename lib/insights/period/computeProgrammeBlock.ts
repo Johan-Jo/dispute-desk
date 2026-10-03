@@ -22,7 +22,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CheckpointSeverity } from "@/lib/insights/checkpoints.types";
-import { classifyRail, CARD_FRAMING_MIN_DISPUTE_SHARE } from "@/lib/insights/railSegmentation";
+import { classifyRail } from "@/lib/insights/railSegmentation";
 import {
   PROGRAMME_MIN_SETTLED,
   VAMP_COUNT_FLOOR,
@@ -82,8 +82,9 @@ export interface ProgrammeBlock {
   ecmSeverity: CheckpointSeverity | null;
   /** Card share of this month's classified disputes, 0–1; null when none. */
   cardDisputeShare: number | null;
-  /** Card share of this month's classified disputes ≥ 0.5 — or, in a month
-   *  with no classified dispute, a card book with measurable card volume. */
+  /** At least PROGRAMME_MIN_SETTLED card settled orders this month: Visa and
+   *  Mastercard measure this merchant's card payments. Independent of the
+   *  dispute mix. */
   cardFramingApplies: boolean;
   /** Orders with no payment method recorded, as a share of card + unknown. */
   unknownPaymentShare: number | null;
@@ -233,11 +234,14 @@ export async function computeProgrammeBlock(
   const vampRatioWithoutDd = cardDisputeRatio;
   const ecmRatio = ratio(mcCount, cardSettledPrev);
 
-  const cardFramingApplies =
-    classifiedDisputes > 0
-      ? cardDisputes / classifiedDisputes >= CARD_FRAMING_MIN_DISPUTE_SHARE &&
-        cardSettled >= PROGRAMME_MIN_SETTLED
-      : cardSettled >= PROGRAMME_MIN_SETTLED;
+  // Visa and Mastercard measure a merchant's CARD payments, whatever else the
+  // merchant takes. So the programmes apply whenever there is measurable card
+  // volume. An earlier rule hid the card verdict when most disputes were on
+  // PayPal or Klarna, which told Mein Maison (1,000 card orders a month) and
+  // cay-collective (750) that the programmes "do not apply" — they do, and
+  // both were at or near 0%. The dispute mix is shown by the per-method
+  // breakdown, not by suppressing a valid card figure.
+  const cardFramingApplies = cardSettled >= PROGRAMME_MIN_SETTLED;
 
   return {
     periodMonth,

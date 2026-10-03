@@ -105,21 +105,20 @@ describe("evaluateCheckpoints — Mastercard ECM rule (one calendar month)", () 
   });
 });
 
-describe("evaluateCheckpoints — card programmes only apply to card disputes", () => {
-  // cay-collective is 100% Klarna and Mein Maison mostly PayPal. Neither is
-  // measured by Visa or Mastercard; `healthy` would be as wrong as `breach`.
-  const klarnaShop = withProgramme({ cardFramingApplies: false, cardDisputeShare: 0 });
-
-  it("emits a not-applicable observation instead of a VAMP verdict", () => {
-    const vamp = find(klarnaShop, "chargeback_rate_vs_vamp");
-    expect(vamp?.severity).toBe("info");
-    expect(vamp?.titleKey).toContain("not_applicable");
+describe("evaluateCheckpoints — card programmes follow card volume, not the dispute mix", () => {
+  // cay-collective: 752 card orders, 0 card chargebacks, every dispute Klarna.
+  // Visa measures the card payments; the verdict is healthy 0.00%.
+  it("judges a Klarna-heavy shop on its card payments", () => {
+    const cay = withProgramme({ cardDisputeRatio: 0, visaChargebackCount: 0, mcChargebackCount: 0, ecmRatio: 0, cardDisputeShare: 0 });
+    expect(find(cay, "chargeback_rate_vs_vamp")?.severity).toBe("healthy");
+    expect(find(cay, "chargeback_rate_vs_vamp")?.values.current).toBe("0.00%");
+    expect(find(cay, "chargeback_rate_vs_ecm")?.severity).toBe("healthy");
   });
 
-  it("emits a not-applicable observation instead of an ECM verdict", () => {
-    const ecm = find(klarnaShop, "chargeback_rate_vs_ecm");
-    expect(ecm?.severity).toBe("info");
-    expect(ecm?.titleKey).toContain("not_applicable");
+  it("gives no verdict without measurable card volume", () => {
+    const tiny = withProgramme({ cardFramingApplies: false, cardDisputeRatio: null, ecmRatio: null });
+    expect(find(tiny, "chargeback_rate_vs_vamp")).toBeUndefined();
+    expect(find(tiny, "chargeback_rate_vs_ecm")).toBeUndefined();
   });
 });
 
