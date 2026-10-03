@@ -43,6 +43,19 @@ const SETTLED_STATUSES = ["PAID", "PARTIALLY_REFUNDED"];
 const VISA_REASON = /^1[0-3]\./;
 const MC_REASON = /^48/;
 
+/**
+ * The card network a dispute's network reason code names, in the spelling
+ * `shopify_order_risk_signals.card_brand` uses. A network-specific code is
+ * only ever resolved when the network is known from Shopify's payment
+ * details (lib/disputes/networkReasonCode.ts), so the code is evidence of
+ * the network even when the order's own card brand was never captured.
+ */
+export function reasonCodeNetwork(code: string | null | undefined): "Visa" | "Mastercard" | null {
+  if (VISA_REASON.test(code ?? "")) return "Visa";
+  if (MC_REASON.test(code ?? "")) return "Mastercard";
+  return null;
+}
+
 /** What the routes return for the statement month. `error` is an explicit
  *  state the page renders as "temporarily unavailable" — never a blank card
  *  and never the whole-page failure banner. */

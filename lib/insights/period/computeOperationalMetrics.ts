@@ -17,6 +17,7 @@ import { winRateCounts } from "@/lib/disputes/winRate";
 import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 import { protectValue } from "@/lib/insights/protectCoverage";
 import { monthEnd } from "./months";
+import { reasonCodeNetwork } from "./computeProgrammeBlock";
 
 const SETTLED = ["PAID", "PARTIALLY_REFUNDED"];
 /** Below this many orders a method's rates are not shown. */
@@ -142,11 +143,11 @@ export async function computeOperationalMetrics(
   );
 
   // ── Disputes opened in the month, resolved to their order's method ──
-  const disputes = await pageAll<{ phase: string | null; order_gid: string | null; reason: string | null }>(
+  const disputes = await pageAll<{ phase: string | null; order_gid: string | null; reason: string | null; network_reason_code: string | null }>(
     (o) =>
       sb
         .from("disputes")
-        .select("phase, order_gid, reason")
+        .select("phase, order_gid, reason, network_reason_code")
         .eq("shop_id", shopId)
         .gte("initiated_at", from)
         .lt("initiated_at", to)
@@ -179,6 +180,17 @@ export async function computeOperationalMetrics(
     "card brands",
   )) {
     brandByOrder.set(r.shopify_order_id, r.card_brand);
+  }
+
+  // An order whose card brand was never captured (blume-box #352535: several
+  // cards tried at checkout, no brand on the signals row) still has a known
+  // network when its dispute's reason code names one. Without this the
+  // dispute sat on a brandless "Card" row of its own.
+  for (const d of disputes) {
+    if (!d.order_gid || brandByOrder.get(d.order_gid)) continue;
+    if (classifyRail(methodByOrder.get(d.order_gid) ?? null) !== "card") continue;
+    const network = reasonCodeNetwork(d.network_reason_code);
+    if (network) brandByOrder.set(d.order_gid, network);
   }
 
   const keyOf = (orderId: string | null): { method: string; brand: string | null; isCardNetwork: boolean } => {
