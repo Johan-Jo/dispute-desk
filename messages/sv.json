@@ -3828,8 +3828,8 @@
         "body": "Shopify grupperar alla tvister i 14 breda kategorier. Men Visa och Mastercard använder mycket mer specifika koder under: Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855. Den specifika nätverkskoden avgör hur den utfärdande banken bedömer dina bevis och vilken typ av försvarsspråk som vinner.\n\nDisputeDesk löser nätverksorsakskoden automatiskt för varje tvist. Upplösningen använder flera signaler i pålitlighetsordning: direkt (typat fält på Shopify-tvisten — exponeras för närvarande inte, reserverat för framtida API-ändring), härlett (extraherat från gateway-kvittot när det är tillgängligt, endast Shopify Payments), inferterat (bästa gissning från Shopify-enum + nätverk + kontext), eller okänt.\n\nDetaljsidan visar den upplösta koden (t.ex. 'Visa 13.1 — Varor/tjänster ej mottagna') med konfidensindikator. Tillförlitlig upplösning gör det möjligt att: upptäcka CE 3.0-behörighet (Visa 10.4), upptäcka FPT-behörighet (Mastercard 4837 / 4863), välja mer specifika försvarsmallar per kod och tillämpa anpassade bevischecklistor.\n\nDu behöver inte göra något — upplösningen är automatisk. Förblir koden 'okänd' faller DisputeDesk tillbaka på standardhanteringen av Shopify-kategorin."
       },
       "vampRatioExplained": {
-        "title": "VAMP, ECM och EFM — vad siffrorna betyder",
-        "body": "Kortnätverk övervakar tre viktiga chargeback-nyckeltal för varje handlare. Att överskrida tröskelvärdena utlöser avgifter, inskrivning i övervakningsprogram och i extrema fall kontostängning. DisputeDesk-nyckeltalspanelen visar dina beräknade uppskattningar plus den kontrafaktiska effekten av DisputeDesks vinster.\n\nDe tre nyckeltalen:\n- Visa VAMP — totala tvister / totalt avräknade transaktioner. Standardtröskel: 0,65 %. Överdriven: 1,50 %. Att passera den överdrivna utlöser en tillsynsavgift per transaktion.\n- Mastercard ECM — Mastercard-chargebacks / Mastercard-avräkningar. Tröskel: 1,00 %.\n- Mastercard EFM — Mastercard bedrägeri-chargebacks / Mastercard-avräkningar. Tröskel: 0,50 %.\n\nDisputeDesk visar gul varning vid 80 % av tröskeln och röd varning vid passering, samt skickar e-post vid bandsändring.\n\nDen kontrafaktiska linjen är nyckelinsikten: DisputeDesk-tillskrivna vinster (CE 3.0 och FPT) tas bort från VAMP-täljaren. Den streckade linjen visar vad ditt nyckeltal skulle vara utan DisputeDesks arbete — gapet är det levererade värdet.\n\nViktigt: dessa är beräknade uppskattningar från din Shopify-data, inte de officiella siffror din inlösare rapporterar. Endast inlösaren har det auktoritativa nyckeltalet. DisputeDesk använder standardformeln men approximerar TC40 / TC15 / TC05-koder från Shopifys tvist- och orderdata. Om inlösarens siffra skiljer sig är dennes den som gäller för efterlevnad.\n\nMånadsvis effektsammanfattning visar: kvalificerade tvister, vinster per kanal, transaktioner borttagna från VAMP, uppskattade undvikna avgifter och uppskattad återvunnen intäkt."
+        "title": "VAMP och ECM — vad siffrorna betyder",
+        "body": "Visa och Mastercard följer hur många av en handlares kortbetalningar som blir chargebacks. DisputeDesk visar en beräknad uppskattning för båda programmen, en kalendermånad i taget.\n\nSå räknar vi:\n- Månad: den senaste hela kalendermånaden. Den är preliminär till den 8:e i nästa månad, eftersom sena chargebacks fortsätter att komma in i ungefär en vecka; därefter är den slutlig.\n- Chargebackfrekvens för kortbetalningar (uppskattning av Visa VAMP): kortchargebacks som öppnats under månaden ÷ kortbeställningar som lagts och betalats under månaden. Förfrågningar räknas inte, och inte heller PayPal, Klarna eller andra betalningar utan kort.\n- Mastercard ECM: Mastercard-chargebacks under månaden ÷ kortbeställningar föregående månad. Tills vi kan skilja Mastercard-beställningar från andra kort är det en undre gräns.\n- Med färre än 50 kortbeställningar under en månad visar vi ingen kvot, eftersom en enda tvist skulle flytta den flera procentenheter.\n\nTrösklar:\n- Visa VAMP: tidig varning vid 0,9 %, Excessive vid 1,5 %. Visa tillämpar VAMP först från 1 500 tvister i månaden.\n- Mastercard ECM: 1,5 % och minst 100 chargebacks i månaden (High ECM: 3,0 % och 300).\n- En månad över kvoten men under gränsen för tillämpning visas som information, aldrig som en överträdelse.\n\nOm de flesta av dina tvister kommer via PayPal, Klarna eller en annan leverantör utan kort mäter de här programmen dig inte, och vi säger det i stället för att visa ett utlåtande.\n\nDen kontrafaktiska linjen är nyckelinsikten: DisputeDesk-tillskrivna vinster (CE 3.0 och FPT) tas bort från VAMP-täljaren. Den streckade linjen visar vad ditt nyckeltal skulle vara utan DisputeDesks arbete — gapet är det levererade värdet.\n\nViktigt: dessa är beräknade uppskattningar från din Shopify-data, inte de officiella siffror din inlösare rapporterar. Endast inlösaren har det auktoritativa nyckeltalet. DisputeDesk använder standardformeln men approximerar TC40 / TC15 / TC05-koder från Shopifys tvist- och orderdata. Om inlösarens siffra skiljer sig är dennes den som gäller för efterlevnad.\n\nMånadsvis effektsammanfattning visar: kvalificerade tvister, vinster per kanal, transaktioner borttagna från VAMP, uppskattade undvikna avgifter och uppskattad återvunnen intäkt."
       },
       "sessionCapture": {
         "title": "Sessionsregistrering på butiken — vad det är och vad vi lagrar",
@@ -5443,17 +5443,17 @@
     "checkpointsSubtitle": "Var du befinner dig i förhållande till kortnätsreglerna och din egen 30-dagars baslinje.",
     "checkpointSourcePrefix": "Källa",
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Under Visas övervakningsband.",
-    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Din 90-dagars chargebackfrekvens är {current}. Visas VAMP Excessive-tröskel är {vampExcessive}; det operativa 'närmar sig'-bandet börjar kring {vampApproaching}.",
+    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "I {month} var din chargebackfrekvens för kortbetalningar {current}. Visas tidiga varningsnivå är {vampApproaching}; VAMP:s Excessive-tröskel är {vampExcessive}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Närmar sig Visas VAMP-tröskel.",
-    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Din 90-dagars chargebackfrekvens är {current} — inom bandet {vampApproaching}–{vampExcessive}. Acquirers betalar 8 USD per ifrågasatt transaktion när Excessive-nivån ({vampExcessive}) nås.",
+    "checkpoint_chargeback_rate_vs_vamp_consider_body": "I {month} var din chargebackfrekvens för kortbetalningar {current}, mellan Visas tidiga varningsnivå på {vampApproaching} och Excessive-tröskeln på {vampExcessive}, med tillräckligt många tvister för att VAMP ska gälla.",
     "checkpoint_chargeback_rate_vs_vamp_breach_title": "Över Visas VAMP Excessive-tröskel.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Din 90-dagars chargebackfrekvens är {current}, på eller över Visas Excessive-tröskel ({vampExcessive}). Acquirers betalar 8 USD per ifrågasatt transaktion på denna nivå.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_body": "I {month} var din chargebackfrekvens för kortbetalningar {current}, på eller över Visas Excessive-tröskel på {vampExcessive}, med {visaCount} Visa-chargebacks. Inlösare betalar 8 $ per bestridd transaktion på den här nivån.",
     "checkpoint_chargeback_rate_vs_ecm_healthy_title": "Under Mastercards ECM-tröskel.",
-    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Din 90-dagars chargebackfrekvens är {current}, klart under Mastercards ECM-kvot på {ecmRatio} (kräver dessutom {ecmCount}+ chargebacks/månad).",
+    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "I {month} motsvarade Mastercard-chargebacks {current} av förra månadens kortbeställningar ({mcCount} chargebacks), under ECM:s kvot på {ecmRatio}, som dessutom kräver {ecmCount}+ chargebacks i månaden.",
     "checkpoint_chargeback_rate_vs_ecm_consider_title": "Närmar sig Mastercards ECM-tröskel.",
-    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Din 90-dagars chargebackfrekvens är {current}. Mastercards ECM aktiveras vid {ecmRatio}-kvot och {ecmCount}+ chargebacks/månad (snitt: ~{monthlyEstimate}).",
+    "checkpoint_chargeback_rate_vs_ecm_consider_body": "I {month} hade du {mcCount} Mastercard-chargebacks, vid ECM:s gräns på {ecmCount} i månaden. Den visade kvoten, {current}, mäts mot alla kortbeställningar, så den faktiska Mastercard-kvoten är högre.",
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Över Mastercards ECM-trösklar.",
-    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Din 90-dagars chargebackfrekvens är {current} och du har ~{monthlyEstimate} chargebacks/månad. Båda ECM-kriterierna ({ecmRatio}-kvot, {ecmCount}+/månad) är uppfyllda.",
+    "checkpoint_chargeback_rate_vs_ecm_breach_body": "I {month} motsvarade Mastercard-chargebacks {current} av förra månadens kortbeställningar, med {mcCount} chargebacks. Båda ECM-kriterierna ({ecmRatio}-kvot, {ecmCount}+ i månaden) är uppfyllda.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} av HÖG-risk-order skickades.",
     "checkpoint_high_risk_fulfilled_consider_body": "Varje skickad HÖG-risk-order är absorberad exponering — Shopifys riskmodell flaggade men blockerade inte. Skapa en Shopify Flow-regel som håller leveransen när en order är Hög-risk och överstiger ett värde du själv väljer.",
     "checkpoint_signature_capture_low_consider_title": "Signatur registrerad på {current} av bekräftade leveranser.",
@@ -5490,7 +5490,14 @@
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Visas program gäller inte dina ärenden.",
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Visas VAMP räknar kort-chargebacks och mäter därför inte din övriga ärendevolym — det finns inget VAMP-utlåtande att ge här.",
     "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Mastercards program gäller inte dina ärenden.",
-    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Mastercards ECM räknar kort-chargebacks; dina övriga ärenden avgörs enligt reglerna hos den leverantör som hanterade dem."
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Endast {cardShare} av dina ärenden kommer via ett kortnätverk. Mastercards ECM räknar kort-chargebacks; dina övriga ärenden avgörs enligt reglerna hos den leverantör som hanterade dem.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_title": "Över Visas kvot, under gränsen för tillämpning.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_body": "I {month} var din chargebackfrekvens för kortbetalningar {current}, över Visas tidiga varningsnivå på {vampApproaching}. VAMP tillämpas först från {vampFloor} tvister i månaden; du hade {visaCount} Visa-chargebacks.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_title": "Över Mastercards kvot, under gränsen för tillämpning.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_body": "I {month} motsvarade Mastercard-chargebacks {current} av förra månadens kortbeställningar, över ECM:s kvot på {ecmRatio}. ECM tillämpas först från {ecmCount} chargebacks i månaden; du hade {mcCount}.",
+    "programmeFinal": "Kortnätverkens siffror gäller {month}.",
+    "programmeProvisional": "Kortnätverkens siffror gäller {month} och är preliminära till {finalOn}.",
+    "programmeUnavailable": "Kortnätverkens siffror är tillfälligt otillgängliga. Resten av sidan är uppdaterad."
   },
   "consent": {
     "ariaLabel": "Inställningar för cookies och integritet",
@@ -5808,7 +5815,8 @@
         "label": "Visa VAMP"
       },
       "ecm": {
-        "label": "Mastercard ECM"
+        "label": "Mastercard ECM",
+        "lowerBound": "Undre gräns: mätt mot alla kortbeställningar."
       },
       "efm": {
         "label": "Mastercard EFM"
@@ -5832,7 +5840,16 @@
         "fptWinsHelper": "Mastercard 4837 / 4863-tvister vunna via First-Party Trust"
       },
       "estimateNotice": "Nyckeltal är beräknade uppskattningar från dina Shopify-data. Din inlösare har de auktoritativa siffrorna som används för efterlevnadskontroll.",
-      "notApplicable": "Ingen kortvolym denna period — detta program mäter inte dina ärenden."
+      "notApplicable": "Ingen kortvolym denna period — detta program mäter inte dina ärenden.",
+      "periodLabelProvisional": "Period: {period} · preliminär till {finalOn}",
+      "notMeasured": "Vi kunde inte hämta månadens siffror från kortnätverken. Försök igen om några minuter.",
+      "tooFewOrders": "För få kortbeställningar den här månaden för att mäta.",
+      "severity": {
+        "healthy": "Hälsosamt",
+        "info": "Över kvoten, under gränsen",
+        "consider": "Se över",
+        "breach": "Överskriden"
+      }
     }
   },
   "playbook": {

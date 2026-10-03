@@ -1,3 +1,4 @@
+import { insightsDigestsEnabled } from "@/lib/email/insightsDigestGate";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { sendMonthlyChargebackDigest } from "@/lib/email/sendMonthlyChargebackDigest";
@@ -30,6 +31,11 @@ export const maxDuration = 300;
 export async function GET(req: NextRequest) {
   const gate = cronEnvGate(req);
   if (gate) return gate;
+
+  if (!insightsDigestsEnabled()) {
+    console.log("[monthly-digest] insight digests suspended; nothing sent");
+    return NextResponse.json({ suspended: true, sent: 0 });
+  }
 
   const sb = getServiceClient();
   const now = new Date();

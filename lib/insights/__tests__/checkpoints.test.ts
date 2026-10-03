@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { evaluateCheckpoints } from "../checkpoints";
-import type { CheckpointInput } from "../checkpoints.types";
+import type { CheckpointInput, ProgrammeCheckpointInput } from "../checkpoints.types";
+
+/** blume-box, September 2026 (prod, 2026-10-02): 4 card chargebacks on
+ *  2,686 card settled orders, 2 Visa, 2 Mastercard. */
+const sep: ProgrammeCheckpointInput = {
+  periodMonth: "2026-09-01",
+  cardDisputeRatio: 0.00149,
+  visaChargebackCount: 2,
+  mcChargebackCount: 2,
+  ecmRatio: 0.00061,
+  ecmIsLowerBound: true,
+  cardFramingApplies: true,
+  cardDisputeShare: 1,
+};
 
 // A baseline input where every rule emits its healthiest/quietest
 // observation — used as a starting point each test mutates.
 const baseline: CheckpointInput = {
-  chargebackRate90d: 0.4,
-  chargebackCount90d: 30,
+  programme: sep,
   fraudDisputeRatePct: 0.3,
   fulfilledHighRiskPct: 20,
   threeDsAuthRatePct: 40,
@@ -16,198 +28,165 @@ const baseline: CheckpointInput = {
   medianFulfillmentHoursPrior: 18,
 };
 
-describe("evaluateCheckpoints — VAMP rule", () => {
-  it("emits healthy below 0.9%", () => {
-    const r = evaluateCheckpoints(baseline);
-    const v = r.find((c) => c.id === "chargeback_rate_vs_vamp");
+const find = (input: CheckpointInput, id: string) =>
+  evaluateCheckpoints(input, 10).find((c) => c.id === id);
+const withProgramme = (p: Partial<ProgrammeCheckpointInput>): CheckpointInput => ({
+  ...baseline,
+  programme: { ...sep, ...p },
+});
+
+describe("evaluateCheckpoints — VAMP rule (one calendar month)", () => {
+  it("emits healthy below the 0.9% early-warning level, citing the month", () => {
+    const v = find(baseline, "chargeback_rate_vs_vamp");
     expect(v?.severity).toBe("healthy");
+    expect(v?.values.current).toBe("0.15%");
+    expect(v?.values.month).toBe("2026-09-01");
   });
 
-  it("emits consider at 0.9% (approaching)", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 0.9,
-      chargebackCount90d: 30,
-    });
-    const v = r.find((c) => c.id === "chargeback_rate_vs_vamp");
+  // blume-box July 2026: a fraud wave, 75 card chargebacks (2.37%) but only
+  // 2 on Visa — far below the 1,500/month floor. Visa cannot enforce VAMP
+  // on it, so it is never a breach.
+  it("emits info (above the ratio, below the floor) when the Visa count is under 1,500", () => {
+    const v = find(withProgramme({ cardDisputeRatio: 0.02369, visaChargebackCount: 2 }), "chargeback_rate_vs_vamp");
+    expect(v?.severity).toBe("info");
+    expect(v?.titleKey).toContain("_below_floor_");
+    expect(v?.values.vampFloor).toBe(1500);
+  });
+
+  it("emits consider between 0.9% and 1.5% once the floor is met", () => {
+    const v = find(withProgramme({ cardDisputeRatio: 0.012, visaChargebackCount: 1600 }), "chargeback_rate_vs_vamp");
     expect(v?.severity).toBe("consider");
   });
 
-  it("emits breach at 1.5% (VAMP Excessive)", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 1.5,
-      chargebackCount90d: 30,
-    });
-    const v = r.find((c) => c.id === "chargeback_rate_vs_vamp");
+  it("emits breach at 1.5% once the floor is met", () => {
+    const v = find(withProgramme({ cardDisputeRatio: 0.015, visaChargebackCount: 1600 }), "chargeback_rate_vs_vamp");
     expect(v?.severity).toBe("breach");
   });
 
-  it("returns null when chargeback rate unknown", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: null,
-    });
-    expect(r.find((c) => c.id === "chargeback_rate_vs_vamp")).toBeUndefined();
+  it("returns nothing when the month has too few orders to measure", () => {
+    expect(find(withProgramme({ cardDisputeRatio: null }), "chargeback_rate_vs_vamp")).toBeUndefined();
+  });
+
+  // The defect class this replaces: a verdict from a rolling window, or from
+  // disputes counted by when we inserted them (blume-box "5.31%, breach").
+  it("emits NO VAMP/ECM checkpoint without a programme block", () => {
+    const input: CheckpointInput = { ...baseline, programme: undefined };
+    expect(find(input, "chargeback_rate_vs_vamp")).toBeUndefined();
+    expect(find(input, "chargeback_rate_vs_ecm")).toBeUndefined();
   });
 });
 
-describe("evaluateCheckpoints — Mastercard ECM rule", () => {
-  it("breach requires BOTH ratio ≥ 1.5% AND ≥100/month", () => {
-    // Ratio breach but count below 100/month → consider, not breach
-    const r1 = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 1.6,
-      chargebackCount90d: 30, // 10/month
-    });
-    expect(
-      r1.find((c) => c.id === "chargeback_rate_vs_ecm")?.severity,
-    ).toBe("consider");
-
-    // Both breached → breach
-    const r2 = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 1.6,
-      chargebackCount90d: 400, // ≈133/month
-    });
-    expect(r2.find((c) => c.id === "chargeback_rate_vs_ecm")?.severity).toBe(
-      "breach",
-    );
+describe("evaluateCheckpoints — Mastercard ECM rule (one calendar month)", () => {
+  it("emits healthy below 1.5% with the real monthly count", () => {
+    const e = find(baseline, "chargeback_rate_vs_ecm");
+    expect(e?.severity).toBe("healthy");
+    expect(e?.values.mcCount).toBe(2);
   });
 
-  // Regression: the input is a DISPUTE count, never an order count.
-  // The in-app page used to pass the 90d order denominator here, so a
-  // merchant with 14,635 orders and 300 chargebacks was told they average
-  // ~4,878 chargebacks/month against a true ~100 — a 49x overstatement, on
-  // the one number where precision decides the verdict (ECM's floor is
-  // exactly 100/month). Pinning the rendered value is what catches a
-  // future caller re-crossing the two.
-  it("reports monthlyEstimate from the dispute count, not the order count", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 2.05, // 300 / 14,635
-      chargebackCount90d: 300, // NOT 14_635
-    });
-    const ecm = r.find((c) => c.id === "chargeback_rate_vs_ecm");
-    expect(ecm?.values.monthlyEstimate).toBe(100);
-    // An order count in this slot would read 4,878 and flip the verdict
-    // to breach on volume the merchant does not have.
-    expect(ecm?.values.monthlyEstimate).not.toBe(4878);
+  it("emits info above 1.5% while under 100 Mastercard chargebacks", () => {
+    const e = find(withProgramme({ ecmRatio: 0.0513, mcChargebackCount: 71 }), "chargeback_rate_vs_ecm");
+    expect(e?.severity).toBe("info");
+    expect(e?.titleKey).toContain("_below_floor_");
   });
 
-  it("does not breach on volume when the true dispute count is below the ECM floor", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 1.6, // ratio is breached
-      chargebackCount90d: 297, // 99/month — just under the 100 floor
-    });
-    expect(r.find((c) => c.id === "chargeback_rate_vs_ecm")?.severity).toBe(
-      "consider",
-    );
+  it("emits breach when both criteria are met", () => {
+    const e = find(withProgramme({ ecmRatio: 0.016, mcChargebackCount: 120 }), "chargeback_rate_vs_ecm");
+    expect(e?.severity).toBe("breach");
+  });
+
+  it("emits at least consider at 120 Mastercard chargebacks while the denominator is a lower bound", () => {
+    const e = find(withProgramme({ ecmRatio: 0.008, mcChargebackCount: 120, ecmIsLowerBound: true }), "chargeback_rate_vs_ecm");
+    expect(e?.severity).toBe("consider");
+  });
+
+  it("is healthy below the ratio with a true Mastercard denominator", () => {
+    const e = find(withProgramme({ ecmRatio: 0.008, mcChargebackCount: 120, ecmIsLowerBound: false }), "chargeback_rate_vs_ecm");
+    expect(e?.severity).toBe("healthy");
+  });
+});
+
+describe("evaluateCheckpoints — card programmes follow card volume, not the dispute mix", () => {
+  // cay-collective: 752 card orders, 0 card chargebacks, every dispute Klarna.
+  // Visa measures the card payments; the verdict is healthy 0.00%.
+  it("judges a Klarna-heavy shop on its card payments", () => {
+    const cay = withProgramme({ cardDisputeRatio: 0, visaChargebackCount: 0, mcChargebackCount: 0, ecmRatio: 0, cardDisputeShare: 0 });
+    expect(find(cay, "chargeback_rate_vs_vamp")?.severity).toBe("healthy");
+    expect(find(cay, "chargeback_rate_vs_vamp")?.values.current).toBe("0.00%");
+    expect(find(cay, "chargeback_rate_vs_ecm")?.severity).toBe("healthy");
+  });
+
+  it("gives no verdict without measurable card volume", () => {
+    const tiny = withProgramme({ cardFramingApplies: false, cardDisputeRatio: null, ecmRatio: null });
+    expect(find(tiny, "chargeback_rate_vs_vamp")).toBeUndefined();
+    expect(find(tiny, "chargeback_rate_vs_ecm")).toBeUndefined();
   });
 });
 
 describe("evaluateCheckpoints — high-risk-fulfilled rule", () => {
   it("does not emit below 50%", () => {
-    const r = evaluateCheckpoints({ ...baseline, fulfilledHighRiskPct: 49 });
-    expect(r.find((c) => c.id === "high_risk_fulfilled")).toBeUndefined();
+    expect(find({ ...baseline, fulfilledHighRiskPct: 49 }, "high_risk_fulfilled")).toBeUndefined();
   });
 
   it("emits consider at 50% and above", () => {
-    const r = evaluateCheckpoints({ ...baseline, fulfilledHighRiskPct: 65 });
-    expect(r.find((c) => c.id === "high_risk_fulfilled")?.severity).toBe(
-      "consider",
-    );
+    expect(find({ ...baseline, fulfilledHighRiskPct: 65 }, "high_risk_fulfilled")?.severity).toBe("consider");
   });
 });
 
 describe("evaluateCheckpoints — signature-capture rule", () => {
   it("does not emit at or above 30%", () => {
-    const r = evaluateCheckpoints({ ...baseline, signedForRatePct: 35 });
-    expect(r.find((c) => c.id === "signature_capture_low")).toBeUndefined();
+    expect(find({ ...baseline, signedForRatePct: 35 }, "signature_capture_low")).toBeUndefined();
   });
 
   it("emits consider below 30%", () => {
-    const r = evaluateCheckpoints({ ...baseline, signedForRatePct: 21 });
-    expect(r.find((c) => c.id === "signature_capture_low")?.severity).toBe(
-      "consider",
-    );
+    expect(find({ ...baseline, signedForRatePct: 21 }, "signature_capture_low")?.severity).toBe("consider");
   });
 });
 
 describe("evaluateCheckpoints — 3-DS auth rule", () => {
   it("healthy at or above 25%", () => {
-    expect(
-      evaluateCheckpoints({ ...baseline, threeDsAuthRatePct: 38 }).find(
-        (c) => c.id === "threeds_auth",
-      )?.severity,
-    ).toBe("healthy");
+    expect(find({ ...baseline, threeDsAuthRatePct: 38 }, "threeds_auth")?.severity).toBe("healthy");
   });
 
   it("info in the 10–25% middle band", () => {
-    expect(
-      evaluateCheckpoints({ ...baseline, threeDsAuthRatePct: 15 }).find(
-        (c) => c.id === "threeds_auth",
-      )?.severity,
-    ).toBe("info");
+    expect(find({ ...baseline, threeDsAuthRatePct: 15 }, "threeds_auth")?.severity).toBe("info");
   });
 
   it("consider below 10%", () => {
-    expect(
-      evaluateCheckpoints({ ...baseline, threeDsAuthRatePct: 5 }).find(
-        (c) => c.id === "threeds_auth",
-      )?.severity,
-    ).toBe("consider");
+    expect(find({ ...baseline, threeDsAuthRatePct: 5 }, "threeds_auth")?.severity).toBe("consider");
   });
 });
 
 describe("evaluateCheckpoints — fulfillment baseline rule", () => {
   it("emits degraded when current is 12+ hours slower than prior", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      medianFulfillmentHoursCurrent: 32,
-      medianFulfillmentHoursPrior: 18,
-    });
-    expect(
-      r.find((c) => c.id === "fulfillment_baseline_degraded")?.severity,
-    ).toBe("consider");
+    const r = { ...baseline, medianFulfillmentHoursCurrent: 32, medianFulfillmentHoursPrior: 18 };
+    expect(find(r, "fulfillment_baseline_degraded")?.severity).toBe("consider");
   });
 
   it("emits improved when current is 6+ hours faster than prior", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      medianFulfillmentHoursCurrent: 10,
-      medianFulfillmentHoursPrior: 18,
-    });
-    expect(
-      r.find((c) => c.id === "fulfillment_baseline_improved")?.severity,
-    ).toBe("healthy");
+    const r = { ...baseline, medianFulfillmentHoursCurrent: 10, medianFulfillmentHoursPrior: 18 };
+    expect(find(r, "fulfillment_baseline_improved")?.severity).toBe("healthy");
   });
 
   it("does not emit for small drifts", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      medianFulfillmentHoursCurrent: 19,
-      medianFulfillmentHoursPrior: 18,
-    });
-    expect(
-      r.find((c) => c.id?.startsWith("fulfillment_baseline_")),
-    ).toBeUndefined();
+    const r = evaluateCheckpoints({ ...baseline, medianFulfillmentHoursCurrent: 19, medianFulfillmentHoursPrior: 18 });
+    expect(r.find((c) => c.id?.startsWith("fulfillment_baseline_"))).toBeUndefined();
   });
 });
 
 describe("evaluateCheckpoints — sort + cap", () => {
+  const busy: CheckpointInput = {
+    ...withProgramme({ cardDisputeRatio: 0.016, visaChargebackCount: 1600, ecmRatio: 0.016, mcChargebackCount: 120 }),
+    fulfilledHighRiskPct: 70,
+    signedForRatePct: 10,
+    threeDsAuthRatePct: 5,
+    shopifyProtectCoveragePct: 5,
+    medianFulfillmentHoursCurrent: 36,
+    medianFulfillmentHoursPrior: 18,
+  };
+
   it("sorts most-urgent severity first", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 1.6,
-      chargebackCount90d: 400, // VAMP breach + ECM breach
-      fulfilledHighRiskPct: 70,  // consider
-      signedForRatePct: 10,      // consider
-      threeDsAuthRatePct: 38,    // healthy
-    });
+    const r = evaluateCheckpoints(busy);
     expect(r[0]?.severity).toBe("breach");
-    // No "consider" entry may precede a "breach" entry.
     const firstHealthyIdx = r.findIndex((c) => c.severity === "healthy");
     const lastBreachIdx = r.map((c) => c.severity).lastIndexOf("breach");
     if (firstHealthyIdx >= 0 && lastBreachIdx >= 0) {
@@ -216,117 +195,10 @@ describe("evaluateCheckpoints — sort + cap", () => {
   });
 
   it("caps at 5 visible by default", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 1.6,
-      chargebackCount90d: 400,
-      fulfilledHighRiskPct: 70,
-      signedForRatePct: 10,
-      threeDsAuthRatePct: 5,
-      shopifyProtectCoveragePct: 5,
-      medianFulfillmentHoursCurrent: 36,
-      medianFulfillmentHoursPrior: 18,
-    });
-    expect(r.length).toBeLessThanOrEqual(5);
+    expect(evaluateCheckpoints(busy).length).toBeLessThanOrEqual(5);
   });
 
   it("respects custom limit", () => {
-    const r = evaluateCheckpoints(baseline, 2);
-    expect(r.length).toBeLessThanOrEqual(2);
-  });
-});
-
-describe("evaluateCheckpoints — surasvenne current-state sanity", () => {
-  it("produces a stable mix for realistic dev-shop data", () => {
-    const r = evaluateCheckpoints({
-      chargebackRate90d: 0.7,
-      chargebackCount90d: 18,
-      fraudDisputeRatePct: 3.0,
-      fulfilledHighRiskPct: 64,
-      threeDsAuthRatePct: 38,
-      signedForRatePct: 21,
-      shopifyProtectCoveragePct: 12,
-      medianFulfillmentHoursCurrent: 20,
-      medianFulfillmentHoursPrior: 22,
-    });
-    expect(r.length).toBeGreaterThan(0);
-    expect(r.length).toBeLessThanOrEqual(5);
-    // Should never emit a breach for these numbers.
-    expect(r.find((c) => c.severity === "breach")).toBeUndefined();
-  });
-});
-
-describe("evaluateCheckpoints — card programmes only apply to card disputes", () => {
-  // The failure this prevents: cay-collective's 76 disputes are 100% Klarna
-  // and Mein Maison's are 92.3% PayPal, yet both were shown Visa VAMP and
-  // Mastercard ECM verdicts. Neither merchant is measured by either
-  // programme. `healthy` was as wrong as `breach` — it told them they were
-  // fine against a threshold that does not apply to them.
-  const klarnaShop: CheckpointInput = {
-    ...baseline,
-    chargebackRate90d: 5.56, // blended, and meaningless here
-    cardChargebackRate90d: null,
-    cardChargebackCount90d: 0,
-    cardDisputeShare: 0,
-    cardFramingApplies: false,
-  };
-
-  it("emits a not-applicable observation instead of a VAMP verdict", () => {
-    const r = evaluateCheckpoints(klarnaShop);
-    const vamp = r.find((c) => c.id === "chargeback_rate_vs_vamp");
-    expect(vamp?.severity).toBe("info");
-    expect(vamp?.titleKey).toContain("not_applicable");
-    // Crucially NOT "breach" — and equally not "healthy".
-    expect(vamp?.severity).not.toBe("breach");
-    expect(vamp?.severity).not.toBe("healthy");
-  });
-
-  it("emits a not-applicable observation instead of an ECM verdict", () => {
-    const r = evaluateCheckpoints(klarnaShop);
-    const ecm = r.find((c) => c.id === "chargeback_rate_vs_ecm");
-    expect(ecm?.severity).toBe("info");
-    expect(ecm?.titleKey).toContain("not_applicable");
-  });
-
-  it("judges a card merchant on the CARD rate, not the blended one", () => {
-    // Mein Maison shape: blended 2.05% would breach VAMP; the card-rail rate
-    // is 1.22%. If this shop were card-framed it must still be judged on the
-    // card figure, never the rail-mixed one.
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 2.05,
-      cardChargebackRate90d: 1.22,
-      cardChargebackCount90d: 40,
-      cardDisputeShare: 0.9,
-      cardFramingApplies: true,
-    });
-    const vamp = r.find((c) => c.id === "chargeback_rate_vs_vamp");
-    // 1.22% is over VAMP_EXCESSIVE (1.5%)? No — it is under, so consider.
-    expect(vamp?.values.current).toBe("1.22%");
-    expect(vamp?.severity).toBe("consider");
-  });
-
-  it("feeds ECM a card-rail count, so the 100/month floor means card chargebacks", () => {
-    const r = evaluateCheckpoints({
-      ...baseline,
-      chargebackRate90d: 4.0,
-      cardChargebackRate90d: 2.0,
-      cardChargebackCount90d: 60, // 20/month — below the ECM floor
-      cardDisputeShare: 0.95,
-      cardFramingApplies: true,
-    });
-    const ecm = r.find((c) => c.id === "chargeback_rate_vs_ecm");
-    expect(ecm?.values.monthlyEstimate).toBe(20);
-    // Ratio breached but the card count is under the floor → consider.
-    expect(ecm?.severity).toBe("consider");
-  });
-
-  it("keeps the old behaviour when a caller has not been taught about rails", () => {
-    // Back-compat: an un-updated caller must not lose a real breach warning
-    // to a plumbing gap. Absence of rail data means "unknown", not "suppress".
-    const r = evaluateCheckpoints({ ...baseline, chargebackRate90d: 2.0 });
-    expect(r.find((c) => c.id === "chargeback_rate_vs_vamp")?.severity).toBe(
-      "breach",
-    );
+    expect(evaluateCheckpoints(baseline, 2).length).toBeLessThanOrEqual(2);
   });
 });

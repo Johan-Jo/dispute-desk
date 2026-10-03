@@ -17,6 +17,7 @@
  * Fire-and-forget — never throws.
  */
 
+import { insightsDigestsEnabled } from "@/lib/email/insightsDigestGate";
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
@@ -104,12 +105,10 @@ export function renderOnboardingAnalysisDigest(
   // for the prior — the fulfillment-baseline rule self-suppresses.
   const checkpoints = evaluateCheckpoints(
     {
-      chargebackRate90d: cb,
-      chargebackCount90d: d.chargebackCount90d,
-      cardChargebackRate90d: d.rail?.cardRatePct,
-      cardChargebackCount90d: d.rail?.cardDisputes,
-      cardDisputeShare: d.rail?.cardDisputeShare,
-      cardFramingApplies: d.rail?.cardFramingApplies,
+      // No programme block: the digest's own 90-day figures are exactly what
+      // disagreed with the page. Suspended (insightsDigestGate) until PR4
+      // renders the stored month record instead.
+      programme: undefined,
       fraudDisputeRatePct: m.fraudDisputeRatePct,
       fulfilledHighRiskPct: m.fulfilledHighRiskPct,
       threeDsAuthRatePct: m.threeDsAuthRatePct,
@@ -246,7 +245,12 @@ Pulled from your historical Shopify orders and disputes. ${cardFraming ? "Thresh
 
 export async function sendOnboardingAnalysisDigest(
   d: OnboardingDigestData,
-): Promise<{ delivered: boolean; subject: string }> {
+): Promise<{ delivered: boolean; subject: string; suspended?: true }> {
+  // Checked here, not only in the trigger, so no caller (scripts included)
+  // can send while the digests are suspended.
+  if (!insightsDigestsEnabled()) {
+    return { delivered: false, subject: "", suspended: true };
+  }
   const rendered = renderOnboardingAnalysisDigest(d);
   if (!RESEND_API_KEY) {
     return { delivered: false, subject: rendered.subject };

@@ -3828,8 +3828,8 @@
         "body": "O Shopify agrupa todas as disputas em 14 categorias amplas (Fraudulento, Produto Não Recebido, Assinatura Cancelada, etc.). Mas Visa e Mastercard usam códigos muito mais específicos por baixo: Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855, e assim por diante. O código específico da rede determina como o banco emissor avalia sua evidência e o tipo de linguagem de defesa que ganha.\n\nO DisputeDesk resolve o código de motivo da rede automaticamente para toda disputa. A resolução usa vários sinais (em ordem de confiabilidade):\n- Direto: um campo tipado na disputa Shopify (atualmente não exposto pelo Shopify, reservado para mudança futura da API)\n- Derivado: extraído do recibo da transação do gateway de pagamento quando disponível (apenas Shopify Payments)\n- Inferido: melhor estimativa a partir do enum do Shopify + rede do cartão + contexto do pedido\n- Desconhecido: sinal indisponível; tratamento padrão se aplica\n\nA página de detalhe da disputa mostra o código resolvido (ex.: 'Visa 13.1 — Mercadoria/Serviços Não Recebidos') com indicador de confiança. A resolução confiável permite ao DisputeDesk:\n1. Detectar elegibilidade para CE 3.0 (Visa 10.4 → caminho CE 3.0)\n2. Detectar elegibilidade para FPT (Mastercard 4837 / 4863 → caminho FPT)\n3. Escolher modelos de defesa mais específicos por código (Visa 13.1, 13.2 e 13.3 recebem linguagens diferentes mesmo todos mapeando para 'Produto Não Recebido' no enum Shopify)\n4. Aplicar checklists de evidência personalizados por código\n\nVocê não precisa fazer nada — a resolução é automática. Se o código não for resolvido, o DisputeDesk volta ao tratamento padrão da categoria Shopify."
       },
       "vampRatioExplained": {
-        "title": "VAMP, ECM e EFM — o que os números significam",
-        "body": "As redes de cartões monitoram três índices-chave de chargeback de todo lojista. Ultrapassar os limites dispara taxas, inscrição em programas de monitoramento e, em casos extremos, encerramento da conta. O painel de Índices do DisputeDesk mostra suas estimativas calculadas mais o impacto contrafactual das vitórias do DisputeDesk.\n\nOs três índices:\n- Visa VAMP (Programa de Monitoramento de Adquirentes) — disputas totais / transações liquidadas totais. Limite padrão: 0,65%. Limite excessivo: 1,50%. Ultrapassar o excessivo dispara uma taxa de fiscalização por transação.\n- Mastercard ECM (Lojista com Chargebacks Excessivos) — chargebacks Mastercard / liquidações Mastercard. Limite: 1,00%.\n- Mastercard EFM (Lojista com Fraudes Excessivas) — chargebacks de fraude Mastercard / liquidações Mastercard. Limite: 0,50%.\n\nO DisputeDesk mostra alerta amarelo a 80% do limite e alerta vermelho ao cruzá-lo. Também enviamos e-mail quando a faixa muda.\n\nA linha contrafactual é o insight principal: vitórias atribuídas ao DisputeDesk (CE 3.0 e FPT) são removidas do numerador VAMP no cálculo. A linha tracejada mostra qual seria seu índice sem o trabalho do DisputeDesk — a diferença entre as duas linhas é o valor entregue pelo DisputeDesk.\n\nRessalva importante: são estimativas calculadas a partir dos seus dados Shopify, não os números oficiais que seu adquirente reporta. Apenas o adquirente tem o índice autoritativo. O DisputeDesk usa a fórmula padrão mas aproxima os códigos TC40 / TC15 / TC05 a partir dos dados de disputas e pedidos do Shopify. Se o número do adquirente diferir, o dele é o que vale para conformidade — o nosso é uma aproximação prática para detectar tendências cedo.\n\nO resumo mensal de impacto mostra: disputas qualificadas, vitórias por canal, transações removidas do VAMP, taxas estimadas evitadas e receita estimada recuperada."
+        "title": "VAMP e ECM: o que significam os números",
+        "body": "A Visa e a Mastercard monitoram quantos pagamentos com cartão de um lojista viram estornos. A DisputeDesk mostra uma estimativa calculada dos dois programas, mês a mês.\n\nComo calculamos:\n- Mês: o último mês completo do calendário. Ele é provisório até o dia 8 do mês seguinte, porque estornos tardios continuam chegando por cerca de uma semana; depois disso é definitivo.\n- Taxa de estornos em cartão (estimativa do Visa VAMP): estornos em cartão abertos no mês ÷ pedidos com cartão feitos e pagos no mês. Consultas não contam, nem PayPal, Klarna ou outros pagamentos sem cartão.\n- Mastercard ECM: estornos Mastercard no mês ÷ pedidos com cartão do mês anterior. Enquanto não conseguirmos separar pedidos Mastercard de outros cartões, é um limite inferior.\n- Com menos de 50 pedidos com cartão no mês, não mostramos taxa, porque uma única disputa a mudaria em pontos inteiros.\n\nLimites:\n- Visa VAMP: alerta antecipado em 0,9%, Excessive em 1,5%. A Visa só aplica o VAMP a partir de 1.500 disputas por mês.\n- Mastercard ECM: 1,5% e 100 ou mais estornos por mês (High ECM: 3,0% e 300).\n- Um mês acima do ratio mas abaixo do mínimo de aplicação aparece como informação, nunca como violação.\n\nSe a maioria das suas disputas vem do PayPal, da Klarna ou de outro provedor sem cartão, esses programas não medem você, e dizemos isso em vez de mostrar um veredito.\n\nA linha contrafactual é o insight principal: vitórias atribuídas ao DisputeDesk (CE 3.0 e FPT) são removidas do numerador VAMP no cálculo. A linha tracejada mostra qual seria seu índice sem o trabalho do DisputeDesk — a diferença entre as duas linhas é o valor entregue pelo DisputeDesk.\n\nRessalva importante: são estimativas calculadas a partir dos seus dados Shopify, não os números oficiais que seu adquirente reporta. Apenas o adquirente tem o índice autoritativo. O DisputeDesk usa a fórmula padrão mas aproxima os códigos TC40 / TC15 / TC05 a partir dos dados de disputas e pedidos do Shopify. Se o número do adquirente diferir, o dele é o que vale para conformidade — o nosso é uma aproximação prática para detectar tendências cedo.\n\nO resumo mensal de impacto mostra: disputas qualificadas, vitórias por canal, transações removidas do VAMP, taxas estimadas evitadas e receita estimada recuperada."
       },
       "sessionCapture": {
         "title": "Captura de sessão na loja — o que é e o que armazenamos",
@@ -5441,17 +5441,17 @@
     "checkpointsSubtitle": "Sua posição em relação às regras das redes de cartões e à sua própria média dos últimos 30 dias.",
     "checkpointSourcePrefix": "Fonte",
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Abaixo da faixa de monitoramento da Visa.",
-    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Sua taxa de estornos em 90 dias é de {current}. O limite Excessive do VAMP da Visa é {vampExcessive}; a faixa operacional 'aproximando-se' começa por volta de {vampApproaching}.",
+    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Em {month}, sua taxa de estornos em cartão foi de {current}. O nível de alerta antecipado da Visa é {vampApproaching}; o limite Excessive do VAMP é {vampExcessive}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Aproximando-se do limite VAMP da Visa.",
-    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Sua taxa de estornos em 90 dias é {current} — dentro da faixa {vampApproaching}–{vampExcessive}. Adquirentes sofrem multa de 8 USD por transação contestada quando o nível Excessive ({vampExcessive}) é atingido.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_title": "Acima do limite Excessive do VAMP.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Sua taxa de estornos em 90 dias é {current}, igual ou acima do limite Excessive do VAMP ({vampExcessive}). Adquirentes sofrem multa de 8 USD por transação contestada neste nível.",
+    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Em {month}, sua taxa de estornos em cartão foi de {current}, entre o nível de alerta antecipado da Visa de {vampApproaching} e o limite Excessive de {vampExcessive}, com disputas suficientes para o VAMP se aplicar.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_title": "Acima do limite Excessive do VAMP da Visa.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Em {month}, sua taxa de estornos em cartão foi de {current}, igual ou acima do limite Excessive da Visa de {vampExcessive}, com {visaCount} estornos Visa. Os adquirentes pagam US$ 8 por transação disputada neste nível.",
     "checkpoint_chargeback_rate_vs_ecm_healthy_title": "Abaixo do limite ECM da Mastercard.",
-    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Sua taxa de estornos em 90 dias é {current}, bem abaixo do ratio ECM da Mastercard de {ecmRatio} (que também exige {ecmCount}+ estornos/mês).",
+    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Em {month}, os estornos Mastercard foram {current} dos pedidos com cartão do mês anterior ({mcCount} estornos), abaixo do ratio de {ecmRatio} do ECM, que também exige {ecmCount}+ estornos por mês.",
     "checkpoint_chargeback_rate_vs_ecm_consider_title": "Aproximando-se do limite ECM da Mastercard.",
-    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Sua taxa de estornos em 90 dias é {current}. O ECM da Mastercard ativa com ratio de {ecmRatio} e {ecmCount}+ estornos/mês (média: ~{monthlyEstimate}).",
+    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Em {month} você teve {mcCount} estornos Mastercard, no mínimo de {ecmCount} por mês do ECM. O ratio mostrado, {current}, é medido sobre todos os pedidos com cartão, então o ratio real da Mastercard é maior.",
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Acima dos limites ECM da Mastercard.",
-    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Sua taxa de estornos em 90 dias é {current} e você acumula ~{monthlyEstimate} estornos/mês. Ambos os critérios ECM ({ecmRatio} ratio, {ecmCount}+/mês) estão atingidos.",
+    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Em {month}, os estornos Mastercard foram {current} dos pedidos com cartão do mês anterior, com {mcCount} estornos. Os dois critérios do ECM (ratio de {ecmRatio}, {ecmCount}+ por mês) foram atingidos.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} dos pedidos de risco ALTO foram atendidos.",
     "checkpoint_high_risk_fulfilled_consider_body": "Cada pedido de risco ALTO atendido é exposição absorvida — o modelo da Shopify sinalizou mas não bloqueou. Crie uma regra no Shopify Flow que retém o atendimento quando o pedido for de risco Alto e ultrapassar um valor que você definir.",
     "checkpoint_signature_capture_low_consider_title": "Assinatura registrada em {current} das entregas confirmadas.",
@@ -5490,7 +5490,14 @@
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "O programa da Visa não se aplica às suas disputas.",
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O VAMP da Visa conta chargebacks de cartão, portanto não mede o resto do seu volume — não há veredicto VAMP a dar aqui.",
     "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "O programa da Mastercard não se aplica às suas disputas.",
-    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O ECM da Mastercard conta chargebacks de cartão; as restantes seguem as regras do fornecedor que as tratou."
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Apenas {cardShare} das suas disputas chegam por uma rede de cartões. O ECM da Mastercard conta chargebacks de cartão; as restantes seguem as regras do fornecedor que as tratou.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_title": "Acima do ratio da Visa, abaixo do mínimo de aplicação.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_body": "Em {month}, sua taxa de estornos em cartão foi de {current}, acima do nível de alerta antecipado da Visa de {vampApproaching}. O VAMP só é aplicado a partir de {vampFloor} disputas por mês; você teve {visaCount} estornos Visa.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_title": "Acima do ratio da Mastercard, abaixo do mínimo de aplicação.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_body": "Em {month}, os estornos Mastercard foram {current} dos pedidos com cartão do mês anterior, acima do ratio de {ecmRatio} do ECM. O ECM só é aplicado a partir de {ecmCount} estornos por mês; você teve {mcCount}.",
+    "programmeFinal": "Os números das bandeiras de cartão são de {month}.",
+    "programmeProvisional": "Os números das bandeiras de cartão são de {month} e são provisórios até {finalOn}.",
+    "programmeUnavailable": "Os números das bandeiras de cartão estão temporariamente indisponíveis. O resto desta página está atualizado."
   },
   "consent": {
     "ariaLabel": "Preferências de cookies e privacidade",
@@ -5808,7 +5815,8 @@
         "label": "Visa VAMP"
       },
       "ecm": {
-        "label": "Mastercard ECM"
+        "label": "Mastercard ECM",
+        "lowerBound": "Limite inferior: medido sobre todos os pedidos com cartão."
       },
       "efm": {
         "label": "Mastercard EFM"
@@ -5832,7 +5840,16 @@
         "fptWinsHelper": "Disputas Mastercard 4837 / 4863 vencidas via First-Party Trust"
       },
       "estimateNotice": "Índices são estimativas calculadas a partir dos seus dados Shopify. Seu adquirente possui os números autoritativos usados na fiscalização de conformidade.",
-      "notApplicable": "Sem volume de cartão neste período — este programa não mede as suas disputas."
+      "notApplicable": "Sem volume de cartão neste período — este programa não mede as suas disputas.",
+      "periodLabelProvisional": "Período: {period} · provisório até {finalOn}",
+      "notMeasured": "Não foi possível carregar os números das bandeiras de cartão deste mês. Tente novamente em alguns minutos.",
+      "tooFewOrders": "Poucos pedidos com cartão neste mês para medir.",
+      "severity": {
+        "healthy": "Saudável",
+        "info": "Acima do ratio, abaixo do mínimo",
+        "consider": "Revisar",
+        "breach": "Ultrapassado"
+      }
     }
   },
   "playbook": {

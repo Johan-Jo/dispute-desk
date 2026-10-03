@@ -2,23 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import {
-  bandForVamp,
-  bandForMcEcm,
-  bandForMcEfm,
-  VAMP_STANDARD,
+  MC_ECM_COUNT_FLOOR,
+  MC_ECM_RATIO,
+  VAMP_COUNT_FLOOR,
+  VAMP_EARLY_WARNING,
   VAMP_EXCESSIVE,
-  MC_ECM,
-  MC_EFM,
-} from "@/lib/liabilityShift/ratios/thresholds";
+} from "@/lib/insights/programmeThresholds";
+import { programmeMonthFor } from "@/lib/insights/period/computeProgrammeBlock";
+import { statementMonth } from "@/lib/insights/period/months";
 
 export const runtime = "nodejs";
 
 /**
  * GET /api/ratios/current
  *
- * Returns the most recent calculated ratio snapshot for the shop,
- * with threshold bands and the counterfactual delta. Always labeled
- * "calculated estimate" client-side.
+ * The Liability-shift card's figures for the statement month (the last
+ * complete calendar month) — computed by the same `computeProgrammeBlock`
+ * the Insights checkpoints use, so the two VAMP numbers on that page are one
+ * number. It used to read the newest `ratio_snapshots` row, which is the
+ * CURRENT, unfinished month (Mein Maison: 1 dispute on 32 October orders
+ * shown as 3.13% VAMP in red), and turned NULL into 0.
+ *
+ * The DisputeDesk-impact counts (CE 3.0 / FPT exclusions, fees avoided)
+ * still come from that month's snapshot row. Always labelled "calculated
+ * estimate" client-side.
  */
 export async function GET(req: NextRequest) {
   const shopId = extractShopId(req);
@@ -30,51 +37,60 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = getServiceClient();
-  const { data, error } = await sb
+  const now = new Date();
+  const month = statementMonth(now);
+
+  const programme = await programmeMonthFor(sb, shopId, month, now);
+  if (programme.status === "error") {
+    return NextResponse.json({ snapshot: null, status: "error", periodMonth: month });
+  }
+
+  const { data: row, error } = await sb
     .from("ratio_snapshots")
-    .select("*")
+    .select(
+      "vamp_ratio_without_dd, ce30_excluded_count, fpt_excluded_count, estimated_fees_avoided_usd, estimated_revenue_recovered_usd, calculated_at",
+    )
     .eq("shop_id", shopId)
-    .order("period_month", { ascending: false })
-    .limit(1)
+    .eq("period_month", month)
     .maybeSingle();
-
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ snapshot: null, status: "error", periodMonth: month });
   }
 
-  if (!data) {
-    return NextResponse.json({ snapshot: null });
-  }
+  const num = (v: unknown): number | null =>
+    v === null || v === undefined ? null : Number(v);
 
   return NextResponse.json({
+    status: "ok",
     snapshot: {
-      periodMonth: data.period_month,
+      periodMonth: month,
+      periodState: programme.periodState,
+      finalOn: programme.finalOn,
+      cardFramingApplies: programme.cardFramingApplies,
       vamp: {
-        ratio: Number(data.vamp_ratio_calculated ?? 0),
-        ratioWithoutDd: Number(data.vamp_ratio_without_dd ?? 0),
-        band: bandForVamp(Number(data.vamp_ratio_calculated ?? 0)),
-        thresholdStandard: VAMP_STANDARD,
+        ratio: programme.cardDisputeRatio,
+        ratioWithoutDd: num(row?.vamp_ratio_without_dd),
+        severity: programme.vampSeverity,
+        count: programme.visaChargebackCount,
+        countFloor: VAMP_COUNT_FLOOR,
+        thresholdEarlyWarning: VAMP_EARLY_WARNING,
         thresholdExcessive: VAMP_EXCESSIVE,
       },
       mcEcm: {
-        ratio: Number(data.mc_ecm_ratio ?? 0),
-        band: bandForMcEcm(Number(data.mc_ecm_ratio ?? 0)),
-        threshold: MC_ECM,
-      },
-      mcEfm: {
-        ratio: Number(data.mc_efm_ratio ?? 0),
-        band: bandForMcEfm(Number(data.mc_efm_ratio ?? 0)),
-        threshold: MC_EFM,
+        ratio: programme.ecmRatio,
+        severity: programme.ecmSeverity,
+        lowerBound: programme.ecmIsLowerBound,
+        count: programme.mcChargebackCount,
+        countFloor: MC_ECM_COUNT_FLOOR,
+        threshold: MC_ECM_RATIO,
       },
       impact: {
-        ce30ExcludedCount: Number(data.ce30_excluded_count ?? 0),
-        fptExcludedCount: Number(data.fpt_excluded_count ?? 0),
-        estimatedFeesAvoidedUsd: Number(data.estimated_fees_avoided_usd ?? 0),
-        estimatedRevenueRecoveredUsd: Number(
-          data.estimated_revenue_recovered_usd ?? 0,
-        ),
+        ce30ExcludedCount: Number(row?.ce30_excluded_count ?? 0),
+        fptExcludedCount: Number(row?.fpt_excluded_count ?? 0),
+        estimatedFeesAvoidedUsd: Number(row?.estimated_fees_avoided_usd ?? 0),
+        estimatedRevenueRecoveredUsd: Number(row?.estimated_revenue_recovered_usd ?? 0),
       },
-      calculatedAt: data.calculated_at,
+      calculatedAt: (row?.calculated_at as string | null) ?? null,
     },
   });
 }

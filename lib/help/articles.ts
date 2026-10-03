@@ -488,7 +488,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     titleKey: "help.articles.vampRatioExplained.title",
     bodyKey: "help.articles.vampRatioExplained.body",
     relatedSlugs: ["ce30-overview", "mastercard-fpt", "auto-qualification-visa-secure"],
-    tags: ["vamp", "ratio", "ecm", "efm", "threshold", "compliance", "fees"],
+    tags: ["vamp", "ratio", "ecm", "threshold", "compliance", "fees", "calendar month"],
   },
   {
     slug: "session-capture",

@@ -21,21 +21,28 @@ export type CheckpointSeverity =
   /** Actual network-threshold breach (VAMP/ECM/HECM). */
   | "breach";
 
+/** The card-programme figures for ONE calendar month — the subset of
+ *  `computeProgrammeBlock` the VAMP/ECM rules read. */
+export interface ProgrammeCheckpointInput {
+  /** ISO first-of-month, "YYYY-MM-01". */
+  periodMonth: string;
+  cardDisputeRatio: number | null;
+  visaChargebackCount: number;
+  mcChargebackCount: number;
+  ecmRatio: number | null;
+  ecmIsLowerBound: boolean;
+  /** Whether card-network framing describes this merchant in this month.
+   *  When false the rules emit "not applicable", never a verdict. */
+  cardFramingApplies: boolean;
+  /** Card share of the month's classified disputes, 0–1. */
+  cardDisputeShare: number | null;
+}
+
 export interface CheckpointInput {
-  /** 90-day chargeback rate as a percent (e.g. 0.7 = 0.7%). */
-  chargebackRate90d: number | null;
-  /** 90-day CHARGEBACK count — needed for the ECM rule, which requires
-   *  both the ratio AND 100+ disputes/month.
-   *
-   *  Named `...Count...`, not `...Orders...`, deliberately. The field was
-   *  previously `chargebackOrders90d`, which reads like an order count —
-   *  and the in-app page duly passed the order denominator, so a merchant
-   *  with 14,635 orders and 300 chargebacks was told they average ~4,878
-   *  chargebacks a month against a true ~100 (49x). The two digests passed
-   *  the correct value, so the same merchant saw contradictory figures in
-   *  the app and in their email. The name is the fix: a count and a
-   *  denominator must not share one. */
-  chargebackCount90d: number;
+  /** The month's card-programme block. Absent → no VAMP/ECM checkpoint at
+   *  all. A verdict from a rolling 90-day window, or from disputes counted by
+   *  when we inserted them, is what told blume-box "5.31%, breach". */
+  programme?: ProgrammeCheckpointInput;
   /** 30-day fraud-dispute rate as a percent. */
   fraudDisputeRatePct: number | null;
   /** % of HIGH-risk orders that were still fulfilled (last 30 days). */
@@ -51,30 +58,6 @@ export interface CheckpointInput {
   medianFulfillmentHoursCurrent: number | null;
   /** Median fulfillment hours, prior 30-day window. */
   medianFulfillmentHoursPrior: number | null;
-
-  // ── Payment rail ────────────────────────────────────────────────
-  // Without these the card-programme rules cannot tell whether Visa and
-  // Mastercard govern this merchant at all. Measured on prod, they do not
-  // for two of four shops: cay-collective's 76 disputes are 100% Klarna and
-  // Mein Maison's are 92.3% PayPal, yet both were shown VAMP/ECM verdicts.
-  //
-  // Optional so the three existing callers (page, monthly digest, onboarding
-  // digest) keep compiling; when absent the card rules fall back to their
-  // previous unconditional behaviour rather than silently self-suppressing.
-  // Suppressing on missing data would hide a genuine breach from a
-  // card-only merchant whose caller simply had not been updated yet.
-
-  /** Card-rail dispute rate, %. The only rate VDMP/ECM actually govern. */
-  cardChargebackRate90d?: number | null;
-  /** 90-day CHARGEBACK count on the card rail — the ECM count criterion. */
-  cardChargebackCount90d?: number;
-  /** Share of classified disputes on the card rail, 0–1. */
-  cardDisputeShare?: number | null;
-  /** Whether card-network framing describes this merchant at all. When
-   *  false the VAMP/ECM rules emit a "not applicable" observation instead
-   *  of a verdict — the honest third state that did not exist before, and
-   *  whose absence made `healthy` as wrong as `breach` for a PayPal shop. */
-  cardFramingApplies?: boolean;
 }
 
 export interface Checkpoint {

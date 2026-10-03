@@ -3827,8 +3827,8 @@
         "body": "Shopify groups all disputes into 14 broad categories (Fraudulent, Product Not Received, Subscription Canceled, etc.). But Visa and Mastercard use much more specific reason codes underneath: Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855, and so on. The specific network code is what determines how the issuing bank evaluates your evidence and what kind of rebuttal language wins.\n\nDisputeDesk resolves the underlying network reason code automatically for every dispute. The resolution uses several signals (in order of reliability):\n- Direct: a typed field on the Shopify dispute (currently not exposed by Shopify, so this is reserved for a future API change)\n- Derived: parsed from the payment gateway's transaction receipt when available (Shopify Payments only)\n- Inferred: best-guess mapping from Shopify's enum + the card network + order context\n- Unknown: signal not available; standard handling applies\n\nThe dispute detail page shows the resolved code (e.g., 'Visa 13.1 — Merchandise/Services Not Received') with a confidence indicator. Confident resolution lets DisputeDesk:\n1. Detect CE 3.0 eligibility (Visa 10.4 → CE 3.0 path)\n2. Detect FPT eligibility (Mastercard 4837 / 4863 → FPT path)\n3. Pick more specific rebuttal templates per code (Visa 13.1, 13.2, and 13.3 each get different language even though they all map to 'Product Not Received' in Shopify's enum)\n4. Apply tailored evidence checklists per code\n\nYou don't need to do anything — resolution is automatic. If a code resolves as 'unknown', DisputeDesk falls back gracefully to the standard handling for the Shopify enum value."
       },
       "vampRatioExplained": {
-        "title": "VAMP, ECM, and EFM — what the numbers mean",
-        "body": "Card networks monitor three key chargeback ratios for every merchant. Crossing the thresholds triggers fees, enrollment in monitoring programs, and in extreme cases account termination. The DisputeDesk Ratio Dashboard shows your calculated estimates plus the counterfactual impact of DisputeDesk's wins.\n\nThe three ratios:\n- Visa VAMP (Acquirer Monitoring Program) — total disputes / total settled transactions. Standard threshold: 0.65%. Excessive threshold: 1.50%. Crossing excessive triggers a per-transaction enforcement fee.\n- Mastercard ECM (Excessive Chargeback Merchant) — Mastercard chargebacks / Mastercard settled. Threshold: 1.00%.\n- Mastercard EFM (Excessive Fraud Merchant) — Mastercard fraud chargebacks / Mastercard settled. Threshold: 0.50%.\n\nDisputeDesk shows a yellow warning at 80% of each threshold and a red alert when you cross it. We also email you when bands change.\n\nThe counterfactual line is the key insight: DisputeDesk-attributed wins (CE 3.0 and FPT successes) are removed from your VAMP numerator when calculating your ratio. The dashed line shows what your ratio would be without DisputeDesk's work — the gap between the two lines is the value DisputeDesk delivered.\n\nImportant caveat: these are calculated estimates from your Shopify data, not the official numbers your acquirer reports. Only your acquirer has the authoritative ratio. DisputeDesk's calculation uses the standard formula but approximates TC40 / TC15 / TC05 settlement codes from Shopify's dispute and order data. If your acquirer's number differs, theirs is the one that matters for compliance — ours is a working approximation to spot trends early.\n\nMonthly impact summary on the dashboard shows: disputes qualified, wins by channel, transactions removed from VAMP, estimated fees avoided, and estimated revenue recovered."
+        "title": "VAMP and ECM — what the numbers mean",
+        "body": "Visa and Mastercard monitor how many of a merchant's card payments turn into chargebacks. DisputeDesk shows a calculated estimate for both programmes, one calendar month at a time.\n\nHow we calculate it:\n- Month: the last complete calendar month. It is provisional until the 8th of the following month, because late chargebacks keep arriving for about a week; after that it is final.\n- Card dispute ratio (Visa VAMP estimate): card chargebacks opened in the month ÷ card orders placed and paid in the month. Inquiries are not counted, and neither are PayPal, Klarna or other non-card payments.\n- Mastercard ECM: Mastercard chargebacks in the month ÷ card orders in the previous month. Until we can separate Mastercard orders from other cards, this is a lower bound.\n- With fewer than 50 card orders in a month we show no ratio, because one dispute would swing it by whole points.\n\nThresholds:\n- Visa VAMP: early warning at 0.9%, Excessive at 1.5%. Visa only enforces VAMP from 1,500 disputes a month.\n- Mastercard ECM: 1.5% and 100 or more chargebacks a month (High ECM: 3.0% and 300).\n- A month above the ratio but below the enforcement floor is shown as information, never as a breach.\n\nIf most of your disputes come through PayPal, Klarna or another non-card provider, these programmes don't measure you, and we say so instead of showing a verdict.\n\nThe counterfactual line is the key insight: DisputeDesk-attributed wins (CE 3.0 and FPT successes) are removed from your VAMP numerator when calculating your ratio. The dashed line shows what your ratio would be without DisputeDesk's work — the gap between the two lines is the value DisputeDesk delivered.\n\nImportant caveat: these are calculated estimates from your Shopify data, not the official numbers your acquirer reports. Only your acquirer has the authoritative ratio. DisputeDesk's calculation uses the standard formula but approximates TC40 / TC15 / TC05 settlement codes from Shopify's dispute and order data. If your acquirer's number differs, theirs is the one that matters for compliance — ours is a working approximation to spot trends early.\n\nMonthly impact summary on the dashboard shows: disputes qualified, wins by channel, transactions removed from VAMP, estimated fees avoided, and estimated revenue recovered."
       },
       "sessionCapture": {
         "title": "Storefront session capture — what it is and what we store",
@@ -5578,17 +5578,17 @@
     "checkpointsSubtitle": "Where you stand relative to card-network rules and your own 30-day baseline.",
     "checkpointSourcePrefix": "Source",
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Below Visa's monitoring band.",
-    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Your 90-day chargeback rate is {current}. Visa's VAMP Excessive threshold is {vampExcessive}; the operationally watched 'approaching' band begins around {vampApproaching}.",
+    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "In {month}, your card dispute ratio was {current}. Visa's early-warning level is {vampApproaching}; VAMP's Excessive threshold is {vampExcessive}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Approaching Visa's VAMP threshold.",
-    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Your 90-day chargeback rate is {current} — inside the {vampApproaching}–{vampExcessive} 'approaching' band. Acquirers face $8 per disputed transaction once Excessive ({vampExcessive}) is reached.",
+    "checkpoint_chargeback_rate_vs_vamp_consider_body": "In {month}, your card dispute ratio was {current}, between Visa's {vampApproaching} early-warning level and the {vampExcessive} Excessive threshold, with enough disputes for VAMP to apply.",
     "checkpoint_chargeback_rate_vs_vamp_breach_title": "Above Visa's VAMP Excessive threshold.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Your 90-day chargeback rate is {current}, at or above Visa's VAMP Excessive threshold of {vampExcessive}. Acquirers face $8 per disputed transaction at this level.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_body": "In {month}, your card dispute ratio was {current}, at or above Visa's {vampExcessive} Excessive threshold, with {visaCount} Visa chargebacks. Acquirers face $8 per disputed transaction at this level.",
     "checkpoint_chargeback_rate_vs_ecm_healthy_title": "Below Mastercard's ECM threshold.",
-    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Your 90-day chargeback rate is {current}, well below Mastercard's ECM ratio of {ecmRatio} (which also requires {ecmCount}+ chargebacks per month).",
+    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "In {month}, Mastercard chargebacks were {current} of last month's card orders ({mcCount} chargebacks), below ECM's {ecmRatio} ratio, which also requires {ecmCount}+ chargebacks a month.",
     "checkpoint_chargeback_rate_vs_ecm_consider_title": "Approaching Mastercard's ECM threshold.",
-    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Your 90-day chargeback rate is {current}. Mastercard's ECM activates at {ecmRatio} ratio with {ecmCount}+ chargebacks per month (you average ~{monthlyEstimate}).",
+    "checkpoint_chargeback_rate_vs_ecm_consider_body": "In {month} you had {mcCount} Mastercard chargebacks, at ECM's {ecmCount}-a-month floor. The ratio shown, {current}, is measured against all card orders, so the true Mastercard ratio is higher.",
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Above Mastercard's ECM thresholds.",
-    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Your 90-day chargeback rate is {current} and you average ~{monthlyEstimate} chargebacks per month. Both ECM criteria ({ecmRatio} ratio, {ecmCount}+/month) are now met.",
+    "checkpoint_chargeback_rate_vs_ecm_breach_body": "In {month}, Mastercard chargebacks were {current} of last month's card orders, with {mcCount} chargebacks. Both ECM criteria ({ecmRatio} ratio, {ecmCount}+ a month) are met.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} of HIGH-risk orders were fulfilled.",
     "checkpoint_high_risk_fulfilled_consider_body": "Each fulfilled HIGH-risk order is absorbed exposure — Shopify's risk model flagged but did not block. Set up a Shopify Flow rule that holds fulfillment when an order is High-risk and over a value threshold you choose.",
     "checkpoint_signature_capture_low_consider_title": "Signature captured on {current} of confirmed deliveries.",
@@ -5625,7 +5625,14 @@
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_title": "Visa's programme does not apply to your disputes.",
     "checkpoint_chargeback_rate_vs_vamp_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Visa's VAMP counts card chargebacks, so it does not measure the rest of your dispute volume — there is no VAMP verdict to give you here.",
     "checkpoint_chargeback_rate_vs_ecm_not_applicable_title": "Mastercard's programme does not apply to your disputes.",
-    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Mastercard's ECM counts card chargebacks, so your other disputes are settled under the rules of the provider that handled them instead."
+    "checkpoint_chargeback_rate_vs_ecm_not_applicable_body": "Only {cardShare} of your disputes arrive on a card network. Mastercard's ECM counts card chargebacks, so your other disputes are settled under the rules of the provider that handled them instead.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_title": "Above Visa's ratio, below its enforcement floor.",
+    "checkpoint_chargeback_rate_vs_vamp_below_floor_body": "In {month}, your card dispute ratio was {current}, above Visa's {vampApproaching} early-warning level. VAMP is only enforced from {vampFloor} disputes a month; you had {visaCount} Visa chargebacks.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_title": "Above Mastercard's ratio, below its enforcement floor.",
+    "checkpoint_chargeback_rate_vs_ecm_below_floor_body": "In {month}, Mastercard chargebacks were {current} of last month's card orders, above ECM's {ecmRatio} ratio. ECM is only enforced from {ecmCount} chargebacks a month; you had {mcCount}.",
+    "programmeFinal": "Card-network figures are for {month}.",
+    "programmeProvisional": "Card-network figures are for {month} and are provisional until {finalOn}.",
+    "programmeUnavailable": "Card-network figures are temporarily unavailable. The rest of this page is up to date."
   },
   "consent": {
     "ariaLabel": "Cookie and privacy choices",
@@ -5807,7 +5814,8 @@
         "label": "Visa VAMP"
       },
       "ecm": {
-        "label": "Mastercard ECM"
+        "label": "Mastercard ECM",
+        "lowerBound": "Lower bound: measured against all card orders."
       },
       "efm": {
         "label": "Mastercard EFM"
@@ -5831,7 +5839,16 @@
         "fptWinsHelper": "Mastercard 4837 / 4863 disputes won via First-Party Trust"
       },
       "estimateNotice": "Ratios are calculated estimates from your Shopify data. Your acquirer holds the authoritative numbers used for compliance enforcement.",
-      "notApplicable": "No card volume this period — this programme does not measure your disputes."
+      "notApplicable": "No card volume this period — this programme does not measure your disputes.",
+      "periodLabelProvisional": "Period: {period} · provisional until {finalOn}",
+      "notMeasured": "We couldn't load this month's card-network figures. Try again in a few minutes.",
+      "tooFewOrders": "Too few card orders this month to measure.",
+      "severity": {
+        "healthy": "Healthy",
+        "info": "Above ratio, below floor",
+        "consider": "Consider",
+        "breach": "Breach"
+      }
     }
   },
   "playbook": {

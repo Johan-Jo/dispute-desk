@@ -48,8 +48,14 @@ import styles from "./initial-analysis.module.css";
 import { OperationalCheckpoints } from "./OperationalCheckpoints";
 import { LiabilityShiftImpact } from "./LiabilityShiftImpact";
 import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
+import {
+  programmeCheckpointInput,
+  type ProgrammeMonth,
+} from "@/lib/insights/period/computeProgrammeBlock";
 
 interface InsightsResponse {
+  /** VAMP/ECM for the statement month — the only card-programme input. */
+  programmeMonth?: ProgrammeMonth;
   available: boolean;
   ordersAnalyzed: number;
 
@@ -972,16 +978,12 @@ export default function InitialAnalysisPage() {
             as interpretation layer, not data presenter. */}
         <Layout.Section>
           <OperationalCheckpoints
+            programmeMonth={data.programmeMonth}
             checkpoints={evaluateCheckpoints({
-              chargebackRate90d: data.chargebackRate90d,
-              chargebackCount90d: data.chargebackCount90d,
-              // Rail context. Without it the VAMP/ECM rules grade every
-              // merchant against Visa and Mastercard, including the ones
-              // whose disputes never touch a card network.
-              cardChargebackRate90d: data.rail?.cardRatePct,
-              cardChargebackCount90d: data.rail?.cardDisputes,
-              cardDisputeShare: data.rail?.cardDisputeShare,
-              cardFramingApplies: data.rail?.cardFramingApplies,
+              // VAMP/ECM from ONE calendar month (the statement month).
+              // Undefined on a programme error → no VAMP/ECM checkpoint, and
+              // OperationalCheckpoints says the figures are unavailable.
+              programme: programmeCheckpointInput(data.programmeMonth),
               fraudDisputeRatePct: current30d.fraudDisputeRatePct,
               fulfilledHighRiskPct: current30d.fulfilledHighRiskPct,
               threeDsAuthRatePct: current30d.threeDsAuthRatePct,
