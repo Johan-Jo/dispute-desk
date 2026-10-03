@@ -12,6 +12,7 @@
  * No side effects. Pure functions only.
  */
 
+import { formatCheckpointValues } from "@/lib/insights/period/format";
 import type { Checkpoint } from "@/lib/insights/checkpoints.types";
 
 // ─── Formatters ───────────────────────────────────────────────────
@@ -219,8 +220,8 @@ export function resolveCheckpointCopy(c: Checkpoint): {
   const copy = CHECKPOINT_COPY[key];
   if (!copy) return { title: c.id, body: "" };
   return {
-    title: interpolate(copy.title, c.values),
-    body: interpolate(copy.body, c.values),
+    title: interpolate(copy.title, formatCheckpointValues(c.values, "en")),
+    body: interpolate(copy.body, formatCheckpointValues(c.values, "en")),
   };
 }
 

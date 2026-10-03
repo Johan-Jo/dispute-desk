@@ -14,7 +14,8 @@
  * attention is amber, not crisis.
  */
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { formatCheckpointValues } from "@/lib/insights/period/format";
 import { Card, BlockStack, Text, Badge, Icon } from "@shopify/polaris";
 import {
   AlertCircleIcon,
@@ -83,6 +84,7 @@ export function OperationalCheckpoints({
 }) {
   const t = useTranslations();
   const format = useFormatter();
+  const locale = useLocale();
   const monthLabel = (iso: string) =>
     format.dateTime(isoToDate(iso), { month: "long", year: "numeric", timeZone: "UTC" });
 
@@ -105,13 +107,12 @@ export function OperationalCheckpoints({
 
   if (checkpoints.length === 0 && !programmeNote) return null;
 
-  // Checkpoint values carry ISO months; the month name is a locale decision
-  // made here, not in lib/.
-  const localized = checkpoints.map((c) =>
-    typeof c.values.month === "string"
-      ? { ...c, values: { ...c.values, month: monthLabel(c.values.month) } }
-      : c,
-  );
+  // Checkpoints carry raw values; formatting is a locale decision made here
+  // (one formatter shared with the email), never in lib/.
+  const localized = checkpoints.map((c) => ({
+    ...c,
+    values: formatCheckpointValues(c.values, locale),
+  }));
 
   const counts: Record<CheckpointSeverity, number> = {
     healthy: 0,
@@ -173,11 +174,16 @@ export function OperationalCheckpoints({
   );
 }
 
+/** A checkpoint whose values are already formatted for the viewer's locale. */
+type LocalizedCheckpoint = Omit<Checkpoint, "values"> & {
+  values: Record<string, string | number>;
+};
+
 function CheckpointCard({
   checkpoint,
   t,
 }: {
-  checkpoint: Checkpoint;
+  checkpoint: LocalizedCheckpoint;
   t: ReturnType<typeof useTranslations>;
 }) {
   const IconSource = SEVERITY_ICON_SOURCE[checkpoint.severity];

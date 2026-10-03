@@ -39,8 +39,9 @@ describe("evaluateCheckpoints — VAMP rule (one calendar month)", () => {
   it("emits healthy below the 0.9% early-warning level, citing the month", () => {
     const v = find(baseline, "chargeback_rate_vs_vamp");
     expect(v?.severity).toBe("healthy");
-    expect(v?.values.current).toBe("0.15%");
-    expect(v?.values.month).toBe("2026-09-01");
+    // Raw values; the renderer formats them per locale.
+    expect(v?.values.current).toEqual({ value: 0.149, format: "pct2" });
+    expect(v?.values.month).toEqual({ value: "2026-09-01", format: "month" });
   });
 
   // blume-box July 2026: a fraud wave, 75 card chargebacks (2.37%) but only
@@ -111,7 +112,7 @@ describe("evaluateCheckpoints — card programmes follow card volume, not the di
   it("judges a Klarna-heavy shop on its card payments", () => {
     const cay = withProgramme({ cardDisputeRatio: 0, visaChargebackCount: 0, mcChargebackCount: 0, ecmRatio: 0, cardDisputeShare: 0 });
     expect(find(cay, "chargeback_rate_vs_vamp")?.severity).toBe("healthy");
-    expect(find(cay, "chargeback_rate_vs_vamp")?.values.current).toBe("0.00%");
+    expect(find(cay, "chargeback_rate_vs_vamp")?.values.current).toEqual({ value: 0, format: "pct2" });
     expect(find(cay, "chargeback_rate_vs_ecm")?.severity).toBe("healthy");
   });
 
