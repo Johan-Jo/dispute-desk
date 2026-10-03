@@ -82,6 +82,7 @@ describe("GET /api/dashboard/insights/initial-analysis?view=period", () => {
       previousReasons: PREVIOUS,
     });
     expect(vi.mocked(readPreviousReasons).mock.calls[0]![2]).toBe("2026-08-01");
+    expect(res.headers.get("Server-Timing")).toMatch(/^insights;dur=\d+$/);
   });
 
   it("runs none of the 90-day work", async () => {
@@ -93,6 +94,7 @@ describe("GET /api/dashboard/insights/initial-analysis?view=period", () => {
     expect(computeLiveState).not.toHaveBeenCalled();
     expect(sb.tables).not.toContain("shop_fraud_daily_metrics");
     expect(sb.tables).not.toContain("shop_daily_metrics");
+    expect(sb.tables).not.toContain("shop_sessions"); // scopes are the banner's, not the page's
   });
 
   it("still serves the trend when the reasons read fails", async () => {
