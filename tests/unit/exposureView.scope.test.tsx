@@ -121,7 +121,7 @@ describe("ExposureView — chart scope, card-only shop (blume-box)", () => {
   });
 
   it("averages counts, not rates, on the 3-month line", () => {
-    expect(chart).toContain("3-month average 5.5");
+    expect(chart).toContain("3-month average 5.5 per month");
   });
 });
 
@@ -185,7 +185,7 @@ describe("ExposureView — count average and empty months", () => {
   it("states the 3-month average in chargebacks, with its direction", () => {
     const chart = chartOf(render(FOUR));
     // (75 + 7 + 4) / 3 = 28.7 against June's own 22.
-    expect(chart).toContain("3-month average 28.7 chargebacks, up from 22 in June");
+    expect(chart).toContain("3-month average 28.7 per month, up from 22 in June");
   });
 
   it("draws no bar for a month without chargebacks", () => {

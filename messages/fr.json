@@ -6662,7 +6662,7 @@
       "FRAUDULENT": "Fraude",
       "PRODUCT_NOT_RECEIVED": "Produit non reçu",
       "PRODUCT_UNACCEPTABLE": "Pas comme décrit",
-      "CREDIT_NOT_PROCESSED": "Remboursement non traité",
+      "CREDIT_NOT_PROCESSED": "Crédit non traité",
       "SUBSCRIPTION_CANCELLED": "Abonnement annulé",
       "DUPLICATE": "Double facturation",
       "UNRECOGNIZED": "Paiement non reconnu",
@@ -6685,8 +6685,8 @@
     "tipOrdersAll": "sur {d} commandes",
     "tipSplit": "{cards} par carte · {other} par d’autres moyens",
     "trendNoteAll": "Tous les moyens de paiement. Visa et Mastercard ne mesurent que les paiements par carte ; leurs seuils figurent sous « Cartes uniquement ».",
-    "trendAverageAllDown": "Moyenne sur 3 mois : {now} contestations, en baisse par rapport à {prev} en {month}",
-    "trendAverageAllUp": "Moyenne sur 3 mois : {now} contestations, en hausse par rapport à {prev} en {month}",
-    "trendAverageAllOnly": "Moyenne sur 3 mois : {now} contestations"
+    "trendAverageAllDown": "Moyenne sur 3 mois : {now} par mois, en baisse par rapport à {prev} en {month}",
+    "trendAverageAllUp": "Moyenne sur 3 mois : {now} par mois, en hausse par rapport à {prev} en {month}",
+    "trendAverageAllOnly": "Moyenne sur 3 mois : {now} par mois"
   }
 }
