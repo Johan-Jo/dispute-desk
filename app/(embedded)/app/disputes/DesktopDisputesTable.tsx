@@ -29,17 +29,19 @@ import { phaseLabel } from "@/lib/disputes/phaseUtils";
 import { isEscalatedFromInquiry, showReopenedPill } from "@/lib/disputes/escalation";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
-/** 9-column grid shared by the header + every row (Disputes Table design).
- *  The Type column carries the escalated / reopened / review tags, so it
- *  needs a real minimum width — at 1fr the nowrap tags spilled into the
- *  Case strength column. The table scrolls horizontally below TABLE_MIN_WIDTH
- *  instead of letting columns collide. TABLE_MIN_WIDTH is the real sum of the
- *  track minimums + gaps + row padding (1074 + 8×20 + 40); the page renders
- *  `fullWidth` so the table normally fits without scrolling. */
+/** 9-column grid shared by the header + every row. Sized to fit the standard
+ *  998px Polaris page without horizontal scroll: the fixed tracks hold short,
+ *  predictable content (chip, amount, dates, outcome, chevron) and the three
+ *  text columns share what is left (about 160 / 135 / 155px at 998). The Type
+ *  column carries the escalated / reopened / review tags; they wrap inside it
+ *  instead of spilling into Case strength. TABLE_MIN_WIDTH only matters on a
+ *  window narrower than the page, where the table scrolls rather than
+ *  crushing the text columns to nothing. */
 const GRID_COLUMNS =
-  "minmax(200px,1.6fr) minmax(190px,1.3fr) 120px minmax(170px,1.3fr) 90px 90px 100px 90px 24px";
-const GRID_GAP = 20;
-const TABLE_MIN_WIDTH = 1274;
+  "minmax(0,1.5fr) minmax(0,1.25fr) 90px minmax(0,1.45fr) 90px 72px 88px 84px 16px";
+const GRID_GAP = 10;
+const TABLE_MIN_WIDTH = 900;
+
 
 /** Tag colors — the design system Badge `warning` / `danger` variants. */
 const ESCALATED_TAG_COLORS = { background: "#FEF3C7", color: "#92400E" } as const;
@@ -84,6 +86,10 @@ const PILL_STYLE: CSSProperties = {
   alignItems: "center",
 };
 
+/** Tags in the Type column may break onto a second line; a nowrap tag is
+ *  wider than the column in most locales. */
+const TAG_STYLE: CSSProperties = { ...PILL_STYLE, whiteSpace: "normal" };
+
 function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   bg: string;
   color: string;
@@ -125,6 +131,11 @@ const COL_HEADER_STYLE: CSSProperties = {
   color: "#6D7175",
   textTransform: "uppercase",
   letterSpacing: "0.06em",
+  // Long single-word headers (de "Fälligkeitsdatum") break inside their
+  // column instead of running under the next header.
+  minWidth: 0,
+  overflowWrap: "anywhere",
+  hyphens: "auto",
 };
 
 export function DesktopDisputesTable({
@@ -150,7 +161,7 @@ export function DesktopDisputesTable({
         style={{
           background: "#F6F8FB",
           borderBottom: "1px solid #E1E3E5",
-          padding: "14px 20px",
+          padding: "12px 12px 12px 16px",
           display: "grid",
           gridTemplateColumns: GRID_COLUMNS,
           gap: GRID_GAP,
@@ -195,8 +206,7 @@ export function DesktopDisputesTable({
             gridTemplateColumns: GRID_COLUMNS,
             gap: GRID_GAP,
             alignItems: "center",
-            padding: "16px 20px",
-            paddingLeft: 16,
+            padding: "16px 12px",
             borderBottom: "1px solid #E1E3E5",
             borderLeft: chrome.stripeColor
               ? `4px solid ${chrome.stripeColor}`
@@ -295,17 +305,17 @@ export function DesktopDisputesTable({
                 {isEscalatedFromInquiry(d) || showReopenedPill(d) || reviewChip ? (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: "100%" }}>
                     {isEscalatedFromInquiry(d) ? (
-                      <span data-testid="dispute-escalated-pill" style={{ ...PILL_STYLE, ...ESCALATED_TAG_COLORS }}>
+                      <span data-testid="dispute-escalated-pill" style={{ ...TAG_STYLE, ...ESCALATED_TAG_COLORS }}>
                         {t("disputes.escalatedBadge")}
                       </span>
                     ) : null}
                     {showReopenedPill(d) ? (
-                      <span data-testid="dispute-reopened-pill" style={{ ...PILL_STYLE, ...REOPENED_TAG_COLORS }}>
+                      <span data-testid="dispute-reopened-pill" style={{ ...TAG_STYLE, ...REOPENED_TAG_COLORS }}>
                         {t("disputes.reopenedBadge")}
                       </span>
                     ) : null}
                     {reviewChip ? (
-                      <span style={{ ...PILL_STYLE, background: reviewChip.bg, color: reviewChip.color }}>
+                      <span style={{ ...TAG_STYLE, background: reviewChip.bg, color: reviewChip.color }}>
                         {reviewChip.label}
                       </span>
                     ) : null}
@@ -339,9 +349,10 @@ export function DesktopDisputesTable({
                     fontWeight: 600,
                     color: "#202223",
                     lineHeight: 1.4,
-                    whiteSpace: "nowrap",
                     overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
                   }}
                 >
                   {next.label}
@@ -401,7 +412,7 @@ export function DesktopDisputesTable({
               {/* Chevron */}
               <span
                 style={{
-                  width: 20,
+                  width: 16,
                   height: 20,
                   color: "#6D7175",
                   display: "inline-flex",
