@@ -33,11 +33,13 @@ import type { DisputePhase } from "@/lib/rules/disputeReasons";
  *  The Type column carries the escalated / reopened / review tags, so it
  *  needs a real minimum width — at 1fr the nowrap tags spilled into the
  *  Case strength column. The table scrolls horizontally below TABLE_MIN_WIDTH
- *  instead of letting columns collide. */
+ *  instead of letting columns collide. TABLE_MIN_WIDTH is the real sum of the
+ *  track minimums + gaps + row padding (1074 + 8×20 + 40); the page renders
+ *  `fullWidth` so the table normally fits without scrolling. */
 const GRID_COLUMNS =
   "minmax(200px,1.6fr) minmax(190px,1.3fr) 120px minmax(170px,1.3fr) 90px 90px 100px 90px 24px";
 const GRID_GAP = 20;
-const TABLE_MIN_WIDTH = 1080;
+const TABLE_MIN_WIDTH = 1274;
 
 /** Tag colors — the design system Badge `warning` / `danger` variants. */
 const ESCALATED_TAG_COLORS = { background: "#FEF3C7", color: "#92400E" } as const;
