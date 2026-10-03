@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { roundRatio } from "@/lib/insights/programmeThresholds";
 import { classifyRail } from "@/lib/insights/railSegmentation";
 import { winRateCounts } from "@/lib/disputes/winRate";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 import { protectValue } from "@/lib/insights/protectCoverage";
 import { monthEnd } from "./months";
 
@@ -34,6 +35,14 @@ export interface PaymentMethodRow {
   inquiries: number;
   chargebackRate: number | null;
   disputeRate: number | null;
+}
+
+export interface ReasonRow {
+  /** Shopify's dispute reason (FRAUDULENT, PRODUCT_NOT_RECEIVED, …), or
+   *  "UNKNOWN" when the dispute carries none. */
+  reason: string;
+  /** Chargebacks and inquiries opened in the month with this reason. */
+  disputes: number;
 }
 
 export interface OperationalMetrics {
@@ -59,6 +68,9 @@ export interface OperationalMetrics {
   wonCount: number;
   decidedCount: number;
   byPaymentMethod: PaymentMethodRow[];
+  /** Disputes opened in the month by reason, most first. Absent on records
+   *  written before metrics v4; absent means "not measured", never "none". */
+  byReason?: ReasonRow[];
 }
 
 function fail(what: string, error: { message?: string; code?: string } | null): void {
@@ -130,11 +142,11 @@ export async function computeOperationalMetrics(
   );
 
   // ── Disputes opened in the month, resolved to their order's method ──
-  const disputes = await pageAll<{ phase: string | null; order_gid: string | null }>(
+  const disputes = await pageAll<{ phase: string | null; order_gid: string | null; reason: string | null }>(
     (o) =>
       sb
         .from("disputes")
-        .select("phase, order_gid")
+        .select("phase, order_gid, reason")
         .eq("shop_id", shopId)
         .gte("initiated_at", from)
         .lt("initiated_at", to)
@@ -204,6 +216,18 @@ export async function computeOperationalMetrics(
       disputeRate: share(g.chargebacks + g.inquiries, g.orders, METHOD_MIN_ORDERS),
     }))
     .sort((a, b) => b.chargebacks + b.inquiries - (a.chargebacks + a.inquiries) || b.orders - a.orders);
+
+  // ── Disputes by reason: the same disputes, grouped by Shopify's reason ──
+  const reasonCounts = new Map<string, number>();
+  for (const d of disputes) {
+    // Legacy spellings fold into the canonical code; a value Shopify adds
+    // later is kept as sent rather than dropped.
+    const reason = canonicalReasonCode(d.reason) ?? ((d.reason ?? "").trim().toUpperCase() || "UNKNOWN");
+    reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+  }
+  const byReason: ReasonRow[] = [...reasonCounts.entries()]
+    .map(([reason, n]) => ({ reason, disputes: n }))
+    .sort((a, b) => b.disputes - a.disputes || a.reason.localeCompare(b.reason));
 
   // ── 3-D Secure: card-network orders on Shopify Payments, both sides ──
   // Wallets and Shop Pay settle on the card networks and do carry 3-D Secure
@@ -299,5 +323,6 @@ export async function computeOperationalMetrics(
     wonCount: wr.won,
     decidedCount: wr.decided,
     byPaymentMethod,
+    byReason,
   };
 }

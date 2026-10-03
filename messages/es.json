@@ -6645,6 +6645,35 @@
     "methodsFootRates": "Las tasas se muestran a partir de 50 pedidos.",
     "methodsFootEarlier": "Una disputa abierta este mes puede corresponder a un pedido anterior.",
     "methodsFootReference": "Línea de referencia del {pct}",
-    "sourcePrefix": "Fuente:"
+    "sourcePrefix": "Fuente:",
+    "reasonsTitle": "Motivos de disputa · {month} frente a {prev}",
+    "reasonsSub": "Contracargos y consultas abiertos cada mes, agrupados por el motivo que indicó el banco.",
+    "reasonsTotal": "{count, plural, one {# disputa} other {# disputas}}",
+    "reasonsSame": "Igual que en {prev}",
+    "reasonsFewer": "{count} menos que en {prev}",
+    "reasonsMore": "{count} más que en {prev}",
+    "reasonsColReason": "Motivo",
+    "reasonsColChange": "Cambio",
+    "reasonsShare": "{pct} de {month}",
+    "reasonsNone": "Ninguna en {month}",
+    "reasonsNew": "Nuevo",
+    "reasonsFoot": "Según el mes en que se abrió cada disputa. Un motivo puede cambiar si el banco actualiza el caso.",
+    "reason": {
+      "FRAUDULENT": "Fraude",
+      "PRODUCT_NOT_RECEIVED": "Producto no recibido",
+      "PRODUCT_UNACCEPTABLE": "No conforme a la descripción",
+      "CREDIT_NOT_PROCESSED": "Crédito no procesado",
+      "SUBSCRIPTION_CANCELLED": "Suscripción cancelada",
+      "DUPLICATE": "Cargo duplicado",
+      "UNRECOGNIZED": "Pago no reconocido",
+      "GENERAL": "General",
+      "BANK_CANNOT_PROCESS": "El banco no puede procesar",
+      "CUSTOMER_INITIATED": "Iniciado por el cliente",
+      "DEBIT_NOT_AUTHORIZED": "Débito no autorizado",
+      "INCORRECT_ACCOUNT_DETAILS": "Datos de cuenta incorrectos",
+      "INSUFFICIENT_FUNDS": "Fondos insuficientes",
+      "NONCOMPLIANT": "No conforme",
+      "UNKNOWN": "Sin motivo indicado"
+    }
   }
 }

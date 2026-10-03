@@ -21,6 +21,7 @@ import { Page, Layout, Card, BlockStack, Text, Banner, Spinner } from "@shopify/
 import type { InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
 import type { TrendPoint } from "@/lib/insights/period/readTrend";
 import type { LiveState } from "@/lib/insights/period/computeLiveState";
+import type { PreviousReasons } from "@/lib/insights/period/reasonComparison";
 import { formatMonth } from "@/lib/insights/period/format";
 import { ExposureView } from "./ExposureView";
 
@@ -30,6 +31,7 @@ interface InsightsResponse {
   period: InsightsPeriod;
   trend: TrendPoint[];
   liveState: LiveState | null;
+  previousReasons: PreviousReasons | null;
 }
 
 export default function InitialAnalysisPage() {
@@ -129,6 +131,7 @@ export default function InitialAnalysisPage() {
       <ExposureView
         period={data.period}
         trend={data.trend}
+        previousReasons={data.previousReasons ?? null}
         monthOptions={monthOptions}
         selected={current}
         onSelect={(value) => {

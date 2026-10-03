@@ -31,6 +31,7 @@ import type { ProgrammeMonth } from "@/lib/insights/period/computeProgrammeBlock
 import { statementMonth, trendWindow } from "@/lib/insights/period/months";
 import { readInsightsPeriod, type InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
 import { readTrend, type TrendPoint } from "@/lib/insights/period/readTrend";
+import { readPreviousReasons, type PreviousReasons } from "@/lib/insights/period/reasonComparison";
 import { computeLiveState, type LiveState } from "@/lib/insights/period/computeLiveState";
 
 export const runtime = "nodejs";
@@ -96,6 +97,9 @@ interface InsightsResponse {
   trend: TrendPoint[];
   /** "Right now" — never part of a month record. Null if it failed. */
   liveState: LiveState | null;
+  /** The month before `period`, for the reasons comparison; null when that
+   *  month has no reasons on record. */
+  previousReasons: PreviousReasons | null;
 
   // ── 30d current + prior 30d (MoM comparison) ─────────────────────
   // Each "Window" carries the aggregate metrics for its date range.
@@ -627,6 +631,7 @@ export async function GET(req: NextRequest) {
   });
   const trend: TrendPoint[] = await readTrend(sb, shopId, window).catch(() => []);
   const liveState: LiveState | null = await computeLiveState(sb, shopId).catch(() => null);
+  const previousReasons: PreviousReasons | null = await readPreviousReasons(sb, shopId, requested).catch(() => null);
 
   // ── 8-week weekly sparkline (chargeback rate) ──────────────────
   const chargebackRateSparklineWeekly = weeklySparkline(daily);
@@ -703,6 +708,7 @@ export async function GET(req: NextRequest) {
     period,
     trend,
     liveState,
+    previousReasons,
     rail: {
       cardOrders: railSeg.card.orders,
       cardDisputes: railSeg.card.disputes,
