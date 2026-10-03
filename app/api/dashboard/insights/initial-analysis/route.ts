@@ -28,8 +28,10 @@ import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 import { railSegmentationFor } from "@/lib/insights/railSegmentation";
 import type { ProgrammeMonth } from "@/lib/insights/period/computeProgrammeBlock";
-import { readProgrammeMonth } from "@/lib/insights/period/readProgrammeMonth";
-import { statementMonth } from "@/lib/insights/period/months";
+import { statementMonth, trendWindow } from "@/lib/insights/period/months";
+import { readInsightsPeriod, type InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
+import { readTrend, type TrendPoint } from "@/lib/insights/period/readTrend";
+import { computeLiveState, type LiveState } from "@/lib/insights/period/computeLiveState";
 
 export const runtime = "nodejs";
 
@@ -87,6 +89,13 @@ interface InsightsResponse {
   /** VAMP/ECM for the statement month (the last complete calendar month).
    *  The only source of card-programme verdicts on this page. */
   programmeMonth: ProgrammeMonth;
+  /** The requested month from its record (or live for the statement month
+   *  before its first recompute, and for month-to-date). */
+  period: InsightsPeriod;
+  /** Card ratio by month over the trend window, from the records only. */
+  trend: TrendPoint[];
+  /** "Right now" — never part of a month record. Null if it failed. */
+  liveState: LiveState | null;
 
   // ── 30d current + prior 30d (MoM comparison) ─────────────────────
   // Each "Window" carries the aggregate metrics for its date range.
@@ -582,12 +591,42 @@ export async function GET(req: NextRequest) {
   // VAMP/ECM are judged per calendar month, on the last complete month,
   // read from the stored month row (the record the emails also read).
   // A failure here is a state, not a page failure.
-  const programmeMonth = await readProgrammeMonth(
-    sb,
-    shopId,
-    statementMonth(new Date()),
-    new Date(),
-  );
+  // `?period=YYYY-MM` opens a closed month from its record; `?period=mtd`
+  // the live month-to-date; no param = the statement month (last complete
+  // month). Closed months are never recomputed on read.
+  const now = new Date();
+  const statement = statementMonth(now);
+  const periodParam = req.nextUrl.searchParams.get("period");
+  const currentMonth = `${now.toISOString().slice(0, 7)}-01`;
+  const requested =
+    periodParam === "mtd"
+      ? currentMonth
+      : periodParam && /^\d{4}-\d{2}$/.test(periodParam)
+        ? `${periodParam}-01`
+        : statement;
+  const kind =
+    requested === currentMonth ? "mtd" : requested === statement ? "statement" : "closed";
+  const period: InsightsPeriod =
+    requested > currentMonth
+      ? { status: "not_available", periodMonth: requested }
+      : await readInsightsPeriod(sb, shopId, requested, kind);
+  const programmeMonth: ProgrammeMonth =
+    period.status === "ok" ? period.programme : { status: "error", periodMonth: requested };
+
+  const { data: firstOrder } = await sb
+    .from("shopify_orders")
+    .select("created_at_shopify")
+    .eq("shop_id", shopId)
+    .order("created_at_shopify", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const window = trendWindow({
+    now,
+    sinceDate: (shopRow?.historical_import_since_date as string | null) ?? null,
+    firstOrderAt: (firstOrder?.created_at_shopify as string | null) ?? null,
+  });
+  const trend: TrendPoint[] = await readTrend(sb, shopId, window).catch(() => []);
+  const liveState: LiveState | null = await computeLiveState(sb, shopId).catch(() => null);
 
   // ── 8-week weekly sparkline (chargeback rate) ──────────────────
   const chargebackRateSparklineWeekly = weeklySparkline(daily);
@@ -661,6 +700,9 @@ export async function GET(req: NextRequest) {
     chargebackOrders90d: win90.chargebackOrders,
     chargebackCount90d: win90.chargebackCount,
     programmeMonth,
+    period,
+    trend,
+    liveState,
     rail: {
       cardOrders: railSeg.card.orders,
       cardDisputes: railSeg.card.disputes,

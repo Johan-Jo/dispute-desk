@@ -60,6 +60,15 @@ export interface CheckpointInput {
   medianFulfillmentHoursPrior: number | null;
 }
 
+/** A raw value plus how to display it. Checkpoints carry raw numbers; the
+ *  page and the email format them for their locale (`formatCheckpointValues`),
+ *  so a stored checkpoint never freezes one language's number format. */
+export type CheckpointValue =
+  | string
+  | number
+  | { value: number; format: "pct0" | "pct1" | "pct2" | "hours" }
+  | { value: string; format: "month" };
+
 export interface Checkpoint {
   /** Stable rule id — also the i18n namespace key suffix. */
   id: string;
@@ -69,7 +78,7 @@ export interface Checkpoint {
   /** i18n key for the body line. */
   bodyKey: string;
   /** Interpolation values for both title and body keys. */
-  values: Record<string, string | number>;
+  values: Record<string, CheckpointValue>;
   /** Citation surfaced under the body — public URL + short label. */
   source?: { label: string; url: string };
 }

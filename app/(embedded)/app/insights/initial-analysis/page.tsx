@@ -47,15 +47,14 @@ import { InfoIcon } from "@shopify/polaris-icons";
 import styles from "./initial-analysis.module.css";
 import { OperationalCheckpoints } from "./OperationalCheckpoints";
 import { LiabilityShiftImpact } from "./LiabilityShiftImpact";
-import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
-import {
-  programmeCheckpointInput,
-  type ProgrammeMonth,
-} from "@/lib/insights/period/computeProgrammeBlock";
+import type { ProgrammeMonth } from "@/lib/insights/period/computeProgrammeBlock";
+import type { InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
 
 interface InsightsResponse {
   /** VAMP/ECM for the statement month — the only card-programme input. */
   programmeMonth?: ProgrammeMonth;
+  /** The month from its record, with the server-evaluated checkpoints. */
+  period?: InsightsPeriod;
   available: boolean;
   ordersAnalyzed: number;
 
@@ -979,19 +978,11 @@ export default function InitialAnalysisPage() {
         <Layout.Section>
           <OperationalCheckpoints
             programmeMonth={data.programmeMonth}
-            checkpoints={evaluateCheckpoints({
-              // VAMP/ECM from ONE calendar month (the statement month).
-              // Undefined on a programme error → no VAMP/ECM checkpoint, and
-              // OperationalCheckpoints says the figures are unavailable.
-              programme: programmeCheckpointInput(data.programmeMonth),
-              fraudDisputeRatePct: current30d.fraudDisputeRatePct,
-              fulfilledHighRiskPct: current30d.fulfilledHighRiskPct,
-              threeDsAuthRatePct: current30d.threeDsAuthRatePct,
-              signedForRatePct: current30d.signedForRatePct,
-              shopifyProtectCoveragePct: current30d.shopifyProtectCoveragePct,
-              medianFulfillmentHoursCurrent: current30d.medianFulfillmentHours,
-              medianFulfillmentHoursPrior: prior30d.medianFulfillmentHours,
-            })}
+            // Evaluated once on the server and stored with the month: the
+            // page and the email render the same list (first 5 here, 3 there).
+            checkpoints={
+              data.period?.status === "ok" ? data.period.checkpoints.slice(0, 5) : []
+            }
           />
         </Layout.Section>
 

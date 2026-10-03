@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase/server";
 import { cronEnvGate } from "@/lib/cron/envGate";
-import { computeProgrammeBlock } from "@/lib/insights/period/computeProgrammeBlock";
+import { computeShopMonth } from "@/lib/insights/period/computeShopMonth";
 import { persistShopMonth, METRICS_VERSION } from "@/lib/insights/period/persistShopMonth";
 import { canMarkStable, type StabilityShop } from "@/lib/insights/period/canMarkStable";
 import { driftIsMaterial, type StoredMonth } from "@/lib/insights/period/driftIsMaterial";
@@ -116,8 +116,8 @@ async function maintainShop(
   const rows = new Map(((rowsData ?? []) as MonthRow[]).map((r) => [String(r.period_month).slice(0, 10), r]));
 
   const write = async (month: string, reason: string) => {
-    const block = await computeProgrammeBlock(sb, shop.id, month);
-    const r = await persistShopMonth(sb, { shopId: shop.id, shop, month, block, reason, now });
+    const data = await computeShopMonth(sb, shop.id, month);
+    const r = await persistShopMonth(sb, { shopId: shop.id, shop, month, data, reason, now });
     out.recomputed.push(month);
     if (r.changed && rows.has(month)) out.revised.push(month);
     if (r.stableAt && !rows.get(month)?.stable_at) out.markedStable.push(month);
@@ -146,9 +146,9 @@ async function maintainShop(
     const r = rows.get(m);
     if (!r || !r.stable_at || toHeal.includes(m) || !window.includes(m)) continue;
     if (Number(r.metrics_version ?? 1) < METRICS_VERSION) continue;
-    const block = await computeProgrammeBlock(sb, shop.id, m);
-    if (!driftIsMaterial(r, block)) continue;
-    await persistShopMonth(sb, { shopId: shop.id, shop, month: m, block, reason: "late_data", now });
+    const data = await computeShopMonth(sb, shop.id, m);
+    if (!driftIsMaterial(r, data.programme)) continue;
+    await persistShopMonth(sb, { shopId: shop.id, shop, month: m, data, reason: "late_data", now });
     out.revised.push(m);
   }
 
