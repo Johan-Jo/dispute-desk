@@ -5,8 +5,8 @@
  *
  * One calendar month at a time, from the stored month record
  * (docs/plans/insights-single-source.plan.md PR3b). The layout is
- * transcribed from the Claude Design file "Chargeback Exposure redesign"
- * (ChargebackExposure.dc.html); see ExposureView.tsx.
+ * transcribed from the Claude Design file "Chargeback Exposure Alternatives"
+ * (variant 1a, Trend hero); see ExposureView.tsx.
  *
  * Removed with the redesign (2026-10-02): the Shopify risk-classification
  * hero and breakdown, the risk-vs-outcome chart, the chargeback-health gauge
@@ -21,6 +21,7 @@ import { Page, Layout, Card, BlockStack, Text, Banner, Spinner } from "@shopify/
 import type { InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
 import type { TrendPoint } from "@/lib/insights/period/readTrend";
 import type { LiveState } from "@/lib/insights/period/computeLiveState";
+import type { PreviousReasons } from "@/lib/insights/period/reasonComparison";
 import { formatMonth } from "@/lib/insights/period/format";
 import { ExposureView } from "./ExposureView";
 
@@ -30,6 +31,7 @@ interface InsightsResponse {
   period: InsightsPeriod;
   trend: TrendPoint[];
   liveState: LiveState | null;
+  previousReasons: PreviousReasons | null;
 }
 
 export default function InitialAnalysisPage() {
@@ -129,7 +131,7 @@ export default function InitialAnalysisPage() {
       <ExposureView
         period={data.period}
         trend={data.trend}
-        liveState={data.liveState}
+        previousReasons={data.previousReasons ?? null}
         monthOptions={monthOptions}
         selected={current}
         onSelect={(value) => {

@@ -15,8 +15,15 @@ import { canMarkStable, monthCoverage, type StabilityShop } from "./canMarkStabl
 
 /** v2 = card-rail chargebacks initiated in the month, inquiries excluded,
  *  rounded once (PR2). v3 adds operational metrics, disputes by payment
- *  method and the evaluated checkpoints (PR3a). */
-export const METRICS_VERSION = 3;
+ *  method and the evaluated checkpoints (PR3a). v4 adds disputes by reason
+ *  inside the operational metrics. */
+export const METRICS_VERSION = 4;
+
+/** The oldest record the page still shows. v4 only ADDS `byReason`, so a v3
+ *  record is complete for everything else; the reasons card is left out for
+ *  it until the nightly job rewrites the month. Raise this only when an older
+ *  record would show a wrong number. */
+export const MIN_READABLE_METRICS_VERSION = 3;
 
 /** The row payload: keys are `ratio_snapshots` column names. Legacy columns
  *  carry the v2 meaning (documented in docs/technical.md). */

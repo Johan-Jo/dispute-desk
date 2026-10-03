@@ -14,7 +14,7 @@ import type { OperationalMetrics } from "./computeOperationalMetrics";
 import { computeShopMonth } from "./computeShopMonth";
 import { finalOn } from "./months";
 import { MONTH_COLUMNS, rowToProgrammeMonth } from "./readProgrammeMonth";
-import { METRICS_VERSION } from "./persistShopMonth";
+import { MIN_READABLE_METRICS_VERSION } from "./persistShopMonth";
 
 export type PeriodState = "final" | "provisional" | "mtd";
 
@@ -54,7 +54,7 @@ export async function readInsightsPeriod(
       if (row?.coverage === "partial") return { status: "not_fully_imported", periodMonth: month };
       const complete =
         row &&
-        Number(row.metrics_version ?? 1) >= METRICS_VERSION &&
+        Number(row.metrics_version ?? 1) >= MIN_READABLE_METRICS_VERSION &&
         row.operational_metrics != null &&
         row.checkpoints != null;
       if (complete) {

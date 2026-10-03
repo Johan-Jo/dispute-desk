@@ -49,8 +49,9 @@ describe("computeOperationalMetrics", () => {
     const sb = fakeSb({
       shopify_orders: orders,
       disputes: [
-        { phase: "chargeback", order_gid: "p1" }, { phase: "inquiry", order_gid: "p2" },
-        { phase: "chargeback", order_gid: "v1" },
+        { phase: "chargeback", order_gid: "p1", reason: "PRODUCT_NOT_RECEIVED" },
+        { phase: "inquiry", order_gid: "p2", reason: "PRODUCT_NOT_RECEIVED" },
+        { phase: "chargeback", order_gid: "v1", reason: null },
       ],
       shopify_order_risk_signals: [
         ...Array.from({ length: 60 }, (_, i) => ({ shopify_order_id: `v${i}`, card_brand: "Visa" })),
@@ -67,6 +68,12 @@ describe("computeOperationalMetrics", () => {
     const ap = m.byPaymentMethod.find((r) => r.method === "apple_pay")!;
     expect(ap.chargebackRate).toBeNull(); // 10 orders: below 50, no rate
     expect(m.byPaymentMethod[0]!.method).toBe("paypal"); // most disputes first
+    // The same three disputes by reason; chargebacks and inquiries together,
+    // a dispute without a reason counted as UNKNOWN rather than dropped.
+    expect(m.byReason).toEqual([
+      { reason: "PRODUCT_NOT_RECEIVED", disputes: 2 },
+      { reason: "UNKNOWN", disputes: 1 },
+    ]);
   });
 
   it("measures signatures only where a carrier lookup ran, and says — below 30", async () => {
@@ -110,6 +117,15 @@ describe("readInsightsPeriod", () => {
     const sb = fakeSb({ ratio_snapshots: [{ period_month: "2026-06-01", metrics_version: 2, operational_metrics: null, checkpoints: null }] });
     const p = await readInsightsPeriod(sb, "s", "2026-06-01", "closed");
     expect(p).toEqual({ status: "not_available", periodMonth: "2026-06-01" });
+    expect(vi.mocked(computeShopMonth)).not.toHaveBeenCalled();
+  });
+
+  it("still shows a v3 record (no reasons yet) instead of blanking the month", async () => {
+    const sb = fakeSb({
+      ratio_snapshots: [{ period_month: "2026-06-01", coverage: "full", metrics_version: 3, operational_metrics: { byPaymentMethod: [] }, checkpoints: [] }],
+    });
+    const p = await readInsightsPeriod(sb, "s", "2026-06-01", "closed");
+    expect(p.status).toBe("ok");
     expect(vi.mocked(computeShopMonth)).not.toHaveBeenCalled();
   });
 

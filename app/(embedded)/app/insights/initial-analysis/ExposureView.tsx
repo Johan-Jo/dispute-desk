@@ -2,19 +2,20 @@
 
 /**
  * Chargeback Exposure — the month view, transcribed from the Claude Design
- * file "Chargeback Exposure redesign" (ChargebackExposure.dc.html, approved
- * 2026-10-02). Every number comes from the stored month record (`period`),
- * the records-only trend, and the live state; nothing is computed here
- * except display formatting through lib/insights/period/format.ts.
+ * file "Chargeback Exposure Alternatives" (variant 1a, Trend hero;
+ * 2026-10-03). Every number comes from the stored month record (`period`)
+ * and the records-only trend; nothing is computed here except display
+ * formatting through lib/insights/period/format.ts and the chart's
+ * 3-month average (lib/insights/period/trendAverage.ts).
  */
 
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Select } from "@shopify/polaris";
 
 import type { CheckpointSeverity } from "@/lib/insights/checkpoints.types";
 import type { InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
 import type { TrendPoint } from "@/lib/insights/period/readTrend";
-import type { LiveState } from "@/lib/insights/period/computeLiveState";
 import type { PaymentMethodRow } from "@/lib/insights/period/computeOperationalMetrics";
 import {
   formatCheckpointValues,
@@ -22,26 +23,41 @@ import {
   formatMonth,
   formatRatio,
 } from "@/lib/insights/period/format";
+import { trendAverage } from "@/lib/insights/period/trendAverage";
+import { compareReasons, type PreviousReasons } from "@/lib/insights/period/reasonComparison";
+import { addMonths } from "@/lib/insights/period/months";
+import { MC_ECM_COUNT_FLOOR, MC_ECM_RATIO, VAMP_COUNT_FLOOR, VAMP_EARLY_WARNING, VAMP_EXCESSIVE } from "@/lib/insights/programmeThresholds";
 import s from "./exposure.module.css";
 
-const SEV: Record<CheckpointSeverity, { bg: string; fg: string; dot: string }> = {
-  healthy: { bg: "#ECFDF3", fg: "#067647", dot: "#22C55E" },
-  info: { bg: "#EEF0F3", fg: "#344054", dot: "#98A2B3" },
-  consider: { bg: "#FFFAEB", fg: "#B54708", dot: "#F59E0B" },
-  breach: { bg: "#FEF3F2", fg: "#B42318", dot: "#EF4444" },
+const PRIMARY = "#1D4ED8";
+const WARNING = "#F59E0B";
+const DANGER = "#EF4444";
+const INFO = "#0EA5E9";
+
+const SEV: Record<CheckpointSeverity, { badge: string; dotBg: string; dotFg: string }> = {
+  healthy: { badge: s.bSuccess, dotBg: "#DCFCE7", dotFg: "#166534" },
+  info: { badge: s.bDefault, dotBg: "#F1F5F9", dotFg: "#64748B" },
+  consider: { badge: s.bWarning, dotBg: "#FEF3C7", dotFg: "#92400E" },
+  breach: { badge: s.bDanger, dotBg: "#FEE2E2", dotFg: "#991B1B" },
 };
 
-const STATE_CHIP = {
-  final: { bg: "#ECFDF3", fg: "#067647", dot: "#22C55E" },
-  provisional: { bg: "#FFFAEB", fg: "#B54708", dot: "#F59E0B" },
-  mtd: { bg: "#EFF4FF", fg: "#1D4ED8", dot: "#1D4ED8" },
-  muted: { bg: "#EEF0F3", fg: "#344054", dot: "#98A2B3" },
-} as const;
+/** Chart ceiling, the bar scales of the exposure rows and the payment table. */
+const CHART_MAX = 0.025;
+const PROGRAMME_SCALE = 0.02;
+const METHOD_REFERENCE = 0.01;
 
 /** Method keys with their own name; anything else is shown as stored. */
 const METHOD_KEYS = new Set([
   "card", "shopify_pay", "shop_pay", "apple_pay", "google_pay", "shop_pay_installments",
   "paypal", "klarna", "amazon_pay", "tiktok_shop", "gift_card", "shop_cash", "unknown",
+]);
+
+/** Shopify dispute reasons with their own name; anything else is shown as stored. */
+const REASON_KEYS = new Set([
+  "BANK_CANNOT_PROCESS", "CREDIT_NOT_PROCESSED", "CUSTOMER_INITIATED", "DEBIT_NOT_AUTHORIZED",
+  "DUPLICATE", "FRAUDULENT", "GENERAL", "INCORRECT_ACCOUNT_DETAILS", "INSUFFICIENT_FUNDS",
+  "NONCOMPLIANT", "PRODUCT_NOT_RECEIVED", "PRODUCT_UNACCEPTABLE", "SUBSCRIPTION_CANCELLED",
+  "UNRECOGNIZED", "UNKNOWN",
 ]);
 
 /** A month's methods, with small quiet ones folded into one "Other" row. */
@@ -59,18 +75,18 @@ function displayMethods(rows: PaymentMethodRow[]): Array<PaymentMethodRow & { ot
   ];
 }
 
-
 export function ExposureView({
   period,
   trend,
-  liveState,
+  previousReasons = null,
   monthOptions,
   selected,
   onSelect,
 }: {
   period: InsightsPeriod;
   trend: TrendPoint[];
-  liveState: LiveState | null;
+  /** The month before `period`; null when it has no reasons on record. */
+  previousReasons?: PreviousReasons | null;
   /** Value "YYYY-MM-01" or "mtd". */
   monthOptions: Array<{ value: string; label: string }>;
   selected: string;
@@ -78,46 +94,49 @@ export function ExposureView({
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  const [showZero, setShowZero] = useState(false);
   const ip = (k: string, v?: Record<string, string | number>) => t(`insightsPage.${k}` as never, v as never);
   const month = formatMonth(period.periodMonth, locale);
   const shortDate = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso));
+  const monthPart = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(locale, { ...opts, timeZone: "UTC" }).format(new Date(`${iso.slice(0, 7)}-15T12:00:00Z`));
 
-  // ── State chip + header sub ───────────────────────────────────────
-  let chip: { text: string; c: (typeof STATE_CHIP)[keyof typeof STATE_CHIP] };
-  let headerSub: string;
+  // ── State badge + the line under "Thresholds verified" ────────────
+  let state: { text: string; badge: string };
+  let stateLine: string;
   if (period.status === "ok") {
     if (period.periodState === "final") {
-      chip = {
+      state = {
         text: period.revisedAt ? ip("stateFinalUpdated", { date: shortDate(period.revisedAt) }) : ip("stateFinal"),
-        c: STATE_CHIP.final,
+        badge: s.bSuccess,
       };
-      headerSub = ip("headerSubFinal", { month });
+      stateLine = ip("headerSubFinal", { month });
     } else if (period.periodState === "provisional") {
-      chip = { text: ip("stateProvisional", { date: shortDate(period.finalOn) }), c: STATE_CHIP.provisional };
-      headerSub = ip("headerSubProvisional", { month, date: shortDate(period.finalOn) });
+      state = { text: ip("stateProvisional", { date: shortDate(period.finalOn) }), badge: s.bWarning };
+      stateLine = ip("headerSubProvisional", { month, date: shortDate(period.finalOn) });
     } else {
-      chip = { text: ip("stateMtd", { date: shortDate(new Date().toISOString()) }), c: STATE_CHIP.mtd };
-      headerSub = ip("headerSubMtd", { month });
+      state = { text: ip("stateMtd", { date: shortDate(new Date().toISOString()) }), badge: s.bInfo };
+      stateLine = ip("headerSubMtd", { month });
     }
   } else if (period.status === "not_fully_imported") {
-    chip = { text: ip("stateNotFullyImported"), c: STATE_CHIP.muted };
-    headerSub = ip("headerSubNotFullyImported");
+    state = { text: ip("stateNotFullyImported"), badge: s.bDefault };
+    stateLine = ip("headerSubNotFullyImported");
   } else {
-    chip = { text: ip(period.status === "error" ? "stateFinal" : "stateNotAvailable"), c: STATE_CHIP.muted };
-    headerSub = ip("headerSubNotAvailable");
+    state = { text: ip(period.status === "error" ? "stateFinal" : "stateNotAvailable"), badge: s.bDefault };
+    stateLine = ip("headerSubNotAvailable");
   }
 
   const ok = period.status === "ok" ? period : null;
   const p = ok?.programme;
   const op = ok?.operational;
   const sevLabel = (sev: CheckpointSeverity) => t(`fraudIntel.checkpointSeverity.${sev}` as never);
-  const Chip = ({ sev }: { sev: CheckpointSeverity }) => (
-    <span className={s.chip} style={{ background: SEV[sev].bg, color: SEV[sev].fg }}>
-      <span className={s.dot} style={{ background: SEV[sev].dot }} />
-      {sevLabel(sev)}
-    </span>
-  );
+  const methodName = (r: PaymentMethodRow & { other?: number }) =>
+    r.method === "other"
+      ? ip("methodOther", { count: r.other ?? 0 })
+      : METHOD_KEYS.has(r.method)
+        ? ip(`method.${r.method}`)
+        : r.method;
 
   // ── Notes under the exposure block ────────────────────────────────
   const notes: string[] = [];
@@ -130,280 +149,401 @@ export function ExposureView({
     const nonCardDisputes = nonCard.reduce((n, r) => n + r.chargebacks + r.inquiries, 0);
     const top = [...nonCard].sort((a, b) => b.chargebacks + b.inquiries - (a.chargebacks + a.inquiries))[0];
     if (top && totalDisputes > 0 && nonCardDisputes * 2 > totalDisputes) {
-      notes.push(
-        ip("noteNonCard", {
-          count: nonCardDisputes,
-          total: totalDisputes,
-          method: METHOD_KEYS.has(top.method) ? ip(`method.${top.method}`) : top.method,
-        }),
-      );
+      notes.push(ip("noteNonCard", { count: nonCardDisputes, total: totalDisputes, method: methodName(top) }));
     }
   }
 
-  // ── Trend bars ────────────────────────────────────────────────────
-  const max = Math.max(2.6, ...trend.map((x) => (x.cardDisputeRatio ?? 0) * 100 * 1.1));
-  const monthShort = (iso: string, style: "short" | "narrow") =>
-    new Intl.DateTimeFormat(locale, { month: style, timeZone: "UTC" }).format(new Date(`${iso.slice(0, 7)}-15T12:00:00Z`));
+  // ── Ratio by month ────────────────────────────────────────────────
+  const max = Math.max(CHART_MAX, ...trend.map((x) => (x.cardDisputeRatio ?? 0) * 1.1));
+  const up = (v: number) => `${(v / max) * 100}%`;
+  const avg = trendAverage(trend.map((x) => x.cardDisputeRatio));
+  const avgPoints = avg.flatMap((a, i) => (a === null ? [] : [{ i, a }]));
+  const selectedPoint = trend.find((x) => x.periodMonth === period.periodMonth);
+  const selectedText =
+    selectedPoint && selectedPoint.cardDisputeRatio !== null
+      ? ip("trendSelected", {
+          month: monthPart(selectedPoint.periodMonth, { month: "short", year: "numeric" }),
+          ratio: formatRatio(selectedPoint.cardDisputeRatio, locale),
+          status: ip(
+            selectedPoint.cardDisputeRatio >= VAMP_EXCESSIVE
+              ? "trendStatusExcessive"
+              : selectedPoint.cardDisputeRatio >= VAMP_EARLY_WARNING
+                ? "trendStatusEarlyWarning"
+                : "trendStatusBelow",
+          ),
+        })
+      : null;
+  let trendText: string | null = null;
+  const now3 = avg[avg.length - 1] ?? null;
+  const prev3 = avg[avg.length - 4] ?? null;
+  if (now3 !== null) {
+    const now = formatRatio(now3, locale);
+    const prev = prev3 === null ? null : formatRatio(prev3, locale);
+    trendText =
+      prev === null || prev === now
+        ? ip("trendAverageOnly", { now })
+        : ip(now3 < prev3! ? "trendAverageDown" : "trendAverageUp", {
+            now,
+            prev,
+            month: monthPart(trend[trend.length - 4]!.periodMonth, { month: "long" }),
+          });
+  }
 
-  const methods = op ? displayMethods(op.byPaymentMethod) : [];
+  // ── Disputes by payment method ────────────────────────────────────
+  const methods = (op ? displayMethods(op.byPaymentMethod) : []).map((r) => ({
+    ...r,
+    name: methodName(r),
+    flagged: r.chargebackRate !== null && r.chargebackRate >= METHOD_REFERENCE,
+  }));
+  const activeRows = methods.filter((r) => r.chargebacks + r.inquiries > 0);
+  const zeroRows = methods.filter((r) => r.chargebacks + r.inquiries === 0);
+  const flagged = methods.filter((r) => r.flagged);
+  const referencePct = formatRatio(METHOD_REFERENCE, locale, 0);
+
+  // ── Dispute reasons, this month against the one before ────────────
+  const reasons = op?.byReason ? compareReasons(op.byReason, previousReasons?.byReason ?? null) : null;
+  const prevMonthIso = addMonths(period.periodMonth, -1);
+  const monthLong = monthPart(period.periodMonth, { month: "long" });
+  const prevLong = monthPart(prevMonthIso, { month: "long" });
+  const reasonWidth = (n: number) => (n > 0 ? `${Math.max((n / (reasons?.max ?? 1)) * 100, 4)}%` : "0%");
+  const totalChange =
+    reasons && reasons.previousTotal !== null ? reasons.currentTotal - reasons.previousTotal : null;
+
   const checkpoints = ok ? ok.checkpoints.slice(0, 5) : [];
+  const threeDsSeverity = ok?.checkpoints.find((c) => c.id === "threeds_auth")?.severity;
+  const threeDsFlagged = threeDsSeverity === "consider" || threeDsSeverity === "breach";
+  const cols = { gridTemplateColumns: `repeat(${trend.length}, minmax(0, 1fr))` };
 
   return (
     <div className={s.wrap} data-screen-label="Chargeback Exposure page">
-      <div className={s.header}>
-        <div className={s.col} style={{ gap: 4, minWidth: 0 }}>
-          <span className={`${s.sub} ${s.pretty}`}>{ip("subtitle")}</span>
-        </div>
-        <div className={s.row} style={{ gap: 8 }}>
-          <div style={{ minWidth: 190 }}>
+      <div className={s.header} data-screen-label="Header">
+        <div className={s.subtitle}>{ip("subtitle")}</div>
+        <div className={s.headerRight}>
+          <span className={`${s.badge} ${state.badge}`}>{state.text}</span>
+          <div className={s.select}>
             <Select label={ip("monthSelectLabel")} labelHidden options={monthOptions} value={selected} onChange={onSelect} />
           </div>
-          <span className={s.chip} style={{ background: chip.c.bg, color: chip.c.fg }}>
-            <span className={s.dot} style={{ background: chip.c.dot }} />
-            {chip.text}
-          </span>
         </div>
       </div>
 
-      {/* ── Card-network exposure ─────────────────────────────────── */}
-      <div className={s.card}>
-        <div className={s.cardHead}>
-          <div className={s.col} style={{ gap: 2 }}>
-            <span className={s.h2}>{ip("exposureTitle", { month })}</span>
-            <span className={`${s.sub} ${s.small}`}>{headerSub}</span>
-          </div>
-          <span className={`${s.sub} ${s.small}`}>{ip("thresholdsVerified", { date: "2026-10-01" })}</span>
-        </div>
-
-        {p && p.cardDisputeRatio !== null && p.vampSeverity && (
-          <>
-            <div className={s.headline}>
-              <span className={`${s.sub} ${s.small}`}>{ip("headlineEstimate")}</span>
-              <span className={s.row} style={{ gap: 10, alignItems: "baseline" }}>
-                <span className={`${s.big} ${s.num}`}>{formatRatio(p.cardDisputeRatio, locale)}</span>
-                <Chip sev={p.vampSeverity} />
+      {/* ── Card dispute ratio by month ───────────────────────────── */}
+      {trend.length > 0 && (
+        <div className={s.trend} data-screen-label="Ratio by month">
+          <div className={s.trendHead}>
+            <div className={s.titleBlock}>
+              <div className={s.cardTitle}>{ip("trendTitle")}</div>
+              <div className={s.cardSub}>{ip("trendSub", { count: trend.length })}</div>
+            </div>
+            <div className={s.legend}>
+              <span className={s.legendItem}>
+                <span className={s.legendLine} style={{ borderColor: WARNING }} />
+                {ip("legendEarlyWarning", { pct: formatRatio(VAMP_EARLY_WARNING, locale, 1) })}
               </span>
-              <span className={`${s.sub} ${s.num}`}>
-                {ip("headlineDetail", { n: p.cardChargebackCount, d: formatCount(p.cardSettledCount, locale) })}
+              <span className={s.legendItem}>
+                <span className={s.legendLine} style={{ borderColor: DANGER }} />
+                {ip("legendExcessive", { pct: formatRatio(VAMP_EXCESSIVE, locale, 1) })}
+              </span>
+              <span className={s.legendItem}>
+                <span className={s.legendLine} style={{ borderTopStyle: "solid", borderColor: "#0B1220" }} />
+                {ip("legendAverage")}
               </span>
             </div>
-            <ProgrammeRow
-              name={ip("vampName")}
-              qual={ip("vampQualEstimate")}
-              value={formatRatio(p.cardDisputeRatio, locale)}
-              detail={`${formatCount(p.cardChargebackCount, locale)} / ${formatCount(p.cardSettledCount, locale)}`}
-              threshold={ip("vampThreshold", { pct: formatRatio(0.009, locale, 1) })}
-              floor={ip("vampFloor", { floor: formatCount(1500, locale), count: formatCount(p.visaChargebackCount, locale) })}
-              chip={<Chip sev={p.vampSeverity} />}
-            />
-            {p.ecmRatio !== null && p.ecmSeverity && (
-              <ProgrammeRow
-                name={ip("ecmName")}
-                qual={ip("ecmQualLowerBound")}
-                value={formatRatio(p.ecmRatio, locale)}
-                detail={`${formatCount(p.mcChargebackCount, locale)} / ${formatCount(p.cardSettledPrevCount, locale)}`}
-                threshold={ip("ecmThreshold", { pct: formatRatio(0.015, locale, 1) })}
-                floor={ip("ecmFloor", { floor: formatCount(100, locale), count: formatCount(p.mcChargebackCount, locale) })}
-                chip={<Chip sev={p.ecmSeverity} />}
+          </div>
+          <div className={s.chart}>
+            <div className={s.tline} style={{ bottom: up(VAMP_EARLY_WARNING), borderColor: WARNING }} />
+            <div className={s.tline} style={{ bottom: up(VAMP_EXCESSIVE), borderColor: DANGER }} />
+            <div className={s.baseline} />
+            <div className={s.bars} style={cols}>
+              {trend.map((x) => {
+                const v = x.cardDisputeRatio;
+                const sel = x.periodMonth === period.periodMonth;
+                const tone = v !== null && v >= VAMP_EXCESSIVE ? DANGER : v !== null && v >= VAMP_EARLY_WARNING ? WARNING : PRIMARY;
+                const soft = v !== null && v >= VAMP_EXCESSIVE ? "#FCA5A5" : v !== null && v >= VAMP_EARLY_WARNING ? "#FCD34D" : "#BFD0F7";
+                const h = v === null ? "0%" : `${Math.max((v / max) * 100, 1.5)}%`;
+                return (
+                  <button
+                    type="button"
+                    key={x.periodMonth}
+                    className={s.barCol}
+                    onClick={() => onSelect(x.periodMonth)}
+                    aria-label={`${formatMonth(x.periodMonth, locale)}: ${formatRatio(v, locale)}`}
+                  >
+                    <span
+                      className={s.barLabel}
+                      style={{ color: sel ? tone : "#667085", opacity: v !== null && (sel || v >= VAMP_EARLY_WARNING) ? 1 : 0 }}
+                    >
+                      {formatRatio(v, locale)}
+                    </span>
+                    <span className={s.bar} style={{ height: h, background: sel ? tone : soft }} />
+                    {v !== null && (
+                      <span className={s.tip} style={{ bottom: `calc(${h} + 28px)` }}>
+                        <span className={s.tipDim}>
+                          {monthPart(x.periodMonth, { month: "short", year: "numeric" })} · {formatRatio(v, locale)}
+                        </span>
+                        <span className={s.tipMain}>{ip("tipChargebacks", { n: x.cardChargebackCount ?? 0 })}</span>
+                        <span className={s.tipDim}>{ip("tipOrders", { d: formatCount(x.cardSettledCount, locale) })}</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <svg className={s.avgLine} viewBox={`0 0 ${trend.length * 100} 100`} preserveAspectRatio="none" aria-hidden="true">
+              <polyline
+                points={avgPoints.map(({ i, a }) => `${i * 100 + 50},${(100 - (a / max) * 100).toFixed(2)}`).join(" ")}
+                fill="none"
+                stroke="#0B1220"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
               />
-            )}
-            {notes.map((n) => (
-              <div className={s.note} key={n}>
-                <span className={s.noteIcon}>i</span>
-                <span className={s.pretty}>{n}</span>
-              </div>
+            </svg>
+            {avgPoints.map(({ i, a }) => (
+              <span key={i} className={s.avgDot} style={{ left: `${(i * 100 + 50) / trend.length}%`, bottom: up(a) }} />
             ))}
-          </>
-        )}
-        {p && p.cardDisputeRatio === null && (
-          <div className={s.state}>
-            <span className={`${s.sub} ${s.pretty}`}>{ip("tooFewCardOrders")}</span>
           </div>
-        )}
-        {!ok && (
-          <div className={s.state}>
-            <span style={{ fontWeight: 600 }}>{ip(`stateMsg.${period.status}.title`)}</span>
-            <span className={`${s.sub} ${s.pretty}`} style={{ maxWidth: 620 }}>
-              {ip(`stateMsg.${period.status}.body`, { month })}
+          <div className={s.mlabels} style={cols}>
+            {trend.map((x) => {
+              const sel = x.periodMonth === period.periodMonth;
+              return (
+                <span key={x.periodMonth} className={s.mlabel} style={{ color: sel ? "#0B1220" : "#667085", fontWeight: sel ? 600 : 400 }}>
+                  <span className={s.mlabLong}>{monthPart(x.periodMonth, { month: "short" })}</span>
+                  <span className={s.mlabShort}>{monthPart(x.periodMonth, { month: "narrow" })}</span>
+                </span>
+              );
+            })}
+          </div>
+          <div className={s.trendFoot}>
+            <span className={s.trendFootLeft}>
+              {selectedText && <span className={s.trendSelected}>{selectedText}</span>}
+              {trendText && <span>{trendText}</span>}
             </span>
+            <span>{ip("trendNote")}</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Disputes by payment method ────────────────────────────── */}
       {op && (
         <div className={s.card} data-screen-label="Disputes by payment method">
-          <div className={`${s.pad} ${s.col}`} style={{ gap: 2, paddingBottom: 12 }}>
-            <span className={s.h2}>{ip("methodsTitle", { month })}</span>
-            <span className={`${s.sub} ${s.small} ${s.pretty}`}>{ip("methodsSub")}</span>
-          </div>
-          <div className={`${s.pm} ${s.pmHead}`}>
-            <span>{ip("colMethod")}</span>
-            <span className={s.r}>{ip("colOrders")}</span>
-            <span className={s.r}>{ip("colChargebacks")}</span>
-            <span className={s.r}>{ip("colInquiries")}</span>
-            <span className={s.r}>{ip("colChargebackRate")}</span>
-            <span className={s.r}>{ip("colAllDisputes")}</span>
-          </div>
-          {methods.map((r) => {
-            const hot = r.disputeRate !== null && r.disputeRate >= 0.009;
-            const name =
-              r.method === "other"
-                ? ip("methodOther", { count: r.other ?? 0 })
-                : METHOD_KEYS.has(r.method)
-                  ? ip(`method.${r.method}`)
-                  : r.method;
-            return (
-              <div className={`${s.pm} ${hot ? s.pmHot : ""}`} key={`${r.method}|${r.brand ?? ""}`}>
-                <span className={`${s.row} ${s.pmName}`} style={{ gap: 8 }}>
-                  <span style={{ fontWeight: 600 }}>{name}</span>
-                  {r.brand && <span className={s.netBadge}>{r.brand}</span>}
+          <div className={s.pmTop}>
+            <div className={s.titleBlock}>
+              <div className={s.cardTitle}>{ip("methodsTitle")}</div>
+              <div className={s.cardSub}>{ip("methodsSub")}</div>
+            </div>
+            {flagged.length > 0 && (
+              <div className={s.flag}>
+                <span className={s.flagDot} />
+                <span>
+                  {flagged.length === 1
+                    ? ip("methodsFlaggedOne", {
+                        name: flagged[0]!.brand ? `${flagged[0]!.name} · ${flagged[0]!.brand}` : flagged[0]!.name,
+                        pct: referencePct,
+                      })
+                    : ip("methodsFlaggedMany", { count: flagged.length, pct: referencePct })}
                 </span>
-                <span className={`${s.r} ${s.num}`}><span className={s.mlab}>{ip("colOrders")} </span>{formatCount(r.orders, locale)}</span>
-                <span className={`${s.r} ${s.num}`}><span className={s.mlab}>{ip("colChargebacks")} </span>{formatCount(r.chargebacks, locale)}</span>
-                <span className={`${s.r} ${s.num}`}><span className={s.mlab}>{ip("colInquiries")} </span>{formatCount(r.inquiries, locale)}</span>
-                <span className={`${s.r} ${s.num} ${hot ? s.pmHotRate : ""}`} style={{ fontWeight: 600 }}>
-                  <span className={s.mlab}>{ip("colChargebackRate")} </span>{formatRatio(r.chargebackRate, locale)}
-                </span>
-                <span className={`${s.r} ${s.num}`}><span className={s.mlab}>{ip("colAllDisputes")} </span>{formatRatio(r.disputeRate, locale)}</span>
               </div>
-            );
-          })}
-          <div className={s.note} style={{ color: "#667085" }}>
-            <span className={s.pretty}>{ip("methodsFoot")}</span>
+            )}
           </div>
-        </div>
-      )}
-
-      {/* ── Trend ─────────────────────────────────────────────────── */}
-      {trend.length > 0 && (
-        <div className={`${s.card} ${s.pad} ${s.col}`} style={{ gap: 10 }}>
-          <div className={s.row} style={{ justifyContent: "space-between" }}>
-            <div className={s.col} style={{ gap: 2 }}>
-              <span className={s.h2}>{ip("trendTitle")}</span>
-              <span className={`${s.sub} ${s.small}`}>{ip("trendSub", { count: trend.length })}</span>
-            </div>
-            <div className={`${s.row} ${s.tiny} ${s.sub}`} style={{ gap: 12 }}>
-              <span className={s.row} style={{ gap: 4 }}><span className={s.legendLine} style={{ borderColor: "#F59E0B" }} />{ip("legendEarlyWarning", { pct: formatRatio(0.009, locale, 1) })}</span>
-              <span className={s.row} style={{ gap: 4 }}><span className={s.legendLine} style={{ borderColor: "#EF4444" }} />{ip("legendExcessive", { pct: formatRatio(0.015, locale, 1) })}</span>
-            </div>
-          </div>
-          <div className={s.bars} style={{ gridTemplateColumns: `repeat(${trend.length}, minmax(0, 1fr))` }}>
-            <div className={s.tline} style={{ bottom: `${(0.9 / max) * 100}%`, borderColor: "#F59E0B" }} />
-            <div className={s.tline} style={{ bottom: `${(1.5 / max) * 100}%`, borderColor: "#EF4444" }} />
-            {trend.map((x) => {
-              const v = x.cardDisputeRatio === null ? null : x.cardDisputeRatio * 100;
-              const sel = x.periodMonth === period.periodMonth;
-              const color = v === null ? "#E5E7EB" : v >= 1.5 ? "#FDA29B" : v >= 0.9 ? "#FEC84B" : "#B2CCFF";
-              return (
-                <button
-                  type="button"
-                  key={x.periodMonth}
-                  className={s.barCol}
-                  onClick={() => onSelect(x.periodMonth)}
-                  aria-label={`${formatMonth(x.periodMonth, locale)}: ${formatRatio(x.cardDisputeRatio, locale)}`}
-                >
-                  <span className={`${s.tiny} ${s.num}`} style={{ textAlign: "center", color: sel ? "#1D4ED8" : "#475467", fontWeight: 600, marginBottom: 2 }}>
-                    {v !== null && (v >= 0.9 || sel) ? formatRatio(x.cardDisputeRatio, locale) : ""}
-                  </span>
-                  <span
-                    className={s.bar}
-                    style={{
-                      height: `${v === null ? 0 : (v / max) * 100}%`,
-                      background: sel ? "#1D4ED8" : color,
-                      outline: sel ? "2px solid #C7D7FE" : "none",
-                      outlineOffset: 2,
-                    }}
-                  />
-                </button>
-              );
-            })}
-          </div>
-          <div className={s.mlabels} style={{ gridTemplateColumns: `repeat(${trend.length}, minmax(0, 1fr))` }}>
-            {trend.map((x) => {
-              const sel = x.periodMonth === period.periodMonth;
-              return (
-                <span key={x.periodMonth} className={s.tiny} style={{ textAlign: "center", color: sel ? "#0B1220" : "#98A2B3", fontWeight: sel ? 700 : 500 }}>
-                  <span className={s.mlabLong}>{monthShort(x.periodMonth, "short")}</span>
-                  <span className={s.mlabShort}>{monthShort(x.periodMonth, "narrow")}</span>
-                </span>
-              );
-            })}
-          </div>
-          <span className={`${s.sub} ${s.small} ${s.pretty}`}>{ip("trendNote")}</span>
-        </div>
-      )}
-
-      {/* ── Checkpoints + Right now ───────────────────────────────── */}
-      <div className={s.twoc}>
-        <div className={s.card}>
-          <div className={`${s.pad} ${s.col}`} style={{ gap: 2, paddingBottom: 12 }}>
-            <span className={s.h2}>{ip("checkpointsTitle", { month })}</span>
-            <span className={`${s.sub} ${s.small}`}>{ip("checkpointsSub")}</span>
-          </div>
-          {checkpoints.map((c, i) => {
-            const values = formatCheckpointValues(c.values, locale);
-            return (
-              <div className={s.cp} key={c.id}>
-                <span className={s.stripe} style={{ background: SEV[c.severity].dot }} />
-                <div className={s.col} style={{ gap: 3, flex: 1, minWidth: 0 }}>
-                  <div className={s.row} style={{ gap: 8, justifyContent: "space-between", flexWrap: "nowrap" }}>
-                    <span className={s.pretty} style={{ fontWeight: 600 }}>{t(c.titleKey as never, values as never)}</span>
-                    <span className={s.row} style={{ gap: 6, flex: "none", flexWrap: "nowrap" }}>
-                      {i < 3 && <span className={s.inEmail}>{ip("inEmail")}</span>}
-                      <span className={s.chip} style={{ background: SEV[c.severity].bg, color: SEV[c.severity].fg }}>{sevLabel(c.severity)}</span>
-                    </span>
-                  </div>
-                  <span className={`${s.sub} ${s.pretty}`}>{t(c.bodyKey as never, values as never)}</span>
-                  {c.source && (
-                    <a className={s.tiny} style={{ color: "#98A2B3" }} href={c.source.url} target="_blank" rel="noopener noreferrer">
-                      {c.source.label}
-                    </a>
-                  )}
+          <div className={s.pmScroll}>
+            <div className={s.pmInner}>
+              <div className={`${s.pm} ${s.pmHead}`}>
+                <div>{ip("colMethod")}</div>
+                <div className={s.r}>{ip("colOrders")}</div>
+                <div className={s.r}>{ip("colChargebacks")}</div>
+                <div className={s.r}>{ip("colInquiries")}</div>
+                <div className={s.pmRateHead}>
+                  <span>{ip("colChargebackRate")}</span>
+                  <span>{referencePct}</span>
                 </div>
+                <div className={s.r}>{ip("colAllDisputes")}</div>
               </div>
-            );
-          })}
-          {checkpoints.length === 0 && (
-            <div className={s.cp}>
-              <span className={`${s.sub} ${s.small}`}>{ip("checkpointsNone")}</span>
+              <div className={`${s.pmGroup} ${s.pmGroupRow}`}>{ip("methodsGroupActive", { count: activeRows.length })}</div>
+              {activeRows.map((r) => (
+                <div className={`${s.pm} ${r.flagged ? s.pmFlagged : ""}`} key={`${r.method}|${r.brand ?? ""}`}>
+                  <div className={s.pmName}>
+                    <span style={{ fontWeight: 500 }}>{r.name}</span>
+                    {r.brand && <span className={`${s.badge} ${s.bDefault}`}>{r.brand}</span>}
+                  </div>
+                  <div className={`${s.r} ${s.subtle}`}>{formatCount(r.orders, locale)}</div>
+                  <div className={s.r} style={{ fontWeight: 600 }}>{formatCount(r.chargebacks, locale)}</div>
+                  <div className={`${s.r} ${s.subtle}`}>{formatCount(r.inquiries, locale)}</div>
+                  <div className={s.pmRate}>
+                    {r.chargebackRate !== null ? (
+                      <>
+                        <div className={s.pmTrack}>
+                          <div
+                            className={s.pmFill}
+                            style={{
+                              width: `${Math.max(Math.min(r.chargebackRate / (METHOD_REFERENCE * 2), 1) * 100, 2)}%`,
+                              background: r.flagged ? WARNING : PRIMARY,
+                            }}
+                          />
+                          <div className={s.pmRef} />
+                        </div>
+                        <span className={s.pmRateValue} style={{ fontWeight: 600, color: r.flagged ? "#B45309" : "#0B1220" }}>
+                          {formatRatio(r.chargebackRate, locale)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={s.pmTooFew}>{ip("methodsTooFew")}</span>
+                        <span className={`${s.pmRateValue} ${s.muted}`}>—</span>
+                      </>
+                    )}
+                  </div>
+                  <div className={`${s.r} ${s.subtle}`}>{formatRatio(r.disputeRate, locale)}</div>
+                </div>
+              ))}
+              <button type="button" className={s.pmToggle} onClick={() => setShowZero(!showZero)} aria-expanded={showZero}>
+                <span className={s.pmGroup}>{ip("methodsGroupZero", { count: zeroRows.length })}</span>
+                <span className={s.pmToggleLabel}>{ip(showZero ? "methodsHide" : "methodsShow")}</span>
+              </button>
+              {showZero &&
+                zeroRows.map((r) => (
+                  <div className={`${s.pm} ${s.pmZero}`} key={`${r.method}|${r.brand ?? ""}`}>
+                    <div className={s.pmName}>
+                      <span style={{ color: "#0B1220" }}>{r.name}</span>
+                      {r.brand && <span className={`${s.badge} ${s.bDefault}`}>{r.brand}</span>}
+                    </div>
+                    <div className={s.r}>{formatCount(r.orders, locale)}</div>
+                    <div className={s.r}>{formatCount(0, locale)}</div>
+                    <div className={s.r}>{formatCount(0, locale)}</div>
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <span className={s.pmRateValue}>{formatRatio(r.chargebackRate, locale)}</span>
+                    </div>
+                    <div className={s.r}>{formatRatio(r.disputeRate, locale)}</div>
+                  </div>
+                ))}
             </div>
-          )}
-        </div>
-
-        <div className={s.live}>
-          <div className={s.row} style={{ padding: "14px 18px 4px", justifyContent: "space-between" }}>
-            <span className={s.h2}>{ip("liveTitle")}</span>
-            <span className={`${s.tiny} ${s.sub}`}>{ip("liveSub")}</span>
           </div>
-          <div className={s.liveCell}>
-            <span className={`${s.sub} ${s.small}`}>{ip("liveNeedAction")}</span>
-            <span className={`${s.mid} ${s.num}`}>{liveState ? formatCount(liveState.needsAction, locale) : "—"}</span>
-            <span className={`${s.sub} ${s.small}`}>{ip("liveNeedActionSub")}</span>
-          </div>
-          <div className={s.liveCell}>
-            <span className={`${s.sub} ${s.small}`}>{ip("liveWithBank")}</span>
-            <span className={`${s.mid} ${s.num}`}>{liveState ? formatCount(liveState.awaitingBank, locale) : "—"}</span>
-            <span className={`${s.sub} ${s.small}`}>{ip("liveWithBankSub")}</span>
-          </div>
-          <div className={s.liveCell}>
-            <span className={`${s.sub} ${s.small}`}>{ip("liveNearest")}</span>
-            <span className={s.mid}>
-              {liveState?.nearestDueAt ? shortDate(liveState.nearestDueAt) : ip("liveNoneDue")}
+          <div className={s.pmFoot}>
+            <span>{ip("methodsFootRates")}</span>
+            <span>{ip("methodsFootEarlier")}</span>
+            <span className={s.pmFootRef}>
+              <span className={s.pmFootRefLine} />
+              {ip("methodsFootReference", { pct: referencePct })}
             </span>
           </div>
         </div>
+      )}
+
+      {/* ── Card-network exposure ─────────────────────────────────── */}
+      <div className={s.exposureRow}>
+        <div className={`${s.card} ${s.exposure}`} data-screen-label="Card-network exposure">
+          {p && p.cardDisputeRatio !== null && p.vampSeverity && (
+            <>
+              <div className={s.exposureTop}>
+                <div className={s.exposureLeft}>
+                  <div className={s.eyebrow}>{ip("headlineEstimate")}</div>
+                  <div className={s.bigRow}>
+                    <span className={s.big}>{formatRatio(p.cardDisputeRatio, locale)}</span>
+                    <span className={`${s.badge} ${SEV[p.vampSeverity].badge}`}>{sevLabel(p.vampSeverity)}</span>
+                  </div>
+                  <div className={`${s.subtle} ${s.num}`}>
+                    {ip("headlineDetail", { n: p.cardChargebackCount, d: formatCount(p.cardSettledCount, locale) })}
+                  </div>
+                </div>
+                <div className={s.exposureRight}>
+                  <span className={s.nowrap}>{ip("thresholdsVerified", { date: "2026-10-01" })}</span>
+                  <span className={s.pretty}>{stateLine}</span>
+                </div>
+              </div>
+              <ProgrammeRow
+                name={ip("vampName")}
+                basis={ip("vampQualEstimate")}
+                ratio={p.cardDisputeRatio}
+                value={formatRatio(p.cardDisputeRatio, locale)}
+                fraction={`${formatCount(p.cardChargebackCount, locale)} / ${formatCount(p.cardSettledCount, locale)}`}
+                ticks={[
+                  { at: VAMP_EARLY_WARNING, color: WARNING },
+                  { at: VAMP_EXCESSIVE, color: DANGER },
+                ]}
+                threshold={ip("vampThreshold", {
+                  warn: formatRatio(VAMP_EARLY_WARNING, locale, 1),
+                  excessive: formatRatio(VAMP_EXCESSIVE, locale, 1),
+                })}
+                applies={ip("vampFloor", { floor: formatCount(VAMP_COUNT_FLOOR, locale), count: formatCount(p.visaChargebackCount, locale) })}
+              />
+              {p.ecmRatio !== null && p.ecmSeverity && (
+                <ProgrammeRow
+                  name={ip("ecmName")}
+                  basis={ip("ecmQualLowerBound")}
+                  ratio={p.ecmRatio}
+                  value={formatRatio(p.ecmRatio, locale)}
+                  fraction={`${formatCount(p.mcChargebackCount, locale)} / ${formatCount(p.cardSettledPrevCount, locale)}`}
+                  ticks={[{ at: MC_ECM_RATIO, color: DANGER }]}
+                  threshold={ip("ecmThreshold", { pct: formatRatio(MC_ECM_RATIO, locale, 1) })}
+                  applies={ip("ecmFloor", { floor: formatCount(MC_ECM_COUNT_FLOOR, locale), count: formatCount(p.mcChargebackCount, locale) })}
+                />
+              )}
+              {notes.map((n) => (
+                <div className={s.exposureNote} key={n}>{n}</div>
+              ))}
+            </>
+          )}
+          {p && p.cardDisputeRatio === null && (
+            <div className={s.state}>
+              <span className={`${s.subtle} ${s.pretty}`}>{ip("tooFewCardOrders")}</span>
+            </div>
+          )}
+          {!ok && (
+            <div className={s.state}>
+              <span className={s.stateTitle}>{ip(`stateMsg.${period.status}.title`)}</span>
+              <span className={`${s.subtle} ${s.pretty}`} style={{ maxWidth: 620 }}>
+                {ip(`stateMsg.${period.status}.body`, { month })}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Checkpoints ───────────────────────────────────────────── */}
+      <div className={s.card} data-screen-label="Checkpoints">
+        <div className={s.sectionHead}>
+          <div className={s.cardTitle}>{ip("checkpointsTitle", { month })}</div>
+          <div className={s.cardSub}>{ip("checkpointsSub")}</div>
+        </div>
+        {checkpoints.map((c, i) => {
+          const values = formatCheckpointValues(c.values, locale);
+          return (
+            <div className={s.cp} key={c.id}>
+              <span className={s.cpNum} style={{ background: SEV[c.severity].dotBg, color: SEV[c.severity].dotFg }}>{i + 1}</span>
+              <div className={s.cpText}>
+                <span className={s.cpTitle}>{t(c.titleKey as never, values as never)}</span>
+                <span className={s.cpBody}>{t(c.bodyKey as never, values as never)}</span>
+                {c.source && (
+                  <span className={s.cpSource}>
+                    {ip("sourcePrefix")}{" "}
+                    <a href={c.source.url} target="_blank" rel="noopener noreferrer">{c.source.label}</a>
+                  </span>
+                )}
+              </div>
+              <div className={s.cpBadges}>
+                {i < 3 && <span className={`${s.badge} ${s.bInfo}`}>{ip("inEmail")}</span>}
+                <span className={`${s.badge} ${SEV[c.severity].badge}`}>{sevLabel(c.severity)}</span>
+              </div>
+            </div>
+          );
+        })}
+        {checkpoints.length === 0 && <div className={s.cpNone}>{ip("checkpointsNone")}</div>}
       </div>
 
       {/* ── How orders were protected ─────────────────────────────── */}
       {op && (
-        <div className={s.card}>
-          <div className={`${s.pad} ${s.col}`} style={{ gap: 2, paddingBottom: 12 }}>
-            <span className={s.h2}>{ip("protectTitle", { month })}</span>
-            <span className={`${s.sub} ${s.small}`}>{ip("protectSub")}</span>
+        <div className={s.card} data-screen-label="Protection">
+          <div className={s.sectionHead}>
+            <div className={s.cardTitle}>{ip("protectTitle", { month })}</div>
+            <div className={s.cardSub}>{ip("protectSub")}</div>
           </div>
           <div className={s.metrics}>
-            <Metric label={ip("m3ds")} value={formatRatio(op.threeDsShare, locale, 1)} note={ip("m3dsNote")} />
+            <Metric
+              label={ip("m3ds")}
+              value={formatRatio(op.threeDsShare, locale, 1)}
+              note={ip("m3dsNote")}
+              color={threeDsFlagged ? "#B45309" : undefined}
+            />
             <Metric
               label={ip("mSigned")}
               value={formatRatio(op.signedForShare, locale, 0)}
@@ -423,46 +563,134 @@ export function ExposureView({
         </div>
       )}
 
-      <span className={`${s.sub} ${s.small} ${s.pretty}`} style={{ textAlign: "center" }}>{ip("footer")}</span>
+      {/* ── Dispute reasons ───────────────────────────────────────── */}
+      {reasons && (
+        <div className={s.card} data-screen-label="Dispute reasons">
+          <div className={s.pmTop}>
+            <div className={s.titleBlock} style={{ maxWidth: 600 }}>
+              <div className={s.cardTitle}>{ip("reasonsTitle", { month: monthLong, prev: prevLong })}</div>
+              <div className={s.cardSub}>{ip("reasonsSub")}</div>
+            </div>
+            <div className={s.rsSummary}>
+              <div className={s.rsTotalRow}>
+                <span className={s.rsTotal}>{ip("reasonsTotal", { count: reasons.currentTotal })}</span>
+                {totalChange !== null && (
+                  <span
+                    className={s.rsDelta}
+                    style={{ color: totalChange > 0 ? "#B45309" : totalChange < 0 ? "#15803D" : "#64748B" }}
+                  >
+                    {totalChange === 0
+                      ? ip("reasonsSame", { prev: prevLong })
+                      : ip(totalChange < 0 ? "reasonsFewer" : "reasonsMore", { count: Math.abs(totalChange), prev: prevLong })}
+                  </span>
+                )}
+              </div>
+              <div className={s.rsLegend}>
+                <span className={s.rsLegendItem}>
+                  <span className={s.rsSwatch} style={{ background: PRIMARY }} />
+                  {monthLong}
+                </span>
+                <span className={s.rsLegendItem}>
+                  <span className={s.rsSwatch} style={{ background: INFO }} />
+                  {prevLong}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className={s.pmScroll}>
+            <div className={s.rsInner}>
+              <div className={`${s.rs} ${s.rsHead}`}>
+                <div>{ip("reasonsColReason")}</div>
+                <div />
+                <div className={s.r}>{monthPart(period.periodMonth, { month: "short" })}</div>
+                <div className={s.r}>{monthPart(prevMonthIso, { month: "short" })}</div>
+                <div className={s.r}>{ip("reasonsColChange")}</div>
+              </div>
+              {reasons.rows.map((r) => (
+                <div className={s.rs} key={r.reason}>
+                  <div className={s.rsName}>
+                    <span style={{ fontWeight: 500 }}>{REASON_KEYS.has(r.reason) ? ip(`reason.${r.reason}`) : r.reason}</span>
+                    <span className={s.rsShare}>
+                      {r.share !== null
+                        ? ip("reasonsShare", { pct: formatRatio(r.share, locale, 0), month: monthLong })
+                        : ip("reasonsNone", { month: monthLong })}
+                    </span>
+                  </div>
+                  <div className={s.rsBars}>
+                    <div className={s.rsBar} style={{ background: PRIMARY, width: reasonWidth(r.current) }} />
+                    <div className={s.rsBar} style={{ background: INFO, width: reasonWidth(r.previous ?? 0) }} />
+                  </div>
+                  <div className={s.r} style={{ fontWeight: 600 }}>{formatCount(r.current, locale)}</div>
+                  <div className={`${s.r} ${s.subtle}`}>{r.previous === null ? "—" : formatCount(r.previous, locale)}</div>
+                  <div
+                    className={s.r}
+                    style={{
+                      fontWeight: 600,
+                      color: r.change !== null && r.change > 0 ? "#B45309" : r.change !== null && r.change < 0 ? "#15803D" : "#64748B",
+                    }}
+                  >
+                    {r.change === null || r.change === 0
+                      ? "—"
+                      : r.isNew
+                        ? ip("reasonsNew")
+                        : `${r.change > 0 ? "+" : "−"}${formatCount(Math.abs(r.change), locale)}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className={s.rsFoot}>{ip("reasonsFoot")}</div>
+        </div>
+      )}
+
+      <div className={s.footer}>{ip("footer")}</div>
     </div>
   );
 }
 
 function ProgrammeRow(props: {
   name: string;
-  qual: string;
+  basis: string;
+  ratio: number;
   value: string;
-  detail: string;
+  fraction: string;
+  ticks: Array<{ at: number; color: string }>;
   threshold: string;
-  floor: string;
-  chip: React.ReactNode;
+  applies: string;
 }) {
+  const pos = (v: number) => `${Math.min(v / PROGRAMME_SCALE, 1) * 100}%`;
   return (
     <div className={s.prog}>
-      <div className={s.col} style={{ gap: 2, minWidth: 0 }}>
-        <span style={{ fontWeight: 600 }}>{props.name}</span>
-        <span className={`${s.sub} ${s.small}`}>{props.qual}</span>
+      <div className={s.progName}>
+        <span className={s.progTitle}>{props.name}</span>
+        <span className={s.progBasis}>{props.basis}</span>
       </div>
-      <div className={`${s.col} ${s.progWide}`} style={{ gap: 2 }}>
-        <span className={`${s.mid} ${s.num}`}>{props.value}</span>
-        <span className={`${s.sub} ${s.small} ${s.num}`}>{props.detail}</span>
+      <div className={s.progMid}>
+        <div className={s.progTrack}>
+          <div className={s.progFill} style={{ width: pos(props.ratio) }} />
+          {props.ticks.map((tick) => (
+            <div key={tick.at} className={s.progTick} style={{ left: pos(tick.at), background: tick.color }} />
+          ))}
+        </div>
+        <div className={s.progTexts}>
+          <span>{props.threshold}</span>
+          <span>{props.applies}</span>
+        </div>
       </div>
-      <div className={`${s.col} ${s.progWide}`} style={{ gap: 2 }}>
-        <span className={s.small}>{props.threshold}</span>
-        <span className={`${s.sub} ${s.small}`}>{props.floor}</span>
+      <div className={s.progValue}>
+        <span className={s.progNumber}>{props.value}</span>
+        <span className={s.progFraction}>{props.fraction}</span>
       </div>
-      <span style={{ justifySelf: "end" }}>{props.chip}</span>
     </div>
   );
 }
 
-function Metric({ label, value, note }: { label: string; value: string; note: string }) {
+function Metric({ label, value, note, color }: { label: string; value: string; note: string; color?: string }) {
   return (
     <div className={s.metric}>
-      <span className={`${s.sub} ${s.small}`}>{label}</span>
-      <span className={`${s.mid} ${s.num}`} style={{ color: value === "—" ? "#98A2B3" : undefined }}>{value}</span>
-      <span className={`${s.sub} ${s.small} ${s.pretty}`}>{note}</span>
+      <span className={s.metricLabel}>{label}</span>
+      <span className={s.metricValue} style={{ color: value === "—" ? "#64748B" : color }}>{value}</span>
+      <span className={s.metricNote}>{note}</span>
     </div>
   );
 }
-
