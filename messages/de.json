@@ -6675,15 +6675,18 @@
       "NONCOMPLIANT": "Nicht konform",
       "UNKNOWN": "Kein Grund angegeben"
     },
-    "trendTitleAll": "Rückbuchungsquote nach Monat",
+    "trendTitleAll": "Rückbuchungen nach Monat",
     "trendScopeLabel": "Zahlungsarten im Diagramm",
     "trendScopeAll": "Alle Zahlungsarten",
     "trendScopeCards": "Nur Karten",
     "legendCards": "Karten",
     "legendOther": "Andere Zahlungsarten",
-    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# Rückbuchung} other {# Rückbuchungen}} bei {d} Bestellungen",
+    "trendSelectedAll": "{month} · {n, plural, one {# Rückbuchung} other {# Rückbuchungen}} bei {d} Bestellungen",
     "tipOrdersAll": "bei {d} Bestellungen",
     "tipSplit": "{cards} mit Karte · {other} mit anderen Zahlungsarten",
-    "trendNoteAll": "Alle Zahlungsarten. Visa und Mastercard messen nur Kartenzahlungen; ihre Schwellenwerte stehen unter „Nur Karten“."
+    "trendNoteAll": "Alle Zahlungsarten. Visa und Mastercard messen nur Kartenzahlungen; ihre Schwellenwerte stehen unter „Nur Karten“.",
+    "trendAverageAllDown": "3-Monats-Durchschnitt {now} Rückbuchungen, gesunken von {prev} im {month}",
+    "trendAverageAllUp": "3-Monats-Durchschnitt {now} Rückbuchungen, gestiegen von {prev} im {month}",
+    "trendAverageAllOnly": "3-Monats-Durchschnitt {now} Rückbuchungen"
   }
 }
