@@ -50,13 +50,27 @@ export async function consumePack(params: {
     throw new PackLimitReachedError(shopId, balance);
   }
 
-  await sb.from("pack_usage_events").insert({
+  // The insert trigger charges this use to one specific grant (soonest to
+  // expire first) under a per-shop lock, and refuses when no live grant has
+  // room — so the balance read above can be stale without over-drawing.
+  const { error } = await sb.from("pack_usage_events").insert({
     shop_id: shopId,
     dispute_id: disputeId,
     pack_id: packId ?? null,
     event_type: eventType,
     packs: 1,
   });
+
+  if (error) {
+    if (error.message?.includes("PACK_LIMIT_REACHED")) {
+      throw new PackLimitReachedError(shopId, 0);
+    }
+    // A concurrent caller recorded the same (shop, dispute, eventType).
+    if (error.code === "23505" || error.message?.includes("duplicate key")) {
+      return { ok: true, consumed: 0, remaining: balance };
+    }
+    throw new Error(`consumePack failed for ${shopId}: ${error.message}`);
+  }
 
   return { ok: true, consumed: 1, remaining: balance - 1 };
 }
