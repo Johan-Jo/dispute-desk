@@ -60,6 +60,10 @@ const RENEWAL_LOOKAHEAD_MS = 60 * 60 * 1000;
  *  to catch silent uninstalls or token revocations. */
 const STALE_RECONCILIATION_MS = 24 * 60 * 60 * 1000;
 
+/** Two monthly grants whose expiries are this close belong to the same
+ *  cycle (see `tryGrantMonthlyCredits`). */
+const SAME_CYCLE_TOLERANCE_MS = 3 * 24 * 60 * 60 * 1000;
+
 export type ReconcileShopOutcome =
   | { ok: true; action: "no_change"; state: SubscriptionState }
   | {
@@ -331,6 +335,12 @@ export async function reconcileBillingCycleForShop(
         reference,
       });
       if (result === "granted") {
+        // A new cycle's packs just landed, so the cycle starts now. This
+        // column used to keep the original subscription date forever.
+        await sb
+          .from("plan_entitlements")
+          .update({ billing_cycle_started_at: nowIso })
+          .eq("shop_id", input.shopId);
         grantOutcome = {
           action: "credits_granted",
           packs: plan.packsPerMonth,
@@ -467,6 +477,24 @@ async function tryGrantMonthlyCredits(
     .limit(1)
     .maybeSingle();
   if (existing) return "duplicate";
+
+  // The subscribe callback grants the first cycle under its own reference
+  // (`monthly_<plan>_<chargeId>`) with a locally computed cycle end, up to a
+  // day or two off Shopify's. Without this the first reconciliation granted
+  // the same cycle a second time (blume-box, 2026-07-23: 200 packs in month
+  // one). A monthly grant already expiring around this cycle's end IS this
+  // cycle's grant.
+  const cycleEndMs = new Date(args.expiresAt).getTime();
+  const { data: sameCycle } = await sb
+    .from("pack_credits_ledger")
+    .select("id")
+    .eq("shop_id", args.shopId)
+    .eq("source", "monthly_included")
+    .gte("expires_at", new Date(cycleEndMs - SAME_CYCLE_TOLERANCE_MS).toISOString())
+    .lte("expires_at", new Date(cycleEndMs + SAME_CYCLE_TOLERANCE_MS).toISOString())
+    .limit(1)
+    .maybeSingle();
+  if (sameCycle) return "duplicate";
 
   try {
     await grantCredits({
