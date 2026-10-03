@@ -98,6 +98,25 @@ describe("the body says what failed and what happens next", () => {
     expect(mockSend.mock.calls[0][0].text).toContain("Shopify");
   });
 
+  /* blume-box #360980, 2026-10-03: v27 failed at 06:07, the alert said the
+   * dispute "files nothing", and the deadline cron filed v26 at 08:02. */
+  it("names the earlier built version instead of saying nothing is filed", async () => {
+    await sendDefencePackageFailedAlert({ ...BASE, dueAt: null, earlierBuiltVersion: 26 }, NOW);
+    const { text, html } = mockSend.mock.calls[0][0];
+    for (const body of [text, html]) {
+      expect(body).toContain("the deadline cron files v26");
+      expect(body).not.toContain("files nothing");
+      expect(body).not.toContain("no fileable defence package");
+      expect(body).toContain("regenerate");
+    }
+  });
+
+  it("still says nothing is filed when no earlier version was built", async () => {
+    await sendDefencePackageFailedAlert({ ...BASE, dueAt: null, earlierBuiltVersion: null }, NOW);
+    expect(mockSend.mock.calls[0][0].text).toContain("files nothing");
+    expect(mockSend.mock.calls[0][0].html).toContain("no fileable defence package");
+  });
+
   it("escapes HTML — a failure reason is model output, not trusted markup", async () => {
     await sendDefencePackageFailedAlert(
       { ...BASE, dueAt: null, failureReason: '<script>alert("x")</script>' },
