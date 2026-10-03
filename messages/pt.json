@@ -6645,6 +6645,35 @@
     "methodsFootRates": "As taxas aparecem a partir de 50 pedidos.",
     "methodsFootEarlier": "Uma disputa aberta neste mês pode ser de um pedido anterior.",
     "methodsFootReference": "Linha de referência de {pct}",
-    "sourcePrefix": "Fonte:"
+    "sourcePrefix": "Fonte:",
+    "reasonsTitle": "Motivos de disputa · {month} vs. {prev}",
+    "reasonsSub": "Estornos e consultas abertos em cada mês, agrupados pelo motivo informado pelo banco.",
+    "reasonsTotal": "{count, plural, one {# disputa} other {# disputas}}",
+    "reasonsSame": "Igual a {prev}",
+    "reasonsFewer": "{count} a menos que em {prev}",
+    "reasonsMore": "{count} a mais que em {prev}",
+    "reasonsColReason": "Motivo",
+    "reasonsColChange": "Variação",
+    "reasonsShare": "{pct} de {month}",
+    "reasonsNone": "Nenhuma em {month}",
+    "reasonsNew": "Novo",
+    "reasonsFoot": "Pelo mês em que cada disputa foi aberta. Um motivo pode mudar se o banco atualizar o caso.",
+    "reason": {
+      "FRAUDULENT": "Fraude",
+      "PRODUCT_NOT_RECEIVED": "Produto não recebido",
+      "PRODUCT_UNACCEPTABLE": "Não conforme descrito",
+      "CREDIT_NOT_PROCESSED": "Crédito não processado",
+      "SUBSCRIPTION_CANCELLED": "Assinatura cancelada",
+      "DUPLICATE": "Cobrança duplicada",
+      "UNRECOGNIZED": "Pagamento não reconhecido",
+      "GENERAL": "Geral",
+      "BANK_CANNOT_PROCESS": "Banco não pode processar",
+      "CUSTOMER_INITIATED": "Iniciado pelo cliente",
+      "DEBIT_NOT_AUTHORIZED": "Débito não autorizado",
+      "INCORRECT_ACCOUNT_DETAILS": "Dados da conta incorretos",
+      "INSUFFICIENT_FUNDS": "Fundos insuficientes",
+      "NONCOMPLIANT": "Não conforme",
+      "UNKNOWN": "Sem motivo informado"
+    }
   }
 }

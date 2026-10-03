@@ -24,12 +24,15 @@ import {
   formatRatio,
 } from "@/lib/insights/period/format";
 import { trendAverage } from "@/lib/insights/period/trendAverage";
+import { compareReasons, type PreviousReasons } from "@/lib/insights/period/reasonComparison";
+import { addMonths } from "@/lib/insights/period/months";
 import { MC_ECM_COUNT_FLOOR, MC_ECM_RATIO, VAMP_COUNT_FLOOR, VAMP_EARLY_WARNING, VAMP_EXCESSIVE } from "@/lib/insights/programmeThresholds";
 import s from "./exposure.module.css";
 
 const PRIMARY = "#1D4ED8";
 const WARNING = "#F59E0B";
 const DANGER = "#EF4444";
+const INFO = "#0EA5E9";
 
 const SEV: Record<CheckpointSeverity, { badge: string; dotBg: string; dotFg: string }> = {
   healthy: { badge: s.bSuccess, dotBg: "#DCFCE7", dotFg: "#166534" },
@@ -47,6 +50,14 @@ const METHOD_REFERENCE = 0.01;
 const METHOD_KEYS = new Set([
   "card", "shopify_pay", "shop_pay", "apple_pay", "google_pay", "shop_pay_installments",
   "paypal", "klarna", "amazon_pay", "tiktok_shop", "gift_card", "shop_cash", "unknown",
+]);
+
+/** Shopify dispute reasons with their own name; anything else is shown as stored. */
+const REASON_KEYS = new Set([
+  "BANK_CANNOT_PROCESS", "CREDIT_NOT_PROCESSED", "CUSTOMER_INITIATED", "DEBIT_NOT_AUTHORIZED",
+  "DUPLICATE", "FRAUDULENT", "GENERAL", "INCORRECT_ACCOUNT_DETAILS", "INSUFFICIENT_FUNDS",
+  "NONCOMPLIANT", "PRODUCT_NOT_RECEIVED", "PRODUCT_UNACCEPTABLE", "SUBSCRIPTION_CANCELLED",
+  "UNRECOGNIZED", "UNKNOWN",
 ]);
 
 /** A month's methods, with small quiet ones folded into one "Other" row. */
@@ -67,12 +78,15 @@ function displayMethods(rows: PaymentMethodRow[]): Array<PaymentMethodRow & { ot
 export function ExposureView({
   period,
   trend,
+  previousReasons = null,
   monthOptions,
   selected,
   onSelect,
 }: {
   period: InsightsPeriod;
   trend: TrendPoint[];
+  /** The month before `period`; null when it has no reasons on record. */
+  previousReasons?: PreviousReasons | null;
   /** Value "YYYY-MM-01" or "mtd". */
   monthOptions: Array<{ value: string; label: string }>;
   selected: string;
@@ -185,6 +199,15 @@ export function ExposureView({
   const zeroRows = methods.filter((r) => r.chargebacks + r.inquiries === 0);
   const flagged = methods.filter((r) => r.flagged);
   const referencePct = formatRatio(METHOD_REFERENCE, locale, 0);
+
+  // ── Dispute reasons, this month against the one before ────────────
+  const reasons = op?.byReason ? compareReasons(op.byReason, previousReasons?.byReason ?? null) : null;
+  const prevMonthIso = addMonths(period.periodMonth, -1);
+  const monthLong = monthPart(period.periodMonth, { month: "long" });
+  const prevLong = monthPart(prevMonthIso, { month: "long" });
+  const reasonWidth = (n: number) => (n > 0 ? `${Math.max((n / (reasons?.max ?? 1)) * 100, 4)}%` : "0%");
+  const totalChange =
+    reasons && reasons.previousTotal !== null ? reasons.currentTotal - reasons.previousTotal : null;
 
   const checkpoints = ok ? ok.checkpoints.slice(0, 5) : [];
   const threeDsSeverity = ok?.checkpoints.find((c) => c.id === "threeds_auth")?.severity;
@@ -537,6 +560,86 @@ export function ExposureView({
               note={ip("mWinRateNote", { won: op.wonCount, decided: op.decidedCount, month })}
             />
           </div>
+        </div>
+      )}
+
+      {/* ── Dispute reasons ───────────────────────────────────────── */}
+      {reasons && (
+        <div className={s.card} data-screen-label="Dispute reasons">
+          <div className={s.pmTop}>
+            <div className={s.titleBlock} style={{ maxWidth: 600 }}>
+              <div className={s.cardTitle}>{ip("reasonsTitle", { month: monthLong, prev: prevLong })}</div>
+              <div className={s.cardSub}>{ip("reasonsSub")}</div>
+            </div>
+            <div className={s.rsSummary}>
+              <div className={s.rsTotalRow}>
+                <span className={s.rsTotal}>{ip("reasonsTotal", { count: reasons.currentTotal })}</span>
+                {totalChange !== null && (
+                  <span
+                    className={s.rsDelta}
+                    style={{ color: totalChange > 0 ? "#B45309" : totalChange < 0 ? "#15803D" : "#64748B" }}
+                  >
+                    {totalChange === 0
+                      ? ip("reasonsSame", { prev: prevLong })
+                      : ip(totalChange < 0 ? "reasonsFewer" : "reasonsMore", { count: Math.abs(totalChange), prev: prevLong })}
+                  </span>
+                )}
+              </div>
+              <div className={s.rsLegend}>
+                <span className={s.rsLegendItem}>
+                  <span className={s.rsSwatch} style={{ background: PRIMARY }} />
+                  {monthLong}
+                </span>
+                <span className={s.rsLegendItem}>
+                  <span className={s.rsSwatch} style={{ background: INFO }} />
+                  {prevLong}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className={s.pmScroll}>
+            <div className={s.rsInner}>
+              <div className={`${s.rs} ${s.rsHead}`}>
+                <div>{ip("reasonsColReason")}</div>
+                <div />
+                <div className={s.r}>{monthPart(period.periodMonth, { month: "short" })}</div>
+                <div className={s.r}>{monthPart(prevMonthIso, { month: "short" })}</div>
+                <div className={s.r}>{ip("reasonsColChange")}</div>
+              </div>
+              {reasons.rows.map((r) => (
+                <div className={s.rs} key={r.reason}>
+                  <div className={s.rsName}>
+                    <span style={{ fontWeight: 500 }}>{REASON_KEYS.has(r.reason) ? ip(`reason.${r.reason}`) : r.reason}</span>
+                    <span className={s.rsShare}>
+                      {r.share !== null
+                        ? ip("reasonsShare", { pct: formatRatio(r.share, locale, 0), month: monthLong })
+                        : ip("reasonsNone", { month: monthLong })}
+                    </span>
+                  </div>
+                  <div className={s.rsBars}>
+                    <div className={s.rsBar} style={{ background: PRIMARY, width: reasonWidth(r.current) }} />
+                    <div className={s.rsBar} style={{ background: INFO, width: reasonWidth(r.previous ?? 0) }} />
+                  </div>
+                  <div className={s.r} style={{ fontWeight: 600 }}>{formatCount(r.current, locale)}</div>
+                  <div className={`${s.r} ${s.subtle}`}>{r.previous === null ? "—" : formatCount(r.previous, locale)}</div>
+                  <div
+                    className={s.r}
+                    style={{
+                      fontWeight: 600,
+                      color: r.change !== null && r.change > 0 ? "#B45309" : r.change !== null && r.change < 0 ? "#15803D" : "#64748B",
+                    }}
+                  >
+                    {r.change === null || r.change === 0
+                      ? "—"
+                      : r.isNew
+                        ? ip("reasonsNew")
+                        : `${r.change > 0 ? "+" : "−"}${formatCount(Math.abs(r.change), locale)}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className={s.rsFoot}>{ip("reasonsFoot")}</div>
         </div>
       )}
 

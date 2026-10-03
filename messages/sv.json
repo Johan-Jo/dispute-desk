@@ -6645,6 +6645,35 @@
     "methodsFootRates": "Kvoter visas från 50 beställningar.",
     "methodsFootEarlier": "En tvist som öppnats den här månaden kan gälla en tidigare beställning.",
     "methodsFootReference": "Referenslinje {pct}",
-    "sourcePrefix": "Källa:"
+    "sourcePrefix": "Källa:",
+    "reasonsTitle": "Tvistorsaker · {month} mot {prev}",
+    "reasonsSub": "Chargebacks och förfrågningar som öppnats varje månad, grupperade efter den orsak banken angav.",
+    "reasonsTotal": "{count, plural, one {# tvist} other {# tvister}}",
+    "reasonsSame": "Samma som i {prev}",
+    "reasonsFewer": "{count} färre än i {prev}",
+    "reasonsMore": "{count} fler än i {prev}",
+    "reasonsColReason": "Orsak",
+    "reasonsColChange": "Förändring",
+    "reasonsShare": "{pct} av {month}",
+    "reasonsNone": "Inga i {month}",
+    "reasonsNew": "Ny",
+    "reasonsFoot": "Efter den månad då varje tvist öppnades. En orsak kan ändras om banken uppdaterar ärendet.",
+    "reason": {
+      "FRAUDULENT": "Bedrägeri",
+      "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
+      "PRODUCT_UNACCEPTABLE": "Ej enligt beskrivning",
+      "CREDIT_NOT_PROCESSED": "Kredit ej behandlad",
+      "SUBSCRIPTION_CANCELLED": "Prenumeration avslutad",
+      "DUPLICATE": "Dubbeldebitering",
+      "UNRECOGNIZED": "Okänd betalning",
+      "GENERAL": "Generellt",
+      "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
+      "CUSTOMER_INITIATED": "Initierad av kund",
+      "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
+      "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
+      "INSUFFICIENT_FUNDS": "Otillräckliga medel",
+      "NONCOMPLIANT": "Ej regelenlig",
+      "UNKNOWN": "Ingen orsak angiven"
+    }
   }
 }

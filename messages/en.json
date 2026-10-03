@@ -6644,6 +6644,35 @@
     "methodsFootRates": "Rates shown from 50 orders.",
     "methodsFootEarlier": "A dispute opened this month can be on an order placed earlier.",
     "methodsFootReference": "{pct} reference line",
-    "sourcePrefix": "Source:"
+    "sourcePrefix": "Source:",
+    "reasonsTitle": "Dispute reasons · {month} vs {prev}",
+    "reasonsSub": "Chargebacks and inquiries opened each month, grouped by the reason the bank gave.",
+    "reasonsTotal": "{count, plural, one {# dispute} other {# disputes}}",
+    "reasonsSame": "Same as {prev}",
+    "reasonsFewer": "{count} fewer than {prev}",
+    "reasonsMore": "{count} more than {prev}",
+    "reasonsColReason": "Reason",
+    "reasonsColChange": "Change",
+    "reasonsShare": "{pct} of {month}",
+    "reasonsNone": "None in {month}",
+    "reasonsNew": "New",
+    "reasonsFoot": "By the month each dispute was opened. A reason can change if the bank updates the case.",
+    "reason": {
+      "FRAUDULENT": "Fraudulent",
+      "PRODUCT_NOT_RECEIVED": "Product not received",
+      "PRODUCT_UNACCEPTABLE": "Not as described",
+      "CREDIT_NOT_PROCESSED": "Credit not processed",
+      "SUBSCRIPTION_CANCELLED": "Subscription canceled",
+      "DUPLICATE": "Duplicate charge",
+      "UNRECOGNIZED": "Unrecognized",
+      "GENERAL": "General",
+      "BANK_CANNOT_PROCESS": "Bank cannot process",
+      "CUSTOMER_INITIATED": "Customer initiated",
+      "DEBIT_NOT_AUTHORIZED": "Debit not authorized",
+      "INCORRECT_ACCOUNT_DETAILS": "Incorrect account details",
+      "INSUFFICIENT_FUNDS": "Insufficient funds",
+      "NONCOMPLIANT": "Noncompliant",
+      "UNKNOWN": "No reason given"
+    }
   }
 }
