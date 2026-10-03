@@ -6684,8 +6684,8 @@
     "tipOrdersAll": "of {d} orders",
     "tipSplit": "{cards} on cards · {other} on other methods",
     "trendNoteAll": "Every payment method. Visa and Mastercard only measure card payments; their thresholds are under Cards only.",
-    "trendAverageAllDown": "3-month average {now} chargebacks, down from {prev} in {month}",
-    "trendAverageAllUp": "3-month average {now} chargebacks, up from {prev} in {month}",
-    "trendAverageAllOnly": "3-month average {now} chargebacks"
+    "trendAverageAllDown": "3-month average {now} per month, down from {prev} in {month}",
+    "trendAverageAllUp": "3-month average {now} per month, up from {prev} in {month}",
+    "trendAverageAllOnly": "3-month average {now} per month"
   }
 }
