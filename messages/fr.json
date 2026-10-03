@@ -6675,15 +6675,18 @@
       "NONCOMPLIANT": "Non conforme",
       "UNKNOWN": "Aucun motif indiqué"
     },
-    "trendTitleAll": "Taux de contestations par mois",
+    "trendTitleAll": "Contestations par mois",
     "trendScopeLabel": "Moyens de paiement dans le graphique",
     "trendScopeAll": "Tous les moyens",
     "trendScopeCards": "Cartes uniquement",
     "legendCards": "Cartes",
     "legendOther": "Autres moyens",
-    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# contestation} other {# contestations}} sur {d} commandes",
+    "trendSelectedAll": "{month} · {n, plural, one {# contestation} other {# contestations}} sur {d} commandes",
     "tipOrdersAll": "sur {d} commandes",
     "tipSplit": "{cards} par carte · {other} par d’autres moyens",
-    "trendNoteAll": "Tous les moyens de paiement. Visa et Mastercard ne mesurent que les paiements par carte ; leurs seuils figurent sous « Cartes uniquement »."
+    "trendNoteAll": "Tous les moyens de paiement. Visa et Mastercard ne mesurent que les paiements par carte ; leurs seuils figurent sous « Cartes uniquement ».",
+    "trendAverageAllDown": "Moyenne sur 3 mois : {now} par mois, en baisse par rapport à {prev} en {month}",
+    "trendAverageAllUp": "Moyenne sur 3 mois : {now} par mois, en hausse par rapport à {prev} en {month}",
+    "trendAverageAllOnly": "Moyenne sur 3 mois : {now} par mois"
   }
 }

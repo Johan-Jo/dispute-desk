@@ -6674,15 +6674,18 @@
       "NONCOMPLIANT": "Noncompliant",
       "UNKNOWN": "No reason given"
     },
-    "trendTitleAll": "Chargeback rate by month",
+    "trendTitleAll": "Chargebacks by month",
     "trendScopeLabel": "Payment methods in the chart",
     "trendScopeAll": "All methods",
     "trendScopeCards": "Cards only",
     "legendCards": "Cards",
     "legendOther": "Other methods",
-    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# chargeback} other {# chargebacks}} of {d} orders",
+    "trendSelectedAll": "{month} · {n, plural, one {# chargeback} other {# chargebacks}} of {d} orders",
     "tipOrdersAll": "of {d} orders",
     "tipSplit": "{cards} on cards · {other} on other methods",
-    "trendNoteAll": "Every payment method. Visa and Mastercard only measure card payments; their thresholds are under Cards only."
+    "trendNoteAll": "Every payment method. Visa and Mastercard only measure card payments; their thresholds are under Cards only.",
+    "trendAverageAllDown": "3-month average {now} per month, down from {prev} in {month}",
+    "trendAverageAllUp": "3-month average {now} per month, up from {prev} in {month}",
+    "trendAverageAllOnly": "3-month average {now} per month"
   }
 }

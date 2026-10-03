@@ -24,6 +24,7 @@ import {
   formatRatio,
 } from "@/lib/insights/period/format";
 import { trendAverage } from "@/lib/insights/period/trendAverage";
+import { hasAllMethods, trendBarValue } from "@/lib/insights/period/trendScope";
 import { compareReasons, type PreviousReasons } from "@/lib/insights/period/reasonComparison";
 import { addMonths } from "@/lib/insights/period/months";
 import { MC_ECM_COUNT_FLOOR, MC_ECM_RATIO, VAMP_COUNT_FLOOR, VAMP_EARLY_WARNING, VAMP_EXCESSIVE } from "@/lib/insights/programmeThresholds";
@@ -48,6 +49,8 @@ const SEV: Record<CheckpointSeverity, { badge: string; dotBg: string; dotFg: str
 const CHART_MAX = 0.025;
 const PROGRAMME_SCALE = 0.02;
 const METHOD_REFERENCE = 0.01;
+/** Lowest top of the all-methods chart, so one chargeback is not a full bar. */
+const COUNT_CHART_MIN = 5;
 
 /** Method keys with their own name; anything else is shown as stored. */
 const METHOD_KEYS = new Set([
@@ -85,7 +88,10 @@ export function ExposureView({
   monthOptions,
   selected,
   onSelect,
+  initialScope = "all",
 }: {
+  /** Which chart view opens first. */
+  initialScope?: "all" | "cards";
   period: InsightsPeriod;
   trend: TrendPoint[];
   /** The month before `period`; null when it has no reasons on record. */
@@ -100,7 +106,7 @@ export function ExposureView({
   const [showZero, setShowZero] = useState(false);
   /** "all" = chargebacks on every payment method; "cards" = the ratio the
    *  card networks judge, with their thresholds. */
-  const [scope, setScope] = useState<"all" | "cards">("all");
+  const [scope, setScope] = useState<"all" | "cards">(initialScope);
   const ip = (k: string, v?: Record<string, string | number>) => t(`insightsPage.${k}` as never, v as never);
   const month = formatMonth(period.periodMonth, locale);
   const shortDate = (iso: string) =>
@@ -155,27 +161,36 @@ export function ExposureView({
     const nonCardDisputes = nonCard.reduce((n, r) => n + r.chargebacks + r.inquiries, 0);
     const top = [...nonCard].sort((a, b) => b.chargebacks + b.inquiries - (a.chargebacks + a.inquiries))[0];
     if (top && totalDisputes > 0 && nonCardDisputes * 2 > totalDisputes) {
-      notes.push(ip("noteNonCard", { count: nonCardDisputes, total: totalDisputes, method: methodName(top) }));
+      // The sentence names ONE method, so the count is that method's own
+      // disputes. It used to be every non-card dispute: PayPal 45 + Klarna 4
+      // read "49 … were PayPal claims" above a table showing PayPal at 45.
+      notes.push(ip("noteNonCard", { count: top.chargebacks + top.inquiries, total: totalDisputes, method: methodName(top) }));
     }
   }
 
   // ── Ratio by month ────────────────────────────────────────────────
   // A trend without the all-method figures (older API payloads, records
   // without a payment-method split) only has the card view.
-  const hasAll = trend.some((x) => x.allChargebackRate !== null && x.allChargebackRate !== undefined);
+  const hasAll = hasAllMethods(trend);
   const all = scope === "all" && hasAll;
-  const rateOf = (x: TrendPoint) => (all ? (x.allChargebackRate ?? null) : x.cardDisputeRatio);
-  const max = Math.max(CHART_MAX, ...trend.map((x) => (rateOf(x) ?? 0) * 1.1));
+  // All methods: a bar is a NUMBER of chargebacks. Cards only: the ratio.
+  const valueOf = (x: TrendPoint) => trendBarValue(x, all ? "all" : "cards");
+  const fmtValue = (v: number | null) =>
+    all
+      ? v === null
+        ? "—"
+        : new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(v)
+      : formatRatio(v, locale);
+  const max = Math.max(all ? COUNT_CHART_MIN : CHART_MAX, ...trend.map((x) => (valueOf(x) ?? 0) * 1.1));
   const up = (v: number) => `${(v / max) * 100}%`;
-  const avg = trendAverage(trend.map(rateOf));
+  const avg = trendAverage(trend.map(valueOf));
   const avgPoints = avg.flatMap((a, i) => (a === null ? [] : [{ i, a }]));
   const selectedPoint = trend.find((x) => x.periodMonth === period.periodMonth);
   const selectedText = all
-    ? selectedPoint && selectedPoint.allChargebackRate !== null && selectedPoint.allChargebackRate !== undefined
+    ? selectedPoint && selectedPoint.allChargebackCount !== null && selectedPoint.allChargebackCount !== undefined
       ? ip("trendSelectedAll", {
           month: monthPart(selectedPoint.periodMonth, { month: "short", year: "numeric" }),
-          ratio: formatRatio(selectedPoint.allChargebackRate, locale),
-          n: selectedPoint.allChargebackCount ?? 0,
+          n: selectedPoint.allChargebackCount,
           d: formatCount(selectedPoint.allOrderCount, locale),
         })
       : null
@@ -196,12 +211,12 @@ export function ExposureView({
   const now3 = avg[avg.length - 1] ?? null;
   const prev3 = avg[avg.length - 4] ?? null;
   if (now3 !== null) {
-    const now = formatRatio(now3, locale);
-    const prev = prev3 === null ? null : formatRatio(prev3, locale);
+    const now = fmtValue(now3);
+    const prev = prev3 === null ? null : fmtValue(prev3);
     trendText =
       prev === null || prev === now
-        ? ip("trendAverageOnly", { now })
-        : ip(now3 < prev3! ? "trendAverageDown" : "trendAverageUp", {
+        ? ip(all ? "trendAverageAllOnly" : "trendAverageOnly", { now })
+        : ip(now3 < prev3! ? (all ? "trendAverageAllDown" : "trendAverageDown") : all ? "trendAverageAllUp" : "trendAverageUp", {
             now,
             prev,
             month: monthPart(trend[trend.length - 4]!.periodMonth, { month: "long" }),
@@ -225,8 +240,13 @@ export function ExposureView({
   const monthLong = monthPart(period.periodMonth, { month: "long" });
   const prevLong = monthPart(prevMonthIso, { month: "long" });
   const reasonWidth = (n: number) => (n > 0 ? `${Math.max((n / (reasons?.max ?? 1)) * 100, 4)}%` : "0%");
+  // "So far this month" is part of a month. Set against a complete month it
+  // would always read as fewer, in green: on 3 October, "2 disputes, 60 fewer
+  // than September". The previous month's counts stay; the comparison goes.
+  const partialMonth = ok?.periodState === "mtd";
+  const reasonRows = (reasons?.rows ?? []).map((r) => (partialMonth ? { ...r, change: null, isNew: false } : r));
   const totalChange =
-    reasons && reasons.previousTotal !== null ? reasons.currentTotal - reasons.previousTotal : null;
+    reasons && !partialMonth && reasons.previousTotal !== null ? reasons.currentTotal - reasons.previousTotal : null;
 
   const checkpoints = ok ? ok.checkpoints.slice(0, 5) : [];
   const threeDsSeverity = ok?.checkpoints.find((c) => c.id === "threeds_auth")?.severity;
@@ -306,21 +326,21 @@ export function ExposureView({
             <div className={s.baseline} />
             <div className={s.bars} style={cols}>
               {trend.map((x) => {
-                const v = rateOf(x);
+                const v = valueOf(x);
                 const sel = x.periodMonth === period.periodMonth;
                 // All methods: one bar, the card part below the other methods.
                 const cardPart =
                   all && x.allChargebackCount ? (x.allCardChargebackCount ?? 0) / x.allChargebackCount : 1;
                 const tone = v !== null && v >= VAMP_EXCESSIVE ? DANGER : v !== null && v >= VAMP_EARLY_WARNING ? WARNING : PRIMARY;
                 const soft = v !== null && v >= VAMP_EXCESSIVE ? "#FCA5A5" : v !== null && v >= VAMP_EARLY_WARNING ? "#FCD34D" : "#BFD0F7";
-                const h = v === null ? "0%" : `${Math.max((v / max) * 100, 1.5)}%`;
+                const h = v === null || (all && v === 0) ? "0%" : `${Math.max((v / max) * 100, 1.5)}%`;
                 return (
                   <button
                     type="button"
                     key={x.periodMonth}
                     className={s.barCol}
                     onClick={() => onSelect(x.periodMonth)}
-                    aria-label={`${formatMonth(x.periodMonth, locale)}: ${formatRatio(v, locale)}`}
+                    aria-label={`${formatMonth(x.periodMonth, locale)}: ${all && v !== null ? ip("tipChargebacks", { n: v }) : fmtValue(v)}`}
                   >
                     <span
                       className={s.barLabel}
@@ -330,7 +350,7 @@ export function ExposureView({
                           : { color: sel ? tone : "#667085", opacity: v !== null && (sel || v >= VAMP_EARLY_WARNING) ? 1 : 0 }
                       }
                     >
-                      {formatRatio(v, locale)}
+                      {fmtValue(v)}
                     </span>
                     {all ? (
                       <span className={`${s.bar} ${s.barStack}`} style={{ height: h }}>
@@ -343,7 +363,8 @@ export function ExposureView({
                     {v !== null && (
                       <span className={s.tip} style={{ bottom: `calc(${h} + 28px)` }}>
                         <span className={s.tipDim}>
-                          {monthPart(x.periodMonth, { month: "short", year: "numeric" })} · {formatRatio(v, locale)}
+                          {monthPart(x.periodMonth, { month: "short", year: "numeric" })}
+                          {!all && <> · {formatRatio(v, locale)}</>}
                         </span>
                         {all ? (
                           <>
@@ -686,7 +707,7 @@ export function ExposureView({
                 <div className={s.r}>{monthPart(prevMonthIso, { month: "short" })}</div>
                 <div className={s.r}>{ip("reasonsColChange")}</div>
               </div>
-              {reasons.rows.map((r) => (
+              {reasonRows.map((r) => (
                 <div className={s.rs} key={r.reason}>
                   <div className={s.rsName}>
                     <span style={{ fontWeight: 500 }}>{REASON_KEYS.has(r.reason) ? ip(`reason.${r.reason}`) : r.reason}</span>
