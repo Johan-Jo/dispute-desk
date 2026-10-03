@@ -31,9 +31,10 @@
  *   - fully_protected_value: sum of order_total where
  *     fraud_protection_level is a COVERED status (PROTECTED or ACTIVE
  *     — the Coverage Gate's canonical set, imported not redeclared).
- *   - eligible_protected_value: sum of order_total where
- *     fraud_protection_level IN ('PROTECTED','ACTIVE','PENDING') —
- *     the orders Shopify Protect could underwrite if a dispute lands.
+ *   - eligible_protected_value: sum of order_total over every order
+ *     Shopify gave a Protect status (incl. INACTIVE / NOT_PROTECTED) —
+ *     see lib/insights/protectCoverage.ts. Until 2026-10-02 this counted
+ *     only PROTECTED/ACTIVE/PENDING, which read 100% for every shop.
  *
  * Tracking gap: the orders columns only count orders whose
  * `processed_at` (or `created_at_shopify` fallback) falls in the
@@ -41,7 +42,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
-import { COVERED_STATUSES } from "@/lib/packs/sources/coverageSource";
+import { protectValue } from "@/lib/insights/protectCoverage";
 
 export interface FraudSnapshotResult {
   shopId: string;
@@ -62,17 +63,6 @@ export interface FraudSnapshotResult {
 const DB_PAGE_SIZE = 1000;
 
 const FULFILLED_STATUSES = new Set<string>(["FULFILLED", "PARTIAL", "PARTIALLY_FULFILLED"]);
-/** Numerator for the Protect-coverage KPI. Imported from the Coverage
- *  Gate rather than redeclared: this used to be a local
- *  `new Set(["PROTECTED"])`, which disagreed with the gate's
- *  {PROTECTED, ACTIVE} and reported 0% coverage for orders the pipeline
- *  refuses to auto-save BECAUSE they are covered. */
-const PROTECTED_STATUSES = COVERED_STATUSES;
-const ELIGIBLE_PROTECTED_STATUSES = new Set<string>([
-  "PROTECTED",
-  "ACTIVE",
-  "PENDING",
-]);
 
 export async function snapshotFraudDailyMetrics(
   shopId: string,
@@ -234,13 +224,9 @@ export function aggregateOrderCounts(
         break;
     }
 
-    const total = Number(r.order_total ?? 0);
-    if (Number.isFinite(total) && total > 0 && r.fraud_protection_level) {
-      const status = r.fraud_protection_level.toUpperCase();
-      if (PROTECTED_STATUSES.has(status)) out.fullyProtectedValue += total;
-      if (ELIGIBLE_PROTECTED_STATUSES.has(status))
-        out.eligibleProtectedValue += total;
-    }
+    const v = protectValue(r.fraud_protection_level, r.order_total);
+    out.fullyProtectedValue += v.covered;
+    out.eligibleProtectedValue += v.eligible;
   }
   return out;
 }

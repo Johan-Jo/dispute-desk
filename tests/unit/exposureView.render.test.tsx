@@ -1,0 +1,99 @@
+/**
+ * The redesigned Chargeback Exposure page renders a REAL month record.
+ *
+ * Fixture: Mein Maison, September 2026, computed on prod data (2026-10-02) by
+ * `computeShopMonth` — a PayPal-heavy book with ~1,000 card orders. A real
+ * render through the real providers catches what pure-function tests cannot:
+ * a missing translation key, a field the view reads that the record does not
+ * carry, or a crash on a real shape.
+ */
+
+import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { NextIntlClientProvider } from "next-intl";
+import { AppProvider } from "@shopify/polaris";
+import polarisEn from "@shopify/polaris/locales/en.json";
+import messages from "@/messages/en.json";
+import de from "@/messages/de.json";
+import fixture from "@/lib/insights/period/__tests__/fixtures/meinmaison-2026-09.json";
+import { ExposureView } from "@/app/(embedded)/app/insights/initial-analysis/ExposureView";
+import type { InsightsPeriod } from "@/lib/insights/period/readInsightsPeriod";
+
+const month = fixture as unknown as {
+  programme: Record<string, unknown>;
+  operational: Record<string, unknown>;
+  checkpoints: unknown[];
+};
+
+const period = {
+  status: "ok",
+  periodMonth: "2026-09-01",
+  periodState: "final",
+  finalOn: "2026-10-08T00:00:00.000Z",
+  revision: 2,
+  revisedAt: "2026-10-09T02:00:00.000Z",
+  programme: { status: "ok", periodState: "final", finalOn: "2026-10-08T00:00:00.000Z", ...month.programme },
+  operational: month.operational,
+  checkpoints: month.checkpoints,
+} as unknown as InsightsPeriod;
+
+function render(p: InsightsPeriod, locale = "en", msgs: Record<string, unknown> = messages) {
+  return renderToStaticMarkup(
+    <NextIntlClientProvider locale={locale} messages={msgs} timeZone="UTC">
+      <AppProvider i18n={polarisEn}>
+        <ExposureView
+          period={p}
+          trend={[
+            { periodMonth: "2026-08-01", periodState: "final", cardDisputeRatio: 0.00201, cardChargebackCount: 2, cardSettledCount: 995 },
+            { periodMonth: "2026-09-01", periodState: "final", cardDisputeRatio: 0.00098, cardChargebackCount: 1, cardSettledCount: 1022 },
+          ]}
+          liveState={{ needsAction: 6, awaitingBank: 23, nearestDueAt: "2026-10-05T23:00:00Z" }}
+          monthOptions={[{ value: "2026-09-01", label: "September 2026" }]}
+          selected="2026-09-01"
+          onSelect={() => {}}
+        />
+      </AppProvider>
+    </NextIntlClientProvider>,
+  );
+}
+
+describe("ExposureView — Mein Maison, September 2026 (prod record)", () => {
+  const html = render(period);
+
+  it("shows the card verdict for a PayPal-heavy shop, not 'not applicable'", () => {
+    expect(html).toContain("Card dispute ratio (estimate)");
+    expect(html).toContain("0.10%");
+    expect(html).toContain("1 chargeback / 1,022 card orders");
+  });
+
+  it("explains that most disputes were PayPal claims", () => {
+    expect(html).toMatch(/of your \d+ disputes this month were PayPal claims/);
+  });
+
+  it("lists disputes by payment method with PayPal first", () => {
+    expect(html).toContain("Disputes by payment method");
+    expect(html.indexOf(">PayPal<")).toBeGreaterThan(-1);
+    expect(html.indexOf(">PayPal<")).toBeLessThan(html.indexOf(">Card (typed in)<"));
+  });
+
+  it("shows Protect coverage near 0%, never 100%", () => {
+    expect(html).toContain("Shopify Protect");
+    expect(html).not.toContain(">100%<");
+  });
+
+  it("renders the stored checkpoints, the first marked In email", () => {
+    expect(html).toContain("In email");
+    expect(html).toContain("Right now");
+  });
+
+  it("renders in German without a missing key", () => {
+    const de_ = render(period, "de", de as Record<string, unknown>);
+    expect(de_).toContain("Streitfälle nach Zahlungsart");
+    expect(de_).not.toContain("insightsPage.");
+  });
+
+  it("says not available, never a blank page, for a month without a record", () => {
+    const na = render({ status: "not_available", periodMonth: "2026-04-01" } as InsightsPeriod);
+    expect(na).toContain("Not available for this month");
+  });
+});

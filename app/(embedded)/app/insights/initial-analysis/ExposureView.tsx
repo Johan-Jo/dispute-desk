@@ -184,7 +184,7 @@ export function ExposureView({
                 <Chip sev={p.vampSeverity} />
               </span>
               <span className={`${s.sub} ${s.num}`}>
-                {ip("headlineDetail", { n: formatCount(p.cardChargebackCount, locale), d: formatCount(p.cardSettledCount, locale) })}
+                {ip("headlineDetail", { n: p.cardChargebackCount, d: formatCount(p.cardSettledCount, locale) })}
               </span>
             </div>
             <ProgrammeRow
