@@ -18,6 +18,7 @@ import { DEMO_DISPUTES } from "./fixtures/disputes";
 import { DEMO_DASHBOARD_STATS_REAL, DEMO_RECENT_ACTIVITY_REAL } from "./fixtures/realDashboardStats";
 import { buildWorkspaceData } from "./fixtures/workspaceData";
 import { buildDemoPresentation } from "./fixtures/presentation";
+import { DEMO_INSIGHTS } from "./fixtures/insights";
 
 const ORIGINAL_FETCH = typeof window !== "undefined" ? window.fetch.bind(window) : null;
 
@@ -337,83 +338,10 @@ const HANDLERS: Handler[] = [
     }),
   },
 
-  // ── Insights initial analysis — full InsightsResponse shape per
-  //    app/(embedded)/app/insights/initial-analysis/page.tsx:54
+  // ── Insights (Chargeback Exposure) — typed fixture, see fixtures/insights.ts
   {
     match: (u) => u.pathname === "/api/dashboard/insights/initial-analysis",
-    respond: () => {
-      const periodWindow = {
-        ordersTotal: 482,
-        acceptanceRatePct: 91.4,
-        highRiskPct: 4.2,
-        fulfilledHighRiskPct: 1.1,
-        fraudDisputeRatePct: 0.4,
-        shopifyProtectCoveragePct: 71,
-        chargebackRatePct: 0.42,
-        chargebackOrders: 2,
-        threeDsAuthRatePct: 88,
-        threeDsAuthOrders: 425,
-        threeDsAuthEligibleOrders: 482,
-        medianFulfillmentHours: 18,
-        fulfilledOrdersCount: 478,
-        confirmedDeliveryRatePct: 92,
-        confirmedDeliveryOrders: 439,
-        fulfilledForDeliveryCount: 478,
-        signedForRatePct: 38,
-        signedForOrders: 182,
-      };
-      return jsonResponse({
-        available: true,
-        ordersAnalyzed: 1432,
-        windowStart90d: "2025-10-17T00:00:00Z",
-        highRiskPct: 4.2,
-        fulfilledHighRiskPct: 1.1,
-        acceptanceRatePct: 91.4,
-        fraudDisputeRatePct: 0.4,
-        shopifyProtectCoveragePct: 71,
-        chargebackRate90d: 0.42,
-        chargebackHealth: "good",
-        chargebackHealthAvailable: true,
-        chargebackOrders90d: 6,
-        chargebackCount90d: 1,
-        windowStart30d: "2025-12-17T00:00:00Z",
-        windowStart30dPrior: "2025-11-17T00:00:00Z",
-        current30d: periodWindow,
-        prior30d: { ...periodWindow, ordersTotal: 401, chargebackRatePct: 0.75, chargebackOrders: 3 },
-        chargebackRateSparklineWeekly: [
-          { weekStart: "2025-11-03", rate: 0.6, orderCount: 38 },
-          { weekStart: "2025-11-10", rate: 0.5, orderCount: 42 },
-          { weekStart: "2025-11-17", rate: 0.8, orderCount: 46 },
-          { weekStart: "2025-11-24", rate: 0.7, orderCount: 44 },
-          { weekStart: "2025-12-01", rate: 0.5, orderCount: 51 },
-          { weekStart: "2025-12-08", rate: 0.4, orderCount: 48 },
-          { weekStart: "2025-12-15", rate: 0.3, orderCount: 39 },
-          { weekStart: "2025-12-22", rate: 0.4, orderCount: 36 },
-          { weekStart: "2025-12-29", rate: 0.5, orderCount: 42 },
-          { weekStart: "2026-01-05", rate: 0.4, orderCount: 47 },
-          { weekStart: "2026-01-12", rate: 0.3, orderCount: 44 },
-        ],
-        riskBreakdown: { low: 1120, medium: 184, high: 64, none: 48, pending: 16 },
-        riskToDisputeConversion: {
-          high: { orders: 64, disputes: 2, conversionPct: 3.1 },
-          medium: { orders: 184, disputes: 3, conversionPct: 1.6 },
-          low: { orders: 1120, disputes: 1, conversionPct: 0.09 },
-          none: { orders: 48, disputes: 0, conversionPct: 0 },
-          pending: { orders: 16, disputes: 0, conversionPct: 0 },
-        },
-        historicalImportStatus: "complete",
-        historicalImportOrdersTotal: 1432,
-        historicalImportSinceDate: "2025-10-17T00:00:00Z",
-        historicalImportScopeGranted: "read_all_orders",
-        historicalImportCompletedAt: "2026-01-15T08:30:00Z",
-        // Hide the "Unlock your full order history" upsell banner —
-        // demo store is on read_all_orders so the banner self-hides
-        // (see DashboardScopeUpgradeBanner.tsx:77).
-        currentScopeGrant: "read_all_orders",
-        dismissedBanners: {},
-        recommendation: null,
-      });
-    },
+    respond: () => jsonResponse(DEMO_INSIGHTS),
   },
 
   // ── Feedback submit — pretend success

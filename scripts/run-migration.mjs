@@ -190,6 +190,16 @@ async function run() {
     try {
       await client.query(sql);
       await client.query("INSERT INTO _migrations (name) VALUES ($1)", [file]);
+      // Also record it where the Supabase CLI looks. This script only wrote
+      // its own `_migrations` table, so every migration it applied was
+      // invisible to `supabase db push`: by 2026-10-03 prod's CLI history was
+      // missing 22 applied migrations and `db push` refused to run at all.
+      const [version, ...rest] = file.replace(/.sql$/, "").split("_");
+      await client.query(
+        `INSERT INTO supabase_migrations.schema_migrations (version, name)
+         VALUES ($1, $2) ON CONFLICT (version) DO NOTHING`,
+        [version, rest.join("_")],
+      );
       console.log(`  OK    ${file}`);
     } catch (err) {
       // ABORT, never continue. Migrations are frequently ordered — the
