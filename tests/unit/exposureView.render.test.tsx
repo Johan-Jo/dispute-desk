@@ -47,7 +47,6 @@ function render(p: InsightsPeriod, locale = "en", msgs: Record<string, unknown> 
             { periodMonth: "2026-08-01", periodState: "final", cardDisputeRatio: 0.00201, cardChargebackCount: 2, cardSettledCount: 995 },
             { periodMonth: "2026-09-01", periodState: "final", cardDisputeRatio: 0.00098, cardChargebackCount: 1, cardSettledCount: 1022 },
           ]}
-          liveState={{ needsAction: 6, awaitingBank: 23, nearestDueAt: "2026-10-05T23:00:00Z" }}
           monthOptions={[{ value: "2026-09-01", label: "September 2026" }]}
           selected="2026-09-01"
           onSelect={() => {}}
@@ -61,9 +60,9 @@ describe("ExposureView — Mein Maison, September 2026 (prod record)", () => {
   const html = render(period);
 
   it("shows the card verdict for a PayPal-heavy shop, not 'not applicable'", () => {
-    expect(html).toContain("Card dispute ratio (estimate)");
+    expect(html).toContain("Card dispute ratio · estimate");
     expect(html).toContain("0.10%");
-    expect(html).toContain("1 chargeback / 1,022 card orders");
+    expect(html).toContain("1 chargeback of 1,022 card orders");
   });
 
   it("explains that most disputes were PayPal claims", () => {
@@ -83,7 +82,22 @@ describe("ExposureView — Mein Maison, September 2026 (prod record)", () => {
 
   it("renders the stored checkpoints, the first marked In email", () => {
     expect(html).toContain("In email");
-    expect(html).toContain("Right now");
+  });
+
+  it("leads with the trend: chart, then payment methods, then the card verdict", () => {
+    const order = ["Ratio by month", "Disputes by payment method", "Card-network exposure", "Checkpoints", "Protection"].map(
+      (label) => html.indexOf(`data-screen-label="${label}"`),
+    );
+    expect(order.every((i) => i > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(html).toContain("3-month average");
+    expect(html).toContain("Sep 2026 · 0.10% — below both thresholds");
+  });
+
+  it("keeps methods without disputes folded until asked for", () => {
+    expect(html).toMatch(/With disputes · \d+/);
+    expect(html).toMatch(/No disputes this month · \d+/);
+    expect(html).toContain(">Show<");
   });
 
   it("renders in German without a missing key", () => {

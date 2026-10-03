@@ -5,8 +5,8 @@
  *
  * One calendar month at a time, from the stored month record
  * (docs/plans/insights-single-source.plan.md PR3b). The layout is
- * transcribed from the Claude Design file "Chargeback Exposure redesign"
- * (ChargebackExposure.dc.html); see ExposureView.tsx.
+ * transcribed from the Claude Design file "Chargeback Exposure Alternatives"
+ * (variant 1a, Trend hero); see ExposureView.tsx.
  *
  * Removed with the redesign (2026-10-02): the Shopify risk-classification
  * hero and breakdown, the risk-vs-outcome chart, the chargeback-health gauge
@@ -129,7 +129,6 @@ export default function InitialAnalysisPage() {
       <ExposureView
         period={data.period}
         trend={data.trend}
-        liveState={data.liveState}
         monthOptions={monthOptions}
         selected={current}
         onSelect={(value) => {
