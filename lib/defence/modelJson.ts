@@ -65,7 +65,12 @@ function firstObject(text: string, start: number): string | null {
 
 /** Escape every `"` inside a string that does not close it. A quote closes a
  *  string only when the next non-blank character is JSON structure
- *  (`,` `:` `}` `]`) or the text ends; anything else is prose. */
+ *  (`,` `:` `}` `]`) or the text ends; anything else is prose.
+ *
+ *  A comma is structure only when a JSON value or key follows it. Prose puts a
+ *  comma after a closing quote too: Mein Maison #100806 failed a third build
+ *  (2026-10-03) on `weather!", and the fulfilment record`, which the bare
+ *  comma rule read as the end of the string. */
 export function escapeStrayQuotes(text: string): string {
   let out = "";
   let inString = false;
@@ -80,8 +85,15 @@ export function escapeStrayQuotes(text: string): string {
     if (escaped) escaped = false;
     else if (ch === "\\") escaped = true;
     else if (ch === '"') {
-      const next = /\S/.exec(text.slice(i + 1))?.[0];
-      if (next === undefined || next === "," || next === ":" || next === "}" || next === "]") {
+      const rest = text.slice(i + 1);
+      const next = /\S/.exec(rest)?.[0];
+      const closes =
+        next === undefined ||
+        next === ":" ||
+        next === "}" ||
+        next === "]" ||
+        (next === "," && /^\s*,\s*(?:["{[\-\d]|(?:true|false|null)\b)/.test(rest));
+      if (closes) {
         inString = false;
       } else {
         out += '\\"';

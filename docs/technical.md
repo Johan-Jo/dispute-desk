@@ -3784,6 +3784,11 @@ bank-claim analysis. It takes the first balanced object, and when strict
 JSON structure (`,` `:` `}` `]`) and parses again. A reply that still fails
 throws with the excerpt it failed on.
 
+A comma counts as structure only when a JSON value or key follows it (`"`, `{`,
+`[`, a number, `true`/`false`/`null`). Prose puts a comma after a closing quote
+too: #100806 failed a third build (2026-10-03) on `weather!", and the fulfilment
+record`, which the bare comma rule read as the end of the string.
+
 Before this, one unescaped quote in the writer's prose lost the whole letter:
 Mein Maison #100806 failed two builds in a row on `Expected ',' or ']' after
 array element` in the summary, and the alert never showed the text. The three
@@ -9303,6 +9308,8 @@ Settings → Dispute handling → **Require my approval before saving** (`shop_s
 - `awaitsMerchantApproval` (`lib/automation/merchantApprovalGate.ts`) is true when `auto_save_enabled` is false **or** `evaluateRules` resolves the dispute to `review`, unless `review_state = 'approved'` (*Submit on the deadline*). A rules-lookup failure resolves to `review` (fails closed).
 - When true: nothing is filed, audit event `deadline_submit_refused_awaiting_approval` (`{ ruleMode, autoSaveEnabled, reviewState }`), summary counter `awaitingApproval`. No admin no-file alert — nothing failed; the merchant already has the approval-required task and email.
 - Both the canonical route and `legacyRoute.ts` call it.
+
+**Decided disputes are out of scope (2026-10-03).** `due_at` is never cleared on close, and the `review_state = 'approved'` arm of the status filter does not look at status. cay-collective #15538 was won on 2026-09-25, was still `approved`, and on its due date the cron reached it, found nothing to file and emailed the merchant and the admin that "DisputeDesk filed nothing". Both routes now select only `final_outcome IS NULL AND closed_at IS NULL` and skip any row `isDecidedDispute` (`lib/disputes/isDecidedDispute.ts`) matches before every other gate: no filing, no audit event, no email. A reopened dispute has both columns cleared and is in scope again.
 
 Why: the 2026-07-06 gate only excluded `normalized_status = 'needs_review'` from the cron's query, but the pipeline's review park does not reliably write that status. On 2026-10-01 dispute `16ece0c5` (6a8848-dd, *Require my approval*, never approved) sat at `new`, was auto-finalized (`deadline_cron_auto_finalize`) and filed. Pinned by `tests/api/cron/deadlineSubmitAwaitsApproval.test.ts`.
 

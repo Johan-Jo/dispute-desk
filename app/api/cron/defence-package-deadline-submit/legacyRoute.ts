@@ -40,6 +40,7 @@ import {
 import { cronEnvGate } from "@/lib/cron/envGate";
 import { getShopSettings } from "@/lib/automation/settings";
 import { deadlineAwaitsMerchantApproval } from "@/lib/automation/merchantApprovalGate";
+import { isDecidedDispute } from "@/lib/disputes/isDecidedDispute";
 import {
   deadlineWindow,
   SUBMIT_WINDOW_MARGIN_MS,
@@ -119,11 +120,14 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, phase, normalized_status, review_state",
+      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, phase, normalized_status, review_state, closed_at, final_outcome",
     )
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
     .is("evidence_saved_to_shopify_at", null)
+    // Decided disputes keep their due date; see lib/disputes/isDecidedDispute.ts.
+    .is("final_outcome", null)
+    .is("closed_at", null)
     .or(
       `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")}),review_state.eq.approved`,
     );
@@ -142,6 +146,13 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
 
   for (const d of disputes) {
     try {
+      // Already decided or closed: nothing can be filed, so nobody is told
+      // that nothing was filed (cay-collective #15538, 2026-10-03).
+      if (isDecidedDispute(d)) {
+        summary.scanned--;
+        continue;
+      }
+
       // Merchant explicitly conceded this dispute ("do not defend").
       // NEVER auto-submit it, regardless of pack state — covers the plain
       // submit path AND both auto-finalize + fallback branches below.

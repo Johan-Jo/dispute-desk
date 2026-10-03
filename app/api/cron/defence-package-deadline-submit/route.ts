@@ -67,6 +67,7 @@ import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { runDeadlineSubmitLegacy } from "./legacyRoute";
 import { deadlineAwaitsMerchantApproval } from "@/lib/automation/merchantApprovalGate";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import { isDecidedDispute } from "@/lib/disputes/isDecidedDispute";
 import { bankClaimBlocksFiling, bankClaimInputFromRow, bankClaimTrigger } from "@/lib/disputes/bankClaim";
 
 export const runtime = "nodejs";
@@ -174,6 +175,9 @@ export async function GET(req: NextRequest) {
     .gte("due_at", windowFrom.toISOString())
     .lt("due_at", windowTo.toISOString())
     .is("evidence_saved_to_shopify_at", null)
+    // Decided disputes keep their due date; see lib/disputes/isDecidedDispute.ts.
+    .is("final_outcome", null)
+    .is("closed_at", null)
     .or(
       `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")}),review_state.eq.approved`,
     );
@@ -243,6 +247,13 @@ export async function GET(req: NextRequest) {
 
   for (const d of disputes) {
     try {
+      // Already decided or closed: nothing can be filed, so nobody is told
+      // that nothing was filed (cay-collective #15538, 2026-10-03).
+      if (isDecidedDispute(d)) {
+        summary.scanned--;
+        continue;
+      }
+
       // Merchant explicitly conceded this dispute ("do not defend").
       // NEVER auto-submit it, regardless of pack state — checked before the
       // decision because it is an instruction, not an assessment.

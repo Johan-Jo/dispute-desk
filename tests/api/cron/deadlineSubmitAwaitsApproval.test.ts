@@ -24,6 +24,7 @@ vi.mock("@/lib/rules/evaluateRules", () => ({ evaluateRules: vi.fn() }));
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDeadlineNoFileAdminAlert } from "@/lib/email/sendDeadlineNoFileAdminAlert";
+import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { getShopSettings } from "@/lib/automation/settings";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { GET } from "@/app/api/cron/defence-package-deadline-submit/route";
@@ -161,4 +162,28 @@ describe("awaitsMerchantApproval", () => {
     expect(awaitsMerchantApproval({ autoSaveEnabled: true, ruleMode: "review", reviewState: null })).toBe(true);
     expect(awaitsMerchantApproval({ autoSaveEnabled: false, ruleMode: "review", reviewState: "in_review" })).toBe(true);
   });
+});
+
+/* cay-collective #15538: won on 2026-09-25 with `review_state = "approved"`,
+ * due 2026-10-03. The approved arm of the status filter reached it and the
+ * cron emailed "DisputeDesk filed nothing" for a dispute already won. */
+describe("deadline submit — decided disputes", () => {
+  for (const mode of ["canonical", "legacy"] as const) {
+    it(`skips a won dispute without filing or alerting (${mode} route)`, async () => {
+      if (mode === "legacy") delete process.env[CANONICAL_PIPELINE_ENV];
+      const { from } = makeSupabase({
+        ...dispute("approved"),
+        status: "won",
+        normalized_status: "won",
+        closed_at: "2026-09-25T06:47:31+00:00",
+        final_outcome: "won",
+      } as never);
+      setMode(true, "auto");
+      const body = await run();
+      expect(body.scanned).toBe(0);
+      expect(from).not.toHaveBeenCalledWith("evidence_packs");
+      expect(sendDeadlineNoFileAdminAlert).not.toHaveBeenCalled();
+      expect(sendDefenceDeadlineFallbackAlert).not.toHaveBeenCalled();
+    });
+  }
 });
