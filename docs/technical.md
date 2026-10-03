@@ -3785,6 +3785,11 @@ bank-claim analysis. It takes the first balanced object, and when strict
 JSON structure (`,` `:` `}` `]`) and parses again. A reply that still fails
 throws with the excerpt it failed on.
 
+A comma counts as structure only when a JSON value or key follows it (`"`, `{`,
+`[`, a number, `true`/`false`/`null`). Prose puts a comma after a closing quote
+too: #100806 failed a third build (2026-10-03) on `weather!", and the fulfilment
+record`, which the bare comma rule read as the end of the string.
+
 Before this, one unescaped quote in the writer's prose lost the whole letter:
 Mein Maison #100806 failed two builds in a row on `Expected ',' or ']' after
 array element` in the summary, and the alert never showed the text. The three
