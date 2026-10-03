@@ -6673,6 +6673,16 @@
       "INSUFFICIENT_FUNDS": "Insufficient funds",
       "NONCOMPLIANT": "Noncompliant",
       "UNKNOWN": "No reason given"
-    }
+    },
+    "trendTitleAll": "Chargeback rate by month",
+    "trendScopeLabel": "Payment methods in the chart",
+    "trendScopeAll": "All methods",
+    "trendScopeCards": "Cards only",
+    "legendCards": "Cards",
+    "legendOther": "Other methods",
+    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# chargeback} other {# chargebacks}} of {d} orders",
+    "tipOrdersAll": "of {d} orders",
+    "tipSplit": "{cards} on cards · {other} on other methods",
+    "trendNoteAll": "Every payment method. Visa and Mastercard only measure card payments; their thresholds are under Cards only."
   }
 }

@@ -6674,6 +6674,16 @@
       "INSUFFICIENT_FUNDS": "Fonds insuffisants",
       "NONCOMPLIANT": "Non conforme",
       "UNKNOWN": "Aucun motif indiqué"
-    }
+    },
+    "trendTitleAll": "Taux de contestations par mois",
+    "trendScopeLabel": "Moyens de paiement dans le graphique",
+    "trendScopeAll": "Tous les moyens",
+    "trendScopeCards": "Cartes uniquement",
+    "legendCards": "Cartes",
+    "legendOther": "Autres moyens",
+    "trendSelectedAll": "{month} · {ratio} — {n, plural, one {# contestation} other {# contestations}} sur {d} commandes",
+    "tipOrdersAll": "sur {d} commandes",
+    "tipSplit": "{cards} par carte · {other} par d’autres moyens",
+    "trendNoteAll": "Tous les moyens de paiement. Visa et Mastercard ne mesurent que les paiements par carte ; leurs seuils figurent sous « Cartes uniquement »."
   }
 }
