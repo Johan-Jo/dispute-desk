@@ -45,8 +45,10 @@ export default function InitialAnalysisPage() {
   const load = useCallback((value: string) => {
     let cancelled = false;
     setLoading(true);
-    const q = value === "" ? "" : `?period=${value === "mtd" ? "mtd" : value.slice(0, 7)}`;
-    fetch(`/api/dashboard/insights/initial-analysis${q}`)
+    // `view=period`: only what this page renders (the full response also
+    // carries the dashboard's 90-day blocks, which take 10–20 s to build).
+    const q = value === "" ? "" : `&period=${value === "mtd" ? "mtd" : value.slice(0, 7)}`;
+    fetch(`/api/dashboard/insights/initial-analysis?view=period${q}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((d) => {
         if (!cancelled) setData(d);

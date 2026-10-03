@@ -450,6 +450,43 @@ function weeklySparkline(
   return buckets;
 }
 
+/** Which month a request opens: `mtd`, `YYYY-MM`, or (no param) the
+ *  statement month. One place, so both response shapes agree. */
+function selectPeriod(periodParam: string | null, now: Date) {
+  const statement = statementMonth(now);
+  const currentMonth = `${now.toISOString().slice(0, 7)}-01`;
+  const requested =
+    periodParam === "mtd"
+      ? currentMonth
+      : periodParam && /^\d{4}-\d{2}$/.test(periodParam)
+        ? `${periodParam}-01`
+        : statement;
+  const kind: "mtd" | "statement" | "closed" =
+    requested === currentMonth ? "mtd" : requested === statement ? "statement" : "closed";
+  return { requested, currentMonth, kind };
+}
+
+/** The trend over the shop's window (its first order bounds the window). */
+async function readTrendWindow(
+  sb: ReturnType<typeof getServiceClient>,
+  shopId: string,
+  sinceDate: string | null,
+): Promise<TrendPoint[]> {
+  const { data: firstOrder } = await sb
+    .from("shopify_orders")
+    .select("created_at_shopify")
+    .eq("shop_id", shopId)
+    .order("created_at_shopify", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const window = trendWindow({
+    now: new Date(),
+    sinceDate,
+    firstOrderAt: (firstOrder?.created_at_shopify as string | null) ?? null,
+  });
+  return readTrend(sb, shopId, window);
+}
+
 export async function GET(req: NextRequest) {
   const shopId = extractShopId(req);
   if (!shopId) {
@@ -501,6 +538,32 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // ── `?view=period`: the Insights page ──────────────────────────
+  // The page renders the month record, the trend and the previous month's
+  // reasons, and nothing from the 90-day blocks below. Those blocks page
+  // every order of the last 90 days twice; measured on prod 2026-10-03 the
+  // full response took 12 s (Mein Maison) and 20 s (blume-box), of which
+  // the page's own data was about 1 s. The dashboard strip and the scope
+  // banner still read the full response.
+  if (req.nextUrl.searchParams.get("view") === "period") {
+    const sel = selectPeriod(req.nextUrl.searchParams.get("period"), new Date());
+    const [period, trend, previousReasons] = await Promise.all([
+      sel.requested > sel.currentMonth
+        ? Promise.resolve<InsightsPeriod>({ status: "not_available", periodMonth: sel.requested })
+        : readInsightsPeriod(sb, shopId, sel.requested, sel.kind),
+      readTrendWindow(sb, shopId, (shopRow?.historical_import_since_date as string | null) ?? null).catch(() => []),
+      readPreviousReasons(sb, shopId, sel.requested).catch(() => null),
+    ]);
+    return NextResponse.json({
+      historicalImportStatus: status,
+      historicalImportOrdersTotal: ordersTotal,
+      period,
+      trend,
+      liveState: null,
+      previousReasons,
+    });
+  }
+
   // ── Pull the rollup tables once for the full 90-day window ─────
   // We slice that single dataset for: current 30d, prior 30d, and
   // the all-90d aggregate. Saves three round-trips.
@@ -544,7 +607,23 @@ export async function GET(req: NextRequest) {
     }
     return out;
   }
-  const orderRowsForKpi = await fetchOrderRowsFor90d();
+  // The two 90-day order scans and the all-time conversion aggregate are
+  // independent and are the slow part of the full response; run together
+  // they cost the slowest of the three instead of their sum.
+  const [orderRowsForKpi, railSeg, conversionResult] = await Promise.all([
+    fetchOrderRowsFor90d(),
+    // The 90-day rail split only feeds the operational rail-share text. It
+    // goes through the shared helper, which filters disputes by
+    // `initiated_at`. The inline copy that stood here filtered by
+    // `disputes.created_at` — the time OUR row was inserted — so every
+    // dispute a shop's history import backfilled counted as "last 90 days"
+    // (blume-box: 474 of 478, reported as VAMP 5.31%). Card-programme
+    // verdicts come from `programmeMonth` below, never from this window.
+    railSegmentationFor(sb, shopId, new Date(windowStart90dIso), new Date()),
+    // Risk-to-dispute conversion (all-time), aggregated set-based in
+    // Postgres. See migration 20260721200000_insights_risk_conversion_rpc.sql.
+    sb.rpc("insights_risk_conversion", { p_shop_id: shopId }),
+  ]);
 
   // ── Is a signature rate measurable for this shop at all? ───────
   // `signed_by_name` is written ONLY by the carrier-lookup layer
@@ -576,21 +655,6 @@ export async function GET(req: NextRequest) {
     fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d, signatureObservable,
   );
 
-  // ── Payment-rail segmentation (90d) ────────────────────────────
-  // The 90-day rail split now only feeds the operational rail-share text.
-  // It goes through the shared helper, which filters disputes by
-  // `initiated_at`. The inline copy that stood here filtered by
-  // `disputes.created_at` — the time OUR row was inserted — so every dispute
-  // a shop's history import backfilled counted as "last 90 days" (blume-box:
-  // 474 of 478, reported as VAMP 5.31%). Card-programme verdicts come from
-  // `programmeMonth` below, never from this window.
-  const railSeg = await railSegmentationFor(
-    sb,
-    shopId,
-    new Date(windowStart90dIso),
-    new Date(),
-  );
-
   // ── Card-network programme, one calendar month ─────────────────
   // VAMP/ECM are judged per calendar month, on the last complete month,
   // read from the stored month row (the record the emails also read).
@@ -598,18 +662,7 @@ export async function GET(req: NextRequest) {
   // `?period=YYYY-MM` opens a closed month from its record; `?period=mtd`
   // the live month-to-date; no param = the statement month (last complete
   // month). Closed months are never recomputed on read.
-  const now = new Date();
-  const statement = statementMonth(now);
-  const periodParam = req.nextUrl.searchParams.get("period");
-  const currentMonth = `${now.toISOString().slice(0, 7)}-01`;
-  const requested =
-    periodParam === "mtd"
-      ? currentMonth
-      : periodParam && /^\d{4}-\d{2}$/.test(periodParam)
-        ? `${periodParam}-01`
-        : statement;
-  const kind =
-    requested === currentMonth ? "mtd" : requested === statement ? "statement" : "closed";
+  const { requested, currentMonth, kind } = selectPeriod(req.nextUrl.searchParams.get("period"), new Date());
   const period: InsightsPeriod =
     requested > currentMonth
       ? { status: "not_available", periodMonth: requested }
@@ -617,19 +670,11 @@ export async function GET(req: NextRequest) {
   const programmeMonth: ProgrammeMonth =
     period.status === "ok" ? period.programme : { status: "error", periodMonth: requested };
 
-  const { data: firstOrder } = await sb
-    .from("shopify_orders")
-    .select("created_at_shopify")
-    .eq("shop_id", shopId)
-    .order("created_at_shopify", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  const window = trendWindow({
-    now,
-    sinceDate: (shopRow?.historical_import_since_date as string | null) ?? null,
-    firstOrderAt: (firstOrder?.created_at_shopify as string | null) ?? null,
-  });
-  const trend: TrendPoint[] = await readTrend(sb, shopId, window).catch(() => []);
+  const trend: TrendPoint[] = await readTrendWindow(
+    sb,
+    shopId,
+    (shopRow?.historical_import_since_date as string | null) ?? null,
+  ).catch(() => []);
   const liveState: LiveState | null = await computeLiveState(sb, shopId).catch(() => null);
   const previousReasons: PreviousReasons | null = await readPreviousReasons(sb, shopId, requested).catch(() => null);
 
@@ -651,10 +696,7 @@ export async function GET(req: NextRequest) {
     none:    { orders: 0, disputes: 0 },
     pending: { orders: 0, disputes: 0 },
   };
-  const { data: conversionRows, error: conversionErr } = await sb.rpc(
-    "insights_risk_conversion",
-    { p_shop_id: shopId },
-  );
+  const { data: conversionRows, error: conversionErr } = conversionResult;
   if (conversionErr) throw new Error(conversionErr.message);
   for (const r of (conversionRows ?? []) as Array<{
     bucket: ConversionKey;
