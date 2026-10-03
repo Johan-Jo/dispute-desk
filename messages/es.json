@@ -6549,7 +6549,7 @@
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Estimación · todos los pedidos con tarjeta",
     "vampThreshold": "Alerta temprana {warn} · Excessive {excessive}",
-    "vampFloor": "Se aplica desde {floor} disputas al mes · tuviste {count}",
+    "vampFloor": "Se aplica desde {floor} disputas al mes · tuviste {count} con Visa",
     "ecmName": "Mastercard ECM",
     "ecmQualLowerBound": "Límite inferior · mes anterior",
     "ecmThreshold": "Excessive {pct}",

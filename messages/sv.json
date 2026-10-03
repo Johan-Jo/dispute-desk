@@ -6549,7 +6549,7 @@
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Uppskattning · alla kortbeställningar",
     "vampThreshold": "Tidig varning {warn} · Excessive {excessive}",
-    "vampFloor": "Gäller från {floor} tvister i månaden · du hade {count}",
+    "vampFloor": "Gäller från {floor} tvister i månaden · du hade {count} på Visa",
     "ecmName": "Mastercard ECM",
     "ecmQualLowerBound": "Undre gräns · föregående månad",
     "ecmThreshold": "Excessive {pct}",
