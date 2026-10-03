@@ -14,7 +14,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
-import { computeProgrammeBlock } from "@/lib/insights/period/computeProgrammeBlock";
+import { computeShopMonth } from "@/lib/insights/period/computeShopMonth";
 import { persistShopMonth, restoreRevision } from "@/lib/insights/period/persistShopMonth";
 import { trendWindow } from "@/lib/insights/period/months";
 
@@ -90,7 +90,8 @@ async function main() {
         .eq("shop_id", shop.id)
         .eq("period_month", month)
         .maybeSingle();
-      const block = await computeProgrammeBlock(sb, shop.id, month);
+      const data = await computeShopMonth(sb, shop.id, month);
+      const block = data.programme;
       const before = row
         ? `rev ${row.revision} ratio ${row.card_dispute_ratio ?? "—"} cb ${row.card_chargeback_count ?? "—"} settled ${row.settled_count}${row.stable_at ? " final" : ""}`
         : "no row";
@@ -99,7 +100,7 @@ async function main() {
         console.log(`${shop.shop_domain} ${month}: ${before}  →  ${after}`);
         continue;
       }
-      const r = await persistShopMonth(sb, { shopId: shop.id, shop, month, block, reason, now });
+      const r = await persistShopMonth(sb, { shopId: shop.id, shop, month, data, reason, now });
       console.log(
         `${shop.shop_domain} ${month}: ${before}  →  ${after}  [${r.changed ? `rev ${r.revision}` : "unchanged"}${r.stableAt ? ", final" : ""}]`,
       );

@@ -15,6 +15,7 @@ import {
   windowStartDate,
 } from "./chargebackRate";
 import { isDormantInquiry } from "./dormantInquiry";
+import { winRateCounts } from "./winRate";
 import { ACTIVE_NORMALIZED_STATUSES } from "./presentation/isActive";
 import { isDisputeDeskFiled, resolveFiledBy } from "@/lib/admin/filedBy";
 
@@ -350,8 +351,9 @@ export async function computeDisputeMetrics(
   const accepted = outcomeList.filter((d) => d.final_outcome === "accepted");
   const disputesWon = won.length;
   const disputesLost = lost.length;
-  const winLossDenom = disputesWon + disputesLost + accepted.length;
-  const winRate = winLossDenom > 0 ? Math.round((disputesWon / winLossDenom) * 100) : 0;
+  // One definition (lib/disputes/winRate.ts), shared with the Insights month
+  // record. The dashboard keeps its historical 0 for "nothing decided".
+  const winRate = winRateCounts(outcomeList).ratePct ?? 0;
 
   // ── Attributed win rate — DisputeDesk-filed disputes only ────────────
   // `winRate` above counts every decided dispute, including the ones

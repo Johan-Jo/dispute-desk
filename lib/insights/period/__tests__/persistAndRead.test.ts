@@ -34,6 +34,13 @@ const sep: ProgrammeBlock = {
   cardFramingApplies: true,
   unknownPaymentShare: 0.32308,
 };
+const op = {
+  threeDsShare: 0.00073, threeDsOrders: 2, threeDsEligible: 2728,
+  signedForShare: null, signedForOrders: 0, signedForEligible: 0,
+  protectShareByValue: null, protectedValue: 0, protectEligibleValue: 0, highRiskFulfilledShare: null,
+  medianFulfillmentHours: 40.4, winRate: 0.15152, wonCount: 5, decidedCount: 33, byPaymentMethod: [],
+};
+const month = { programme: sep, operational: op, checkpoints: [] };
 const blume = {
   historical_import_status: "complete",
   historical_import_completed_at: "2026-07-21T00:00:00Z",
@@ -45,7 +52,7 @@ describe("persistShopMonth", () => {
     const rpc = vi.fn().mockResolvedValue({ data: { changed: true, revision: 1, stable_at: null }, error: null });
     const from = vi.fn();
     await persistShopMonth({ rpc, from } as never, {
-      shopId: "s", shop: blume, month: "2026-09-01", block: sep, reason: "nightly",
+      shopId: "s", shop: blume, month: "2026-09-01", data: month, reason: "nightly",
       now: new Date("2026-10-02T02:00:00Z"),
     });
     expect(from).not.toHaveBeenCalled();
@@ -56,9 +63,11 @@ describe("persistShopMonth", () => {
     expect(args.p_thresholds_version).toBe(THRESHOLDS_VERSION);
     expect(args.p_values.card_dispute_ratio).toBe(0.00149);
     expect(args.p_values.coverage).toBe("full");
+    expect(args.p_values.operational_metrics).toEqual(op);
+    expect(args.p_values.checkpoints).toEqual([]);
 
     await persistShopMonth({ rpc, from } as never, {
-      shopId: "s", shop: blume, month: "2026-09-01", block: sep, reason: "nightly",
+      shopId: "s", shop: blume, month: "2026-09-01", data: month, reason: "nightly",
       now: new Date("2026-10-08T02:00:00Z"),
     });
     expect(rpc.mock.calls[1]![1].p_mark_stable).toBe(true);
@@ -67,14 +76,14 @@ describe("persistShopMonth", () => {
   it("throws on an RPC error", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "nope" } });
     await expect(
-      persistShopMonth({ rpc } as never, { shopId: "s", shop: blume, month: "2026-09-01", block: sep, reason: "x", now: new Date() }),
+      persistShopMonth({ rpc } as never, { shopId: "s", shop: blume, month: "2026-09-01", data: month, reason: "x", now: new Date() }),
     ).rejects.toThrow(/nope/);
   });
 });
 
 describe("row ⇄ payload", () => {
   it("a stored row reads back as the block it was written from", () => {
-    const stored = { period_month: "2026-09-01", ...monthPayload(sep, "full"), stable_at: "2026-10-08T02:00:00Z", metrics_version: 2 };
+    const stored = { period_month: "2026-09-01", ...monthPayload(month, "full"), stable_at: "2026-10-08T02:00:00Z", metrics_version: 3 };
     const back = rowToProgrammeMonth(stored);
     expect(back.status).toBe("ok");
     if (back.status !== "ok") return;
@@ -85,7 +94,7 @@ describe("row ⇄ payload", () => {
   });
 
   it("a row without stable_at is provisional", () => {
-    const back = rowToProgrammeMonth({ period_month: "2026-09-01", ...monthPayload(sep, "full"), stable_at: null });
+    const back = rowToProgrammeMonth({ period_month: "2026-09-01", ...monthPayload(month, "full"), stable_at: null });
     expect(back.status === "ok" && back.periodState).toBe("provisional");
   });
 });

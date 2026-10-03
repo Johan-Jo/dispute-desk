@@ -45,6 +45,7 @@ import type {
   Checkpoint,
   CheckpointInput,
   CheckpointSeverity,
+  CheckpointValue,
 } from "./checkpoints.types";
 import {
   MC_ECM_COUNT_FLOOR,
@@ -93,14 +94,14 @@ const SOURCES = {
   },
 } as const;
 
-/** Format a percent value compactly. */
-function pct(v: number | null, digits = 1): string {
-  return v === null ? "—" : `${v.toFixed(digits)}%`;
+/** A percent (in percent units, 0.15 = 0.15%) to be formatted by the
+ *  renderer with `digits` decimals. Never pre-formatted here. */
+function pct(v: number | null, digits: 0 | 1 | 2 = 1): CheckpointValue {
+  return v === null ? "—" : { value: v, format: `pct${digits}` as "pct0" | "pct1" | "pct2" };
 }
 
-function hours(v: number | null): string {
-  if (v === null) return "—";
-  return v < 24 ? `${v.toFixed(1)} h` : `${(v / 24).toFixed(1)} d`;
+function hours(v: number | null): CheckpointValue {
+  return v === null ? "—" : { value: v, format: "hours" };
 }
 
 // ─── Rules ────────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
     titleKey: `fraudIntel.checkpoint_chargeback_rate_vs_vamp_${key}_title`,
     bodyKey: `fraudIntel.checkpoint_chargeback_rate_vs_vamp_${key}_body`,
     values: {
-      month: p.periodMonth,
+      month: { value: p.periodMonth, format: "month" },
       current: pct(p.cardDisputeRatio * 100, 2),
       vampExcessive: pct(VAMP_EXCESSIVE * 100, 1),
       vampApproaching: pct(VAMP_EARLY_WARNING * 100, 1),
@@ -160,7 +161,7 @@ function ruleChargebackRateEcm(input: CheckpointInput): Checkpoint | null {
     titleKey: `fraudIntel.checkpoint_chargeback_rate_vs_ecm_${key}_title`,
     bodyKey: `fraudIntel.checkpoint_chargeback_rate_vs_ecm_${key}_body`,
     values: {
-      month: p.periodMonth,
+      month: { value: p.periodMonth, format: "month" },
       current: pct(p.ecmRatio * 100, 2),
       ecmRatio: pct(MC_ECM_RATIO * 100, 1),
       ecmCount: MC_ECM_COUNT_FLOOR,
@@ -209,7 +210,8 @@ function ruleThreeDsAuth(input: CheckpointInput): Checkpoint | null {
     severity,
     titleKey: `fraudIntel.checkpoint_threeds_auth_${severity}_title`,
     bodyKey: `fraudIntel.checkpoint_threeds_auth_${severity}_body`,
-    values: { current: pct(v, 0) },
+    // One decimal: blume-box is at 0.07%, which "0%" would misstate.
+    values: { current: pct(v, 1) },
   };
 }
 

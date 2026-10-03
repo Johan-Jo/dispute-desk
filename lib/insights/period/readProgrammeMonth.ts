@@ -14,9 +14,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ecmSeverity, roundRatio, vampSeverity } from "@/lib/insights/programmeThresholds";
 import { programmeMonthFor, type ProgrammeMonth } from "./computeProgrammeBlock";
 import { finalOn } from "./months";
-import { METRICS_VERSION } from "./persistShopMonth";
+/** The programme columns are valid from v2; v3 only adds operational data. */
+const PROGRAMME_MIN_VERSION = 2;
 
-const COLUMNS =
+export const MONTH_COLUMNS =
   "period_month, settled_count, tc40_count, vamp_ratio_calculated, vamp_ratio_without_dd, ce30_excluded_count, fpt_excluded_count, mc_ecm_ratio, mc_efm_fraud_count, estimated_revenue_recovered_usd, card_chargeback_count, visa_chargeback_count, mc_chargeback_count, unknown_network_chargeback_count, unresolved_rail_dispute_count, unknown_settled_count, ecm_denominator_count, card_dispute_ratio, card_dispute_share, vamp_floor_met, ecm_floor_met, card_framing_applies, coverage, stable_at, revision, metrics_version";
 
 type Row = Record<string, unknown>;
@@ -74,7 +75,7 @@ export async function readProgrammeMonth(
 ): Promise<ProgrammeMonth> {
   const { data, error } = await sb
     .from("ratio_snapshots")
-    .select(COLUMNS)
+    .select(MONTH_COLUMNS)
     .eq("shop_id", shopId)
     .eq("period_month", month)
     .maybeSingle();
@@ -83,7 +84,7 @@ export async function readProgrammeMonth(
     return { status: "error", periodMonth: month };
   }
   const row = data as Row | null;
-  if (row && Number(row.metrics_version ?? 1) >= METRICS_VERSION) {
+  if (row && Number(row.metrics_version ?? 1) >= PROGRAMME_MIN_VERSION) {
     return rowToProgrammeMonth(row);
   }
   // Not materialised yet: the same computation, live, never labelled final.
