@@ -47,6 +47,38 @@ export interface DefencePackageFailedAlertOptions {
   /** The versions in force, so a reader can tell a stale failure from a live one. */
   promptVersion?: number | null;
   validatorVersion?: number | null;
+  /**
+   * The last version that WAS built (validated, PDF rendered, same response
+   * cycle), when one exists. The deadline cron looks past a failed build to
+   * it, so "files nothing" is false for this dispute.
+   */
+  earlierBuiltVersion?: number | null;
+}
+
+/**
+ * What happens next, stated so the reader does not have to remember it.
+ *
+ * This used to say "no fileable defence package … it files nothing" on every
+ * failure. blume-box #360980 (2026-10-03, due that day): v27 failed at 06:07,
+ * the alert said nothing would be filed, and the deadline cron filed v26 at
+ * 08:02. The alert read as a lost deadline for a dispute that was answered.
+ */
+function nextStep(options: DefencePackageFailedAlertOptions): string {
+  const regenerates =
+    "It will regenerate automatically once the prompt, validator or evidence changes";
+  const earlier = options.earlierBuiltVersion;
+  if (typeof earlier === "number") {
+    return (
+      `This build failed, but v${earlier} was built earlier and is still on record. ` +
+      `${regenerates}; until then the deadline cron files v${earlier}, ` +
+      "provided it passes the safety checks and any merchant approval the store requires. " +
+      "It was built from older evidence than this failed version."
+    );
+  }
+  return (
+    `This dispute has no fileable defence package. ${regenerates}; ` +
+    "until then it files nothing and Shopify submits its own scrape at the deadline."
+  );
 }
 
 const esc = (s: string) =>
@@ -99,11 +131,7 @@ export async function sendDefencePackageFailedAlert(
     ...facts.map(([k, v]) => `${k}: ${v}`),
     ...(errorLines.length ? ["", "Validation errors:", ...errorLines.map((l) => `  - ${l}`)] : []),
     "",
-    /* The recovery rule, stated so the reader does not have to remember it. */
-    "This dispute has no fileable defence package. It will regenerate",
-    "automatically once the prompt, validator or evidence changes",
-    "(evaluateGenerationGuard); until then it files nothing and Shopify",
-    "submits its own scrape at the deadline.",
+    nextStep(options),
   ].join("\n");
 
   const html = [
@@ -121,7 +149,7 @@ export async function sendDefencePackageFailedAlert(
           "</ul>",
         ]
       : []),
-    "<p style=\"color:#666\">This dispute has no fileable defence package. It will regenerate automatically once the prompt, validator or evidence changes; until then it files nothing and Shopify submits its own scrape at the deadline.</p>",
+    `<p style="color:#666">${esc(nextStep(options))}</p>`,
   ].join("\n");
 
   await sendAdminEmail({ subject, html, text, logTag: "defence-package-failed" });

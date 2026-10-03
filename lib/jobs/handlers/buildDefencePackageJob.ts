@@ -47,6 +47,8 @@ import { cachedListingTranslator } from "@/lib/defence/listingTranslationCache";
 import { applyShipmentRecordSections, disputedAmountDisplay } from "@/lib/defence/shipmentRecordSections";
 import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
+import { fetchCandidateRows, latestCandidate } from "@/lib/defence/candidateVersions";
+import { isStaleCycle } from "@/lib/disputes/responseCycle";
 import {
   validateNarrative,
   validateComposedDocument,
@@ -1749,11 +1751,30 @@ async function notifyDefencePackageFailed(
     const [{ data: dispute }, { data: shop }] = await Promise.all([
       sb
         .from("disputes")
-        .select("order_name, due_at")
+        .select("order_name, due_at, response_cycle")
         .eq("id", pkg.dispute_id)
         .maybeSingle(),
       sb.from("shops").select("shop_domain").eq("id", pkg.shop_id).maybeSingle(),
     ]);
+    /* The same "last version that was built" rule the deadline cron uses
+     * (lib/defence/candidateVersions.ts), so the alert does not announce a
+     * lost deadline for a dispute that still has a package to file. */
+    const { rows } = await fetchCandidateRows<{
+      version: number;
+      status: string | null;
+      validation_status: string | null;
+      pdf_path: string | null;
+      response_cycle: number | null;
+    }>(sb, pkg.dispute_id, "version, status, validation_status, pdf_path, response_cycle");
+    const { candidate, ambiguous } = latestCandidate(rows);
+    const earlierBuiltVersion =
+      candidate &&
+      !ambiguous &&
+      candidate.validation_status === "ok" &&
+      candidate.pdf_path &&
+      !isStaleCycle(candidate.response_cycle, dispute?.response_cycle as number | null | undefined)
+        ? candidate.version
+        : null;
     await sendDefencePackageFailedAlert({
       shopDomain: (shop?.shop_domain as string | null) ?? null,
       orderName: (dispute?.order_name as string | null) ?? null,
@@ -1766,6 +1787,7 @@ async function notifyDefencePackageFailed(
       dueAt: (dispute?.due_at as string | null) ?? null,
       promptVersion: promptVersion ?? null,
       validatorVersion: VALIDATOR_VERSION,
+      earlierBuiltVersion,
     });
   } catch (err) {
     console.error("[defence] failed-package alert could not be sent", err);
