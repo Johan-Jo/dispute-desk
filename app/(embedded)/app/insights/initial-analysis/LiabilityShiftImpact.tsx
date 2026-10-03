@@ -60,7 +60,6 @@ interface CurrentSnapshot {
     estimatedFeesAvoidedUsd: number;
     estimatedRevenueRecoveredUsd: number;
   };
-  calculatedAt: string | null;
 }
 
 const SEVERITY_TONE: Record<

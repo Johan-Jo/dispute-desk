@@ -7,8 +7,9 @@ import {
   VAMP_COUNT_FLOOR,
   VAMP_EARLY_WARNING,
   VAMP_EXCESSIVE,
+  VAMP_PER_TRANSACTION_FEE_USD,
 } from "@/lib/insights/programmeThresholds";
-import { programmeMonthFor } from "@/lib/insights/period/computeProgrammeBlock";
+import { readProgrammeMonth } from "@/lib/insights/period/readProgrammeMonth";
 import { statementMonth } from "@/lib/insights/period/months";
 
 export const runtime = "nodejs";
@@ -23,9 +24,9 @@ export const runtime = "nodejs";
  * CURRENT, unfinished month (Mein Maison: 1 dispute on 32 October orders
  * shown as 3.13% VAMP in red), and turned NULL into 0.
  *
- * The DisputeDesk-impact counts (CE 3.0 / FPT exclusions, fees avoided)
- * still come from that month's snapshot row. Always labelled "calculated
- * estimate" client-side.
+ * Read from the stored month row (`readProgrammeMonth`), the same record
+ * the checkpoints and the emails use. Always labelled "calculated estimate"
+ * client-side.
  */
 export async function GET(req: NextRequest) {
   const shopId = extractShopId(req);
@@ -40,25 +41,10 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const month = statementMonth(now);
 
-  const programme = await programmeMonthFor(sb, shopId, month, now);
+  const programme = await readProgrammeMonth(sb, shopId, month, now);
   if (programme.status === "error") {
     return NextResponse.json({ snapshot: null, status: "error", periodMonth: month });
   }
-
-  const { data: row, error } = await sb
-    .from("ratio_snapshots")
-    .select(
-      "vamp_ratio_without_dd, ce30_excluded_count, fpt_excluded_count, estimated_fees_avoided_usd, estimated_revenue_recovered_usd, calculated_at",
-    )
-    .eq("shop_id", shopId)
-    .eq("period_month", month)
-    .maybeSingle();
-  if (error) {
-    return NextResponse.json({ snapshot: null, status: "error", periodMonth: month });
-  }
-
-  const num = (v: unknown): number | null =>
-    v === null || v === undefined ? null : Number(v);
 
   return NextResponse.json({
     status: "ok",
@@ -69,7 +55,7 @@ export async function GET(req: NextRequest) {
       cardFramingApplies: programme.cardFramingApplies,
       vamp: {
         ratio: programme.cardDisputeRatio,
-        ratioWithoutDd: num(row?.vamp_ratio_without_dd),
+        ratioWithoutDd: programme.vampRatioWithoutDd,
         severity: programme.vampSeverity,
         count: programme.visaChargebackCount,
         countFloor: VAMP_COUNT_FLOOR,
@@ -85,12 +71,12 @@ export async function GET(req: NextRequest) {
         threshold: MC_ECM_RATIO,
       },
       impact: {
-        ce30ExcludedCount: Number(row?.ce30_excluded_count ?? 0),
-        fptExcludedCount: Number(row?.fpt_excluded_count ?? 0),
-        estimatedFeesAvoidedUsd: Number(row?.estimated_fees_avoided_usd ?? 0),
-        estimatedRevenueRecoveredUsd: Number(row?.estimated_revenue_recovered_usd ?? 0),
+        ce30ExcludedCount: programme.ce30ExcludedCount,
+        fptExcludedCount: programme.fptExcludedCount,
+        estimatedFeesAvoidedUsd:
+          (programme.ce30ExcludedCount + programme.fptExcludedCount) * VAMP_PER_TRANSACTION_FEE_USD,
+        estimatedRevenueRecoveredUsd: programme.revenueRecoveredUsd,
       },
-      calculatedAt: (row?.calculated_at as string | null) ?? null,
     },
   });
 }
