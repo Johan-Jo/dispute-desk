@@ -138,12 +138,9 @@ export async function POST(req: NextRequest) {
 
   // 4. Grant a one-time "fresh start" allowance so a merchant who
   //    used >= 3 packs as a paid customer isn't immediately stuck at
-  //    the Free lifetime cap on their first day back. The Free plan
-  //    is `packsLifetime: 3` (FREE_LIFETIME_PACKS) measured against
-  //    all-time `pack_usage_events`, and the `pack_balance` view
-  //    nets credits against ALL historical usage — so to surface
-  //    exactly 3 packs of remaining balance, we have to grant
-  //    `(usage_count + FREE_LIFETIME_PACKS)`.
+  //    the Free lifetime cap on their first day back. Usage is charged
+  //    to the grant it drew from, so packs used on the paid plan do not
+  //    count against this one — the grant is exactly the 3 packs.
   //
   //    Deduped by `reference = "downgrade_to_free_${shop_id}"` so a
   //    second cancel (or a replay) does not re-grant. The merchant
@@ -158,11 +155,6 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!existingGrant) {
-    const { count: usageCount } = await sb
-      .from("pack_usage_events")
-      .select("id", { count: "exact", head: true })
-      .eq("shop_id", shop_id);
-    const usage = usageCount ?? 0;
     // Must go through grantCredits, not a direct insert: that is the single
     // chokepoint where the credit-arrival replay is scheduled, so a shop
     // downgrading with quota-blocked disputes gets them swept back through
@@ -170,7 +162,7 @@ export async function POST(req: NextRequest) {
     await grantCredits({
       shopId: shop_id,
       source: "admin_adjustment",
-      packs: usage + FRESH_START_PACKS,
+      packs: FRESH_START_PACKS,
       expiresAt: null,
       reference: downgradeRef,
     });

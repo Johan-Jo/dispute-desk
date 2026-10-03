@@ -1,6 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, type PlanId } from "./plans";
-import { getBalance } from "./consumePack";
 
 export interface QuotaResult {
   allowed: boolean;
@@ -14,6 +13,11 @@ export interface QuotaResult {
 /**
  * Check if a shop can consume a pack credit (finalize/export/submit).
  * Uses the credit-ledger balance rather than counting evidence_packs rows.
+ *
+ * `used` and `remaining` both come from `pack_balance`, which counts only
+ * live grants and the usage charged to them. On a paid plan the live grant
+ * is this cycle's allowance, so the counter resets at renewal and an unused
+ * remainder is not carried into the next month.
  */
 export async function checkPackQuota(shopId: string): Promise<QuotaResult> {
   const sb = getServiceClient();
@@ -27,32 +31,14 @@ export async function checkPackQuota(shopId: string): Promise<QuotaResult> {
   const planId = (shop?.plan ?? "free") as PlanId;
   const plan = getPlan(planId);
 
-  const remaining = await getBalance(shopId);
+  const { data: balance } = await sb
+    .from("pack_balance")
+    .select("remaining_packs, total_used")
+    .eq("shop_id", shopId)
+    .maybeSingle();
 
-  // Scope "used" to the current billing cycle on paid plans so the UI's
-  // "N of <packsPerMonth> packs used" counter resets each renewal.
-  // Free / Sandbox uses a lifetime allowance, so it stays unscoped.
-  // (Previously this read `data` from a `head:true` count query, which
-  // is always null — so the counter was permanently stuck at 0.)
-  let cycleStart: string | null = null;
-  if (plan.packsLifetime == null) {
-    const { data: entitlement } = await sb
-      .from("plan_entitlements")
-      .select("billing_cycle_started_at")
-      .eq("shop_id", shopId)
-      .maybeSingle();
-    cycleStart = (entitlement as { billing_cycle_started_at: string | null } | null)
-      ?.billing_cycle_started_at ?? null;
-  }
-
-  let usageQuery = sb
-    .from("pack_usage_events")
-    .select("id", { count: "exact", head: true })
-    .eq("shop_id", shopId);
-  if (cycleStart) usageQuery = usageQuery.gte("created_at", cycleStart);
-  const { count: usageCount } = await usageQuery;
-
-  const used = usageCount ?? 0;
+  const remaining = (balance?.remaining_packs as number | undefined) ?? 0;
+  const used = (balance?.total_used as number | undefined) ?? 0;
 
   const limit = plan.packsLifetime ?? plan.packsPerMonth;
 

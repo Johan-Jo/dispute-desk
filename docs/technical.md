@@ -6077,15 +6077,39 @@ The embedded billing page (`app/(embedded)/app/billing/page.tsx`) uses custom Ta
 - **Single card container** with header ("Plan management" + "Apply discount" button), current plan section (icon, name, price, usage), and a "Next plan" recommendation banner with inline upgrade CTA.
 - **Collapsible 4-column plan grid** toggled by "Show/Hide all plans". The Growth card is fully inverted (solid blue `#1D4ED8` background, white text) with a floating "Popular" pill badge.
 - **Discount modal** triggered from header for discount code entry.
-- **Active top-ups list** beneath the plan-usage bar. `/api/billing/usage` returns every unexpired `pack_credits_ledger` row with `source='topup'`; the UI lists each bundle as `+N packs · expires <date>` so merchants can see exactly what they bought and when it expires. The ledger does not attribute consumption to a specific bundle, so the surface shows the granted amount per bundle (not "remaining in this bundle"); combined remaining lives on the cycle gauge.
+- **Active top-ups list** beneath the plan-usage bar. `/api/billing/usage` reads the live `topup` / `admin_adjustment` rows of `pack_grant_balance` that still have packs left; the UI lists each as `+N packs · expires <date>`, where **N is what remains of that bundle**, not what was granted (a 200-pack bundle with 80 used lists as +120, and disappears at 0).
 - **Top-ups purchase section** as a separate card below the main container. Renders all SKUs from `TOP_UPS` (currently `+10/$19`, `+50/$79`, `+200/$249`); the grid auto-sizes by `TOP_UPS.length`.
-- **Plan usage counter** ("N of 100 packs used") reflects this billing cycle. `checkPackQuota()` reads `pack_usage_events` filtered by `plan_entitlements.billing_cycle_started_at` on paid plans, so the counter resets each renewal. Free stays lifetime-scoped (`packsLifetime`). Prior to 2026-05-21 the counter was permanently stuck at zero because the head/count query destructured `data` instead of `count`.
+- **Plan usage counter** ("N of 100 packs used") reflects this billing cycle. `checkPackQuota()` reads `pack_balance.total_used` — usage charged to grants that are still live — so on a paid plan the counter resets when the cycle's grant expires at renewal. Free's grant never expires, so it stays lifetime-scoped. (Until 2026-10-03 it counted events since `plan_entitlements.billing_cycle_started_at`, which never advanced past the original subscription date, so the counter accumulated across cycles. The reconciler now advances that column whenever it grants a cycle's packs.)
 - **Downgrade modal** uses Polaris `<Modal>` for Shopify consistency.
 
 ### Enforcement
 
 Server-side only. `checkPackQuota()` (`lib/billing/checkQuota.ts`) gates pack creation against the
-remaining balance in `pack_balance` (a view derived from `pack_credits_ledger − pack_usage_events`).
+remaining balance in `pack_balance`.
+
+**Accounting model — per grant, no rollover (2026-10-03, migration `20261003110000_pack_usage_per_grant.sql`).**
+Every `pack_usage_events` row carries `ledger_id`: the ONE `pack_credits_ledger` grant that use was
+charged to. A `BEFORE INSERT` trigger (`stamp_pack_usage_grant`) picks it via `pick_pack_grant()` —
+the live grant with room that expires soonest, non-expiring grants last — under a per-shop advisory
+lock, and raises `PACK_LIMIT_REACHED` when none has room. `pack_grant_balance` exposes each grant's
+`used_packs` / `remaining_packs` / `live`; `pack_balance` sums the **live** grants only.
+
+Consequences, all intended:
+- **Monthly packs never roll over.** A cycle's grant expires at cycle end and its unused remainder
+  goes with it. So does the usage charged to it — it is never deducted from a later grant.
+- The previous view was `(unexpired grants) − (ALL usage ever)`. Expired grants left the first term
+  while their usage stayed in the second, so each renewal started short by whatever had been used in
+  earlier cycles, and a non-expiring grant silently carried forward. Do not reintroduce netting.
+- Deleting a grant releases the usage charged to it (`on delete set null`); unstamped usage counts
+  against nothing.
+- To extend a grant, update its `expires_at`. A `−N` void plus `+N` reissue is a *second* grant in
+  this model (the migration collapsed the one existing pair).
+- The trigger covers every writer, so `consumePack` needs no grant logic; it maps the trigger's
+  refusal to `PackLimitReachedError` and a unique violation to `consumed: 0`.
+- **First-cycle double grant:** the subscribe callback grants cycle one as `monthly_<plan>_<chargeId>`
+  with a locally computed end date; the reconciler's `monthly_<shopId>_<cycleEnd>` reference never
+  matched it and granted the cycle again. `tryGrantMonthlyCredits` now treats any `monthly_included`
+  grant expiring within 3 days of the cycle end as that cycle's grant.
 `checkFeatureAccess()` gates auto-pack and rules by plan tier.
 
 **Gate at enqueue:** `POST /api/disputes/:id/packs` calls `checkPackQuota()` and returns 403
@@ -6302,10 +6326,10 @@ or reinstalling the app. The fix:
    Without intervention, a merchant who used ≥ 3 packs on a paid
    plan would be at the Free cap the instant they downgrade. To
    prevent that lock-out the cancel route writes a single
-   `admin_adjustment` ledger row of size `(usage_count + 3)` —
-   `pack_balance` nets credits against all historical usage, so the
-   merchant ends up with **exactly 3 packs** of remaining balance,
-   regardless of prior consumption. Deduped by
+   `admin_adjustment` ledger row of 3 packs. Usage is charged per
+   grant, so paid-plan consumption does not count against it and the
+   merchant ends up with **exactly 3 packs**. (Before 2026-10-03 the
+   row had to be `usage_count + 3` to survive the netting view.) Deduped by
    `reference = "downgrade_to_free_${shop_id}"`, so a second cancel
    or a replay does not re-grant. One fresh-start per shop, ever —
    re-subscribing and re-cancelling does NOT mint a second batch,
