@@ -331,3 +331,25 @@
 .rsBars { display: flex; flex-direction: column; gap: 4px; }
 .rsBar { height: 6px; border-radius: 3px; }
 .rsFoot { padding: 14px var(--px); font-size: 13px; color: #667085; background: #f6f8fb; }
+
+/* ── Trend scope switch (all methods / cards only) ───────────────── */
+.trendControls { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.scope { display: inline-flex; padding: 3px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f6f8fb; }
+.scopeBtn {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #667085;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.scopeBtnOn { background: #ffffff; color: #0b1220; box-shadow: 0 1px 2px rgba(11, 18, 32, 0.08); }
+.legendSwatch { width: 10px; height: 10px; border-radius: 2px; }
+.barStack { display: flex; flex-direction: column; overflow: hidden; }
+@container (max-width: 680px) {
+  .trendControls { align-items: flex-start; }
+}

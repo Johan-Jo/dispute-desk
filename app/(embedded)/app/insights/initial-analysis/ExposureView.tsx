@@ -33,6 +33,9 @@ const PRIMARY = "#1D4ED8";
 const WARNING = "#F59E0B";
 const DANGER = "#EF4444";
 const INFO = "#0EA5E9";
+/** Unselected-month tints of the two stacked parts. */
+const PRIMARY_SOFT = "#BFD0F7";
+const INFO_SOFT = "#BAE6FD";
 
 const SEV: Record<CheckpointSeverity, { badge: string; dotBg: string; dotFg: string }> = {
   healthy: { badge: s.bSuccess, dotBg: "#DCFCE7", dotFg: "#166534" },
@@ -95,6 +98,9 @@ export function ExposureView({
   const t = useTranslations();
   const locale = useLocale();
   const [showZero, setShowZero] = useState(false);
+  /** "all" = chargebacks on every payment method; "cards" = the ratio the
+   *  card networks judge, with their thresholds. */
+  const [scope, setScope] = useState<"all" | "cards">("all");
   const ip = (k: string, v?: Record<string, string | number>) => t(`insightsPage.${k}` as never, v as never);
   const month = formatMonth(period.periodMonth, locale);
   const shortDate = (iso: string) =>
@@ -154,13 +160,26 @@ export function ExposureView({
   }
 
   // ── Ratio by month ────────────────────────────────────────────────
-  const max = Math.max(CHART_MAX, ...trend.map((x) => (x.cardDisputeRatio ?? 0) * 1.1));
+  // A trend without the all-method figures (older API payloads, records
+  // without a payment-method split) only has the card view.
+  const hasAll = trend.some((x) => x.allChargebackRate !== null && x.allChargebackRate !== undefined);
+  const all = scope === "all" && hasAll;
+  const rateOf = (x: TrendPoint) => (all ? (x.allChargebackRate ?? null) : x.cardDisputeRatio);
+  const max = Math.max(CHART_MAX, ...trend.map((x) => (rateOf(x) ?? 0) * 1.1));
   const up = (v: number) => `${(v / max) * 100}%`;
-  const avg = trendAverage(trend.map((x) => x.cardDisputeRatio));
+  const avg = trendAverage(trend.map(rateOf));
   const avgPoints = avg.flatMap((a, i) => (a === null ? [] : [{ i, a }]));
   const selectedPoint = trend.find((x) => x.periodMonth === period.periodMonth);
-  const selectedText =
-    selectedPoint && selectedPoint.cardDisputeRatio !== null
+  const selectedText = all
+    ? selectedPoint && selectedPoint.allChargebackRate !== null && selectedPoint.allChargebackRate !== undefined
+      ? ip("trendSelectedAll", {
+          month: monthPart(selectedPoint.periodMonth, { month: "short", year: "numeric" }),
+          ratio: formatRatio(selectedPoint.allChargebackRate, locale),
+          n: selectedPoint.allChargebackCount ?? 0,
+          d: formatCount(selectedPoint.allOrderCount, locale),
+        })
+      : null
+    : selectedPoint && selectedPoint.cardDisputeRatio !== null
       ? ip("trendSelected", {
           month: monthPart(selectedPoint.periodMonth, { month: "short", year: "numeric" }),
           ratio: formatRatio(selectedPoint.cardDisputeRatio, locale),
@@ -231,32 +250,67 @@ export function ExposureView({
         <div className={s.trend} data-screen-label="Ratio by month">
           <div className={s.trendHead}>
             <div className={s.titleBlock}>
-              <div className={s.cardTitle}>{ip("trendTitle")}</div>
+              <div className={s.cardTitle}>{ip(all ? "trendTitleAll" : "trendTitle")}</div>
               <div className={s.cardSub}>{ip("trendSub", { count: trend.length })}</div>
             </div>
+            <div className={s.trendControls}>
+              {hasAll && (
+                <div className={s.scope} role="group" aria-label={ip("trendScopeLabel")}>
+                  {(["all", "cards"] as const).map((k) => (
+                    <button
+                      type="button"
+                      key={k}
+                      className={`${s.scopeBtn} ${scope === k ? s.scopeBtnOn : ""}`}
+                      aria-pressed={scope === k}
+                      onClick={() => setScope(k)}
+                    >
+                      {ip(k === "all" ? "trendScopeAll" : "trendScopeCards")}
+                    </button>
+                  ))}
+                </div>
+              )}
             <div className={s.legend}>
-              <span className={s.legendItem}>
-                <span className={s.legendLine} style={{ borderColor: WARNING }} />
-                {ip("legendEarlyWarning", { pct: formatRatio(VAMP_EARLY_WARNING, locale, 1) })}
-              </span>
-              <span className={s.legendItem}>
-                <span className={s.legendLine} style={{ borderColor: DANGER }} />
-                {ip("legendExcessive", { pct: formatRatio(VAMP_EXCESSIVE, locale, 1) })}
-              </span>
+              {all ? (
+                <>
+                  <span className={s.legendItem}>
+                    <span className={s.legendSwatch} style={{ background: PRIMARY }} />
+                    {ip("legendCards")}
+                  </span>
+                  <span className={s.legendItem}>
+                    <span className={s.legendSwatch} style={{ background: INFO }} />
+                    {ip("legendOther")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={s.legendItem}>
+                    <span className={s.legendLine} style={{ borderColor: WARNING }} />
+                    {ip("legendEarlyWarning", { pct: formatRatio(VAMP_EARLY_WARNING, locale, 1) })}
+                  </span>
+                  <span className={s.legendItem}>
+                    <span className={s.legendLine} style={{ borderColor: DANGER }} />
+                    {ip("legendExcessive", { pct: formatRatio(VAMP_EXCESSIVE, locale, 1) })}
+                  </span>
+                </>
+              )}
               <span className={s.legendItem}>
                 <span className={s.legendLine} style={{ borderTopStyle: "solid", borderColor: "#0B1220" }} />
                 {ip("legendAverage")}
               </span>
             </div>
+            </div>
           </div>
           <div className={s.chart}>
-            <div className={s.tline} style={{ bottom: up(VAMP_EARLY_WARNING), borderColor: WARNING }} />
-            <div className={s.tline} style={{ bottom: up(VAMP_EXCESSIVE), borderColor: DANGER }} />
+            {!all && <div className={s.tline} style={{ bottom: up(VAMP_EARLY_WARNING), borderColor: WARNING }} />}
+            {!all && <div className={s.tline} style={{ bottom: up(VAMP_EXCESSIVE), borderColor: DANGER }} />}
             <div className={s.baseline} />
             <div className={s.bars} style={cols}>
               {trend.map((x) => {
-                const v = x.cardDisputeRatio;
+                const v = rateOf(x);
                 const sel = x.periodMonth === period.periodMonth;
+                // All methods: one bar, the card part below the other methods.
+                const cardPart =
+                  all && x.allChargebackCount ? (x.allCardChargebackCount ?? 0) / x.allChargebackCount : 1;
                 const tone = v !== null && v >= VAMP_EXCESSIVE ? DANGER : v !== null && v >= VAMP_EARLY_WARNING ? WARNING : PRIMARY;
                 const soft = v !== null && v >= VAMP_EXCESSIVE ? "#FCA5A5" : v !== null && v >= VAMP_EARLY_WARNING ? "#FCD34D" : "#BFD0F7";
                 const h = v === null ? "0%" : `${Math.max((v / max) * 100, 1.5)}%`;
@@ -270,18 +324,44 @@ export function ExposureView({
                   >
                     <span
                       className={s.barLabel}
-                      style={{ color: sel ? tone : "#667085", opacity: v !== null && (sel || v >= VAMP_EARLY_WARNING) ? 1 : 0 }}
+                      style={
+                        all
+                          ? { color: sel ? "#0B1220" : "#667085", opacity: v !== null && sel ? 1 : 0 }
+                          : { color: sel ? tone : "#667085", opacity: v !== null && (sel || v >= VAMP_EARLY_WARNING) ? 1 : 0 }
+                      }
                     >
                       {formatRatio(v, locale)}
                     </span>
-                    <span className={s.bar} style={{ height: h, background: sel ? tone : soft }} />
+                    {all ? (
+                      <span className={`${s.bar} ${s.barStack}`} style={{ height: h }}>
+                        <span style={{ flex: `${1 - cardPart} 1 0`, background: sel ? INFO : INFO_SOFT }} />
+                        <span style={{ flex: `${cardPart} 1 0`, background: sel ? PRIMARY : PRIMARY_SOFT }} />
+                      </span>
+                    ) : (
+                      <span className={s.bar} style={{ height: h, background: sel ? tone : soft }} />
+                    )}
                     {v !== null && (
                       <span className={s.tip} style={{ bottom: `calc(${h} + 28px)` }}>
                         <span className={s.tipDim}>
                           {monthPart(x.periodMonth, { month: "short", year: "numeric" })} · {formatRatio(v, locale)}
                         </span>
-                        <span className={s.tipMain}>{ip("tipChargebacks", { n: x.cardChargebackCount ?? 0 })}</span>
-                        <span className={s.tipDim}>{ip("tipOrders", { d: formatCount(x.cardSettledCount, locale) })}</span>
+                        {all ? (
+                          <>
+                            <span className={s.tipMain}>{ip("tipChargebacks", { n: x.allChargebackCount ?? 0 })}</span>
+                            <span className={s.tipDim}>{ip("tipOrdersAll", { d: formatCount(x.allOrderCount, locale) })}</span>
+                            <span className={s.tipDim}>
+                              {ip("tipSplit", {
+                                cards: formatCount(x.allCardChargebackCount ?? 0, locale),
+                                other: formatCount((x.allChargebackCount ?? 0) - (x.allCardChargebackCount ?? 0), locale),
+                              })}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className={s.tipMain}>{ip("tipChargebacks", { n: x.cardChargebackCount ?? 0 })}</span>
+                            <span className={s.tipDim}>{ip("tipOrders", { d: formatCount(x.cardSettledCount, locale) })}</span>
+                          </>
+                        )}
                       </span>
                     )}
                   </button>
@@ -319,7 +399,7 @@ export function ExposureView({
               {selectedText && <span className={s.trendSelected}>{selectedText}</span>}
               {trendText && <span>{trendText}</span>}
             </span>
-            <span>{ip("trendNote")}</span>
+            <span>{ip(all ? "trendNoteAll" : "trendNote")}</span>
           </div>
         </div>
       )}
