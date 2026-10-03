@@ -76,6 +76,31 @@ describe("computeOperationalMetrics", () => {
     ]);
   });
 
+  it("takes the card brand from the dispute's reason code when the order has none", async () => {
+    // blume-box #352535: Mastercard code 4837, no card brand on the order.
+    const orders = Array.from({ length: 60 }, (_, i) => order(`m${i}`, "card"));
+    const sb = fakeSb({
+      shopify_orders: [...orders, order("nobrand", "card"), order("stillnone", "card")],
+      disputes: [
+        { phase: "chargeback", order_gid: "m1", reason: "FRAUDULENT", network_reason_code: "4837" },
+        { phase: "chargeback", order_gid: "nobrand", reason: "FRAUDULENT", network_reason_code: "4837" },
+        { phase: "chargeback", order_gid: "stillnone", reason: "GENERAL", network_reason_code: null },
+      ],
+      shopify_order_risk_signals: [
+        ...orders.map((o) => ({ shopify_order_id: o.shopify_order_id, card_brand: "Mastercard" })),
+        { shopify_order_id: "nobrand", card_brand: null },
+      ],
+      shopify_fulfillment_trackings: [],
+      shop_fraud_daily_metrics: [],
+    });
+    const m = await computeOperationalMetrics(sb, "s", "2026-09-01");
+    const mc = m.byPaymentMethod.find((r) => r.method === "card" && r.brand === "Mastercard")!;
+    expect(mc).toMatchObject({ orders: 61, chargebacks: 2 });
+    // No reason code naming a network: the brand stays unknown, never guessed.
+    const none = m.byPaymentMethod.find((r) => r.method === "card" && r.brand === null)!;
+    expect(none).toMatchObject({ orders: 1, chargebacks: 1 });
+  });
+
   it("measures signatures only where a carrier lookup ran, and says — below 30", async () => {
     const delivered = Array.from({ length: 40 }, (_, i) =>
       order(`d${i}`, "card", { delivery_status: "Delivered", signed_by_name: i < 10 ? "J. Doe" : null }));
