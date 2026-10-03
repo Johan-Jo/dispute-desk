@@ -6546,7 +6546,7 @@
     "exposureTitle": "Exponering mot kortnätverken · {month}",
     "thresholdsVerified": "Trösklar kontrollerade {date}",
     "headlineEstimate": "Chargebackfrekvens för kortbetalningar (uppskattning)",
-    "headlineDetail": "{n} chargebacks / {d} kortbeställningar",
+    "headlineDetail": "{n, plural, one {# chargeback} other {# chargebacks}} / {d} kortbeställningar",
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Uppskattning · alla kortbeställningar",
     "vampThreshold": "Tidig varning vid {pct}",

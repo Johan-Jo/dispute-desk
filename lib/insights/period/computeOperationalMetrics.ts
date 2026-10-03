@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { roundRatio } from "@/lib/insights/programmeThresholds";
 import { classifyRail } from "@/lib/insights/railSegmentation";
 import { winRateCounts } from "@/lib/disputes/winRate";
+import { protectValue } from "@/lib/insights/protectCoverage";
 import { monthEnd } from "./months";
 
 const SETTLED = ["PAID", "PARTIALLY_REFUNDED"];
@@ -45,10 +46,8 @@ export interface OperationalMetrics {
   signedForShare: number | null;
   signedForOrders: number;
   signedForEligible: number;
-  /** NULL until its definition is fixed: the daily rollup's "eligible"
-   *  value only counts orders Shopify already deems eligible, so the share
-   *  reads ~100% for every shop (blume-box, Mein Maison, 2026-10-02). The raw
-   *  sums are kept so the fix can recompute from the record. */
+  /** Value of orders Protect covers ÷ value of every order with a Protect
+   *  status (lib/insights/protectCoverage.ts). Null when no order has one. */
   protectShareByValue: number | null;
   protectedValue: number;
   protectEligibleValue: number;
@@ -77,6 +76,8 @@ interface OrderRow {
   delivered_at_tracking: string | null;
   signed_by_name: string | null;
   financial_status: string | null;
+  fraud_protection_level: string | null;
+  order_total: number | string | null;
 }
 
 async function pageAll<T>(fetchPage: (from: number) => PromiseLike<{ data: unknown; error: { message?: string } | null }>, what: string): Promise<T[]> {
@@ -119,7 +120,7 @@ export async function computeOperationalMetrics(
     (o) =>
       sb
         .from("shopify_orders")
-        .select("shopify_order_id, payment_gateway, payment_method, three_ds_authenticated, processed_at, fulfilled_at, delivery_status, delivered_at_tracking, signed_by_name, financial_status")
+        .select("shopify_order_id, payment_gateway, payment_method, three_ds_authenticated, processed_at, fulfilled_at, delivery_status, delivered_at_tracking, signed_by_name, financial_status, fraud_protection_level, order_total")
         .eq("shop_id", shopId)
         .gte("created_at_shopify", from)
         .lt("created_at_shopify", to)
@@ -243,21 +244,26 @@ export async function computeOperationalMetrics(
     .sort((a, b) => a - b);
   const median = hours.length ? Math.round(hours[Math.floor(hours.length / 2)]! * 10) / 10 : null;
 
-  // ── Shopify Protect, by value, from the daily fraud rollup ──
+  // ── Shopify Protect, by value, from the month's orders ──
+  let protectedValue = 0;
+  let eligibleValue = 0;
+  for (const o of orders) {
+    const v = protectValue(o.fraud_protection_level, o.order_total);
+    protectedValue += v.covered;
+    eligibleValue += v.eligible;
+  }
+
+  // ── High-risk orders still fulfilled, from the daily fraud rollup ──
   const { data: protectRows, error: protectErr } = await sb
     .from("shop_fraud_daily_metrics")
-    .select("fully_protected_value, eligible_protected_value, orders_high, orders_fulfilled_high_risk")
+    .select("orders_high, orders_fulfilled_high_risk")
     .eq("shop_id", shopId)
     .gte("date", month)
     .lt("date", monthEnd(month));
-  fail("protect", protectErr);
-  let protectedValue = 0;
-  let eligibleValue = 0;
+  fail("fraud rollup", protectErr);
   let high = 0;
   let highFulfilled = 0;
   for (const r of (protectRows ?? []) as Array<Record<string, unknown>>) {
-    protectedValue += Number(r.fully_protected_value ?? 0);
-    eligibleValue += Number(r.eligible_protected_value ?? 0);
     high += Number(r.orders_high ?? 0);
     highFulfilled += Number(r.orders_fulfilled_high_risk ?? 0);
   }
@@ -284,7 +290,7 @@ export async function computeOperationalMetrics(
     signedForShare: share(signed, observable.length, SIGNED_MIN_DELIVERIES),
     signedForOrders: signed,
     signedForEligible: observable.length,
-    protectShareByValue: null,
+    protectShareByValue: eligibleValue > 0 ? roundRatio(protectedValue / eligibleValue) : null,
     protectedValue: Math.round(protectedValue * 100) / 100,
     protectEligibleValue: Math.round(eligibleValue * 100) / 100,
     highRiskFulfilledShare: share(highFulfilled, high),

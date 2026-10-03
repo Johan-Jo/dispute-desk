@@ -6546,7 +6546,7 @@
     "exposureTitle": "Exposición a las redes de tarjetas · {month}",
     "thresholdsVerified": "Umbrales verificados el {date}",
     "headlineEstimate": "Tasa de contracargos con tarjeta (estimación)",
-    "headlineDetail": "{n} contracargos / {d} pedidos con tarjeta",
+    "headlineDetail": "{n, plural, one {# contracargo} other {# contracargos}} / {d} pedidos con tarjeta",
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Estimación · todos los pedidos con tarjeta",
     "vampThreshold": "Alerta temprana al {pct}",

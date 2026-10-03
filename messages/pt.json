@@ -6546,7 +6546,7 @@
     "exposureTitle": "Exposição às bandeiras de cartão · {month}",
     "thresholdsVerified": "Limites verificados em {date}",
     "headlineEstimate": "Taxa de estornos em cartão (estimativa)",
-    "headlineDetail": "{n} estornos / {d} pedidos com cartão",
+    "headlineDetail": "{n, plural, one {# estorno} other {# estornos}} / {d} pedidos com cartão",
     "vampName": "Visa VAMP",
     "vampQualEstimate": "Estimativa · todos os pedidos com cartão",
     "vampThreshold": "Alerta antecipado em {pct}",
