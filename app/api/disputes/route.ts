@@ -153,9 +153,32 @@ export async function GET(req: NextRequest) {
       "id, shop_id, reason, status, amount, currency_code, phase, normalized_status, submission_state, final_outcome, closed_at, due_at, initiated_at, needs_attention, attention_reason, attention_payload",
     )
     .eq("shop_id", shopId);
-  const nonTerminalRows = (shopRows ?? []).filter(
-    (r) => r.closed_at == null && r.final_outcome == null,
-  );
+  // Dormant inquiries (dead, deadline-less Shopify inquiries — see
+  // lib/disputes/dormantInquiry.ts) are not listed at all. They were already
+  // dropped from the KPI aggregates below, which left rows in the list that
+  // no count acknowledged and the merchant could do nothing with. Deleting
+  // them is not an option: Shopify still returns them, so the next sync
+  // would re-import each one as a brand-new dispute. Only NON-terminal rows
+  // are hidden — if Shopify ever resolves one it reappears in history with
+  // its true outcome.
+  const dormantIds: string[] = [];
+  const nonTerminalRows = (shopRows ?? []).filter((r) => {
+    if (r.closed_at != null || r.final_outcome != null) return false;
+    if (
+      isDormantInquiry({
+        phase: r.phase as string | null,
+        due_at: r.due_at as string | null,
+        initiated_at: r.initiated_at as string | null,
+      })
+    ) {
+      dormantIds.push(r.id as string);
+      return false;
+    }
+    return true;
+  });
+  if (dormantIds.length > 0) {
+    query = query.not("id", "in", `(${dormantIds.join(",")})`);
+  }
   const shopPresentations = await gatherPresentations(
     sb,
     shopId,
