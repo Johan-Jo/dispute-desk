@@ -97,6 +97,12 @@ describe("ExposureView — Mein Maison, September 2026 (prod record)", () => {
     expect(html).toContain("1 chargeback of 1,022 card orders");
   });
 
+  it("says the Visa floor count is Visa's, beside a fraction that counts every card chargeback", () => {
+    // "1 / 1,022" (all card chargebacks) next to "you had 0" read as two
+    // counts of the same thing.
+    expect(html).toMatch(/you had \d+ on Visa/);
+  });
+
   it("explains that most disputes were PayPal claims", () => {
     expect(html).toMatch(/of your \d+ disputes this month were PayPal claims/);
   });
