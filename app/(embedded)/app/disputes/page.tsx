@@ -731,7 +731,6 @@ export default function DisputesListPage() {
 
   return (
     <Page
-      fullWidth
       title={t("disputes.title")}
       subtitle={t("disputes.purposeLine")}
       primaryAction={{
