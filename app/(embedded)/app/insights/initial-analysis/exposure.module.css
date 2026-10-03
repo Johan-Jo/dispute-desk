@@ -298,3 +298,36 @@
 @container (min-width: 681px) {
   .mlabShort { display: none; }
 }
+
+/* ── Dispute reasons ─────────────────────────────────────────────── */
+.rsSummary { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.rsTotalRow { display: flex; align-items: baseline; gap: 8px; }
+.rsTotal { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rsDelta { font-size: 13px; font-weight: 500; }
+.rsLegend { display: flex; gap: 14px; font-size: 12px; color: #667085; }
+.rsLegendItem { display: flex; align-items: center; gap: 6px; }
+.rsSwatch { width: 10px; height: 10px; border-radius: 2px; }
+.rsInner { min-width: 600px; }
+.rs {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.4fr) minmax(0, 2fr) 56px 56px 72px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px var(--px);
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.rsHead {
+  padding: 12px var(--px);
+  background: #f6f8fb;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+  font-weight: 500;
+  color: #667085;
+}
+.rsName { display: flex; flex-direction: column; gap: 2px; }
+.rsShare { font-size: 12px; color: #64748b; }
+.rsBars { display: flex; flex-direction: column; gap: 4px; }
+.rsBar { height: 6px; border-radius: 3px; }
+.rsFoot { padding: 14px var(--px); font-size: 13px; color: #667085; background: #f6f8fb; }

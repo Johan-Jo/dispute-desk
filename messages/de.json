@@ -6645,6 +6645,35 @@
     "methodsFootRates": "Quoten werden ab 50 Bestellungen angezeigt.",
     "methodsFootEarlier": "Ein in diesem Monat eröffneter Streitfall kann eine frühere Bestellung betreffen.",
     "methodsFootReference": "Referenzlinie {pct}",
-    "sourcePrefix": "Quelle:"
+    "sourcePrefix": "Quelle:",
+    "reasonsTitle": "Streitfallgründe · {month} vs. {prev}",
+    "reasonsSub": "In jedem Monat eröffnete Rückbuchungen und Anfragen, gruppiert nach dem von der Bank angegebenen Grund.",
+    "reasonsTotal": "{count, plural, one {# Streitfall} other {# Streitfälle}}",
+    "reasonsSame": "Wie im {prev}",
+    "reasonsFewer": "{count} weniger als im {prev}",
+    "reasonsMore": "{count} mehr als im {prev}",
+    "reasonsColReason": "Grund",
+    "reasonsColChange": "Änderung",
+    "reasonsShare": "{pct} im {month}",
+    "reasonsNone": "Keine im {month}",
+    "reasonsNew": "Neu",
+    "reasonsFoot": "Nach dem Monat, in dem der Streitfall eröffnet wurde. Ein Grund kann sich ändern, wenn die Bank den Fall aktualisiert.",
+    "reason": {
+      "FRAUDULENT": "Betrug",
+      "PRODUCT_NOT_RECEIVED": "Produkt nicht erhalten",
+      "PRODUCT_UNACCEPTABLE": "Nicht wie beschrieben",
+      "CREDIT_NOT_PROCESSED": "Gutschrift nicht verarbeitet",
+      "SUBSCRIPTION_CANCELLED": "Abonnement gekündigt",
+      "DUPLICATE": "Doppelte Belastung",
+      "UNRECOGNIZED": "Nicht erkannte Zahlung",
+      "GENERAL": "Allgemein",
+      "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
+      "CUSTOMER_INITIATED": "Vom Kunden initiiert",
+      "DEBIT_NOT_AUTHORIZED": "Lastschrift nicht autorisiert",
+      "INCORRECT_ACCOUNT_DETAILS": "Falsche Kontodaten",
+      "INSUFFICIENT_FUNDS": "Unzureichende Mittel",
+      "NONCOMPLIANT": "Nicht konform",
+      "UNKNOWN": "Kein Grund angegeben"
+    }
   }
 }

@@ -6645,6 +6645,35 @@
     "methodsFootRates": "Les taux sont affichés à partir de 50 commandes.",
     "methodsFootEarlier": "Un litige ouvert ce mois-ci peut porter sur une commande antérieure.",
     "methodsFootReference": "Ligne de référence à {pct}",
-    "sourcePrefix": "Source :"
+    "sourcePrefix": "Source :",
+    "reasonsTitle": "Motifs de litige · {month} vs {prev}",
+    "reasonsSub": "Contestations et demandes ouvertes chaque mois, regroupées selon le motif donné par la banque.",
+    "reasonsTotal": "{count, plural, one {# litige} other {# litiges}}",
+    "reasonsSame": "Comme en {prev}",
+    "reasonsFewer": "{count} de moins qu’en {prev}",
+    "reasonsMore": "{count} de plus qu’en {prev}",
+    "reasonsColReason": "Motif",
+    "reasonsColChange": "Évolution",
+    "reasonsShare": "{pct} de {month}",
+    "reasonsNone": "Aucun en {month}",
+    "reasonsNew": "Nouveau",
+    "reasonsFoot": "Selon le mois d’ouverture de chaque litige. Un motif peut changer si la banque met à jour le dossier.",
+    "reason": {
+      "FRAUDULENT": "Fraude",
+      "PRODUCT_NOT_RECEIVED": "Produit non reçu",
+      "PRODUCT_UNACCEPTABLE": "Pas comme décrit",
+      "CREDIT_NOT_PROCESSED": "Crédit non traité",
+      "SUBSCRIPTION_CANCELLED": "Abonnement annulé",
+      "DUPLICATE": "Double facturation",
+      "UNRECOGNIZED": "Paiement non reconnu",
+      "GENERAL": "Général",
+      "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
+      "CUSTOMER_INITIATED": "Initié par le client",
+      "DEBIT_NOT_AUTHORIZED": "Débit non autorisé",
+      "INCORRECT_ACCOUNT_DETAILS": "Détails du compte incorrects",
+      "INSUFFICIENT_FUNDS": "Fonds insuffisants",
+      "NONCOMPLIANT": "Non conforme",
+      "UNKNOWN": "Aucun motif indiqué"
+    }
   }
 }

@@ -37,12 +37,44 @@ const period = {
   checkpoints: month.checkpoints,
 } as unknown as InsightsPeriod;
 
-function render(p: InsightsPeriod, locale = "en", msgs: Record<string, unknown> = messages) {
+const AUGUST = {
+  periodMonth: "2026-08-01",
+  byReason: [
+    { reason: "FRAUDULENT", disputes: 3 },
+    { reason: "PRODUCT_NOT_RECEIVED", disputes: 1 },
+    { reason: "CREDIT_NOT_PROCESSED", disputes: 1 },
+  ],
+};
+const withReasons = (previous: typeof AUGUST | null, locale = "en", msgs: Record<string, unknown> = messages) =>
+  render(
+    {
+      ...period,
+      operational: {
+        ...month.operational,
+        byReason: [
+          { reason: "FRAUDULENT", disputes: 2 },
+          { reason: "PRODUCT_NOT_RECEIVED", disputes: 1 },
+          { reason: "PRODUCT_UNACCEPTABLE", disputes: 1 },
+        ],
+      },
+    } as unknown as InsightsPeriod,
+    locale,
+    msgs,
+    previous,
+  );
+
+function render(
+  p: InsightsPeriod,
+  locale = "en",
+  msgs: Record<string, unknown> = messages,
+  previousReasons: typeof AUGUST | null = null,
+) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale={locale} messages={msgs} timeZone="UTC">
       <AppProvider i18n={polarisEn}>
         <ExposureView
           period={p}
+          previousReasons={previousReasons}
           trend={[
             { periodMonth: "2026-08-01", periodState: "final", cardDisputeRatio: 0.00201, cardChargebackCount: 2, cardSettledCount: 995 },
             { periodMonth: "2026-09-01", periodState: "final", cardDisputeRatio: 0.00098, cardChargebackCount: 1, cardSettledCount: 1022 },
@@ -104,6 +136,39 @@ describe("ExposureView — Mein Maison, September 2026 (prod record)", () => {
     const de_ = render(period, "de", de as Record<string, unknown>);
     expect(de_).toContain("Streitfälle nach Zahlungsart");
     expect(de_).not.toContain("insightsPage.");
+  });
+
+  it("leaves the reasons card out for a record written before reasons were stored", () => {
+    expect(html).not.toContain('data-screen-label="Dispute reasons"');
+  });
+
+  it("compares dispute reasons with the month before, after the protection card", () => {
+    const r = withReasons(AUGUST);
+    expect(r.indexOf('data-screen-label="Dispute reasons"')).toBeGreaterThan(r.indexOf('data-screen-label="Protection"'));
+    expect(r).toContain("Dispute reasons · September vs August");
+    expect(r).toContain("4 disputes");
+    expect(r).toContain("1 fewer than August");
+    expect(r).toContain(">Fraudulent<");
+    expect(r).toContain("50% of September");
+    expect(r).toContain(">Not as described<");
+    expect(r).toContain(">New<");
+    expect(r).toContain(">Credit not processed<");
+    expect(r).toContain("None in September");
+    expect(r).toContain(">−1<");
+  });
+
+  it("shows a dash, not zero, when the month before has no reasons on record", () => {
+    const r = withReasons(null);
+    expect(r).toContain("Dispute reasons · September vs August");
+    expect(r).not.toContain("than August");
+    expect(r).not.toContain(">New<");
+  });
+
+  it("renders the reasons card in German without a missing key", () => {
+    const r = withReasons(AUGUST, "de", de as Record<string, unknown>);
+    expect(r).toContain("Streitfallgründe · September vs. August");
+    expect(r).toContain("1 weniger als im August");
+    expect(r).not.toContain("insightsPage.");
   });
 
   it("says not available, never a blank page, for a month without a record", () => {
