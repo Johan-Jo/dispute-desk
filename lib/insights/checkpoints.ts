@@ -105,27 +105,6 @@ function hours(v: number | null): string {
 
 // ─── Rules ────────────────────────────────────────────────────────
 
-/** Emitted in place of a VAMP/ECM verdict when the merchant's disputes are
- *  mostly not on a card network. Previously every merchant got healthy /
- *  consider / breach, and `healthy` was as wrong as `breach` for a Klarna or
- *  PayPal shop — it told them they were fine against a threshold they are
- *  not measured by. */
-function notApplicable(
-  id: string,
-  cardDisputeShare: number | null | undefined,
-): Checkpoint {
-  return {
-    id,
-    severity: "info",
-    titleKey: `fraudIntel.checkpoint_${id}_not_applicable_title`,
-    bodyKey: `fraudIntel.checkpoint_${id}_not_applicable_body`,
-    values: {
-      cardShare:
-        cardDisputeShare == null ? "0%" : pct(cardDisputeShare * 100, 0),
-    },
-  };
-}
-
 /** `info` = above the ratio, below the enforcement floor. Its copy lives in
  *  `_below_floor_` keys; the other severities keep their own families. */
 function severityKey(severity: CheckpointSeverity): string {
@@ -141,9 +120,8 @@ function severityKey(severity: CheckpointSeverity): string {
 function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
   const p = input.programme;
   if (!p) return null;
-  if (!p.cardFramingApplies) {
-    return notApplicable("chargeback_rate_vs_vamp", p.cardDisputeShare);
-  }
+  // Too few card orders this month to measure: no verdict (the page shows "—").
+  if (!p.cardFramingApplies) return null;
   if (p.cardDisputeRatio === null) return null;
   const severity = vampSeverity(p.cardDisputeRatio, p.visaChargebackCount);
   const key = severityKey(severity);
@@ -171,9 +149,8 @@ function ruleChargebackRateVamp(input: CheckpointInput): Checkpoint | null {
 function ruleChargebackRateEcm(input: CheckpointInput): Checkpoint | null {
   const p = input.programme;
   if (!p) return null;
-  if (!p.cardFramingApplies) {
-    return notApplicable("chargeback_rate_vs_ecm", p.cardDisputeShare);
-  }
+  // Too few card orders this month to measure: no verdict (the page shows "—").
+  if (!p.cardFramingApplies) return null;
   if (p.ecmRatio === null) return null;
   const severity = ecmSeverity(p.ecmRatio, p.mcChargebackCount, p.ecmIsLowerBound);
   const key = severityKey(severity);
