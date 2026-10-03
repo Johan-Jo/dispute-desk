@@ -212,7 +212,7 @@ describe("segmentByRail — thin denominators", () => {
 });
 
 describe("classifyRail — the CARD_RAIL_METHODS contract", () => {
-  // lib/liabilityShift/ratios/calculate.ts filters its Visa/Mastercard
+  // lib/insights/period/computeProgrammeBlock.ts filters its Visa/Mastercard
   // settlement denominator with a literal CARD_RAIL_METHODS array, because a
   // PostgREST `.in()` cannot call this function. The two must agree: if a
   // method is card here but missing there, the VAMP denominator silently

@@ -56,8 +56,19 @@ export interface ProgrammeBlock {
   cardSettledPrevCount: number;
   unknownSettledCount: number;
   cardChargebackCount: number;
+  /** Card chargebacks with a fraud reason (legacy `tc40_count`). */
+  cardFraudChargebackCount: number;
   visaChargebackCount: number;
   mcChargebackCount: number;
+  mcFraudChargebackCount: number;
+  /** Card chargebacks whose reason code names neither Visa nor Mastercard. */
+  unknownNetworkChargebackCount: number;
+  /** Won chargebacks attributed to a DisputeDesk CE 3.0 / FPT package. */
+  ce30ExcludedCount: number;
+  fptExcludedCount: number;
+  revenueRecoveredUsd: number;
+  /** The ratio without DisputeDesk exclusions (= cardDisputeRatio). */
+  vampRatioWithoutDd: number | null;
   /** Disputes in M whose order we could not resolve to a payment method. */
   unresolvedRailDisputeCount: number;
   cardDisputeRatio: number | null;
@@ -111,6 +122,8 @@ async function settledCount(
 
 interface DisputeRow {
   id: string;
+  reason: string | null;
+  amount: number | string | null;
   phase: string | null;
   network_reason_code: string | null;
   final_outcome: string | null;
@@ -138,7 +151,7 @@ export async function computeProgrammeBlock(
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await sb
       .from("disputes")
-      .select("id, phase, network_reason_code, final_outcome, order_gid")
+      .select("id, reason, amount, phase, network_reason_code, final_outcome, order_gid")
       .eq("shop_id", shopId)
       .gte("initiated_at", `${periodMonth}T00:00:00Z`)
       .lt("initiated_at", `${end}T00:00:00Z`)
@@ -183,28 +196,41 @@ export async function computeProgrammeBlock(
   const visaCount = cardChargebacks.filter((d) => VISA_REASON.test(d.network_reason_code ?? "")).length;
   const mcCount = cardChargebacks.filter((d) => MC_REASON.test(d.network_reason_code ?? "")).length;
 
+  const isFraud = (d: DisputeRow) => (d.reason ?? "").toLowerCase().includes("fraud");
+  const fraudCount = cardChargebacks.filter(isFraud).length;
+  const mcFraudCount = cardChargebacks.filter(
+    (d) => isFraud(d) && MC_REASON.test(d.network_reason_code ?? ""),
+  ).length;
+  const unknownNetworkCount = cardChargebacks.length - visaCount - mcCount;
+
   // DisputeDesk exclusions for the secondary ratio: won chargebacks whose
   // pack was a CE 3.0 or first-party-trust package.
-  let excluded = 0;
-  const wonIds = cardChargebacks.filter((d) => d.final_outcome === "won").map((d) => d.id);
+  const via = new Map<string, "ce_30" | "fpt">();
+  const won = cardChargebacks.filter((d) => d.final_outcome === "won");
+  const wonIds = won.map((d) => d.id);
   for (let i = 0; i < wonIds.length; i += 200) {
     const { data, error } = await sb
       .from("evidence_packs")
       .select("dispute_id, package_type")
       .in("dispute_id", wonIds.slice(i, i + 200));
     fail("evidence packs", error);
-    const attributed = new Set(
-      ((data ?? []) as Array<{ dispute_id: string | null; package_type: string | null }>)
-        .filter((p) => p.package_type === "ce_30" || p.package_type === "fpt")
-        .map((p) => p.dispute_id),
-    );
-    excluded += attributed.size;
+    for (const p of (data ?? []) as Array<{ dispute_id: string | null; package_type: string | null }>) {
+      if (p.dispute_id && (p.package_type === "ce_30" || p.package_type === "fpt")) {
+        via.set(p.dispute_id, p.package_type);
+      }
+    }
   }
+  const ce30Excluded = [...via.values()].filter((v) => v === "ce_30").length;
+  const fptExcluded = via.size - ce30Excluded;
+  const excluded = via.size;
+  const revenueRecoveredUsd =
+    Math.round(won.filter((d) => via.has(d.id)).reduce((sum, d) => sum + Number(d.amount ?? 0), 0) * 100) / 100;
 
   const ratio = (n: number, d: number): number | null =>
     d >= PROGRAMME_MIN_SETTLED ? roundRatio(n / d) : null;
   const cardDisputeRatio = ratio(cardChargebacks.length, cardSettled);
   const vampRatioCalculated = ratio(Math.max(0, cardChargebacks.length - excluded), cardSettled);
+  const vampRatioWithoutDd = cardDisputeRatio;
   const ecmRatio = ratio(mcCount, cardSettledPrev);
 
   const cardFramingApplies =
@@ -219,8 +245,15 @@ export async function computeProgrammeBlock(
     cardSettledPrevCount: cardSettledPrev,
     unknownSettledCount: unknownSettled,
     cardChargebackCount: cardChargebacks.length,
+    cardFraudChargebackCount: fraudCount,
     visaChargebackCount: visaCount,
     mcChargebackCount: mcCount,
+    mcFraudChargebackCount: mcFraudCount,
+    unknownNetworkChargebackCount: unknownNetworkCount,
+    ce30ExcludedCount: ce30Excluded,
+    fptExcludedCount: fptExcluded,
+    revenueRecoveredUsd,
+    vampRatioWithoutDd,
     unresolvedRailDisputeCount: unresolved,
     cardDisputeRatio,
     vampRatioCalculated,
