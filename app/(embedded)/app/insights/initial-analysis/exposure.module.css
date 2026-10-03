@@ -1,0 +1,104 @@
+/* Chargeback Exposure page — transcribed from the Claude Design file
+   "Chargeback Exposure redesign" (ChargebackExposure.dc.html). */
+
+.wrap {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.pad { padding: 18px; }
+.sub { color: #667085; }
+.small { font-size: 12px; }
+.tiny { font-size: 11px; }
+.h2 { font-size: 14px; font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+.big { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.mid { font-size: 20px; font-weight: 700; letter-spacing: -0.015em; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; }
+.pretty { text-wrap: pretty; }
+
+.header { display: flex; gap: 12px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+
+.cardHead { padding: 18px 18px 14px; display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.headline { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 4px; }
+
+.prog {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 18px; border-top: 1px solid #e5e7eb; color: #475467; font-size: 12px; }
+.noteIcon { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #98a2b3; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #667085; }
+.state { padding: 28px 18px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; border-top: 1px solid #e5e7eb; }
+
+.pm {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr));
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px 18px;
+  border-top: 1px solid #e5e7eb;
+}
+.pmHead { color: #667085; font-size: 11px; font-weight: 600; padding-top: 8px; padding-bottom: 8px; background: #f9fafb; }
+.pmHot { background: #fffbf5; }
+.pmHotRate { color: #b54708; }
+.r { text-align: right; }
+.netBadge { font-size: 10px; font-weight: 600; color: #344054; background: #eef0f3; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.mlab { display: none; }
+
+.bars { position: relative; height: 150px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; align-items: end; padding-top: 6px; }
+.barCol { display: flex; flex-direction: column; height: 100%; justify-content: flex-end; position: relative; z-index: 1; cursor: pointer; background: none; border: 0; padding: 0; }
+.bar { border-radius: 4px 4px 0 0; min-height: 2px; }
+.tline { position: absolute; left: 0; right: 0; border-top: 1px dashed; height: 0; }
+.mlabels { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.legendLine { width: 14px; border-top: 1px dashed; }
+
+.twoc { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cp { display: flex; gap: 12px; align-items: flex-start; padding: 12px 18px; border-top: 1px solid #e5e7eb; }
+.stripe { width: 3px; align-self: stretch; border-radius: 2px; flex: none; }
+.inEmail { font-size: 10px; font-weight: 600; color: #1d4ed8; background: #eff4ff; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+
+.live { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; }
+.liveCell { padding: 14px 18px; display: flex; flex-direction: column; gap: 3px; }
+.liveCell + .liveCell { border-top: 1px solid #e2e8f0; }
+
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #e5e7eb; }
+.metric { padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; border-left: 1px solid #e5e7eb; }
+.metric:first-child { border-left: none; }
+
+@container (max-width: 680px) {
+  .prog { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .progWide { grid-column: 1 / -1; }
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric:nth-child(3) { border-left: none; }
+  .metric:nth-child(n + 3) { border-top: 1px solid #e5e7eb; }
+  .twoc { grid-template-columns: minmax(0, 1fr); }
+  .big { font-size: 28px; }
+  .bars { gap: 3px; height: 120px; }
+  .mlabels { gap: 3px; }
+  .mlabLong { display: none; }
+  .pm { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
+  .pmName { grid-column: 1 / -1; }
+  .pm .r { text-align: left; }
+  .pmHead { display: none; }
+  .mlab { display: inline; color: #667085; font-weight: 400; }
+}
+
+@container (min-width: 681px) {
+  .mlabShort { display: none; }
+}
