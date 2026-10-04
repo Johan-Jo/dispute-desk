@@ -59,6 +59,10 @@ export async function GET(req: NextRequest) {
         .from("winnability_leads")
         .update({ status: "unsubscribed", unsubscribed_at: unsubscribedAt })
         .eq("email", email),
+      sb
+        .from("meta_leads")
+        .update({ status: "unsubscribed", unsubscribed_at: unsubscribedAt })
+        .eq("email", email),
     ]);
   } catch (err) {
     console.error("[playbook/unsubscribe] db threw:", err);

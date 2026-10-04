@@ -237,3 +237,71 @@ export async function sendAdminWinnabilityLeadNotification(
 
   await sendAdminEmail({ subject, html, text, logTag: "admin-winnability-lead" });
 }
+
+export interface AdminMetaLeadNotificationOptions {
+  email: string | null;
+  fullName?: string | null;
+  company?: string | null;
+  store?: string | null;
+  phone?: string | null;
+  campaignName?: string | null;
+  adName?: string | null;
+  formName?: string | null;
+  /** Every answer on the form, keyed by Meta field name. */
+  answers?: Record<string, string>;
+}
+
+function escapeHtml(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Notify the team (ADMIN_NOTIFY_EMAIL) the moment a Meta Instant Form lead is stored.
+ * Non-blocking — never throws.
+ */
+export async function sendAdminMetaLeadNotification(
+  options: AdminMetaLeadNotificationOptions,
+): Promise<void> {
+  const who = options.fullName?.trim() || options.email || "unknown";
+  const subject = `New Meta lead: ${who}${options.campaignName ? " · " + options.campaignName : ""}`;
+  const rows: Array<[string, string]> = [
+    ["Email", options.email ?? "—"],
+    ["Name", options.fullName ?? "—"],
+    ["Company", options.company ?? "—"],
+    ["Store", options.store ?? "—"],
+    ["Phone", options.phone ?? "—"],
+    ["Campaign", options.campaignName ?? "—"],
+    ["Ad", options.adName ?? "—"],
+    ["Form", options.formName ?? "—"],
+    ["Time", new Date().toUTCString()],
+  ];
+  const answers = Object.entries(options.answers ?? {});
+  const rowHtml = rows
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:4px 16px 4px 0;font-weight:600;">${k}</td><td style="padding:4px 0;">${escapeHtml(v)}</td></tr>`,
+    )
+    .join("");
+  const answerHtml = answers
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:2px 12px 2px 0;color:#6b7280;">${escapeHtml(k)}</td><td style="padding:2px 0;color:#475569;">${escapeHtml(v)}</td></tr>`,
+    )
+    .join("");
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;padding:32px 16px;">
+  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">New Meta Instant Form lead</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;font-size:14px;color:#374151;border-collapse:collapse;">${rowHtml}</table>
+  ${
+    answers.length
+      ? `<p style="margin:18px 0 4px;font-weight:600;color:#374151;">Form answers</p><table role="presentation" cellpadding="0" cellspacing="0" style="font-size:13px;">${answerHtml}</table>`
+      : ""
+  }
+</body></html>`;
+  const text =
+    "New Meta Instant Form lead\n\n" +
+    rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
+    (answers.length ? "\n\nForm answers:\n" + answers.map(([k, v]) => `${k}: ${v}`).join("\n") : "");
+  await sendAdminEmail({ subject, html, text, logTag: "admin-meta-lead" });
+}
