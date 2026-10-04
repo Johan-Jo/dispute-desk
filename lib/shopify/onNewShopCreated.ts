@@ -44,6 +44,7 @@ import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { grantFreeLifetimeCredits } from "@/lib/billing/grantFreeLifetime";
 import { sendAdminInstallNotification } from "@/lib/email/sendAdminNotification";
 import { sendInstallWelcomeEmail } from "@/lib/email/sendInstallWelcome";
+import { sendMetaInstall, type MetaAttribution } from "@/lib/analytics/metaInstall";
 
 export interface OnNewShopCreatedOptions {
   /** Internal `shops.id` of the just-inserted row. */
@@ -57,6 +58,12 @@ export interface OnNewShopCreatedOptions {
   source: string;
   /** Merchant locale, for the welcome email. Defaults to English. */
   locale?: Locale;
+  /**
+   * Meta click/browser ids + consent flag read from the install request's cookies. Present only
+   * on the OAuth-callback path (the merchant's browser returns to our domain); absent for Session
+   * Token Exchange installs, which send nothing.
+   */
+  metaAttribution?: MetaAttribution;
 }
 
 /**
@@ -125,5 +132,19 @@ export async function onNewShopCreated(
       "[email:install-welcome] send threw:",
       err instanceof Error ? err.message : err,
     );
+  });
+
+  // Meta Conversions API install conversion — only when the installer accepted analytics cookies
+  // on our site. Awaited for the same reason as the sends above, but capped at 3s so a slow
+  // Graph API can never hold up the install redirect. Never throws.
+  await Promise.race([
+    sendMetaInstall({
+      shopDomain,
+      email: details?.email ?? null,
+      attribution: options.metaAttribution,
+    }),
+    new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+  ]).catch((err) => {
+    console.warn("[meta-capi] install event failed:", err instanceof Error ? err.message : err);
   });
 }
