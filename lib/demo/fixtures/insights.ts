@@ -14,6 +14,10 @@ import type { LiveState } from "@/lib/insights/period/computeLiveState";
 export interface DemoInsightsResponse {
   historicalImportStatus: "not_started" | "in_progress" | "complete" | "failed";
   historicalImportOrdersTotal: number;
+  /** Read by DashboardScopeUpgradeBanner — anything but "read_all_orders"
+   *  shows the re-authorize upsell on the public demo dashboard. */
+  currentScopeGrant: "read_all_orders";
+  dismissedBanners: Record<string, string>;
   period: InsightsPeriod;
   trend: TrendPoint[];
   liveState: LiveState | null;
@@ -34,6 +38,8 @@ function point(periodMonth: string, chargebacks: number, settled: number): Trend
 export const DEMO_INSIGHTS = {
   historicalImportStatus: "complete",
   historicalImportOrdersTotal: 8432,
+  currentScopeGrant: "read_all_orders",
+  dismissedBanners: {},
   period: {
     status: "ok",
     periodMonth: MONTH,
