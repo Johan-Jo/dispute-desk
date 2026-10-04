@@ -56,6 +56,12 @@ export function trackStartShopifyInstallAndRedirect(
     shop_domain: shopDomain,
   };
 
+  // Meta: install intent as the standard `InitiateCheckout` (Shopify's own listing tracker
+  // owns ViewContent / AddToCart / Purchase). `fbq` exists only after analytics consent.
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("track", "InitiateCheckout", { content_name: "shopify_app_install" });
+  }
+
   if (typeof window !== "undefined" && typeof window.gtag === "function") {
     let navigated = false;
     const navigateOnce = () => {

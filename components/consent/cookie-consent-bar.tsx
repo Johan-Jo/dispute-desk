@@ -7,6 +7,7 @@ import {
   CONSENT_VALUE_ANALYTICS,
   CONSENT_VALUE_ESSENTIAL,
 } from "@/lib/consent/constants";
+import { META_CONSENT_EVENT } from "@/lib/analytics/metaPixel";
 import {
   grantAnalyticsConsentViaGtag,
   persistConsent,
@@ -30,6 +31,7 @@ export function CookieConsentBar() {
   const acceptAnalytics = () => {
     persistConsent(CONSENT_VALUE_ANALYTICS);
     grantAnalyticsConsentViaGtag();
+    window.dispatchEvent(new Event(META_CONSENT_EVENT));
     setOpen(false);
   };
 

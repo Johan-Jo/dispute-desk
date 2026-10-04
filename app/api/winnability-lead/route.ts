@@ -10,6 +10,7 @@ import {
   VERDICT_BAND,
   type WinnabilityAnswers,
 } from "@/lib/marketing/winnability/scoring";
+import { sendMetaLead } from "@/lib/analytics/metaCapi";
 import { sendAdminWinnabilityLeadNotification } from "@/lib/email/sendAdminNotification";
 
 export const runtime = "nodejs";
@@ -44,6 +45,8 @@ type LeadPayload = {
   winnability?: string;
   ratio?: number | null;
   ts?: string;
+  metaEventId?: string;
+  metaConsent?: boolean;
 };
 
 const recentSubmissions = new Map<string, number>();
@@ -156,6 +159,22 @@ export async function POST(req: NextRequest) {
     if (error) console.error("[winnability-lead] upsert error:", error);
   } catch (err) {
     console.error("[winnability-lead] db threw:", err);
+  }
+
+  // Meta Conversions API `Lead` — only for visitors who accepted analytics; shares the
+  // browser pixel's event id so Meta deduplicates. Fire-and-forget.
+  if (body.metaConsent === true && typeof body.metaEventId === "string" && body.metaEventId) {
+    const cookie = req.headers.get("cookie") ?? "";
+    const pick = (name: string) => cookie.match(new RegExp(`(?:^|;\s*)${name}=([^;]+)`))?.[1] ?? null;
+    void sendMetaLead({
+      eventId: body.metaEventId.slice(0, 100),
+      email,
+      sourceUrl: req.headers.get("referer"),
+      clientIp: ip === "unknown" ? null : ip,
+      userAgent: req.headers.get("user-agent"),
+      fbp: pick("_fbp"),
+      fbc: pick("_fbc"),
+    });
   }
 
   // 3) Admin notification to the team (fire-and-forget; never throws).
