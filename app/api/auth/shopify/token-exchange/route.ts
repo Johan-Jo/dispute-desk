@@ -6,6 +6,7 @@ import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { needsRefresh } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
+import { readMetaAttribution } from "@/lib/analytics/metaInstall";
 import { normalizeLocale } from "@/lib/i18n/locales";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
@@ -71,7 +72,13 @@ export async function GET(req: NextRequest) {
   const announceNewShop = async (source: string): Promise<void> => {
     if (!isNewShop || announced) return;
     announced = true;
-    await onNewShopCreated({ shopInternalId, shopDomain: shop, source, locale });
+    await onNewShopCreated({
+      shopInternalId,
+      shopDomain: shop,
+      source,
+      locale,
+      metaAttribution: readMetaAttribution(req),
+    });
   };
   {
     const { data: existing } = await db

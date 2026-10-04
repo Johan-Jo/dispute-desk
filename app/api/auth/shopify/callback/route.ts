@@ -16,6 +16,7 @@ import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { ingestShopifyPolicies } from "@/lib/policies/ingestShopifyPolicies";
 import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
+import { readMetaAttribution } from "@/lib/analytics/metaInstall";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { seedDefaultStoreAutomation } from "@/lib/rules/storeAutomation";
 import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
@@ -152,6 +153,7 @@ export async function GET(req: NextRequest) {
           shopDomain: shop,
           source,
           locale,
+          metaAttribution: readMetaAttribution(req),
         });
       }
 
