@@ -2030,7 +2030,7 @@ Snapshot columns on `disputes` for fast rendering without recalculating from eve
 - `GET/POST /api/disputes/:id/notes` — support notes (admin/support auth)
 - `POST /api/admin/disputes/:id/override` — admin field override with snapshot consistency (admin auth)
 - `POST /api/disputes/:id/resync` — single-dispute resync respecting override locks (admin/support auth)
-- `GET /api/admin/disputes` — cross-shop disputes list with note_count and override indicators (admin auth). Supports `?filed_by=disputedesk|shopify|pending`, which filters on the derived submission attribution (see *Submission attribution*). It is not a stored column, so the route reproduces `resolveFiledBy`'s conditions as PostgREST filters — applied server-side rather than on the returned page, so the 50-row page and the reported total stay consistent.
+- `GET /api/admin/disputes` — cross-shop disputes list with note_count and override indicators (admin auth). Each row carries `shop_name` (the merchant's store name) next to `shop_domain`; the list's Shop column shows the name, with the domain underneath, because a domain like `6a8848-dd.myshopify.com` does not say whose dispute it is. Supports `?filed_by=disputedesk|shopify|pending`, which filters on the derived submission attribution (see *Submission attribution*). It is not a stored column, so the route reproduces `resolveFiledBy`'s conditions as PostgREST filters — applied server-side rather than on the returned page, so the 50-row page and the reported total stay consistent.
 
 ### Phase 3 event types
 
