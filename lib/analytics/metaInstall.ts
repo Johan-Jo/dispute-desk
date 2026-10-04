@@ -48,10 +48,14 @@ export function readMetaAttribution(req: Request): MetaAttribution {
 }
 
 /**
- * Server-side install conversion for a brand-new shop whose installer accepted analytics
- * cookies on our site. Sent as the standard `CompleteRegistration` so it can't be confused
- * with (or double-count) the `Purchase` Shopify sends for installs through its listing.
- * The event id is per shop, so a repeated callback deduplicates. Never throws.
+ * Server-side install conversion for EVERY brand-new shop, whichever path created it — a merchant
+ * who goes from Shopify's listing straight to the install never touches our site, so site
+ * consent cannot be a precondition. What is sent depends on consent: the hashed shop-owner email
+ * and shop domain always; the browser-level signals (IP, user agent, `_fbp`, `_fbc`) only when
+ * the install request's cookies show the visitor accepted analytics on our site. Sent as the
+ * standard `CompleteRegistration` so it can't be confused with (or double-count) the `Purchase`
+ * Shopify sends for installs through its listing. The event id is per shop, so a repeated
+ * callback deduplicates. Never throws.
  */
 export async function sendMetaInstall(opts: {
   shopDomain: string;
@@ -59,16 +63,18 @@ export async function sendMetaInstall(opts: {
   attribution: MetaAttribution | undefined;
 }): Promise<void> {
   const a = opts.attribution;
-  if (!a?.consented) return;
+  const browser = a?.consented ? a : null;
+  // Nothing to match on: no owner email and no consented browser signals.
+  if (!opts.email && !browser) return;
   await sendMetaEvent({
     eventName: "CompleteRegistration",
     eventId: `install:${opts.shopDomain}`,
     email: opts.email,
-    sourceUrl: a.sourceUrl ?? "https://disputedesk.app/",
-    clientIp: a.clientIp,
-    userAgent: a.userAgent,
-    fbp: a.fbp,
-    fbc: a.fbc,
+    sourceUrl: browser?.sourceUrl ?? "https://disputedesk.app/",
+    clientIp: browser?.clientIp ?? null,
+    userAgent: browser?.userAgent ?? null,
+    fbp: browser?.fbp ?? null,
+    fbc: browser?.fbc ?? null,
     customData: { content_name: "shopify_app_install", shop_domain: opts.shopDomain },
   });
 }
