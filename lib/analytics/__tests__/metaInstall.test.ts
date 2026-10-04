@@ -42,14 +42,37 @@ describe("sendMetaInstall", () => {
     vi.unstubAllEnvs();
   });
 
-  it("sends nothing without consent or attribution", async () => {
-    await sendMetaInstall({ shopDomain: "a.myshopify.com", email: "o@x.com", attribution: undefined });
+  it("sends nothing when there is no owner email and no consented browser signals", async () => {
+    await sendMetaInstall({ shopDomain: "a.myshopify.com", email: null, attribution: undefined });
     await sendMetaInstall({
       shopDomain: "a.myshopify.com",
-      email: "o@x.com",
-      attribution: { consented: false, fbp: "p", fbc: null, clientIp: null, userAgent: null, sourceUrl: null },
+      email: null,
+      attribution: { consented: false, fbp: "p", fbc: null, clientIp: "1.2.3.4", userAgent: "UA", sourceUrl: null },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("still sends for an install that never touched our site (no attribution) (hashed email only)", async () => {
+    await sendMetaInstall({ shopDomain: "b.myshopify.com", email: "Owner@X.com", attribution: undefined });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const ev = JSON.parse(fetchMock.mock.calls[0][1].body).data[0];
+    expect(ev.event_name).toBe("CompleteRegistration");
+    expect(ev.event_id).toBe("install:b.myshopify.com");
+    expect(ev.user_data.em[0]).toMatch(/^[0-9a-f]{64}$/);
+    expect(ev.user_data).not.toHaveProperty("client_ip_address");
+    expect(ev.user_data).not.toHaveProperty("client_user_agent");
+    expect(ev.user_data).not.toHaveProperty("fbp");
+  });
+
+  it("drops browser signals when the cookies show no consent", async () => {
+    await sendMetaInstall({
+      shopDomain: "c.myshopify.com",
+      email: "o@x.com",
+      attribution: { consented: false, fbp: "p", fbc: "c", clientIp: "1.2.3.4", userAgent: "UA", sourceUrl: null },
+    });
+    const ev = JSON.parse(fetchMock.mock.calls[0][1].body).data[0];
+    expect(ev.user_data).not.toHaveProperty("client_ip_address");
+    expect(ev.user_data).not.toHaveProperty("fbc");
   });
 
   it("sends one CompleteRegistration with a per-shop event id and hashed email when consented", async () => {
