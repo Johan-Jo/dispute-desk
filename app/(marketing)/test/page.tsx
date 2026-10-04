@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
 import { WinnabilityTest } from "@/components/marketing/WinnabilityTest";
+import { CookieConsentBar } from "@/components/consent/cookie-consent-bar";
+import { getMessages } from "@/lib/i18n/getMessages";
 import { PRODUCTION_ORIGIN } from "@/lib/resources/url";
 
 // Absolute OG image URL (the (marketing) route group has no metadataBase, so a
@@ -39,6 +42,17 @@ export const metadata: Metadata = {
  * app/(marketing)/), not through next-intl. See middleware.ts for the routing
  * entry. The interactive tool + lead capture live in <WinnabilityTest />.
  */
-export default function WinnabilityTestPage() {
-  return <WinnabilityTest />;
+export default async function WinnabilityTestPage() {
+  // /test sits outside app/[locale], so it never got the cookie bar — and without it the Meta
+  // Pixel (consent-gated) could not load for visitors landing here from an ad. Only the
+  // `consent` namespace is sent to the client.
+  const messages = await getMessages("en");
+  return (
+    <>
+      <WinnabilityTest />
+      <NextIntlClientProvider locale="en" messages={{ consent: messages.consent }} timeZone="UTC">
+        <CookieConsentBar />
+      </NextIntlClientProvider>
+    </>
+  );
 }
