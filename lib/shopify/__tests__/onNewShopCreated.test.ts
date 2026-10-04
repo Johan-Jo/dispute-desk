@@ -29,6 +29,10 @@ vi.mock("@/lib/email/sendAdminNotification", () => ({
     sendAdminInstallNotification(...args),
 }));
 
+vi.mock("@/lib/analytics/metaInstall", () => ({
+  sendMetaInstall: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
 
 const OPTS = {
