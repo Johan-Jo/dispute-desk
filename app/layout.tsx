@@ -6,6 +6,7 @@ import "./globals.css";
 import { isLocale, resolveLocale } from "@/lib/i18n/locales";
 import { gtagConsentBootstrapScript } from "@/lib/consent/ga-bootstrap";
 import { TawkChatWidget } from "@/components/marketing/TawkChatWidget";
+import { MetaPixel } from "@/components/marketing/MetaPixel";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -69,6 +70,7 @@ export default async function RootLayout({
       <body className={inter.className}>
         {children}
         {!loadAppBridge && <TawkChatWidget />}
+        {!loadAppBridge && <MetaPixel />}
         {!loadAppBridge && (
           // Ahrefs Web Analytics — marketing/portal only, never the embedded Shopify app.
           <Script
