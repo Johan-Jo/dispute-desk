@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Crimson_Pro, Inter, Spline_Sans_Mono } from "next/font/google";
+import { hasMetaConsent, newEventId, trackLead } from "@/lib/analytics/metaPixel";
 import {
   WINNABILITY_URLS,
   scoreWinnability,
@@ -250,7 +251,11 @@ export function WinnabilityTest() {
   const go = useCallback((screen: number) => setState((s) => ({ ...s, screen })), []);
 
   const submitLead = useCallback((s: State) => {
+    const metaEventId = newEventId();
+    const metaConsent = hasMetaConsent();
     const payload = {
+      metaEventId,
+      metaConsent,
       email: s.email,
       store: s.store,
       answers: s.answers,
@@ -263,6 +268,7 @@ export function WinnabilityTest() {
     } catch {
       /* ignore */
     }
+    if (metaConsent) trackLead(metaEventId);
     // Fire-and-forget — never block the verdict on the network.
     void fetch("/api/winnability-lead", {
       method: "POST",
