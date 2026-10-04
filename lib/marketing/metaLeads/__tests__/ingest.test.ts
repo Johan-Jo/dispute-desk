@@ -6,30 +6,21 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 vi.mock("@/lib/marketing/metaLeads/graph", () => ({
-  listLeadForms: () => {
+  getLead: () => {
     throw new Error("must not call Meta when not configured");
   },
-  listLeadsSince: () => {
+  getFormName: () => {
     throw new Error("must not call Meta when not configured");
   },
 }));
 
-import { ingestMetaLeads } from "@/lib/marketing/metaLeads/ingest";
+import { processMetaLead } from "@/lib/marketing/metaLeads/ingest";
 
-describe("ingestMetaLeads", () => {
+describe("processMetaLead", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("is a no-op until META_PAGE_ID and META_PAGE_ACCESS_TOKEN are set", async () => {
-    vi.stubEnv("META_PAGE_ID", "");
+  it("is a no-op until META_PAGE_ACCESS_TOKEN is set", async () => {
     vi.stubEnv("META_PAGE_ACCESS_TOKEN", "");
-    const r = await ingestMetaLeads();
-    expect(r).toMatchObject({ forms: 0, fetched: 0, inserted: 0, welcomed: 0 });
-    expect(r.skipped).toMatch(/not set/);
-  });
-
-  it("needs both values — a token alone is still a no-op", async () => {
-    vi.stubEnv("META_PAGE_ID", "");
-    vi.stubEnv("META_PAGE_ACCESS_TOKEN", "tok");
-    expect((await ingestMetaLeads()).skipped).toBeDefined();
+    expect(await processMetaLead({ leadgenId: "1", formId: "f" })).toBe("not_configured");
   });
 });
