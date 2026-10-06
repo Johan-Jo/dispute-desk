@@ -341,8 +341,8 @@ export function WinnabilityTest() {
           </a>
         </div>
         <p className="disclaimer">
-          Educational tool, not legal or financial advice. Thresholds reflect Visa’s published Dispute
-          Monitoring Program.
+          Educational tool, not legal or financial advice. Thresholds reflect Visa’s current Acquirer
+          Monitoring Program (VAMP).
         </p>
       </div>
     );
