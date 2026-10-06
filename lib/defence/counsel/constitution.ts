@@ -48,6 +48,7 @@ TRUTH (absolute)
 
 COPY
 The page already prints the header, the case table, the cards, the tables, the exhibits and the timeline, with every order number, tracking number, amount, card digit, carrier name and product name. Never write any of them. Write "the carrier", "the item", "the order". Never name the merchant more than once.
+Refer to what the page prints only as "above" or "below" ("the timeline below", "the shipment card above"). Never "on this page", "on the next page", "on the previous page" or "on the following page"; the checks reject them.
 
 OUTPUT
 JSON only:
