@@ -51,7 +51,8 @@ export async function countPublishedForRoute(
     .eq("route_kind", routeKind)
     .eq("locale", locale)
     .eq("is_published", true)
-    .eq("content_items.workflow_status", "published");
+    .eq("content_items.workflow_status", "published")
+    .is("redirect_to_localization_id", null);
 
   if (opts?.pillar) {
     q = q.eq("content_items.primary_pillar", opts.pillar);
@@ -95,7 +96,8 @@ export async function listPublishedByRoute(
     .eq("route_kind", routeKind)
     .eq("locale", locale)
     .eq("is_published", true)
-    .eq("content_items.workflow_status", "published");
+    .eq("content_items.workflow_status", "published")
+    .is("redirect_to_localization_id", null);
 
   if (opts?.pillar) {
     q = q.eq("content_items.primary_pillar", opts.pillar);
@@ -374,6 +376,7 @@ export async function getRelatedResources(args: {
       .eq("locale", args.locale)
       .eq("is_published", true)
       .eq("content_items.workflow_status", "published")
+      .is("redirect_to_localization_id", null)
       .in("content_item_id", curated);
 
     if (curatedData && curatedData.length > 0) {
@@ -400,6 +403,7 @@ export async function getRelatedResources(args: {
       .eq("locale", args.locale)
       .eq("is_published", true)
       .eq("content_items.workflow_status", "published")
+      .is("redirect_to_localization_id", null)
       .eq("content_items.primary_pillar", args.pillar)
       .not("content_item_id", "in", `(${excludeIds.map((id) => `"${id}"`).join(",")})`)
       .order("publish_at", { ascending: false, nullsFirst: false })
@@ -424,7 +428,8 @@ export async function countPublishedByPillar(
     .eq("route_kind", routeKind)
     .eq("locale", locale)
     .eq("is_published", true)
-    .eq("content_items.workflow_status", "published");
+    .eq("content_items.workflow_status", "published")
+    .is("redirect_to_localization_id", null);
 
   if (error) throw new Error(error.message);
 
