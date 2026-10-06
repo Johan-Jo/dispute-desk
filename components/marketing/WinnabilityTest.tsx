@@ -12,6 +12,11 @@ import {
   RATIO_BAND_COLOR,
   RATIO_BAND_TEXT,
   RATIO_BAND_DESC,
+  RATIO_EXCESSIVE_PCT,
+  RATIO_WATCH_PCT,
+  RATIO_GAUGE_MAX_PCT,
+  EXCESSIVE_LABEL,
+  WATCH_LABEL,
   type RatioBand,
 } from "@/lib/marketing/winnability/scoring";
 
@@ -122,7 +127,7 @@ const QUESTIONS: Question[] = [
   {
     id: "orders",
     q: "And roughly how many orders per month?",
-    help: "Ratio = disputes ÷ orders. The danger line sits around 0.9% (Visa’s Dispute Monitoring Program).",
+    help: `Ratio = disputes ÷ orders. Visa’s VAMP Excessive line is ${EXCESSIVE_LABEL}; we start flagging risk from about ${WATCH_LABEL}.`,
     num: true,
     placeholder: "e.g. 1200",
   },
@@ -153,8 +158,9 @@ function gaugeSVG(pct: number | null, band: RatioBand) {
     r = size * 0.4,
     start = 150,
     sweep = 240,
-    max = 1.5;
-  const danger = 0.9;
+    max = RATIO_GAUGE_MAX_PCT;
+  const watch = RATIO_WATCH_PCT,
+    danger = RATIO_EXCESSIVE_PCT;
   const toXY = (deg: number, rad: number): [number, number] => {
     const ang = (deg * Math.PI) / 180;
     return [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)];
@@ -167,6 +173,7 @@ function gaugeSVG(pct: number | null, band: RatioBand) {
   };
   const v = pct == null ? 0 : Math.min(pct, max);
   const valDeg = start + (v / max) * sweep,
+    wDeg = start + (watch / max) * sweep,
     dDeg = start + (danger / max) * sweep;
   const [nx, ny] = toXY(valDeg, r - 14);
   const [a1, b1] = toXY(dDeg, r - 20),
@@ -174,7 +181,8 @@ function gaugeSVG(pct: number | null, band: RatioBand) {
   const needleCol = band === "red" ? "#8a2a1f" : band === "amber" ? "#b06d12" : "#1f7a4d";
   return (
     <svg width={size} height={size * 0.8} viewBox={`0 0 ${size} ${size * 0.8}`} fill="none">
-      <path d={arc(start, dDeg, r)} stroke="rgba(31,122,77,0.5)" strokeWidth={11} strokeLinecap="round" />
+      <path d={arc(start, wDeg, r)} stroke="rgba(31,122,77,0.5)" strokeWidth={11} strokeLinecap="round" />
+      <path d={arc(wDeg, dDeg, r)} stroke="rgba(176,109,18,0.55)" strokeWidth={11} strokeLinecap="round" />
       <path d={arc(dDeg, start + sweep, r)} stroke="#8a2a1f" strokeWidth={11} strokeLinecap="round" />
       <line x1={a1} y1={b1} x2={a2} y2={b2} stroke="#0b1220" strokeWidth={2} />
       <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={needleCol} strokeWidth={4} strokeLinecap="round" />
@@ -536,8 +544,8 @@ export function WinnabilityTest() {
         </div>
         <p className="disclaimer">
           Indicative only, based on your answers. A real dispute review may surface evidence this quick test
-          can’t. Thresholds reflect Visa’s published Dispute Monitoring Program; Shopify Payments operates
-          under the card-network rules.
+          can’t. Thresholds reflect Visa’s current Acquirer Monitoring Program (VAMP); Shopify Payments
+          operates under the card-network rules.
         </p>
       </div>
     );
