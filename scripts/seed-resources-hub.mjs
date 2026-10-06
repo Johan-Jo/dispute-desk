@@ -97,7 +97,7 @@ const ARTICLES = [
             "Every customer interaction should be timestamped and stored as potential evidence"
           ],
           faq: [
-            { q: "What is a good chargeback ratio?", a: "Below 0.65% is considered healthy. Visa's dispute monitoring program threshold is 0.9%, and Mastercard's Excessive Chargeback Program triggers at 1.5%. Stay well below these to avoid penalties." },
+            { q: "What is a good chargeback ratio?", a: "Below about 0.9% is generally considered healthy. Visa's VAMP merchant Excessive line is 1.5% (since April 2026, enforced from 1,500 fraud-plus-dispute events a month), and Mastercard's Excessive Chargeback Program triggers at 1.5% with at least 100 chargebacks. Stay well below these to avoid penalties." },
             { q: "How long do I have to respond to a chargeback?", a: "Typically 20–45 days depending on the card network and reason code. Visa gives 30 days for most codes; Mastercard allows 45 days. Always check the specific deadline in your processor's dashboard." },
             { q: "Does a refund prevent a chargeback?", a: "Only if processed before the customer files with their bank. Once the dispute is opened, a refund may not stop it. Act fast when a customer complains." }
           ],
