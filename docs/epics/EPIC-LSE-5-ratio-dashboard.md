@@ -73,11 +73,11 @@ VAMP_ratio = (count(TC40_fraud) + count(TC15_disputes)) / count(TC05_settled)
 **Mastercard ECM ratio** ≈ Mastercard chargebacks ÷ Mastercard settled count (per month)
 **Mastercard EFM ratio** ≈ Mastercard fraud-only chargebacks ÷ Mastercard settled count (per month)
 
-Thresholds (display only — encoded in `lib/liabilityShift/ratios/thresholds.ts`):
-- VAMP standard threshold: 0.65%
+Thresholds (display only). **Superseded (2026-10):** the original figures below (VAMP standard 0.65%, ECM 1.00%) were wrong and are gone; every VAMP/ECM number now lives in `lib/insights/programmeThresholds.ts` (VAMP Excessive 1.5% with a 1,500-event floor, ECM 1.5% with 100 chargebacks, HECM 3% with 300). EFM is not computed.
+- ~~VAMP standard threshold: 0.65%~~
 - VAMP excessive threshold: 1.50%
-- ECM threshold: 1.00%
-- EFM threshold: 0.50% (varies by region — encode as data)
+- ~~ECM threshold: 1.00%~~ (now 1.5% AND 100+ chargebacks)
+- EFM threshold: 0.50% (not computed)
 
 Color bands:
 - Green: < 80% of standard threshold
@@ -161,7 +161,7 @@ Top-of-page **Ratio Strip**:
 **Trend chart** (12 months):
 - Line: actual VAMP ratio
 - Line (dashed): without-DisputeDesk VAMP ratio
-- Horizontal threshold lines at 0.65% (standard) and 1.50% (excessive)
+- Horizontal threshold lines at 0.9% (early warning) and 1.50% (excessive)
 - Hover tooltip per month with breakdown
 
 **Monthly impact summary** card:

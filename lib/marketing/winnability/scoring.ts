@@ -10,6 +10,23 @@
  * lib/marketing/playbook/*), intentionally outside the i18n token system.
  */
 
+import { VAMP_EARLY_WARNING, VAMP_EXCESSIVE } from "@/lib/insights/programmeThresholds";
+
+/**
+ * The ratio gauge, in percent. The two lines come from the one programme
+ * threshold table (never retype them here): Visa VAMP's merchant Excessive line
+ * and the early-warning level we flag from. This gauge used to sit on the
+ * retired Visa Dispute Monitoring Program numbers (0.65% / 0.9%), which VAMP
+ * replaced on 1 April 2025.
+ */
+export const RATIO_EXCESSIVE_PCT = VAMP_EXCESSIVE * 100;
+export const RATIO_WATCH_PCT = VAMP_EARLY_WARNING * 100;
+/** Top of the gauge scale — leaves room past the Excessive line. */
+export const RATIO_GAUGE_MAX_PCT = 2;
+/** "1.5" / "0.9" for copy. */
+export const EXCESSIVE_LABEL = `${RATIO_EXCESSIVE_PCT.toFixed(1)}%`;
+export const WATCH_LABEL = `${RATIO_WATCH_PCT.toFixed(1)}%`;
+
 // Real destinations (relative paths; the email builder absolutizes them).
 // The install CTA routes to the on-site free-trial popup at /#pricing, NOT the
 // App Store — see lib/marketing/shopifyInstallUrl.ts.
@@ -70,9 +87,9 @@ export const RATIO_BAND_TEXT: Record<RatioBand, string> = {
 };
 
 export const RATIO_BAND_DESC: Record<RatioBand, string> = {
-  green: "Comfortably under the ~0.9% threshold. Keep winning the winnable ones.",
-  amber: "This is where most merchants sit — and don’t realise it. Worth acting before it climbs.",
-  red: "At or over the line. You may already be on a monitoring program. Act now.",
+  green: `Comfortably under the ~${WATCH_LABEL} level we watch. Keep winning the winnable ones.`,
+  amber: `Above the ~${WATCH_LABEL} level we watch, but under Visa’s ${EXCESSIVE_LABEL} Excessive line. This is where most merchants sit — and don’t realise it. Worth acting before it climbs.`,
+  red: `At or over Visa’s ${EXCESSIVE_LABEL} Excessive line. Visa enforces it from 1,500 fraud-plus-dispute events a month, and your processor can act sooner. Act now.`,
   unknown: "We couldn’t compute a ratio from your numbers.",
 };
 
@@ -136,20 +153,22 @@ export function scoreRatio(a: WinnabilityAnswers): RatioResult {
   const d = Number(a.disputes) || 0;
   const o = Number(a.orders) || 0;
   if (o <= 0) return { pct: null, band: "unknown" };
-  const pct = (d / o) * 100;
+  const fraction = d / o;
+  const pct = fraction * 100;
+  // Compare as fractions, like the rest of the app: 0.009 × 100 is not 0.9 in floating point.
   let band: RatioBand = "green";
-  if (pct >= 0.9) band = "red";
-  else if (pct >= 0.65) band = "amber";
+  if (fraction >= VAMP_EXCESSIVE) band = "red";
+  else if (fraction >= VAMP_EARLY_WARNING) band = "amber";
   return { pct, band };
 }
 
 /**
  * The ratio meter marker position, as a percentage of track width.
- * Scale tops out at 1.5% (the on-screen gauge's max); capped at 100%.
+ * Scale tops out at RATIO_GAUGE_MAX_PCT (the on-screen gauge's max); capped at 100%.
  */
 export function ratioMarkerPct(pct: number | null): number {
   if (pct == null) return 0;
-  return Math.min((pct / 1.5) * 100, 100);
+  return Math.min((pct / RATIO_GAUGE_MAX_PCT) * 100, 100);
 }
 
 /**

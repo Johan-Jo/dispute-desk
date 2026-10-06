@@ -16,6 +16,11 @@ import {
   scoreRatio,
   ctaFor,
   ratioMarkerPct,
+  RATIO_WATCH_PCT,
+  RATIO_EXCESSIVE_PCT,
+  RATIO_GAUGE_MAX_PCT,
+  EXCESSIVE_LABEL,
+  WATCH_LABEL,
   VERDICT_BAND,
   RATIO_BAND_COLOR,
   RATIO_BAND_TEXT,
@@ -59,6 +64,10 @@ export function buildWinnabilityResultEmail(opts: BuildOpts): WinnabilityResultE
   const ratioDesc = RATIO_BAND_DESC[ratio.band];
   const pctLabel = ratio.pct == null ? "—" : `${ratio.pct.toFixed(2)}%`;
   const markerPct = Math.round(ratioMarkerPct(ratio.pct));
+  // Meter segments follow the gauge scale: healthy | approaching | past the Excessive line.
+  const greenW = Math.round((RATIO_WATCH_PCT / RATIO_GAUGE_MAX_PCT) * 100);
+  const amberW = Math.round(((RATIO_EXCESSIVE_PCT - RATIO_WATCH_PCT) / RATIO_GAUGE_MAX_PCT) * 100);
+  const redW = 100 - greenW - amberW;
 
   const shieldSrc = `${baseUrl}/shield-icon.png`;
   const ctaPrimaryHref = abs(baseUrl, cta.primary.href);
@@ -139,11 +148,12 @@ export function buildWinnabilityResultEmail(opts: BuildOpts): WinnabilityResultE
             <p style="margin:0 0 12px 0;font-family:${FONT_SERIF};font-size:30px;font-weight:bold;color:${ratioColor};line-height:1;">${pctLabel}
               <span style="font-family:Arial,sans-serif;font-size:13px;font-weight:normal;color:${ratioColor};">&nbsp; ${ratioText}</span></p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;"><tr>
-              <td width="60%" style="height:8px;background:#bfe3cd;font-size:0;line-height:0;border-radius:4px 0 0 4px;">&nbsp;</td>
-              <td width="40%" style="height:8px;background:#e7c2bb;font-size:0;line-height:0;border-radius:0 4px 4px 0;">&nbsp;</td>
+              <td width="${greenW}%" style="height:8px;background:#bfe3cd;font-size:0;line-height:0;border-radius:4px 0 0 4px;">&nbsp;</td>
+              <td width="${amberW}%" style="height:8px;background:#ecd9b0;font-size:0;line-height:0;">&nbsp;</td>
+              <td width="${redW}%" style="height:8px;background:#e7c2bb;font-size:0;line-height:0;border-radius:0 4px 4px 0;">&nbsp;</td>
             </tr></table>
             ${markerRow}
-            <p style="margin:6px 0 0 0;font-family:Arial,sans-serif;font-size:12px;line-height:1.5;color:#475569;">The danger line sits at ~0.9% (Visa&rsquo;s Dispute Monitoring Program). ${ratioDesc}</p>
+            <p style="margin:6px 0 0 0;font-family:Arial,sans-serif;font-size:12px;line-height:1.5;color:#475569;">Visa&rsquo;s VAMP Excessive line is ${EXCESSIVE_LABEL}; we start flagging risk from about ${WATCH_LABEL}. ${ratioDesc}</p>
           </td></tr>
         </table>
 
@@ -166,7 +176,7 @@ export function buildWinnabilityResultEmail(opts: BuildOpts): WinnabilityResultE
       <!-- footer -->
       <tr><td style="padding:0 32px 30px 32px;">
         <hr style="border:none;border-top:1px solid rgba(11,18,32,0.12);margin:0 0 16px 0;" />
-        <p style="font-family:Arial,sans-serif;font-size:11.5px;line-height:1.6;color:#64748b;margin:0 0 8px 0;font-style:italic;">Indicative only, based on your answers — a full dispute review may surface evidence this quick test can&rsquo;t. Thresholds reflect Visa&rsquo;s published Dispute Monitoring Program; Shopify Payments operates under the card-network rules.</p>
+        <p style="font-family:Arial,sans-serif;font-size:11.5px;line-height:1.6;color:#64748b;margin:0 0 8px 0;font-style:italic;">Indicative only, based on your answers — a full dispute review may surface evidence this quick test can&rsquo;t. Thresholds reflect Visa&rsquo;s current Acquirer Monitoring Program (VAMP); Shopify Payments operates under the card-network rules.</p>
         <p style="font-family:Arial,sans-serif;font-size:11.5px;line-height:1.6;color:#94a3b8;margin:0;">DisputeDesk &middot; chargeback evidence automation for Shopify &nbsp;&middot;&nbsp; <a href="${baseUrl}" style="color:#64748b;">disputedesk.app</a><br/>You got this because you took the Winnability Test. <a href="${unsubscribeUrl}" style="color:#64748b;">Unsubscribe</a>.</p>
       </td></tr>
 
@@ -186,7 +196,7 @@ export function buildWinnabilityResultEmail(opts: BuildOpts): WinnabilityResultE
     reasonsText,
     "",
     `Your chargeback ratio: ${pctLabel} (${ratioText})`,
-    `The danger line sits at ~0.9% (Visa's Dispute Monitoring Program). ${ratioDesc}`,
+    `Visa's VAMP Excessive line is ${EXCESSIVE_LABEL}; we start flagging risk from about ${WATCH_LABEL}. ${ratioDesc}`,
     "",
     `${cta.h}`,
     cta.p,

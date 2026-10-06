@@ -36,11 +36,22 @@ describe("winnability scoring", () => {
     expect(scoreWinnability({ reason: "nad" }).state).toBe("other");
   });
 
-  it("ratio bands at the published thresholds", () => {
-    expect(scoreRatio({ disputes: 12, orders: 900 }).band).toBe("red"); // 1.33%
-    expect(scoreRatio({ disputes: 7, orders: 1000 }).band).toBe("amber"); // 0.7%
+  // Bands follow Visa VAMP (programmeThresholds.ts): Excessive 1.5% since
+  // 2026-04-01, early-warning 0.9%. They used to follow the retired VDMP
+  // (0.65% / 0.9%), which called a healthy 0.7% store "amber".
+  it("ratio bands at the VAMP thresholds", () => {
+    expect(scoreRatio({ disputes: 16, orders: 1000 }).band).toBe("red"); // 1.6%
+    expect(scoreRatio({ disputes: 12, orders: 900 }).band).toBe("amber"); // 1.33%
+    expect(scoreRatio({ disputes: 7, orders: 1000 }).band).toBe("green"); // 0.7% — fine under VAMP
     expect(scoreRatio({ disputes: 3, orders: 1000 }).band).toBe("green"); // 0.3%
     expect(scoreRatio({ disputes: 1, orders: 0 }).band).toBe("unknown");
+  });
+
+  it("ratio band edges are exact (fractions, not float percents)", () => {
+    expect(scoreRatio({ disputes: 9, orders: 1000 }).band).toBe("amber"); // exactly 0.9%
+    expect(scoreRatio({ disputes: 899, orders: 100000 }).band).toBe("green"); // 0.899%
+    expect(scoreRatio({ disputes: 15, orders: 1000 }).band).toBe("red"); // exactly 1.5%
+    expect(scoreRatio({ disputes: 1499, orders: 100000 }).band).toBe("amber"); // 1.499%
   });
 });
 
@@ -57,6 +68,16 @@ describe("winnability result email", () => {
     // Primary CTA label + absolutized href both present in the email.
     expect(html).toContain(cta.primary.label);
     expect(html).toContain(`${BASE}/#pricing`);
+  });
+
+  it("names VAMP and the 1.5% line, never the retired Dispute Monitoring Program", () => {
+    const { html, text } = build({ reason: "ff", returning: "yes", window: "yes", anchor: "yes", disputes: 12, orders: 900 });
+    for (const body of [html, text]) {
+      expect(body).toContain("VAMP");
+      expect(body).toContain("1.5%");
+      expect(body).not.toContain("Dispute Monitoring Program");
+      expect(body).not.toContain("danger line sits at ~0.9%");
+    }
   });
 
   it("absolutizes relative CTA hrefs and includes the hosted shield + unsubscribe", () => {
