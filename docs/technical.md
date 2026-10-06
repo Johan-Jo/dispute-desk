@@ -8108,6 +8108,8 @@ In `vercel.json`:
 
 The two paths use the same set of sibling rows and filter logic (`is_excluded_from_sitemap`, `redirect_to_localization_id`, `quality_status`).
 
+**Merged articles stay out of the hub lists (2026-10-06).** Merging an article into another sets `redirect_to_localization_id` on the old row, which stays `is_published` so the detail route can issue the 301. Every hub list/count/related query in `lib/resources/queries.ts` (`listPublishedByRoute`, `countPublishedForRoute`, `countPublishedByPillar`, `getRelatedResources` x2) therefore filters `redirect_to_localization_id IS NULL`; the slug resolvers (`getPublishedLocalizationBySlug`, `findLocalizationBySlugAnyLocale`) deliberately do not. Without the filter the hub kept linking a URL that only redirects (the retired VAMP article sat on page 1 beside the pillar that replaced it). Pinning a pillar to the top of the hub uses `content_items.publish_priority` (`9999`; normal articles are `100`), then `publish_at` descending. Guard: `lib/resources/__tests__/hubExcludesRedirected.test.ts`.
+
 ### Robots.txt
 
 `app/robots.ts` serves a robots.txt that allows all crawlers on public routes and disallows `/admin/`, `/api/`, `/app/`, `/portal/`, `/auth/`.
