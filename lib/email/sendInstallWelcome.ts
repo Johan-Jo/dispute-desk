@@ -35,6 +35,11 @@ import {
   generateInstallWelcomeEmailText,
   getInstallWelcomeSubject,
 } from "./installWelcomeTemplate";
+import {
+  generateNoOrdersInstallEmailHTML,
+  generateNoOrdersInstallEmailText,
+  getNoOrdersInstallSubject,
+} from "./noOrdersInstallTemplate";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -52,6 +57,12 @@ export interface SendInstallWelcomeOptions {
   /** Merchant-facing store name; greeting degrades gracefully when absent. */
   shopName?: string | null;
   locale?: Locale;
+  /**
+   * `"no_orders"` swaps the welcome for the "we couldn't set up DisputeDesk —
+   * your store has no orders" email (docs/plans/no-orders-install-gate.plan.md).
+   * Same claim, same idempotency key: a shop gets exactly one install email.
+   */
+  variant?: "welcome" | "no_orders";
 }
 
 type SendResult =
@@ -98,6 +109,7 @@ export async function sendInstallWelcomeEmail(
     return { ok: false, reason: "already_sent" };
   }
 
+  const noOrders = options.variant === "no_orders";
   const appUrl = getEmbeddedAppUrl(options.shopDomain, "/");
   const variables = {
     shopName: options.shopName,
@@ -111,9 +123,15 @@ export async function sendInstallWelcomeEmail(
       from: FROM_EMAIL,
       replyTo: REPLY_TO,
       to,
-      subject: getInstallWelcomeSubject(options.locale),
-      html: generateInstallWelcomeEmailHTML(variables),
-      text: generateInstallWelcomeEmailText(variables),
+      subject: noOrders
+        ? getNoOrdersInstallSubject(options.locale)
+        : getInstallWelcomeSubject(options.locale),
+      html: noOrders
+        ? generateNoOrdersInstallEmailHTML(variables)
+        : generateInstallWelcomeEmailHTML(variables),
+      text: noOrders
+        ? generateNoOrdersInstallEmailText(variables)
+        : generateInstallWelcomeEmailText(variables),
     },
     { idempotencyKey: `install-welcome/${options.shopInternalId}` },
   );
