@@ -17,7 +17,7 @@
 
 "use client";
 
-import React, { Fragment } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@shopify/polaris";
 import type {
@@ -36,6 +36,7 @@ import {
 } from "@/lib/defence/render/sections";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
+import { exhibitCaption, type ProductListingExhibit } from "@/lib/defence/productListingExhibit";
 import { familyKeyForModule, ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
 import { buildCaseDetailsRows } from "@/lib/defence/render/caseDetails";
 import {
@@ -319,6 +320,38 @@ function Section({ number, title, children }: { number: string; title: string; c
   );
 }
 
+function ProductListingCardView({ x }: { x: ProductListingExhibit }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{exhibitCaption(x.retrievedOn)}</div>
+      {x.title ? <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 2 }}>{x.title}</div> : null}
+      {x.variantLine ? <div style={{ fontSize: 13, marginBottom: 8 }}>{x.variantLine}</div> : null}
+      {x.images.length > 0 ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 8 }}>
+          {x.images.map((src, k) => (
+            // eslint-disable-next-line @next/next/no-img-element -- data: URI from the exhibit builder
+            <img key={k} src={src} alt="" style={{ width: 160, height: 160, objectFit: "contain", border: `1px solid ${C.accentSoft}`, borderRadius: 6 }} />
+          ))}
+        </div>
+      ) : null}
+      {x.excerpt ? <p style={css.paragraph}>{x.excerpt}</p> : null}
+      {x.translation ? (
+        <div style={{ margin: "8px 0", paddingLeft: 10, borderLeft: `2px solid ${C.muted}` }}>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>English translation (machine-translated)</div>
+          {x.translation.title ? <div style={{ fontWeight: 700, color: C.ink }}>{x.translation.title}</div> : null}
+          {x.translation.variantLine ? <div style={{ fontSize: 13 }}>{x.translation.variantLine}</div> : null}
+          {x.translation.excerpt ? <p style={css.paragraph}>{x.translation.excerpt}</p> : null}
+        </div>
+      ) : null}
+      {x.sourceUrl ? (
+        <a href={x.sourceUrl} target="_blank" rel="noopener noreferrer" style={css.link}>
+          {x.sourceUrlDisplay ?? x.sourceUrl}
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 function Prose({ text, emphasise = [] }: { text: string; emphasise?: string[] }) {
   const parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
@@ -483,6 +516,26 @@ function ChronologyView({
 
 export function DefencePackageHtmlView({ row, dispute }: Props) {
   const t = useTranslations("disputes.defencePackageHtml");
+  // The same listing exhibit the PDF prints (photos included); the images
+  // live in storage, so the server reads them.
+  const [listingExhibits, setListingExhibits] = useState<ProductListingExhibit[]>([]);
+  const rowId = row.id;
+  const shopId = dispute?.shopId;
+  useEffect(() => {
+    let live = true;
+    const qs = shopId ? `?shop_id=${encodeURIComponent(shopId)}` : "";
+    fetch(`/api/defence-packages/${rowId}/listing-exhibit${qs}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (live) setListingExhibits(Array.isArray(j?.exhibits) ? j.exhibits : []);
+      })
+      .catch(() => {
+        if (live) setListingExhibits([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [rowId, shopId]);
   // No narrative → render nothing (e.g., skipped / failed packages).
   if (!row.narrative_json || !row.facts_json) {
     return null;
@@ -795,6 +848,14 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                 <ShipmentCardView card={laterOrderCard(narrative.laterOrderExhibit)!} wide />
               </div>
             ) : null}
+          </Section>
+        ) : null}
+
+        {listingExhibits.length > 0 ? (
+          <Section number={num()} title="Product Listing">
+            {listingExhibits.map((x, i) => (
+              <ProductListingCardView key={i} x={x} />
+            ))}
           </Section>
         ) : null}
 
