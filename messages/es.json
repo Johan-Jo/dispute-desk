@@ -82,6 +82,12 @@
     "dashboard": "Panel",
     "clearShopReconnect": "Limpiar tienda y volver a conectar"
   },
+  "noOrdersGate": {
+    "title": "Tu tienda aún no tiene pedidos",
+    "body": "Tu tienda no tiene pedidos, por lo que lamentablemente DisputeDesk no puede trabajar en ella. DisputeDesk defiende los contracargos de pedidos que ya has vendido, y sin historial de pedidos no hay disputas en las que podamos ayudar.",
+    "welcomeBack": "Serás muy bienvenido de nuevo cuando tu tienda esté en marcha con pedidos; estaremos encantados de ayudarte entonces.",
+    "contact": "¿Preguntas? Escribe a"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "¿Qué tal va tu experiencia con DisputeDesk?",

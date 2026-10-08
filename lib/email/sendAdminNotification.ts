@@ -48,6 +48,12 @@ export interface AdminInstallNotificationOptions {
   shopName?: string;
   /** OAuth entry point that created the shop: "portal" or "embedded". */
   source?: string;
+  /**
+   * True when the store has no orders at install time. Changes the subject and
+   * headline to the "no orders" wording so these installs are spotted at a
+   * glance (docs/plans/no-orders-install-gate.plan.md).
+   */
+  noOrders?: boolean;
 }
 
 /**
@@ -64,13 +70,24 @@ export async function sendAdminInstallNotification(
   const email = options.email?.trim() || "—";
   const source = options.source?.trim() || "—";
   const timestamp = new Date().toUTCString();
-  const subject = `New DisputeDesk install: ${options.shopDomain}`;
+  const noOrders = options.noOrders === true;
+  const headline = noOrders
+    ? "Yet another store with no orders was installed"
+    : "New merchant installed DisputeDesk";
+  const subject = noOrders
+    ? `Yet another store with no orders was installed: ${options.shopDomain}`
+    : `New DisputeDesk install: ${options.shopDomain}`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>${subject}</title></head>
 <body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;padding:32px 16px;">
-  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">New merchant installed DisputeDesk</p>
+  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">${headline}</p>${
+    noOrders
+      ? `
+  <p style="margin:0 0 8px;font-size:14px;color:#374151;">The store has no orders, so the app is locked behind the no-orders screen.</p>`
+      : ""
+  }
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;font-size:14px;color:#374151;border-collapse:collapse;">
     <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Shop</td><td style="padding:4px 0;">${options.shopDomain}</td></tr>
     <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Store name</td><td style="padding:4px 0;">${shopName}</td></tr>
@@ -82,7 +99,10 @@ export async function sendAdminInstallNotification(
 </html>`;
 
   const text =
-    `New merchant installed DisputeDesk\n\n` +
+    `${headline}\n\n` +
+    (noOrders
+      ? `The store has no orders, so the app is locked behind the no-orders screen.\n\n`
+      : "") +
     `Shop: ${options.shopDomain}\n` +
     `Store name: ${shopName}\n` +
     `Owner email: ${email}\n` +

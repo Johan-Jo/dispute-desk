@@ -44,6 +44,8 @@ import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { grantFreeLifetimeCredits } from "@/lib/billing/grantFreeLifetime";
 import { sendAdminInstallNotification } from "@/lib/email/sendAdminNotification";
 import { sendInstallWelcomeEmail } from "@/lib/email/sendInstallWelcome";
+import { shopHasAnyOrders } from "@/lib/shopify/hasAnyOrders";
+import { stampOrdersVerified } from "@/lib/shopify/ordersGate";
 import { sendMetaInstall, type MetaAttribution } from "@/lib/analytics/metaInstall";
 
 export interface OnNewShopCreatedOptions {
@@ -101,11 +103,21 @@ export async function onNewShopCreated(
     return null;
   });
 
+  // No-orders gate (docs/plans/no-orders-install-gate.plan.md). `true` stamps
+  // the shop verified so the embedded app never re-checks; `false` is a store
+  // with nothing for us to work on — it gets the lock screen, a different
+  // merchant email and a different admin alert; `null` (couldn't tell) fails
+  // open and the embedded layout re-checks on first load.
+  const hasOrders = await shopHasAnyOrders(shopInternalId).catch(() => null);
+  if (hasOrders === true) await stampOrdersVerified(shopInternalId);
+  const noOrders = hasOrders === false;
+
   await sendAdminInstallNotification({
     shopDomain,
     email: details?.email,
     shopName: details?.name,
     source,
+    noOrders,
   }).catch((err) => {
     console.warn(
       "[email:admin-install] notification failed:",
@@ -127,6 +139,7 @@ export async function onNewShopCreated(
     to: details?.email,
     shopName: details?.name,
     locale: options.locale,
+    variant: noOrders ? "no_orders" : "welcome",
   }).catch((err) => {
     console.warn(
       "[email:install-welcome] send threw:",
