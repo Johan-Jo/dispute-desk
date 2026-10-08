@@ -82,6 +82,12 @@
     "dashboard": "Tableau de bord",
     "clearShopReconnect": "Effacer la boutique et reconnecter"
   },
+  "noOrdersGate": {
+    "title": "Votre boutique n'a pas encore de commandes",
+    "body": "Votre boutique n'a aucune commande, DisputeDesk ne peut donc malheureusement pas travailler sur cette boutique. DisputeDesk défend les rétrofacturations liées à des commandes déjà vendues, et sans historique de commandes il n'y a aucun litige pour lequel nous puissions vous aider.",
+    "welcomeBack": "Vous serez le bienvenu dès que votre boutique fonctionnera avec des commandes ; nous serons ravis de vous aider à ce moment-là.",
+    "contact": "Une question ? Écrivez à"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "Que pensez-vous de DisputeDesk jusqu'à présent ?",

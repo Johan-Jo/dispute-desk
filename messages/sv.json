@@ -82,6 +82,12 @@
     "insights": "Insikter",
     "dashboard": "Dashboard"
   },
+  "noOrdersGate": {
+    "title": "Din butik har inga ordrar än",
+    "body": "Din butik har inga ordrar, så tyvärr kan DisputeDesk inte arbeta med den här butiken. DisputeDesk försvarar återkrav på ordrar du redan har sålt, och utan orderhistorik finns det inga ärenden vi kan hjälpa till med.",
+    "welcomeBack": "Du är varmt välkommen tillbaka när din butik är igång med ordrar — då hjälper vi dig gärna.",
+    "contact": "Frågor? Skriv till"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "Hur upplever du DisputeDesk hittills?",

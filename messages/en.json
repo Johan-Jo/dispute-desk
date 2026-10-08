@@ -82,6 +82,12 @@
     "switchToDemo": "Switch to demo store",
     "insights": "Insights"
   },
+  "noOrdersGate": {
+    "title": "Your store has no orders yet",
+    "body": "Your store has no orders, so unfortunately DisputeDesk cannot work on this store. DisputeDesk defends chargebacks on orders you have already sold, and without an order history there are no disputes for us to help with.",
+    "welcomeBack": "You're very welcome back once you have a working store with orders, and we'll be glad to help you then.",
+    "contact": "Questions? Write to"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "How's your experience with DisputeDesk so far?",
