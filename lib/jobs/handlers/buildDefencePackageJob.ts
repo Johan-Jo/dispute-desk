@@ -40,7 +40,9 @@ import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { nonCardDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
-import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel } from "@/lib/defence/counsel/run";
+import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel, type CounselTrace } from "@/lib/defence/counsel/run";
+import { issueRecords } from "@/lib/defence/counsel/issueRules";
+import { SKIP_REASON, factCountsByCategory, failureSignature, llmErrorClass, type SkipExit } from "@/lib/defence/outcomes";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
 import { disputeFrame, requestLine, responseTitle } from "@/lib/defence/counsel/frame";
 import { cachedListingTranslator } from "@/lib/defence/listingTranslationCache";
@@ -406,7 +408,13 @@ export async function handleBuildDefencePackage(
 
   // Eligibility short-circuit.
   if (!classification.eligible) {
-    return await markSkipped(sb, pkg, classification.ineligibilityReason);
+    return await markSkipped(
+      sb,
+      pkg,
+      classification.ineligibilityReason,
+      classification.ineligibilityReason === "covered_shopify" ? "covered_shopify" : "classifier_ineligible",
+      { moduleKey: reasonCodeModule.key },
+    );
   }
 
   /* ── THE CANONICAL ARGUMENT PLAN (CP-B) ──────────────────────────────
@@ -506,14 +514,14 @@ export async function handleBuildDefencePackage(
      * fatal-loss reason, and nothing here composes any.
      */
     if (fatalLoss.triggered === true) {
-      return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+      return await markSkipped(sb, pkg, "no_bank_eligible_facts", "fatal_loss", { moduleKey: reasonCodeModule.key });
     }
 
     /* No safe argument survives the exclusions. An honest product outcome, not
      * an error — and specifically not a reason to lower the bar and generate
      * something weaker. Refused before generation for the same reason. */
     if (!planHasSafeArgument(activePlan.plan)) {
-      return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+      return await markSkipped(sb, pkg, "no_bank_eligible_facts", "no_safe_argument", { moduleKey: reasonCodeModule.key });
     }
 
     /* ── F1 / F3 / F6 — what the argument may be built from ─────────────
@@ -541,7 +549,10 @@ export async function handleBuildDefencePackage(
     // own records (policies, the order) survived — context, not an argument.
     // Same honest answer: no document, no draft, no candidate.
     if (!hasArgumentBeyondRecordContext(planFacts)) {
-      return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+      return await markSkipped(sb, pkg, "no_bank_eligible_facts", "record_context_only", {
+        moduleKey: reasonCodeModule.key,
+        facts: factCountsByCategory(planFacts),
+      });
     }
   }
 
@@ -570,7 +581,12 @@ export async function handleBuildDefencePackage(
       // deadline as a blank response. Same honest exit the canonical plan
       // takes; the merchant's checklist now asks for the claim's evidence.
       if (!hasArgumentBeyondRecordContext(planFacts)) {
-        return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+        return await markSkipped(sb, pkg, "no_bank_eligible_facts", "claim_scoped_empty", {
+          moduleKey: reasonCodeModule.key,
+          facts: factCountsByCategory(planFacts),
+          claimReason: claimAnalysis.reason,
+          removed: scoped.removed,
+        });
       }
     }
   }
@@ -597,6 +613,8 @@ export async function handleBuildDefencePackage(
   let usedCounsel = false;
   let counselRes: Awaited<ReturnType<typeof runCounsel>> = null;
   let counselTransient: { code: "daily_cap_reached" | "llm_error"; reason: string } | null = null;
+  // What the writer decided from, and why it wrote no letter when it did not.
+  let counselTrace: CounselTrace | null = null;
   // PayPal and Klarna disputes are counsel's too (plan §5.1): 50 of 60 open
   // disputes on 2026-09-28. A captured bank claim still skips counsel (§6).
   if (counselEnabled(reasonCodeModule.key) && !bankClaim?.text) {
@@ -666,6 +684,23 @@ export async function handleBuildDefencePackage(
               promptVersion: COUNSEL_PROMPT_VERSION,
             });
           },
+          /* Stored at once, letter or not, so a later failure in this build
+           * (validation, PDF) still has the writer's inputs beside it. Never
+           * fails the build: it is a record, not a step. */
+          onTrace: async (trace) => {
+            counselTrace = trace;
+            try {
+              await sb
+                .from("defence_packages")
+                .update({
+                  counsel_replay_json: trace.replay,
+                  outcome_detail: counselCoverage(trace, planFacts),
+                })
+                .eq("id", packageId);
+            } catch (err) {
+              console.warn("[buildDefencePackage] counsel replay input not stored", err);
+            }
+          },
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -685,24 +720,56 @@ export async function handleBuildDefencePackage(
    * can see — until its family has a counsel playbook
    * (docs/plans/defence-letter-structure.plan.md). Never re-add a fallback. */
   if (!counselRes && counselTransient) {
-    return await markFailed(sb, pkg, counselTransient.reason, counselTransient.code, true);
+    return await markFailed(sb, pkg, counselTransient.reason, counselTransient.code, true, undefined, {
+      signature: failureSignature({
+        code: counselTransient.code,
+        moduleKey: reasonCodeModule.key,
+        detail: counselTransient.code === "llm_error" ? llmErrorClass(counselTransient.reason) : null,
+      }),
+    });
   }
   if (!counselRes) {
+    /* WHY there is no letter, stored (plan: defence-package-failure-classes,
+     * Phase 0a). Three situations used to share one sentence and one code, and
+     * the writer's own findings went to the log only, kept for a day. */
+    const trace = counselTrace as CounselTrace | null;
+    const kind = !counselEnabled(reasonCodeModule.key)
+      ? "counsel_disabled"
+      : bankClaim?.text
+        ? "counsel_bank_claim_unsupported"
+        : "no_counsel_letter";
+    const issues = trace ? issueRecords(trace.issues) : [];
     await logAuditEvent({
       shopId: pkg.shop_id,
       disputeId: pkg.dispute_id,
       packId: pkg.source_pack_id,
       actorType: "system",
       eventType: "defence_package_no_counsel_letter",
-      eventPayload: { packageId, version: pkg.version, moduleKey: reasonCodeModule.key },
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        moduleKey: reasonCodeModule.key,
+        kind,
+        brief: trace?.replay.brief ?? null,
+        rules: issues.map((i) => `${i.section}:${i.rule}`),
+      },
     });
-    return await markFailed(
-      sb,
-      pkg,
-      `No letter: the template writer is retired and counsel v2 wrote none for ${reasonCodeModule.key}.`,
-      "no_counsel_letter",
-      false,
-    );
+    const reason =
+      kind === "counsel_disabled"
+        ? "No letter: counsel v2 is switched off (DEFENCE_COUNSEL_V2=off) and the template writer is retired."
+        : kind === "counsel_bank_claim_unsupported"
+          ? "No letter: a bank claim is captured for this dispute and counsel v2 does not write from one yet."
+          : `No letter: the template writer is retired and counsel v2 wrote none for ${reasonCodeModule.key}.`;
+    return await markFailed(sb, pkg, reason, kind, false, undefined, {
+      validationErrors: issues,
+      signature: failureSignature({
+        code: kind,
+        moduleKey: reasonCodeModule.key,
+        brief: trace?.replay.brief ?? null,
+        paymentFamily: paymentContext?.family ?? null,
+        rules: issues.map((i) => i.rule),
+      }),
+    });
   }
   const narrativeRes = {
     narrative: counselRes.narrative,
@@ -923,6 +990,11 @@ export async function handleBuildDefencePackage(
         validation_errors: validation.errors,
         failure_code: "validation_failed",
         failure_reason: `${validation.errors.length} validation error${validation.errors.length === 1 ? "" : "s"} (after one retry)`,
+        failure_signature: failureSignature({
+          code: "validation_failed",
+          moduleKey: reasonCodeModule.key,
+          detail: (validation.errors[0] as { rule?: string } | undefined)?.rule ?? null,
+        }),
         narrative_json: narrativeRes.narrative,
         facts_json: planFacts,
         package_mode: classification.packageMode,
@@ -1221,6 +1293,11 @@ export async function handleBuildDefencePackage(
         validation_errors: composedValidation.errors,
         failure_code: "validation_failed",
         failure_reason: summary,
+        failure_signature: failureSignature({
+          code: "validation_failed",
+          moduleKey: reasonCodeModule.key,
+          detail: `composed:${(composedValidation.errors[0] as { rule?: string } | undefined)?.rule ?? "unknown"}`,
+        }),
         narrative_json: narrativeRes.narrative,
         facts_json: planFacts,
         package_mode: classification.packageMode,
@@ -1353,6 +1430,7 @@ export async function handleBuildDefencePackage(
         status: "failed",
         failure_code: "pdf_render_failed",
         failure_reason: fullReason,
+        failure_signature: failureSignature({ code: "pdf_render_failed", moduleKey: reasonCodeModule.key }),
         narrative_json: narrativeRes.narrative,
         facts_json: planFacts,
         package_mode: classification.packageMode,
@@ -1370,6 +1448,8 @@ export async function handleBuildDefencePackage(
       eventType: "defence_pdf_render_failed",
       eventPayload: { packageId, version: pkg.version, reason: message, stackHead: stack.slice(0, 500) },
     });
+    // The one failure path that told nobody.
+    void notifyDefencePackageFailed(sb, pkg, "pdf_render_failed", message, undefined, narrativeRes.promptVersion);
     return { ok: false, retriable: false, reason: `pdf_render_failed: ${message}` };
   }
 
@@ -1705,6 +1785,10 @@ async function markSkipped(
     version: number;
   },
   reason: DefencePackageFailureCode | null,
+  /** Which exit this is. Five skips share one `failure_code`; without this
+   *  they cannot be told apart afterwards. */
+  exit: SkipExit,
+  detail: { moduleKey?: string | null } & Record<string, unknown> = {},
 ): Promise<JobResult> {
   const code: DefencePackageFailureCode = reason ?? "no_bank_eligible_facts";
   await sb
@@ -1712,10 +1796,9 @@ async function markSkipped(
     .update({
       status: "skipped",
       failure_code: code,
-      failure_reason:
-        code === "covered_shopify"
-          ? "Coverage gate: Shopify Protect is underwriting this dispute."
-          : "No bank-eligible approved facts after classification.",
+      failure_reason: SKIP_REASON[exit],
+      outcome_detail: { exit, ...detail },
+      failure_signature: failureSignature({ code, moduleKey: detail.moduleKey ?? null, detail: exit }),
       updated_at: new Date().toISOString(),
     })
     .eq("id", pkg.id);
@@ -1725,9 +1808,28 @@ async function markSkipped(
     packId: pkg.source_pack_id,
     actorType: "system",
     eventType: "defence_package_skipped",
-    eventPayload: { packageId: pkg.id, version: pkg.version, failureCode: code },
+    eventPayload: { packageId: pkg.id, version: pkg.version, failureCode: code, exit },
   });
   return { ok: true };
+}
+
+/** What the writer argued from: the brief it started with and ended on, the
+ *  theory, the sections it was asked to argue, the ledger's claims, and the
+ *  approved facts by category. Counted across disputes this ranks which
+ *  dispute type next needs a brief of its own. */
+function counselCoverage(trace: CounselTrace, facts: ReadonlyArray<{ category: string }>): Record<string, unknown> {
+  return {
+    counsel: {
+      outcome: trace.outcome,
+      startBrief: trace.replay.startBrief,
+      brief: trace.replay.brief,
+      theory: trace.replay.theory,
+      argued: trace.replay.argued,
+      ledgerClaims: trace.replay.ledger.map((c) => c.id),
+      corrected: trace.corrected,
+    },
+    facts: factCountsByCategory(facts),
+  };
 }
 
 /**
@@ -1811,6 +1913,9 @@ async function markFailed(
    * failures raised before generation (cap reached, LLM transport error).
    */
   promptVersion?: number | null,
+  /** What makes the failure countable: the rules that rejected the letter
+   *  (stored in `validation_errors`, shown in the alert) and its signature. */
+  record: { validationErrors?: Array<{ rule: string; section: string; message: string }>; signature?: string } = {},
 ): Promise<JobResult> {
   /* THE VERSIONS ARE PART OF THE FAILURE RECORD.
    *
@@ -1827,6 +1932,10 @@ async function markFailed(
       status: "failed",
       failure_code: failureCode,
       failure_reason: reason,
+      failure_signature:
+        record.signature ??
+        failureSignature({ code: failureCode, detail: failureCode === "llm_error" ? llmErrorClass(reason) : null }),
+      ...(record.validationErrors?.length ? { validation_errors: record.validationErrors } : {}),
       validator_version: VALIDATOR_VERSION,
       ...(typeof promptVersion === "number" ? { prompt_version: promptVersion } : {}),
       updated_at: new Date().toISOString(),
@@ -1844,6 +1953,6 @@ async function markFailed(
    * is how fourteen disputes reached a failed latest package unnoticed, two of
    * them past their deadline. Not awaited into the failure path: a build that
    * already failed must not fail differently because an email did. */
-  void notifyDefencePackageFailed(sb, pkg, failureCode, reason);
+  void notifyDefencePackageFailed(sb, pkg, failureCode, reason, record.validationErrors);
   return { ok: false, retriable, reason };
 }

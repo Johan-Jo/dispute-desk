@@ -33,5 +33,9 @@ export async function GET(
   if (error || !data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ package: data });
+  // Server-side only: the writer's inputs and its last draft, which may be a
+  // rejected one (docs/technical.md, counsel replay input).
+  const { counsel_replay_json: _replay, ...pkg } = data as Record<string, unknown>;
+  void _replay;
+  return NextResponse.json({ package: pkg });
 }

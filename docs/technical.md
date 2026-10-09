@@ -3841,6 +3841,75 @@ array element` in the summary, and the alert never showed the text. The three
 sibling parsers each sliced `{…}` and returned null on any error, which silently
 dropped the return window, the listing translation or the bank-claim analysis.
 
+### Defence package outcome record (2026-10-09)
+
+Every build that produces no letter stores why, in a form that can be counted, and every counsel run stores what it
+decided from. Plan: `docs/plans/defence-package-failure-classes.plan.md` (Phase 0a). Nothing here changes what a letter
+says or which builds run.
+
+**Why.** On 2026-10-09 all 25 `no_counsel_letter` packages in prod carried one sentence ("counsel v2 wrote none for
+X"). The rules that rejected each letter went to `console.warn` only, and the function log is kept for one day: for 13
+of the 25 the reason was unrecoverable. Five unrelated skip exits shared `failure_code = no_bank_eligible_facts` and one
+fixed `failure_reason`. `pdf_render_failed` sent no alert.
+
+**Columns** (`20261009150000_defence_package_outcome_record.sql`, all nullable, no backfill):
+
+| column | written for | holds |
+|---|---|---|
+| `outcome_detail` jsonb | skipped rows; every counsel run | a skip's `exit` and what the gate saw; for a counsel run `{ counsel: { outcome, startBrief, brief, theory, argued, ledgerClaims, corrected }, facts: {category: n} }` |
+| `failure_signature` text | failed and skipped rows | the grouping key (below) |
+| `counsel_replay_json` jsonb | every counsel run, letter or not | the writer's inputs and its last draft (`CounselReplay`, `lib/defence/counsel/run.ts`) |
+
+**Skip exits** (`SkipExit`, `lib/defence/outcomes.ts`). `failure_code` values are unchanged, so every existing reader
+(`resolveBuildAttempt`, `serverFacts`, the package card) behaves as before; the exit is the new information:
+
+| exit | site | `failure_code` |
+|---|---|---|
+| `covered_shopify` | `enqueue.ts` `insertSkippedRow`; job classifier | `covered_shopify` |
+| `classifier_ineligible` | `enqueue.ts` `insertSkippedRow`; job classifier | `no_bank_eligible_facts` |
+| `fatal_loss` | job, fatal-loss gate | `no_bank_eligible_facts` |
+| `no_safe_argument` | job, `planHasSafeArgument` | `no_bank_eligible_facts` |
+| `record_context_only` | job, `hasArgumentBeyondRecordContext` on the plan's facts | `no_bank_eligible_facts` |
+| `claim_scoped_empty` | job, after `scopeFactsToBankClaim` | `no_bank_eligible_facts` |
+
+`markSkipped` takes the exit as a required argument; a test pins that each job site passes a distinct one.
+
+**Counsel non-letters.** `runCounsel` still returns the letter or `null`; it now also calls `onTrace` once the writer
+has run, with the outcome (`letter` | `checks_failed`), the issues, and the replay input. The job stores the replay
+input and the coverage record at once (so a later validation or PDF failure in the same build keeps them), and types
+the three situations that used to share `no_counsel_letter`:
+
+| `failure_code` | when |
+|---|---|
+| `no_counsel_letter` | the writer wrote; its checks or the reviewer rejected the letter after the corrections |
+| `counsel_bank_claim_unsupported` | a bank claim is captured, so counsel is not called (a known gap, scheduled) |
+| `counsel_disabled` | `DEFENCE_COUNSEL_V2=off` |
+
+For `no_counsel_letter` the rejecting rules are written to `validation_errors` as `{ rule, section, message }` and are
+listed in the failed-package alert. The issue strings themselves are unchanged (they are the correction prompt's
+input); `lib/defence/counsel/issueRules.ts` reads a stable rule id off each one (`grounding.unsupported_specific`,
+`copy.specific_repeated`, `review.fact_check`, `lint.<name>`, `truth.validator`, ...). `message` is the rule's fixed
+description, never the issue text: an issue quotes the rejected draft and `validation_errors` is returned to the
+browser. A new `issues.push` in `checks.ts` needs a rule there; `issueRules.test.ts` pins the producer count.
+
+**Signature** (`failureSignature`): `code · module · brief · payment family · detail · sorted rule ids`, absent parts
+dropped. `detail` is a skip's exit, an `llm_error`'s class (`json_parse`, `api_4xx`, `api_5xx`, `timeout`, `other`) or
+a validator's first rule. Example: `no_counsel_letter · credit_not_processed · general · klarna ·
+copy.specific_repeated,grounding.unsupported_specific`.
+
+**Replay input stays server-side.** `GET /api/defence-packages/:id` strips `counsel_replay_json` from its response; the
+workspace route selects an explicit column list that does not include it. Retention is not implemented yet (plan
+Phase 0b: nulled 30 days after the dispute closes).
+
+**Tools.**
+- `scripts/sql/defence-failure-classes.sql` — failed and skipped packages by signature, with recent volume and the
+  disputes that still need a response.
+- `scripts/counsel/replay.mts` — re-runs the production writer (`writeLetter`, checks and reviewer) over stored replay
+  input for `--package <id>`, a `--signature`, or a reconstructed `--input` file, against the working tree. Read-only;
+  files nothing. Use it before releasing a change to a prompt, a brief or a check.
+
+**Also changed:** `pdf_render_failed` now sends the failed-package alert.
+
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
 `lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude

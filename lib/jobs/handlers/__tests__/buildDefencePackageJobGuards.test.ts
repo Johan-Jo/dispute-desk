@@ -348,3 +348,64 @@ describe("buildDefencePackageJob — auto-submit guards", () => {
     expect(finalizeAndEnqueueSave).toHaveBeenCalledTimes(1);
   });
 });
+
+/* Plan: defence-package-failure-classes, Phase 0a. A letter the writer's own
+ * checks reject used to leave one generic sentence; the rules that rejected it
+ * went to the log only. They are stored on the row now, with a signature to
+ * count by and the writer's inputs to replay. */
+describe("buildDefencePackageJob — a withheld letter says why", () => {
+  const TRACE = {
+    outcome: "checks_failed",
+    firstIssues: [],
+    issues: [
+      'conclusion: "fifty" is not a specific of any ledger claim',
+      'copy: "3 july" is used 2 times (summary, conclusion); once only — elsewhere refer to the event ("the delivery", "that order")',
+    ],
+    corrected: true,
+    replay: {
+      v: 1,
+      moduleKey: "visa_10_4_fraud",
+      startBrief: "general",
+      brief: "general",
+      theory: "sale_on_record",
+      argued: [],
+      ledger: [{ id: "claim_stated" }, { id: "order_placed" }],
+      lastDraft: { summary: { paragraphs: ["A rejected summary."], claimIds: [] }, evidenceSections: [], conclusion: { paragraphs: [], claimIds: [] } },
+    },
+  };
+
+  it("stores the rejecting rules, a signature and the replay input", async () => {
+    const { runCounsel } = await import("@/lib/defence/counsel/run");
+    vi.mocked(runCounsel).mockImplementationOnce((async (args: { onTrace?: (t: unknown) => Promise<void> }) => {
+      await args.onTrace?.(TRACE);
+      return null;
+    }) as never);
+
+    const { result, captured } = await runWith(packJsonWith({ case_strength: { overall: "strong" } }));
+
+    expect(result.ok).toBe(false);
+    const failed = captured.updates.find((u) => u.table === "defence_packages" && u.values.status === "failed");
+    expect(failed?.values.failure_code).toBe("no_counsel_letter");
+    expect(failed?.values.validation_errors).toEqual([
+      { rule: "grounding.unsupported_specific", section: "conclusion", message: expect.any(String) },
+      { rule: "copy.specific_repeated", section: "letter", message: expect.any(String) },
+    ]);
+    // The rejected draft's words are never in the column the browser receives.
+    expect(JSON.stringify(failed?.values.validation_errors)).not.toMatch(/fifty|3 july/);
+    expect(failed?.values.failure_signature).toBe(
+      "no_counsel_letter · visa_10_4_fraud · general · copy.specific_repeated,grounding.unsupported_specific",
+    );
+    const stored = captured.updates.find((u) => u.table === "defence_packages" && u.values.counsel_replay_json !== undefined);
+    expect(stored?.values.counsel_replay_json).toBe(TRACE.replay);
+    expect(stored?.values.outcome_detail).toMatchObject({
+      counsel: { outcome: "checks_failed", brief: "general", theory: "sale_on_record", argued: [], ledgerClaims: ["claim_stated", "order_placed"] },
+    });
+    const { logAuditEvent } = await import("@/lib/audit/logEvent");
+    expect(vi.mocked(logAuditEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "defence_package_no_counsel_letter",
+        eventPayload: expect.objectContaining({ kind: "no_counsel_letter", brief: "general" }),
+      }),
+    );
+  });
+});
