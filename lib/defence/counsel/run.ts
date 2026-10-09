@@ -331,6 +331,19 @@ async function prepareNotAsDescribed(
   return { extras: { orderItemsEnglish, returnWindow, returnRouteAllowed: allowReturnRoute }, policy };
 }
 
+/** What the writer is told the shipment card prints. It names a delivered date
+ *  only when the ledger holds the delivery: told "shipped and delivered dates"
+ *  for an order with no delivery on record, the writer wrote that the card
+ *  "records its delivery" and the reviewer rejected the letter (#103370). */
+export function shipmentCardContext(deliveryRecorded: boolean): string {
+  return `Shipment card: carrier, tracking number, ${deliveryRecorded ? "shipped and delivered dates" : "shipped date"}. Tracking link printed below the shipping section.`;
+}
+
+/** The timeline's event kinds, by the same rule. */
+export function timelineEventsContext(deliveryRecorded: boolean): string {
+  return deliveryRecorded ? "order, payment, shipping, delivery, notifications" : "order, payment, shipping, notifications";
+}
+
 /**
  * The hash of everything the letter depends on (cost refactor §3.6). Same
  * hash → same letter: the ledger (claims, specifics, limits, exhibits), what
@@ -473,6 +486,7 @@ export async function runCounsel(args: {
     []) as Array<{ title?: unknown }>)
     .map((l) => str(l?.title))
     .filter((x): x is string => !!x);
+  const deliveryRecorded = ledger.some((c) => c.id === "carrier_delivered");
   const pageContext = [
     `Header: ${[disputeNumber && `Dispute ${disputeNumber}`, args.orderName && `Order ${args.orderName}`, args.amountDisplay].filter(Boolean).join(" · ")} · submitted on behalf of ${args.merchantName}.`,
     frame.provider === "card"
@@ -485,10 +499,10 @@ export async function runCounsel(args: {
       ? null
       : multi
       ? "Parcel cards, one per parcel: its products, carrier, tracking number or shipping reference, shipped date, delivery date where the carrier recorded one, and the tracking link where one exists."
-      : `Shipment card: carrier, tracking number, shipped and delivered dates. Tracking link printed below the shipping section.`,
+      : shipmentCardContext(deliveryRecorded),
     hasAddresses ? "Order addresses card under the shipment card: shipping and billing address side by side, stated identical." : null,
     `Line-items table: products, adjustments, total.${hasLater ? " Under it, a card for the same customer's later order (order number, date, amount, card ending, wallet)." : ""}`,
-    `Timeline: the order's events (order, payment, shipping, delivery, notifications) and the opening of the ${frame.provider === "card" ? (frame.stage === "inquiry" ? "inquiry" : "chargeback") : "dispute"}, with dates.`,
+    `Timeline: the order's events (${timelineEventsContext(deliveryRecorded)}) and the opening of the ${frame.provider === "card" ? (frame.stage === "inquiry" ? "inquiry" : "chargeback") : "dispute"}, with dates.`,
     `Request line after the conclusion: "${requestLine(frame)}"`,
   ]
     .filter(Boolean)
