@@ -223,7 +223,8 @@ Before putting a sentence in "errors", check each number and date in it against 
 Put a sentence in "unclear" only when a busy analyst would have to read it twice, when its literal meaning could be taken the wrong way, or when it uses a metaphor, idiom or legal flourish instead of the plain fact.
 
 Do not flag style, tone, length or reasonable argument drawn from ledger facts. Do not suggest rewrites of sentences that are correct. When in doubt, do not flag.
-Return JSON only: { "errors": [ { "sentence": "…", "problem": "…" } ], "unclear": [ { "sentence": "…", "problem": "…" } ] } with empty arrays when the summary is correct and clear.`;
+Each entry in "errors" ends with a "verdict", written after the problem: "error" when the sentence is wrong, "correct" when, having written the problem out, you find the sentence matches the ledger after all.
+Return JSON only: { "errors": [ { "sentence": "…", "problem": "…", "verdict": "error" } ], "unclear": [ { "sentence": "…", "problem": "…" } ] } with empty arrays when the summary is correct and clear.`;
 
 /**
  * The case's events and the intervals between them, spelled out. Without it

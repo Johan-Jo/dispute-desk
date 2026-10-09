@@ -86,6 +86,26 @@ export function composeDraft(
   return { summary, evidenceSections: record.evidenceSections, conclusion: record.conclusion };
 }
 
+type ReviewFinding = { sentence?: string; problem?: string; verdict?: string };
+export type ReviewReply = { errors?: ReviewFinding[]; unclear?: ReviewFinding[] };
+
+/**
+ * The reviewer's reply as issues. The reviewer reasons inside "problem" and
+ * sometimes reverses itself there: #99199 (prod, 2026-10-09) lost its letter
+ * to an "error" whose own note ended "This is correct" (and #352543 in the
+ * eval before it). So each error carries a verdict written after the problem,
+ * and one the reviewer itself calls "correct" is not an issue. A missing
+ * verdict still blocks.
+ */
+export function reviewIssues(res: ReviewReply): string[] {
+  return [
+    ...(res.errors ?? [])
+      .filter((e) => e.verdict?.trim().toLowerCase() !== "correct")
+      .map((e) => `fact-check: "${e.sentence ?? ""}" — ${e.problem ?? ""}`),
+    ...(res.unclear ?? []).map((e) => `unclear: "${e.sentence ?? ""}" — ${e.problem ?? "rewrite it plainly"}`),
+  ];
+}
+
 export async function writeCounselLetter(args: {
   ledger: readonly LedgerClaim[];
   playbook: Playbook;
@@ -117,22 +137,17 @@ export async function writeCounselLetter(args: {
   const issuesOf = async (draft: CounselDraft): Promise<string[]> => {
     const code = checkDraft(draft, args.check);
     if (code.length) return code;
-    const res = parseJson<{
-      errors?: Array<{ sentence?: string; problem?: string }>;
-      unclear?: Array<{ sentence?: string; problem?: string }>;
-    }>(
-      await args.call({
-        stage: "review",
-        system: REVIEW_SYSTEM,
-        user: reviewUserPrompt(args.ledger, draft.summary.paragraphs, recordText),
-        temperature: 0,
-        maxTokens: 800,
-      }),
+    return reviewIssues(
+      parseJson<ReviewReply>(
+        await args.call({
+          stage: "review",
+          system: REVIEW_SYSTEM,
+          user: reviewUserPrompt(args.ledger, draft.summary.paragraphs, recordText),
+          temperature: 0,
+          maxTokens: 800,
+        }),
+      ),
     );
-    return [
-      ...(res.errors ?? []).map((e) => `fact-check: "${e.sentence ?? ""}" — ${e.problem ?? ""}`),
-      ...(res.unclear ?? []).map((e) => `unclear: "${e.sentence ?? ""}" — ${e.problem ?? "rewrite it plainly"}`),
-    ];
   };
 
   const first = summaryFrom(
@@ -245,10 +260,7 @@ export async function writeLetter(args: {
     // A summary slightly over its word limit is still fact-checked: after the
     // corrections it no longer blocks the letter, so the review must have run.
     if (code.some((i) => !isSoftLengthIssue(i))) return code;
-    const res = parseJson<{
-      errors?: Array<{ sentence?: string; problem?: string }>;
-      unclear?: Array<{ sentence?: string; problem?: string }>;
-    }>(
+    const res = parseJson<ReviewReply>(
       await args.call({
         stage: "review",
         system: REVIEW_SYSTEM,
@@ -257,11 +269,7 @@ export async function writeLetter(args: {
         maxTokens: 1000,
       }),
     );
-    return [
-      ...code,
-      ...(res.errors ?? []).map((e) => `fact-check: "${e.sentence ?? ""}" — ${e.problem ?? ""}`),
-      ...(res.unclear ?? []).map((e) => `unclear: "${e.sentence ?? ""}" — ${e.problem ?? "rewrite it plainly"}`),
-    ];
+    return [...code, ...reviewIssues(res)];
   };
 
   const firstRaw = await args.call({ stage: "write", system: WRITER_SYSTEM, user: caseUser, temperature: 0.4, maxTokens: 1500 });
