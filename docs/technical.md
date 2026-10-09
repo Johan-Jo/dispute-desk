@@ -3604,7 +3604,10 @@ code-built claim ledger.
   data only (`counsel/briefs/index.ts`: claim, per-provider question, claim tuples as theories, sections with the
   question each answers, prohibition-only limits). The model writes the summary, one argument per brief section
   and the conclusion in one call (`generate.ts` `writeLetter`); code checks run on every part, one review covers
-  the whole letter, up to two corrections; a reviewer clarity note alone does not block after them. Rules the
+  the whole letter, up to two corrections; a reviewer clarity note alone does not block after them. Each reviewer
+  error ends with a `verdict` written after its `problem`; `reviewIssues` (`generate.ts`) drops an error the
+  reviewer itself marks `"correct"` (it reasons inside `problem` and sometimes reverses there: #99199 lost its
+  letter on 2026-10-09 to an "error" whose note ended "This is correct"); a missing verdict still blocks. Rules the
   checks enforce for every letter: reasons before the request; English only; each date or number once, or twice
   when the second use is in the section that owns it; numbers inside the ordered item's description exempt;
   summary ≤ 80 words (≤ 90 when three or more sections argue); no page positions. A summary at most
