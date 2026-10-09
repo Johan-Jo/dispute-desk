@@ -6926,6 +6926,14 @@ Single source of truth for all locale data. Exports:
 5. Default: `en-US`.
 6. Partial locale fallback: `fr-CA` → base `fr` → `fr-FR`.
 
+### Embedded app locale (`/app/*`) — Shopify Admin language decides
+The embedded app does **not** use the cascade above. `resolveEmbeddedLocale()` (`lib/i18n/locales.ts`), read per request through `getEmbeddedRequestLocale()` (`lib/i18n/embeddedRequestLocale.ts`) by both `app/(embedded)/layout.tsx` and `i18n/request.ts`, resolves:
+1. **Shopify's `?locale=`** (middleware → `x-shopify-locale`) — the language the merchant selected in Shopify Admin. A language we don't ship renders **English** (`shopifyAdminLocale()`); it never falls through to a cookie or the browser.
+2. **`shops.locale`** — only under SuperAdmin impersonation, where there is no Shopify in the loop, so the operator sees the merchant's language instead of their own browser's. Append `?locale=xx` to override for one load.
+3. `dd_locale` cookie → `Accept-Language` → `en`.
+
+**Keeping `shops.locale` true.** Request-less senders (install welcome, billing, reminders) read `shops.locale`. Middleware must forward Shopify's `locale` to `/api/auth/shopify/token-exchange` as its own parameter — `buildTokenExchangeUrl()` (`lib/middleware/tokenExchangeUrl.ts`) is the single builder for both redirects; the route also reads it out of `return_to`. The route writes it on insert. For an existing shop it only fills a row still on the `en-US` column default (never captured): Shopify's `locale` is the language of whoever is logged in to Admin, and the exchange re-runs about hourly per browser, so refreshing it unconditionally would let a staff member with an English Admin flip a German store's emails. Under impersonation the shop id is taken from the verified signed cookie, never from the client-sendable `x-shop-id` header. Until 2026-10-09 the parameter was dropped on the redirect, so every token-exchange install was stored as the `en-US` column default and emailed in English (Mein Maison, Hem & Trend). Tests: `tests/integration/middlewareTokenExchangeLocale.test.ts`, `app/api/auth/shopify/token-exchange/__tests__/locale.test.ts`.
+
 ### DB Storage
 - `shops.locale` — BCP-47 tag, default `'en-US'`.
 - `portal_user_profiles.user_locale` — nullable BCP-47 tag (null = inherit from shop).
