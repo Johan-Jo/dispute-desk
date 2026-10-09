@@ -1327,6 +1327,12 @@
         "order_fetch_failed": {
           "title": "Vi kunde inte hämta Shopify-orderdata",
           "body": "Detta paket kunde inte byggas eftersom vi inte kunde ladda den underliggande ordern från Shopify. Detta är ett systemproblem på vår sida — inte saknade bevis på din."
+        },
+        "pack_limit_reached": {
+          "title": "Det här paketet behöver en kredit för att bli klart",
+          "body": "Vi samlade in bevisen för den här tvisten, men din plan har inga paketkrediter kvar, så paketet blev inte klart. Det är inget fel på tvisten eller dina bevis.",
+          "help": "Uppgradera din plan för att få fler krediter och bygg sedan om paketet.",
+          "cta": "Uppgradera plan"
         }
       },
       "failureCopyFallback": {

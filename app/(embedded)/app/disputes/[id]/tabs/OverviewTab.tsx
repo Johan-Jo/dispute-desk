@@ -60,6 +60,7 @@ import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDispute
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
 import { SubmissionSummaryPanel } from "./sections/SubmissionSummaryPanel";
 import { BankClaimCard } from "./sections/BankClaimCard";
+import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
 import {
   MERCHANT_UI_HIDDEN_FIELDS,
   isNonEvidenceAccountHistoryRow,
@@ -289,6 +290,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   /* ── F1: Failure short-circuit ── */
   if (derived.isFailed) {
     const failureCode = derived.failureCode;
+    if (failureCode === PACK_LIMIT_REACHED) {
+      return (
+        <BlockStack gap="400">
+          <PackCreditNeededBanner
+            onRetry={() => { void actions.generatePack(); }}
+            retrying={clientState.retrying}
+          />
+        </BlockStack>
+      );
+    }
     const titleKey = failureCode && (failureCode === "order_fetch_failed")
       ? `failureCopy.${failureCode}.title`
       : "failureCopyFallback.title";

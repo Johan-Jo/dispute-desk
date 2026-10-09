@@ -180,13 +180,17 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
           });
         } catch (consumeErr) {
           if (consumeErr instanceof PackLimitReachedError) {
-            // Rare race: quota was passing at enqueue time but drained by
-            // concurrent disputes finishing first. Flip the pack to failed
-            // so the merchant sees a remediation path (upgrade / top-up).
+            // Quota was passing at enqueue time but drained by other
+            // disputes finishing first — the norm on a first sync, where
+            // every dispute enqueues against the same starting balance.
+            // Flip the pack to failed WITH the code, so the merchant sees
+            // the upgrade path and not the generic "system issue" banner.
             await db
               .from("evidence_packs")
               .update({
                 status: "failed",
+                failure_code: "pack_limit_reached",
+                failure_reason: `No pack credit left at consume (remaining=${consumeErr.remaining})`,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", packId);
