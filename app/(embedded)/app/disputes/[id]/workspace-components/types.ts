@@ -420,6 +420,9 @@ export interface WorkspaceData {
     latest: unknown | null;
     bankFacing: unknown | null;
     currentPromptVersion: number | null;
+    /** `latest` is an unbuilt placeholder whose build job is still queued or
+     *  running. The card shows "being generated" and no safety verdict. */
+    building?: boolean;
     /** PR-C1 candidate-safety verdict for `latest`, computed server-side by
      *  the same predicate every save / forward path uses. When `blocked`, the
      *  card must show review-required and disable Finalize / Submit /

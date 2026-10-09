@@ -135,6 +135,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
                 currentPromptVersion: data.defencePackage.currentPromptVersion,
                 // PR-C1 review-required verdict for the latest candidate.
                 safety: data.defencePackage.safety,
+                building: data.defencePackage.building,
               }
             : undefined
         }
