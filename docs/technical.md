@@ -3685,6 +3685,11 @@ code-built claim ledger.
     "inverted" in every run. Any finding → **one** surgical correction (same cached prompt), checked and
     reviewed again; if that fails, the template writer. Calls per package: 2 (write, review), at most 4.
   - **No judge in production.** `judgePrompt` is used only by the offline eval, `scripts/counsel/eval-counsel.mts`.
+  - **Page context follows the record.** The description of the page handed to the writer (`pageContext`, `run.ts`)
+    names a delivered date on the shipment card, and delivery among the timeline's events, only when the ledger holds
+    `carrier_delivered` (`shipmentCardContext`, `timelineEventsContext`). Before 2026-10-09 it always said "shipped and
+    delivered dates"; on an order with no recorded delivery the writer repeated it and the reviewer rejected the letter
+    (`no_counsel_letter`, #103370).
   - **Reuse.** `counselInputHash` hashes the ledger (claims, specifics, limits, exhibits), the page context, the
     merchant name, the models and `COUNSEL_PROMPT_VERSION` (which also versions the code-written wording). It is stored
     with the summary in `narrative_json.counsel = { inputHash, summary }`. A rebuild whose latest non-failed counsel
