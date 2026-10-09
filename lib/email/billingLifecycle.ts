@@ -40,6 +40,7 @@ import { toBcp47 } from "@/lib/i18n/bcp47";
 import { getEmbeddedAppUrl } from "./publicSiteUrl";
 import { brandHeader, ctaButton, plateLayout } from "./digestShared";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
 
 // Env reads happen at call time, not module load — capturing at module
 // scope makes the module's behavior depend on import order in tests
@@ -126,12 +127,12 @@ async function resolveTeamContext(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("shop_domain")
+    .select("shop_domain, shop_name, primary_domain")
     .eq("id", shopId)
     .single();
   const shopDomain = shop?.shop_domain ?? "";
 
-  return { to, shopDomain, shopName: shopDomain };
+  return { to, shopDomain, shopName: storeDisplayName(shop) ?? "" };
 }
 
 /** A namespaced translator for the `email.billing` message tree plus a

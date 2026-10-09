@@ -69,7 +69,7 @@ function buildSb(opts: {
             eq: () => ({
               single: vi
                 .fn()
-                .mockResolvedValue({ data: { shop_domain: "acme.myshopify.com" }, error: null }),
+                .mockResolvedValue({ data: { shop_domain: "acme.myshopify.com", shop_name: "Salt & Stone" }, error: null }),
             }),
           }),
         };
@@ -112,6 +112,11 @@ describe("sendGorgiasEvidenceReadyAlert", () => {
     // CTA deep-links to the Gorgias review card (section param survives the
     // ddredirect URL-encoding), so the merchant lands on the right spot.
     expect(arg.html).toContain(encodeURIComponent("section=gorgias-comms"));
+    // The store is called by its own name (HTML-escaped), never the myshopify alias.
+    expect(arg.html).toContain("Salt &amp; Stone");
+    expect(arg.text).toContain("Salt & Stone");
+    expect(arg.html).not.toContain("acme.myshopify.com");
+    expect(arg.text).not.toContain("acme.myshopify.com");
   });
 
   it("sends even when the evidenceReady preference is missing (defaults on)", async () => {
