@@ -360,6 +360,9 @@ describe("buildDefencePackageJob — a withheld letter says why", () => {
     issues: [
       'conclusion: "fifty" is not a specific of any ledger claim',
       'copy: "3 july" is used 2 times (summary, conclusion); once only — elsewhere refer to the event ("the delivery", "that order")',
+      // Neither of these withholds a letter; neither is stored as a reason.
+      'unclear: "It was that order." — rewrite it plainly',
+      "length: summary: 92 words, the limit is 90 — rewrite it to about 75 words.",
     ],
     corrected: true,
     replay: {

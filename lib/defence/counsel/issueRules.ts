@@ -44,6 +44,9 @@ function splitSection(issue: string): { section: string; body: string } {
 
 /** [test on the issue body, rule id, description]. First match wins. */
 const RULES: ReadonlyArray<[RegExp, string, string]> = [
+  // First: a reviewer finding quotes the letter and may contain any phrase below.
+  [/^fact-check: /, "review.fact_check", "The reviewer found a sentence the ledger does not support."],
+  [/^unclear: /, "review.unclear", "The reviewer found a sentence unclear."],
   [/^shape: section ".*" is not in the playbook/, "shape.unknown_section", "A section the brief does not have."],
   [/^shape: section ".*" appears twice/, "shape.duplicate_section", "A section written twice."],
   [/^unknown claim "/, "shape.unknown_claim", "A claim id that is not in the ledger."],
@@ -67,13 +70,15 @@ const RULES: ReadonlyArray<[RegExp, string, string]> = [
   [/^copy: ".*" is used \d+ times; at most twice/, "copy.phrase_repeated", "A distinctive phrase used more than twice."],
   [/^copy: ".*" is used \d+ times \(.*\); once only/, "copy.specific_repeated", "A date or number stated more than once."],
   [/the timeline and the table print BELOW the text/, "copy.exhibit_position", "An exhibit placed above the text."],
-  [/^fact-check: /, "review.fact_check", "The reviewer found a sentence the ledger does not support."],
-  [/^unclear: /, "review.unclear", "The reviewer found a sentence unclear."],
 ];
 
 /** The rule, part and fixed description for one issue string. */
 export function classifyIssue(issue: string): CounselIssueRecord {
   const { section, body } = splitSection(issue);
+  if (/^(?:fact-check|unclear): /.test(body)) {
+    const [, rule, message] = RULES.find(([re]) => re.test(body))!;
+    return { rule, section, message };
+  }
   if (issue.startsWith("truth (")) {
     return { rule: "truth.validator", section, message: "The production validator rejected a section." };
   }
@@ -84,6 +89,14 @@ export function classifyIssue(issue: string): CounselIssueRecord {
     if (re.test(body)) return { rule, section, message };
   }
   return { rule: "unclassified", section, message: "An issue with no rule id (add it to issueRules.ts)." };
+}
+
+/** Rule ids as the signature counts them: every style rule is one "lint",
+ *  so two letters withheld for the same cause do not land in different groups
+ *  because of which adjective each one used. `validation_errors` keeps the
+ *  exact rules. */
+export function signatureRules(records: readonly CounselIssueRecord[]): string[] {
+  return [...new Set(records.map((r) => (r.rule.startsWith("lint.") ? "lint" : r.rule)))];
 }
 
 /** Issues as stored records: one per rule and part, in first-seen order. */

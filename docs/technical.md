@@ -3885,20 +3885,23 @@ the three situations that used to share `no_counsel_letter`:
 | `counsel_bank_claim_unsupported` | a bank claim is captured, so counsel is not called (a known gap, scheduled) |
 | `counsel_disabled` | `DEFENCE_COUNSEL_V2=off` |
 
-For `no_counsel_letter` the rejecting rules are written to `validation_errors` as `{ rule, section, message }` and are
-listed in the failed-package alert. The issue strings themselves are unchanged (they are the correction prompt's
+For `no_counsel_letter` the rules that withheld the letter are written to `validation_errors` as `{ rule, section,
+message }` and are listed in the failed-package alert. Only blocking issues are stored (`isBlockingIssue`,
+`generate.ts`): a reviewer clarity note or a summary a few words over its limit is sent to the writer but never costs
+the letter, so it is not recorded as a reason. The issue strings themselves are unchanged (they are the correction prompt's
 input); `lib/defence/counsel/issueRules.ts` reads a stable rule id off each one (`grounding.unsupported_specific`,
 `copy.specific_repeated`, `review.fact_check`, `lint.<name>`, `truth.validator`, ...). `message` is the rule's fixed
 description, never the issue text: an issue quotes the rejected draft and `validation_errors` is returned to the
 browser. A new `issues.push` in `checks.ts` needs a rule there; `issueRules.test.ts` pins the producer count.
 
 **Signature** (`failureSignature`): `code · module · brief · payment family · detail · sorted rule ids`, absent parts
-dropped. `detail` is a skip's exit, an `llm_error`'s class (`json_parse`, `api_4xx`, `api_5xx`, `timeout`, `other`) or
+dropped. In the signature every style rule counts as one `lint` (`signatureRules`), so the same cause does not split
+into groups by which word tripped it; `validation_errors` keeps the exact rules. `detail` is a skip's exit, an `llm_error`'s class (`json_parse`, `api_4xx`, `api_5xx`, `timeout`, `other`) or
 a validator's first rule. Example: `no_counsel_letter · credit_not_processed · general · klarna ·
 copy.specific_repeated,grounding.unsupported_specific`.
 
-**Replay input stays server-side.** `GET /api/defence-packages/:id` strips `counsel_replay_json` from its response; the
-workspace route selects an explicit column list that does not include it. Retention is not implemented yet (plan
+**The record stays server-side.** `GET /api/defence-packages/:id` strips `counsel_replay_json`, `outcome_detail` and
+`failure_signature` from its response; the workspace route selects an explicit column list that includes none of them. Retention is not implemented yet (plan
 Phase 0b: nulled 30 days after the dispute closes).
 
 **Tools.**

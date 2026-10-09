@@ -211,6 +211,10 @@ export function draftFromWriter(raw: string, argued: Brief["sections"]): Counsel
   };
 }
 
+/** True for an issue that withholds the letter. A reviewer clarity note and a
+ *  summary a few words over its limit are reported and corrected but do not. */
+export const isBlockingIssue = (issue: string): boolean => !issue.startsWith("unclear:") && !isSoftLengthIssue(issue);
+
 // Soft (a few words over, `length:` prefix) or hard: both go to the shortener.
 const LENGTH_ISSUE = /^(length: )?summary: \d+ words, the limit is \d+/;
 
@@ -318,6 +322,6 @@ export async function writeLetter(args: {
   // every other code check and every fact-check error still blocks.
   return {
     theory, draft, firstIssues, issues, corrected,
-    ok: issues.filter((i) => !i.startsWith("unclear:") && !isSoftLengthIssue(i)).length === 0,
+    ok: issues.filter(isBlockingIssue).length === 0,
   };
 }

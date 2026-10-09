@@ -60,7 +60,7 @@ describe("non-letter outcome records", () => {
 
   it("the package route never returns the writer's replay input", () => {
     const route = readFileSync(join(__dirname, "..", "..", "..", "app", "api", "defence-packages", "[id]", "route.ts"), "utf8");
-    expect(route).toMatch(/counsel_replay_json: _replay, \.\.\.pkg/);
+    expect(route).toMatch(/counsel_replay_json: _replay, outcome_detail: _detail, failure_signature: _signature, \.\.\.pkg/);
     expect(route).toMatch(/NextResponse\.json\(\{ package: pkg \}\)/);
     const workspace = readFileSync(join(__dirname, "..", "..", "..", "app", "api", "disputes", "[id]", "workspace", "route.ts"), "utf8");
     expect(workspace).not.toMatch(/counsel_replay_json/);

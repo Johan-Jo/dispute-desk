@@ -41,7 +41,8 @@ import { nonCardDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCatego
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel, type CounselTrace } from "@/lib/defence/counsel/run";
-import { issueRecords } from "@/lib/defence/counsel/issueRules";
+import { issueRecords, signatureRules } from "@/lib/defence/counsel/issueRules";
+import { isBlockingIssue } from "@/lib/defence/counsel/generate";
 import { SKIP_REASON, factCountsByCategory, failureSignature, llmErrorClass, type SkipExit } from "@/lib/defence/outcomes";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
 import { disputeFrame, requestLine, responseTitle } from "@/lib/defence/counsel/frame";
@@ -690,13 +691,14 @@ export async function handleBuildDefencePackage(
           onTrace: async (trace) => {
             counselTrace = trace;
             try {
-              await sb
+              const { error } = await sb
                 .from("defence_packages")
                 .update({
                   counsel_replay_json: trace.replay,
                   outcome_detail: counselCoverage(trace, planFacts),
                 })
                 .eq("id", packageId);
+              if (error) console.warn("[buildDefencePackage] counsel replay input not stored", error.message);
             } catch (err) {
               console.warn("[buildDefencePackage] counsel replay input not stored", err);
             }
@@ -738,7 +740,9 @@ export async function handleBuildDefencePackage(
       : bankClaim?.text
         ? "counsel_bank_claim_unsupported"
         : "no_counsel_letter";
-    const issues = trace ? issueRecords(trace.issues) : [];
+    // Only what withheld the letter: a clarity note or a summary a few words
+    // over its limit is reported to the writer but never costs the letter.
+    const issues = trace ? issueRecords(trace.issues.filter(isBlockingIssue)) : [];
     await logAuditEvent({
       shopId: pkg.shop_id,
       disputeId: pkg.dispute_id,
@@ -756,7 +760,7 @@ export async function handleBuildDefencePackage(
     });
     const reason =
       kind === "counsel_disabled"
-        ? "No letter: counsel v2 is switched off (DEFENCE_COUNSEL_V2=off) and the template writer is retired."
+        ? "No letter: counsel v2 is switched off and the template writer is retired."
         : kind === "counsel_bank_claim_unsupported"
           ? "No letter: a bank claim is captured for this dispute and counsel v2 does not write from one yet."
           : `No letter: the template writer is retired and counsel v2 wrote none for ${reasonCodeModule.key}.`;
@@ -767,7 +771,10 @@ export async function handleBuildDefencePackage(
         moduleKey: reasonCodeModule.key,
         brief: trace?.replay.brief ?? null,
         paymentFamily: paymentContext?.family ?? null,
-        rules: issues.map((i) => i.rule),
+        // The writer returned nothing and reported nothing: its own class,
+        // never an unexplained `no_counsel_letter`.
+        detail: kind === "no_counsel_letter" && !trace ? "no_trace" : null,
+        rules: signatureRules(issues),
       }),
     });
   }

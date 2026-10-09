@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LINT } from "../checks";
-import { classifyIssue, issueRecords, LINT_RULE_IDS } from "../issueRules";
+import { classifyIssue, issueRecords, LINT_RULE_IDS, signatureRules } from "../issueRules";
 
 /** One real-shaped issue string per producer in checks.ts and generate.ts. */
 const SAMPLES: Array<[issue: string, rule: string, section: string]> = [
@@ -65,6 +65,17 @@ describe("counsel issue rules", () => {
       const quoted = issue.match(/"([^"]{12,})"/)?.[1];
       if (quoted) expect(classifyIssue(issue).message).not.toContain(quoted);
     }
+  });
+
+  it("classes a reviewer finding as the reviewer's, whatever it quotes", () => {
+    expect(classifyIssue('fact-check: "It arrived 14 days later." — "14" is not a specific of any ledger claim').rule).toBe("review.fact_check");
+    expect(classifyIssue('unclear: "See the timeline above." — the timeline and the table print BELOW the text').rule).toBe("review.unclear");
+  });
+
+  it("counts every style rule as one in the signature", () => {
+    const recs = issueRecords(['summary: meta-talk — "notably"', 'conclusion: banned word — "baseless"', 'fact-check: "x" — y']);
+    expect(recs).toHaveLength(3);
+    expect(signatureRules(recs)).toEqual(["lint", "review.fact_check"]);
   });
 
   it("keeps one record per rule and part", () => {

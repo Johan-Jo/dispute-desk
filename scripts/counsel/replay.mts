@@ -90,7 +90,9 @@ if (packageIds.length || signature) {
     .select("id, version, status, failure_code, failure_signature, counsel_replay_json")
     .not("counsel_replay_json", "is", null);
   q = packageIds.length ? q.in("id", packageIds) : q.eq("failure_signature", signature as string);
-  const { data, error } = await q.order("created_at", { ascending: false }).range(0, Number(arg("limit") ?? "12") - 1);
+  // The limit bounds a signature's sample; a list of ids is run whole.
+  const ordered = q.order("created_at", { ascending: false });
+  const { data, error } = await (packageIds.length ? ordered : ordered.range(0, Number(arg("limit") ?? "12") - 1));
   if (error) throw new Error(error.message);
   for (const row of data ?? []) {
     cases.push({
@@ -113,6 +115,10 @@ let letters = 0;
 let cost = 0;
 for (const c of cases) {
   const r = c.replay;
+  if (r.v !== 1) {
+    lines.push(`- ${c.label}: replay input version ${String(r.v)} is not one this script reads, skipped`);
+    continue;
+  }
   const brief = BRIEFS[r.brief];
   if (!brief) {
     lines.push(`- ${c.label}: unknown brief "${r.brief}", skipped`);
