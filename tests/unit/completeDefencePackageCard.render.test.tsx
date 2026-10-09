@@ -307,3 +307,36 @@ describe("CompleteDefencePackageCard — held on Auto-pilot for the due date", (
     expect(contains(render(props(false)), "Approve v2")).toBe(true);
   });
 });
+
+/* Prod dispute e1fa509e, 2026-10-09: the build job for a fresh draft sat
+ * queued for 35+ minutes and the card told the merchant to regenerate a
+ * package that simply had not been written yet. */
+describe("CompleteDefencePackageCard — draft whose build job is still pending", () => {
+  const props = (building: boolean): CardProps => ({
+    packId: "pack-1",
+    submittedToShopifyAt: null,
+    defencePackage: {
+      latest: row({ pdf_path: null, validation_status: null, llm_model: null }),
+      bankFacing: null,
+      currentPromptVersion: 10,
+      building,
+      safety: SAFE,
+    },
+  });
+
+  it("says the package is being generated, and never review-required", () => {
+    const html = render(props(true));
+    expect(occurrences(html, PKG.generatingTitle)).toBe(1);
+    expect(occurrences(html, REVIEW_REQUIRED_TITLE)).toBe(0);
+  });
+
+  it("offers no approval action while it is being generated", () => {
+    const html = render(props(true));
+    expect(html).not.toContain("Approve");
+    expect(html).not.toContain("Submit to Shopify");
+  });
+
+  it("does not render the generating banner once the build is done", () => {
+    expect(occurrences(render(props(false)), PKG.generatingTitle)).toBe(0);
+  });
+});
