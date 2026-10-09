@@ -12,6 +12,7 @@
 
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
@@ -44,7 +45,12 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   }
 
   // ── Failed / building / no-pack banners ──
-  const failedBanner = derived.isFailed ? (
+  const failedBanner = derived.failureCode === PACK_LIMIT_REACHED ? (
+    <PackCreditNeededBanner
+      onRetry={() => { void actions.generatePack(); }}
+      retrying={clientState.retrying}
+    />
+  ) : derived.isFailed ? (
     <Banner tone="critical" title={tExtra("buildFailedTitle")}>
       <p>{tChrome("buildFailedBody")}</p>
     </Banner>

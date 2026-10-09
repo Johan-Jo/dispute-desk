@@ -1993,6 +1993,12 @@
         "order_fetch_failed": {
           "title": "Não conseguimos obter os dados do pedido no Shopify",
           "body": "Este pacote não pôde ser montado porque não conseguimos carregar o pedido subjacente no Shopify. Trata-se de um problema do nosso sistema — não é falta de evidências da sua parte."
+        },
+        "pack_limit_reached": {
+          "title": "Este pacote precisa de um crédito para ser concluído",
+          "body": "Reunimos as evidências desta disputa, mas seu plano não tem mais créditos de pacote, então o pacote não foi concluído. Não há nada de errado com a disputa nem com as suas evidências.",
+          "help": "Faça upgrade do plano para adicionar créditos e depois reconstrua este pacote.",
+          "cta": "Fazer upgrade do plano"
         }
       },
       "failureCopyFallback": {

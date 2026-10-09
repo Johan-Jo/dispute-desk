@@ -4634,7 +4634,7 @@ to a dedicated `lib/argument/reasonFamily.ts` for the same reason.
 - **`ready`** — build completed; whether it can be submitted is encoded in `submission_readiness` (`ready` / `ready_with_warnings` / `blocked`).
 - **`saving`** / **`save_failed`** / **`saved_to_shopify`** — submission lifecycle.
 
-When a build fails, `evidence_packs.failure_code` (machine-readable, e.g. `order_fetch_failed`) and `evidence_packs.failure_reason` (internal full error text) are persisted. The merchant UI maps `failureCode` → safe copy via `FAILURE_COPY` in `OverviewTab.tsx` / `EvidenceTab.tsx`; `failureReason` is **never rendered** to merchants.
+When a build fails, `evidence_packs.failure_code` (machine-readable, e.g. `order_fetch_failed`) and `evidence_packs.failure_reason` (internal full error text) are persisted. The merchant UI maps `failureCode` → safe copy via `FAILURE_COPY` in `OverviewTab.tsx` / `EvidenceTab.tsx`; `failureReason` is **never rendered** to merchants. `pack_limit_reached` is the one code that is a billing halt rather than a system failure: `buildPackJob` writes it when a finished build finds no credit left at `consumePack` (typical on a first sync, where every dispute enqueues against the same starting balance). All three workspace tabs render `PackCreditNeededBanner` for it — an upgrade CTA plus retry, never the "system issue" copy.
 
 Build pipeline contract (`lib/packs/buildPack.ts`, `lib/jobs/handlers/buildPackJob.ts`, `lib/automation/pipeline.ts`):
 

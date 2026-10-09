@@ -1328,6 +1328,12 @@
         "order_fetch_failed": {
           "title": "We couldn't retrieve the Shopify order data",
           "body": "This pack couldn't be built because we weren't able to load the underlying order from Shopify. This is a system issue on our end — not missing evidence on yours."
+        },
+        "pack_limit_reached": {
+          "title": "This pack needs a credit to finish",
+          "body": "We collected the evidence for this dispute, but your plan has no pack credits left, so the pack wasn't finished. Nothing went wrong with the dispute or your evidence.",
+          "help": "Upgrade your plan to add credits, then rebuild this pack.",
+          "cta": "Upgrade plan"
         }
       },
       "failureCopyFallback": {
