@@ -12,6 +12,7 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
@@ -69,7 +70,7 @@ export async function sendHighValueReviewAlert(
         High-value dispute parked for your review
       </h1>
       <p style="font-size:14px;color:#6D7175;margin:0 0 20px;line-height:1.5">
-        A <strong>${reasonLabel}</strong> dispute for ${shopLabel} came in at
+        A <strong>${reasonLabel}</strong> dispute for ${escapeHtml(shopLabel)} came in at
         <strong>$${ctx.disputeAmount}</strong>, which is above the
         <strong>$${ctx.threshold}</strong> review threshold you set during setup.
         DisputeDesk built the evidence pack automatically but is holding it for your approval

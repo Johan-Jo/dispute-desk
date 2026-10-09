@@ -12,6 +12,8 @@ import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
@@ -164,7 +166,7 @@ export async function sendPackSavedAlert(
     const s = STRINGS[locale];
 
     const [{ data: shop }, { data: dispute }] = await Promise.all([
-      sb.from("shops").select("shop_domain").eq("id", ctx.shopId).single(),
+      sb.from("shops").select("shop_domain, shop_name, primary_domain").eq("id", ctx.shopId).single(),
       sb
         .from("disputes")
         .select("dispute_gid, dispute_evidence_gid, due_at")
@@ -172,7 +174,7 @@ export async function sendPackSavedAlert(
         .single(),
     ]);
     const shopDomain = shop?.shop_domain ?? "";
-    const shopName = shopDomain || "your store";
+    const shopName = storeDisplayName(shop) ?? "your store";
     const reason = reasonLabel(ctx.reason);
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
 
@@ -214,7 +216,7 @@ export async function sendPackSavedAlert(
       </tr></table>
 
       <p style="font-size:14px;color:#6D7175;margin:0 0 16px;line-height:1.5">
-        ${s.intro({ reason, amount: amountStr, shop: shopName })}
+        ${s.intro({ reason, amount: amountStr, shop: escapeHtml(shopName) })}
       </p>
 
       <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 16px;margin-bottom:20px">

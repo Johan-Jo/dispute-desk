@@ -51,6 +51,7 @@ import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeA
 import { sendHighValueReviewAlert } from "@/lib/email/sendHighValueReviewAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
 import {
   SAFEGUARD_RULE_NAME as HIGH_VALUE_SAFEGUARD_NAME,
   readStoreAutomation,
@@ -953,13 +954,13 @@ async function sendHighValueReviewAlertForPack(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("shop_domain")
+    .select("shop_domain, shop_name, primary_domain")
     .eq("id", shopId)
     .single();
 
   const result = await sendHighValueReviewAlert({
     to,
-    shopName: shop?.shop_domain ?? undefined,
+    shopName: storeDisplayName(shop) ?? undefined,
     shopDomain: shop?.shop_domain ?? null,
     disputeId,
     disputeReason: dispute.reason,
