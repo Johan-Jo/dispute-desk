@@ -3931,6 +3931,12 @@ Phase 0b: nulled 30 days after the dispute closes).
 
 **Also changed:** `pdf_render_failed` now sends the failed-package alert.
 
+**A skipped letter is a merchant task in every automation mode (2026-10-09).** `resolveAttention` returns `blocking` /
+`missing_required_evidence` whenever the latest defence package was skipped for lack of evidence and the evidence pack
+is `ready`. The rule used to sit inside the review-mode approval gate, so in auto mode it never ran and the dispute
+resolved to `pack_prepared` ("No action required") while the letter tab said "Not enough bank-facing evidence" and
+nothing would be filed (whj8db-1q #21037). The evidence pack being ready is not the letter being ready.
+
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
 `lib/defence/pdf/DefencePackageDocument.tsx` + `styles.ts` are built to the maintainer's Claude

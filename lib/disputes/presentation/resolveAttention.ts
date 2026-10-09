@@ -199,13 +199,19 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
       internalIssue,
     };
   }
+  /* A letter skipped for lack of evidence halts the response in EVERY mode.
+   *
+   * This lived inside the approval gate below, so it only fired in review
+   * mode. In auto mode there is no gate, the branch was never reached, and the
+   * case resolved to `pack_prepared` — "No action required" — over a dispute
+   * with no letter, where nothing is filed at the deadline (whj8db-1q #21037,
+   * 2026-10-09: the Overview said the pack was prepared while the letter tab
+   * said "Not enough bank-facing evidence"). The evidence pack being ready is
+   * not the letter being ready. */
+  if (input.letterSkippedNoEvidence === true && input.packStatus === "ready") {
+    return { attention: "blocking", blockingReason: "missing_required_evidence", internalIssue };
+  }
   if (approvalGate) {
-    // Nothing to approve when the letter was skipped for lack of evidence —
-    // "approval required" there sends the merchant to a button that files
-    // nothing (Sura Svenne test dispute, 2026-09-28).
-    if (input.letterSkippedNoEvidence === true) {
-      return { attention: "blocking", blockingReason: "missing_required_evidence", internalIssue };
-    }
     return { attention: "blocking", blockingReason: "approval_gate", internalIssue };
   }
 

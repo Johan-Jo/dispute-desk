@@ -793,6 +793,34 @@ describe("Blocking-cause labels", () => {
     );
   });
 
+  /* whj8db-1q #21037 (2026-10-09): an AUTO-mode shop, the evidence pack
+   * `ready`, the letter skipped. The rule above sat inside the review-mode
+   * approval gate, so here the Overview said "Pack prepared — No action
+   * required" while the letter tab said there was not enough evidence. */
+  it("a skipped letter asks for evidence in auto mode too, never 'no action required'", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      automationMode: "auto",
+      packStatus: "ready",
+      approvedForSaveAt: null,
+      letterSkippedNoEvidence: true,
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("missing_required_evidence");
+    expect(listPrimaryState(p).labelKey).toBe("presentation.attentionBlocking.missing_required_evidence");
+  });
+
+  it("an auto-mode pack with a letter is still not a merchant task", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      automationMode: "auto",
+      packStatus: "ready",
+      approvedForSaveAt: null,
+      letterSkippedNoEvidence: false,
+    });
+    expect(p.attention).not.toBe("blocking");
+  });
+
   it("billing halts label as billing action", () => {
     const p = resolvePresentation({
       ...basePresentation,
