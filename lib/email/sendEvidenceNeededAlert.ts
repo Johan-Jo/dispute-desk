@@ -27,6 +27,7 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
@@ -290,8 +291,8 @@ export async function sendEvidenceNeededAlert(
     : "Manual evidence needed";
 
   const intro = isReviewMode
-    ? `A <strong>${reasonLabel}</strong> dispute${amountStr}${orderLabel} for ${shopLabel} has been processed. DisputeDesk has collected all the evidence it can from Shopify${attachedLabels.length ? " and your connected tools" : ""} — no upload is needed. Review the pack when you have a moment.`
-    : `A <strong>${reasonLabel}</strong> dispute${amountStr}${orderLabel} for ${shopLabel} has been processed. DisputeDesk has collected available Shopify data, but this dispute type benefits from additional evidence that must be uploaded manually.`;
+    ? `A <strong>${reasonLabel}</strong> dispute${amountStr}${orderLabel} for ${escapeHtml(shopLabel)} has been processed. DisputeDesk has collected all the evidence it can from Shopify${attachedLabels.length ? " and your connected tools" : ""} — no upload is needed. Review the pack when you have a moment.`
+    : `A <strong>${reasonLabel}</strong> dispute${amountStr}${orderLabel} for ${escapeHtml(shopLabel)} has been processed. DisputeDesk has collected available Shopify data, but this dispute type benefits from additional evidence that must be uploaded manually.`;
 
   // "Already attached" block (HTML) — shown whenever we have something.
   const attachedBlockHtml = attachedLabels.length
