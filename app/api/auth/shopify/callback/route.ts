@@ -214,12 +214,19 @@ export async function GET(req: NextRequest) {
       // shop, so re-installs after uninstall don't re-pay the cost.
       // Fire-and-forget — backfill runs in the worker, not on this
       // request path, so OAuth latency is unaffected.
-      enqueueShopDailyMetricsBackfill(shopInternalId).catch((err) => {
-        console.warn(
-          "[shop_daily_metrics] backfill enqueue failed:",
-          err instanceof Error ? err.message : err,
-        );
-      });
+      //
+      // Not on a brand-new shop: its disputes are not synced yet, so the
+      // backfill would write 90 days of zero chargebacks. A new shop gets it
+      // when its first Insights month records are written
+      // (`maintainShopMonths`), on either install path.
+      if (!isNewShop) {
+        enqueueShopDailyMetricsBackfill(shopInternalId).catch((err) => {
+          console.warn(
+            "[shop_daily_metrics] backfill enqueue failed:",
+            err instanceof Error ? err.message : err,
+          );
+        });
+      }
 
       // LSE-4: register the dispute-desk-pixel Web Pixel extension on
       // this shop via the webPixelCreate mutation. App pixels don't

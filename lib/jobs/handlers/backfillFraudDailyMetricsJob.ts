@@ -14,10 +14,14 @@
  */
 
 import { backfillFraudDailyMetrics } from "@/lib/disputes/snapshotFraudDailyMetrics";
+import { enqueueMaterializeInsightsMonths } from "@/lib/insights/period/enqueueMaterialize";
 import type { ClaimedJob } from "../claimJobs";
 
 export async function handleBackfillFraudDailyMetrics(
   job: ClaimedJob,
 ): Promise<void> {
   await backfillFraudDailyMetrics(job.shopId);
+  // A new shop's month records read one share from this rollup. No-op for a
+  // shop that already has records; never throws.
+  await enqueueMaterializeInsightsMonths(job.shopId);
 }
