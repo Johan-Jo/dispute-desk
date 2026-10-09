@@ -216,3 +216,40 @@ describe("counsel cost", () => {
     expect(quantile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.9)).toBe(9);
   });
 });
+
+/* The run reports what it decided from and why it stopped, letter or not, so
+ * the job can store it (plan: defence-package-failure-classes, Phase 0a). */
+describe("runCounsel trace", () => {
+  it("reports the letter's inputs when a letter is written", async () => {
+    callClaudeMessages.mockResolvedValueOnce(reply(summaryJson(V12_SUMMARY))).mockResolvedValueOnce(reply(CLEAN));
+    const onTrace = vi.fn();
+    const res = await runCounsel({ ...runArgs, onTrace });
+    expect(res).not.toBeNull();
+    expect(onTrace).toHaveBeenCalledTimes(1);
+    const trace = onTrace.mock.calls[0][0];
+    expect(trace.outcome).toBe("letter");
+    expect(trace.issues).toEqual([]);
+    expect(trace.replay.brief).toBe("item_not_received");
+    expect(trace.replay.argued).toContain("shipping");
+    expect(trace.replay.ledger.map((c: { id: string }) => c.id)).toContain("carrier_delivered");
+    expect(trace.replay.lastDraft.summary.paragraphs).toEqual([V12_SUMMARY]);
+    expect(trace.replay.inputHash).toMatch(/^[0-9a-f]{16,}$/);
+  });
+
+  it("reports the issues that withheld the letter", async () => {
+    const long = summaryJson(LONG_ONLY);
+    callClaudeMessages
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(long))
+      .mockResolvedValueOnce(reply(LONG_ONLY));
+    const onTrace = vi.fn();
+    const res = await runCounsel({ ...runArgs, onTrace });
+    expect(res).toBeNull();
+    const trace = onTrace.mock.calls[0][0];
+    expect(trace.outcome).toBe("checks_failed");
+    expect(trace.corrected).toBe(true);
+    expect(trace.issues.some((i: string) => /words, the limit is/.test(i))).toBe(true);
+    expect(trace.replay.lastDraft.summary.paragraphs.join(" ")).toContain("agree with each other");
+  });
+});

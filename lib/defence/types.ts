@@ -39,8 +39,14 @@ export type DefencePackageFailureCode =
   | "llm_error"
   | "pdf_render_failed"
   | "daily_cap_reached"
-  /** Counsel v2 wrote no letter; the template writer is retired (2026-09-28). */
-  | "no_counsel_letter";
+  /** Counsel v2 wrote a letter and its checks or the reviewer rejected it;
+   *  the template writer is retired (2026-09-28). The rules that rejected it
+   *  are in `validation_errors`. */
+  | "no_counsel_letter"
+  /** A bank claim is captured and counsel v2 does not write from one yet. */
+  | "counsel_bank_claim_unsupported"
+  /** Counsel v2 is switched off (`DEFENCE_COUNSEL_V2=off`). */
+  | "counsel_disabled";
 
 /** Wire shape of a `defence_packages` row. Matches the migration column-for-column. */
 export interface DefencePackage {

@@ -28,7 +28,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { checkDraft, toNarrative, type CheckContext } from "./checks";
 import { composeDraft, writeLetter, type CounselStage, type ModelCall } from "./generate";
 import { NOT_AS_DESCRIBED, playbookForModule } from "./playbooks";
-import { briefForModule, GENERAL_BRIEF, type Brief } from "./briefs";
+import { briefForModule, GENERAL_BRIEF, sectionApplies, type Brief } from "./briefs";
 import { CONSTITUTION_VERSION } from "./constitution";
 import { disputeFrame, frameRule, requestLine, type DisputeFrame } from "./frame";
 import { classifyChronologyEvent } from "../chronology";
@@ -381,6 +381,45 @@ export function counselInputHash(args: {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
+/**
+ * Everything a counsel run decided from, kept so the run can be replayed and
+ * its outcome counted (`defence_packages.counsel_replay_json`). Server-side
+ * only: it holds the last draft, which may be a rejected one.
+ */
+export interface CounselReplay {
+  v: 1;
+  moduleKey: string;
+  startBrief: string;
+  brief: string;
+  frame: DisputeFrame;
+  theory: string;
+  /** The brief sections the writer was asked to argue. */
+  argued: string[];
+  pageContext: string;
+  merchantName: string;
+  ledger: LedgerClaim[];
+  facts: readonly EvidenceFact[];
+  disputeOpenedAt: string | null;
+  check: Pick<CheckContext, "carrierName" | "pageIdentifiers" | "trackingUrl" | "carrierNames" | "productNames" | "forbiddenTitles">;
+  /** Not-as-described inputs that came from a model call or a record read. */
+  notAsDescribed: { extras: Omit<NotAsDescribedExtras, "constraints">; policy: { updatedAt: string | null; url: string | null; windowDays: number | null } | null } | null;
+  inputHash: string;
+  writeModel: string;
+  reviewModel: string;
+  promptVersion: number;
+  lastDraft: CounselDraft;
+}
+
+/** What a run that reached the writer reports, letter or not. */
+export interface CounselTrace {
+  outcome: "letter" | "checks_failed";
+  /** Issues on the first draft, and on the draft the run ended with. */
+  firstIssues: string[];
+  issues: string[];
+  corrected: boolean;
+  replay: CounselReplay;
+}
+
 export async function runCounsel(args: {
   shopId: string;
   moduleKey: string;
@@ -415,6 +454,8 @@ export async function runCounsel(args: {
     ok: boolean;
     reused: boolean;
   }) => Promise<void>;
+  /** Called once when the writer has run, with the outcome and its inputs. */
+  onTrace?: (trace: CounselTrace) => Promise<void> | void;
 }): Promise<CounselRunResult | null> {
   if (!counselEnabled(args.moduleKey)) return null;
   const started = Date.now();
@@ -599,6 +640,43 @@ export async function runCounsel(args: {
     throw err;
   }
   await args.onSpend?.({ model, tokens, stages, durationMs: Date.now() - started, ok: written.ok, reused: false });
+  const inLedger = new Set(ledger.map((c) => c.id));
+  await args.onTrace?.({
+    outcome: written.ok ? "letter" : "checks_failed",
+    firstIssues: written.firstIssues,
+    issues: written.issues,
+    corrected: written.corrected,
+    replay: {
+      v: 1,
+      moduleKey: args.moduleKey,
+      startBrief: startBrief.type,
+      brief: brief.type,
+      frame,
+      theory: written.theory.name,
+      argued: brief.sections.filter((sec) => !sec.exhibitOnly && sectionApplies(sec, inLedger)).map((sec) => sec.key),
+      pageContext,
+      merchantName: args.merchantName,
+      ledger,
+      facts: args.facts,
+      disputeOpenedAt: args.disputeOpenedAt,
+      check: {
+        carrierName: check.carrierName,
+        pageIdentifiers: check.pageIdentifiers,
+        trackingUrl: check.trackingUrl,
+        carrierNames: check.carrierNames,
+        productNames: check.productNames,
+        forbiddenTitles: check.forbiddenTitles,
+      },
+      notAsDescribed: nad
+        ? { extras: nad.extras, policy: nad.policy ? { updatedAt: nad.policy.updatedAt, url: nad.policy.url, windowDays: nad.policy.windowDays } : null }
+        : null,
+      inputHash,
+      writeModel: model,
+      reviewModel,
+      promptVersion: COUNSEL_PROMPT_VERSION,
+      lastDraft: written.draft,
+    },
+  });
   if (!written.ok) {
     // Visible in the logs: why there is no letter.
     console.warn(
