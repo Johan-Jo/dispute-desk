@@ -67,6 +67,7 @@ import {
 } from "@/lib/automation/merchantUiHiddenFields";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
+import { OrderSituationNote } from "./sections/OrderSituationNote";
 import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
 import {
   MANUAL_UPLOAD_FIELD,
@@ -1578,6 +1579,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           one PAID with 0.0 refunded, showed only "delivery proof unavailable /
           weak". Suppressed once submitted, like every other pre-submit advice
           block — the merchant can no longer act on it. */}
+      {/* A return on the order, stated to the merchant. The dispute page's
+          timeline is the bank letter's allow-list and drops return events, so
+          without this the merchant is never shown the one fact that explains
+          the case (whj8db-1q #21037). Shown after submission too: it is the
+          record, not advice. */}
+      <OrderSituationNote situation={dispute.orderSituation ?? null} />
+
       {!submitted && heldReason && (
         <Banner tone="info" title={tExtra(`heldUnrefunded.title.${heldReason}`)}>
           <BlockStack gap="200">

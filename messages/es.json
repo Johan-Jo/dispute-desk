@@ -2022,6 +2022,21 @@
         },
         "body": "Su control de fraude marcó este pedido y no se envió nada. El pago sigue cobrado: no se ha emitido ningún reembolso.",
         "helper": "Como no se envió nada, no hay prueba de entrega que presentar: la puntuación refleja eso, no una falta en sus registros."
+      },
+      "orderSituation": {
+        "title": {
+          "requested": "El cliente ha solicitado una devolución de este pedido",
+          "in_progress": "Hay una devolución abierta en este pedido",
+          "returned": "Una devolución de este pedido está marcada como recibida",
+          "failed": "Una devolución de este pedido está marcada como fallida"
+        },
+        "opened": "La devolución se creó el {date}.",
+        "refund": {
+          "none": "No se ha emitido ningún reembolso para el pedido.",
+          "some": "Se ha emitido un reembolso para el pedido."
+        },
+        "asOf": "Según el registro de Shopify cuando DisputeDesk consultó este pedido por última vez, el {date}.",
+        "privateNote": "Esta nota es solo para ti. No forma parte de nada de lo que se envía al banco."
       }
     },
     "evidenceTabExtra": {
@@ -3891,7 +3906,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalle de disputa en esta aplicación",
-          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda.\n\n**Si el pedido quedó retenido o se canceló y no se reembolsó**, un aviso lo indica. Su control de fraude marcó el pedido, no se envió nada y el pago sigue cobrado. En ese caso no hay prueba de entrega que presentar: la puntuación refleja lo que ocurrió con el pedido, no una falta en sus registros.\n\n**Cifras de su propia tienda.** En una disputa ganada o perdida, **Qué gana este tipo de disputa** puede mostrar con qué frecuencia se ganaron las disputas del mismo tipo en su tienda, y un paso de **La próxima vez** puede mostrar cuántas de sus disputas perdidas de ese tipo tuvieron el mismo problema. Solo aparecen cuando su tienda tiene suficientes disputas resueltas de ese tipo. Describen el historial de su tienda, no el razonamiento del banco en este caso."
+          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda.\n\n**Si el pedido quedó retenido o se canceló y no se reembolsó**, un aviso lo indica. Su control de fraude marcó el pedido, no se envió nada y el pago sigue cobrado. En ese caso no hay prueba de entrega que presentar: la puntuación refleja lo que ocurrió con el pedido, no una falta en sus registros.\n\n**Cifras de su propia tienda.** En una disputa ganada o perdida, **Qué gana este tipo de disputa** puede mostrar con qué frecuencia se ganaron las disputas del mismo tipo en su tienda, y un paso de **La próxima vez** puede mostrar cuántas de sus disputas perdidas de ese tipo tuvieron el mismo problema. Solo aparecen cuando su tienda tiene suficientes disputas resueltas de ese tipo. Describen el historial de su tienda, no el razonamiento del banco en este caso.\n\n**Una devolución en el pedido.** Cuando Shopify registra una devolución en el pedido disputado, el resumen y la pestaña de la carta muestran una nota que lo indica, con la fecha en que se creó la devolución si Shopify la proporciona y si se ha emitido un reembolso. La nota refleja el registro de Shopify en el momento de la última consulta de DisputeDesk. Es solo para ti y no forma parte de nada de lo que se envía al banco."
         },
         "reviewQueue": {
           "title": "La cola de revisión",

@@ -10,6 +10,7 @@
 
 "use client";
 
+import { OrderSituationNote } from "./sections/OrderSituationNote";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
@@ -105,6 +106,8 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {noPackBanner}
       {noDefenceLetterBanner}
       {notAssessedBanner}
+      {/* Merchant-only, and outside the card that mirrors the bank document. */}
+      <OrderSituationNote situation={data?.dispute?.orderSituation ?? null} />
 
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,
