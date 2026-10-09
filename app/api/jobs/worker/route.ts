@@ -18,9 +18,9 @@ import { handleCollectProductEvidence } from "@/lib/jobs/handlers/collectProduct
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
-// Backfill jobs walk 90 UTC days × ~700ms/day ≈ 63s. Other handlers
-// typically finish in <10s. 300s leaves headroom for retries on slow
-// Shopify responses without leaking into the worker's 2-min cadence.
+// Backfill jobs walk 90 UTC days × ~700ms/day ≈ 63s; order backfills and
+// dispute syncs run for minutes. 300s leaves headroom for one long job
+// started within the 150s start budget below.
 export const maxDuration = 300;
 
 /**
@@ -32,6 +32,28 @@ export const maxDuration = 300;
  * reclaimed per hour, some only finishing on their last attempt).
  */
 const START_BUDGET_MS = 150_000;
+
+/**
+ * Job types that may START in a later claim round, i.e. part-way through the
+ * invocation. These finish in seconds (measured: `build_pack` ~8 s,
+ * `build_defence_package` ~30 s, max 46 s).
+ *
+ * Everything else is only started from the first claim, at t≈0, exactly as
+ * before the re-claim loop existed. `backfill_shop_orders` measures its 240 s
+ * soft budget from its own start, and `sync_disputes` /
+ * `backfill_fraud_daily_metrics` run for minutes: started at t=140 s they
+ * would be killed at the 300 s `maxDuration`, burn an attempt and hold the
+ * shop's only slot until the 600 s lock expires. A type missing from this
+ * list just waits for the next tick, so new job types are safe by default.
+ */
+const LATE_START_JOB_TYPES = new Set([
+  "build_pack",
+  "build_defence_package",
+  "render_pdf",
+  "save_to_shopify",
+  "replay_blocked_builds",
+  "collect_product_evidence",
+]);
 
 /**
  * POST|GET /api/jobs/worker
@@ -67,100 +89,157 @@ async function runWorker(req: NextRequest) {
    * stays claimed, `claim_jobs` reclaims stale locks, and the next tick
    * continues. Doubling throughput while keeping ~40 % headroom is the trade;
    * raising it further would start betting on the mix.
+   *
+   * 10 is per CLAIM. It spreads one claim over up to ten shops; it never
+   * gave one shop more than one job — see the re-claim loop below.
    */
   const workerId = `worker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const claimed = await claimJobs(workerId, 10);
 
   const results: Array<{ jobId: string; status: string; error?: string }> = [];
   const startedAt = Date.now();
 
-  for (const [index, job] of claimed.entries()) {
-    if (index > 0 && Date.now() - startedAt > START_BUDGET_MS) {
-      for (const rest of claimed.slice(index)) {
-        await releaseJob(rest.id, workerId, rest.attempts);
-        results.push({ jobId: rest.id, status: "released" });
-      }
-      break;
-    }
-    try {
-      // Handlers return either `void` (legacy) or a `JobResult` (Phase
-      // 2.6+). When a handler explicitly returns `{ ok: false, ... }`,
-      // the dispatcher honors `retriable` instead of always retrying
-      // until maxAttempts. Throws stay retriable by default.
-      let handlerResult: void | { ok: boolean; reason?: string; retriable?: boolean } | undefined;
-      switch (job.jobType) {
-        case "build_pack":
-          await handleBuildPack(job);
-          break;
-        case "render_pdf":
-          await handleRenderPdf(job);
-          break;
-        case "sync_disputes":
-          await handleSyncDisputes(job);
-          break;
-        case "save_to_shopify":
-          handlerResult = await handleSaveToShopify(job);
-          break;
-        case "build_defence_package":
-          handlerResult = await handleBuildDefencePackage(job);
-          break;
-        case "snapshot_shop_daily_metrics":
-          // Returns a JobResult so `shop_unavailable` is honoured as
-          // non-retriable; discarding it would re-queue a deleted store daily.
-          handlerResult = await handleSnapshotShopDailyMetrics(job);
-          break;
-        case "backfill_shop_daily_metrics":
-          await handleBackfillShopDailyMetrics(job);
-          break;
-        case "backfill_shop_orders":
-          await handleBackfillShopOrders(job);
-          break;
-        case "snapshot_fraud_daily_metrics":
-          await handleSnapshotFraudDailyMetrics(job);
-          break;
-        case "backfill_fraud_daily_metrics":
-          await handleBackfillFraudDailyMetrics(job);
-          break;
-        case "reconcile_missing_order":
-          await handleReconcileMissingOrder(job);
-          break;
-        case "enrich_gorgias_comms":
-          handlerResult = await handleEnrichGorgiasComms(job);
-          break;
-        case "intel_run":
-          handlerResult = await handleIntelligenceRun(job);
-          break;
-        case "replay_blocked_builds":
-          await handleReplayBlockedBuilds(job);
-          break;
-        case "collect_product_evidence":
-          handlerResult = await handleCollectProductEvidence(job);
-          break;
-        default:
-          throw new Error(`Unknown job type: ${job.jobType}`);
-      }
+  /* ── CLAIM AGAIN WHILE THE START BUDGET LASTS ───────────────────────
+   *
+   * `claim_jobs` caps a shop at ONE running job, and the cap is evaluated
+   * inside the claim — so a single call hands back at most one job per shop,
+   * whatever `p_limit` says. The batch size of 10 above only ever helped a
+   * queue spread over ten shops. A backlog for ONE shop drained at one job
+   * per 2-minute tick.
+   *
+   * Measured on production 2026-10-09, shop d595d90a after a
+   * `replay_blocked_builds`: 27 `build_pack` jobs of ~8 s each, claimed at
+   * 10:24:38, 10:26:38, 10:28:38 … exactly one per tick. The chained
+   * `build_defence_package` for Order #23294 waited 54 minutes for ~30 s of
+   * work, and the whole replay needed ~1 h 50 for ~15 minutes of work.
+   *
+   * So when a batch finishes with budget left, claim again. Still one job
+   * per shop at a time: the previous job is `succeeded`/`failed` before the
+   * next claim runs, and a job another invocation holds is `running` and
+   * counted by the same SQL cap.
+   *
+   * A job this invocation already ran is not run twice. A failed job is
+   * re-queued with a 30 s × attempts delay, which could come due inside this
+   * window; ticks used to space attempts at least 2 minutes apart, and a
+   * transient outage should not burn all three attempts in 90 seconds. It is
+   * released untouched and the next tick takes it.
+   *
+   * Later rounds only start the short job types in `LATE_START_JOB_TYPES`;
+   * anything else is released the same way. A released job keeps its place
+   * at the head of its shop's queue, so that shop does no more work in this
+   * invocation — the old one-job-per-tick rate, never worse.
+   */
+  const handled = new Set<string>();
+  let claimedTotal = 0;
+  let budgetSpent = false;
+  let round = 0;
 
-      if (handlerResult && handlerResult.ok === false) {
-        const reason = handlerResult.reason ?? "handler returned failure";
-        await markJobFailed(job.id, reason, job.attempts, job.maxAttempts, {
-          retriable: handlerResult.retriable !== false,
-        });
-        results.push({ jobId: job.id, status: "failed", error: reason });
+  while (!budgetSpent) {
+    round += 1;
+    const batch = await claimJobs(workerId, 10);
+    const claimed: typeof batch = [];
+    for (const job of batch) {
+      if (handled.has(job.id) || (round > 1 && !LATE_START_JOB_TYPES.has(job.jobType))) {
+        await releaseJob(job.id, workerId, job.attempts);
+        results.push({ jobId: job.id, status: "released" });
       } else {
-        await markJobSucceeded(job.id);
-        results.push({ jobId: job.id, status: "succeeded" });
+        claimed.push(job);
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      // Unhandled exception → retriable by default. Handlers that
-      // need non-retriable behavior should return JobResult instead.
-      await markJobFailed(job.id, message, job.attempts, job.maxAttempts);
-      results.push({ jobId: job.id, status: "failed", error: message });
     }
+    if (claimed.length === 0) break;
+    claimedTotal += claimed.length;
+
+    for (const [index, job] of claimed.entries()) {
+      if (index > 0 && Date.now() - startedAt > START_BUDGET_MS) {
+        for (const rest of claimed.slice(index)) {
+          await releaseJob(rest.id, workerId, rest.attempts);
+          results.push({ jobId: rest.id, status: "released" });
+        }
+        budgetSpent = true;
+        break;
+      }
+      handled.add(job.id);
+      try {
+        // Handlers return either `void` (legacy) or a `JobResult` (Phase
+        // 2.6+). When a handler explicitly returns `{ ok: false, ... }`,
+        // the dispatcher honors `retriable` instead of always retrying
+        // until maxAttempts. Throws stay retriable by default.
+        let handlerResult: void | { ok: boolean; reason?: string; retriable?: boolean } | undefined;
+        switch (job.jobType) {
+          case "build_pack":
+            await handleBuildPack(job);
+            break;
+          case "render_pdf":
+            await handleRenderPdf(job);
+            break;
+          case "sync_disputes":
+            await handleSyncDisputes(job);
+            break;
+          case "save_to_shopify":
+            handlerResult = await handleSaveToShopify(job);
+            break;
+          case "build_defence_package":
+            handlerResult = await handleBuildDefencePackage(job);
+            break;
+          case "snapshot_shop_daily_metrics":
+            // Returns a JobResult so `shop_unavailable` is honoured as
+            // non-retriable; discarding it would re-queue a deleted store daily.
+            handlerResult = await handleSnapshotShopDailyMetrics(job);
+            break;
+          case "backfill_shop_daily_metrics":
+            await handleBackfillShopDailyMetrics(job);
+            break;
+          case "backfill_shop_orders":
+            await handleBackfillShopOrders(job);
+            break;
+          case "snapshot_fraud_daily_metrics":
+            await handleSnapshotFraudDailyMetrics(job);
+            break;
+          case "backfill_fraud_daily_metrics":
+            await handleBackfillFraudDailyMetrics(job);
+            break;
+          case "reconcile_missing_order":
+            await handleReconcileMissingOrder(job);
+            break;
+          case "enrich_gorgias_comms":
+            handlerResult = await handleEnrichGorgiasComms(job);
+            break;
+          case "intel_run":
+            handlerResult = await handleIntelligenceRun(job);
+            break;
+          case "replay_blocked_builds":
+            await handleReplayBlockedBuilds(job);
+            break;
+          case "collect_product_evidence":
+            handlerResult = await handleCollectProductEvidence(job);
+            break;
+          default:
+            throw new Error(`Unknown job type: ${job.jobType}`);
+        }
+
+        if (handlerResult && handlerResult.ok === false) {
+          const reason = handlerResult.reason ?? "handler returned failure";
+          await markJobFailed(job.id, reason, job.attempts, job.maxAttempts, {
+            retriable: handlerResult.retriable !== false,
+          });
+          results.push({ jobId: job.id, status: "failed", error: reason });
+        } else {
+          await markJobSucceeded(job.id);
+          results.push({ jobId: job.id, status: "succeeded" });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        // Unhandled exception → retriable by default. Handlers that
+        // need non-retriable behavior should return JobResult instead.
+        await markJobFailed(job.id, message, job.attempts, job.maxAttempts);
+        results.push({ jobId: job.id, status: "failed", error: message });
+      }
+    }
+
+    if (Date.now() - startedAt > START_BUDGET_MS) budgetSpent = true;
   }
 
   return NextResponse.json({
-    claimed: claimed.length,
+    claimed: claimedTotal,
     results,
   });
 }
