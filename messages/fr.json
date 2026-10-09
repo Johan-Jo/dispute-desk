@@ -1991,6 +1991,12 @@
         "order_fetch_failed": {
           "title": "Nous n'avons pas pu récupérer les données de commande Shopify",
           "body": "Ce dossier n'a pas pu être monté car nous n'avons pas pu charger la commande sous-jacente depuis Shopify. Il s'agit d'un problème système de notre côté — et non d'une preuve manquante de votre côté."
+        },
+        "pack_limit_reached": {
+          "title": "Ce dossier a besoin d'un crédit pour être finalisé",
+          "body": "Nous avons rassemblé les preuves de ce litige, mais votre plan n'a plus de crédits de dossier : le dossier n'a donc pas été finalisé. Il n'y a aucun problème avec le litige ni avec vos preuves.",
+          "help": "Changez de plan pour ajouter des crédits, puis relancez la construction de ce dossier.",
+          "cta": "Changer de plan"
         }
       },
       "failureCopyFallback": {

@@ -324,7 +324,10 @@ describe("handleBuildPack", () => {
 
     // Status flipped to failed after the consume race.
     expect(updateCalls.at(-1)).toEqual(
-      expect.objectContaining({ status: "failed" }),
+      expect.objectContaining({
+        status: "failed",
+        failure_code: "pack_limit_reached",
+      }),
     );
     const auditTypes = mockLogAuditEvent.mock.calls.map(
       (c) => (c[0] as { eventType: string }).eventType,

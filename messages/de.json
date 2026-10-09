@@ -1991,6 +1991,12 @@
         "order_fetch_failed": {
           "title": "Wir konnten die Shopify-Bestelldaten nicht abrufen",
           "body": "Dieses Beweispaket konnte nicht erstellt werden, weil wir die zugrunde liegende Bestellung nicht aus Shopify laden konnten. Dies ist ein Systemproblem auf unserer Seite — keine fehlenden Beweise auf Ihrer."
+        },
+        "pack_limit_reached": {
+          "title": "Dieses Beweispaket benötigt ein Guthaben",
+          "body": "Wir haben die Beweise für diesen Streitfall gesammelt, aber Ihr Plan hat kein Paketguthaben mehr — das Beweispaket wurde daher nicht fertiggestellt. Mit dem Streitfall und Ihren Beweisen ist alles in Ordnung.",
+          "help": "Upgraden Sie Ihren Plan, um Guthaben hinzuzufügen, und erstellen Sie das Paket dann erneut.",
+          "cta": "Plan upgraden"
         }
       },
       "failureCopyFallback": {
