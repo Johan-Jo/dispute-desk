@@ -2022,6 +2022,21 @@
         },
         "body": "Ihre Betrugsprüfung hat diese Bestellung markiert und es wurde nichts versandt. Die Zahlung ist weiterhin eingezogen — es wurde keine Rückerstattung vorgenommen.",
         "helper": "Da nichts versandt wurde, gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt das wider, keine Lücke in Ihren Unterlagen."
+      },
+      "orderSituation": {
+        "title": {
+          "requested": "Der Kunde hat für diese Bestellung eine Rücksendung angefragt",
+          "in_progress": "Für diese Bestellung ist eine Rücksendung offen",
+          "returned": "Eine Rücksendung zu dieser Bestellung ist als eingegangen markiert",
+          "failed": "Eine Rücksendung zu dieser Bestellung ist als fehlgeschlagen markiert"
+        },
+        "opened": "Die Rücksendung wurde am {date} angelegt.",
+        "refund": {
+          "none": "Für die Bestellung wurde keine Rückerstattung vorgenommen.",
+          "some": "Für die Bestellung wurde eine Rückerstattung vorgenommen."
+        },
+        "asOf": "Stand in Shopify, als DisputeDesk diese Bestellung zuletzt abgerufen hat, am {date}.",
+        "privateNote": "Dieser Hinweis ist nur für Sie. Er ist nicht Teil dessen, was an die Bank gesendet wird."
       }
     },
     "evidenceTabExtra": {
@@ -3891,7 +3906,7 @@
         },
         "disputeDetailPage": {
           "title": "Streitfall-Detail in dieser App",
-          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall."
+          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Eine Rücksendung zur Bestellung.** Wenn Shopify für die strittige Bestellung eine Rücksendung verzeichnet, zeigen die Übersicht und der Brief-Tab einen Hinweis darauf, mit dem Datum, an dem die Rücksendung angelegt wurde, sofern Shopify eines liefert, und ob eine Rückerstattung vorgenommen wurde. Der Hinweis gibt den Stand in Shopify zum Zeitpunkt des letzten Abrufs durch DisputeDesk wieder. Er ist nur für Sie und nicht Teil dessen, was an die Bank gesendet wird."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",

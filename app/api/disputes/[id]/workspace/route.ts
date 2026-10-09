@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopSettings } from "@/lib/automation/settings";
 import { loadReturnRequestConfirmation, packShowsReturnOrRefund, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
+import { orderSituationFromPackSections } from "@/lib/disputes/orderSituation";
 import path from "node:path";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
@@ -492,6 +493,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     refundedAmount:
       ((packJsonSections.find((s) => (s.data as Record<string, unknown> | undefined)?.orderName)
         ?.data as { totals?: { refunded?: string | null } } | undefined)?.totals?.refunded) ?? null,
+    /* The order's return/refund situation, for the merchant-only note
+     * (lib/disputes/orderSituation.ts). Read off the same pack sections, with
+     * the date the pack was last built: the note states Shopify's record as
+     * of that collection, not as of now. Null when the pack has no order
+     * section. Never bank-facing. */
+    orderSituation: (() => {
+      const situation = orderSituationFromPackSections(packJsonSections);
+      if (!situation) return null;
+      return {
+        ...situation,
+        asOf: ((packRow?.updated_at ?? packRow?.created_at) as string | null | undefined) ?? null,
+      };
+    })(),
     cardholderName: orderContext.cardholderName ?? row.customer_display_name ?? null,
     // Full event timeline from the pack's access_log section. The PDF
     // builder threads the same array through `meta.timelineEvents`;

@@ -1362,6 +1362,21 @@
         },
         "body": "Din bedrägerikontroll flaggade ordern och inget skickades. Betalningen är fortfarande dragen — ingen återbetalning har gjorts.",
         "helper": "Eftersom inget skickades finns ingen leveransbevisning att skicka in — betyget speglar det, inte en lucka i dina underlag."
+      },
+      "orderSituation": {
+        "title": {
+          "requested": "Kunden har begärt en retur för den här ordern",
+          "in_progress": "En retur är öppen för den här ordern",
+          "returned": "En retur för den här ordern är markerad som mottagen",
+          "failed": "En retur för den här ordern är markerad som misslyckad"
+        },
+        "opened": "Returen skapades den {date}.",
+        "refund": {
+          "none": "Ingen återbetalning har gjorts för ordern.",
+          "some": "En återbetalning har gjorts för ordern."
+        },
+        "asOf": "Enligt Shopify när DisputeDesk senast hämtade ordern, den {date}.",
+        "privateNote": "Den här noteringen är bara till för dig. Den ingår inte i något som skickas till banken."
       }
     },
     "overviewPill": {
@@ -3891,7 +3906,7 @@
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
-          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet."
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**En retur på ordern.** När Shopify har registrerat en retur på den bestridda ordern visar översikten och brevfliken en notering om det, med datumet då returen skapades om Shopify anger det och om en återbetalning har gjorts. Noteringen visar vad Shopify angav senast DisputeDesk hämtade ordern. Den är bara till för dig och ingår inte i något som skickas till banken."
         },
         "reviewQueue": {
           "title": "Granskningskön",

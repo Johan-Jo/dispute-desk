@@ -3,6 +3,7 @@
  * Maps the API response to typed structures for components.
  */
 
+import type { OrderSituation } from "@/lib/disputes/orderSituation";
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
@@ -143,6 +144,10 @@ export interface WorkspaceDispute {
   /** Amount refunded, as the decimal string the pack persists ("0.0", "220.0").
    *  Null when the pack predates the field. */
   refundedAmount?: string | null;
+  /** The order's return/refund situation as Shopify recorded it when the pack
+   *  was last built (`asOf`). Merchant-only: drives the note on the Overview
+   *  and the letter tab, and is never part of anything sent to the bank. */
+  orderSituation?: (OrderSituation & { asOf: string | null }) | null;
   cardholderName?: string | null;
   /** Full event timeline from the pack's access_log section — the SAME
    *  array the PDF builder threads through `meta.timelineEvents`. The
