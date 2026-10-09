@@ -93,6 +93,30 @@ describe("summary length slack (#100705)", () => {
     expect(r.ok).toBe(false);
   });
 
+  // #99199 (prod, 2026-10-09): the reviewer listed a correct sentence under
+  // "errors" while its own note ended "This is correct"; the letter was lost.
+  it("does not block on an error the reviewer itself retracts", async () => {
+    const ok = draftJson(V12_SUMMARY);
+    const retracted = JSON.stringify({
+      errors: [{ sentence: "x", problem: "The interval is inverted … let me re-examine. This is correct.", verdict: "correct" }],
+      unclear: [],
+    });
+    const s = scripted([ok, retracted]);
+    const r = await write(s.call);
+    expect(s.stages).toEqual(["write", "review"]);
+    expect(r.issues).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("still blocks on an error with verdict \"error\" or with none", async () => {
+    const ok = draftJson(V12_SUMMARY);
+    const confirmed = JSON.stringify({ errors: [{ sentence: "x", problem: "not in the ledger", verdict: "error" }], unclear: [] });
+    const bare = JSON.stringify({ errors: [{ sentence: "x", problem: "not in the ledger" }], unclear: [] });
+    const r = await write(scripted([ok, confirmed, ok, bare, ok, confirmed]).call);
+    expect(r.ok).toBe(false);
+    expect(r.issues).toHaveLength(1);
+  });
+
   it("still blocks a summary more than the slack over the limit", async () => {
     const far = draftJson(summaryOf(LIMIT + SUMMARY_SLACK_WORDS + 1));
     const s = scripted([far, far, far, summaryOf(LIMIT + SUMMARY_SLACK_WORDS + 1)]);
