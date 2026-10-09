@@ -114,7 +114,7 @@ export function specificsIn(text: string): string[] {
   return out;
 }
 
-const LINT: Array<[RegExp, string]> = [
+export const LINT: Array<[RegExp, string]> = [
   [/\b(?:position is that|submits that|contends that|respectfully submits|wishes to)\b/i, "throat-clearing"],
   [/\bsame card\b/i, "overstated: Shopify shows brand, last four digits and wallet; say 'a card ending in the same four digits'"],
   [/\b(?:makes sense only|only makes sense|would not have|would never|must have (?:known|received)|knew|intended)\b/i, "speculation about what the cardholder thought or intended"],

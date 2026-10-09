@@ -33,5 +33,13 @@ export async function GET(
   if (error || !data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ package: data });
+  // Server-side only (docs/technical.md, defence package outcome record): the
+  // writer's inputs and its last draft, which may be a rejected one; and the
+  // outcome record, which names the gate that stopped a build and the facts a
+  // bank claim removed.
+  const { counsel_replay_json: _replay, outcome_detail: _detail, failure_signature: _signature, ...pkg } = data as Record<string, unknown>;
+  void _replay;
+  void _detail;
+  void _signature;
+  return NextResponse.json({ package: pkg });
 }
