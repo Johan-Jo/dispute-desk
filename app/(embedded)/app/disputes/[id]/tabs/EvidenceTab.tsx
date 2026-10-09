@@ -28,6 +28,7 @@
 
 import type { ReactElement } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
 import { toBcp47Loose } from "@/lib/i18n/bcp47";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
@@ -68,7 +69,12 @@ export default function EvidenceTab({ workspace }: Props) {
   // ── Build-failed banner ──
   // Distinct from evidence gaps: the build itself errored. Short,
   // honest copy — never a stack trace, never the raw failureReason.
-  const failedBanner = derived.isFailed ? (
+  const failedBanner = derived.failureCode === PACK_LIMIT_REACHED ? (
+    <PackCreditNeededBanner
+      onRetry={() => { void actions.generatePack(); }}
+      retrying={clientState.retrying}
+    />
+  ) : derived.isFailed ? (
     <Banner tone="critical" title={tExtra("buildFailedTitle")}>
       <p>
         We couldn&apos;t build this evidence pack. Try resyncing the dispute or
