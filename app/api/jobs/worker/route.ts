@@ -15,6 +15,7 @@ import { handleEnrichGorgiasComms } from "@/lib/jobs/handlers/enrichGorgiasComms
 import { handleIntelligenceRun } from "@/lib/jobs/handlers/intelligenceRunJob";
 import { handleReplayBlockedBuilds } from "@/lib/jobs/handlers/replayBlockedBuildsJob";
 import { handleCollectProductEvidence } from "@/lib/jobs/handlers/collectProductEvidenceJob";
+import { handleMaterializeInsightsMonths } from "@/lib/jobs/handlers/materializeInsightsMonthsJob";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
@@ -211,6 +212,9 @@ async function runWorker(req: NextRequest) {
             break;
           case "collect_product_evidence":
             handlerResult = await handleCollectProductEvidence(job);
+            break;
+          case "materialize_insights_months":
+            await handleMaterializeInsightsMonths(job);
             break;
           default:
             throw new Error(`Unknown job type: ${job.jobType}`);

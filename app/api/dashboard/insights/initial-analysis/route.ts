@@ -487,6 +487,36 @@ async function readTrendWindow(
   return readTrend(sb, shopId, window);
 }
 
+/** How long the page may wait for a new shop's first month records. Matches
+ *  the upper bound of the forced first write (`firstMaterialization.ts`:
+ *  the first 02:00 cron after hour 24). After it the page shows what it has. */
+const RECORDS_PENDING_MAX_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * True while a shop's order import is complete but its statement-month record
+ * does not exist yet. Reads nothing for a shop whose import finished more
+ * than 48 hours ago.
+ */
+async function monthRecordsPending(
+  sb: ReturnType<typeof getServiceClient>,
+  shopId: string,
+  shopRow: { historical_import_status?: unknown; historical_import_completed_at?: unknown } | null,
+  now: Date,
+): Promise<boolean> {
+  if (shopRow?.historical_import_status !== "complete") return false;
+  const completedAt = shopRow.historical_import_completed_at;
+  if (typeof completedAt !== "string") return false;
+  if (now.getTime() - new Date(completedAt).getTime() >= RECORDS_PENDING_MAX_MS) return false;
+  const { data, error } = await sb
+    .from("ratio_snapshots")
+    .select("period_month")
+    .eq("shop_id", shopId)
+    .eq("period_month", statementMonth(now))
+    .limit(1);
+  // On a read error show the page as before rather than hold it.
+  return !error && (data ?? []).length === 0;
+}
+
 export async function GET(req: NextRequest) {
   const shopId = extractShopId(req);
   if (!shopId) {
@@ -499,12 +529,8 @@ export async function GET(req: NextRequest) {
   // nothing from the shop row start now, alongside the shop row itself.
   const started = Date.now();
   const lean = req.nextUrl.searchParams.get("view") === "period";
-  const sel = selectPeriod(req.nextUrl.searchParams.get("period"), new Date());
-  const leanPeriod: Promise<InsightsPeriod> | null = !lean
-    ? null
-    : sel.requested > sel.currentMonth
-      ? Promise.resolve<InsightsPeriod>({ status: "not_available", periodMonth: sel.requested })
-      : readInsightsPeriod(sb, shopId, sel.requested, sel.kind);
+  const now = new Date();
+  const sel = selectPeriod(req.nextUrl.searchParams.get("period"), now);
   const leanPrevious: Promise<PreviousReasons | null> | null = lean
     ? readPreviousReasons(sb, shopId, sel.requested).catch(() => null)
     : null;
@@ -561,9 +587,16 @@ export async function GET(req: NextRequest) {
   // full response took 12 s (Mein Maison) and 20 s (blume-box), of which
   // the page's own data was about 1 s. The dashboard strip and the scope
   // banner still read the full response.
-  if (lean && leanPeriod && leanPrevious) {
+  if (lean && leanPrevious) {
+    // A new shop between "import complete" and "month records written": the
+    // page shows an in-progress card instead of a month view computed live
+    // over an empty trend. Decided before the period read, so the live
+    // statement-month compute does not run for a response nobody renders.
+    const recordsPending = await monthRecordsPending(sb, shopId, shopRow, now);
     const [period, trend, previousReasons] = await Promise.all([
-      leanPeriod,
+      recordsPending || sel.requested > sel.currentMonth
+        ? Promise.resolve<InsightsPeriod>({ status: "not_available", periodMonth: sel.requested })
+        : readInsightsPeriod(sb, shopId, sel.requested, sel.kind),
       readTrendWindow(sb, shopId, (shopRow?.historical_import_since_date as string | null) ?? null).catch(() => []),
       leanPrevious,
     ]);
@@ -575,6 +608,7 @@ export async function GET(req: NextRequest) {
         trend,
         liveState: null,
         previousReasons,
+        recordsPending,
       },
       // Shown in the browser's Network → Timing panel, so the time this
       // handler takes can be told apart from the rest of the page load.
