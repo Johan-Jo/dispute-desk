@@ -5,6 +5,7 @@
  */
 
 import { syncDisputes } from "@/lib/disputes/syncDisputes";
+import { enqueueMaterializeInsightsMonths } from "@/lib/insights/period/enqueueMaterialize";
 import type { ClaimedJob } from "../claimJobs";
 
 export async function handleSyncDisputes(job: ClaimedJob): Promise<void> {
@@ -30,4 +31,8 @@ export async function handleSyncDisputes(job: ClaimedJob): Promise<void> {
         result.errors.slice(0, 5).join(" | "),
     );
   }
+
+  // A new shop's first month records wait for its first error-free dispute
+  // sync. No-op for a shop that already has records; never throws.
+  await enqueueMaterializeInsightsMonths(job.shopId);
 }

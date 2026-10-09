@@ -35,7 +35,7 @@ const PERIOD = { status: "not_available", periodMonth: "2026-08-01" };
 const TREND = [{ periodMonth: "2026-08-01", periodState: "final", cardDisputeRatio: 0.002, cardChargebackCount: 2, cardSettledCount: 995 }];
 const PREVIOUS = { periodMonth: "2026-07-01", byReason: [{ reason: "FRAUDULENT", disputes: 1 }] };
 
-function fakeSb() {
+function fakeSb(opts: { completedAt?: string; statementRows?: unknown[] } = {}) {
   const tables: string[] = [];
   const ranges: string[] = [];
   const rpc = vi.fn();
@@ -49,13 +49,14 @@ function fakeSb() {
     };
     const row =
       table === "shops"
-        ? { plan: "starter", historical_import_status: "complete", historical_import_orders_total: 4200, historical_import_since_date: null }
+        ? { plan: "starter", historical_import_status: "complete", historical_import_orders_total: 4200, historical_import_since_date: null, historical_import_completed_at: opts.completedAt }
         : table === "shopify_orders"
           ? { created_at_shopify: "2025-01-01T00:00:00Z" }
           : null;
     b.single = () => Promise.resolve({ data: row, error: null });
     b.maybeSingle = () => Promise.resolve({ data: row, error: null });
-    b.then = (resolve: (r: unknown) => void) => resolve({ data: [], error: null, count: 0 });
+    b.then = (resolve: (r: unknown) => void) =>
+      resolve({ data: table === "ratio_snapshots" ? (opts.statementRows ?? []) : [], error: null, count: 0 });
     return b;
   };
   vi.mocked(getServiceClient).mockReturnValue({ from, rpc } as never);
@@ -80,6 +81,7 @@ describe("GET /api/dashboard/insights/initial-analysis?view=period", () => {
       trend: TREND,
       liveState: null,
       previousReasons: PREVIOUS,
+      recordsPending: false,
     });
     expect(vi.mocked(readPreviousReasons).mock.calls[0]![2]).toBe("2026-08-01");
     expect(res.headers.get("Server-Timing")).toMatch(/^insights;dur=\d+$/);
@@ -104,5 +106,42 @@ describe("GET /api/dashboard/insights/initial-analysis?view=period", () => {
     const body = await res.json();
     expect(body.previousReasons).toBeNull();
     expect(body.trend).toEqual(TREND);
+  });
+
+  // A new shop between "import complete" and "month records written"
+  // (whj8db-1q, 2026-10-09: an empty chart for the whole first day).
+  describe("recordsPending", () => {
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+    const get = () => GET(new NextRequest("https://x.test/api/dashboard/insights/initial-analysis?view=period"));
+
+    it("is true while the import is complete, recent, and the statement month has no record", async () => {
+      const sb = fakeSb({ completedAt: hoursAgo(1) });
+      const body = await (await get()).json();
+      expect(body.recordsPending).toBe(true);
+      // The live statement-month compute is not run for a page that shows a card.
+      expect(readInsightsPeriod).not.toHaveBeenCalled();
+      expect(body.period.status).toBe("not_available");
+      expect(sb.tables.filter((t) => t !== "shops" && t !== "ratio_snapshots" && t !== "shopify_orders")).toEqual([]);
+    });
+
+    it("is false once the statement month has a record of any coverage", async () => {
+      fakeSb({ completedAt: hoursAgo(1), statementRows: [{ period_month: "2026-09-01", coverage: "partial" }] });
+      const body = await (await get()).json();
+      expect(body.recordsPending).toBe(false);
+      expect(readInsightsPeriod).toHaveBeenCalled();
+    });
+
+    it("is false 49 hours after the import, so the page can never be held for good", async () => {
+      const sb = fakeSb({ completedAt: hoursAgo(49) });
+      const body = await (await get()).json();
+      expect(body.recordsPending).toBe(false);
+      expect(sb.tables).not.toContain("ratio_snapshots");
+    });
+
+    it("is false while the import is still running", async () => {
+      fakeSb({});
+      const body = await (await get()).json();
+      expect(body.recordsPending).toBe(false);
+    });
   });
 });
