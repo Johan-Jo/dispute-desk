@@ -72,6 +72,7 @@ import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import {
   assessPackageCandidateSafety,
   packageBlockSummary,
+  isUnbuiltPackagePlaceholder,
 } from "@/lib/defence/packageSafety";
 import { buildGorgiasCommsBlock } from "@/lib/integrations/gorgias/workspaceBlock";
 
@@ -742,6 +743,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json, plan_json, plan_input_hash, plan_deadline_only, plan_no_safe_argument, document_validation_passed";
   let defencePackageLatest: Record<string, unknown> | null = null;
   let defencePackageBankFacing: Record<string, unknown> | null = null;
+  let defencePackageBuilding = false;
   if (packRow?.id) {
     const [latestRes, bankFacingRes] = await Promise.all([
       sb
@@ -761,6 +763,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         .maybeSingle(),
     ]);
     defencePackageLatest = (latestRes.data as Record<string, unknown> | null) ?? null;
+    // An unbuilt placeholder with a live build job is "being generated", not
+    // "review required" (see `isUnbuiltPackagePlaceholder`). The job lookup
+    // only runs for a placeholder, so the 4s poll pays for it only while a
+    // build is actually pending.
+    if (defencePackageLatest && isUnbuiltPackagePlaceholder(defencePackageLatest)) {
+      const { data: liveJob } = await sb
+        .from("jobs")
+        .select("id")
+        .eq("job_type", "build_defence_package")
+        .eq("entity_id", defencePackageLatest.id as string)
+        .in("status", ["queued", "running"])
+        .limit(1)
+        .maybeSingle();
+      defencePackageBuilding = !!liveJob;
+    }
     defencePackageBankFacing = (bankFacingRes.data as Record<string, unknown> | null) ?? null;
     // A signed link per PDF: "View PDF" opens in a new tab with no session
     // (lib/security/previewLink.ts).
@@ -1305,8 +1322,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       // Shopify Protect), so it is not a filing candidate: read as
       // "unreadable" it would show "cannot be reviewed — regenerate" over
       // a card whose own banner explains why there is no letter.
+      // The build job for `latest` is still queued or running: there is no
+      // letter to judge yet, so the card says "being generated" instead of
+      // rendering the fail-closed verdict as an instruction to regenerate.
+      building: defencePackageBuilding,
       safety:
         defencePackageLatest &&
+        !defencePackageBuilding &&
         (defencePackageLatest as { status?: string }).status !== "skipped"
         ? (() => {
             const verdict = assessPackageCandidateSafety({

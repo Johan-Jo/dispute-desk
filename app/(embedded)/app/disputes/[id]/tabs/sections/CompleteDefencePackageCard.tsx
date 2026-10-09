@@ -156,6 +156,9 @@ interface Props {
      *  cannot happen. Preview and Regenerate stay available: regenerating is
      *  the fix. */
     safety?: { blocked: boolean; reasons: string[]; message: string };
+    /** `latest` has not been built yet and its build job is still queued or
+     *  running — show "being generated", never review-required. */
+    building?: boolean;
   };
   /** Triggers a workspace refresh. Bound to the parent's
    *  `actions.fetchAll`. Used by the "Check for update" action on the
@@ -754,6 +757,26 @@ export function CompleteDefencePackageCard({
               Preview and Regenerate remain below; Finalize / Submit / Resubmit
               are suppressed via `canFinalize` / `canSubmit` /
               `bannerHostsActions`. */}
+          {/* Not built yet. The build job for this draft is still queued or
+              running, so there is nothing to review and nothing to
+              regenerate — saying so replaces the review-required banner the
+              empty placeholder row used to trigger. */}
+          {defencePackage?.building ? (
+            <Banner
+              tone="info"
+              title={tPkg("generatingTitle")}
+              action={{
+                content: refreshing ? t("checking") : t("checkForUpdate"),
+                onAction: () => void refresh(),
+                loading: refreshing,
+              }}
+            >
+              <Text as="p" variant="bodySm">
+                {tPkg("generatingBody")}
+              </Text>
+            </Banner>
+          ) : null}
+
           {actionState.showReviewRequired ? (
             <Banner tone="warning" title={tPkg("reviewRequiredTitle")}>
               <Text as="p" variant="bodySm">
