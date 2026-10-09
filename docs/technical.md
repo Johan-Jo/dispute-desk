@@ -419,6 +419,22 @@ HaveIBeenPwned password toggle) are tracked as P1/P2 hygiene.
 
 All transactional email is sent via **Resend** using branded table-based HTML templates (indigo header, CTA button, footer) with plain-text fallbacks. Supabase's built-in email is **not used** — every auth email goes through our own routes. All six app locales are supported (`en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE`); locale is resolved from the `dd_locale` cookie, then `Accept-Language` header, then `en-US`. The same resolution drives **on-screen copy** for `/auth/*` (sign-in, sign-up, password reset, magic-link, set new password): `app/(auth)/layout.tsx` + `messages/*/auth.*` (see **Portal Auth** in API Surface).
 
+- **Store name in merchant emails:** every merchant-facing email calls the
+  store by its own name — `shops.shop_name` ("Mein Maison") — never the
+  `*.myshopify.com` alias (`whj8db-1q.myshopify.com`), which a merchant does
+  not recognise as their business. The single resolution path is
+  **`storeDisplayName()`** (`lib/shopify/storeDisplayName.ts`): `shop_name` →
+  custom `primary_domain` (never a myshopify host) → `null`, in which case the
+  sender uses its generic wording ("your store"). Covers evidence-needed /
+  ready-to-review, high-value review, case-strengthened, due reminder,
+  pack-saved, Gorgias evidence-ready, and both digests. `shop_domain` is still
+  passed separately, but only to build the embedded-app link. Because a store
+  name is merchant-authored (unlike a domain), it goes through
+  `lib/email/escapeHtml.ts` at every HTML position; plain-text bodies take it
+  raw. `lib/email/__tests__/storeNameInvariant.test.ts` fails the build if an
+  email sender or caller assigns `shop_domain` to a store-name field.
+  Internal ops/admin alerts keep the domain — there it is the identifier.
+
 - **Env:** `RESEND_API_KEY` (required for sending). Both addresses resolve
   through **`lib/email/addresses.ts`** — the single source of truth; senders
   must never re-declare them or read the env vars directly (a vitest case in

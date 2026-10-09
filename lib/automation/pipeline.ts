@@ -54,6 +54,7 @@ import {
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
 import { isShopifyObservedResponseState } from "@/lib/disputes/respondedViaShopify";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
 
 import {
   AUTO_BUILD_TRIGGERED,
@@ -1436,13 +1437,13 @@ async function sendHighValueReviewAlertForPack(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("shop_domain")
+    .select("shop_domain, shop_name, primary_domain")
     .eq("id", shopId)
     .single();
 
   const result = await sendHighValueReviewAlert({
     to,
-    shopName: shop?.shop_domain ?? undefined,
+    shopName: storeDisplayName(shop) ?? undefined,
     shopDomain: shop?.shop_domain ?? null,
     disputeId,
     disputeReason: dispute.reason,

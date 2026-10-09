@@ -21,6 +21,8 @@ import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 // Read env at call time (not module load) so it's robust to test module
 // caching and to env set after import.
@@ -181,7 +183,7 @@ export async function sendGorgiasEvidenceReadyAlert(
     const s = STRINGS[locale];
 
     const [{ data: shop }, { data: dispute }] = await Promise.all([
-      sb.from("shops").select("shop_domain").eq("id", ctx.shopId).single(),
+      sb.from("shops").select("shop_domain, shop_name, primary_domain").eq("id", ctx.shopId).single(),
       sb
         .from("disputes")
         .select("due_at")
@@ -189,7 +191,7 @@ export async function sendGorgiasEvidenceReadyAlert(
         .single(),
     ]);
     const shopDomain = shop?.shop_domain ?? "";
-    const shopName = shopDomain || "your store";
+    const shopName = storeDisplayName(shop) ?? "your store";
     const reason = reasonLabel(ctx.reason);
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
 
@@ -239,7 +241,7 @@ export async function sendGorgiasEvidenceReadyAlert(
       </tr></table>
 
       <p style="font-size:14px;color:#6D7175;margin:0 0 16px;line-height:1.5">
-        ${s.intro({ reason, amount: amountStr, shop: shopName, count: ctx.proposalCount })}
+        ${s.intro({ reason, amount: amountStr, shop: escapeHtml(shopName), count: ctx.proposalCount })}
       </p>
 
       <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 16px;margin-bottom:20px">

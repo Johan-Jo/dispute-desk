@@ -69,7 +69,7 @@ function buildSb(opts: {
             eq: () => ({
               single: vi
                 .fn()
-                .mockResolvedValue({ data: { shop_domain: "acme.myshopify.com" }, error: null }),
+                .mockResolvedValue({ data: { shop_domain: "acme.myshopify.com", shop_name: "Salt & Stone" }, error: null }),
             }),
           }),
         };
