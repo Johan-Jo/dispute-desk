@@ -16,6 +16,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assessPackageCandidateSafety,
+  isUnbuiltPackagePlaceholder,
   narrativeTexts,
   packageBlockSummary,
 } from "../packageSafety";
@@ -495,5 +496,41 @@ describe("record-built and counsel v2 letters", () => {
     ]) {
       expect(assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: n }).reasons).toContain("affirmative_address_delivery_claim");
     }
+  });
+});
+
+describe("isUnbuiltPackagePlaceholder", () => {
+  // The row `maybeEnqueueDefencePackage` inserts before the build job runs —
+  // prod dispute e1fa509e, 2026-10-09.
+  const PLACEHOLDER = {
+    status: "draft",
+    narrative_json: null,
+    facts_json: null,
+    pdf_path: null,
+    validation_status: null,
+    failure_code: null,
+  };
+
+  it("recognises the row inserted ahead of the build job", () => {
+    expect(isUnbuiltPackagePlaceholder(PLACEHOLDER)).toBe(true);
+  });
+
+  it("still fails closed for filing — the safety verdict is unchanged", () => {
+    expect(
+      assessPackageCandidateSafety({ factsJson: null, narrativeJson: null }).safe,
+    ).toBe(false);
+  });
+
+  it.each([
+    ["a built draft", { narrative_json: CLEAN_NARRATIVE, facts_json: CLEAN_FACTS, pdf_path: "p.pdf", validation_status: "ok" }],
+    ["a draft that lost only its narrative", { facts_json: CLEAN_FACTS }],
+    ["a draft that lost only its facts", { narrative_json: CLEAN_NARRATIVE }],
+    ["a validated row", { validation_status: "failed" }],
+    ["a failed row", { status: "failed" }],
+    ["a row carrying a failure code", { failure_code: "llm_cap" }],
+    ["a stale row", { status: "stale" }],
+    ["a skipped row", { status: "skipped" }],
+  ])("is not a placeholder: %s", (_label, over) => {
+    expect(isUnbuiltPackagePlaceholder({ ...PLACEHOLDER, ...over })).toBe(false);
   });
 });

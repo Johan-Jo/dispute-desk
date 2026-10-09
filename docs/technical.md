@@ -7540,6 +7540,19 @@ unreadable. Unsafe candidates stay viewable but are never saved, forwarded, auto
 deadline-selected; Finalize / Submit / Resubmit are disabled in the workspace with a review-required
 banner, while Preview and Regenerate remain available.
 
+**A package that has not been built yet is "being generated", not review-required (2026-10-09).**
+`maybeEnqueueDefencePackage` inserts the `draft` row before the `build_defence_package` job runs, so
+until the job finishes the row has no narrative, no facts and no PDF. The predicate reads that as
+unreadable and fails closed, which is right for every filing path and is unchanged. The workspace
+route no longer renders that verdict to the merchant: when `isUnbuiltPackagePlaceholder(latest)`
+(`lib/defence/packageSafety.ts`) holds AND a `build_defence_package` job for that row is still
+`queued` or `running`, it returns `defencePackage.building: true` with an unblocked `safety`, and
+`CompleteDefencePackageCard` shows the info banner `disputes.reviewTab.package.generatingTitle` /
+`generatingBody` with a Check for update action. A placeholder with no live job keeps the
+review-required banner, because regenerating is then the true instruction. Found on prod dispute
+`e1fa509e` (Order #23294), whose build sat queued 35+ minutes behind a bulk replay while the
+Review tab told the merchant to regenerate.
+
 **Measured block population**, one census at `2026-08-07T18:24:16.273Z` over all 280 persisted
 candidates, under the strict schema parser and the predicate-scoped detector (a version can appear
 in several reason buckets, so the buckets do not sum to the union):

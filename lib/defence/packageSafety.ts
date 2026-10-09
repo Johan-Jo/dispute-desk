@@ -868,3 +868,39 @@ export function preflightSummary(p: PreflightOutcome): string {
       );
   }
 }
+
+/* ── A package that has not been built yet is not an unsafe package ──────
+ *
+ * `maybeEnqueueDefencePackage` inserts the `draft` row FIRST and the
+ * `build_defence_package` job second, so until the job runs the row holds no
+ * letter, no facts and no PDF. `assessPackageCandidateSafety` reads that as
+ * "unreadable" and fails closed — correct for every filing path, and it stays
+ * that way. But the workspace rendered the same verdict to the merchant as
+ * "Review required … cannot be reviewed automatically … Regenerate", over a
+ * build that was simply still in the queue.
+ *
+ * Observed 2026-10-09 on dispute e1fa509e (Order #23294): the job sat queued
+ * for 35+ minutes behind a bulk replay for the same shop, and for all of that
+ * time the Review tab told the merchant to regenerate while the Overview tab
+ * said no action was required.
+ *
+ * Shape only. The caller must ALSO confirm a live build job before saying
+ * "being generated" — a placeholder whose job is gone really does need a
+ * regenerate, and the review-required banner is then the true instruction. */
+export function isUnbuiltPackagePlaceholder(row: {
+  status?: unknown;
+  narrative_json?: unknown;
+  facts_json?: unknown;
+  pdf_path?: unknown;
+  validation_status?: unknown;
+  failure_code?: unknown;
+}): boolean {
+  return (
+    row.status === "draft" &&
+    row.narrative_json == null &&
+    row.facts_json == null &&
+    row.pdf_path == null &&
+    row.validation_status == null &&
+    row.failure_code == null
+  );
+}

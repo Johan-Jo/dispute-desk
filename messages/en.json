@@ -1891,6 +1891,8 @@
         },
         "reviewRequiredTitle": "Review required before this package can be filed",
         "reviewRequiredBody": "DisputeDesk cannot file this defence package as built. Regenerate it to produce a version that can be submitted. Preview and Regenerate are still available; Finalize and Submit are unavailable until a regenerated version passes review.",
+        "generatingTitle": "Your defence package is being generated",
+        "generatingBody": "DisputeDesk is writing the defence letter and PDF from the evidence collected for this dispute. This usually takes a few minutes, and longer when several disputes are being prepared at the same time. Nothing is needed from you.",
         "notEnoughEvidenceReturnedTitle": "There is nothing to argue until you tell us why the parcel came back",
         "notEnoughEvidenceReturnedBody": "The carrier returned this parcel to you, so there is no delivery to argue and no proof of delivery can ever exist for this order. Waiting will not change that — nothing further will be collected. The one thing that can still help is on the Evidence tab: tell us whether the customer refused the delivery or never collected it. Neither counts as a valid return, and we will say so in your response.",
         "notEnoughEvidenceClaimTitle": "Nothing on file answers the bank's claim yet",
