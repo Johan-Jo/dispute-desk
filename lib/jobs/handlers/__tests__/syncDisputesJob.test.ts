@@ -14,6 +14,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/disputes/syncDisputes", () => ({
   syncDisputes: vi.fn(),
 }));
+vi.mock("@/lib/insights/period/enqueueMaterialize", () => ({
+  enqueueMaterializeInsightsMonths: vi.fn().mockResolvedValue(null),
+}));
 
 import { syncDisputes } from "@/lib/disputes/syncDisputes";
 import { handleSyncDisputes } from "../syncDisputesJob";

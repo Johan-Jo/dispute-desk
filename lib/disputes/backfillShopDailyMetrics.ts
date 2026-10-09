@@ -148,10 +148,15 @@ export async function backfillShopDailyMetrics(
  *     uninstalls fall through here, which is correct: existing rows
  *     stay, missing days will be top-up by the daily cron).
  *
+ * `force` skips the second check. A new shop's backfill is enqueued when its
+ * first month records are written (`maintainShopMonths`), by which time the
+ * 00:30 nightly snapshot may already have written one row.
+ *
  * Returns the job ID, or null when skipped.
  */
 export async function enqueueShopDailyMetricsBackfill(
   shopId: string,
+  opts: { force?: boolean } = {},
 ): Promise<string | null> {
   const sb = getServiceClient();
 
@@ -166,12 +171,14 @@ export async function enqueueShopDailyMetricsBackfill(
 
   if (existingJob) return null;
 
-  const { count } = await sb
-    .from("shop_daily_metrics")
-    .select("date", { count: "exact", head: true })
-    .eq("shop_id", shopId);
+  if (!opts.force) {
+    const { count } = await sb
+      .from("shop_daily_metrics")
+      .select("date", { count: "exact", head: true })
+      .eq("shop_id", shopId);
 
-  if ((count ?? 0) > 0) return null;
+    if ((count ?? 0) > 0) return null;
+  }
 
   return enqueueJob({
     shopId,

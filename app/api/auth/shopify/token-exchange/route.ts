@@ -6,6 +6,7 @@ import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { needsRefresh } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
+import { enqueueShopOrdersBackfill } from "@/lib/disputes/backfillOrders";
 import { readMetaAttribution } from "@/lib/analytics/metaInstall";
 import { shopifyAdminLocale } from "@/lib/i18n/locales";
 
@@ -239,6 +240,24 @@ export async function GET(req: NextRequest) {
       // response returns, so a fire-and-forget Shopify round-trip would lose
       // that race and the email would never send.
       await announceNewShop("token-exchange");
+
+      // First offline session for this shop: start the historical order
+      // import, as the OAuth callback does. Until 2026-10-09 this path never
+      // did, so the import only began when someone opened the Insights page.
+      // "No prior session" rather than "new shop row", so an exchange that
+      // failed after creating the row still starts it on the retry. Awaited
+      // for the same reason as the announce above; the helper skips when an
+      // import is queued or complete.
+      if (!existing) {
+        try {
+          await enqueueShopOrdersBackfill(shopInternalId);
+        } catch (err) {
+          console.warn(
+            "[fraud-intel] orders backfill enqueue failed:",
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
 
       // Register dispute webhooks out-of-band; don't block the redirect.
       registerDisputeWebhooks({ shopDomain: shop, accessToken: data.access_token })

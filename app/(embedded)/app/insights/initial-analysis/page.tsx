@@ -32,7 +32,13 @@ interface InsightsResponse {
   trend: TrendPoint[];
   liveState: LiveState | null;
   previousReasons: PreviousReasons | null;
+  /** The order import is complete but the month records are still being
+   *  written (a new shop's first hour). */
+  recordsPending?: boolean;
 }
+
+/** How often the page re-checks while the month records are being written. */
+const PENDING_POLL_MS = 30_000;
 
 export default function InitialAnalysisPage() {
   const t = useTranslations();
@@ -62,6 +68,14 @@ export default function InitialAnalysisPage() {
   }, []);
 
   useEffect(() => load(""), [load]);
+
+  // The in-progress card clears by itself once the records exist.
+  const recordsPending = data?.recordsPending === true;
+  useEffect(() => {
+    if (!recordsPending) return;
+    const timer = setInterval(() => load(""), PENDING_POLL_MS);
+    return () => clearInterval(timer);
+  }, [recordsPending, load]);
 
   const title = t("fraudIntel.pageTitleV2");
 
@@ -109,6 +123,27 @@ export default function InitialAnalysisPage() {
                   {t("fraudIntel.analyzingBody", {
                     count: data.historicalImportOrdersTotal.toLocaleString(),
                   })}
+                </Text>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    );
+  }
+
+  if (recordsPending) {
+    return (
+      <Page title={title}>
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">
+                  {t("fraudIntel.preparingTitle")}
+                </Text>
+                <Text as="p" tone="subdued">
+                  {t("fraudIntel.preparingBody")}
                 </Text>
               </BlockStack>
             </Card>

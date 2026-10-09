@@ -48,6 +48,7 @@ import { triggerOnboardingDigest } from "@/lib/email/triggerOnboardingDigest";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 import { scheduleBlockedBuildReplay } from "@/lib/billing/replayBlockedBuilds";
+import { enqueueMaterializeInsightsMonths } from "@/lib/insights/period/enqueueMaterialize";
 
 /** Default `read_orders` window when `read_all_orders` is not granted.
  *  Shopify Admin returns the trailing 60 days for unscoped order
@@ -323,6 +324,20 @@ export async function backfillShopOrders(
           priority: 70,
         });
       }
+      // Insights month records: a new shop's are written by
+      // `materialize_insights_months` once its disputes are local. Start the
+      // first dispute sync now rather than at the next hourly cron, then
+      // enqueue the job (it writes nothing until that sync has succeeded,
+      // and the sync enqueues it again when it does). Neither may fail the
+      // import.
+      try {
+        await enqueueFirstDisputeSync(shopId);
+      } catch (err) {
+        console.warn(
+          `[backfill-orders] first dispute sync enqueue failed for ${shopId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+      await enqueueMaterializeInsightsMonths(shopId);
       // The order history is now whole, so any pack build that was blocked
       // on credits AND deferred while this walk was running can safely go
       // ahead. Without this the deferral in `replayBlockedBuilds` would be
@@ -351,6 +366,31 @@ export async function backfillShopOrders(
     }
     cursor = page.endCursor;
   }
+}
+
+/** One `sync_disputes` job for a shop that has an offline session and has
+ *  never had one queued, running or succeeded. */
+export async function enqueueFirstDisputeSync(shopId: string): Promise<void> {
+  const sb = getServiceClient();
+  const { data: session } = await sb
+    .from("shop_sessions")
+    .select("id")
+    .eq("shop_id", shopId)
+    .eq("session_type", "offline")
+    .is("user_id", null)
+    .limit(1)
+    .maybeSingle();
+  if (!session) return;
+  const { data: existing } = await sb
+    .from("jobs")
+    .select("id")
+    .eq("shop_id", shopId)
+    .eq("job_type", "sync_disputes")
+    .in("status", ["queued", "running", "succeeded"])
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+  await enqueueJob({ shopId, jobType: "sync_disputes", entityId: shopId, priority: 50 });
 }
 
 // `persistOrders` was extracted to `lib/shopify/persistOrders.ts` (PR-A)

@@ -182,3 +182,14 @@ describe("ExposureView — Mein Maison, September 2026 (prod record)", () => {
     expect(na).toContain("Not available for this month");
   });
 });
+
+describe("ExposureView — a shop with no Shopify Protect orders", () => {
+  // whj8db-1q, 2026-10-09: 0 of 22,938 orders carry a Protect status. "Not
+  // measured yet" promised a number that will never come.
+  it("says no order had Shopify Protect, in every locale", () => {
+    const none = { ...period, operational: { ...month.operational, protectShareByValue: null } } as unknown as InsightsPeriod;
+    expect(render(none)).toContain("No orders this month had Shopify Protect");
+    expect(render(none, "de", de)).toContain("Keine Bestellung in diesem Monat hatte Shopify Protect");
+    expect(render(period)).not.toContain("No orders this month had Shopify Protect");
+  });
+});
