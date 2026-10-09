@@ -12,6 +12,7 @@
  * itself reaches `final`.
  */
 
+import { failureSignature } from "./outcomes";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
@@ -387,6 +388,11 @@ async function insertSkippedRow(
       evidence_hash: `skipped_${args.reason}`,
       failure_code: args.reason,
       failure_reason: args.message,
+      outcome_detail: { exit: args.reason === "covered_shopify" ? "covered_shopify" : "classifier_ineligible", at: "enqueue" },
+      failure_signature: failureSignature({
+        code: args.reason,
+        detail: args.reason === "covered_shopify" ? "covered_shopify" : "classifier_ineligible",
+      }),
     })
     .select("id, version")
     .single();
