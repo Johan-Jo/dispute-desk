@@ -15,6 +15,7 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
@@ -88,7 +89,7 @@ export async function sendCaseStrengthenedAlert(
         Your case just got stronger
       </h1>
       <p style="font-size:14px;color:#6D7175;margin:0 0 20px;line-height:1.5">
-        The <strong>${reasonLabel}</strong> dispute${amountStr} for ${shopLabel} was refreshed.
+        The <strong>${reasonLabel}</strong> dispute${amountStr} for ${escapeHtml(shopLabel)} was refreshed.
         ${reasonLine} Its strength moved from
         <strong>${priorLabel}</strong> to <strong>${newLabel}</strong>.
       </p>

@@ -31,6 +31,7 @@ import { insightsDigestsEnabled } from "@/lib/email/insightsDigestGate";
 import { getServiceClient } from "@/lib/supabase/server";
 import { sendOnboardingAnalysisDigest } from "@/lib/email/sendOnboardingAnalysisDigest";
 import { railSegmentationFor } from "@/lib/insights/railSegmentation";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
 
 /** Orders fetched for the 30-day snapshot. Mirrors the columns the monthly
  *  cron's `windowMetrics` reads — kept local rather than imported, because
@@ -76,7 +77,7 @@ export async function triggerOnboardingDigest(
     const { data: shop } = await sb
       .from("shops")
       .select(
-        "id, shop_domain, historical_import_orders_total, onboarding_digest_sent_at",
+        "id, shop_domain, shop_name, primary_domain, historical_import_orders_total, onboarding_digest_sent_at",
       )
       .eq("id", shopId)
       .maybeSingle();
@@ -201,7 +202,7 @@ export async function triggerOnboardingDigest(
 
     const { delivered: ok } = await sendOnboardingAnalysisDigest({
       shopDomain: shop.shop_domain as string,
-      merchantName: null,
+      merchantName: storeDisplayName(shop),
       to,
       ordersAnalyzedTotal:
         (shop.historical_import_orders_total as number | null) ?? 0,
