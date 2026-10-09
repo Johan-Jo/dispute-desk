@@ -163,6 +163,44 @@ export function resolveLocale({
   );
 }
 
+/**
+ * The language the merchant selected in Shopify Admin, as Shopify reports it
+ * on embedded loads (`?locale=`). Null when Shopify sent nothing; English
+ * when Shopify sent a language we don't ship — never a guess from another
+ * source.
+ */
+export function shopifyAdminLocale(param?: string | null): Locale | null {
+  if (!param?.trim()) return null;
+  return normalizeLocale(param) ?? DEFAULT_LOCALE;
+}
+
+/**
+ * Locale for the embedded app (/app/*). The merchant's Shopify Admin language
+ * decides. Without it (SuperAdmin impersonation has no Shopify in the loop)
+ * the store's persisted locale is used, so the operator sees what the
+ * merchant sees rather than their own browser's language. Cookie and
+ * Accept-Language are last resorts.
+ */
+export function resolveEmbeddedLocale({
+  shopifyLocale,
+  storeLocale,
+  cookieLocale,
+  browserLocale,
+}: {
+  shopifyLocale?: string | null;
+  storeLocale?: string | null;
+  cookieLocale?: string | null;
+  browserLocale?: string | null;
+}): Locale {
+  return (
+    shopifyAdminLocale(shopifyLocale) ??
+    normalizeLocale(storeLocale) ??
+    normalizeLocale(cookieLocale) ??
+    normalizeLocale(browserLocale) ??
+    DEFAULT_LOCALE
+  );
+}
+
 /** Display metadata for a given locale (safe — returns en fallback). */
 export function getLocaleDisplay(locale: Locale): {
   label: string;
