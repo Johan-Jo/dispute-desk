@@ -7,7 +7,7 @@ import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { needsRefresh } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
 import { readMetaAttribution } from "@/lib/analytics/metaInstall";
-import { normalizeLocale } from "@/lib/i18n/locales";
+import { shopifyAdminLocale } from "@/lib/i18n/locales";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
@@ -41,8 +41,13 @@ export async function GET(req: NextRequest) {
   // Admin). Captured so a new shop's welcome email is written in the
   // merchant's language rather than defaulting to English — Mein Maison, the
   // 2026-08-29 install, is a German store that came in through this path.
-  const localeParam = req.nextUrl.searchParams.get("locale");
-  const locale = normalizeLocale(localeParam) ?? undefined;
+  // Middleware forwards it as its own param; `return_to` (the original
+  // embedded URL) is also read, so a caller that forgets to forward it can't
+  // silently drop the merchant's language again. A language we don't ship
+  // resolves to English.
+  const localeParam =
+    req.nextUrl.searchParams.get("locale") ?? localeFromReturnTo(returnTo, req.url);
+  const locale = shopifyAdminLocale(localeParam) ?? undefined;
 
   if (!idToken || !shopParam) {
     return errorPage("Missing id_token or shop parameter.");
@@ -89,9 +94,16 @@ export async function GET(req: NextRequest) {
 
     if (existing) {
       shopInternalId = existing.id;
+      // Refresh the persisted locale on every exchange (like the OAuth
+      // callback does on re-auth) so it tracks a merchant who changes their
+      // Shopify Admin language. Left untouched when Shopify sent none.
       await db
         .from("shops")
-        .update({ uninstalled_at: null, updated_at: new Date().toISOString() })
+        .update({
+          uninstalled_at: null,
+          ...(locale ? { locale } : {}),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", shopInternalId);
     } else {
       const { data: created, error } = await db
@@ -335,6 +347,14 @@ function buildSuccessRedirect(
 function safeReturnTo(raw: string): string {
   if (!raw.startsWith("/") || raw.startsWith("//")) return "/app";
   return raw;
+}
+
+function localeFromReturnTo(returnTo: string, base: string): string | null {
+  try {
+    return new URL(safeReturnTo(returnTo), base).searchParams.get("locale");
+  } catch {
+    return null;
+  }
 }
 
 function errorPage(message: string): NextResponse {

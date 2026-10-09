@@ -6960,6 +6960,14 @@ Single source of truth for all locale data. Exports:
 5. Default: `en-US`.
 6. Partial locale fallback: `fr-CA` → base `fr` → `fr-FR`.
 
+### Embedded app locale (`/app/*`) — Shopify Admin language decides
+The embedded app does **not** use the cascade above. `resolveEmbeddedLocale()` (`lib/i18n/locales.ts`), read per request through `getEmbeddedRequestLocale()` (`lib/i18n/embeddedRequestLocale.ts`) by both `app/(embedded)/layout.tsx` and `i18n/request.ts`, resolves:
+1. **Shopify's `?locale=`** (middleware → `x-shopify-locale`) — the language the merchant selected in Shopify Admin. A language we don't ship renders **English** (`shopifyAdminLocale()`); it never falls through to a cookie or the browser.
+2. **`shops.locale`** — only under SuperAdmin impersonation, where there is no Shopify in the loop, so the operator sees the merchant's language instead of their own browser's. Append `?locale=xx` to override for one load.
+3. `dd_locale` cookie → `Accept-Language` → `en`.
+
+**Keeping `shops.locale` true.** Request-less senders (install welcome, billing, reminders) read `shops.locale`. Middleware must forward Shopify's `locale` to `/api/auth/shopify/token-exchange` as its own parameter — `buildTokenExchangeUrl()` (`lib/middleware/tokenExchangeUrl.ts`) is the single builder for both redirects; the route also reads it out of `return_to`. The route writes it on insert **and** refreshes it on every exchange for an existing shop (~hourly per active merchant), so a merchant who changes their Admin language is followed. Until 2026-10-09 the parameter was dropped on the redirect, so every token-exchange install was stored as the `en-US` column default and emailed in English (Mein Maison, Hem & Trend). Tests: `tests/integration/middlewareTokenExchangeLocale.test.ts`, `app/api/auth/shopify/token-exchange/__tests__/locale.test.ts`.
+
 ### DB Storage
 - `shops.locale` — BCP-47 tag, default `'en-US'`.
 - `portal_user_profiles.user_locale` — nullable BCP-47 tag (null = inherit from shop).

@@ -7,7 +7,9 @@ import {
   isLocale,
   localeToLegacyCode,
   normalizeLocale,
+  resolveEmbeddedLocale,
   resolveLocale,
+  shopifyAdminLocale,
   type Locale,
 } from "@/lib/i18n/locales";
 import { toBcp47, toBcp47Loose } from "@/lib/i18n/bcp47";
@@ -178,6 +180,64 @@ describe("resolveLocale", () => {
 
   it("defaults to en when all inputs are nullish", () => {
     expect(resolveLocale({})).toBe("en");
+  });
+});
+
+// ─── Embedded app: Shopify Admin language decides ──────────────
+
+describe("shopifyAdminLocale", () => {
+  it("is null when Shopify sent nothing", () => {
+    expect(shopifyAdminLocale(null)).toBeNull();
+    expect(shopifyAdminLocale("  ")).toBeNull();
+  });
+
+  it("maps a supported language", () => {
+    expect(shopifyAdminLocale("sv")).toBe("sv");
+    expect(shopifyAdminLocale("pt-BR")).toBe("pt");
+  });
+
+  it("is English for a language we do not ship", () => {
+    expect(shopifyAdminLocale("da")).toBe("en");
+    expect(shopifyAdminLocale("zh-CN")).toBe("en");
+  });
+});
+
+describe("resolveEmbeddedLocale", () => {
+  it("Shopify Admin language beats cookie, store and browser", () => {
+    expect(
+      resolveEmbeddedLocale({
+        shopifyLocale: "sv",
+        storeLocale: "de",
+        cookieLocale: "fr",
+        browserLocale: "es-ES",
+      })
+    ).toBe("sv");
+  });
+
+  it("an unsupported Shopify language renders English, not another source", () => {
+    expect(
+      resolveEmbeddedLocale({
+        shopifyLocale: "da",
+        cookieLocale: "sv",
+        browserLocale: "sv-SE",
+      })
+    ).toBe("en");
+  });
+
+  it("without Shopify (impersonation) the store locale beats the operator's cookie and browser", () => {
+    expect(
+      resolveEmbeddedLocale({
+        storeLocale: "sv",
+        cookieLocale: "en",
+        browserLocale: "pt-BR",
+      })
+    ).toBe("sv");
+  });
+
+  it("falls back to cookie, then browser, then English", () => {
+    expect(resolveEmbeddedLocale({ cookieLocale: "de", browserLocale: "fr" })).toBe("de");
+    expect(resolveEmbeddedLocale({ browserLocale: "fr-FR" })).toBe("fr");
+    expect(resolveEmbeddedLocale({})).toBe("en");
   });
 });
 

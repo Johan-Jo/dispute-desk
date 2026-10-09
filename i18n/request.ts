@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { routing } from "./routing";
 import { resolveLocale } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
+import { getEmbeddedRequestLocale } from "@/lib/i18n/embeddedRequestLocale";
 import {
   pathLocaleToMessages,
   type PathLocale,
@@ -19,6 +20,14 @@ export default getRequestConfig(async ({ requestLocale }) => {
       pathLocaleToMessages[locale as PathLocale]
     );
     return { locale, messages };
+  }
+
+  // Embedded app: the merchant's Shopify Admin language decides, same as the
+  // embedded layout — otherwise server-rendered copy (nav, server pages) and
+  // the client provider could disagree.
+  const embeddedLocale = await getEmbeddedRequestLocale();
+  if (embeddedLocale) {
+    return { locale: embeddedLocale, messages: await getMessages(embeddedLocale) };
   }
 
   const cookieStore = await cookies();

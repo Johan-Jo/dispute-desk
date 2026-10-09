@@ -7,7 +7,8 @@
 import { headers, cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { Providers } from "./providers";
-import { resolveLocale } from "@/lib/i18n/locales";
+import { resolveEmbeddedLocale } from "@/lib/i18n/locales";
+import { getEmbeddedRequestLocale } from "@/lib/i18n/embeddedRequestLocale";
 import { getMessages } from "@/lib/i18n/getMessages";
 import { getPolarisTranslations } from "@/lib/i18n/polarisLocales";
 import { TawkToWidget } from "@/components/embedded/TawkToWidget";
@@ -24,22 +25,6 @@ export default async function EmbeddedLayout({
 }) {
   const headerStore = await headers();
   const cookieStore = await cookies();
-  const acceptLang = headerStore.get("accept-language");
-  const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
-  // x-shopify-locale is set by middleware from the ?locale= query param on every
-  // embedded app load — use it as the primary Shopify locale source so the first
-  // request renders in the right language (the cookie isn't available until the
-  // second request since it's set in the middleware response, not the request).
-  const shopifyLocaleHeader = headerStore.get("x-shopify-locale");
-  const locale = resolveLocale({
-    userLocale: cookieLocale,
-    shopLocale: shopifyLocaleHeader,
-    shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim(),
-  });
-  const messages = await getMessages(locale);
-  const polarisTranslations = await getPolarisTranslations(locale);
-  const shopifyHost = headerStore.get("x-shopify-host")?.trim() ?? "";
-
   // SuperAdmin impersonation: middleware sets these headers only for a valid,
   // signed impersonation cookie. Render the banner + skip App Bridge host wiring.
   const impersonationModeHeader = headerStore.get(IMPERSONATION_MODE_HEADER);
@@ -50,6 +35,21 @@ export default async function EmbeddedLayout({
   const impersonationShopDomain = impersonationMode
     ? (headerStore.get("x-shop-domain")?.trim() ?? "")
     : "";
+
+  const acceptLang = headerStore.get("accept-language");
+  const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
+  // The language the merchant selected in Shopify Admin decides (a language we
+  // don't ship renders English); under impersonation the store's persisted
+  // locale stands in. Cookie / Accept-Language only when neither is present.
+  const locale =
+    (await getEmbeddedRequestLocale()) ??
+    resolveEmbeddedLocale({
+      cookieLocale,
+      browserLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim(),
+    });
+  const messages = await getMessages(locale);
+  const polarisTranslations = await getPolarisTranslations(locale);
+  const shopifyHost = headerStore.get("x-shopify-host")?.trim() ?? "";
 
   // Under impersonation there's no Shopify Admin host, so <s-app-nav> can't
   // upgrade — provide a real fallback nav (same items as AppNavSidebar, labels

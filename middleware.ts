@@ -11,6 +11,7 @@ import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 import { shopIdentityMatches } from "@/lib/middleware/shopMatch";
+import { buildTokenExchangeUrl } from "@/lib/middleware/tokenExchangeUrl";
 import {
   verifyImpersonation,
   signImpersonation,
@@ -833,17 +834,13 @@ export async function middleware(req: NextRequest) {
       // complete. Cryptographic verification happens in the node route,
       // not here (edge runtime has no crypto.createHmac).
       if (looksLikeSessionToken(idTokenParam) && shopParam) {
-        const exchangeUrl = new URL(
-          "/api/auth/shopify/token-exchange",
-          req.url,
-        );
-        exchangeUrl.searchParams.set("id_token", idTokenParam!);
-        exchangeUrl.searchParams.set("shop", shopParam);
-        if (hostParam) exchangeUrl.searchParams.set("host", hostParam);
-        exchangeUrl.searchParams.set(
-          "return_to",
-          pathname + req.nextUrl.search,
-        );
+        const exchangeUrl = buildTokenExchangeUrl(req.url, {
+          idToken: idTokenParam!,
+          shop: shopParam,
+          host: hostParam,
+          locale: localeParam,
+          returnTo: pathname + req.nextUrl.search,
+        });
         return NextResponse.redirect(exchangeUrl);
       }
 
@@ -951,11 +948,13 @@ export async function middleware(req: NextRequest) {
       shopParam &&
       shopIdentityMatches(shopDomain, shopParam)
     ) {
-      const exchangeUrl = new URL("/api/auth/shopify/token-exchange", req.url);
-      exchangeUrl.searchParams.set("id_token", idTokenParam!);
-      exchangeUrl.searchParams.set("shop", shopParam);
-      if (hostParam) exchangeUrl.searchParams.set("host", hostParam);
-      exchangeUrl.searchParams.set("return_to", pathname + req.nextUrl.search);
+      const exchangeUrl = buildTokenExchangeUrl(req.url, {
+        idToken: idTokenParam!,
+        shop: shopParam,
+        host: hostParam,
+        locale: localeParam,
+        returnTo: pathname + req.nextUrl.search,
+      });
       return NextResponse.redirect(exchangeUrl);
     }
 
