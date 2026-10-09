@@ -3902,6 +3902,34 @@ Phase 0b: nulled 30 days after the dispute closes).
 
 **Also changed:** `pdf_render_failed` now sends the failed-package alert.
 
+### Order situation: returns and refunds, merchant-side (2026-10-09)
+
+`lib/disputes/orderSituation.ts` is the one statement of the order's return/refund situation as Shopify records it.
+Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
+
+- `resolveOrderSituation({ returnStatus, refundedAmount, events })` returns `{ returns, refund, returnOpenedAt }`.
+  `returns` groups `Order.returnStatus`: `NO_RETURN` → `none`, `RETURN_REQUESTED` → `requested`, `IN_PROGRESS` →
+  `in_progress`, `RETURNED` / `INSPECTION_COMPLETE` → `returned`, `RETURN_FAILED` → `failed`, anything else or absent →
+  `unknown`. `refund` is `none` / `some` / `unknown` (coverage of the disputed amount stays in `creditTiming.ts`).
+  `returnOpenedAt` is the earliest "created return #…" order event, and is optional: Shopify writes event messages in
+  the shop's admin language and the pack keeps the latest 20.
+- It fails closed: an absent status or refund amount is `unknown`, never `none`.
+- `orderSituationFromPackSections(sections)` reads the persisted pack (order section `returnStatus`, `totals.refunded`;
+  `access_log` events). `shopifyRecordsReturnOrRefund` / `packShowsReturnOrRefund` now read the same function; their
+  answers are pinned by a parity test.
+- **Merchant note.** The workspace route returns `dispute.orderSituation` (`{ ...situation, asOf }`, `asOf` = the
+  pack's last build). `OrderSituationNote` renders it on the Overview and above the letter card when a return is on
+  record: the return's state, its date when known, whether a refund has been issued, "as recorded on {asOf}", and that
+  the note is for the merchant only. Copy: `disputes.overviewExtra.orderSituation.*`, six locales.
+- **Never bank-facing, structurally.** The module writes nothing to `pack_json`, provides no evidence field, and a test
+  fails if anything under `lib/defence`, `lib/packs`, `lib/argument`, `lib/shopify` or `lib/jobs` imports it, or if the
+  bank-document mirror (`DefencePackageHtmlView`) renders it. The bank timeline's allow-list (`chronology.ts`) is
+  untouched and still drops return events.
+
+Why: whj8db-1q #21037 had `returnStatus: IN_PROGRESS` and a return created six weeks before the inquiry; the dispute
+page showed neither, while offering a receipt acknowledgement and an upload. The return's own details and tracking need
+the `read_returns` scope, which the app does not hold yet (`order.returns` answers `ACCESS_DENIED`).
+
 **A skipped letter is a merchant task in every automation mode (2026-10-09).** `resolveAttention` returns `blocking` /
 `missing_required_evidence` whenever the latest defence package was skipped for lack of evidence and the evidence pack
 is `ready`. The rule used to sit inside the review-mode approval gate, so in auto mode it never ran and the dispute

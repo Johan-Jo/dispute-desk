@@ -2016,6 +2016,21 @@
         },
         "body": "Votre contrôle antifraude a signalé cette commande et rien n'a été expédié. Le paiement est toujours encaissé — aucun remboursement n'a été effectué.",
         "helper": "Comme rien n'a été expédié, il n'y a aucune preuve de livraison à soumettre — le score reflète cela, pas une lacune dans vos dossiers."
+      },
+      "orderSituation": {
+        "title": {
+          "requested": "Le client a demandé un retour pour cette commande",
+          "in_progress": "Un retour est en cours pour cette commande",
+          "returned": "Un retour pour cette commande est marqué comme reçu",
+          "failed": "Un retour pour cette commande est marqué comme échoué"
+        },
+        "opened": "Le retour a été créé le {date}.",
+        "refund": {
+          "none": "Aucun remboursement n'a été effectué pour la commande.",
+          "some": "Un remboursement a été effectué pour la commande."
+        },
+        "asOf": "Selon Shopify lors de la dernière collecte de cette commande par DisputeDesk, le {date}.",
+        "privateNote": "Cette note vous est réservée. Elle ne fait partie d'aucun élément envoyé à la banque."
       }
     },
     "evidenceTabExtra": {
@@ -3885,7 +3900,7 @@
         },
         "disputeDetailPage": {
           "title": "Détail du litige dans cette application",
-          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers.\n\n**Des chiffres tirés de votre propre boutique.** Sur un litige gagné ou perdu, **Ce qui fait gagner ce type de litige** peut indiquer à quelle fréquence les litiges du même type ont été gagnés sur votre boutique, et une étape de **La prochaine fois** peut indiquer combien de vos litiges perdus de ce type présentaient le même problème. Ils n'apparaissent que lorsque votre boutique compte assez de litiges tranchés de ce type. Ils décrivent l'historique de votre boutique, pas le raisonnement de la banque sur ce dossier."
+          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers.\n\n**Des chiffres tirés de votre propre boutique.** Sur un litige gagné ou perdu, **Ce qui fait gagner ce type de litige** peut indiquer à quelle fréquence les litiges du même type ont été gagnés sur votre boutique, et une étape de **La prochaine fois** peut indiquer combien de vos litiges perdus de ce type présentaient le même problème. Ils n'apparaissent que lorsque votre boutique compte assez de litiges tranchés de ce type. Ils décrivent l'historique de votre boutique, pas le raisonnement de la banque sur ce dossier.\n\n**Un retour sur la commande.** Lorsque Shopify enregistre un retour sur la commande contestée, l'aperçu et l'onglet de la lettre affichent une note qui l'indique, avec la date de création du retour si Shopify la fournit et si un remboursement a été effectué. La note reprend ce que Shopify indiquait lors de la dernière collecte par DisputeDesk. Elle vous est réservée et ne fait partie d'aucun élément envoyé à la banque."
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",

@@ -15,6 +15,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveOrderSituation } from "./orderSituation";
 
 export const RETURN_REQUEST_ANSWERS = ["no_request_received", "request_received", "not_sure"] as const;
 export type ReturnRequestAnswer = (typeof RETURN_REQUEST_ANSWERS)[number];
@@ -57,9 +58,11 @@ export function shopifyRecordsReturnOrRefund(args: {
   returnStatus: string | null | undefined;
   totalRefunded: number | string | null | undefined;
 }): boolean {
-  const refunded = Number.parseFloat(String(args.totalRefunded ?? "0"));
-  if (Number.isFinite(refunded) && refunded > 0) return true;
-  return args.returnStatus != null && args.returnStatus !== "NO_RETURN";
+  // One derivation of the order's situation (orderSituation.ts). A status
+  // this code does not recognise still counts as "not NO_RETURN", as before.
+  const situation = resolveOrderSituation({ returnStatus: args.returnStatus, refundedAmount: args.totalRefunded });
+  if (situation.refund === "some") return true;
+  return args.returnStatus != null && situation.returns !== "none";
 }
 
 /**
