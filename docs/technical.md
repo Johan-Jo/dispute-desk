@@ -3931,6 +3931,10 @@ Phase 0b: nulled 30 days after the dispute closes).
 
 **Also changed:** `pdf_render_failed` now sends the failed-package alert.
 
+**The deadline fallback email names the proceeding (2026-10-09).** `sendDefenceDeadlineFallbackAlert` takes
+`phase` and says "The inquiry …" for an inquiry; a chargeback, or an unknown phase, keeps "The chargeback dispute …".
+It used to call every dispute a chargeback (plan `order-situation-drives-dispute`, Phase B0).
+
 ### Order situation: returns and refunds, merchant-side (2026-10-09)
 
 `lib/disputes/orderSituation.ts` is the one statement of the order's return/refund situation as Shopify records it.

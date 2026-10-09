@@ -87,6 +87,7 @@ type Reason =
 async function render(
   fallbackReason: Reason,
   unsafeReasons?: readonly PackageUnsafeReason[],
+  phase?: string | null,
 ) {
   mockGetServiceClient.mockReturnValue(buildClient());
   await sendDefenceDeadlineFallbackAlert({
@@ -99,6 +100,7 @@ async function render(
     dueAt: "2026-08-14T22:55:00Z",
     fallbackReason,
     unsafeReasons,
+    phase,
   });
   expect(sendMock).toHaveBeenCalledTimes(1);
   return sendMock.mock.calls[0][0];
@@ -250,5 +252,39 @@ describe("the summary table speaks English, not enum", () => {
       const sent = await render(value);
       expect(sent.text, value).not.toMatch(/,\s+There is no fallback/);
     }
+  });
+});
+
+/* whj8db-1q #21037 (2026-10-09), a Klarna INQUIRY due the next day: this email
+ * would have told the merchant their "chargeback dispute" had no response
+ * filed. An inquiry is not a chargeback — no funds have moved and it can
+ * still be refunded — and the page beside the email calls it an inquiry. */
+describe("deadline fallback alert — names the proceeding", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.RESEND_API_KEY = "test-key";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  for (const reason of ["skipped_no_facts", "skipped_covered"] as const) {
+    it(`${reason}: an inquiry is called an inquiry, in the text and the HTML`, async () => {
+      const mail = await render(reason, undefined, "inquiry");
+      expect(mail.text).toMatch(/^The inquiry /m);
+      expect(mail.html).toMatch(/The inquiry <strong>/);
+      expect(mail.text).not.toMatch(/chargeback/i);
+      expect(mail.html).not.toMatch(/chargeback/i);
+    });
+
+    it(`${reason}: a chargeback keeps its wording`, async () => {
+      const mail = await render(reason, undefined, "chargeback");
+      expect(mail.text).toMatch(/^The chargeback dispute /m);
+      expect(mail.html).toMatch(/The chargeback dispute <strong>/);
+    });
+  }
+
+  it("an unknown phase is worded as a chargeback, as before", async () => {
+    const mail = await render("missing");
+    expect(mail.text).toMatch(/^The chargeback dispute /m);
   });
 });
