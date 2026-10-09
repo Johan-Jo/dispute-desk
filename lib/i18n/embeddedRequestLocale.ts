@@ -1,6 +1,10 @@
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
-import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
+import {
+  IMPERSONATION_COOKIE,
+  IMPERSONATION_MODE_HEADER,
+  verifyImpersonationValue,
+} from "@/lib/admin/impersonation";
 import { getServiceClient } from "@/lib/supabase/server";
 import { resolveEmbeddedLocale, type Locale } from "./locales";
 
@@ -21,23 +25,29 @@ import { resolveEmbeddedLocale, type Locale } from "./locales";
  */
 export const getEmbeddedRequestLocale = cache(async (): Promise<Locale | null> => {
   const headerStore = await headers();
+  const cookieStore = await cookies();
   const shopifyLocale = headerStore.get("x-shopify-locale");
+  // The mode header marks an impersonated /app request, but request headers
+  // are client-sendable, so the shop id comes from the signed cookie — never
+  // from `x-shop-id`. The header is still required: the cookie is path "/"
+  // and rides along to /admin and /portal, which must keep their own locale.
   const impersonationMode = headerStore.get(IMPERSONATION_MODE_HEADER);
-  const impersonating = impersonationMode === "read" || impersonationMode === "write";
-  if (!shopifyLocale && !impersonating) return null;
+  const impersonation =
+    impersonationMode === "read" || impersonationMode === "write"
+      ? await verifyImpersonationValue(cookieStore.get(IMPERSONATION_COOKIE)?.value)
+      : null;
+  if (!shopifyLocale && !impersonation) return null;
 
   let storeLocale: string | null = null;
-  const shopId = impersonating ? (headerStore.get("x-shop-id")?.trim() ?? "") : "";
-  if (shopId && !shopifyLocale) {
+  if (impersonation && !shopifyLocale) {
     const { data } = await getServiceClient()
       .from("shops")
       .select("locale")
-      .eq("id", shopId)
+      .eq("id", impersonation.shopId)
       .maybeSingle();
     storeLocale = (data?.locale as string | null) ?? null;
   }
 
-  const cookieStore = await cookies();
   return resolveEmbeddedLocale({
     shopifyLocale,
     storeLocale,

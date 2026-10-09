@@ -36,10 +36,15 @@ import { NextRequest } from "next/server";
 
 const inserts: Record<string, unknown>[] = [];
 const updates: Record<string, unknown>[] = [];
+const eqCalls: [string, unknown][] = [];
 
 function makeShopsTable(shopRow: { id: string } | null) {
   const chain: Record<string, unknown> = {};
-  for (const m of ["from", "select", "eq"]) chain[m] = () => chain;
+  for (const m of ["from", "select"]) chain[m] = () => chain;
+  chain.eq = (col: string, val: unknown) => {
+    eqCalls.push([col, val]);
+    return chain;
+  };
   chain.insert = (row: Record<string, unknown>) => {
     inserts.push(row);
     return chain;
@@ -64,6 +69,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   inserts.length = 0;
   updates.length = 0;
+  eqCalls.length = 0;
   vi.mocked(verifySessionToken).mockReturnValue({ shopDomain: "acme.myshopify.com" } as never);
   vi.mocked(loadSession).mockResolvedValue(null);
   vi.stubGlobal(
@@ -112,20 +118,33 @@ describe("GET /api/auth/shopify/token-exchange — merchant locale", () => {
     expect(inserts).toEqual([{ shop_domain: "acme.myshopify.com", locale: "en" }]);
   });
 
-  it("refreshes the locale of an existing shop", async () => {
+  // The locale is the logged-in user's, and this route re-runs hourly: a staff
+  // member with an English Admin must not flip a captured store locale.
+  it("fills an existing shop's locale only where it is still the column default", async () => {
     vi.mocked(getServiceClient).mockReturnValue(makeShopsTable({ id: "shop-1" }) as never);
 
     await GET(makeRequest("&locale=sv&return_to=%2Fapp"));
 
-    expect(updates[0]).toMatchObject({ uninstalled_at: null, locale: "sv" });
+    expect(updates[0]).not.toHaveProperty("locale");
+    expect(updates[1]).toEqual({ locale: "sv" });
+    expect(eqCalls).toContainEqual(["locale", "en-US"]);
   });
 
-  it("leaves the stored locale alone when Shopify sent none", async () => {
+  it("writes no locale for an existing shop when Shopify sent none", async () => {
     vi.mocked(getServiceClient).mockReturnValue(makeShopsTable({ id: "shop-1" }) as never);
 
     await GET(makeRequest("&return_to=%2Fapp"));
 
+    expect(updates).toHaveLength(1);
     expect(updates[0]).not.toHaveProperty("locale");
     expect(inserts).toEqual([]);
+  });
+
+  it("an empty locale param does not hide the one in return_to", async () => {
+    vi.mocked(getServiceClient).mockReturnValue(makeShopsTable(null) as never);
+
+    await GET(makeRequest(`&locale=&return_to=${encodeURIComponent("/app?locale=fr")}`));
+
+    expect(inserts).toEqual([{ shop_domain: "acme.myshopify.com", locale: "fr" }]);
   });
 });

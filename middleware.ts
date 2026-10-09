@@ -709,6 +709,9 @@ export async function middleware(req: NextRequest) {
     requestHeaders.set("x-shopify-host", hostParam);
     // Forward locale param as header so embedded layout can use it on the first
     // request (cookie is set in the response and isn't available until next request).
+    // Deleted first: the embedded locale resolver trusts this header, so a
+    // client-sent copy must never survive a load without `?locale=`.
+    requestHeaders.delete("x-shopify-locale");
     if (localeParam) requestHeaders.set("x-shopify-locale", localeParam);
     // Forward the raw id_token (present on essentially every embedded load —
     // see docs/technical.md § Expiring offline tokens) so the Node-runtime

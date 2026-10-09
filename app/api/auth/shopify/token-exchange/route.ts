@@ -12,7 +12,10 @@ import { shopifyAdminLocale } from "@/lib/i18n/locales";
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
 
-const GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
+/** `shops.locale` column default — app code only ever writes short codes. */
+const UNSET_SHOP_LOCALE = "en-US";
+
+const GRANT_TYPE ="urn:ietf:params:oauth:grant-type:token-exchange";
 const SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id_token";
 const OFFLINE_TOKEN_TYPE = "urn:shopify:params:oauth:token-type:offline-access-token";
 
@@ -46,7 +49,7 @@ export async function GET(req: NextRequest) {
   // silently drop the merchant's language again. A language we don't ship
   // resolves to English.
   const localeParam =
-    req.nextUrl.searchParams.get("locale") ?? localeFromReturnTo(returnTo, req.url);
+    req.nextUrl.searchParams.get("locale") || localeFromReturnTo(returnTo, req.url);
   const locale = shopifyAdminLocale(localeParam) ?? undefined;
 
   if (!idToken || !shopParam) {
@@ -94,17 +97,22 @@ export async function GET(req: NextRequest) {
 
     if (existing) {
       shopInternalId = existing.id;
-      // Refresh the persisted locale on every exchange (like the OAuth
-      // callback does on re-auth) so it tracks a merchant who changes their
-      // Shopify Admin language. Left untouched when Shopify sent none.
       await db
         .from("shops")
-        .update({
-          uninstalled_at: null,
-          ...(locale ? { locale } : {}),
-          updated_at: new Date().toISOString(),
-        })
+        .update({ uninstalled_at: null, updated_at: new Date().toISOString() })
         .eq("id", shopInternalId);
+      // `locale` is the language of whoever is logged in to Admin right now,
+      // and this route re-runs about hourly per browser — so it must not
+      // overwrite a captured store locale (a staff member with an English
+      // Admin would flip a German store's emails). Only fill in a row still
+      // on the column default, i.e. one whose locale was never captured.
+      if (locale) {
+        await db
+          .from("shops")
+          .update({ locale })
+          .eq("id", shopInternalId)
+          .eq("locale", UNSET_SHOP_LOCALE);
+      }
     } else {
       const { data: created, error } = await db
         .from("shops")
