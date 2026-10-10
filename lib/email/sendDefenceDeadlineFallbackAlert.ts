@@ -41,6 +41,10 @@ export interface DefenceDeadlineFallbackContext {
   amount: number | null;
   currencyCode: string | null;
   dueAt: string | null;
+  /** `disputes.phase`. An inquiry is not a chargeback: no funds have moved and
+   *  the merchant can still refund it. Until 2026-10-09 this email called
+   *  every dispute "the chargeback dispute". Absent = chargeback wording. */
+  phase?: string | null;
   /** Why the defence package couldn't be used. */
   fallbackReason:
     | "validation_failed"
@@ -211,6 +215,8 @@ export async function sendDefenceDeadlineFallbackAlert(
    * that, in the first sentence, unmistakably.
    */
   const covered = isCovered(ctx.fallbackReason);
+  // What Shopify calls the case at this stage.
+  const proceeding = ctx.phase === "inquiry" ? "inquiry" : "chargeback dispute";
 
   const subject = covered
     ? `No response needed: dispute ${disputeIdShort} is covered by Shopify Protect`
@@ -220,7 +226,7 @@ export async function sendDefenceDeadlineFallbackAlert(
     ? [
         `Hello,`,
         ``,
-        `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.`,
+        `The ${proceeding} ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.`,
         ``,
         `That is deliberate: ${reason}. Shopify absorbs this loss, so there is nothing to defend and nothing for you to do.`,
         ``,
@@ -232,7 +238,7 @@ export async function sendDefenceDeadlineFallbackAlert(
     : [
         `Hello,`,
         ``,
-        `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DISPUTEDESK HAS FILED NOTHING.`,
+        `The ${proceeding} ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DISPUTEDESK HAS FILED NOTHING.`,
         ``,
         `${failureSentence(ctx.fallbackReason, reason)} There is no fallback — the defence package is the only thing we submit. We have sent no evidence to Shopify for this dispute.`,
         ``,
@@ -246,9 +252,9 @@ export async function sendDefenceDeadlineFallbackAlert(
       ].join("\n");
 
   const body = covered
-    ? `<p>The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.</p>
+    ? `<p>The ${proceeding} <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.</p>
 <p>That is deliberate: ${reason}. Shopify absorbs this loss, so there is nothing to defend and nothing for you to do.</p>`
-    : `<p style="font-size:16px;font-weight:600;">The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DisputeDesk has filed nothing.</p>
+    : `<p style="font-size:16px;font-weight:600;">The ${proceeding} <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DisputeDesk has filed nothing.</p>
 <p>${failureSentence(ctx.fallbackReason, reason)} There is no fallback — the defence package is the only thing we submit. <strong>We have sent no evidence to Shopify for this dispute.</strong></p>
 <p>Shopify will pass on the basic order details it holds when the deadline passes, but nothing we built and nothing you have reviewed. That rarely wins. Open the dispute in DisputeDesk to regenerate the package, or add your own evidence directly in Shopify Admin before the deadline.</p>`;
 
