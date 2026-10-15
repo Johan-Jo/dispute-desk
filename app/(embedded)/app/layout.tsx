@@ -84,24 +84,34 @@ export default async function EmbeddedAppLayout({
   // orders gets the lock screen INSTEAD of the nav and every page, so there is
   // nothing to browse. Placed after the page-view recording above on purpose —
   // we still want to see who is poking around a locked shop. Fails open on any
-  // doubt; impersonation bypasses it so support can still inspect these shops.
-  // `x-dd-shop-id` is the cookie-derived id middleware forwards on /app/*.
-  const gateShopId = headerStore.get("x-dd-shop-id");
+  // doubt. `x-dd-shop-id` is the cookie-derived id middleware forwards on
+  // /app/*; under impersonation middleware injects `x-shop-id` instead.
+  //
+  // Impersonation sees the gate too (2026-10-15): an admin checking a locked
+  // store must see exactly what the merchant sees — bypassing it made the gate
+  // look broken on prod. Under impersonation NOTHING is sent (no admin alert,
+  // no merchant email): it is not a merchant visit.
+  const gateShopId = impersonating
+    ? headerStore.get("x-shop-id")
+    : headerStore.get("x-dd-shop-id");
   //
   // The merchant install email is also settled here when install couldn't tell
   // (lib/shopify/deferredInstallEmail.ts): locked → the no-orders email, first
   // verification → the welcome. Both are once-per-shop. `after()` keeps the
   // instance alive for the sends without delaying the page.
   if (
-    !impersonating &&
     gateShopId &&
     (await resolveOrdersGate(gateShopId, {
-      onVerified: () => after(() => sendDeferredInstallEmail(gateShopId, "welcome")),
+      onVerified: impersonating
+        ? undefined
+        : () => after(() => sendDeferredInstallEmail(gateShopId, "welcome")),
     })) === "locked"
   ) {
-    // Admin alert with the store's details, throttled to one per shop per 24h.
-    after(() => notifyOrdersGateBlock({ shopInternalId: gateShopId, path }));
-    after(() => sendDeferredInstallEmail(gateShopId, "no_orders"));
+    if (!impersonating) {
+      // Admin alert with the store's details, throttled to one per shop per 24h.
+      after(() => notifyOrdersGateBlock({ shopInternalId: gateShopId, path }));
+      after(() => sendDeferredInstallEmail(gateShopId, "no_orders"));
+    }
     return <NoOrdersScreen />;
   }
 
