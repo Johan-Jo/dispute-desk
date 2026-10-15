@@ -84,9 +84,16 @@
   },
   "noOrdersGate": {
     "title": "Votre boutique n'a pas encore de commandes",
-    "body": "Votre boutique n'a aucune commande, DisputeDesk ne peut donc malheureusement pas travailler sur cette boutique. DisputeDesk défend les rétrofacturations liées à des commandes déjà vendues, et sans historique de commandes il n'y a aucun litige pour lequel nous puissions vous aider.",
-    "welcomeBack": "Vous serez le bienvenu dès que votre boutique fonctionnera avec des commandes ; nous serons ravis de vous aider à ce moment-là.",
-    "contact": "Une question ? Écrivez à"
+    "body": "DisputeDesk défend les rétrofacturations liées à des commandes déjà vendues. Sans historique de commandes, il n'y a aucun litige pour lequel nous puissions vous aider — il n'y a donc rien à faire ici pour l'instant.",
+    "badge": "0 commande trouvée",
+    "readyHeading": "Quand vous serez prêt",
+    "step1Title": "Commencez à vendre.",
+    "step1Body": "Dès que des commandes arrivent, les litiges peuvent être suivis par rapport à celles-ci.",
+    "step2Title": "Revenez sur DisputeDesk.",
+    "step2Body": "Nous récupérerons vos commandes et serons ravis de vous aider.",
+    "questions": "Une question ?",
+    "contactSupport": "Contacter le support",
+    "checkAgain": "Vérifier à nouveau"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",

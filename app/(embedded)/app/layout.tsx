@@ -3,6 +3,9 @@
  * Brand bar + feedback card (Figma) live in EmbeddedAppChrome; see components/embedded/EmbeddedAppChrome.tsx.
  */
 import { headers } from "next/headers";
+import { after } from "next/server";
+import { notifyOrdersGateBlock } from "@/lib/shopify/notifyOrdersGateBlock";
+import { sendDeferredInstallEmail } from "@/lib/shopify/deferredInstallEmail";
 import { AppNavSidebar } from "./AppNavSidebar";
 import { EmbeddedAppChrome } from "@/components/embedded/EmbeddedAppChrome";
 import { PageViewBeacon } from "@/components/embedded/PageViewBeacon";
@@ -84,7 +87,21 @@ export default async function EmbeddedAppLayout({
   // doubt; impersonation bypasses it so support can still inspect these shops.
   // `x-dd-shop-id` is the cookie-derived id middleware forwards on /app/*.
   const gateShopId = headerStore.get("x-dd-shop-id");
-  if (!impersonating && gateShopId && (await resolveOrdersGate(gateShopId)) === "locked") {
+  //
+  // The merchant install email is also settled here when install couldn't tell
+  // (lib/shopify/deferredInstallEmail.ts): locked → the no-orders email, first
+  // verification → the welcome. Both are once-per-shop. `after()` keeps the
+  // instance alive for the sends without delaying the page.
+  if (
+    !impersonating &&
+    gateShopId &&
+    (await resolveOrdersGate(gateShopId, {
+      onVerified: () => after(() => sendDeferredInstallEmail(gateShopId, "welcome")),
+    })) === "locked"
+  ) {
+    // Admin alert with the store's details, throttled to one per shop per 24h.
+    after(() => notifyOrdersGateBlock({ shopInternalId: gateShopId, path }));
+    after(() => sendDeferredInstallEmail(gateShopId, "no_orders"));
     return <NoOrdersScreen />;
   }
 

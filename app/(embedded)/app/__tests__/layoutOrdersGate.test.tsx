@@ -16,6 +16,18 @@ vi.mock("@/lib/shopify/ordersGate", () => ({
   resolveOrdersGate: (...a: unknown[]) => resolveOrdersGate(...a),
 }));
 
+const afterMock = vi.fn((cb: () => unknown) => cb());
+vi.mock("next/server", () => ({ after: (cb: () => unknown) => afterMock(cb) }));
+const notifyOrdersGateBlock = vi.fn();
+vi.mock("@/lib/shopify/notifyOrdersGateBlock", () => ({
+  notifyOrdersGateBlock: (...a: unknown[]) => notifyOrdersGateBlock(...a),
+}));
+
+const sendDeferredInstallEmail = vi.fn();
+vi.mock("@/lib/shopify/deferredInstallEmail", () => ({
+  sendDeferredInstallEmail: (...a: unknown[]) => sendDeferredInstallEmail(...a),
+}));
+
 vi.mock("@/lib/shopify/recordLastLogin", () => ({ recordLastLogin: vi.fn() }));
 vi.mock("@/lib/shopify/recordPageView", () => ({ recordPageView: vi.fn() }));
 vi.mock("@/lib/shopify/sessionToken", () => ({ verifySessionToken: () => null }));

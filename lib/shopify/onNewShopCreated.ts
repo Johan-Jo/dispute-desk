@@ -125,7 +125,15 @@ export async function onNewShopCreated(
     );
   });
 
-  // Merchant-facing welcome. Awaited for the same reason as the admin alert:
+  // Merchant-facing welcome — ONLY when the order check gave a real answer.
+  // `null` (couldn't tell) is the normal case on the OAuth-callback path: the
+  // token stored there is non-expiring and the Admin API rejects it. Sending
+  // the welcome then told no-orders stores "we're going through your orders"
+  // (sharpdesk, 2026-10-15). Instead the email is deferred to the first
+  // definitive gate verdict on the merchant's first embedded load — see
+  // lib/shopify/deferredInstallEmail.ts.
+  //
+  // Awaited for the same reason as the admin alert:
   // both install paths end in an immediate redirect and Vercel kills the
   // instance on return, so a fire-and-forget send would lose the race.
   //
@@ -133,19 +141,21 @@ export async function onNewShopCreated(
   // above — the merchant-configured alert address (Settings → team email) does
   // not exist yet at install time. When enrichment failed, `to` is undefined
   // and the sender skips rather than guessing an address.
-  await sendInstallWelcomeEmail({
-    shopInternalId,
-    shopDomain,
-    to: details?.email,
-    shopName: details?.name,
-    locale: options.locale,
-    variant: noOrders ? "no_orders" : "welcome",
-  }).catch((err) => {
-    console.warn(
-      "[email:install-welcome] send threw:",
-      err instanceof Error ? err.message : err,
-    );
-  });
+  if (hasOrders !== null) {
+    await sendInstallWelcomeEmail({
+      shopInternalId,
+      shopDomain,
+      to: details?.email,
+      shopName: details?.name,
+      locale: options.locale,
+      variant: noOrders ? "no_orders" : "welcome",
+    }).catch((err) => {
+      console.warn(
+        "[email:install-welcome] send threw:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+  }
 
   // Meta Conversions API install conversion — only when the installer accepted analytics cookies
   // on our site. Awaited for the same reason as the sends above, but capped at 3s so a slow

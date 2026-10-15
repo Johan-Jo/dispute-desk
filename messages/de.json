@@ -84,9 +84,16 @@
   },
   "noOrdersGate": {
     "title": "Dein Shop hat noch keine Bestellungen",
-    "body": "Dein Shop hat keine Bestellungen, daher kann DisputeDesk für diesen Shop leider nicht arbeiten. DisputeDesk wehrt Chargebacks für bereits verkaufte Bestellungen ab, und ohne Bestellhistorie gibt es keine Fälle, bei denen wir helfen könnten.",
-    "welcomeBack": "Du bist herzlich willkommen zurück, sobald dein Shop mit Bestellungen läuft — dann helfen wir dir gern.",
-    "contact": "Fragen? Schreib an"
+    "body": "DisputeDesk wehrt Chargebacks für Bestellungen ab, die du bereits verkauft hast. Ohne Bestellhistorie gibt es keine Fälle, bei denen wir helfen könnten — hier gibt es also noch nichts zu tun.",
+    "badge": "0 Bestellungen gefunden",
+    "readyHeading": "Wenn du so weit bist",
+    "step1Title": "Fang an zu verkaufen.",
+    "step1Body": "Sobald Bestellungen eingehen, können Fälle dazu verfolgt werden.",
+    "step2Title": "Komm zurück zu DisputeDesk.",
+    "step2Body": "Wir übernehmen deine Bestellungen und helfen dir gern.",
+    "questions": "Fragen?",
+    "contactSupport": "Support kontaktieren",
+    "checkAgain": "Erneut prüfen"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
