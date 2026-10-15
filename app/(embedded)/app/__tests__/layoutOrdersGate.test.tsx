@@ -72,12 +72,23 @@ describe("EmbeddedAppLayout no-orders gate", () => {
     expect(JSON.stringify(out)).toContain(CHILD);
   });
 
-  it("impersonation bypasses the gate and never even asks", async () => {
-    headerValues[IMPERSONATION_MODE_HEADER] = "read";
+  it("impersonation sees the lock screen (gated on x-shop-id) but sends nothing", async () => {
+    headerValues = { [IMPERSONATION_MODE_HEADER]: "read", "x-shop-id": "shop-imp" };
     resolveOrdersGate.mockResolvedValue("locked");
     const out = await render();
+    expect(out.type).toBe(NoOrdersScreen);
+    expect(resolveOrdersGate.mock.calls[0][0]).toBe("shop-imp");
+    expect(resolveOrdersGate.mock.calls[0][1]).toEqual({ onVerified: undefined });
+    expect(notifyOrdersGateBlock).not.toHaveBeenCalled();
+    expect(sendDeferredInstallEmail).not.toHaveBeenCalled();
+  });
+
+  it("impersonation of an open shop renders the normal shell", async () => {
+    headerValues = { [IMPERSONATION_MODE_HEADER]: "read", "x-shop-id": "shop-imp" };
+    resolveOrdersGate.mockResolvedValue("open");
+    const out = await render();
     expect(out.type).not.toBe(NoOrdersScreen);
-    expect(resolveOrdersGate).not.toHaveBeenCalled();
+    expect(JSON.stringify(out)).toContain(CHILD);
   });
 
   it("no shop id forwarded: passes through without asking", async () => {
