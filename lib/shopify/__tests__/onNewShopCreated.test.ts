@@ -105,14 +105,18 @@ describe("onNewShopCreated", () => {
       expect(welcome.to).toBe("owner@example.com");
     });
 
-    it("fails OPEN when the check cannot tell (null): normal emails, not stamped", async () => {
+    it("cannot tell (null): not stamped, and the merchant email is DEFERRED, never the welcome", async () => {
+      // OAuth-callback installs: the stored token is non-expiring and the Admin
+      // API rejects the probe. Sending the welcome told no-orders stores "we're
+      // going through your orders" (sharpdesk, 2026-10-15). The email is sent
+      // later by the embedded gate (lib/shopify/deferredInstallEmail.ts).
       shopHasAnyOrders.mockResolvedValue(null);
 
       await onNewShopCreated(OPTS);
 
       expect(stampOrdersVerified).not.toHaveBeenCalled();
       expect(sendAdminInstallNotification.mock.calls[0][0].noOrders).toBe(false);
-      expect(sendInstallWelcomeEmail.mock.calls[0][0].variant).toBe("welcome");
+      expect(sendInstallWelcomeEmail).not.toHaveBeenCalled();
     });
 
     it("a throwing check never breaks the install or the alert", async () => {
