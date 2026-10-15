@@ -84,9 +84,16 @@
   },
   "noOrdersGate": {
     "title": "Din butik har inga ordrar än",
-    "body": "Din butik har inga ordrar, så tyvärr kan DisputeDesk inte arbeta med den här butiken. DisputeDesk försvarar återkrav på ordrar du redan har sålt, och utan orderhistorik finns det inga ärenden vi kan hjälpa till med.",
-    "welcomeBack": "Du är varmt välkommen tillbaka när din butik är igång med ordrar — då hjälper vi dig gärna.",
-    "contact": "Frågor? Skriv till"
+    "body": "DisputeDesk försvarar återkrav på ordrar du redan har sålt. Utan orderhistorik finns det inga ärenden vi kan hjälpa till med — så det finns inget att göra här ännu.",
+    "badge": "0 ordrar hittades",
+    "readyHeading": "När du är redo",
+    "step1Title": "Börja sälja.",
+    "step1Body": "När ordrar kommer in kan ärenden följas upp mot dem.",
+    "step2Title": "Kom tillbaka till DisputeDesk.",
+    "step2Body": "Vi hämtar dina ordrar och hjälper dig gärna.",
+    "questions": "Frågor?",
+    "contactSupport": "Kontakta support",
+    "checkAgain": "Kontrollera igen"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",

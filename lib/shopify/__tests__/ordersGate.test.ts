@@ -138,3 +138,32 @@ describe("resolveOrdersGate", () => {
     expect(await resolveOrdersGate("s1")).toBe("open");
   });
 });
+
+describe("resolveOrdersGate onVerified", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _resetOrdersGateCache();
+    shopRow = { orders_verified_at: null };
+    shopError = null;
+    disputeCount = 0;
+  });
+
+  it("fires once when this call verifies the shop", async () => {
+    makeAuthedRequest.mockResolvedValue({
+      data: { orders: { edges: [{ node: { id: "gid://shopify/Order/1" } }] } },
+    });
+    const onVerified = vi.fn();
+    expect(await resolveOrdersGate("s-verify", { onVerified })).toBe("open");
+    expect(onVerified).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire for an already-verified shop or a locked one", async () => {
+    const onVerified = vi.fn();
+    shopRow = { orders_verified_at: "2026-10-01T00:00:00Z" };
+    await resolveOrdersGate("s-old", { onVerified });
+    shopRow = { orders_verified_at: null };
+    makeAuthedRequest.mockResolvedValue({ data: { orders: { edges: [] } } });
+    expect(await resolveOrdersGate("s-empty", { onVerified })).toBe("locked");
+    expect(onVerified).not.toHaveBeenCalled();
+  });
+});

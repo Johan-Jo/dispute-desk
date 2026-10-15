@@ -48,7 +48,19 @@ export async function stampOrdersVerified(shopInternalId: string): Promise<void>
   lockedAt.delete(shopInternalId);
 }
 
-export async function resolveOrdersGate(shopInternalId: string): Promise<OrdersGate> {
+export interface ResolveOrdersGateOptions {
+  /**
+   * Called once, when THIS call is the one that verified the shop (the Shopify
+   * probe found orders and the shop was stamped). The layout uses it to send a
+   * deferred install welcome (lib/shopify/deferredInstallEmail.ts).
+   */
+  onVerified?: () => void;
+}
+
+export async function resolveOrdersGate(
+  shopInternalId: string,
+  opts: ResolveOrdersGateOptions = {},
+): Promise<OrdersGate> {
   try {
     const { data, error } = await getServiceClient()
       .from("shops")
@@ -70,6 +82,7 @@ export async function resolveOrdersGate(shopInternalId: string): Promise<OrdersG
   const hasOrders = await shopHasAnyOrders(shopInternalId);
   if (hasOrders === true) {
     await stampOrdersVerified(shopInternalId);
+    opts.onVerified?.();
     return "open";
   }
   if (hasOrders === false) {
