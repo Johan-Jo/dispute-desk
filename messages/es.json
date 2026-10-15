@@ -82,6 +82,19 @@
     "dashboard": "Panel",
     "clearShopReconnect": "Limpiar tienda y volver a conectar"
   },
+  "noOrdersGate": {
+    "title": "Tu tienda aún no tiene pedidos",
+    "body": "DisputeDesk defiende los contracargos de pedidos que ya has vendido. Sin historial de pedidos no hay disputas en las que podamos ayudar, así que todavía no hay nada que hacer aquí.",
+    "badge": "0 pedidos encontrados",
+    "readyHeading": "Cuando estés listo",
+    "step1Title": "Empieza a vender.",
+    "step1Body": "Cuando lleguen pedidos, las disputas se podrán seguir sobre ellos.",
+    "step2Title": "Vuelve a DisputeDesk.",
+    "step2Body": "Recogeremos tus pedidos y estaremos encantados de ayudarte.",
+    "questions": "¿Preguntas?",
+    "contactSupport": "Contactar con soporte",
+    "checkAgain": "Comprobar de nuevo"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "¿Qué tal va tu experiencia con DisputeDesk?",

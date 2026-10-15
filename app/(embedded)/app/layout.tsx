@@ -3,10 +3,15 @@
  * Brand bar + feedback card (Figma) live in EmbeddedAppChrome; see components/embedded/EmbeddedAppChrome.tsx.
  */
 import { headers } from "next/headers";
+import { after } from "next/server";
+import { notifyOrdersGateBlock } from "@/lib/shopify/notifyOrdersGateBlock";
+import { sendDeferredInstallEmail } from "@/lib/shopify/deferredInstallEmail";
 import { AppNavSidebar } from "./AppNavSidebar";
 import { EmbeddedAppChrome } from "@/components/embedded/EmbeddedAppChrome";
 import { PageViewBeacon } from "@/components/embedded/PageViewBeacon";
+import { NoOrdersScreen } from "@/components/embedded/NoOrdersScreen";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
+import { resolveOrdersGate } from "@/lib/shopify/ordersGate";
 import { verifySessionToken } from "@/lib/shopify/sessionToken";
 import { recordLastLogin } from "@/lib/shopify/recordLastLogin";
 import { recordPageView } from "@/lib/shopify/recordPageView";
@@ -73,6 +78,31 @@ export default async function EmbeddedAppLayout({
         actorId: adminUserId || null,
         path,
       });
+  }
+
+  // No-orders gate (docs/plans/no-orders-install-gate.plan.md): a store with no
+  // orders gets the lock screen INSTEAD of the nav and every page, so there is
+  // nothing to browse. Placed after the page-view recording above on purpose —
+  // we still want to see who is poking around a locked shop. Fails open on any
+  // doubt; impersonation bypasses it so support can still inspect these shops.
+  // `x-dd-shop-id` is the cookie-derived id middleware forwards on /app/*.
+  const gateShopId = headerStore.get("x-dd-shop-id");
+  //
+  // The merchant install email is also settled here when install couldn't tell
+  // (lib/shopify/deferredInstallEmail.ts): locked → the no-orders email, first
+  // verification → the welcome. Both are once-per-shop. `after()` keeps the
+  // instance alive for the sends without delaying the page.
+  if (
+    !impersonating &&
+    gateShopId &&
+    (await resolveOrdersGate(gateShopId, {
+      onVerified: () => after(() => sendDeferredInstallEmail(gateShopId, "welcome")),
+    })) === "locked"
+  ) {
+    // Admin alert with the store's details, throttled to one per shop per 24h.
+    after(() => notifyOrdersGateBlock({ shopInternalId: gateShopId, path }));
+    after(() => sendDeferredInstallEmail(gateShopId, "no_orders"));
+    return <NoOrdersScreen />;
   }
 
   return (

@@ -82,6 +82,19 @@
     "dashboard": "Tableau de bord",
     "clearShopReconnect": "Effacer la boutique et reconnecter"
   },
+  "noOrdersGate": {
+    "title": "Votre boutique n'a pas encore de commandes",
+    "body": "DisputeDesk défend les rétrofacturations liées à des commandes déjà vendues. Sans historique de commandes, il n'y a aucun litige pour lequel nous puissions vous aider — il n'y a donc rien à faire ici pour l'instant.",
+    "badge": "0 commande trouvée",
+    "readyHeading": "Quand vous serez prêt",
+    "step1Title": "Commencez à vendre.",
+    "step1Body": "Dès que des commandes arrivent, les litiges peuvent être suivis par rapport à celles-ci.",
+    "step2Title": "Revenez sur DisputeDesk.",
+    "step2Body": "Nous récupérerons vos commandes et serons ravis de vous aider.",
+    "questions": "Une question ?",
+    "contactSupport": "Contacter le support",
+    "checkAgain": "Vérifier à nouveau"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "Que pensez-vous de DisputeDesk jusqu'à présent ?",

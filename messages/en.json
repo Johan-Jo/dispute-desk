@@ -82,6 +82,19 @@
     "switchToDemo": "Switch to demo store",
     "insights": "Insights"
   },
+  "noOrdersGate": {
+    "title": "Your store has no orders yet",
+    "body": "DisputeDesk defends chargebacks on orders you've already sold. Without an order history there are no disputes for us to help with — so there's nothing to do here just yet.",
+    "badge": "0 orders found",
+    "readyHeading": "When you're ready",
+    "step1Title": "Start selling.",
+    "step1Body": "Once orders come in, disputes can be tracked against them.",
+    "step2Title": "Come back to DisputeDesk.",
+    "step2Body": "We'll pick up your orders and be glad to help.",
+    "questions": "Questions?",
+    "contactSupport": "Contact support",
+    "checkAgain": "Check again"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "How's your experience with DisputeDesk so far?",

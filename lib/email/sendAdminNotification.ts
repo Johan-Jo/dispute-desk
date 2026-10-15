@@ -48,6 +48,12 @@ export interface AdminInstallNotificationOptions {
   shopName?: string;
   /** OAuth entry point that created the shop: "portal" or "embedded". */
   source?: string;
+  /**
+   * True when the store has no orders at install time. Changes the subject and
+   * headline to the "no orders" wording so these installs are spotted at a
+   * glance (docs/plans/no-orders-install-gate.plan.md).
+   */
+  noOrders?: boolean;
 }
 
 /**
@@ -64,13 +70,24 @@ export async function sendAdminInstallNotification(
   const email = options.email?.trim() || "—";
   const source = options.source?.trim() || "—";
   const timestamp = new Date().toUTCString();
-  const subject = `New DisputeDesk install: ${options.shopDomain}`;
+  const noOrders = options.noOrders === true;
+  const headline = noOrders
+    ? "Yet another store with no orders was installed"
+    : "New merchant installed DisputeDesk";
+  const subject = noOrders
+    ? `Yet another store with no orders was installed: ${options.shopDomain}`
+    : `New DisputeDesk install: ${options.shopDomain}`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>${subject}</title></head>
 <body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;padding:32px 16px;">
-  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">New merchant installed DisputeDesk</p>
+  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">${headline}</p>${
+    noOrders
+      ? `
+  <p style="margin:0 0 8px;font-size:14px;color:#374151;">The store has no orders, so the app is locked behind the no-orders screen.</p>`
+      : ""
+  }
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;font-size:14px;color:#374151;border-collapse:collapse;">
     <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Shop</td><td style="padding:4px 0;">${options.shopDomain}</td></tr>
     <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Store name</td><td style="padding:4px 0;">${shopName}</td></tr>
@@ -82,7 +99,10 @@ export async function sendAdminInstallNotification(
 </html>`;
 
   const text =
-    `New merchant installed DisputeDesk\n\n` +
+    `${headline}\n\n` +
+    (noOrders
+      ? `The store has no orders, so the app is locked behind the no-orders screen.\n\n`
+      : "") +
     `Shop: ${options.shopDomain}\n` +
     `Store name: ${shopName}\n` +
     `Owner email: ${email}\n` +
@@ -304,4 +324,73 @@ export async function sendAdminMetaLeadNotification(
     rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
     (answers.length ? "\n\nForm answers:\n" + answers.map(([k, v]) => `${k}: ${v}`).join("\n") : "");
   await sendAdminEmail({ subject, html, text, logTag: "admin-meta-lead" });
+}
+
+export interface AdminOrdersGateBlockNotificationOptions {
+  shopDomain: string;
+  shopName?: string;
+  email?: string;
+  phone?: string;
+  primaryDomain?: string;
+  country?: string;
+  currencyCode?: string;
+  /** ISO timestamp the shop installed DisputeDesk. */
+  installedAt?: string;
+  /** ISO timestamp of the previous block alert for this shop, if any. */
+  previouslyNotifiedAt?: string;
+  /** The `/app/*` path the merchant tried to open. */
+  path?: string;
+  shopInternalId: string;
+  shopifyAdminUrl: string;
+}
+
+/**
+ * Notify the admin that a merchant hit the no-orders lock screen in the
+ * embedded app (docs/plans/no-orders-install-gate.plan.md). Throttled by the
+ * caller to one per shop per 24h (lib/shopify/notifyOrdersGateBlock.ts).
+ * Non-blocking — never throws.
+ */
+export async function sendAdminOrdersGateBlockNotification(
+  options: AdminOrdersGateBlockNotificationOptions,
+): Promise<void> {
+  const fmt = (iso?: string) => (iso ? new Date(iso).toUTCString() : "—");
+  const shopName = options.shopName?.trim() || "—";
+  const subject = `Store blocked by the no-orders screen: ${shopName !== "—" ? `${shopName} (${options.shopDomain})` : options.shopDomain}`;
+  const rows: Array<[string, string]> = [
+    ["Store name", shopName],
+    ["Shop", options.shopDomain],
+    ["Owner email", options.email?.trim() || "—"],
+    ["Phone", options.phone?.trim() || "—"],
+    ["Storefront", options.primaryDomain?.trim() || "—"],
+    ["Country", options.country?.trim() || "—"],
+    ["Currency", options.currencyCode?.trim() || "—"],
+    ["Installed", fmt(options.installedAt)],
+    ["Page opened", options.path?.trim() || "—"],
+    ["Previous alert", options.previouslyNotifiedAt ? fmt(options.previouslyNotifiedAt) : "First time"],
+    ["Shopify admin", options.shopifyAdminUrl],
+    ["Shop id", options.shopInternalId],
+    ["Time", new Date().toUTCString()],
+  ];
+  const rowHtml = rows
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:4px 16px 4px 0;font-weight:600;">${k}</td><td style="padding:4px 0;">${escapeHtml(v)}</td></tr>`,
+    )
+    .join("");
+  const intro =
+    "A merchant opened DisputeDesk and was shown the no-orders screen: the store has no orders, so the app is locked. You get at most one of these per store per 24 hours.";
+
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;padding:32px 16px;">
+  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">A store was blocked by the no-orders screen</p>
+  <p style="margin:0 0 8px;font-size:14px;color:#374151;">${intro}</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;font-size:14px;color:#374151;border-collapse:collapse;">${rowHtml}</table>
+</body></html>`;
+  const text =
+    "A store was blocked by the no-orders screen\n\n" +
+    `${intro}\n\n` +
+    rows.map(([k, v]) => `${k}: ${v}`).join("\n");
+
+  await sendAdminEmail({ subject, html, text, logTag: "admin-orders-gate-block" });
 }

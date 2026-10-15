@@ -82,6 +82,19 @@
     "dashboard": "Painel",
     "clearShopReconnect": "Limpar loja e reconectar"
   },
+  "noOrdersGate": {
+    "title": "Sua loja ainda não tem pedidos",
+    "body": "O DisputeDesk defende chargebacks de pedidos que você já vendeu. Sem histórico de pedidos não há disputas em que possamos ajudar — então ainda não há nada a fazer aqui.",
+    "badge": "0 pedidos encontrados",
+    "readyHeading": "Quando você estiver pronto",
+    "step1Title": "Comece a vender.",
+    "step1Body": "Assim que os pedidos chegarem, as disputas poderão ser acompanhadas com base neles.",
+    "step2Title": "Volte ao DisputeDesk.",
+    "step2Body": "Vamos buscar seus pedidos e teremos prazer em ajudar.",
+    "questions": "Dúvidas?",
+    "contactSupport": "Falar com o suporte",
+    "checkAgain": "Verificar novamente"
+  },
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "Como está sendo sua experiência com o DisputeDesk?",

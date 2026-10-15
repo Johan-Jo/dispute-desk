@@ -29,6 +29,19 @@ vi.mock("@/lib/email/sendAdminNotification", () => ({
     sendAdminInstallNotification(...args),
 }));
 
+const shopHasAnyOrders = vi.fn();
+const stampOrdersVerified = vi.fn();
+const sendInstallWelcomeEmail = vi.fn();
+vi.mock("@/lib/shopify/hasAnyOrders", () => ({
+  shopHasAnyOrders: (...args: unknown[]) => shopHasAnyOrders(...args),
+}));
+vi.mock("@/lib/shopify/ordersGate", () => ({
+  stampOrdersVerified: (...args: unknown[]) => stampOrdersVerified(...args),
+}));
+vi.mock("@/lib/email/sendInstallWelcome", () => ({
+  sendInstallWelcomeEmail: (...args: unknown[]) => sendInstallWelcomeEmail(...args),
+}));
+
 vi.mock("@/lib/analytics/metaInstall", () => ({
   sendMetaInstall: vi.fn().mockResolvedValue(undefined),
 }));
@@ -51,6 +64,9 @@ describe("onNewShopCreated", () => {
     });
     grantFreeLifetimeCredits.mockResolvedValue(undefined);
     sendAdminInstallNotification.mockResolvedValue(undefined);
+    shopHasAnyOrders.mockResolvedValue(true);
+    stampOrdersVerified.mockResolvedValue(undefined);
+    sendInstallWelcomeEmail.mockResolvedValue({ ok: true });
   });
 
   it("sends the install alert enriched with store name and owner email", async () => {
@@ -62,6 +78,52 @@ describe("onNewShopCreated", () => {
       email: "owner@example.com",
       shopName: "Acme Goods",
       source: "token-exchange",
+      noOrders: false,
+    });
+  });
+
+  describe("no-orders gate", () => {
+    it("a store with orders is stamped verified and gets the normal emails", async () => {
+      shopHasAnyOrders.mockResolvedValue(true);
+
+      await onNewShopCreated(OPTS);
+
+      expect(stampOrdersVerified).toHaveBeenCalledWith("shop-uuid");
+      expect(sendAdminInstallNotification.mock.calls[0][0].noOrders).toBe(false);
+      expect(sendInstallWelcomeEmail.mock.calls[0][0].variant).toBe("welcome");
+    });
+
+    it("a store with NO orders is not stamped and gets the no-orders alert + merchant email", async () => {
+      shopHasAnyOrders.mockResolvedValue(false);
+
+      await onNewShopCreated(OPTS);
+
+      expect(stampOrdersVerified).not.toHaveBeenCalled();
+      expect(sendAdminInstallNotification.mock.calls[0][0].noOrders).toBe(true);
+      const welcome = sendInstallWelcomeEmail.mock.calls[0][0];
+      expect(welcome.variant).toBe("no_orders");
+      expect(welcome.to).toBe("owner@example.com");
+    });
+
+    it("cannot tell (null): not stamped, and the merchant email is DEFERRED, never the welcome", async () => {
+      // OAuth-callback installs: the stored token is non-expiring and the Admin
+      // API rejects the probe. Sending the welcome told no-orders stores "we're
+      // going through your orders" (sharpdesk, 2026-10-15). The email is sent
+      // later by the embedded gate (lib/shopify/deferredInstallEmail.ts).
+      shopHasAnyOrders.mockResolvedValue(null);
+
+      await onNewShopCreated(OPTS);
+
+      expect(stampOrdersVerified).not.toHaveBeenCalled();
+      expect(sendAdminInstallNotification.mock.calls[0][0].noOrders).toBe(false);
+      expect(sendInstallWelcomeEmail).not.toHaveBeenCalled();
+    });
+
+    it("a throwing check never breaks the install or the alert", async () => {
+      shopHasAnyOrders.mockRejectedValue(new Error("shopify down"));
+
+      await expect(onNewShopCreated(OPTS)).resolves.toBeUndefined();
+      expect(sendAdminInstallNotification).toHaveBeenCalledTimes(1);
     });
   });
 
