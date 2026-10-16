@@ -180,7 +180,7 @@ export async function writeCounselLetter(args: {
 /* ── The single writer (plan rev 8 §2): one call writes the whole argument ── */
 
 import { WRITER_SYSTEM, writerUserPrompt, correctionPrompt } from "./constitution";
-import { sectionApplies, type Brief } from "./briefs";
+import { sectionApplies, sectionForRecord, type Brief } from "./briefs";
 import type { DisputeFrame } from "./frame";
 
 /** The theory: the first brief tuple whose claims are all in the ledger. */
@@ -247,8 +247,8 @@ export async function writeLetter(args: {
   const log = args.log ?? (() => {});
   const theory = pickBriefTheory(args.ledger, args.brief);
   const inLedger = new Set(args.ledger.map((c) => c.id));
-  const argued = args.brief.sections.filter((s) => !s.exhibitOnly && sectionApplies(s, inLedger));
-  const exhibitOnly = args.brief.sections.filter((s) => s.exhibitOnly && sectionApplies(s, inLedger));
+  const argued = args.brief.sections.filter((s) => !s.exhibitOnly && sectionApplies(s, inLedger)).map((s) => sectionForRecord(s, inLedger));
+  const exhibitOnly = args.brief.sections.filter((s) => s.exhibitOnly && sectionApplies(s, inLedger)).map((s) => sectionForRecord(s, inLedger));
   const caseUser = writerUserPrompt({
     brief: args.brief, frame: args.frame, theory, ledger: args.ledger, pageContext: args.pageContext,
     merchantName: args.merchantName, argued, exhibitOnly,
