@@ -53,6 +53,13 @@ export interface DefencePackageFailedAlertOptions {
    * it, so "files nothing" is false for this dispute.
    */
   earlierBuiltVersion?: number | null;
+  /**
+   * Shopify already shows a response for this dispute (`isShopifyObservedResponseState`).
+   * Nothing can be filed this round, so the deadline is not what matters.
+   * #104457 (2026-10-16): the response went in at 11:32; the 16:23 alert still
+   * said "Shopify submits its own scrape at the deadline", three weeks out.
+   */
+  alreadyResponded?: boolean;
 }
 
 /**
@@ -64,6 +71,12 @@ export interface DefencePackageFailedAlertOptions {
  * 08:02. The alert read as a lost deadline for a dispute that was answered.
  */
 function nextStep(options: DefencePackageFailedAlertOptions): string {
+  if (options.alreadyResponded) {
+    return (
+      "A response was already sent through Shopify for this dispute, so nothing more can be filed this round " +
+      "and this failure costs nothing now. It matters only if the dispute reopens for another round."
+    );
+  }
   const regenerates =
     "It will regenerate automatically once the prompt, validator or evidence changes";
   const earlier = options.earlierBuiltVersion;
@@ -77,7 +90,8 @@ function nextStep(options: DefencePackageFailedAlertOptions): string {
   }
   return (
     `This dispute has no fileable defence package. ${regenerates}; ` +
-    "until then it files nothing and Shopify submits its own scrape at the deadline."
+    "until then DisputeDesk files nothing. Unless a response is sent through Shopify first, " +
+    "Shopify submits its own scrape at the deadline."
   );
 }
 
@@ -99,8 +113,9 @@ export async function sendDefencePackageFailedAlert(
   const days = daysUntil(options.dueAt, now);
   /* The deadline is the whole reason this is urgent: a failed package is a
    * dispute that files nothing, and Shopify submits its own scrape instead. */
-  const urgency =
-    days === null ? "" : days < 0 ? " — PAST DEADLINE" : days <= 3 ? ` — due in ${days}d` : "";
+  const urgency = options.alreadyResponded
+    ? " — already responded"
+    : days === null ? "" : days < 0 ? " — PAST DEADLINE" : days <= 3 ? ` — due in ${days}d` : "";
 
   const who = [options.shopDomain, options.orderName].filter(Boolean).join(" ");
   const subject = `Defence package failed: ${who || options.disputeId}${urgency}`;
