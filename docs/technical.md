@@ -3717,7 +3717,12 @@ code-built claim ledger.
     names a delivered date on the shipment card, and delivery among the timeline's events, only when the ledger holds
     `carrier_delivered` (`shipmentCardContext`, `timelineEventsContext`). Before 2026-10-09 it always said "shipped and
     delivered dates"; on an order with no recorded delivery the writer repeated it and the reviewer rejected the letter
-    (`no_counsel_letter`, #103370).
+    (`no_counsel_letter`, #103370). The brief's sections follow the same rule (`sectionForRecord`, `briefs/index.ts`,
+    applied in `generate.ts`): with no delivery claim (`DELIVERY_CLAIM_IDS`: `carrier_delivered`,
+    `all_parcels_delivered`, `some_parcel_delivered`) the exhibit says "shipped date", not "shipped and delivered
+    dates", and a section's `questionWithoutDelivery` replaces a question that presumes one ("When did the goods
+    reach the customer?"). Before 2026-10-16 the not-as-described Shipping section asked that of an in-transit parcel
+    and the writer answered "the carrier recorded delivery" (#104457, reviewer rejection).
   - **Reuse.** `counselInputHash` hashes the ledger (claims, specifics, limits, exhibits), the page context, the
     merchant name, the models and `COUNSEL_PROMPT_VERSION` (which also versions the code-written wording). It is stored
     with the summary in `narrative_json.counsel = { inputHash, summary }`. A rebuild whose latest non-failed counsel
