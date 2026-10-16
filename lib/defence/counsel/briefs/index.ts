@@ -30,6 +30,31 @@ export interface BriefSection {
    *  return window had closed, "no return recorded" alone opened a Return
    *  Route section and the writer invented an open route). */
   requiresClaimId?: string;
+  /** The question when no delivery is on record. A section whose question
+   *  presumes a delivery ("When did the goods reach the customer?") invited the
+   *  writer to state one the ledger does not hold (#104457: parcel in transit,
+   *  the letter said "the carrier recorded delivery"; the reviewer rejected it). */
+  questionWithoutDelivery?: string;
+}
+
+/** The ledger claims that put a carrier delivery on record. */
+export const DELIVERY_CLAIM_IDS = ["carrier_delivered", "all_parcels_delivered", "some_parcel_delivered"] as const;
+
+export function deliveryOnRecord(inLedger: ReadonlySet<string>): boolean {
+  return DELIVERY_CLAIM_IDS.some((id) => inLedger.has(id));
+}
+
+/** A section as the writer is shown it for THIS case: with no delivery on
+ *  record, the exhibit names no delivered date and the question presumes no
+ *  delivery. The same rule as the page context's shipment card (run.ts
+ *  `shipmentCardContext`, #103370). */
+export function sectionForRecord(s: BriefSection, inLedger: ReadonlySet<string>): BriefSection {
+  if (deliveryOnRecord(inLedger)) return s;
+  return {
+    ...s,
+    exhibit: s.exhibit.replace(/shipped and delivered dates/g, "shipped date"),
+    question: s.questionWithoutDelivery ?? s.question,
+  };
 }
 
 /** Whether a brief section applies to this case's ledger. */
@@ -95,6 +120,7 @@ export const ITEM_NOT_RECEIVED_BRIEF: Brief = {
       title: "Shipping & Delivery",
       exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates) and the carrier's tracking link",
       question: "Does the carrier's own record show the delivery the customer denies?",
+      questionWithoutDelivery: "What does the carrier's own record show about the shipment?",
       claimIds: ["carrier_delivered", "signed_for", "carrier_is_third_party", "whole_order_in_shipment", "order_in_parcels", "all_parcels_delivered", "some_parcel_delivered", "shipment_in_transit"],
     },
   ],
@@ -140,6 +166,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
       title: "Shipping & Delivery",
       exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates)",
       question: "When did the goods reach the customer?",
+      questionWithoutDelivery: "What does the shipping record show?",
       claimIds: ["carrier_delivered", "dispute_after_delivery", "no_return_recorded", "merchant_confirmed_no_request"],
     },
     {

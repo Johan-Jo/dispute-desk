@@ -21,9 +21,9 @@ describe("page context follows the recorded delivery", () => {
     expect(timelineEventsContext(false)).not.toMatch(/deliver/i);
   });
 
-  it("runCounsel derives it from the ledger's carrier_delivered claim", () => {
+  it("runCounsel derives it from the ledger's delivery claims (one shared rule)", () => {
     const src = readFileSync(join(__dirname, "..", "run.ts"), "utf8");
-    expect(src).toMatch(/deliveryRecorded = ledger\.some\(\(c\) => c\.id === "carrier_delivered"\)/);
+    expect(src).toMatch(/deliveryRecorded = deliveryOnRecord\(/);
     expect(src).not.toMatch(/Shipment card: carrier, tracking number, shipped and delivered dates\. Tracking/);
   });
 });
