@@ -28,7 +28,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { checkDraft, toNarrative, type CheckContext } from "./checks";
 import { composeDraft, writeLetter, type CounselStage, type ModelCall } from "./generate";
 import { NOT_AS_DESCRIBED, playbookForModule } from "./playbooks";
-import { briefForModule, GENERAL_BRIEF, sectionApplies, type Brief } from "./briefs";
+import { briefForModule, deliveryOnRecord, GENERAL_BRIEF, sectionApplies, type Brief } from "./briefs";
 import { CONSTITUTION_VERSION } from "./constitution";
 import { disputeFrame, frameRule, requestLine, type DisputeFrame } from "./frame";
 import { classifyChronologyEvent } from "../chronology";
@@ -527,7 +527,7 @@ export async function runCounsel(args: {
     []) as Array<{ title?: unknown }>)
     .map((l) => str(l?.title))
     .filter((x): x is string => !!x);
-  const deliveryRecorded = ledger.some((c) => c.id === "carrier_delivered");
+  const deliveryRecorded = deliveryOnRecord(new Set(ledger.map((c) => c.id)));
   const pageContext = [
     `Header: ${[disputeNumber && `Dispute ${disputeNumber}`, args.orderName && `Order ${args.orderName}`, args.amountDisplay].filter(Boolean).join(" · ")} · submitted on behalf of ${args.merchantName}.`,
     frame.provider === "card"
