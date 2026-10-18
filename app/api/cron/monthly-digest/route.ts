@@ -6,6 +6,7 @@ import type { DigestPeriodMetrics } from "@/lib/email/sendMonthlyChargebackDiges
 import { gatherDisputeActivity } from "@/lib/email/digestDisputeActivity";
 import { cronEnvGate } from "@/lib/cron/envGate";
 import { railSegmentationFor } from "@/lib/insights/railSegmentation";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
 
 export const runtime = "nodejs";
 // Some shops are large enough that gathering metrics + sending takes
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   // shops still backfilling — their data is partial and would mislead.
   const { data: shops, error } = await sb
     .from("shops")
-    .select("id, shop_domain, historical_import_status")
+    .select("id, shop_domain, shop_name, primary_domain, historical_import_status")
     .eq("historical_import_status", "complete");
 
   if (error) {
@@ -172,7 +173,7 @@ export async function GET(req: NextRequest) {
 
       const { delivered } = await sendMonthlyChargebackDigest({
         shopDomain: shop.shop_domain,
-        merchantName: null,
+        merchantName: storeDisplayName(shop),
         to: teamEmail,
         periodLabel,
         chargebackRate90dPct,

@@ -6,6 +6,7 @@ import { resurfaceHeldReviews } from "@/lib/disputes/resurfaceHeldReviews";
 import { getShopSettings } from "@/lib/automation/settings";
 import { deadlineAwaitsMerchantApproval } from "@/lib/automation/merchantApprovalGate";
 import { REVIEW_STATES } from "@/lib/disputes/reviewState";
+import { storeDisplayName } from "@/lib/shopify/storeDisplayName";
 
 /**
  * GET /api/cron/dispute-reminders
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
     // Load setup + shop data once per shop.
     const [{ data: setup }, { data: shop }, shopSettings] = await Promise.all([
       sb.from("shop_setup").select("steps").eq("shop_id", shopId).single(),
-      sb.from("shops").select("shop_domain").eq("id", shopId).single(),
+      sb.from("shops").select("shop_domain, shop_name, primary_domain").eq("id", shopId).single(),
       getShopSettings(shopId),
     ]);
 
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
 
     const storeLocale =
       (steps?.store_profile?.payload?.storeLocale as string | undefined) ?? "en";
-    const shopName = shop?.shop_domain ?? "your store";
+    const shopName = storeDisplayName(shop) ?? "your store";
 
     // Get latest pack status per dispute in one query.
     const disputeIds = shopDisputes.map((d) => d.id);

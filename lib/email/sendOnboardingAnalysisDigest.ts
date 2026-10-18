@@ -36,6 +36,7 @@ import {
   sectionLabel,
 } from "@/lib/email/digestShared";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
@@ -162,7 +163,7 @@ export function renderOnboardingAnalysisDigest(
   const inner = `
     ${brandHeader("Welcome · First analysis complete")}
 
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 8px">${merchantDisplay}</div>
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 8px">${escapeHtml(merchantDisplay)}</div>
     <h1 style="font-size:26px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.2;letter-spacing:-0.01em">Your DisputeDesk analysis is ready</h1>
     <p style="font-size:14px;color:#6B7280;margin:0 0 28px;line-height:1.6">
       We finished analyzing your historical Shopify orders. Below is a snapshot of where your store sits today on the operational signals that drive disputes${cardFraming ? " — and where you stand on the published rules at Visa and Mastercard" : ". Most of your disputes are settled by the payment provider that handled them rather than by a card network, so the Visa and Mastercard programmes do not measure them"}.

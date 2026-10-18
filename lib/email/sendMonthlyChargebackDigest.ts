@@ -42,6 +42,7 @@ import {
   tintedCallout,
 } from "@/lib/email/digestShared";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { escapeHtml } from "@/lib/email/escapeHtml";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = DEFAULT_FROM_EMAIL;
@@ -346,7 +347,7 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
   const inner = `
     ${brandHeader(d.periodLabel + " digest")}
 
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 8px">${merchantDisplay}</div>
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 8px">${escapeHtml(merchantDisplay)}</div>
     <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.25;letter-spacing:-0.01em">Your ${d.periodLabel} chargeback exposure</h1>
     <p style="font-size:14px;color:#6B7280;margin:0 0 24px;line-height:1.6">
       Across <strong style="color:#111827">${cur.ordersTotal.toLocaleString()}</strong> orders in the last 30 days. ${

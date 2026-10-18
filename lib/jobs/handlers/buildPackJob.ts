@@ -22,6 +22,7 @@ import { DISPUTE_ATTENTION_REASONS } from "../../disputes/attentionReasons";
 import { categorizeEvidenceField } from "../../argument/canonicalEvidence";
 import type { ClaimedJob } from "../claimJobs";
 import type { BuildResult } from "../../packs/buildPack";
+import { storeDisplayName } from "../../shopify/storeDisplayName";
 
 /**
  * Job handler: build_pack
@@ -396,13 +397,13 @@ async function notifyCaseStrengthened(
 
     const { data: shop } = await db
       .from("shops")
-      .select("shop_domain")
+      .select("shop_domain, shop_name, primary_domain")
       .eq("id", shopId)
       .single();
 
     const emailRes = await sendCaseStrengthenedAlert({
       to,
-      shopName: shop?.shop_domain ?? undefined,
+      shopName: storeDisplayName(shop) ?? undefined,
       shopDomain: shop?.shop_domain ?? null,
       disputeId,
       disputeReason: dispute.reason,
@@ -571,7 +572,7 @@ async function sendManualEvidenceAlert(
   // https://disputedesk.app/... instead of the Shopify Admin URL.
   const { data: shop } = await db
     .from("shops")
-    .select("shop_domain")
+    .select("shop_domain, shop_name, primary_domain")
     .eq("id", shopId)
     .single();
 
@@ -582,7 +583,7 @@ async function sendManualEvidenceAlert(
 
   const result = await sendEvidenceNeededAlert({
     to,
-    shopName: shop?.shop_domain ?? undefined,
+    shopName: storeDisplayName(shop) ?? undefined,
     shopDomain: shop?.shop_domain ?? null,
     disputeId: dispute.id,
     disputeReason: dispute.reason,
