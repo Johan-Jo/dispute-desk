@@ -13,7 +13,7 @@
  *               GraphQL error). Callers MUST treat this as "let them in":
  *               never lock a merchant out because OUR check failed.
  *
- * Only real orders count: test orders and voided orders are filtered out in the
+ * Only real orders count: test, voided and bogus/manual-gateway orders are filtered out in the
  * query (see REAL_ORDER_FILTER), so a dev store seeded with sample data is
  * still "empty".
  *
@@ -30,9 +30,11 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { makeAuthedRequest } from "./makeAuthedRequest";
 
-// Test orders (bogus gateway, dev-store sample data) and voided orders are not
-// real trading, so they must not unlock the gate on their own.
-export const REAL_ORDER_FILTER = "test:false -financial_status:voided";
+// Test orders, voided orders and orders on the `bogus` (Shopify test) or
+// `manual` (hand-entered) gateways are not real trading, so they must not
+// unlock the gate on their own. Dev stores are seeded with exactly these.
+export const REAL_ORDER_FILTER =
+  "test:false -financial_status:voided -gateway:bogus -gateway:manual";
 
 const ANY_ORDER_QUERY = `
   query AnyOrder($query: String!) {
