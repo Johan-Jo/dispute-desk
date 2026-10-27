@@ -59,6 +59,14 @@ describe("shopHasAnyOrders", () => {
     expect(await shopHasAnyOrders("s1")).toBe(true);
   });
 
+  it("asks Shopify for real orders only: no test orders, no voided", async () => {
+    makeAuthedRequest.mockResolvedValue({ data: { orders: { edges: [] } } });
+    await shopHasAnyOrders("s1");
+    expect(makeAuthedRequest.mock.calls[0][0].variables).toEqual({
+      query: "test:false -financial_status:voided",
+    });
+  });
+
   it("false only when Shopify positively answers with zero orders", async () => {
     makeAuthedRequest.mockResolvedValue({ data: { orders: { edges: [] } } });
     expect(await shopHasAnyOrders("s1")).toBe(false);

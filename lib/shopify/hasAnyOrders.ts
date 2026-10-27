@@ -13,6 +13,10 @@
  *               GraphQL error). Callers MUST treat this as "let them in":
  *               never lock a merchant out because OUR check failed.
  *
+ * Only real orders count: test orders and voided orders are filtered out in the
+ * query (see REAL_ORDER_FILTER), so a dev store seeded with sample data is
+ * still "empty".
+ *
  * Why disputes also count: without the `read_all_orders` scope Shopify only
  * exposes the last 60 days of orders. A dormant but real store whose orders
  * are all older, with a dispute on one of them, would otherwise look empty.
@@ -26,9 +30,13 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { makeAuthedRequest } from "./makeAuthedRequest";
 
+// Test orders (bogus gateway, dev-store sample data) and voided orders are not
+// real trading, so they must not unlock the gate on their own.
+export const REAL_ORDER_FILTER = "test:false -financial_status:voided";
+
 const ANY_ORDER_QUERY = `
-  query AnyOrder {
-    orders(first: 1) {
+  query AnyOrder($query: String!) {
+    orders(first: 1, query: $query) {
       edges { node { id } }
     }
   }
@@ -59,6 +67,7 @@ export async function shopHasAnyOrders(
     const result = await makeAuthedRequest<AnyOrderData>({
       shopId: shopInternalId,
       query: ANY_ORDER_QUERY,
+      variables: { query: REAL_ORDER_FILTER },
     });
     // An errors-only / null-data response is "unknown", not "no orders".
     const edges = result.data?.orders?.edges;
