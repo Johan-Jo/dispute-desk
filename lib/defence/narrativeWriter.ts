@@ -24,6 +24,7 @@
 
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
 import { familyKeyForModule } from "./reasonCodes/familyRegistry";
+import { cardReasonCodeDisplay } from "./klarnaDisputeCategory";
 import { familyOmitsArrival } from "./chronology";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
@@ -906,7 +907,11 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
     claimCapabilities: [...deriveClaimCapabilities(input.approvedFacts)].sort(),
     reasonCodeGuidance: {
       key: input.reasonCodeModule.key,
-      displayName: input.reasonCodeModule.displayName,
+      displayName: cardReasonCodeDisplay({
+        module: input.reasonCodeModule,
+        networkReasonCode: input.reasonCode,
+        shopifyReason: null,
+      }),
       claimType: input.reasonCodeModule.claimType,
       prioritize: input.reasonCodeModule.prioritize,
       avoid: input.reasonCodeModule.avoid,

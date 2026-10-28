@@ -79,3 +79,25 @@ export function nonCardDisputeCategoryDisplay(
   const provider = providerLabel?.trim() || "Payment provider";
   return category ? `${provider} dispute — ${category}` : `${provider} dispute`;
 }
+
+/**
+ * The reason-code label for a CARD dispute's letter. A module's `displayName`
+ * is a network code ("Visa 13.1 / Mastercard 4855"); it is only true when the
+ * dispute carries one of that module's codes. A module reached through the
+ * Shopify reason (no network code, or a broad code like Mastercard 4853) must
+ * not print a code the dispute never had, so it gets a neutral label.
+ */
+export function cardReasonCodeDisplay(args: {
+  module: { key: string; displayName: string; reasonCodeKeys?: readonly string[] };
+  networkReasonCode: string | null | undefined;
+  shopifyReason: string | null | undefined;
+}): string {
+  const { module, networkReasonCode, shopifyReason } = args;
+  if (module.key === "generic_fallback") return module.displayName;
+  if (networkReasonCode && module.reasonCodeKeys?.includes(networkReasonCode)) {
+    return module.displayName;
+  }
+  const key = canonicalReasonCode(shopifyReason);
+  const category = key ? SHOPIFY_REASON_TO_NEUTRAL_CATEGORY[key] : undefined;
+  return category ? `Card dispute — ${category}` : "Card dispute";
+}

@@ -131,12 +131,22 @@ const SHOPIFY_REASON_TO_MODULE: ReadonlyMap<string, ReasonCodeModuleKey> =
  * collapsing to generic_fallback. Falls through to generic_fallback when
  * neither yields a match.
  */
+/**
+ * Network codes that name a whole bucket of claims rather than one. Mastercard
+ * 4853 is "cardholder dispute" — it covers not received, not as described,
+ * duplicate, credit not processed and more — yet it is listed as a key of the
+ * not-as-described module, so it used to override the dispute's own Shopify
+ * reason (prod, 6 letters: fraud, duplicate and item-not-received disputes
+ * argued as not-as-described). For these, a specific Shopify reason decides.
+ */
+const BROAD_NETWORK_CODES: ReadonlySet<string> = new Set(["4853"]);
+
 export function resolveReasonCodeModuleForContext(
   networkReasonCode: string | null | undefined,
   shopifyReason: string | null | undefined,
   dbOverride?: ReasonCodeModuleOverride | null,
 ): ReasonCodeGuidance {
-  if (!networkReasonCode && shopifyReason) {
+  if ((!networkReasonCode || BROAD_NETWORK_CODES.has(networkReasonCode)) && shopifyReason) {
     const key = SHOPIFY_REASON_TO_MODULE.get(
       canonicalReasonCode(shopifyReason) ?? "",
     );
