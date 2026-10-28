@@ -131,12 +131,22 @@ const SHOPIFY_REASON_TO_MODULE: ReadonlyMap<string, ReasonCodeModuleKey> =
  * collapsing to generic_fallback. Falls through to generic_fallback when
  * neither yields a match.
  */
+/**
+ * Network codes that name a whole bucket of claims rather than one. Mastercard
+ * 4853 is "cardholder dispute" — it covers not received, not as described,
+ * duplicate, credit not processed and more — yet it is listed as a key of the
+ * not-as-described module, so it used to override the dispute's own Shopify
+ * reason (prod, 6 letters: fraud, duplicate and item-not-received disputes
+ * argued as not-as-described). For these, a specific Shopify reason decides.
+ */
+const BROAD_NETWORK_CODES: ReadonlySet<string> = new Set(["4853"]);
+
 export function resolveReasonCodeModuleForContext(
   networkReasonCode: string | null | undefined,
   shopifyReason: string | null | undefined,
   dbOverride?: ReasonCodeModuleOverride | null,
 ): ReasonCodeGuidance {
-  if (!networkReasonCode && shopifyReason) {
+  if ((!networkReasonCode || BROAD_NETWORK_CODES.has(networkReasonCode)) && shopifyReason) {
     const key = SHOPIFY_REASON_TO_MODULE.get(
       canonicalReasonCode(shopifyReason) ?? "",
     );
@@ -204,17 +214,19 @@ export function resolveCaseReasonCodeModule(args: {
   networkReasonCode: string | null | undefined;
   shopifyReason: string | null | undefined;
   caseReason: string | null | undefined;
-  nonCardPayment: boolean;
   dbOverride?: ReasonCodeModuleOverride | null;
 }): ReasonCodeGuidance {
-  const { networkReasonCode, shopifyReason, caseReason, nonCardPayment, dbOverride } = args;
+  const { networkReasonCode, shopifyReason, caseReason, dbOverride } = args;
   if (!networkReasonCode && caseReason && caseReason !== (shopifyReason ?? null)) {
     const fromClaim = resolveReasonCodeModuleForContext(null, caseReason, undefined);
     if (fromClaim.key !== "generic_fallback") return fromClaim;
   }
-  return nonCardPayment
-    ? resolveReasonCodeModuleForContext(networkReasonCode, shopifyReason ?? null, dbOverride)
-    : resolveReasonCodeModule(networkReasonCode, dbOverride);
+  // Rail-agnostic on purpose. This used to route on Shopify's reason only for
+  // non-card rails, which sent a card dispute with no network code (Amex, 2026
+  // order #353605, PRODUCT_NOT_RECEIVED) to generic_fallback: "Generic
+  // representment / Unmapped chargeback claim" on an item-not-received case.
+  // A network code still wins whenever there is one.
+  return resolveReasonCodeModuleForContext(networkReasonCode, shopifyReason ?? null, dbOverride);
 }
 
 /**
@@ -226,7 +238,6 @@ export function effectiveFamilyForDispute(args: {
   networkReasonCode: string | null | undefined;
   shopifyReason: string | null | undefined;
   caseReason: string | null | undefined;
-  nonCardPayment: boolean;
 }): ReasonCodeFamilyKey {
   return familyKeyForModule(resolveCaseReasonCodeModule(args).key);
 }

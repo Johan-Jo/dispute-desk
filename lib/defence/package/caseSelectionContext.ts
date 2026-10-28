@@ -37,7 +37,6 @@ import { assessmentFromPackRow } from "@/lib/automation/decision";
 import { derivePlanForCase } from "@/lib/argument/plan";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
 import { resolveCaseReasonCodeModule } from "@/lib/defence/reasonCodes/registry";
-import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import { projectReviewItems } from "@/lib/evidence/model/merchantProjection";
 import type { FileableSelectionContext } from "./loadFileableSelection";
 
@@ -108,9 +107,6 @@ export function derivePlanIdentityForPack(args: {
       reason: null,
     };
 
-  const paymentContext =
-    (packJson.payment_context as { family?: string } | undefined) ?? null;
-  const isNonCardPayment = isNonCardPaymentFamily(paymentContext?.family ?? null);
   // The reason the build assessed and argued under: the bank's claim's reason
   // on a GENERAL dispute it re-typed (buildPack persists it), else Shopify's.
   // Resolved exactly as the build resolves it, or the hash never matches and
@@ -121,7 +117,6 @@ export function derivePlanIdentityForPack(args: {
     networkReasonCode: args.networkReasonCode,
     shopifyReason: args.disputeReason,
     caseReason,
-    nonCardPayment: isNonCardPayment,
   });
 
   // The classifier's facts are needed for `alwaysAdmissible` resolution and the
