@@ -41,7 +41,6 @@ describe("claim-typed case: build and filing agree on the module", () => {
       networkReasonCode: null,
       shopifyReason: "GENERAL",
       caseReason: "PRODUCT_UNACCEPTABLE",
-      nonCardPayment: false,
     });
     expect(m.key).toBe("product_unacceptable");
   });
@@ -51,8 +50,28 @@ describe("claim-typed case: build and filing agree on the module", () => {
       networkReasonCode: "10.4",
       shopifyReason: "GENERAL",
       caseReason: "PRODUCT_UNACCEPTABLE",
-      nonCardPayment: false,
     });
     expect(m.key).toBe("visa_10_4_fraud");
+  });
+
+  it("a card dispute with no network code routes on Shopify's reason, not generic_fallback", () => {
+    // Prod order #353605: Amex via Shopify Payments, network_reason_code NULL,
+    // reason PRODUCT_NOT_RECEIVED. It was argued as "Generic representment /
+    // Unmapped chargeback claim" because enum routing was non-card only.
+    const m = resolveCaseReasonCodeModule({
+      networkReasonCode: null,
+      shopifyReason: "PRODUCT_NOT_RECEIVED",
+      caseReason: "PRODUCT_NOT_RECEIVED",
+    });
+    expect(m.key).toBe("inr_product_not_received");
+  });
+
+  it("GENERAL with no network code stays on generic_fallback", () => {
+    const m = resolveCaseReasonCodeModule({
+      networkReasonCode: null,
+      shopifyReason: "GENERAL",
+      caseReason: "GENERAL",
+    });
+    expect(m.key).toBe("generic_fallback");
   });
 });

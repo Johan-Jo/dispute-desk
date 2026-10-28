@@ -357,7 +357,6 @@ export async function handleBuildDefencePackage(
     networkReasonCode: reasonCode,
     shopifyReason: (dispute?.reason as string | null) ?? null,
     caseReason: claimReason,
-    nonCardPayment: isNonCardPayment,
     dbOverride: moduleOverrideInput,
   });
 
