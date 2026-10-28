@@ -27,10 +27,8 @@ import { COMPOSITION_VERSION } from "./pdf/thesisTemplates";
 import { COUNSEL_PROMPT_FAMILY } from "./counsel/run";
 import { classifyFacts } from "./factClassifier";
 import {
-  resolveReasonCodeModule,
   resolveReasonCodeModuleForContext,
 } from "./reasonCodes/registry";
-import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { DefencePackageStatus } from "./types";
 
 export interface MaybeEnqueueResult {
@@ -115,15 +113,13 @@ export async function maybeEnqueueDefencePackage(
     .eq("id", pack.dispute_id)
     .single();
   const reasonCode = dispute?.network_reason_code ?? null;
-  // BNPL/local methods (Klarna, Affirm) have no network reason code; route
-  // the module off the Shopify reason enum instead of collapsing to
-  // generic_fallback. Card disputes keep routing on the network code.
-  const paymentFamily =
-    (packJson.payment_context as { family?: string } | undefined)?.family ?? null;
-  const isNonCardPayment = isNonCardPaymentFamily(paymentFamily);
-  const reasonCodeModule = isNonCardPayment
-    ? resolveReasonCodeModuleForContext(reasonCode, dispute?.reason ?? null)
-    : resolveReasonCodeModule(reasonCode);
+  // A dispute with no network reason code (BNPL/wallets, and cards where the
+  // network gave none, e.g. Amex) routes off the Shopify reason enum instead of
+  // collapsing to generic_fallback. A network code still wins when present.
+  const reasonCodeModule = resolveReasonCodeModuleForContext(
+    reasonCode,
+    dispute?.reason ?? null,
+  );
 
   // Load evidence_items + manual rows + checklist for hash + classification.
   const { data: items } = await sb
