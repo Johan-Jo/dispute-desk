@@ -49,7 +49,6 @@ import {
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import { collectProductEvidence } from "./sources/productSource";
 import { effectiveFamilyForDispute } from "@/lib/defence/reasonCodes/registry";
-import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import {
   buildCaseGateAssessment,
@@ -490,7 +489,6 @@ export async function buildPack(
       resolvedNetworkCode ?? ((dispute as { network_reason_code?: string | null }).network_reason_code ?? null),
     shopifyReason,
     caseReason: (dispute.reason as string | null) ?? null,
-    nonCardPayment: isNonCardPaymentFamily(paymentContext.family),
   });
 
   // Run all collectors concurrently

@@ -37,7 +37,7 @@ import {
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
-import { nonCardDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
+import { nonCardDisputeCategoryDisplay, cardReasonCodeDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel, type CounselTrace } from "@/lib/defence/counsel/run";
@@ -357,7 +357,6 @@ export async function handleBuildDefencePackage(
     networkReasonCode: reasonCode,
     shopifyReason: (dispute?.reason as string | null) ?? null,
     caseReason: claimReason,
-    nonCardPayment: isNonCardPayment,
     dbOverride: moduleOverrideInput,
   });
 
@@ -1363,7 +1362,11 @@ export async function handleBuildDefencePackage(
       // the module's network reference label unchanged.
       reasonCodeDisplay: isNonCardPayment
         ? nonCardDisputeCategoryDisplay(paymentContext?.family ?? null, paymentContext?.label ?? null, dispute?.reason ?? null)
-        : reasonCodeModule.displayName,
+        : cardReasonCodeDisplay({
+            module: reasonCodeModule,
+            networkReasonCode: reasonCode,
+            shopifyReason: dispute?.reason ?? null,
+          }),
       claimType: reasonCodeModule.claimType,
       shopName: merchantDisplayName,
       merchantName: merchantDisplayName,
