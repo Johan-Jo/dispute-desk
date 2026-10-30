@@ -83,6 +83,11 @@ export interface Brief {
   sections: BriefSection[];
   limits: BriefLimit[];
   references: string[];
+  /** How many sentences of the letter may state the recorded absence ("No
+   *  return has been recorded…"). Default 1: for most types it is a side note.
+   *  Credit not processed argues FROM it, so the summary and the conclusion
+   *  may each state it (checks.ts, plan §4.1). */
+  absenceMaxMentions?: number;
 }
 
 const SEQUENCE = ["order_placed", "shipped", "shipped_promptly", "carrier_delivered", "transit_days", "dispute_after_delivery", "delivered_after_dispute_opened", "dispute_opened"];
@@ -192,6 +197,71 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
   references: ["Visa DMG 13.3 pp. 40-41", "Mastercard 4853", "PayPal SNAD", "Klarna: faulty or not as described"],
 };
 
+/**
+ * Credit not processed. Before this brief the type fell to the general brief,
+ * which has no claim for returns, so a letter whose only strong fact is "no
+ * return recorded in Shopify" argued delivery instead (cay-collective #17615,
+ * 2026-10-30: the fact was cited by id in three sections and stated in none).
+ * The argument is the module's own: no return is recorded, the refund policy is
+ * published, so the claim that a refund is outstanding is not supported — never
+ * that no refund was owed, and never what the customer did or asked.
+ */
+export const CREDIT_NOT_PROCESSED_BRIEF: Brief = {
+  type: "credit_not_processed",
+  claim: "a refund or credit owed to the customer was not processed",
+  question: {
+    card: "Is a refund or credit outstanding on this order?",
+    paypal: "Is a refund outstanding on this order?",
+    klarna: "Is a refund outstanding on this order?",
+  },
+  claims: [
+    "claim_is_credit_not_processed", ...SEQUENCE, "no_return_recorded", "merchant_confirmed_no_request",
+    "refund_policy_published", "later_order",
+  ],
+  theories: [
+    { name: "no_return_policy_delivered", claimIds: ["no_return_recorded", "refund_policy_published", "carrier_delivered"] },
+    { name: "no_return_delivered", claimIds: ["no_return_recorded", "carrier_delivered"] },
+    { name: "no_return_policy", claimIds: ["no_return_recorded", "refund_policy_published"] },
+    { name: "no_return", claimIds: ["no_return_recorded"] },
+    { name: "delivered_then_disputed", claimIds: ["carrier_delivered", "dispute_after_delivery"] },
+    { name: "sale_on_record", claimIds: ["claim_is_credit_not_processed"] },
+  ],
+  minimumClaims: ["claim_is_credit_not_processed"],
+  // A letter with neither a recorded absence nor a delivery has nothing of its
+  // own to argue; it falls to the general brief.
+  minimumAnyOf: ["no_return_recorded", "carrier_delivered"],
+  ceilingClaims: [],
+  sections: [
+    {
+      key: "shipping",
+      title: "Shipping & Delivery",
+      exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates)",
+      question: "When did the goods reach the customer?",
+      questionWithoutDelivery: "What does the shipping record show?",
+      claimIds: ["carrier_delivered", "dispute_after_delivery"],
+    },
+  ],
+  limits: [
+    {
+      rule: "No statement that no refund was owed, or that a refund could not be owed. Say only that the claim that a refund is outstanding is not supported by the record.",
+      pattern: /\bno refund (?:was|is|had been) (?:ever )?(?:owed|due)\b|\b(?:refund|credit) (?:was|is) not (?:owed|due)\b|\bnothing (?:was|is) owed\b/i,
+    },
+    {
+      rule: "No statement about what the customer did, asked or did not do about a return: only the recorded absence, in the claim's own words, in a sentence with no date or timing word.",
+      pattern: /\b(?:customer|cardholder|buyer)\s+(?:did not|didn't|never|has not|hasn't|failed to)\b[^.]{0,40}\b(?:return|request|ask|initiate|attempt|try|contact)/i,
+    },
+    {
+      rule: "Say only that the refund policy is published on the store: never what it requires, and never that the customer agreed to or accepted it.",
+      pattern: /\b(?:agreed|accepted|consented|acknowledged)\b[^.]{0,40}\bpolic|\bpolic\w*\b[^.]{0,40}\b(?:requires?|required|states?|stipulates?|conditions?)\b/i,
+    },
+    { rule: "No statement that a refund was issued, is pending or is being processed." },
+    { rule: "No argument that the goods arrived as if non-receipt were claimed: delivery dates the sequence." },
+    { rule: "No payment-authentication statement (3-D Secure, AVS, CVV)." },
+  ],
+  references: ["Visa DMG 13.6", "Mastercard 4860"],
+  absenceMaxMentions: 2,
+};
+
 export const GENERAL_BRIEF: Brief = {
   type: "general",
   claim: "the transaction is disputed",
@@ -225,5 +295,6 @@ export const GENERAL_BRIEF: Brief = {
 export function briefForModule(moduleKey: string): Brief {
   if (moduleKey === "inr_product_not_received") return ITEM_NOT_RECEIVED_BRIEF;
   if (moduleKey === "product_unacceptable") return NOT_AS_DESCRIBED_BRIEF;
+  if (moduleKey === "credit_not_processed") return CREDIT_NOT_PROCESSED_BRIEF;
   return GENERAL_BRIEF;
 }

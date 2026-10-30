@@ -22,6 +22,7 @@ import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import type { DefenceNarrativeOutput, EvidenceFact } from "../types";
 import { buildItemNotReceivedLedger, longDate } from "./claimLedger";
 import { buildNotAsDescribedLedger, type NotAsDescribedExtras } from "./notAsDescribedLedger";
+import { buildCreditNotProcessedLedger } from "./creditNotProcessedLedger";
 import { extractReturnWindow } from "./policyTerms";
 import { translateListing } from "../listingTranslation";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -95,6 +96,7 @@ export function ledgerForBrief(
   };
   if (brief.type === "item_not_received") return within(buildItemNotReceivedLedger(input), brief) ?? general();
   if (brief.type === "product_not_as_described") return within(buildNotAsDescribedLedger(input, { constraints, ...extras }), brief) ?? general();
+  if (brief.type === "credit_not_processed") return within(buildCreditNotProcessedLedger(input, { constraints }), brief) ?? general();
   return general();
 }
 

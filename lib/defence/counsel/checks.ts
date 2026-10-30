@@ -248,7 +248,10 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     // its own, never beside a timing clause.
     const sentences = modelParts.flatMap((p) => p.text.split(/(?<=[.!?])\s+/).map((t) => ({ where: p.where, t })));
     const absences = sentences.filter((x) => /\bno (?:return|refund request)s?\b[^.]*\b(?:recorded|on record)\b|\bnot (?:been )?returned\b|\bhas not come back\b/i.test(x.t));
-    if (absences.length > 1) issues.push(`copy: the recorded absence appears ${absences.length} times; state it once`);
+    const maxAbsences = ctx.brief.absenceMaxMentions ?? 1;
+    if (absences.length > maxAbsences) {
+      issues.push(`copy: the recorded absence appears ${absences.length} times; state it ${maxAbsences === 1 ? "once" : `at most ${maxAbsences} times (the summary and the conclusion)`}`);
+    }
     for (const a of absences) {
       if (/\b(?:days?|after|before|while|within|later|since|until|when)\b/i.test(a.t)) {
         issues.push(`${a.where}: the recorded absence shares a sentence with a timing clause — "${a.t}"`);
@@ -333,7 +336,10 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const res = validateNarrative({
     narrative: n,
     approvedFacts: ctx.facts as EvidenceFact[],
-    reasonCodeModule: resolveReasonCodeModuleForContext(null, notAsDescribed ? "PRODUCT_UNACCEPTABLE" : familyKey === "general" ? "GENERAL" : "PRODUCT_NOT_RECEIVED"),
+    reasonCodeModule: resolveReasonCodeModuleForContext(
+      null,
+      notAsDescribed ? "PRODUCT_UNACCEPTABLE" : familyKey === "general" ? "GENERAL" : familyKey === "credit_not_processed" ? "CREDIT_NOT_PROCESSED" : "PRODUCT_NOT_RECEIVED",
+    ),
     packageMode: "full",
     internalOnlyFactIds: [],
     extraHardPhrases: family.prohibitedBankPhrases,
