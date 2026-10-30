@@ -98,6 +98,10 @@ permission.
 2. Ensure the app has `write_shopify_payments_dispute_evidences` scope.
 3. Ensure the user is authenticated with an online session (not offline).
 
+### Shopify response request ID capture
+
+`requestShopifyGraphQL` attaches `shopifyResponse: { requestId, headers }` to every response (`x-request-id` plus an allow-list of non-credential headers). `save_to_shopify` persists it on the `evidence_saved_to_shopify` audit event as `shopify_request_id` / `shopify_response_headers` and in the `[saveToShopify] mutation response` log line. Shopify support keeps request logs ~30 days while disputes resolve over weeks, so this is the only durable copy. The `X-Request-Id` we *send* (`save-<jobId>`) is our own correlation ID, not Shopify's.
+
 ### GraphQL Throttle Handling
 
 `lib/shopify/graphql.ts` wraps all calls with:
