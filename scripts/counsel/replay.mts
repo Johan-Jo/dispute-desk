@@ -46,7 +46,7 @@ if (!tokenFile || (!inputFiles.length && !envFile) || (!packageIds.length && !in
 if (envFile) config({ path: envFile, override: true });
 
 const { writeLetter } = await import("../../lib/defence/counsel/generate");
-const { GENERAL_BRIEF, ITEM_NOT_RECEIVED_BRIEF, NOT_AS_DESCRIBED_BRIEF } = await import("../../lib/defence/counsel/briefs");
+const { CREDIT_NOT_PROCESSED_BRIEF, GENERAL_BRIEF, ITEM_NOT_RECEIVED_BRIEF, NOT_AS_DESCRIBED_BRIEF } = await import("../../lib/defence/counsel/briefs");
 const { NOT_AS_DESCRIBED, playbookForModule } = await import("../../lib/defence/counsel/playbooks");
 const { classifyIssue } = await import("../../lib/defence/counsel/issueRules");
 const { runCostUsd } = await import("../../lib/defence/counsel/cost");
@@ -73,6 +73,7 @@ const BRIEFS = {
   [GENERAL_BRIEF.type]: GENERAL_BRIEF,
   [ITEM_NOT_RECEIVED_BRIEF.type]: ITEM_NOT_RECEIVED_BRIEF,
   [NOT_AS_DESCRIBED_BRIEF.type]: NOT_AS_DESCRIBED_BRIEF,
+  [CREDIT_NOT_PROCESSED_BRIEF.type]: CREDIT_NOT_PROCESSED_BRIEF,
 };
 
 const cases: Array<{ label: string; stored: string | null; replay: Replay }> = [];
