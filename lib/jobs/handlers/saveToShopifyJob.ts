@@ -636,6 +636,7 @@ export async function handleSaveToShopify(
     errors: result.errors?.length ?? 0,
     userErrors: result.data?.disputeEvidenceUpdate?.userErrors?.length ?? 0,
     evidenceId: result.data?.disputeEvidenceUpdate?.disputeEvidence?.id ?? null,
+    shopifyRequestId: result.shopifyResponse?.requestId ?? null,
   }));
 
   /* ── 9. Auth + GraphQL + userErrors handling ── */
@@ -865,6 +866,7 @@ export async function handleSaveToShopify(
     amount: dispute.amount ?? null,
     currencyCode: dispute.currency_code ?? null,
     eventAt: now,
+    shopifyResponse: result.shopifyResponse ?? null,
   });
 
   /* ── 14. Coalesce tail — re-enqueue if regenerate is pending ──
