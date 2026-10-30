@@ -68,6 +68,10 @@ export interface EmitSaveToShopifyEventsInput {
   currencyCode: string | null;
   /** ISO timestamp captured at the moment the mutation succeeded. */
   eventAt: string;
+  /** Shopify's `X-Request-ID` + safe response headers for the
+   *  `disputeEvidenceUpdate` call. Shopify retains request logs ~30 days
+   *  while disputes resolve over weeks; this is the only durable copy. */
+  shopifyResponse?: { requestId: string | null; headers: Record<string, string> } | null;
 }
 
 /**
@@ -98,6 +102,7 @@ export async function emitSaveToShopifyEvents(
     amount,
     currencyCode,
     eventAt,
+    shopifyResponse = null,
   } = args;
 
   await logAuditEvent({
@@ -119,6 +124,8 @@ export async function emitSaveToShopifyEvents(
       pdf_attached: pdfAttached,
       native_attachment_count: nativeAttachmentCount,
       native_attachment_fields: nativeAttachmentFields,
+      shopify_request_id: shopifyResponse?.requestId ?? null,
+      shopify_response_headers: shopifyResponse?.headers ?? null,
     },
   });
 

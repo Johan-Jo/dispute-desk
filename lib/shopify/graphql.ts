@@ -19,6 +19,12 @@ export interface GraphQLResponse<T = unknown> {
       };
     };
   };
+  /** Shopify response metadata for support escalations. Never contains
+   *  credentials: only the allow-listed headers in `SAFE_RESPONSE_HEADERS`. */
+  shopifyResponse?: {
+    requestId: string | null;
+    headers: Record<string, string>;
+  };
 }
 
 interface RequestOptions {
@@ -32,6 +38,26 @@ interface RequestOptions {
   timeoutMs?: number;
   /** BCP-47 locale for Accept-Language header — localizes event message strings */
   locale?: string;
+}
+
+/** Response headers Shopify support asks for; safe to persist. */
+const SAFE_RESPONSE_HEADERS = [
+  "x-request-id",
+  "x-shopify-api-version",
+  "x-shopify-shop-api-call-limit",
+  "x-shopify-api-deprecated-reason",
+  "date",
+  "content-type",
+  "server-timing",
+];
+
+function captureResponseMeta(res: Response): NonNullable<GraphQLResponse["shopifyResponse"]> {
+  const headers: Record<string, string> = {};
+  for (const name of SAFE_RESPONSE_HEADERS) {
+    const v = res.headers.get(name);
+    if (v != null) headers[name] = v;
+  }
+  return { requestId: res.headers.get("x-request-id"), headers };
 }
 
 const DEFAULT_MAX_RETRIES = 3;
@@ -127,6 +153,7 @@ export async function requestShopifyGraphQL<T = unknown>(
       rawJson.errors = [{ message: text }];
     }
     const json: GraphQLResponse<T> = rawJson;
+    if (json && typeof json === "object") json.shopifyResponse = captureResponseMeta(res);
 
     const throttled = json.errors?.some(
       (e) => e.extensions?.code === "THROTTLED"
