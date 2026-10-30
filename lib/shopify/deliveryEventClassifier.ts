@@ -447,6 +447,24 @@ const COLLECTED_ROOTS = [
   "retirado pelo destinatario",
 ];
 
+/** An ORIGIN drop-off: the shipper (or the customer sending it) handing the
+ *  parcel to the carrier at a drop-off point. UPS's own scan reads "Dropped off
+ *  at a UPS Access Point by Customer" — it contains "access point", so it used
+ *  to classify as a delivery to a pickup point, when it is the opposite end of
+ *  the journey (cay-collective #16315: a parcel dropped off in Aarhus on 24 Sep
+ *  read as `DeliveredToPickup` and then masked a failed delivery and a return
+ *  to sender). Both parts are required, so a destination phrase such as
+ *  "Delivered to a UPS Access Point" is untouched. */
+const DROPOFF_WORDS = ["dropped off", "drop-off", "drop off", "dropoff"];
+const SHIPPER_ACTORS = [
+  "by customer", "by the customer", "by shipper", "by the shipper",
+  "by sender", "by the sender", "by merchant", "by the merchant",
+  "by seller", "by the seller",
+];
+function isOriginDropOff(msg: string): boolean {
+  return containsAny(msg, DROPOFF_WORDS) && containsAny(msg, SHIPPER_ACTORS);
+}
+
 /** Roots that indicate the parcel is OUT FOR (home) DELIVERY. Used only
  *  by the timeline context rule: a bare "delivered" that follows a
  *  pickup-point arrival is a COLLECTION unless a new out-for-delivery
@@ -536,6 +554,8 @@ export function classifyDeliveryEvent(
   const msg = (event.message ?? "").toLowerCase();
   if (msg) {
     if (containsAny(msg, RETURNED_ROOTS)) return "returned";
+    // The shipper's own drop-off is handling at ORIGIN, never a delivery state.
+    if (isOriginDropOff(msg)) return "other";
     // Explicit customer collection ("Picked up by receiver", "uthämtad av
     // mottagaren") — confirmed receipt, checked before PICKUP so the
     // arrival wording never masks the collection.
@@ -586,6 +606,9 @@ export function classifyDeliveryTimeline(
     cat: classifyDeliveryEvent(e),
     at: e.happenedAt ?? null,
     msg: (e.message ?? "").toLowerCase(),
+    outForDelivery:
+      (e.status ?? "").toUpperCase() === "OUT_FOR_DELIVERY" ||
+      containsAny((e.message ?? "").toLowerCase(), OUT_FOR_DELIVERY_ROOTS),
   }));
 
   let finalCategory: DeliveryTimelineResult["finalCategory"] = null;
@@ -631,6 +654,15 @@ export function classifyDeliveryTimeline(
       );
       if (!intervening) finalCategory = "collected_at_pickup";
     }
+  }
+
+  // STALE PICKUP ARRIVAL: a parcel sent back out for delivery AFTER it reached
+  // a pickup point is no longer at that point. The arrival is superseded, and
+  // the answer is "no delivery state" — never a delivery claim. Only dated
+  // events can order against it.
+  if (finalCategory === "delivered_to_pickup" && finalAt) {
+    const sentBackOut = classified.some((e) => e.outForDelivery && e.at && e.at > finalAt!);
+    if (sentBackOut) return { finalCategory: null, finalAt: null };
   }
 
   return { finalCategory, finalAt };

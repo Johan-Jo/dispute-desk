@@ -244,3 +244,46 @@ describe("classifyDeliveryTimeline — the real cay order #12121 (PostNord colle
     expect(r.finalCategory).toBe("delivered_to_pickup");
   });
 });
+
+describe("origin drop-off is not a pickup-point arrival (cay-collective #16315)", () => {
+  it("UPS 'Dropped off at a UPS Access Point by Customer' is origin handling, not a delivery state", () => {
+    expect(classifyDeliveryEvent(ev("Dropped off at a UPS Access Point by Customer"))).toBe("other");
+    expect(classifyDeliveryEvent(ev("Parcel dropped off by the sender at a service point"))).toBe("other");
+  });
+
+  it("a destination phrase is untouched", () => {
+    expect(classifyDeliveryEvent(ev("Delivered to a UPS Access Point"))).toBe("delivered_to_pickup");
+    expect(classifyDeliveryEvent(ev("Förberedd för upphämtning, serviceställe"))).not.toBe("other");
+  });
+
+  it("the real #16315 feed (it stops on 30 Sep, before UPS returned the parcel) reads as no delivery state", () => {
+    const r = classifyDeliveryTimeline([
+      ev("Shipment Ready for UPS", "2026-09-22T09:32:21Z", "CONFIRMED"),
+      ev("Dropped off at a UPS Access Point by Customer", "2026-09-24T13:44:11Z", "IN_TRANSIT"),
+      ev("We Have Your Package", "2026-09-25T15:46:35Z", "IN_TRANSIT"),
+      ev("On the Way", "2026-09-29T03:23:20Z", "IN_TRANSIT"),
+      ev("Out for Delivery", "2026-09-29T08:18:32Z", "OUT_FOR_DELIVERY"),
+      ev("In Warehouse", "2026-09-30T03:04:34Z", "IN_TRANSIT"),
+    ]);
+    expect(r.finalCategory).toBeNull();
+  });
+});
+
+describe("a pickup arrival superseded by a later out-for-delivery", () => {
+  const arrival = ev("Försändelsen har levererats till ett serviceställe.", "2026-07-10T10:00:00Z");
+
+  it("is no longer a delivery state when the parcel went back out for delivery afterwards", () => {
+    const r = classifyDeliveryTimeline([arrival, ev("Lastad på bil, utkörning påbörjad.", "2026-07-11T07:00:00Z")]);
+    expect(r.finalCategory).toBeNull();
+  });
+
+  it("is kept when the out-for-delivery attempt came BEFORE the arrival", () => {
+    const r = classifyDeliveryTimeline([ev("Lastad på bil, utkörning påbörjad.", "2026-07-09T07:00:00Z"), arrival]);
+    expect(r.finalCategory).toBe("delivered_to_pickup");
+  });
+
+  it("an undated out-for-delivery cannot supersede a dated arrival", () => {
+    const r = classifyDeliveryTimeline([arrival, ev("Out for Delivery", null, "OUT_FOR_DELIVERY")]);
+    expect(r.finalCategory).toBe("delivered_to_pickup");
+  });
+});
