@@ -310,6 +310,11 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     if (ctx.brief && where.length === 2 && where.includes("summary")) {
       const other = where.find((w) => w !== "summary")!;
       if (homeOf(s).has(other)) continue;
+      // The conclusion restates the strongest facts by design (REVIEW_SYSTEM:
+      // "even though the Conclusion restates the strongest facts"), so the
+      // summary and conclusion pair is not a repeat. A third use still is.
+      // whj8db-1q #24285 canary, 2026-11-01: "five days" in both, no letter.
+      if (other === "conclusion") continue;
     }
     if (where.length > 1 && (ctx.brief || where.includes("summary"))) issues.push(`copy: "${s}" is used ${where.length} times (${where.join(", ")}); once only — elsewhere refer to the event ("the delivery", "that order")`);
   }
