@@ -238,7 +238,11 @@ export const CREDIT_NOT_PROCESSED_BRIEF: Brief = {
       exhibit: "the shipment card (carrier, tracking number, shipped and delivered dates)",
       question: "When did the goods reach the customer?",
       questionWithoutDelivery: "What does the shipping record show?",
-      claimIds: ["carrier_delivered", "dispute_after_delivery"],
+      // `later_order` is offered to the writer (claims, above) and belongs here:
+      // a claim no section owns may be stated once anywhere, so "five days after
+      // delivery" in the summary AND here failed copy.specific_repeated and no
+      // letter was written (whj8db-1q #24285, 2026-10-31 and 11-01).
+      claimIds: ["carrier_delivered", "dispute_after_delivery", "later_order"],
     },
   ],
   limits: [

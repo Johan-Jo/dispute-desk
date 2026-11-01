@@ -65,10 +65,15 @@ describe("GET /api/ratios/current", () => {
   });
 
   it("a programme failure is a 200 with status 'error', not a vanished card", async () => {
+    // The route derives the statement month from the clock; without a pinned
+    // clock this passed only while the real month was October (broke 2026-11-01).
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T12:00:00Z"));
     const { sb } = sbWithRow(null);
     mockClient.mockReturnValue(sb as never);
     mockProgramme.mockResolvedValue({ status: "error", periodMonth: "2026-09-01" });
     const res = await GET(new Request("https://x.test/x") as never);
+    vi.useRealTimers();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ snapshot: null, status: "error", periodMonth: "2026-09-01" });
   });
