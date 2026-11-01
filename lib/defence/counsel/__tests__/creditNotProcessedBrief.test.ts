@@ -180,6 +180,60 @@ describe("the checks", () => {
   });
 });
 
+describe("a later order from the same customer (whj8db-1q #24285)", () => {
+  // Delivered 17 October; the same account ordered again on 22 October.
+  const withLater = input({
+    customerOrders: [
+      { name: "#17615", createdAt: "2026-10-14T12:10:00Z", financialStatus: "PAID", fulfillmentStatus: "FULFILLED", cancelled: false, deliveredAt: "2026-10-17T14:55:00Z", carrier: "PostNord", cardLast4: "1111", wallet: null },
+      { name: "#17700", createdAt: "2026-10-22T09:00:00Z", financialStatus: "PAID", fulfillmentStatus: "UNFULFILLED", cancelled: false, deliveredAt: null, carrier: null, cardLast4: "1111", wallet: null },
+    ],
+  });
+  const ledger = buildCreditNotProcessedLedger(withLater)!;
+  const ctx: CheckContext = {
+    ledger,
+    playbook: NOT_AS_DESCRIBED,
+    brief: CREDIT_NOT_PROCESSED_BRIEF,
+    facts: FACTS,
+    disputeOpenedAt: "2026-10-30T08:35:00Z",
+    merchantName: "Cay Collective",
+    carrierName: "PostNord",
+    pageIdentifiers: ["#17615", "17615"],
+    trackingUrl: null,
+    frame,
+  };
+  const request = requestLine(frame);
+  const draft: CounselDraft = {
+    summary: {
+      paragraphs: [
+        "The customer says a refund owed on this order was not processed. The same customer account placed a further order five days after delivery. " +
+          `No return has been recorded in Shopify for this order. The claim that a refund is outstanding is not supported by the record. ${request}`,
+      ],
+      claimIds: ["claim_is_credit_not_processed", "later_order", "no_return_recorded"],
+    },
+    evidenceSections: [
+      { key: "shipping", paragraphs: ["The carrier recorded delivery, and the same customer account placed a further order five days after delivery."], claimIds: ["carrier_delivered", "later_order"] },
+    ],
+    conclusion: {
+      paragraphs: ["The order was delivered, and no return is recorded in Shopify. The claim that a refund is outstanding is not supported by the record."],
+      claimIds: ["carrier_delivered", "no_return_recorded"],
+    },
+  };
+
+  it("offers the later order, so the case is real", () => {
+    expect(ledger.map((c) => c.id)).toContain("later_order");
+  });
+
+  it("owns the later order in the shipping section, so summary plus section is not a repeat", () => {
+    expect(CREDIT_NOT_PROCESSED_BRIEF.sections.find((s) => s.key === "shipping")!.claimIds).toContain("later_order");
+    expect(checkDraft(draft, ctx).filter((i) => /once only/.test(i))).toEqual([]);
+  });
+
+  it("still refuses a third mention outside the home section", () => {
+    const three: CounselDraft = { ...draft, conclusion: { ...draft.conclusion, paragraphs: ["Five days after delivery the same account ordered again."] } };
+    expect(checkDraft(three, ctx).join(" ")).toMatch(/"five" is used 3 times/);
+  });
+});
+
 describe("the writer end to end (stubbed model)", () => {
   const ledger = buildCreditNotProcessedLedger(input())!;
   const request = requestLine(frame);
