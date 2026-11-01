@@ -228,6 +228,12 @@ describe("a later order from the same customer (whj8db-1q #24285)", () => {
     expect(checkDraft(draft, ctx).filter((i) => /once only/.test(i))).toEqual([]);
   });
 
+  it("lets the conclusion restate what the summary says (#24285 canary)", () => {
+    const restated: CounselDraft = { ...draft, conclusion: { ...draft.conclusion, paragraphs: ["Five days after delivery the same account ordered again."] } };
+    const noShipping: CounselDraft = { ...restated, evidenceSections: [{ key: "shipping", paragraphs: ["The carrier recorded delivery."], claimIds: ["carrier_delivered"] }] };
+    expect(checkDraft(noShipping, ctx).filter((i) => /once only/.test(i))).toEqual([]);
+  });
+
   it("still refuses a third mention outside the home section", () => {
     const three: CounselDraft = { ...draft, conclusion: { ...draft.conclusion, paragraphs: ["Five days after delivery the same account ordered again."] } };
     expect(checkDraft(three, ctx).join(" ")).toMatch(/"five" is used 3 times/);
