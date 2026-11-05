@@ -596,7 +596,7 @@ const PRIORITY_WEIGHT: Record<EvidenceItemPriority, number> = {
  * Resolve v2 item status from requirement mode, order context, and
  * waive state.
  */
-function resolveItemStatus(
+export function resolveItemStatus(
   mode: RequirementMode,
   ctx: OrderContext,
   isPresent: boolean,

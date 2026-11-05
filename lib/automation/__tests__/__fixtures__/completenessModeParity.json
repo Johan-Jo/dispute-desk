@@ -1,0 +1,66 @@
+{
+  "null": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "FRAUDULENT": {
+    "cases": 3888,
+    "sha256": "7bef3bb20bd7ad70680ec7faa9f4ca2e42d99304928432ff54a4b143800a4218"
+  },
+  "PRODUCT_NOT_RECEIVED": {
+    "cases": 3888,
+    "sha256": "f176c11abeab7cbe0676fb43579ca994064ecd01d83ad35e69c175f97b7d8c61"
+  },
+  "PRODUCT_UNACCEPTABLE": {
+    "cases": 3888,
+    "sha256": "31248fbe899daba033035df80fd4fab1ad15c5d6a30536379f670f5b079d10e6"
+  },
+  "CREDIT_NOT_PROCESSED": {
+    "cases": 3888,
+    "sha256": "efde55e21f00390aac295cb3563e26b438195c13c3cdd8ad580d2d41b2bb136e"
+  },
+  "SUBSCRIPTION_CANCELED": {
+    "cases": 3888,
+    "sha256": "4a10c7652a242da84405f598235ee11eb8ded6a00b1ac1cd5647ddbe4c7e3b8b"
+  },
+  "SUBSCRIPTION_CANCELLED": {
+    "cases": 3888,
+    "sha256": "4a10c7652a242da84405f598235ee11eb8ded6a00b1ac1cd5647ddbe4c7e3b8b"
+  },
+  "DUPLICATE": {
+    "cases": 3888,
+    "sha256": "65debc2970a1f07670372f573f5ff99a8909b4194daafbc827e8406c3e426861"
+  },
+  "GENERAL": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "UNRECOGNIZED": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "INCORRECT_ACCOUNT_DETAILS": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "BANK_CANNOT_PROCESS": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "CUSTOMER_INITIATED": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "DEBIT_NOT_AUTHORIZED": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "INSUFFICIENT_FUNDS": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  },
+  "NOT_A_REAL_REASON": {
+    "cases": 3888,
+    "sha256": "7a0af290c44a0679911fb215a2efe37a2e1500da453b9cab0649bca4b1da91d6"
+  }
+}
