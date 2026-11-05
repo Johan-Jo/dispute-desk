@@ -242,15 +242,42 @@ export function resolveRequirement(
   mode: RequirementMode,
   ctx: OrderContext,
 ): { required: boolean; collectable: boolean; unavailableReason?: string } {
+  return modeApplicability(mode, ctx);
+}
+
+/**
+ * THE one body of the requirement-mode rules (PR 0 of
+ * docs/plans/single-source-architecture-audit.plan.md: the rules used to
+ * exist twice, here and as a switch inside `resolveItemStatus`).
+ *
+ * `field` is optional on purpose: only `resolveItemStatus` passes it, to word
+ * the "shipped, not yet delivered" reason for `delivery_proof`. The v1
+ * callers (`evaluateCompleteness`) pass none and persist the result in
+ * `pack_json.completeness.checklist`, so the wording they produce must not
+ * change. Behaviour of both callers is pinned byte-for-byte by
+ * `__tests__/completenessModeParity.test.ts`.
+ */
+export function modeApplicability(
+  mode: RequirementMode,
+  ctx: OrderContext,
+  field?: string,
+): { required: boolean; collectable: boolean; unavailableReason?: string } {
   switch (mode) {
     case "required_always":
       return { required: true, collectable: true };
     case "required_if_fulfilled":
       if (!ctx.isFulfilled) {
+        // When the order is structurally `UNFULFILLED` but has at least one
+        // fulfillment record with tracking, "Order is unfulfilled"
+        // misrepresents reality: the merchant has shipped something, just not
+        // yet seen delivery confirmed. Only `delivery_proof` swaps the reason;
+        // `shipping_tracking` can never reach this branch with
+        // `hasShippingEvidence === true` (it would have been `available`).
+        const inTransit = field === "delivery_proof" && ctx.hasShippingEvidence === true;
         return {
           required: false,
           collectable: false,
-          unavailableReason: "Order is unfulfilled",
+          unavailableReason: inTransit ? "Awaiting delivery confirmation" : "Order is unfulfilled",
         };
       }
       return { required: true, collectable: true };
@@ -610,65 +637,17 @@ export function resolveItemStatus(
     return { status: "available", collectable: true };
   }
 
-  // Check if the field is collectable given order context
-  switch (mode) {
-    case "required_if_fulfilled":
-      if (!ctx.isFulfilled) {
-        // When the order is structurally `UNFULFILLED` but has at
-        // least one fulfillment record with tracking, "Order is
-        // unfulfilled" misrepresents reality — the merchant has
-        // shipped something, just not yet seen delivery confirmed.
-        // Only swap the reason for `delivery_proof`; `shipping_tracking`
-        // can never reach this branch with `hasShippingEvidence === true`
-        // (it would have been `available` via `isPresent` short-circuit).
-        const inTransit = field === "delivery_proof" && ctx.hasShippingEvidence === true;
-        return {
-          status: "unavailable",
-          collectable: false,
-          unavailableReason: inTransit
-            ? "Awaiting delivery confirmation"
-            : "Order is unfulfilled",
-        };
-      }
-      break;
-    case "required_if_card_payment":
-      if (!ctx.hasCardPayment) {
-        return {
-          status: "unavailable",
-          collectable: false,
-          unavailableReason: "No card payment on this order",
-        };
-      }
-      if (!ctx.avsCvvAvailable) {
-        return {
-          status: "unavailable",
-          collectable: false,
-          unavailableReason: "AVS/CVV not returned by payment gateway",
-        };
-      }
-      break;
-    case "required_if_refunded":
-      // No refund → nothing to show and nothing to ask for. `missing`
-      // here would render a "add a refund record" nag the merchant can
-      // never satisfy on a never-refunded order.
-      if (!ctx.hasRefund) {
-        return {
-          status: "unavailable",
-          collectable: false,
-          unavailableReason: "No refund was issued on this order",
-        };
-      }
-      break;
-    case "required_if_returned_to_sender":
-      // Nothing came back → there is nothing to tell us about it.
-      if (!ctx.hasReturnedToSenderParcel) {
-        return {
-          status: "unavailable",
-          collectable: false,
-          unavailableReason: "No parcel on this order was returned to sender",
-        };
-      }
-      break;
+  // Not collectable given the order context -> unavailable (nothing to show
+  // and nothing to ask for: e.g. `required_if_refunded` on a never-refunded
+  // order would otherwise render an "add a refund record" nag the merchant
+  // can never satisfy). The rules live in `modeApplicability`.
+  const applicability = modeApplicability(mode, ctx, field);
+  if (!applicability.collectable) {
+    return {
+      status: "unavailable",
+      collectable: false,
+      unavailableReason: applicability.unavailableReason,
+    };
   }
 
   return { status: "missing", collectable: true };
