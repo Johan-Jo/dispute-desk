@@ -19,10 +19,6 @@
     "cases": 3888,
     "sha256": "efde55e21f00390aac295cb3563e26b438195c13c3cdd8ad580d2d41b2bb136e"
   },
-  "SUBSCRIPTION_CANCELED": {
-    "cases": 3888,
-    "sha256": "4a10c7652a242da84405f598235ee11eb8ded6a00b1ac1cd5647ddbe4c7e3b8b"
-  },
   "SUBSCRIPTION_CANCELLED": {
     "cases": 3888,
     "sha256": "4a10c7652a242da84405f598235ee11eb8ded6a00b1ac1cd5647ddbe4c7e3b8b"

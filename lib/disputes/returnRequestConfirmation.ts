@@ -131,6 +131,87 @@ export function noReturnFactScope(args: {
 }
 
 /**
+ * The collector's returns context: the shop takes return requests outside
+ * Shopify, plus the merchant's answer for the dispute's current cycle. This is
+ * the shape `BuildContext.returnScope` already has (`lib/packs/types.ts`).
+ */
+export type ReturnScopeInput = {
+  returnsOutsideShopify: boolean;
+  answer: ReturnRequestAnswer | null;
+};
+
+/** What the no-return fact carries (the output of `noReturnFactScope`). */
+export type NoReturnScopePayload = ReturnType<typeof noReturnFactScope>;
+
+/**
+ * The returns context for a build, from the shop's settings and the merchant's
+ * answer. `undefined` = setting off (a stale answer is ignored when the
+ * setting is off, exactly as the inline code in `buildPack` did).
+ *
+ * Pure on purpose. The caller keeps the I/O and the failure policy: if reading
+ * the settings throws, `buildPack` treats the context as undefined (= off),
+ * because a pure function cannot contain a try/catch around an async load.
+ * `loadReturnRequestConfirmation` itself returns null on a DB error, so a
+ * failed answer read reaches here as "setting on, answer null".
+ */
+export function returnScopeFor(
+  settings: { returns_outside_shopify?: boolean | null } | null | undefined,
+  confirmation: Pick<ReturnRequestConfirmation, "answer"> | null | undefined,
+): ReturnScopeInput | undefined {
+  if (!settings?.returns_outside_shopify) return undefined;
+  return { returnsOutsideShopify: true, answer: confirmation?.answer ?? null };
+}
+
+/**
+ * Should the "no return initiated" fact exist for this order? THE one answer,
+ * shared by the collector (`orderSource`, which emits on `emit: true`) and, in
+ * a later PR, by the read-time applicability of the checklist row.
+ *
+ * Three-state on purpose (docs/plans/single-source-architecture-audit.plan.md
+ * §2.2): an order whose return status was never recorded (a pack built before
+ * 2026-10-02) is `unknown`, not "no return". The collector treats `unknown` as
+ * do-not-emit, as it always has; a reader of stored packs must be able to tell
+ * it apart from a known return.
+ *
+ * Precedence, pinned by `__tests__/noReturnFactVerdict.test.ts` against the
+ * pre-extraction collector:
+ *   1. any non-null status other than NO_RETURN (including a string this code
+ *      does not recognise) -> `return_on_record`;
+ *   2. a refund total above zero -> `refund_on_record`;
+ *   3. no status -> `unknown` (`status_absent`);
+ *   4. NO_RETURN: `merchant_says_request_received` when the merchant said the
+ *      customer DID ask, else `emit: true` with the fact's scope payload.
+ * NO_RETURN with an unparseable refund total emits (the refund reads as
+ * unknown, not "some"); this must not fail closed, or emission would change.
+ */
+export type NoReturnVerdict =
+  | { emit: true; scope: NoReturnScopePayload }
+  | { emit: false; reason: "return_on_record" | "refund_on_record" | "merchant_says_request_received" }
+  | { unknown: true; why: "status_absent" };
+
+export function noReturnFactVerdict(input: {
+  returnStatus: string | null | undefined;
+  totalRefunded: number | string | null | undefined;
+  returnScope?: ReturnScopeInput | null;
+}): NoReturnVerdict {
+  const situation = resolveOrderSituation({
+    returnStatus: input.returnStatus,
+    refundedAmount: input.totalRefunded,
+  });
+  const hasStatus = input.returnStatus != null;
+  if (hasStatus && situation.returns !== "none") return { emit: false, reason: "return_on_record" };
+  if (situation.refund === "some") return { emit: false, reason: "refund_on_record" };
+  if (!hasStatus) return { unknown: true, why: "status_absent" };
+
+  const scope = noReturnFactScope({
+    returnsOutsideShopify: input.returnScope?.returnsOutsideShopify === true,
+    answer: input.returnScope?.answer ?? null,
+  });
+  if (!scope.emit) return { emit: false, reason: "merchant_says_request_received" };
+  return { emit: true, scope };
+}
+
+/**
  * C3: the scoring rule. With the setting on, the Shopify record alone does
  * not count; only the merchant's confirmation restores it. Setting off:
  * unchanged.

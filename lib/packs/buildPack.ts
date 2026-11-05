@@ -32,7 +32,7 @@ import {
 } from "./contradictionGate";
 import { collectOrderEvidence } from "./sources/orderSource";
 import { getShopSettings } from "@/lib/automation/settings";
-import { loadReturnRequestConfirmation } from "@/lib/disputes/returnRequestConfirmation";
+import { loadReturnRequestConfirmation, returnScopeFor } from "@/lib/disputes/returnRequestConfirmation";
 import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
 import { collectManualEvidence } from "./sources/manualSource";
@@ -395,14 +395,16 @@ export async function buildPack(
   let returnScope: BuildContext["returnScope"];
   try {
     const settings = await getShopSettings(pack.shop_id);
-    if (settings.returns_outside_shopify) {
-      const confirmation = await loadReturnRequestConfirmation(
-        sb,
-        dispute.id,
-        (dispute.response_cycle as number | null) ?? 1,
-      );
-      returnScope = { returnsOutsideShopify: true, answer: confirmation?.answer ?? null };
-    }
+    // The answer is read only when the setting is on (no extra query for
+    // shops that do not take returns outside Shopify).
+    const confirmation = settings.returns_outside_shopify
+      ? await loadReturnRequestConfirmation(
+          sb,
+          dispute.id,
+          (dispute.response_cycle as number | null) ?? 1,
+        )
+      : null;
+    returnScope = returnScopeFor(settings, confirmation);
   } catch (err) {
     // Unknown setting reads as "off": the Shopify record keeps its weight,
     // and the letter's wording is safe either way (C2 applies to every shop).
