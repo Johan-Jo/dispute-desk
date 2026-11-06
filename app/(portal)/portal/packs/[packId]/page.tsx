@@ -69,6 +69,9 @@ interface PackData {
   status: string;
   completeness_score: number | null;
   checklist: ChecklistItem[] | null;
+  /** PR 5: effective (record-aware) percentage and rows, added beside the stored ones. */
+  merchant_completeness?: number | null;
+  effective_checklist?: ChecklistItem[] | null;
   blockers: string[] | null;
   recommended_actions: string[] | null;
   pack_json: Record<string, unknown> | null;
@@ -245,7 +248,10 @@ export default function PackPreviewPage() {
   }
 
   const isBuilding = pack.status === "queued" || pack.status === "building";
-  const score = pack.completeness_score ?? 0;
+  // Effective percentage/rows when the API supplied them (dispute packs with a
+  // stored v2 checklist); the stored values otherwise (library packs, legacy).
+  const score = pack.merchant_completeness ?? pack.completeness_score ?? 0;
+  const shownChecklist = pack.effective_checklist ?? pack.checklist;
   const cfg = statusConfig(pack.status, ts);
   const isLibraryPack = pack.dispute_id == null;
   const fromTemplate = pack.source === "TEMPLATE" && (pack.template_name ?? pack.name);
@@ -344,7 +350,7 @@ export default function PackPreviewPage() {
         title={isLibraryPack ? t("recommendedForTemplate") : t("recommendedForDispute")}
         description={isLibraryPack ? t("recommendedForTemplateDescription") : t("recommendedForDisputeDescription")}
         guideLabel={isLibraryPack ? t("useChecklistAsGuideTemplate") : t("recommendedGatherHint")}
-        checklist={pack.checklist}
+        checklist={shownChecklist}
         suggestedLabels={suggestedLabels}
       />
 

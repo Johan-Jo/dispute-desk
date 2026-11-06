@@ -1,7 +1,5 @@
-import { assembleEffectiveChecklist, merchantCompleteness } from "@/lib/packs/effectiveChecklist";
+import { loadEffectivePackView, toDisplayChecklistRows } from "@/lib/packs/effectivePackView";
 import { refundStatementFromPackSections } from "@/lib/disputes/refundStatement";
-import { normalizeChecklistV2Shape } from "@/lib/packs/checklistReconcile";
-import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPackById, deletePack, updatePackStatus } from "@/lib/db/packs";
@@ -360,6 +358,7 @@ export async function GET(
     // we look up the live pack_template_item_i18n row for the caller's
     // locale and substitute. Falls through when there's no template
     // to key off (the English labels stay as a last-resort fallback).
+    let disputeTemplateId: string | null = null;
     if (pack.dispute_id != null) {
       const effectiveTemplateId = await resolveDisputePackTemplateId(
         db,
@@ -367,6 +366,7 @@ export async function GET(
         dispute_reason,
         dispute_phase,
       );
+      disputeTemplateId = effectiveTemplateId;
       if (effectiveTemplateId) {
         (pack as Record<string, unknown>).checklist = await localizeChecklist(
           db,
@@ -411,24 +411,32 @@ export async function GET(
     // them: automation, the save check and the decision hash read the stored
     // values. Dispute packs only (library packs have no record to judge by).
     let effectiveFields: Record<string, unknown> = {};
-    // Only when a stored v2 checklist exists: a legacy pack with none keeps the
-    // page's v1 path (the effective rows would be just the collected fields and
-    // would read as 100% complete).
-    const storedV2 = normalizeChecklistV2Shape(pack.checklist_v2);
-    if (pack.dispute_id != null && storedV2 && storedV2.length > 0) {
-      const effective = assembleEffectiveChecklist({
-        storedChecklist: pack.checklist_v2 ?? null,
-        packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
-        evidenceItems: itemsRes.data ?? [],
-        returnScope: await loadReturnScopeForPack(db, {
-          shopId,
-          disputeId: pack.dispute_id as string,
-          packCycle: (pack as { response_cycle?: number | null }).response_cycle ?? 1,
-        }),
-      });
+    // Only when a stored v2 checklist exists (loadEffectivePackView returns null
+    // otherwise): a legacy pack with none keeps the page's v1 path (the effective
+    // rows would be just the collected fields and would read as 100% complete).
+    const effective =
+      pack.dispute_id != null
+        ? await loadEffectivePackView(db, {
+            shopId,
+            disputeId: pack.dispute_id as string,
+            packCycle: (pack as { response_cycle?: number | null }).response_cycle ?? 1,
+            checklistV2: pack.checklist_v2 ?? null,
+            packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
+            evidenceItems: itemsRes.data ?? [],
+          })
+        : null;
+    if (effective) {
       effectiveFields = {
         effective_checklist_v2: effective.checklist,
-        merchant_completeness: merchantCompleteness(effective.checklist),
+        merchant_completeness: effective.merchantCompleteness,
+        // PR 5: the same effective rows in the v1 shape (labels localized like
+        // `checklist`) for the portal pack page. Stored `checklist` is untouched.
+        effective_checklist: await localizeChecklist(
+          db,
+          disputeTemplateId,
+          toDisplayChecklistRows(effective.checklist),
+          locale,
+        ),
         refund_statement: refundStatementFromPackSections(
           (pack.pack_json as { sections?: unknown } | null)?.sections,
           ((pack as { updated_at?: string | null }).updated_at ??

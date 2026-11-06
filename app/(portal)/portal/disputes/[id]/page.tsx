@@ -67,6 +67,8 @@ interface Pack {
   id: string;
   status: string;
   completeness_score: number | null;
+  /** PR 5: effective percentage (null = no stored v2 checklist: show the stored score). */
+  merchant_completeness?: number | null;
   blockers: string[] | null;
   recommended_actions: string[] | null;
   saved_to_shopify_at: string | null;
@@ -619,7 +621,7 @@ export default function DisputeDetailPage() {
           ) : (
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between"><dt className="text-[#667085]">{t("latestPack")}</dt><dd>{packStatusBadge(packs[0].status, tStatus)}</dd></div>
-              <div className="flex justify-between"><dt className="text-[#667085]">{t("completeness")}</dt><dd className="text-[#0B1220] font-medium">{packs[0].completeness_score != null ? `${packs[0].completeness_score}%` : "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-[#667085]">{t("completeness")}</dt><dd className="text-[#0B1220] font-medium">{(packs[0].merchant_completeness ?? packs[0].completeness_score) != null ? `${packs[0].merchant_completeness ?? packs[0].completeness_score}%` : "—"}</dd></div>
               <div className="flex justify-between"><dt className="text-[#667085]">{t("blockers")}</dt><dd className="text-[#0B1220]">{packs[0].blockers && packs[0].blockers.length > 0 ? tc("remaining", { count: packs[0].blockers.length }) : tc("none")}</dd></div>
             </dl>
           )}
@@ -694,7 +696,7 @@ export default function DisputeDetailPage() {
                   <tr key={p.id} className="border-t border-[#E5E7EB]">
                     <td className="px-4 py-3"><a href={`/portal/packs/${p.id}`} className="text-[#1D4ED8] hover:underline font-medium">{p.id.slice(0, 8)}</a></td>
                     <td className="px-4 py-3">{packStatusBadge(p.status, tStatus)}</td>
-                    <td className="px-4 py-3">{p.completeness_score != null ? <span className={p.completeness_score >= 80 ? "text-[#22C55E]" : p.completeness_score >= 50 ? "text-[#F59E0B]" : "text-[#EF4444]"}>{p.completeness_score}%</span> : "—"}</td>
+                    <td className="px-4 py-3">{(p.merchant_completeness ?? p.completeness_score) != null ? (() => { const pct = (p.merchant_completeness ?? p.completeness_score) as number; return <span className={pct >= 80 ? "text-[#22C55E]" : pct >= 50 ? "text-[#F59E0B]" : "text-[#EF4444]"}>{pct}%</span>; })() : "—"}</td>
                     <td className="px-4 py-3 text-[#667085]">{p.blockers && p.blockers.length > 0 ? p.blockers.join(", ") : tc("none")}</td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(p.created_at, locale)}</td>
                     <td className="px-4 py-3">
