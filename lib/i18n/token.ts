@@ -21,13 +21,13 @@ export type I18nKey = string;
 export type I18nPrimitive = string | number;
 
 /** A param that is itself an i18n key — the resolver looks it up
- *  before substituting into the outer template. Inner params are
- *  primitives only (one level of resolution is sufficient for every
- *  message in this codebase). */
+ *  before substituting into the outer template. Inner params may be
+ *  primitives or further key params (the dispute record's list sentences
+ *  nest two levels: list -> item phrase). */
 export type I18nKeyParam = {
   type: "i18n-key";
   key: I18nKey;
-  params?: Record<string, I18nPrimitive>;
+  params?: Record<string, I18nPrimitive | I18nKeyParam>;
 };
 
 export type I18nTokenParam = I18nPrimitive | I18nKeyParam;

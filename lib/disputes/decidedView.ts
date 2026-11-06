@@ -458,7 +458,14 @@ function nextTimeSection(input: DecidedViewInputs, c: CaseFacts): DecidedView["n
   return out.slice(0, 3);
 }
 
-function storeRateToken(input: DecidedViewInputs): I18nToken | null {
+/** The checklist rows for a case, by the one rule. Reused by the dispute record
+ *  (`lib/disputes/disputeRecord.ts`) so the open and decided pages cannot
+ *  grade "what wins this type" two ways. */
+export function buildChecklistRows(input: DecidedViewInputs): DecidedView["checklist"] {
+  return checklistSection(readCase(input), input);
+}
+
+export function storeRateToken(input: DecidedViewInputs): I18nToken | null {
   const b = input.storePatterns?.baseRate;
   if (!b || b.decided === 0) return null;
   return tk(`store.baseRate.${input.phase}`, {
