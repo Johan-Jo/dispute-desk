@@ -5,6 +5,8 @@ import { emitDisputeEvent } from "../../disputeEvents/emitEvent";
 import { PDF_RENDERED } from "../../disputeEvents/eventTypes";
 import type { PackPdfData } from "../../packs/pdf/EvidencePackDocument";
 import type { ClaimedJob } from "../claimJobs";
+import { normalizeChecklistV2Shape } from "../../packs/checklistReconcile";
+import { loadEffectivePackView, toDisplayChecklistRows } from "../../packs/effectivePackView";
 
 /**
  * Job handler: render_pdf
@@ -32,7 +34,7 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
     const { data: pack, error: fetchErr } = await db
       .from("evidence_packs")
       .select(
-        "id, shop_id, dispute_id, pack_json, completeness_score, checklist, blockers, recommended_actions, pdf_path, created_at"
+        "id, shop_id, dispute_id, pack_json, completeness_score, checklist, checklist_v2, response_cycle, blockers, recommended_actions, pdf_path, created_at"
       )
       .eq("id", packId)
       .single();
@@ -61,14 +63,36 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
     const packJson = pack.pack_json as Record<string, unknown> | null;
     const sections = (packJson?.sections as PackPdfData["sections"]) ?? [];
 
+    // PR 5: the printed percentage and rows are the embedded app's effective
+    // ones (same assembler + merchantCompleteness), so the PDF cannot show a
+    // stored percentage or a row the record makes impossible. Print-time only:
+    // nothing is written back to the pack. Stored fallback when no stored v2.
+    const storedV2 = (pack as { checklist_v2?: unknown }).checklist_v2 ?? null;
+    const hasStoredV2 = (normalizeChecklistV2Shape(storedV2)?.length ?? 0) > 0;
+    const effective =
+      hasStoredV2 && pack.dispute_id
+        ? await loadEffectivePackView(db, {
+            shopId: pack.shop_id,
+            disputeId: pack.dispute_id,
+            packCycle: (pack as { response_cycle?: number | null }).response_cycle ?? 1,
+            checklistV2: storedV2,
+            packSections: sections,
+            evidenceItems:
+              (await db.from("evidence_items").select("source, payload").eq("pack_id", packId))
+                .data ?? [],
+          })
+        : null;
+
     const pdfData: PackPdfData = {
       packId: pack.id,
       shopName: shop?.shop_domain ?? "Unknown Shop",
       disputeGid: dispute?.dispute_gid ?? "Unknown",
       disputeReason: dispute?.reason ?? null,
       generatedAt: new Date().toISOString(),
-      completenessScore: pack.completeness_score ?? 0,
-      checklist: (pack.checklist as PackPdfData["checklist"]) ?? [],
+      completenessScore: effective ? effective.merchantCompleteness : (pack.completeness_score ?? 0),
+      checklist: effective
+        ? toDisplayChecklistRows(effective.checklist)
+        : ((pack.checklist as PackPdfData["checklist"]) ?? []),
       blockers: (pack.blockers as string[]) ?? [],
       recommendedActions: (pack.recommended_actions as string[]) ?? [],
       sections,

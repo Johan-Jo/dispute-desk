@@ -124,7 +124,8 @@ describe("wiring pins: stored outputs keep the build-time upload rule", () => {
     const { join } = await import("node:path");
     const need: Array<[string, RegExp]> = [
       ["app/api/disputes/[id]/workspace/route.ts", /assembleEffectiveChecklist\(/],
-      ["app/api/packs/[packId]/route.ts", /assembleEffectiveChecklist\(/],
+      ["app/api/packs/[packId]/route.ts", /loadEffectivePackView\(/],
+      ["lib/packs/effectivePackView.ts", /assembleEffectiveChecklist\(/],
       ["lib/disputes/loadDecidedResponse.ts", /noReturnApplicability\(/],
       ["app/api/packs/[packId]/inclusion-override/route.ts", /assembleEffectiveChecklist\(/],
     ];
