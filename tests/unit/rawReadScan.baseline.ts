@@ -46,6 +46,7 @@ export const BASELINE: BaselineEntry[] = [
   { file: "app/api/packs/[packId]/upload/route.ts", pattern: "select:checklist_v2", count: 1, category: "write-path", reason: patchReason },
   { file: "app/api/packs/[packId]/waive/route.ts", pattern: "select:checklist_v2", count: 2, category: "write-path", reason: patchReason },
   { file: "app/api/packs/[packId]/inclusion-override/route.ts", pattern: "select:checklist_v2", count: 1, category: "write-path", reason: "Reads the stored checklist and passes it to assembleEffectiveChecklist (storedChecklist) around the override; goes through the single assembler." },
+  { file: "app/api/disputes/[id]/route.ts", pattern: "select:checklist_v2", count: 1, category: "single-source", reason: "Portal dispute route selects the stored checklist only to pass it to loadEffectivePackView (assembleEffectiveChecklist) and strips it from the response; goes through the single assembler." },
   { file: "lib/disputes/presentation/serverFacts.ts", pattern: "select:checklist_v2", count: 1, category: "fact-side", reason: "Feeds recommended/opportunity resolution in the dispute-list presentation resolver, which states no return/refund verdict (plan 4); fact-side reader left alone." },
 
   // --- fact-side / taxonomy ---
