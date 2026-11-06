@@ -42,24 +42,21 @@ export function noReturnApplicability(
   sections: readonly EvidenceSection[] | null | undefined,
 ): Applicability {
   const verdict = noReturnFactVerdict(input);
-  // An UNKNOWN Shopify return status (a pack built before 2026-10-02) is not a
-  // confirmed return and never hides the row on its own. But a carrier that
-  // reconciled a parcel to return-to-sender is affirmative evidence the goods
-  // came back, independent of Shopify's status, so it is not ignored.
+  const carrierReturned = hasReturnedToSenderShipment((sections ?? []) as readonly EvidenceSection[]);
+  const returnedToSender: Applicability = { applicable: false, reason: "returned_to_sender" };
+
+  // A status Shopify never recorded (a pack built before 2026-10-02), or one
+  // this code does not recognise, is UNKNOWN: never a confirmed return, and it
+  // never hides the row on its own (the collector stays silent for it, as
+  // before). But a carrier that reconciled a parcel to return-to-sender is
+  // independent, affirmative evidence the goods came back, so it takes
+  // precedence over an unknown status of either kind.
   if ("unknown" in verdict) {
-    return hasReturnedToSenderShipment((sections ?? []) as readonly EvidenceSection[])
-      ? { applicable: false, reason: "returned_to_sender" }
-      : { applicable: true };
+    return carrierReturned ? returnedToSender : { applicable: true };
   }
-  // The collector treats ANY non-null status other than NO_RETURN as "a return
-  // is on record" (and stays silent). At read time a status this code does not
-  // recognise is UNKNOWN, not a confirmed return: it never hides a row.
   if (!verdict.emit && verdict.reason === "return_on_record" && isUnrecognisedReturnStatusOnly(input)) {
-    return { applicable: true };
+    return carrierReturned ? returnedToSender : { applicable: true };
   }
   if (!verdict.emit) return { applicable: false, reason: verdict.reason };
-  if (hasReturnedToSenderShipment((sections ?? []) as readonly EvidenceSection[])) {
-    return { applicable: false, reason: "returned_to_sender" };
-  }
-  return { applicable: true };
+  return carrierReturned ? returnedToSender : { applicable: true };
 }

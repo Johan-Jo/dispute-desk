@@ -154,6 +154,32 @@ describe("synthetic shapes from the plan (§2.7)", () => {
       },
     );
 
+    describe.each([
+      ["status never recorded", null],
+      ["unrecognised non-null status", "SOMETHING_NEW"],
+    ])("%s", (_label, status) => {
+      it.each([["proofType", returnedShipping], ["per-fulfilment Returned", carrierReturned]])(
+        "+ confirmed carrier return (%s): the missing row is dropped as returned_to_sender",
+        (_n, shipping) => {
+          const out = assemble([row("no_return_initiated", "missing")], [order(status, "0.0"), shipping]);
+          expect(out.droppedForRecord).toEqual(["no_return_initiated"]);
+        },
+      );
+
+      it("without carrier evidence: never inferred to be a return, the row stays", () => {
+        const out = assemble([row("no_return_initiated", "missing")], [order(status, "0.0")]);
+        expect(out.droppedForRecord).toEqual([]);
+        expect(out.checklist.find((r) => r.field === "no_return_initiated")?.status).toBe("missing");
+      });
+
+      it("an available row is kept and flagged even with carrier evidence", () => {
+        const out = assemble([row("no_return_initiated", "available")], [order(status, "0.0"), returnedShipping]);
+        expect(fields(out.checklist)).toContain("no_return_initiated");
+        expect(out.contradictedAvailable).toEqual(["no_return_initiated"]);
+        expect(out.droppedForRecord).toEqual([]);
+      });
+    });
+
     it("status never recorded and NO carrier evidence: unknown stays applicable, the row stays", () => {
       const out = assemble([row("no_return_initiated", "missing")], [order(null, "0.0")]);
       expect(out.droppedForRecord).toEqual([]);
