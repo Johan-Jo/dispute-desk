@@ -2317,6 +2317,10 @@
         "detail": "The refund status is not recorded for this order."
       }
     },
+    "internalOnlyReason": {
+      "refundRecord": "Shopify’s refund record appears here when a refund with a confirmed amount exists. There is nothing to upload for it.",
+      "noReturnInitiated": "Taken from Shopify’s return status. There is nothing to upload for it."
+    },
     "unavailableReason": {
       "orderUnfulfilled": "This order has not been fulfilled.",
       "noCardPayment": "There is no card payment on this order.",

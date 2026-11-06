@@ -134,6 +134,38 @@ describe("synthetic shapes from the plan (§2.7)", () => {
     expect(out.droppedForRecord).toEqual(["no_return_initiated"]);
   });
 
+  describe("unknown Shopify status and carrier evidence", () => {
+    const returnedShipping = {
+      labelToken: { key: "packs.section.shipping" },
+      fieldsProvided: ["shipping_tracking"],
+      data: { proofType: "returned_to_sender" },
+    };
+    const carrierReturned = {
+      labelToken: { key: "packs.section.shipping" },
+      fieldsProvided: ["delivery_proof"],
+      data: { fulfillments: [{ carrierTracking: { deliveryStatus: "Returned" }, carrierTerminalEvent: { happenedAt: "2026-07-06T00:00:00Z" } }] },
+    };
+
+    it.each([["proofType", returnedShipping], ["per-fulfilment Returned", carrierReturned]])(
+      "status never recorded + carrier %s: the missing row is dropped (returned_to_sender)",
+      (_n, shipping) => {
+        const out = assemble([row("no_return_initiated", "missing")], [order(null, "0.0"), shipping]);
+        expect(out.droppedForRecord).toEqual(["no_return_initiated"]);
+      },
+    );
+
+    it("status never recorded and NO carrier evidence: unknown stays applicable, the row stays", () => {
+      const out = assemble([row("no_return_initiated", "missing")], [order(null, "0.0")]);
+      expect(out.droppedForRecord).toEqual([]);
+    });
+
+    it("an available row is still kept, never hidden, even with carrier evidence", () => {
+      const out = assemble([row("no_return_initiated", "available")], [order(null, "0.0"), returnedShipping]);
+      expect(fields(out.checklist)).toContain("no_return_initiated");
+      expect(out.contradictedAvailable).toEqual(["no_return_initiated"]);
+    });
+  });
+
   it("NO_RETURN with an unparseable refund total still shows the row (fails open, as the collector emits)", () => {
     const out = assemble([row("no_return_initiated", "missing")], [order("NO_RETURN", "n/a")]);
     expect(out.droppedForRecord).toEqual([]);

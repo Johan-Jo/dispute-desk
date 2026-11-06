@@ -2317,6 +2317,10 @@
         "detail": "El estado del reembolso no está registrado para este pedido."
       }
     },
+    "internalOnlyReason": {
+      "refundRecord": "El registro de reembolsos de Shopify aparece aquí cuando existe un reembolso con importe confirmado. No hay nada que subir para este elemento.",
+      "noReturnInitiated": "Tomado del estado de devolución de Shopify. No hay nada que subir para este elemento."
+    },
     "unavailableReason": {
       "orderUnfulfilled": "Este pedido no se ha preparado ni enviado.",
       "noCardPayment": "Este pedido no tiene ningún pago con tarjeta.",

@@ -2317,6 +2317,10 @@
         "detail": "Återbetalningsstatus är inte registrerad för den här ordern."
       }
     },
+    "internalOnlyReason": {
+      "refundRecord": "Shopifys återbetalningspost visas här när det finns en återbetalning med bekräftat belopp. Det finns inget att ladda upp för den.",
+      "noReturnInitiated": "Hämtat från Shopifys returstatus. Det finns inget att ladda upp för den."
+    },
     "unavailableReason": {
       "orderUnfulfilled": "Den här ordern har inte expedierats.",
       "noCardPayment": "Den här ordern har ingen kortbetalning.",

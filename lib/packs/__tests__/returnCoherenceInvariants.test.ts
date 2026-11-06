@@ -73,69 +73,106 @@ describe("the upload rule: display closed, persisted recommended_actions unchang
   });
 });
 
-describe("loadReturnScopeForPack: the PACK's cycle decides, a failure reads as setting off", () => {
-  function mocks(settingOn: boolean, answers: Record<number, string>) {
-    const calls: number[] = [];
+describe("loadReturnScopeForPack: read-only, the PACK's cycle decides, a failure reads as setting off", () => {
+  /** A client that records every call and THROWS on anything that is not a plain select. */
+  function stub(opts: { row: { returns_outside_shopify: boolean } | null; answers?: Record<number, string>; settingsError?: boolean }) {
+    const log: string[] = [];
     const sb = {
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            eq: (_c: string, cycle: number) => ({
-              maybeSingle: async () => {
-                calls.push(cycle);
-                const a = answers[cycle];
-                return { data: a ? { answer: a, note: null, response_cycle: cycle, answered_at: "2026-01-01" } : null };
-              },
+      rpc: () => {
+        log.push("rpc");
+        throw new Error("a read path must never call an RPC (ensure_shop_settings inserts a row)");
+      },
+      from: (table: string) => {
+        log.push(`from:${table}`);
+        const write = () => {
+          log.push(`WRITE:${table}`);
+          throw new Error("a read path must never write");
+        };
+        if (table === "shop_settings") {
+          return {
+            insert: write, update: write, upsert: write, delete: write,
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () =>
+                  opts.settingsError ? { data: null, error: { message: "boom" } } : { data: opts.row, error: null },
+              }),
+            }),
+          };
+        }
+        return {
+          insert: write, update: write, upsert: write, delete: write,
+          select: () => ({
+            eq: () => ({
+              eq: (_c: string, cycle: number) => ({
+                maybeSingle: async () => {
+                  log.push(`answer:${cycle}`);
+                  const a = opts.answers?.[cycle];
+                  return { data: a ? { answer: a, note: null, response_cycle: cycle, answered_at: "2026-01-01" } : null };
+                },
+              }),
             }),
           }),
-        }),
-      }),
+        };
+      },
     };
-    return { sb, calls, settingOn };
+    return { sb, log };
   }
+  const run = (sb: unknown, packCycle: number) => loadReturnScopeForPack(sb as never, { shopId: "s", disputeId: "d", packCycle });
 
-  async function load(settingOn: boolean, answers: Record<number, string>, packCycle: number) {
-    vi.resetModules();
-    vi.doMock("@/lib/automation/settings", () => ({
-      getShopSettings: async () => ({ returns_outside_shopify: settingOn }),
-    }));
-    const { loadReturnScopeForPack: fn } = await import("../loadReturnScope");
-    const m = mocks(settingOn, answers);
-    const scope = await fn(m.sb as never, { shopId: "s", disputeId: "d", packCycle });
-    return { scope, calls: m.calls };
-  }
+  it("never calls an RPC and never writes, in any branch", async () => {
+    for (const row of [null, { returns_outside_shopify: false }, { returns_outside_shopify: true }]) {
+      const { sb, log } = stub({ row, answers: { 1: "request_received" } });
+      await run(sb, 1);
+      expect(log.filter((l) => l === "rpc" || l.startsWith("WRITE:")), JSON.stringify(row)).toEqual([]);
+    }
+  });
+
+  it("a shop with NO settings row reads as setting off, and no row is created", async () => {
+    const { sb, log } = stub({ row: null });
+    await expect(run(sb, 1)).resolves.toBeUndefined();
+    expect(log).toEqual(["from:shop_settings"]);
+  });
 
   it("cycle-1 pack + cycle-2 answer: the answer is ignored", async () => {
-    const { scope, calls } = await load(true, { 2: "request_received" }, 1);
-    expect(calls).toEqual([1]);
+    const { sb, log } = stub({ row: { returns_outside_shopify: true }, answers: { 2: "request_received" } });
+    const scope = await run(sb, 1);
+    expect(log).toContain("answer:1");
+    expect(log).not.toContain("answer:2");
     expect(scope).toEqual({ returnsOutsideShopify: true, answer: null });
   });
 
   it("cycle-2 pack + cycle-2 answer: applied", async () => {
-    const { scope } = await load(true, { 2: "request_received" }, 2);
-    expect(scope?.answer).toBe("request_received");
+    const { sb } = stub({ row: { returns_outside_shopify: true }, answers: { 2: "request_received" } });
+    expect((await run(sb, 2))?.answer).toBe("request_received");
   });
 
   it("setting off: undefined, and the answer is never read", async () => {
-    const { scope, calls } = await load(false, { 1: "request_received" }, 1);
-    expect(scope).toBeUndefined();
-    expect(calls).toEqual([]);
+    const { sb, log } = stub({ row: { returns_outside_shopify: false }, answers: { 1: "request_received" } });
+    await expect(run(sb, 1)).resolves.toBeUndefined();
+    expect(log.some((l) => l.startsWith("answer:"))).toBe(false);
   });
 
   it("a settings read failure is `off`, never a throw", async () => {
-    vi.resetModules();
-    vi.doMock("@/lib/automation/settings", () => ({
-      getShopSettings: async () => {
-        throw new Error("boom");
-      },
-    }));
-    const { loadReturnScopeForPack: fn } = await import("../loadReturnScope");
-    await expect(fn({} as never, { shopId: "s", disputeId: "d", packCycle: 1 })).resolves.toBeUndefined();
+    const { sb } = stub({ row: null, settingsError: true });
+    await expect(run(sb, 1)).resolves.toBeUndefined();
+  });
+
+  it("the presentation modules do not import getShopSettings (the RPC that inserts a row)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    for (const f of [
+      "lib/packs/loadReturnScope.ts",
+      "lib/packs/effectiveChecklist.ts",
+      "lib/packs/noReturnApplicability.ts",
+      "lib/disputes/loadDecidedResponse.ts",
+      "app/api/packs/[packId]/route.ts",
+      "app/api/packs/[packId]/inclusion-override/route.ts",
+    ]) {
+      const src = readFileSync(join(process.cwd(), f), "utf8");
+      expect(src, f).not.toMatch(/import[^;]*getShopSettings|getShopSettings\(|\.rpc\(/);
+    }
   });
 });
-
-// Keep the static import used (type-level guard that the module still exports).
-void loadReturnScopeForPack;
 
 describe("review follow-ups", () => {
   it("a positive stored total is `some` even when the refund section has the older shape (no refunds[])", async () => {

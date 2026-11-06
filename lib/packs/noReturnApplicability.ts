@@ -10,8 +10,10 @@
  *   - `emit:true` and a parcel came back -> inapplicable (`returned_to_sender`)
  *   - `emit:true` otherwise      -> applicable
  *   - `unknown` (return status never recorded, packs built before 2026-10-02)
- *                                -> applicable. An unknown status is NOT a
- *     confirmed return: it fails open and never hides a row.
+ *                                -> applicable, UNLESS a carrier reconciled a
+ *     parcel to return-to-sender (independent, affirmative evidence), which is
+ *     inapplicable. An unknown status is NOT itself a confirmed return: it
+ *     never hides a row on its own.
  *
  * Reasons are codes, never English.
  */
@@ -40,7 +42,15 @@ export function noReturnApplicability(
   sections: readonly EvidenceSection[] | null | undefined,
 ): Applicability {
   const verdict = noReturnFactVerdict(input);
-  if ("unknown" in verdict) return { applicable: true };
+  // An UNKNOWN Shopify return status (a pack built before 2026-10-02) is not a
+  // confirmed return and never hides the row on its own. But a carrier that
+  // reconciled a parcel to return-to-sender is affirmative evidence the goods
+  // came back, independent of Shopify's status, so it is not ignored.
+  if ("unknown" in verdict) {
+    return hasReturnedToSenderShipment((sections ?? []) as readonly EvidenceSection[])
+      ? { applicable: false, reason: "returned_to_sender" }
+      : { applicable: true };
+  }
   // The collector treats ANY non-null status other than NO_RETURN as "a return
   // is on record" (and stays silent). At read time a status this code does not
   // recognise is UNKNOWN, not a confirmed return: it never hides a row.

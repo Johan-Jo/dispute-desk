@@ -2317,6 +2317,10 @@
         "detail": "Le statut du remboursement n’est pas enregistré pour cette commande."
       }
     },
+    "internalOnlyReason": {
+      "refundRecord": "Le dossier de remboursement de Shopify apparaît ici lorsqu’un remboursement avec un montant confirmé existe. Il n’y a rien à importer pour cet élément.",
+      "noReturnInitiated": "Repris du statut de retour de Shopify. Il n’y a rien à importer pour cet élément."
+    },
     "unavailableReason": {
       "orderUnfulfilled": "Cette commande n’a pas encore été traitée pour l’expédition.",
       "noCardPayment": "Cette commande n’a aucun paiement par carte.",

@@ -97,10 +97,6 @@ function isInternalOnly(item: ChecklistItemV2): boolean {
 }
 
 const INTERNAL_ONLY_REASON: Record<string, string> = {
-  refund_record:
-    "Shopify’s refund record appears here when a refund with a confirmed amount exists. There is nothing to upload for it.",
-  no_return_initiated:
-    "Taken from Shopify’s return status. There is nothing to upload for it.",
   avs_cvv_match:
     "The payment gateway did not return a clean AVS/CVV match for this order. Used internally for assessment; not surfaced to the bank.",
   ip_location_check:
@@ -109,6 +105,13 @@ const INTERNAL_ONLY_REASON: Record<string, string> = {
     "Device and session consistency signals were not collected for this order. Used internally for assessment; not surfaced to the bank.",
   fraud_risk_screening:
     "Shopify's pre-authorization fraud screening signal is not available for this order. Used internally for assessment; not surfaced to the bank.",
+};
+
+/** Translation keys (disputes.internalOnlyReason.*) for the fields that are
+ *  status-only because only Shopify holds them. Never English literals. */
+const INTERNAL_ONLY_REASON_KEY: Record<string, string> = {
+  refund_record: "refundRecord",
+  no_return_initiated: "noReturnInitiated",
 };
 
 function getInternalOnlyReason(item: ChecklistItemV2): string {
@@ -401,7 +404,9 @@ export function EvidenceBuilderSection({
                     {item.label}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {getInternalOnlyReason(item)}
+                    {INTERNAL_ONLY_REASON_KEY[item.field]
+                      ? tRoot(`disputes.internalOnlyReason.${INTERNAL_ONLY_REASON_KEY[item.field]}`)
+                      : getInternalOnlyReason(item)}
                   </Text>
                 </BlockStack>
               </div>

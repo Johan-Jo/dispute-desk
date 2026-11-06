@@ -2317,6 +2317,10 @@
         "detail": "Für diese Bestellung ist kein Rückerstattungsstatus erfasst."
       }
     },
+    "internalOnlyReason": {
+      "refundRecord": "Der Erstattungsdatensatz von Shopify erscheint hier, sobald eine Erstattung mit bestätigtem Betrag existiert. Dafür gibt es nichts hochzuladen.",
+      "noReturnInitiated": "Aus dem Rückgabestatus von Shopify übernommen. Dafür gibt es nichts hochzuladen."
+    },
     "unavailableReason": {
       "orderUnfulfilled": "Diese Bestellung wurde noch nicht erfüllt.",
       "noCardPayment": "Für diese Bestellung gibt es keine Kartenzahlung.",

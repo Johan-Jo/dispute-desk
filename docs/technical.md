@@ -4011,9 +4011,9 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   per `fieldApplicability` (`FIELD_PRECONDITIONS` in `completeness.ts`; the only entry is `no_return_initiated`,
   delegating to `noReturnApplicability` = `noReturnFactVerdict` composed with `hasReturnedToSenderShipment`).
   Rules: an `available` row is never hidden (kept and logged as `contradictedAvailable`); waived rows are dropped;
-  an UNKNOWN return status (packs built before 2026-10-02) is applicable, never a confirmed return; the merchant's
+  an UNKNOWN return status (packs built before 2026-10-02) is applicable and never a confirmed return on its own, but a carrier that reconciled a parcel to return-to-sender is independent evidence and still makes the row inapplicable; the merchant's
   "request received" answer counts only when the setting is on and only for the PACK's response cycle
-  (`loadReturnScopeForPack`). Nothing stored changes: `checklist_v2`, `completeness_score`, submission readiness,
+  (`loadReturnScopeForPack`, which is strictly read-only: a plain `shop_settings` select, never `getShopSettings`/`ensure_shop_settings`, so a presentation or webhook-path read can never insert a defaults row; a shop with no row reads as setting off). Nothing stored changes: `checklist_v2`, `completeness_score`, submission readiness,
   `plan_input_hash`, facts, letters and PDFs are untouched; build time leaves `OrderContext.noReturnFact` unset.
   Callers: the workspace route (`pack.checklistV2`), the embedded pack
   page API (`effective_checklist_v2`, `merchant_completeness`, `refund_statement` added beside the stored fields),
