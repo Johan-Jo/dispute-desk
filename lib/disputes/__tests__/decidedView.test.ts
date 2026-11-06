@@ -424,3 +424,35 @@ describe("outcome email — same content as the page", () => {
     }
   });
 });
+
+describe("decided checklist: a recorded return removes the impossible 'no return' row (PR 1)", () => {
+  const cnp = (over: Partial<DecidedViewInputs>) =>
+    buildDecidedView(
+      inputs360499({
+        outcome: "lost",
+        reason: "CREDIT_NOT_PROCESSED",
+        facts: { refund_policy: { policy: "x" }, customer_communication: { n: 1 } },
+        ...over,
+      }),
+      fmt,
+    );
+  const items = (v: ReturnType<typeof cnp>) => v.checklist.map((c) => c.item.key.split(".").pop());
+
+  it("omits the row when the record makes it impossible and nothing was collected", () => {
+    expect(items(cnp({ inapplicable: ["no_return_initiated"] }))).not.toContain("noReturn");
+  });
+
+  it("shows it as missing when nothing makes it impossible (unchanged)", () => {
+    const v = cnp({});
+    expect(items(v)).toContain("noReturn");
+    expect(v.checklist.find((c) => c.item.key.endsWith("noReturn"))!.state).toBe("missing");
+  });
+
+  it("never hides a row that WAS collected, even if the record now contradicts it", () => {
+    const v = cnp({
+      inapplicable: ["no_return_initiated"],
+      facts: { refund_policy: { policy: "x" }, no_return_initiated: { returnStatus: "NO_RETURN" } },
+    });
+    expect(v.checklist.find((c) => c.item.key.endsWith("noReturn"))!.state).toBe("had");
+  });
+});

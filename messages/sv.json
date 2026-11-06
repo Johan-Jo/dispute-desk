@@ -858,7 +858,7 @@
       },
       "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående.",
       "returnedToSender": {
-        "returned_unrefunded": "Transportören returnerade paketet till dig och ingen återbetalning har gjorts, så du har både varorna och betalningen. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Berätta varför paketet kom tillbaka — om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är värt att argumentera för. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
+        "returned_unrefunded": "Transportören returnerade paketet till dig. Den registrerade återbetalningen är lägre än det omtvistade beloppet. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Berätta varför paketet kom tillbaka — om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är värt att argumentera för. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
       }
     },
     "outcomeExplanation": {
@@ -1367,7 +1367,7 @@
           "held": "Den här ordern hölls kvar, skickades inte",
           "cancelled": "Den här ordern avbröts, skickades inte"
         },
-        "body": "Din bedrägerikontroll flaggade ordern och inget skickades. Betalningen är fortfarande dragen — ingen återbetalning har gjorts.",
+        "body": "Din bedrägerikontroll flaggade ordern och inget skickades. Betalningen är fortfarande dragen.",
         "helper": "Eftersom inget skickades finns ingen leveransbevisning att skicka in — betyget speglar det, inte en lucka i dina underlag."
       },
       "orderSituation": {
@@ -1378,10 +1378,6 @@
           "failed": "En retur för den här ordern är markerad som misslyckad"
         },
         "opened": "Returen skapades den {date}.",
-        "refund": {
-          "none": "Ingen återbetalning har gjorts för ordern.",
-          "some": "En återbetalning har gjorts för ordern."
-        },
         "asOf": "Enligt Shopify när DisputeDesk senast hämtade ordern, den {date}.",
         "privateNote": "Den här noteringen är bara till för dig. Den ingår inte i något som skickas till banken."
       }
@@ -1993,7 +1989,7 @@
             "notIncluded": "Leveransen har inte bekräftats än. När transportören markerar beställningen som levererad (eller du laddar upp signatur/foto) fylls den här raden i automatiskt."
           },
           "refundRecord": {
-            "notIncluded": "Ingen återbetalning har gjorts för den här beställningen – därför finns det ingen återbetalningspost att visa. Vid en tvist om ”ej behandlad kredit/återbetalning” är detta oftast det starkare läget: ditt försvar är att ingen återbetalning var skyldig, inte att en redan har betalats."
+            "notIncluded": "Shopify har inget bekräftat återbetalningsbelopp registrerat för den här ordern."
           },
           "tdsAuthentication": {
             "notIncluded": "Betalningskvittot innehåller inte 3-D Secure-autentiseringsdata för den här transaktionen."
@@ -2294,11 +2290,44 @@
     },
     "refundStatus": {
       "titleIssued": "Återbetalning genomförd",
-      "titleNone": "Ingen återbetalning genomförd",
+      "titleNoReturn": "Ingen retur påbörjad",
       "factsIssued": "{amount} {currency} återbetalades {date}",
       "factsIssuedNoDate": "{amount} {currency} återbetalades",
       "factsIssuedDateOnly": "Återbetalades {date}",
       "factsNoReturn": "Kunden har aldrig påbörjat en retur"
+    },
+    "refundStatement": {
+      "none": {
+        "title": "Ingen återbetalning registrerad",
+        "detail": "Shopify har ingen återbetalning registrerad för den här ordern (per {date}).",
+        "detailNoDate": "Shopify har ingen återbetalning registrerad för den här ordern."
+      },
+      "recordedNoAmount": {
+        "title": "Återbetalningspost utan bekräftat belopp",
+        "detail": "Shopify har en återbetalningspost registrerad för den här ordern, utan bekräftat belopp (per {date}).",
+        "detailNoDate": "Shopify har en återbetalningspost registrerad för den här ordern, utan bekräftat belopp."
+      },
+      "some": {
+        "title": "Återbetalning registrerad",
+        "detail": "{amount} återbetalades den {date}.",
+        "detailNoDate": "{amount} återbetalades."
+      },
+      "unknown": {
+        "title": "Återbetalningsstatus saknas",
+        "detail": "Återbetalningsstatus är inte registrerad för den här ordern."
+      }
+    },
+    "unavailableReason": {
+      "orderUnfulfilled": "Den här ordern har inte expedierats.",
+      "noCardPayment": "Den här ordern har ingen kortbetalning.",
+      "avsCvvNotReturned": "Betalningsgatewayen returnerade inget resultat från adress- och säkerhetskodskontrollen för den här ordern.",
+      "noParcelReturned": "Inget paket för den här ordern returnerades till avsändaren.",
+      "awaitingDelivery": "Väntar på leveransbekräftelse.",
+      "returnOnRecord": "Shopify har en retur registrerad för den här ordern.",
+      "refundOnRecord": "Shopify har en återbetalning registrerad för den här ordern.",
+      "merchantSaysRequestReceived": "Du har berättat för oss att kunden bad om att få returnera den här ordern.",
+      "returnedToSender": "Transportören returnerade paketet till dig.",
+      "generic": "Gäller inte för den här ordern."
     },
     "signalLabelValue": {
       "refundIssued": "Bevis på att återbetalningen redan är genomförd",

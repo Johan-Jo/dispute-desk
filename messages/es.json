@@ -1232,7 +1232,7 @@
             "notIncluded": "La entrega aún no se ha confirmado. Cuando el transportista marque el pedido como entregado (o subas una firma/foto), esta fila se rellenará automáticamente."
           },
           "refundRecord": {
-            "notIncluded": "No se ha emitido ningún reembolso en este pedido, por lo que no hay ningún registro de reembolso que mostrar. En una disputa por «crédito o reembolso no procesado», esta suele ser la posición más sólida: tu defensa es que no se debía ningún reembolso, no que ya se pagó uno."
+            "notIncluded": "Shopify no registra ningún importe de reembolso confirmado en este pedido."
           },
           "tdsAuthentication": {
             "notIncluded": "El recibo de pago no incluye datos de autenticación 3-D Secure para esta transacción."
@@ -1518,7 +1518,7 @@
       },
       "creditAlreadyIssued": "Esta transacción ya fue reembolsada antes de que se presentara la disputa. La respuesta más sólida es el propio reembolso: al titular de la tarjeta ya se le devolvió el dinero, así que no queda nada pendiente.",
       "returnedToSender": {
-        "returned_unrefunded": "El transportista te devolvió este paquete y no se ha emitido ningún reembolso, así que tienes la mercancía y el dinero. Para este pedido no puede existir una confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente. Dinos por qué volvió el paquete: si el cliente lo rechazó o nunca lo recogió, eso no es una devolución válida y merece la pena argumentarlo. Si te has quedado con la mercancía y el dinero, lo justo es reembolsar."
+        "returned_unrefunded": "El transportista te devolvió este paquete. El reembolso registrado es inferior al importe en disputa. Para este pedido no puede existir una confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente. Dinos por qué volvió el paquete: si el cliente lo rechazó o nunca lo recogió, eso no es una devolución válida y merece la pena argumentarlo. Si te has quedado con la mercancía y el dinero, lo justo es reembolsar."
       }
     },
     "outcomeExplanation": {
@@ -2027,7 +2027,7 @@
           "held": "Este pedido quedó retenido, no se envió",
           "cancelled": "Este pedido se canceló, no se envió"
         },
-        "body": "Su control de fraude marcó este pedido y no se envió nada. El pago sigue cobrado: no se ha emitido ningún reembolso.",
+        "body": "Su control de fraude marcó este pedido y no se envió nada. El pago sigue cobrado.",
         "helper": "Como no se envió nada, no hay prueba de entrega que presentar: la puntuación refleja eso, no una falta en sus registros."
       },
       "orderSituation": {
@@ -2038,10 +2038,6 @@
           "failed": "Una devolución de este pedido está marcada como fallida"
         },
         "opened": "La devolución se creó el {date}.",
-        "refund": {
-          "none": "No se ha emitido ningún reembolso para el pedido.",
-          "some": "Se ha emitido un reembolso para el pedido."
-        },
         "asOf": "Según el registro de Shopify cuando DisputeDesk consultó este pedido por última vez, el {date}.",
         "privateNote": "Esta nota es solo para ti. No forma parte de nada de lo que se envía al banco."
       }
@@ -2294,11 +2290,44 @@
     },
     "refundStatus": {
       "titleIssued": "Reembolso emitido",
-      "titleNone": "Sin reembolso emitido",
+      "titleNoReturn": "Sin devolución iniciada",
       "factsIssued": "{amount} {currency} reembolsados el {date}",
       "factsIssuedNoDate": "{amount} {currency} reembolsados",
       "factsIssuedDateOnly": "Reembolsado el {date}",
       "factsNoReturn": "El cliente nunca inició una devolución"
+    },
+    "refundStatement": {
+      "none": {
+        "title": "Sin reembolso registrado",
+        "detail": "Shopify no registra ningún reembolso en este pedido (a fecha de {date}).",
+        "detailNoDate": "Shopify no registra ningún reembolso en este pedido."
+      },
+      "recordedNoAmount": {
+        "title": "Entrada de reembolso sin importe confirmado",
+        "detail": "Shopify registra una entrada de reembolso en este pedido sin importe confirmado (a fecha de {date}).",
+        "detailNoDate": "Shopify registra una entrada de reembolso en este pedido sin importe confirmado."
+      },
+      "some": {
+        "title": "Reembolso registrado",
+        "detail": "{amount} reembolsados el {date}.",
+        "detailNoDate": "{amount} reembolsados."
+      },
+      "unknown": {
+        "title": "Estado del reembolso no registrado",
+        "detail": "El estado del reembolso no está registrado para este pedido."
+      }
+    },
+    "unavailableReason": {
+      "orderUnfulfilled": "Este pedido no se ha preparado ni enviado.",
+      "noCardPayment": "Este pedido no tiene ningún pago con tarjeta.",
+      "avsCvvNotReturned": "La pasarela de pago no devolvió el resultado de la verificación de dirección y código de seguridad para este pedido.",
+      "noParcelReturned": "Ningún paquete de este pedido fue devuelto al remitente.",
+      "awaitingDelivery": "A la espera de la confirmación de entrega.",
+      "returnOnRecord": "Shopify registra una devolución en este pedido.",
+      "refundOnRecord": "Shopify registra un reembolso en este pedido.",
+      "merchantSaysRequestReceived": "Nos indicaste que el cliente pidió devolver este pedido.",
+      "returnedToSender": "El transportista te devolvió este paquete.",
+      "generic": "No aplica a este pedido."
     },
     "signalLabelValue": {
       "refundIssued": "Prueba de que el reembolso ya fue emitido",

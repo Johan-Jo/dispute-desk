@@ -1296,7 +1296,7 @@
             "notIncluded": "Die Zustellung wurde noch nicht bestätigt. Sobald der Spediteur die Bestellung als zugestellt markiert (oder Sie eine Unterschrift/ein Foto hochladen), wird diese Zeile automatisch gefüllt."
           },
           "refundRecord": {
-            "notIncluded": "Für diese Bestellung wurde keine Rückerstattung ausgestellt – daher gibt es keinen Rückerstattungsnachweis. Bei einer Streitigkeit wegen „nicht bearbeiteter Gutschrift/Rückerstattung“ ist das in der Regel die stärkere Position: Ihre Verteidigung besteht darin, dass keine Rückerstattung geschuldet war, nicht dass bereits eine gezahlt wurde."
+            "notIncluded": "Shopify verzeichnet für diese Bestellung keinen bestätigten Rückerstattungsbetrag."
           },
           "tdsAuthentication": {
             "notIncluded": "Die Zahlungsquittung enthält für diese Transaktion keine 3-D-Secure-Authentifizierungsdaten."
@@ -1518,7 +1518,7 @@
       },
       "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen.",
       "returnedToSender": {
-        "returned_unrefunded": "Der Zusteller hat dieses Paket an Sie zurückgesendet und es wurde keine Rückerstattung veranlasst — Sie haben also sowohl die Ware als auch das Geld. Für diese Bestellung kann es keine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden. Sagen Sie uns, warum das Paket zurückkam: Hat der Kunde die Annahme verweigert oder es nie abgeholt, ist das keine gültige Rücksendung, und das ist ein Argument wert. Behalten Sie Ware und Geld, ist die faire Antwort eine Rückerstattung."
+        "returned_unrefunded": "Der Zusteller hat dieses Paket an Sie zurückgesendet. Die erfasste Rückerstattung liegt unter dem strittigen Betrag. Für diese Bestellung kann es keine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden. Sagen Sie uns, warum das Paket zurückkam: Hat der Kunde die Annahme verweigert oder es nie abgeholt, ist das keine gültige Rücksendung, und das ist ein Argument wert. Behalten Sie Ware und Geld, ist die faire Antwort eine Rückerstattung."
       }
     },
     "outcomeExplanation": {
@@ -2027,7 +2027,7 @@
           "held": "Diese Bestellung wurde zurückgehalten, nicht versandt",
           "cancelled": "Diese Bestellung wurde storniert, nicht versandt"
         },
-        "body": "Ihre Betrugsprüfung hat diese Bestellung markiert und es wurde nichts versandt. Die Zahlung ist weiterhin eingezogen — es wurde keine Rückerstattung vorgenommen.",
+        "body": "Ihre Betrugsprüfung hat diese Bestellung markiert und es wurde nichts versandt. Die Zahlung ist weiterhin eingezogen.",
         "helper": "Da nichts versandt wurde, gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt das wider, keine Lücke in Ihren Unterlagen."
       },
       "orderSituation": {
@@ -2038,10 +2038,6 @@
           "failed": "Eine Rücksendung zu dieser Bestellung ist als fehlgeschlagen markiert"
         },
         "opened": "Die Rücksendung wurde am {date} angelegt.",
-        "refund": {
-          "none": "Für die Bestellung wurde keine Rückerstattung vorgenommen.",
-          "some": "Für die Bestellung wurde eine Rückerstattung vorgenommen."
-        },
         "asOf": "Stand in Shopify, als DisputeDesk diese Bestellung zuletzt abgerufen hat, am {date}.",
         "privateNote": "Dieser Hinweis ist nur für Sie. Er ist nicht Teil dessen, was an die Bank gesendet wird."
       }
@@ -2294,11 +2290,44 @@
     },
     "refundStatus": {
       "titleIssued": "Rückerstattung erfolgt",
-      "titleNone": "Keine Rückerstattung erfolgt",
+      "titleNoReturn": "Keine Rücksendung eingeleitet",
       "factsIssued": "{amount} {currency} erstattet am {date}",
       "factsIssuedNoDate": "{amount} {currency} erstattet",
       "factsIssuedDateOnly": "Erstattet am {date}",
       "factsNoReturn": "Der Kunde hat nie eine Rücksendung eingeleitet"
+    },
+    "refundStatement": {
+      "none": {
+        "title": "Keine Rückerstattung erfasst",
+        "detail": "Shopify verzeichnet für diese Bestellung keine Rückerstattung (Stand: {date}).",
+        "detailNoDate": "Shopify verzeichnet für diese Bestellung keine Rückerstattung."
+      },
+      "recordedNoAmount": {
+        "title": "Rückerstattungseintrag ohne bestätigten Betrag",
+        "detail": "Shopify verzeichnet für diese Bestellung einen Rückerstattungseintrag ohne bestätigten Betrag (Stand: {date}).",
+        "detailNoDate": "Shopify verzeichnet für diese Bestellung einen Rückerstattungseintrag ohne bestätigten Betrag."
+      },
+      "some": {
+        "title": "Rückerstattung erfasst",
+        "detail": "{amount} am {date} erstattet.",
+        "detailNoDate": "{amount} erstattet."
+      },
+      "unknown": {
+        "title": "Rückerstattungsstatus nicht erfasst",
+        "detail": "Für diese Bestellung ist kein Rückerstattungsstatus erfasst."
+      }
+    },
+    "unavailableReason": {
+      "orderUnfulfilled": "Diese Bestellung wurde noch nicht erfüllt.",
+      "noCardPayment": "Für diese Bestellung gibt es keine Kartenzahlung.",
+      "avsCvvNotReturned": "Das Zahlungsgateway hat für diese Bestellung kein Ergebnis der Adress- und Sicherheitscodeprüfung zurückgemeldet.",
+      "noParcelReturned": "Für diese Bestellung wurde kein Paket an den Absender zurückgeschickt.",
+      "awaitingDelivery": "Warten auf die Zustellbestätigung.",
+      "returnOnRecord": "Shopify verzeichnet für diese Bestellung eine Rücksendung.",
+      "refundOnRecord": "Shopify verzeichnet für diese Bestellung eine Rückerstattung.",
+      "merchantSaysRequestReceived": "Sie haben uns mitgeteilt, dass der Kunde um eine Rücksendung dieser Bestellung gebeten hat.",
+      "returnedToSender": "Der Zusteller hat dieses Paket an Sie zurückgesendet.",
+      "generic": "Für diese Bestellung nicht zutreffend."
     },
     "signalLabelValue": {
       "refundIssued": "Nachweis, dass die Rückerstattung bereits erfolgt ist",

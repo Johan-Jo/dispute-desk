@@ -1,3 +1,6 @@
+import { assembleEffectiveChecklist } from "@/lib/packs/effectiveChecklist";
+import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
+import { normalizeChecklistV2Shape } from "@/lib/packs/checklistReconcile";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -108,7 +111,7 @@ export async function POST(
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, status, pack_json, checklist_v2")
+    .select("id, shop_id, dispute_id, status, pack_json, checklist_v2, response_cycle")
     .eq("id", packId)
     .eq("shop_id", shopId)
     .single();
@@ -127,7 +130,9 @@ export async function POST(
   // Validate the field actually exists in this pack's checklist —
   // a defensive belt-and-suspenders check on top of the registry
   // lookup above.
-  const checklist = (pack.checklist_v2 ?? []) as ChecklistItemV2[];
+  // The normaliser accepts both historical shapes (array and `{items}`); the
+  // bare cast it replaces would throw on `{items}`.
+  const checklist = (normalizeChecklistV2Shape(pack.checklist_v2) ?? []) as ChecklistItemV2[];
   const targetRow = checklist.find((c) => c.field === field);
   if (!targetRow) {
     return NextResponse.json(
@@ -137,6 +142,27 @@ export async function POST(
       },
       { status: 400 },
     );
+  }
+
+  // A field the record makes impossible (e.g. "no return initiated" beside a
+  // recorded return) cannot be force-included: the fact does not exist, and
+  // the row is not shown. force_exclude and clearing are unchanged.
+  if (value === "force_include") {
+    const { droppedForRecord } = assembleEffectiveChecklist({
+      storedChecklist: pack.checklist_v2,
+      packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
+      returnScope: await loadReturnScopeForPack(sb, {
+        shopId,
+        disputeId: pack.dispute_id as string,
+        packCycle: (pack.response_cycle as number | null) ?? 1,
+      }),
+    });
+    if (droppedForRecord.includes(field)) {
+      return NextResponse.json(
+        { error: "This item does not apply to this order", code: "FIELD_NOT_APPLICABLE" },
+        { status: 409 },
+      );
+    }
   }
 
   // Patch pack_json.inclusionOverrides in place. Clearing an override

@@ -3,6 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
+import { resolveToken } from "@/lib/i18n/resolveToken";
+import { unavailableReasonToken } from "@/lib/disputes/unavailableReasonToken";
+import type { RefundStatement } from "@/lib/disputes/refundStatement";
 import {
   Card,
   BlockStack,
@@ -133,6 +136,9 @@ interface EvidenceBuilderSectionProps {
   focusField: string | null;
   onFocusHandled: () => void;
   readOnly?: boolean;
+  /** What Shopify records about refunds (lib/disputes/refundStatement.ts). Used to
+   *  word the "not available" reason on the refund row; omitted = "not recorded". */
+  refundStatement?: RefundStatement | null;
 }
 
 export function EvidenceBuilderSection({
@@ -149,10 +155,12 @@ export function EvidenceBuilderSection({
   focusField,
   onFocusHandled,
   readOnly = false,
+  refundStatement = null,
 }: EvidenceBuilderSectionProps) {
   const [includedOpen, setIncludedOpen] = useState(readOnly);
   const [selectedTab, setSelectedTab] = useState(0);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const tRoot = useTranslations();
   const tWhy = useTranslations("disputes.whyText");
   const tWorkspace = useTranslations("disputes.workspaceHook");
   const getWhyText = useCallback(
@@ -352,7 +360,10 @@ export function EvidenceBuilderSection({
                   </InlineStack>
                   {item.unavailableReason && (
                     <Text as="p" variant="bodySm" tone="subdued">
-                      {item.unavailableReason}
+                      {(() => {
+                        const tok = unavailableReasonToken(item.unavailableReason, refundStatement ?? null);
+                        return tok ? resolveToken(tRoot, tok) : null;
+                      })()}
                     </Text>
                   )}
                 </BlockStack>

@@ -72,6 +72,10 @@ export interface DecidedViewInputs {
   /** This store's decided disputes of the same type (PR 3). Null or absent
    *  when unread or failed — the view then shows no store numbers. */
   storePatterns?: StorePatterns | null;
+  /** Checklist fields the record makes impossible (e.g. `no_return_initiated`
+   *  beside a recorded return), computed by the loader. Absent = none, so
+   *  existing fixtures are unchanged. A plain array: this crosses JSON. */
+  inapplicable?: readonly string[];
 }
 
 export type ChecklistState = "had" | "missing" | "none";
@@ -311,7 +315,15 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
       ? { item, state: "had", label: hadLabel }
       : { item, state: missingLabel === "missing" ? "missing" : "none", label: missingLabel };
   const comms = had("communication", c.has("customer_communication"), "none");
-  let rows: Row[];
+  // The "no return" row is omitted when the record makes the fact impossible
+  // and nothing was collected for it: a "missing" there would contradict the
+  // return the page itself reports. A collected row is still shown as "had".
+  const noReturn = (): Row | null => {
+    const had_ = c.has("no_return_initiated") || c.has("returned_parcel_outcome");
+    if (!had_ && input.inapplicable?.includes("no_return_initiated")) return null;
+    return had("noReturn", had_);
+  };
+  let rows: Array<Row | null>;
   switch (c.family) {
     case "delivery":
       rows = [
@@ -354,7 +366,7 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
       rows = [
         had("productDescription", c.has("product_description")),
         had("refundPolicy", c.has("refund_policy"), "missing", "policy"),
-        had("noReturn", c.has("no_return_initiated") || c.has("returned_parcel_outcome")),
+        noReturn(),
         comms,
       ];
       break;
@@ -362,7 +374,7 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
       rows = [
         had("refundPolicy", c.has("refund_policy"), "missing", "policy"),
         had("refundRecord", c.has("refund_record")),
-        had("noReturn", c.has("no_return_initiated") || c.has("returned_parcel_outcome")),
+        noReturn(),
         comms,
       ];
       break;
@@ -387,7 +399,7 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
         comms,
       ];
   }
-  return rows.map((r) => ({
+  return rows.filter((r): r is Row => r !== null).map((r) => ({
     item: tk(`checklist.item.${r.item}`),
     state: r.state,
     label: tk(`checklist.state.${r.label}`),

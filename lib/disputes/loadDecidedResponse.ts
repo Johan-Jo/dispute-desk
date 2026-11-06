@@ -7,6 +7,10 @@
  * then render nothing rather than a guess.
  */
 
+import { inapplicableFields, type OrderContext } from "@/lib/automation/completeness";
+import { normaliseSections, orderFactsFromSections } from "@/lib/packs/effectiveChecklist";
+import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
+import { noReturnApplicability } from "@/lib/packs/noReturnApplicability";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DECIDED_AUDIT_EVENT_TYPES,
@@ -185,7 +189,7 @@ export async function loadDecidedViewInputs(
       loadDecidedContext(sb, row, { withOrder: true }),
       sb
         .from("evidence_packs")
-        .select("id, pack_json")
+        .select("id, pack_json, response_cycle")
         .eq("dispute_id", row.id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -193,7 +197,7 @@ export async function loadDecidedViewInputs(
       loadStorePatterns(sb, row.shop_id, { reason: row.reason ?? null, phase }),
     ]);
     if (!ctx || packRes.error) return null;
-    const pack = packRes.data as { id: string; pack_json: unknown } | null;
+    const pack = packRes.data as { id: string; pack_json: unknown; response_cycle?: number | null } | null;
 
     // Evidence items by field — first write wins, as the workspace route and
     // collectors do. The merchant-side record, including facts withheld from
@@ -215,6 +219,22 @@ export async function loadDecidedViewInputs(
     const rawItems = Array.isArray(facts.order_confirmation?.lineItems)
       ? (facts.order_confirmation.lineItems as Array<{ title?: unknown; quantity?: unknown }>)
       : [];
+    // What the record makes impossible, for the checklist (plan §2.6). Read
+    // from the pack the loader already selected; the extra reads are the shop
+    // setting and (setting on only) the merchant's answer for the PACK's cycle.
+    let inapplicable: string[] = [];
+    if (pack) {
+      const sections = normaliseSections((pack.pack_json as { sections?: unknown } | null)?.sections);
+      const scope = await loadReturnScopeForPack(sb, {
+        shopId: row.shop_id,
+        disputeId: row.id,
+        packCycle: pack.response_cycle ?? 1,
+      });
+      const ctx = {
+        noReturnFact: noReturnApplicability({ ...orderFactsFromSections(sections), returnScope: scope }, sections),
+      } as OrderContext;
+      inapplicable = [...inapplicableFields(ctx)];
+    }
     const fatal = (pack?.pack_json as { fatal_loss?: { reason?: string | null } } | null)?.fatal_loss;
     const amount = Number(
       (outcome === "lost" ? row.outcome_amount_lost : row.outcome_amount_recovered) ?? row.amount ?? 0,
@@ -239,6 +259,7 @@ export async function loadDecidedViewInputs(
       firstPackAt: ctx.firstPackAt,
       events: ctx.events,
       storePatterns,
+      inapplicable,
     };
   } catch {
     return null;

@@ -16,7 +16,7 @@ import { isProductListingEvidenceEnabled } from "@/lib/featureFlags";
  */
 
 import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
-import { canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
+import { canMerchantUploadAtBuild as canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
 
 export type RequirementMode =
   | "required_always"
@@ -82,6 +82,42 @@ export interface OrderContext {
    * Optional for back-compat; defaults to `false`.
    */
   hasReturnedToSenderParcel?: boolean;
+  /**
+   * Whether the record makes the "no return initiated" fact impossible
+   * (a return or refund is on record, the merchant says the customer asked,
+   * or a parcel came back). UNSET = unknown = applicable, so build time is
+   * byte-identical until build-time adoption (plan §5, step B1). Set only by
+   * the read-time assembler (`lib/packs/effectiveChecklist.ts`).
+   */
+  noReturnFact?: Applicability;
+}
+
+/** Whether a checklist field can exist at all for this order. `reason` is a
+ *  CODE, never English (CLAUDE.md rule 5). */
+export type Applicability = { applicable: true } | { applicable: false; reason: string };
+
+/**
+ * Fields whose applicability depends on a fact about the WORLD (not on the
+ * template's requirement mode). Each entry delegates to the single decision
+ * that governs that field's collector. The registry of which fields qualify is
+ * `lib/evidence/model/emissionClassification.ts`.
+ */
+export const FIELD_PRECONDITIONS: Readonly<Record<string, (ctx: OrderContext) => Applicability>> = {
+  no_return_initiated: (ctx) => ctx.noReturnFact ?? { applicable: true },
+};
+
+export function fieldApplicability(field: string, ctx: OrderContext): Applicability {
+  const rule = FIELD_PRECONDITIONS[field];
+  return rule ? rule(ctx) : { applicable: true };
+}
+
+/** The fields this order makes inapplicable. */
+export function inapplicableFields(ctx: OrderContext): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const field of Object.keys(FIELD_PRECONDITIONS)) {
+    if (!fieldApplicability(field, ctx).applicable) out.add(field);
+  }
+  return out;
 }
 
 export interface ChecklistItem {
@@ -648,6 +684,15 @@ export function resolveItemStatus(
       collectable: false,
       unavailableReason: applicability.unavailableReason,
     };
+  }
+
+  // The field half: a world precondition (e.g. a return is on record). Unset in
+  // every build-time caller, so this is a no-op there.
+  if (field) {
+    const world = fieldApplicability(field, ctx);
+    if (!world.applicable) {
+      return { status: "unavailable", collectable: false, unavailableReason: world.reason };
+    }
   }
 
   return { status: "missing", collectable: true };

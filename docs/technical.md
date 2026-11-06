@@ -3946,6 +3946,36 @@ Phase 0b: nulled 30 days after the dispute closes).
 `phase` and says "The inquiry …" for an inquiry; a chargeback, or an unknown phase, keeps "The chargeback dispute …".
 It used to call every dispute a chargeback (plan `order-situation-drives-dispute`, Phase B0).
 
+### Refund statement: what Shopify records about refunds (merchant-side)
+
+`lib/disputes/refundStatement.ts` is the ONLY reader of `order.totals.refunded` and `refundHistory.refunds[]` for merchant
+copy (`docs/plans/single-source-architecture-audit.plan.md` §3.3). The pack keeps no transaction status, so a failed,
+pending, later-successful or transaction-less refund is stored as the same zero-amount entry; "no refund" can therefore
+only be said when no entry exists.
+
+- `refundStatementFromPackSections(sections, asOf?)` returns `{ kind, amount?, currency?, refundedAt?, asOf }` or null
+  (no order and no refund section). `kind`: `none` = the order section stores `totals.refunded`, it reads numerically 0
+  ("0", "0.0", "0.00") and there are no entries; `recorded_no_amount` = at least one entry and total 0; `some` = total > 0
+  (`refundedAt` = latest entry with a positive amount, never a later zero entry); `unknown` = a refund section without a
+  `refunds[]` array, or no stored `totals.refunded` and no entries (a pack built before the field existed is never
+  `none`). Null-safe on malformed sections. `isZeroAmount()` is the numeric zero test.
+- `refundStatementTokens(stmt)` returns `{ title, detail }` I18nTokens under `disputes.refundStatement.{none,
+  recordedNoAmount,some,unknown}` (six locales; `detailNoDate` when no date). `recorded_no_amount` copy never says
+  pending, started, issued, failed or successful. A vitest invariant forbids "no refund" in `messages/en.json` outside
+  this namespace (a reasoned baseline lists five pre-existing evidence-label keys).
+- Consumers: `OrderSituationNote`, the `heldUnrefunded` banner, `refundRecord.notIncluded` (now "Shopify records no
+  confirmed refund amount on this order."), `buildRefundPresentation(payload, statement)` (a zero-amount refund entry can
+  never render "No refund issued"; the NO_RETURN card is titled "No return initiated" and gains the refund clause only for
+  `none`) and the pack viewer's zero guard. The workspace route exposes it as `dispute.refundStatement`.
+- Stored English `unavailableReason` values in `checklist_v2` are never shown: `lib/disputes/unavailableReasonToken.ts`
+  maps the known stored strings and the reason codes (`return_on_record`, `refund_on_record`,
+  `merchant_says_request_received`, `returned_to_sender`) to `disputes.unavailableReason.*` tokens at read time
+  (unknown text becomes a neutral "Not applicable to this order"); "No refund was issued on this order" renders the refund
+  statement instead. `strengthReason.returnedToSender.returned_unrefunded` now says "The refund on record is less than the
+  disputed amount." (trigger unchanged).
+- Never bank-facing: the collector's `refundStatus` write, `no_return_initiated`, `hasRefund`, the fatal-loss gate, the
+  fact classifier and the letters do not read it (a test pins the main ones).
+
 ### Order situation: returns and refunds, merchant-side (2026-10-09)
 
 `lib/disputes/orderSituation.ts` is the one statement of the order's return/refund situation as Shopify records it.
@@ -3973,10 +4003,42 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   (`modeApplicability`), and `hasReturnedToSenderShipment` stopped throwing on malformed persisted section lists.
   Emission and completeness are pinned byte-for-byte against the pre-change code
   (`orderSourceNoReturnParity.test.ts`, `completenessModeParity.test.ts`). No behaviour a merchant can see changes.
+- **The effective checklist (read time), PR 1** (`docs/plans/single-source-architecture-audit.plan.md` §2.6).
+  A stored `checklist_v2` is a snapshot of the build. Where the record shows a return or refund, the stored
+  `no_return_initiated` row still reads `missing` (the collector rightly stayed silent), so every surface counted
+  a row it could never fill and said "No return initiated" beside a recorded return. `assembleEffectiveChecklist`
+  (`lib/packs/effectiveChecklist.ts`) applies the existing reconcile, then drops a row whose field is inapplicable
+  per `fieldApplicability` (`FIELD_PRECONDITIONS` in `completeness.ts`; the only entry is `no_return_initiated`,
+  delegating to `noReturnApplicability` = `noReturnFactVerdict` composed with `hasReturnedToSenderShipment`).
+  Rules: an `available` row is never hidden (kept and logged as `contradictedAvailable`); waived rows are dropped;
+  an UNKNOWN return status (packs built before 2026-10-02) is applicable, never a confirmed return; the merchant's
+  "request received" answer counts only when the setting is on and only for the PACK's response cycle
+  (`loadReturnScopeForPack`). Nothing stored changes: `checklist_v2`, `completeness_score`, submission readiness,
+  `plan_input_hash`, facts, letters and PDFs are untouched; build time leaves `OrderContext.noReturnFact` unset.
+  Callers: the workspace route (`pack.checklistV2`, plus an added `pack.merchantCompleteness`), the embedded pack
+  page API (`effective_checklist_v2`, `merchant_completeness`, `refund_statement` added beside the stored fields),
+  the decided loader (`inapplicable[]` -> `buildDecidedView` omits an uncollected no-return row) and the include
+  endpoint (`force_include` on an inapplicable field returns 409 `FIELD_NOT_APPLICABLE`; it also now accepts the
+  historical `{ items }` checklist shape).
+- **One merchant percentage:** `merchantCompleteness(rows)` (same file) is `deriveCompletenessMetrics(rows)` over the
+  effective rows and is what the embedded pack page header and `SubmissionSidebar` show, including after an optimistic
+  upload. The stored `completeness_score` stays internal (auto-save gate, decision hash, deadline cron, save check).
+  Portal pages and the evidence PDF still show the stored score (PR 5).
+- **`refund_record` and `no_return_initiated` are not merchant-uploadable** (`NEVER_MERCHANT_UPLOADABLE` in
+  `concreteContribution.ts`, applied inside `canMerchantUpload`): the first is Shopify's own refund record (a missing
+  row already means "no confirmed refund amount"; 0 uploads ever), the second is a conclusion from Shopify's return
+  status (the return-request answer is the real channel). Persisted `recommended_actions` keep the old rule through
+  `canMerchantUploadAtBuild`, so stored build output is byte-identical. The case-strength improvement hint therefore
+  has no live input until a merchant-suppliable strength field exists.
+- **Emission classification** (`lib/evidence/model/emissionClassification.ts`): every `auto`/`conditional_auto` field
+  is classified `world_precondition` | `evidence_absent` | `needs_decision` with a written reason. A test enforces
+  completeness against the code templates (plus the DB-only `tds_authentication` and `device_session_consistency`),
+  that `world_precondition` fields and `FIELD_PRECONDITIONS` entries are the same set, and that `needs_decision`
+  only shrinks (today: `refund_record`, owner maintainer, F-1b). It is a reviewed classification, not a proof.
 - **Merchant note.** The workspace route returns `dispute.orderSituation` (`{ ...situation, asOf }`, `asOf` = the
   pack's last build). `OrderSituationNote` renders it on the Overview and above the letter card when a return is on
-  record: the return's state, its date when known, whether a refund has been issued, "as recorded on {asOf}", and that
-  the note is for the merchant only. Copy: `disputes.overviewExtra.orderSituation.*`, six locales.
+  record: the return's state, its date when known, the refund statement's sentence (see **Refund statement**
+  below; not `situation.refund`), "as recorded on {asOf}", and that the note is for the merchant only. Copy: `disputes.overviewExtra.orderSituation.*`, six locales.
 - **Never bank-facing, structurally.** The module writes nothing to `pack_json`, provides no evidence field, and a test
   fails if anything under `lib/defence`, `lib/packs`, `lib/argument`, `lib/shopify` or `lib/jobs` imports it, or if the
   bank-document mirror (`DefencePackageHtmlView`) renders it. The bank timeline's allow-list (`chronology.ts`) is

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopSettings } from "@/lib/automation/settings";
+import { refundStatementFromPackSections } from "@/lib/disputes/refundStatement";
+import { assembleEffectiveChecklist, merchantCompleteness } from "@/lib/packs/effectiveChecklist";
+import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
 import { loadReturnRequestConfirmation, packShowsReturnOrRefund, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
 import { orderSituationFromPackSections } from "@/lib/disputes/orderSituation";
 import path from "node:path";
@@ -506,6 +509,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         asOf: ((packRow?.updated_at ?? packRow?.created_at) as string | null | undefined) ?? null,
       };
     })(),
+    // The one refund statement (lib/disputes/refundStatement.ts): the ONLY
+    // reader of totals.refunded and the refund entries for merchant copy, so
+    // the note, the held banner, the evidence row and the no-return card
+    // cannot say two things about the same order. Same `asOf` as the note.
+    refundStatement: refundStatementFromPackSections(
+      packJsonSections,
+      ((packRow?.updated_at ?? packRow?.created_at) as string | null | undefined) ?? null,
+    ),
     cardholderName: orderContext.cardholderName ?? row.customer_display_name ?? null,
     // Full event timeline from the pack's access_log section. The PDF
     // builder threads the same array through `meta.timelineEvents`;
@@ -541,16 +552,39 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     sections: packJsonSections,
     evidenceItems: itemsRes.data ?? [],
   });
-  const reconciledChecklistV2 = reconcileChecklistWithCollectedFields(
-    (packRow?.checklist_v2 ?? null) as ChecklistItemV2[] | null,
-    collectedForRead,
-  );
+  // The EFFECTIVE checklist: the reconcile above, then rows the record makes
+  // impossible are dropped (a "No return initiated" row beside a recorded
+  // return). Stored rows, score and readiness are untouched (plan §2.6).
+  const effective = packRow
+    ? assembleEffectiveChecklist({
+        storedChecklist: packRow.checklist_v2 ?? null,
+        packSections: (packRow.pack_json as { sections?: unknown } | null)?.sections,
+        evidenceItems: itemsRes.data ?? [],
+        returnScope: await loadReturnScopeForPack(sb, {
+          shopId: row.shop_id as string,
+          disputeId,
+          packCycle: (packRow.response_cycle as number | null) ?? 1,
+        }),
+      })
+    : null;
+  const reconciledChecklistV2: ChecklistItemV2[] =
+    effective?.checklist ??
+    reconcileChecklistWithCollectedFields(null, collectedForRead);
+  if (effective && effective.contradictedAvailable.length > 0) {
+    console.warn("[workspace] available row contradicted by the record", {
+      disputeId,
+      fields: effective.contradictedAvailable,
+    });
+  }
 
   const pack = packRow
     ? {
         id: packRow.id,
         status: packRow.status,
         completenessScore: packRow.completeness_score ?? null,
+        // ADDED, never overwriting the stored score: the one merchant-facing
+        // percentage (plan §3.2), over the effective rows above.
+        merchantCompleteness: merchantCompleteness(reconciledChecklistV2),
         submissionReadiness: packRow.submission_readiness ?? null,
         checklistV2: reconciledChecklistV2,
         waivedItems: packRow.waived_items ?? [],

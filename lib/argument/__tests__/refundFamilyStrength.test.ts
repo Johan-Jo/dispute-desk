@@ -138,11 +138,14 @@ describe("improvement hint never contradicts a collected signal (cay cc86296d, 2
       order_confirmation: { orderId: "1" },
     });
     const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
-    expect(r.improvementHintI18n).not.toBeNull();
-    const label = r.improvementHintI18n?.params?.label as { key?: string };
-    // The hint names the SIGNAL, not the field — `no_return_initiated` carries
-    // `signalId: "refund"`, so the label resolves to the refund signal.
-    expect(JSON.stringify(label)).toContain("refund");
+    // PR 1 (plan 3.1 F-1a, 4.2): `no_return_initiated` and `refund_record` are
+    // the only two fields that were BOTH merchant-suppliable and strength-
+    // affecting, and neither is something a merchant can attach (Shopify's
+    // record; the return answer is the real channel). The hint is therefore
+    // intentionally silent for them; the "uncovered signal" rule itself is
+    // pinned by the sibling case above and the covered-signal case, and comes
+    // back the day a real merchant-suppliable strength field exists.
+    expect(r.improvementHintI18n).toBeNull();
   });
 });
 

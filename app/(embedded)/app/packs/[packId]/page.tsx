@@ -11,6 +11,8 @@
  */
 "use client";
 
+import type { RefundStatement } from "@/lib/disputes/refundStatement";
+import { merchantCompleteness } from "@/lib/packs/effectiveChecklist";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -116,6 +118,10 @@ interface PackData {
   template_items?: TemplateItemRow[];
   deadline?: string | null;
   checklist_v2?: ChecklistItemV2[] | null;
+  /** Rows after the record is applied (API, dispute packs). Preferred over `checklist_v2`. */
+  effective_checklist_v2?: ChecklistItemV2[] | null;
+  merchant_completeness?: number | null;
+  refund_statement?: RefundStatement | null;
   submission_readiness?: string | null;
   waived_items?: WaivedItemRecord[] | null;
 }
@@ -499,7 +505,6 @@ export default function PackPreviewPage() {
   /* ── Derived state ── */
 
   const isBuilding = pack.status === "queued" || pack.status === "building";
-  const score = pack.completeness_score ?? 0;
   const isLibraryPack = pack.dispute_id == null;
   const isSaved = pack.status === "saved_to_shopify";
   const isReadOnly = isSaved;
@@ -543,6 +548,12 @@ export default function PackPreviewPage() {
 
   // Use v2 checklist from API if available; fall back to v1→v2 conversion
   const v2Checklist: ChecklistItemV2[] = (() => {
+    // Dispute packs: the effective rows are authoritative (they already
+    // include everything reconcile appends), so no v1 fallback can resurrect
+    // a row the record makes impossible.
+    if (Array.isArray(pack.effective_checklist_v2)) {
+      return pack.effective_checklist_v2 as ChecklistItemV2[];
+    }
     if (pack.checklist_v2 && Array.isArray(pack.checklist_v2) && pack.checklist_v2.length > 0) {
       return pack.checklist_v2 as ChecklistItemV2[];
     }
@@ -566,6 +577,14 @@ export default function PackPreviewPage() {
     }
     return c;
   });
+
+  // THE merchant-facing percentage: one function over the effective rows, also
+  // after an optimistic completion (so header, sidebar and counts cannot
+  // disagree). The stored score stays internal; the save check below keeps it.
+  const score =
+    pack.dispute_id != null && Array.isArray(pack.effective_checklist_v2)
+      ? merchantCompleteness(checklist)
+      : (pack.completeness_score ?? 0);
 
   // Derive readiness from API or checklist
   const readiness: SubmissionReadiness = (() => {
@@ -917,6 +936,7 @@ export default function PackPreviewPage() {
                 {/* Left: Evidence Builder */}
                 <div className={styles.leftColumn} ref={builderRef}>
                   <EvidenceBuilderSection
+                    refundStatement={pack.refund_statement ?? null}
                     checklist={checklist}
                     includedItems={includedItems}
                     evidenceItems={pack.evidence_items}

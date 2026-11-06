@@ -1,0 +1,1286 @@
+{
+ "24612": {
+  "storedScore": 68,
+  "checklist_v2": [
+   {
+    "blocking": false,
+    "field": "refund_record",
+    "label": "Refund status",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "refund_policy",
+    "label": "Refund / return policy",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_communication",
+    "label": "Customer correspondence",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "no_return_initiated",
+    "label": "Return status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_tracking",
+    "label": "Tracking status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "delivery_proof",
+    "label": "Proof of delivery",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "order_confirmation",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "activity_log",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_account_info",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "cancellation_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "avs_cvv_match",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "ip_location_check",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   }
+  ],
+  "sections": [
+   {
+    "labelToken": {
+     "key": "packs.section.order"
+    },
+    "fieldsProvided": [
+     "order_confirmation"
+    ],
+    "data": {
+     "returnStatus": "RETURNED",
+     "totals": {
+      "currency": "SEK",
+      "discounts": "0.0",
+      "presentment": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "shipping": "69.0",
+       "subtotal": "549.0",
+       "tax": "123.6",
+       "total": "757.0"
+      },
+      "refunded": "0.0",
+      "shipping": "69.0",
+      "subtotal": "549.0",
+      "tax": "123.6",
+      "total": "757.0"
+     }
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerActivityLog"
+    },
+    "fieldsProvided": [
+     "activity_log"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerAccountDetails"
+    },
+    "fieldsProvided": [
+     "customer_account_info"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.fulfillments"
+    },
+    "fieldsProvided": [
+     "shipping_tracking",
+     "delivery_proof"
+    ],
+    "data": {
+     "proofType": "delivered_confirmed"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.storePolicies"
+    },
+    "fieldsProvided": [
+     "shipping_policy",
+     "refund_policy",
+     "cancellation_policy"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.shippingPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.cancellationPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerCommunication"
+    },
+    "fieldsProvided": [
+     "customer_communication"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.paymentVerification"
+    },
+    "fieldsProvided": [
+     "avs_cvv_match"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.ipLocationCheck"
+    },
+    "fieldsProvided": [
+     "ip_location_check"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundHistory"
+    },
+    "fieldsProvided": [],
+    "data": {
+     "amount": "0.0",
+     "creditCoversDisputedAmount": false,
+     "creditResidual": 618,
+     "currency": "SEK",
+     "precededDispute": true,
+     "refundStatus": "none",
+     "refundedAt": "2026-11-03T14:26:26Z",
+     "refunds": [
+      {
+       "createdAt": "2026-11-03T14:26:26Z",
+       "amount": "0.0",
+       "currency": "SEK"
+      }
+     ]
+    }
+   }
+  ],
+  "items": []
+ },
+ "24510": {
+  "storedScore": 68,
+  "checklist_v2": [
+   {
+    "blocking": false,
+    "field": "refund_record",
+    "label": "Refund status",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "refund_policy",
+    "label": "Refund / return policy",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_communication",
+    "label": "Customer correspondence",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "no_return_initiated",
+    "label": "Return status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_tracking",
+    "label": "Tracking status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "delivery_proof",
+    "label": "Proof of delivery",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "order_confirmation",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "activity_log",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_account_info",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "cancellation_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "avs_cvv_match",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "ip_location_check",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   }
+  ],
+  "sections": [
+   {
+    "labelToken": {
+     "key": "packs.section.order"
+    },
+    "fieldsProvided": [
+     "order_confirmation"
+    ],
+    "data": {
+     "returnStatus": "RETURNED",
+     "totals": {
+      "currency": "SEK",
+      "discounts": "0.0",
+      "presentment": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "shipping": "69.0",
+       "subtotal": "1299.0",
+       "tax": "273.6",
+       "total": "1437.0"
+      },
+      "refunded": "0.0",
+      "shipping": "69.0",
+      "subtotal": "1299.0",
+      "tax": "273.6",
+      "total": "1437.0"
+     }
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerActivityLog"
+    },
+    "fieldsProvided": [
+     "activity_log"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerAccountDetails"
+    },
+    "fieldsProvided": [
+     "customer_account_info"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.fulfillments"
+    },
+    "fieldsProvided": [
+     "shipping_tracking",
+     "delivery_proof"
+    ],
+    "data": {
+     "proofType": "delivered_confirmed"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.storePolicies"
+    },
+    "fieldsProvided": [
+     "shipping_policy",
+     "refund_policy",
+     "cancellation_policy"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.shippingPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.cancellationPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerCommunication"
+    },
+    "fieldsProvided": [
+     "customer_communication"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.paymentVerification"
+    },
+    "fieldsProvided": [
+     "avs_cvv_match"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.ipLocationCheck"
+    },
+    "fieldsProvided": [
+     "ip_location_check"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundHistory"
+    },
+    "fieldsProvided": [],
+    "data": {
+     "amount": "0.0",
+     "creditCoversDisputedAmount": false,
+     "creditResidual": 1368,
+     "currency": "SEK",
+     "precededDispute": true,
+     "refundStatus": "none",
+     "refundedAt": "2026-11-03T14:47:43Z",
+     "refunds": [
+      {
+       "createdAt": "2026-11-03T14:47:43Z",
+       "amount": "0.0",
+       "currency": "SEK"
+      }
+     ]
+    }
+   }
+  ],
+  "items": []
+ },
+ "24599": {
+  "storedScore": 68,
+  "checklist_v2": [
+   {
+    "blocking": false,
+    "field": "refund_record",
+    "label": "Refund status",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "refund_policy",
+    "label": "Refund / return policy",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_communication",
+    "label": "Customer correspondence",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "no_return_initiated",
+    "label": "Return status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_tracking",
+    "label": "Tracking status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "delivery_proof",
+    "label": "Proof of delivery",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "order_confirmation",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "activity_log",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_account_info",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "cancellation_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "avs_cvv_match",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "ip_location_check",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   }
+  ],
+  "sections": [
+   {
+    "labelToken": {
+     "key": "packs.section.order"
+    },
+    "fieldsProvided": [
+     "order_confirmation"
+    ],
+    "data": {
+     "returnStatus": "IN_PROGRESS",
+     "totals": {
+      "currency": "SEK",
+      "discounts": "0.0",
+      "presentment": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "shipping": "69.0",
+       "subtotal": "2028.0",
+       "tax": "419.4",
+       "total": "2097.0"
+      },
+      "refunded": "0.0",
+      "shipping": "69.0",
+      "subtotal": "2028.0",
+      "tax": "419.4",
+      "total": "2097.0"
+     }
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerActivityLog"
+    },
+    "fieldsProvided": [
+     "activity_log"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerAccountDetails"
+    },
+    "fieldsProvided": [
+     "customer_account_info"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.fulfillments"
+    },
+    "fieldsProvided": [
+     "shipping_tracking",
+     "delivery_proof"
+    ],
+    "data": {
+     "proofType": "delivered_confirmed"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.storePolicies"
+    },
+    "fieldsProvided": [
+     "refund_policy",
+     "cancellation_policy",
+     "shipping_policy"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.cancellationPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.shippingPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerCommunication"
+    },
+    "fieldsProvided": [
+     "customer_communication"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.paymentVerification"
+    },
+    "fieldsProvided": [
+     "avs_cvv_match"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.ipLocationCheck"
+    },
+    "fieldsProvided": [
+     "ip_location_check"
+    ],
+    "data": {}
+   }
+  ],
+  "items": []
+ },
+ "24215": {
+  "storedScore": 68,
+  "checklist_v2": [
+   {
+    "blocking": false,
+    "field": "refund_record",
+    "label": "Refund status",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "refund_policy",
+    "label": "Refund / return policy",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_communication",
+    "label": "Customer correspondence",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "no_return_initiated",
+    "label": "Return status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_tracking",
+    "label": "Tracking status",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "delivery_proof",
+    "label": "Proof of delivery",
+    "priority": "recommended",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "order_confirmation",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "activity_log",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_account_info",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "cancellation_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "avs_cvv_match",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "ip_location_check",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   }
+  ],
+  "sections": [
+   {
+    "labelToken": {
+     "key": "packs.section.order"
+    },
+    "fieldsProvided": [
+     "order_confirmation"
+    ],
+    "data": {
+     "returnStatus": "NO_RETURN",
+     "totals": {
+      "currency": "SEK",
+      "discounts": "0.0",
+      "presentment": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "shipping": "0.0",
+       "subtotal": "1148.0",
+       "tax": "229.6",
+       "total": "1148.0"
+      },
+      "refunded": "0.0",
+      "shipping": "0.0",
+      "subtotal": "1148.0",
+      "tax": "229.6",
+      "total": "1148.0"
+     }
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.noReturnRecordedInShopify"
+    },
+    "fieldsProvided": [
+     "no_return_initiated"
+    ],
+    "data": {
+     "returnStatus": "NO_RETURN"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerActivityLog"
+    },
+    "fieldsProvided": [
+     "activity_log"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerAccountDetails"
+    },
+    "fieldsProvided": [
+     "customer_account_info"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.fulfillments"
+    },
+    "fieldsProvided": [
+     "delivery_proof"
+    ],
+    "data": {
+     "proofType": "delivered_unverified"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.storePolicies"
+    },
+    "fieldsProvided": [
+     "refund_policy",
+     "cancellation_policy",
+     "shipping_policy"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.cancellationPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.shippingPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerCommunication"
+    },
+    "fieldsProvided": [
+     "customer_communication"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.paymentVerification"
+    },
+    "fieldsProvided": [
+     "avs_cvv_match"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.ipLocationCheck"
+    },
+    "fieldsProvided": [
+     "ip_location_check"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundHistory"
+    },
+    "fieldsProvided": [],
+    "data": {
+     "amount": "0.0",
+     "creditCoversDisputedAmount": false,
+     "creditResidual": 1148,
+     "currency": "SEK",
+     "precededDispute": true,
+     "refundStatus": "none",
+     "refundedAt": "2026-10-29T13:46:32Z",
+     "refunds": [
+      {
+       "createdAt": "2026-10-29T13:46:32Z",
+       "amount": "0.0",
+       "currency": "SEK"
+      }
+     ]
+    }
+   }
+  ],
+  "items": []
+ },
+ "99445": {
+  "storedScore": 97,
+  "checklist_v2": [
+   {
+    "blocking": false,
+    "field": "order_confirmation",
+    "label": "Order summary",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "product_description",
+    "label": "Product description",
+    "priority": "critical",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "return_offered_note",
+    "label": "Return offered",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "missing"
+   },
+   {
+    "blocking": false,
+    "field": "no_return_initiated",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "activity_log",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_account_info",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_tracking",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "delivery_proof",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "shipping_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "refund_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "cancellation_policy",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "customer_communication",
+    "label": "",
+    "priority": "optional",
+    "source": "manual_upload",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "avs_cvv_match",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   },
+   {
+    "blocking": false,
+    "field": "ip_location_check",
+    "label": "",
+    "priority": "optional",
+    "source": "auto_shopify",
+    "status": "available"
+   }
+  ],
+  "sections": [
+   {
+    "labelToken": {
+     "key": "packs.section.order"
+    },
+    "fieldsProvided": [
+     "order_confirmation"
+    ],
+    "data": {
+     "totals": {
+      "currency": "EUR",
+      "discounts": "0.0",
+      "presentment": {
+       "currency": "EUR",
+       "discounts": "0.0",
+       "shipping": "2.95",
+       "subtotal": "79.95",
+       "tax": "0.0",
+       "total": "82.9"
+      },
+      "refunded": "0.0",
+      "shipping": "2.95",
+      "subtotal": "79.95",
+      "tax": "0.0",
+      "total": "82.9"
+     }
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.noReturnInitiated"
+    },
+    "fieldsProvided": [
+     "no_return_initiated"
+    ],
+    "data": {
+     "returnStatus": "NO_RETURN"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerActivityLog"
+    },
+    "fieldsProvided": [
+     "activity_log"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerAccountDetails"
+    },
+    "fieldsProvided": [
+     "customer_account_info"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.fulfillments"
+    },
+    "fieldsProvided": [
+     "shipping_tracking",
+     "delivery_proof"
+    ],
+    "data": {
+     "proofType": "delivered_confirmed"
+    }
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.storePolicies"
+    },
+    "fieldsProvided": [
+     "cancellation_policy",
+     "shipping_policy",
+     "refund_policy"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.cancellationPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.shippingPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundPolicy"
+    },
+    "fieldsProvided": [],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.customerCommunication"
+    },
+    "fieldsProvided": [
+     "customer_communication"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.paymentVerification"
+    },
+    "fieldsProvided": [
+     "avs_cvv_match"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.shopifyProtect"
+    },
+    "fieldsProvided": [
+     "shopify_protect_coverage"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.ipLocationCheck"
+    },
+    "fieldsProvided": [
+     "ip_location_check"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.productListings"
+    },
+    "fieldsProvided": [
+     "product_description"
+    ],
+    "data": {}
+   },
+   {
+    "labelToken": {
+     "key": "packs.section.refundHistory"
+    },
+    "fieldsProvided": [],
+    "data": {
+     "amount": "0.0",
+     "creditCoversDisputedAmount": false,
+     "creditResidual": null,
+     "currency": "EUR",
+     "precededDispute": false,
+     "refundStatus": "none",
+     "refundedAt": "2026-09-28T06:05:54Z",
+     "refunds": [
+      {
+       "createdAt": "2026-09-26T11:27:57Z",
+       "amount": "0.0",
+       "currency": "EUR"
+      },
+      {
+       "createdAt": "2026-09-28T06:05:54Z",
+       "amount": "0.0",
+       "currency": "EUR"
+      }
+     ]
+    }
+   }
+  ],
+  "items": []
+ }
+}

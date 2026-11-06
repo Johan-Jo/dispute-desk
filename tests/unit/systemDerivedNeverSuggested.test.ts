@@ -104,18 +104,20 @@ describe("the improvement hint never names a system-derived field", () => {
     expect(r.improvementHintI18n).toBeNull();
   });
 
-  it("STILL fires for a genuinely merchant-supplied field", () => {
-    /* The gate must not silence every hint — that would trade a wrong
-     * instruction for no guidance, which is a quieter failure but still a
-     * failure. `no_return_initiated` is merchant-suppliable AND `moderate`,
-     * so it survives both `canMerchantUpload` and `affectsStrength`. */
+  it("no longer asks for the two fields a merchant cannot supply (PR 1, F-1a)", () => {
+    /* `no_return_initiated` was the only live hint (merchant-suppliable and
+     * moderate). It is Shopify's return status, not a file the merchant owns,
+     * so the hint "add it" was untruthful; the merchant's real channel is the
+     * return-request answer. The registry holds no other strong/moderate
+     * merchant-suppliable field (see the pinned list above), so the hint path
+     * is intentionally empty until one is added. */
     const r = calculateCaseStrength(
       [missing("no_return_initiated", "manual")],
       "CREDIT_NOT_PROCESSED",
       undefined,
       NO_GATES,
     );
-    expect(r.improvementHintI18n, "the hint path is dead, not merely gated").not.toBeNull();
+    expect(r.improvementHintI18n).toBeNull();
   });
 
   it("exactly two registry fields can ever be suggested — and both are real", () => {
@@ -132,7 +134,13 @@ describe("the improvement hint never names a system-derived field", () => {
       })
       .map(([field]) => field)
       .sort();
-    expect(suggestible).toEqual(["no_return_initiated", "refund_record"]);
+    // PR 1 (plan §3.1 F-1a): `no_return_initiated` and `refund_record` are never
+    // merchant-uploadable at the display layer (the record is Shopify's, the
+    // return answer is the real channel). Persisted `recommended_actions` keep
+    // the build-time rule (`canMerchantUploadAtBuild`) so stored output is
+    // byte-identical. Adding a merchant-suppliable strong/moderate field is
+    // still a deliberate update here.
+    expect(suggestible).toEqual([]);
   });
 });
 
