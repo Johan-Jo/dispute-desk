@@ -131,7 +131,11 @@ describe("refundStatementTokens", () => {
   it("uses the disputes.refundStatement keys, and a no-date variant when there is no date", () => {
     expect(refundStatementTokens({ kind: "none", asOf: ASOF })).toEqual({
       title: { key: "disputes.refundStatement.none.title" },
-      detail: { key: "disputes.refundStatement.none.detail", params: { date: "Nov 4" } },
+      detail: { key: "disputes.refundStatement.none.detail", params: { date: "2026-11-04" } },
+    });
+    // A caller that states "as of" itself gets the sentence without a second date.
+    expect(refundStatementTokens({ kind: "none", asOf: ASOF }, { withAsOf: false }).detail).toEqual({
+      key: "disputes.refundStatement.none.detailNoDate",
     });
     expect(refundStatementTokens({ kind: "recorded_no_amount", asOf: null }).detail).toEqual({
       key: "disputes.refundStatement.recordedNoAmount.detailNoDate",
@@ -141,7 +145,7 @@ describe("refundStatementTokens", () => {
     });
     expect(
       refundStatementTokens({ kind: "some", amount: "120.0", currency: "SEK", refundedAt: "2026-10-01T00:00:00Z", asOf: ASOF }).detail,
-    ).toEqual({ key: "disputes.refundStatement.some.detail", params: { amount: "120.0 SEK", date: "Oct 1" } });
+    ).toEqual({ key: "disputes.refundStatement.some.detail", params: { amount: "120.0 SEK", date: "2026-10-01" } });
   });
 
   it("every token key exists in all six locales", () => {
@@ -287,12 +291,16 @@ describe("copy and wiring invariants", () => {
       "lib/packs/sources/orderSource.ts",
       "lib/automation/fatalLoss.ts",
       "lib/packs/buildPack.ts",
-      "lib/evidence/canonicalEvidence.ts",
-      "lib/automation/planForCase.ts",
+      "lib/argument/canonicalEvidence.ts",
+      "lib/argument/plan/planForCase.ts",
+      "lib/defence/factClassifier.ts",
+      "lib/defence/factPredicates.ts",
+      "lib/defence/claimGuards.ts",
     ];
     for (const f of bankFacing) {
       const p = join(ROOT, f);
-      if (!existsSync(p)) continue;
+      // A listed path must exist: a silent skip is how this test was vacuous.
+      expect(existsSync(p), `${f} does not exist; fix the path`).toBe(true);
       expect(readFileSync(p, "utf8"), f).not.toMatch(/refundStatement|unavailableReasonToken/);
     }
   });

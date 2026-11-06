@@ -1,5 +1,6 @@
 "use client";
 
+import { canMerchantUpload, NEVER_MERCHANT_UPLOADABLE } from "@/lib/disputes/presentation/concreteContribution";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
@@ -86,6 +87,9 @@ const INTERNAL_ONLY_FIELDS: ReadonlySet<string> = new Set([
 
 function isInternalOnly(item: ChecklistItemV2): boolean {
   if (INTERNAL_ONLY_FIELDS.has(item.field)) return true;
+  // Shopify's own record (refund) and a conclusion from its return status: the
+  // merchant has nothing to upload here (F-1a), so no drop zone is offered.
+  if (!canMerchantUpload(item) && NEVER_MERCHANT_UPLOADABLE.has(item.field)) return true;
   // Any field auto-collected from Shopify with no merchant-actionable
   // upload path falls under the same rule. Conditional-auto (e.g. AVS
   // when card data is missing) and manual-upload fields are excluded.
@@ -93,6 +97,10 @@ function isInternalOnly(item: ChecklistItemV2): boolean {
 }
 
 const INTERNAL_ONLY_REASON: Record<string, string> = {
+  refund_record:
+    "Shopify’s refund record appears here when a refund with a confirmed amount exists. There is nothing to upload for it.",
+  no_return_initiated:
+    "Taken from Shopify’s return status. There is nothing to upload for it.",
   avs_cvv_match:
     "The payment gateway did not return a clean AVS/CVV match for this order. Used internally for assessment; not surfaced to the bank.",
   ip_location_check:

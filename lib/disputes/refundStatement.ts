@@ -25,7 +25,14 @@
  */
 
 import type { I18nToken } from "@/lib/i18n/token";
-import { shortEvidenceDate } from "@/lib/argument/deliveryPresentation";
+
+/** ISO -> "YYYY-MM-DD" (UTC). Language-neutral on purpose: lib/ must not carry
+ *  English month names (CLAUDE.md rule 5), and a numeric day reads in every locale. */
+export function isoDay(iso: unknown): string | null {
+  if (typeof iso !== "string") return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
 
 export type RefundKind = "none" | "recorded_no_amount" | "some" | "unknown";
 
@@ -101,7 +108,7 @@ export function refundStatementFromPackSections(
     .filter((e): e is Record<string, unknown> => e !== null);
 
   const positive = entries.filter((e) => (toNumber(e.amount) ?? 0) > 0);
-  // The order total is the authority; the refund section's own total backs it
+  // The order total is the authority when it is positive; the refund section's own total backs it
   // up when the order section did not store one.
   const total = storedTotal ?? (entries.length > 0 ? toNumber(refundData?.amount) : null);
   const positiveSum = positive.reduce((sum, e) => sum + (toNumber(e.amount) ?? 0), 0);
@@ -149,14 +156,17 @@ const KIND_KEY: Record<RefundKind, string> = {
 /** Title and detail tokens for a statement. Dates use the shared short form
  *  ("Jun 12"); a missing date selects the `detailNoDate` variant so a
  *  sentence never carries an empty placeholder. */
-export function refundStatementTokens(stmt: RefundStatement): { title: I18nToken; detail: I18nToken } {
+export function refundStatementTokens(
+  stmt: RefundStatement,
+  opts: { withAsOf?: boolean } = {},
+): { title: I18nToken; detail: I18nToken } {
   const base = `${NS}.${KIND_KEY[stmt.kind]}`;
   const title: I18nToken = { key: `${base}.title` };
   if (stmt.kind === "unknown") return { title, detail: { key: `${base}.detail` } };
 
   if (stmt.kind === "some") {
     const amount = [stmt.amount, stmt.currency].filter(Boolean).join(" ");
-    const date = shortEvidenceDate(stmt.refundedAt);
+    const date = isoDay(stmt.refundedAt);
     return {
       title,
       detail: date
@@ -165,7 +175,8 @@ export function refundStatementTokens(stmt: RefundStatement): { title: I18nToken
     };
   }
 
-  const date = shortEvidenceDate(stmt.asOf);
+  // `withAsOf: false` for a caller that states "as of" itself (no duplicate date).
+  const date = opts.withAsOf === false ? null : isoDay(stmt.asOf);
   return {
     title,
     detail: date ? { key: `${base}.detail`, params: { date } } : { key: `${base}.detailNoDate` },

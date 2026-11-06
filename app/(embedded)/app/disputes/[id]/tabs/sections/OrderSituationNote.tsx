@@ -43,7 +43,7 @@ export function OrderSituationNote({
   const record = [
     opened ? t("opened", { date: opened }) : null,
     refundStatement && refundStatement.kind !== "unknown"
-      ? resolveToken(tRoot, refundStatementTokens(refundStatement).detail)
+      ? resolveToken(tRoot, refundStatementTokens(refundStatement, { withAsOf: false }).detail)
       : null,
   ]
     .filter(Boolean)

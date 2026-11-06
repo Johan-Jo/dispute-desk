@@ -1880,7 +1880,7 @@
     },
     "whyText": {
       "customer_account_info": "Zeigt die frühere Bestellhistorie des Kunden in Ihrem Shop — stützt, dass die Bestellung ein echter Kauf war",
-      "refund_record": "Belegt, dass tatsächlich eine Rückerstattung für die Bestellung ausgestellt wurde — entscheidend gegen Behauptungen einer „nicht bearbeiteten Rückerstattung“",
+      "refund_record": "Shopifys Erstattungsdatensatz, sichtbar sobald eine Erstattung existiert.",
       "no_return_initiated": "Zeigt, dass der Kunde nie eine Rücksendung eingeleitet hat — untermauert das Argument, dass keine Rückerstattung geschuldet war",
       "ip_location_check": "Ordnet die Bestellung dem üblichen Standort des Kunden zu — spricht dafür, dass der Karteninhaber sie aufgegeben hat",
       "device_session_consistency": "Verknüpft die Bestellung mit dem bekannten Gerät und der bekannten Sitzung des Kunden — entkräftet „Das war ich nicht“-Behauptungen",

@@ -4015,14 +4015,16 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   "request received" answer counts only when the setting is on and only for the PACK's response cycle
   (`loadReturnScopeForPack`). Nothing stored changes: `checklist_v2`, `completeness_score`, submission readiness,
   `plan_input_hash`, facts, letters and PDFs are untouched; build time leaves `OrderContext.noReturnFact` unset.
-  Callers: the workspace route (`pack.checklistV2`, plus an added `pack.merchantCompleteness`), the embedded pack
+  Callers: the workspace route (`pack.checklistV2`), the embedded pack
   page API (`effective_checklist_v2`, `merchant_completeness`, `refund_statement` added beside the stored fields),
   the decided loader (`inapplicable[]` -> `buildDecidedView` omits an uncollected no-return row) and the include
   endpoint (`force_include` on an inapplicable field returns 409 `FIELD_NOT_APPLICABLE`; it also now accepts the
   historical `{ items }` checklist shape).
-- **One merchant percentage:** `merchantCompleteness(rows)` (same file) is `deriveCompletenessMetrics(rows)` over the
+- **One merchant percentage:** `merchantCompleteness(rows)` (same file; the pack API also returns it as `merchant_completeness`, but the page recomputes it over its own optimistic rows) is `deriveCompletenessMetrics(rows)` over the
   effective rows and is what the embedded pack page header and `SubmissionSidebar` show, including after an optimistic
   upload. The stored `completeness_score` stays internal (auto-save gate, decision hash, deadline cron, save check).
+  No merchant-facing copy quotes the stored score against a threshold (the timeline text omits both numbers), so no
+  "at build" label was needed; the plan's premise that one did was wrong. The dispute page does not show a percentage.
   Portal pages and the evidence PDF still show the stored score (PR 5).
 - **`refund_record` and `no_return_initiated` are not merchant-uploadable** (`NEVER_MERCHANT_UPLOADABLE` in
   `concreteContribution.ts`, applied inside `canMerchantUpload`): the first is Shopify's own refund record (a missing
@@ -4036,6 +4038,8 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   completeness against the code templates (plus the DB-only `tds_authentication` and `device_session_consistency`),
   that `world_precondition` fields and `FIELD_PRECONDITIONS` entries are the same set, and that `needs_decision`
   only shrinks (today: `refund_record`, owner maintainer, F-1b). It is a reviewed classification, not a proof.
+- **Refund record and return-status rows on the pack page** go to the status-only bucket (no drop zone), and the upload
+  route answers 409 `FIELD_NOT_UPLOADABLE` for them. Refund dates in `refundStatement` are `YYYY-MM-DD` (language-neutral).
 - **Merchant note.** The workspace route returns `dispute.orderSituation` (`{ ...situation, asOf }`, `asOf` = the
   pack's last build). `OrderSituationNote` renders it on the Overview and above the letter card when a return is on
   record: the return's state, its date when known, the refund statement's sentence (see **Refund statement**

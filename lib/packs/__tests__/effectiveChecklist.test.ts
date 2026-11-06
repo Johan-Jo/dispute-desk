@@ -54,10 +54,12 @@ describe("real cases: the return banner and the checklist agree", () => {
     const c = fx("24612");
     const out = run(c);
     // Independent: the same stored rows (after the same reconcile) with that one row excluded.
-    const independent = deriveCompletenessMetrics(
-      out.checklist.map((r) => ({ ...r })),
-    ).completenessScore;
-    expect(merchantCompleteness(out.checklist)).toBe(independent);
+    // Hand-computed from the documented weights, not via the production function.
+    const W: Record<string, number> = { critical: 1, recommended: 0.5, optional: 0.1 };
+    const live = out.checklist.filter((r) => r.status !== "unavailable");
+    const num = live.filter((r) => r.status === "available" || r.status === "waived").reduce((s, r) => s + (W[r.priority] ?? 0), 0);
+    const den = live.reduce((s, r) => s + (W[r.priority] ?? 0), 0);
+    expect(merchantCompleteness(out.checklist)).toBe(Math.round((num / den) * 100));
     const withRow = deriveCompletenessMetrics([
       ...out.checklist,
       c.checklist_v2.find((r) => r.field === "no_return_initiated") as ChecklistItemV2,

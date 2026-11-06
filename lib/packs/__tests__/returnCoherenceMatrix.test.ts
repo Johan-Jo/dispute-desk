@@ -88,6 +88,19 @@ describe("pack built before the return status was recorded (#99445): unknown is 
   });
 });
 
+describe("pre-stamp pack with a MISSING no-return row and nothing refunded (6 prod packs)", () => {
+  it("UNKNOWN status keeps the missing row: nothing is inferred from an absent status", () => {
+    const c = structuredClone(cases["99445"]) as unknown as { checklist_v2: Array<Record<string, unknown>>; sections: Array<{ labelToken: { key: string }; fieldsProvided: string[] }> };
+    c.checklist_v2 = c.checklist_v2.map((r) => (r.field === "no_return_initiated" ? { ...r, status: "missing" } : r));
+    c.sections = c.sections
+      .filter((s) => s.labelToken.key !== "packs.section.refundHistory")
+      .map((s) => ({ ...s, fieldsProvided: s.fieldsProvided.filter((f) => f !== "no_return_initiated") }));
+    const out = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections });
+    expect(out.checklist.find((r) => r.field === "no_return_initiated")?.status).toBe("missing");
+    expect(out.droppedForRecord).toEqual([]);
+  });
+});
+
 describe("what is NOT changed (bank-facing and stored)", () => {
   it.each(["24612", "24510", "24599", "24215", "99445"] as const)("#%s: inputs are not mutated and the stored score is only an input", (k) => {
     const before = JSON.stringify(cases[k]);

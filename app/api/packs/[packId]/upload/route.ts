@@ -1,3 +1,4 @@
+import { NEVER_MERCHANT_UPLOADABLE } from "@/lib/disputes/presentation/concreteContribution";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAuditActor } from "@/lib/audit/resolveActor";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -167,6 +168,17 @@ export async function POST(
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  }
+
+  // Shopify's refund record and the return-status conclusion are not something
+  // a merchant can attach a file to (F-1a): a file would only raise the stored
+  // score without becoming that fact. Proof of an out-of-Shopify refund goes on
+  // `supporting_documents`.
+  if (uploadedField && NEVER_MERCHANT_UPLOADABLE.has(uploadedField)) {
+    return NextResponse.json(
+      { error: "This item cannot be uploaded to", code: "FIELD_NOT_UPLOADABLE" },
+      { status: 409 },
+    );
   }
 
   const typeCheck = validateShopifyDisputeEvidenceUpload({

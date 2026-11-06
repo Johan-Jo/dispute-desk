@@ -46,14 +46,23 @@ export function buildRefundPresentation(
 
   // Refund actually issued (refund_record payload).
   if (p.refundStatus === "processed") {
-    const amountRaw =
-      typeof p.amount === "string"
+    // When the refund statement says `some`, ITS amount and date win: the
+    // collector's `refundedAt` is the latest entry (which can be a failed 0.0
+    // one), the statement takes the date from positive entries only.
+    const fromStatement = refundStatement?.kind === "some" ? refundStatement : null;
+    const amountRaw = fromStatement?.amount
+      ? fromStatement.amount
+      : typeof p.amount === "string"
         ? p.amount.trim()
         : typeof p.amount === "number"
           ? String(p.amount)
           : null;
-    const currency = typeof p.currency === "string" ? p.currency.trim() : null;
-    const date = shortEvidenceDate(p.refundedAt);
+    const currency = fromStatement?.currency
+      ? fromStatement.currency
+      : typeof p.currency === "string"
+        ? p.currency.trim()
+        : null;
+    const date = shortEvidenceDate(fromStatement ? fromStatement.refundedAt ?? null : p.refundedAt);
     const factsTokens: I18nToken[] = [];
     if (amountRaw && currency && date) {
       factsTokens.push({

@@ -11,6 +11,7 @@
  */
 "use client";
 
+import { canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
 import type { RefundStatement } from "@/lib/disputes/refundStatement";
 import { merchantCompleteness } from "@/lib/packs/effectiveChecklist";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -465,10 +466,10 @@ export default function PackPreviewPage() {
   const scrollToFirstMissing = useCallback(() => {
     if (!pack) return;
     // V2: find first missing blocker, then first missing critical
-    const v2 = (pack.checklist_v2 ?? pack.checklist ?? []) as (ChecklistItemV2 | ChecklistItem)[];
+    const v2 = (pack.effective_checklist_v2 ?? pack.checklist_v2 ?? pack.checklist ?? []) as (ChecklistItemV2 | ChecklistItem)[];
     const firstMissing = v2.find((c) => {
       if ("status" in c) {
-        return c.status === "missing" && !completedFields.has(c.field);
+        return c.status === "missing" && !completedFields.has(c.field) && canMerchantUpload(c);
       }
       return (c.required ?? false) && !c.present && !completedFields.has(c.field);
     });

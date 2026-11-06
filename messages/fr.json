@@ -1880,7 +1880,7 @@
     },
     "whyText": {
       "customer_account_info": "Montre l'historique des commandes précédentes du client dans votre boutique — appuie le fait que la commande était un achat authentique",
-      "refund_record": "Prouve qu'un remboursement a réellement été effectué sur la commande — décisif contre les réclamations « remboursement non traité »",
+      "refund_record": "Le dossier de remboursement de Shopify, affiché lorsqu’un remboursement existe.",
       "no_return_initiated": "Montre que le client n'a jamais initié de retour — fonde l'argument qu'aucun remboursement n'était dû",
       "ip_location_check": "Situe la commande à l'emplacement habituel du client — conforte que le titulaire de la carte l'a passée",
       "device_session_consistency": "Relie la commande à l'appareil et à la session connus du client — réfute les allégations « ce n'était pas moi »",
