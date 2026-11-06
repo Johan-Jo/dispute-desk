@@ -4,6 +4,7 @@
  */
 
 import type { OrderSituation } from "@/lib/disputes/orderSituation";
+import type { RefundStatement } from "@/lib/disputes/refundStatement";
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
@@ -148,6 +149,9 @@ export interface WorkspaceDispute {
    *  was last built (`asOf`). Merchant-only: drives the note on the Overview
    *  and the letter tab, and is never part of anything sent to the bank. */
   orderSituation?: (OrderSituation & { asOf: string | null }) | null;
+  /** What Shopify records about refunds on the order (lib/disputes/refundStatement.ts),
+   *  read off the pack sections with `asOf` = the pack's last build. Merchant-only. */
+  refundStatement?: RefundStatement | null;
   cardholderName?: string | null;
   /** Full event timeline from the pack's access_log section — the SAME
    *  array the PDF builder threads through `meta.timelineEvents`. The

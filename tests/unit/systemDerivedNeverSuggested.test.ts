@@ -36,6 +36,7 @@
  * added to a template would otherwise reproduce this exactly.
  */
 
+import { hintAsksForUnsuppliableSignal } from "@/lib/argument/improvementHint";
 import { describe, it, expect } from "vitest";
 import { calculateCaseStrength, calculateImprovement } from "@/lib/argument/caseStrength";
 import { buildCaseGateAssessment, gateNotProvided } from "@/lib/argument/caseGateAssessment";
@@ -118,6 +119,22 @@ describe("the improvement hint never names a system-derived field", () => {
     expect(r.improvementHintI18n, "the hint path is dead, not merely gated").not.toBeNull();
   });
 
+  it("the stored hint for the refund signal is dropped at display time (PR 1)", () => {
+    // Stored output keeps the build-time rule (above); the display layer drops a
+    // hint that asks for a field only Shopify holds.
+    const r = calculateCaseStrength(
+      [missing("no_return_initiated", "manual")],
+      "CREDIT_NOT_PROCESSED",
+      undefined,
+      NO_GATES,
+    );
+    expect(hintAsksForUnsuppliableSignal(r.improvementHintI18n)).toBe(true);
+    expect(hintAsksForUnsuppliableSignal(null)).toBe(false);
+    expect(
+      hintAsksForUnsuppliableSignal({ key: "disputes.improvementHint", params: { label: { type: "i18n-key", key: "disputes.signalLabel.delivery" } } } as never),
+    ).toBe(false);
+  });
+
   it("exactly two registry fields can ever be suggested — and both are real", () => {
     /* Everything else in `FIELD_ACTIONS` is weight-0 `supporting`, which
      * `affectsStrength` skips. Pinned as a NUMBER so that adding a
@@ -132,7 +149,13 @@ describe("the improvement hint never names a system-derived field", () => {
       })
       .map(([field]) => field)
       .sort();
-    expect(suggestible).toEqual(["no_return_initiated", "refund_record"]);
+    // PR 1 (plan §3.1 F-1a): `no_return_initiated` and `refund_record` are never
+    // merchant-uploadable at the display layer (the record is Shopify's, the
+    // return answer is the real channel). Persisted `recommended_actions` keep
+    // the build-time rule (`canMerchantUploadAtBuild`) so stored output is
+    // byte-identical. Adding a merchant-suppliable strong/moderate field is
+    // still a deliberate update here.
+    expect(suggestible).toEqual([]);
   });
 });
 

@@ -1,8 +1,12 @@
 "use client";
 
+import { canMerchantUpload, NEVER_MERCHANT_UPLOADABLE } from "@/lib/disputes/presentation/concreteContribution";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
+import { resolveToken } from "@/lib/i18n/resolveToken";
+import { unavailableReasonToken } from "@/lib/disputes/unavailableReasonToken";
+import type { RefundStatement } from "@/lib/disputes/refundStatement";
 import {
   Card,
   BlockStack,
@@ -83,6 +87,9 @@ const INTERNAL_ONLY_FIELDS: ReadonlySet<string> = new Set([
 
 function isInternalOnly(item: ChecklistItemV2): boolean {
   if (INTERNAL_ONLY_FIELDS.has(item.field)) return true;
+  // Shopify's own record (refund) and a conclusion from its return status: the
+  // merchant has nothing to upload here (F-1a), so no drop zone is offered.
+  if (!canMerchantUpload(item) && NEVER_MERCHANT_UPLOADABLE.has(item.field)) return true;
   // Any field auto-collected from Shopify with no merchant-actionable
   // upload path falls under the same rule. Conditional-auto (e.g. AVS
   // when card data is missing) and manual-upload fields are excluded.
@@ -98,6 +105,13 @@ const INTERNAL_ONLY_REASON: Record<string, string> = {
     "Device and session consistency signals were not collected for this order. Used internally for assessment; not surfaced to the bank.",
   fraud_risk_screening:
     "Shopify's pre-authorization fraud screening signal is not available for this order. Used internally for assessment; not surfaced to the bank.",
+};
+
+/** Translation keys (disputes.internalOnlyReason.*) for the fields that are
+ *  status-only because only Shopify holds them. Never English literals. */
+const INTERNAL_ONLY_REASON_KEY: Record<string, string> = {
+  refund_record: "refundRecord",
+  no_return_initiated: "noReturnInitiated",
 };
 
 function getInternalOnlyReason(item: ChecklistItemV2): string {
@@ -133,6 +147,9 @@ interface EvidenceBuilderSectionProps {
   focusField: string | null;
   onFocusHandled: () => void;
   readOnly?: boolean;
+  /** What Shopify records about refunds (lib/disputes/refundStatement.ts). Used to
+   *  word the "not available" reason on the refund row; omitted = "not recorded". */
+  refundStatement?: RefundStatement | null;
 }
 
 export function EvidenceBuilderSection({
@@ -149,10 +166,12 @@ export function EvidenceBuilderSection({
   focusField,
   onFocusHandled,
   readOnly = false,
+  refundStatement = null,
 }: EvidenceBuilderSectionProps) {
   const [includedOpen, setIncludedOpen] = useState(readOnly);
   const [selectedTab, setSelectedTab] = useState(0);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const tRoot = useTranslations();
   const tWhy = useTranslations("disputes.whyText");
   const tWorkspace = useTranslations("disputes.workspaceHook");
   const getWhyText = useCallback(
@@ -352,7 +371,10 @@ export function EvidenceBuilderSection({
                   </InlineStack>
                   {item.unavailableReason && (
                     <Text as="p" variant="bodySm" tone="subdued">
-                      {item.unavailableReason}
+                      {(() => {
+                        const tok = unavailableReasonToken(item.unavailableReason, refundStatement ?? null);
+                        return tok ? resolveToken(tRoot, tok) : null;
+                      })()}
                     </Text>
                   )}
                 </BlockStack>
@@ -382,7 +404,9 @@ export function EvidenceBuilderSection({
                     {item.label}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {getInternalOnlyReason(item)}
+                    {INTERNAL_ONLY_REASON_KEY[item.field]
+                      ? tRoot(`disputes.internalOnlyReason.${INTERNAL_ONLY_REASON_KEY[item.field]}`)
+                      : getInternalOnlyReason(item)}
                   </Text>
                 </BlockStack>
               </div>

@@ -1,3 +1,7 @@
+import { assembleEffectiveChecklist, merchantCompleteness } from "@/lib/packs/effectiveChecklist";
+import { refundStatementFromPackSections } from "@/lib/disputes/refundStatement";
+import { normalizeChecklistV2Shape } from "@/lib/packs/checklistReconcile";
+import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPackById, deletePack, updatePackStatus } from "@/lib/db/packs";
@@ -402,8 +406,41 @@ export async function GET(
         .maybeSingle(),
     ]);
 
+    // Effective rows + the one merchant percentage (plan §2.6, §3.2). ADDED
+    // beside the stored `checklist_v2` / `completeness_score`, never replacing
+    // them: automation, the save check and the decision hash read the stored
+    // values. Dispute packs only (library packs have no record to judge by).
+    let effectiveFields: Record<string, unknown> = {};
+    // Only when a stored v2 checklist exists: a legacy pack with none keeps the
+    // page's v1 path (the effective rows would be just the collected fields and
+    // would read as 100% complete).
+    const storedV2 = normalizeChecklistV2Shape(pack.checklist_v2);
+    if (pack.dispute_id != null && storedV2 && storedV2.length > 0) {
+      const effective = assembleEffectiveChecklist({
+        storedChecklist: pack.checklist_v2 ?? null,
+        packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
+        evidenceItems: itemsRes.data ?? [],
+        returnScope: await loadReturnScopeForPack(db, {
+          shopId,
+          disputeId: pack.dispute_id as string,
+          packCycle: (pack as { response_cycle?: number | null }).response_cycle ?? 1,
+        }),
+      });
+      effectiveFields = {
+        effective_checklist_v2: effective.checklist,
+        merchant_completeness: merchantCompleteness(effective.checklist),
+        refund_statement: refundStatementFromPackSections(
+          (pack.pack_json as { sections?: unknown } | null)?.sections,
+          ((pack as { updated_at?: string | null }).updated_at ??
+            (pack as { created_at?: string | null }).created_at ??
+            null),
+        ),
+      };
+    }
+
     return NextResponse.json({
       ...pack,
+      ...effectiveFields,
       shop_domain,
       dispute_gid,
       dispute_evidence_gid,

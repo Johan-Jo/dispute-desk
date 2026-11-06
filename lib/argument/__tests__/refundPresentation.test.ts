@@ -34,16 +34,27 @@ describe("buildRefundPresentation", () => {
     });
   });
 
-  it("no return initiated: 'No refund issued' + the no-return basis", () => {
+  it("no return initiated: 'No return initiated' + the no-return basis, no refund clause without a statement", () => {
     const p = buildRefundPresentation({ returnStatus: "NO_RETURN" });
-    expect(p?.titleToken).toEqual({ key: "disputes.refundStatus.titleNone" });
+    expect(p?.titleToken).toEqual({ key: "disputes.refundStatus.titleNoReturn" });
     expect(p?.factsTokens).toEqual([{ key: "disputes.refundStatus.factsNoReturn" }]);
   });
 
-  it("refund section with nothing refunded: 'No refund issued'", () => {
-    expect(buildRefundPresentation({ refundStatus: "none" })?.titleToken).toEqual({
-      key: "disputes.refundStatus.titleNone",
-    });
+  it("adds the refund clause only when the statement kind is none", () => {
+    const withKind = (kind: "none" | "recorded_no_amount" | "some" | "unknown") =>
+      buildRefundPresentation({ returnStatus: "NO_RETURN" }, { kind, asOf: null })?.factsTokens;
+    expect(withKind("none")).toEqual([
+      { key: "disputes.refundStatus.factsNoReturn" },
+      { key: "disputes.refundStatement.none.detailNoDate" },
+    ]);
+    for (const k of ["recorded_no_amount", "some", "unknown"] as const) {
+      expect(withKind(k), k).toEqual([{ key: "disputes.refundStatus.factsNoReturn" }]);
+    }
+  });
+
+  it("a zero-amount refund entry (refundStatus none) can never render 'No refund issued'", () => {
+    expect(buildRefundPresentation({ refundStatus: "none" })).toBeNull();
+    expect(buildRefundPresentation({ refundStatus: "none", amount: "0.0", currency: "SEK" })).toBeNull();
   });
 
   it("unknown payloads fall back to the generic label (null)", () => {

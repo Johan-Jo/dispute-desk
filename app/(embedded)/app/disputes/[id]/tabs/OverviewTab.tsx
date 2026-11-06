@@ -68,6 +68,8 @@ import {
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
 import { OrderSituationNote } from "./sections/OrderSituationNote";
+import { refundStatementTokens } from "@/lib/disputes/refundStatement";
+import { unavailableReasonToken } from "@/lib/disputes/unavailableReasonToken";
 import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
 import {
   MANUAL_UPLOAD_FIELD,
@@ -1584,12 +1586,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           without this the merchant is never shown the one fact that explains
           the case (whj8db-1q #21037). Shown after submission too: it is the
           record, not advice. */}
-      <OrderSituationNote situation={dispute.orderSituation ?? null} />
+      <OrderSituationNote
+        situation={dispute.orderSituation ?? null}
+        refundStatement={dispute.refundStatement ?? null}
+      />
 
       {!submitted && heldReason && (
         <Banner tone="info" title={tExtra(`heldUnrefunded.title.${heldReason}`)}>
           <BlockStack gap="200">
             <Text as="p" variant="bodyMd">{tExtra("heldUnrefunded.body")}</Text>
+            {dispute.refundStatement && dispute.refundStatement.kind !== "unknown" && (
+              <Text as="p" variant="bodyMd">
+                {resolveToken(tRoot, refundStatementTokens(dispute.refundStatement).detail)}
+              </Text>
+            )}
             <Text as="p" variant="bodySm" tone="subdued">
               {tExtra("heldUnrefunded.helper")}
             </Text>
@@ -1716,11 +1726,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 ? buildDeliveryPresentation(payload)
                 : null;
             // Refund rows get a fact-stating title ("Refund issued" /
-            // "No refund issued") + a facts line (amount, currency, date)
+            // "No return initiated") + a facts line (amount, currency, date)
             // instead of the categorical "Refund status" — the merchant
             // must be able to answer "was this refunded?" from the card.
             const refundPresentation =
-              spec.signalId === "refund" ? buildRefundPresentation(payload) : null;
+              spec.signalId === "refund" ? buildRefundPresentation(payload, dispute.refundStatement ?? null)
+                : null;
             return {
               item: c,
               spec,
@@ -1960,7 +1971,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               : null;
           const sourceNote =
             classification.status === "not_applicable" && item.unavailableReason
-              ? item.unavailableReason
+              ? (() => {
+                  // Stored English (or a reason code) -> a token; never shown raw.
+                  const tok = unavailableReasonToken(item.unavailableReason, dispute.refundStatement ?? null);
+                  return tok ? resolveToken(tRoot, tok) : null;
+                })()
               : waiveCaption
                 ? waiveCaption
                 : isInternalOnly && lineItem?.reasonToken

@@ -187,7 +187,8 @@ describe("the order situation never reaches a bank-facing output", () => {
     for (const locale of ["en", "de", "es", "fr", "pt", "sv"]) {
       const copy = JSON.parse(readFileSync(join(ROOT, "messages", `${locale}.json`), "utf8")).disputes.overviewExtra.orderSituation;
       expect(Object.keys(copy.title).sort(), locale).toEqual(["failed", "in_progress", "requested", "returned"]);
-      expect(Object.keys(copy.refund).sort(), locale).toEqual(["none", "some"]);
+      // The refund sentence lives in disputes.refundStatement (lib/disputes/refundStatement.ts).
+      expect(copy.refund, locale).toBeUndefined();
       for (const k of ["opened", "asOf"]) expect(copy[k], `${locale}.${k}`).toContain("{date}");
       expect(copy.privateNote.length, locale).toBeGreaterThan(20);
     }
