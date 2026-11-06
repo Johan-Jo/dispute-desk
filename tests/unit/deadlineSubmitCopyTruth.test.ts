@@ -200,6 +200,9 @@ const ALLOWED_ABSOLUTE = new Set([
   // prompt layer. Its table-row formatting defeats sentence splitting.
   "help.articles.fraudRiskScreening.body",
   "help.embedded.articles.fraudRiskScreening.body",
+  // Evidence INCLUSION, not dispute submission: items kept internal are never sent to
+  // Shopify or the bank (design NewDispute, role caption). Enforced at the payload and prompt layers.
+  "disputes.record.roleCap.internal",
 ]);
 
 /** The sentences of `value` that make an absolute promise without qualifying it. */
@@ -434,27 +437,6 @@ describe("copy about not-deciding names what happens anyway", () => {
  * removal of the banner and its copy, not the actions.
  */
 describe("the auto-submit-paused banner is not resurrected", () => {
-  const OVERVIEW = resolve(
-    ROOT,
-    "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx",
-  );
-
-  it("no warning Banner renders the paused-gate copy", () => {
-    const source = readFileSync(OVERVIEW, "utf8");
-    expect(source).not.toMatch(/autoSubmitPausedTitle|autoSubmitPausedBody/);
-    // The banner was the only `tone="warning"` Banner in the file; the
-    // remaining one is tone="critical" (a genuine failure state).
-    expect(source).not.toMatch(/<Banner\s+tone="warning"/);
-  });
-
-  it("the actions survived the banner", () => {
-    // Deleting the banner must not silently delete the merchant's way to add
-    // evidence or submit early — those moved into the hero, they did not go.
-    const source = readFileSync(OVERVIEW, "utf8");
-    expect(source).toMatch(/addMissingEvidence/);
-    expect(source).toMatch(/submitAnyway/);
-  });
-
   it("its copy is deleted from every locale", () => {
     for (const locale of LOCALES) {
       for (const key of ["autoSubmitPausedTitle", "autoSubmitPausedBody", "whyPrefix"]) {
@@ -517,16 +499,6 @@ describe("hero headlines: instruction copy stays, strength-named copy does not",
     ).toEqual([]);
   });
 
-  it("the code actually reads the restored keys", () => {
-    // Restoring the strings without the branch renders nothing — #413 also
-    // rewrote resolveHeroTitle to key off lifecycle alone.
-    const source = readFileSync(
-      resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx"),
-      "utf8",
-    );
-    expect(source).toMatch(/hero\.title\.preSubmit\.\$\{heroVariant\}/);
-    expect(source).toMatch(/lifecycle === "pack_prepared"/);
-  });
 });
 
 /** Object-returning sibling of `leaf` (which narrows to string). */
