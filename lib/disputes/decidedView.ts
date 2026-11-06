@@ -126,15 +126,7 @@ export interface DecidedView {
   /** `stat` counts how many of the store's lost disputes of this type share
    *  the recommendation's trigger. Present only when the case triggered it. */
   nextTime: Array<{ title: I18nToken; detail: I18nToken | null; stat: I18nToken | null }>;
-  timeline: Array<{
-    at: string;
-    title: I18nToken;
-    detail: I18nToken | null;
-    tone: TimelineTone;
-    /** Which step this is, so the account (lib/disputes/accountPage.ts) can
-     *  replace the ones whose line it owns (opening, decision, gathering). */
-    kind: "opened" | "gathered" | "held" | "emailed" | "weFiled" | "shopifySent" | "cancelled" | "outcome";
-  }>;
+  timeline: Array<{ at: string; title: I18nToken; detail: I18nToken | null; tone: TimelineTone }>;
 }
 
 export interface DecidedViewFormat {
@@ -146,14 +138,6 @@ export interface DecidedViewFormat {
 }
 
 const DELIVERY_CONFIRMED = new Set(["delivered_confirmed", "signature_confirmed"]);
-
-/** True when a delivery-confirmed proof is among the record's evidence facts
- *  (the one reading both the decided view and the dispute account use). */
-export function deliveryConfirmedFromFacts(facts: Record<string, Record<string, unknown>>): boolean {
-  const delivery = facts.delivery_proof ?? facts.shipping_tracking ?? null;
-  const proofType = typeof delivery?.proofType === "string" && delivery.proofType ? delivery.proofType : null;
-  return proofType !== null && DELIVERY_CONFIRMED.has(proofType);
-}
 const DAY_MS = 86_400_000;
 
 function t(iso: string | null | undefined): number | null {
@@ -503,7 +487,6 @@ function timelineSection(
         ? tk("timeline.openedDetail", { claim: claimParam, due: fmtShort(input.dueAt) })
         : tk("timeline.openedDetailNoDue", { claim: claimParam }),
       tone: "muted",
-      kind: "opened",
     });
   }
   if (input.firstPackAt && resp?.responder !== "before_install") {
@@ -517,7 +500,6 @@ function timelineSection(
       title: tk("timeline.gathered"),
       detail: deliveryMissing ? tk("timeline.gatheredNoDelivery") : null,
       tone: "neutral",
-      kind: "gathered",
     });
   }
 
@@ -531,7 +513,6 @@ function timelineSection(
         title: tk(`timeline.held.${held}.title`),
         detail: HELD_DETAIL.has(held) ? tk(`timeline.held.${held}.detail`) : null,
         tone: "warning",
-        kind: "held",
       });
     }
   }
@@ -541,34 +522,34 @@ function timelineSection(
     if (!e.created_at) continue;
     if (e.event_type === "fatal_loss_alert_sent" && !emailed.has(e.event_type)) {
       emailed.add(e.event_type);
-      steps.push({ at: e.created_at, title: tk("timeline.emailed"), detail: tk("timeline.emailedFatalLoss"), tone: "neutral", kind: "emailed" });
+      steps.push({ at: e.created_at, title: tk("timeline.emailed"), detail: tk("timeline.emailedFatalLoss"), tone: "neutral" });
     }
     if (e.event_type === "billing_blocked_email_sent" && !emailed.has(e.event_type)) {
       emailed.add(e.event_type);
-      steps.push({ at: e.created_at, title: tk("timeline.emailed"), detail: tk("timeline.emailedPlanLimit"), tone: "neutral", kind: "emailed" });
+      steps.push({ at: e.created_at, title: tk("timeline.emailed"), detail: tk("timeline.emailedPlanLimit"), tone: "neutral" });
     }
   }
 
   if (resp?.responder === "we" && resp.filedAt) {
-    steps.push({ at: resp.filedAt, title: tk("timeline.weFiled"), detail: tk("timeline.weFiledDetail"), tone: "primary", kind: "weFiled" });
+    steps.push({ at: resp.filedAt, title: tk("timeline.weFiled"), detail: tk("timeline.weFiledDetail"), tone: "primary" });
   }
   if ((resp?.responder === "shopify" || resp?.responder === "sent_before_install") && resp.sentAt) {
-    steps.push({ at: resp.sentAt, title: tk("timeline.shopifySent"), detail: null, tone: "neutral", kind: "shopifySent" });
+    steps.push({ at: resp.sentAt, title: tk("timeline.shopifySent"), detail: null, tone: "neutral" });
   }
 
   const cancelled = input.order?.cancelledAt ?? null;
   const cancelledT = t(cancelled);
   const openedT = t(input.openedAt);
   if (cancelled && cancelledT !== null && openedT !== null && cancelledT >= openedT) {
-    steps.push({ at: cancelled, title: tk("timeline.cancelled"), detail: null, tone: "neutral", kind: "cancelled" });
+    steps.push({ at: cancelled, title: tk("timeline.cancelled"), detail: null, tone: "neutral" });
   }
 
   if (input.closedAt) {
     const money = fmtMoney(input.amount, input.currency);
     steps.push(
       input.outcome === "lost"
-        ? { at: input.closedAt, title: tk("timeline.lost"), detail: tk("timeline.lostDetail", { amount: money }), tone: "danger", kind: "outcome" }
-        : { at: input.closedAt, title: tk("timeline.won"), detail: tk("timeline.wonDetail", { amount: money }), tone: "success", kind: "outcome" },
+        ? { at: input.closedAt, title: tk("timeline.lost"), detail: tk("timeline.lostDetail", { amount: money }), tone: "danger" }
+        : { at: input.closedAt, title: tk("timeline.won"), detail: tk("timeline.wonDetail", { amount: money }), tone: "success" },
     );
   }
 

@@ -2315,19 +2315,6 @@
       "unknown": {
         "title": "Estado del reembolso no registrado",
         "detail": "El estado del reembolso no está registrado para este pedido."
-      },
-      "account": {
-        "none": "Shopify no registra ningún reembolso en este pedido. El total reembolsado es {total}.",
-        "some": "Shopify registra {total} reembolsados en este pedido.",
-        "someDated": "Shopify registra {total} reembolsados en este pedido, el último el {date}.",
-        "entry": "Shopify registra {count, plural, one {una entrada de reembolso} other {# entradas de reembolso}} en este pedido sin importe confirmado. El total reembolsado es {total}.",
-        "entryDated": "Shopify registra una entrada de reembolso en este pedido, hecha el {date}, sin importe confirmado. El total reembolsado es {total}.",
-        "entryBefore": "Shopify registra una entrada de reembolso en este pedido, hecha el {date}, antes de la disputa, sin importe confirmado. El total reembolsado es {total}."
-      },
-      "pill": {
-        "none": "Sin reembolso registrado",
-        "some": "Reembolso registrado",
-        "recordedNoAmount": "Sin importe confirmado"
       }
     },
     "internalOnlyReason": {
@@ -2500,95 +2487,6 @@
         },
         "cancel": "Cancelar",
         "add": "Añadir al paquete"
-      }
-    },
-    "account": {
-      "ret": {
-        "returned": "Una devolución de este pedido está marcada como recibida.",
-        "returnedDated": "Se creó una devolución de este pedido el {date} y está marcada como recibida.",
-        "inProgress": "Hay una devolución en curso de este pedido. Todavía no está marcada como recibida.",
-        "inProgressDated": "Se creó una devolución de este pedido el {date}. Está en curso y todavía no está marcada como recibida.",
-        "requested": "Se ha solicitado una devolución de este pedido. Todavía no está aprobada.",
-        "requestedDated": "Se creó una devolución de este pedido el {date}. Se ha solicitado y todavía no está aprobada.",
-        "failed": "Una devolución de este pedido está marcada como fallida.",
-        "failedDated": "Se creó una devolución de este pedido el {date} y está marcada como fallida."
-      },
-      "match": {
-        "one": "Este registro coincide con lo que afirma el cliente.",
-        "many": "Estos registros coinciden con lo que afirma el cliente."
-      },
-      "filed": {
-        "we": "DisputeDesk presentó pruebas para esta disputa el {date}.",
-        "weNoDate": "DisputeDesk presentó pruebas para esta disputa.",
-        "none": "DisputeDesk no presentó nada para esta disputa, así que ninguna prueba de DisputeDesk formó parte de la decisión.",
-        "shopify": "DisputeDesk no presentó nada para esta disputa. El {date} se envió una respuesta a través de Shopify.",
-        "shopifyNoDate": "DisputeDesk no presentó nada para esta disputa. Se envió una respuesta a través de Shopify.",
-        "beforeInstall": "Esta disputa se resolvió antes de que DisputeDesk estuviera instalado en tu tienda, así que DisputeDesk no presentó nada."
-      },
-      "delivery": {
-        "confirmed": "El transportista confirmó la entrega."
-      },
-      "outcome": {
-        "won": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}. Se recuperaron {amount}.",
-        "wonSameDay": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}, el día en que se abrió la disputa. Se recuperaron {amount}.",
-        "wonNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}.",
-        "wonSameDayNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}, el día en que se abrió la disputa.",
-        "lost": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}. No se devolvieron {amount}.",
-        "lostSameDay": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}, el día en que se abrió la disputa. No se devolvieron {amount}.",
-        "lostNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}.",
-        "lostSameDayNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}, el día en que se abrió la disputa."
-      },
-      "noReason": "No se dio ningún motivo para la decisión.",
-      "order": {
-        "card": "Total del pedido {total}, pagado con tarjeta.",
-        "total": "Total del pedido {total}."
-      },
-      "tracking": {
-        "missing": "El seguimiento del envío no está en el paquete de pruebas."
-      },
-      "opened": "La disputa se abrió el {date}.",
-      "due": "Hay que responder antes del {date}.",
-      "pack": {
-        "none": "Todavía no se ha creado ningún paquete de pruebas y no se ha guardado nada en Shopify.",
-        "built": "Se ha creado un paquete de pruebas y todavía no se ha guardado nada en Shopify.",
-        "saved": "Las pruebas de esta disputa se guardaron en Shopify el {date}.",
-        "forwarded": "Las pruebas de esta disputa se guardaron en Shopify, que las reenvió al banco.",
-        "building": "Se está creando un paquete de pruebas y todavía no se ha guardado nada en Shopify."
-      },
-      "open": {
-        "title": {
-          "response_needed": "Respuesta necesaria",
-          "saved_to_shopify": "Guardado en Shopify",
-          "under_review": "En revisión"
-        },
-        "chip": {
-          "due": "Abierta · responder antes del {date}",
-          "open": "Abierta",
-          "waiting": "Abierta · a la espera de la decisión"
-        },
-        "amountLabel": "Importe en disputa"
-      },
-      "step": {
-        "returnCreated": "Devolución creada",
-        "refundEntry": "Entrada de reembolso registrada",
-        "opened": "Disputa abierta",
-        "decidedWon": "Decidida a tu favor",
-        "decidedLost": "Decidida en tu contra",
-        "pack": "Paquete de pruebas",
-        "due": "Respuesta debida",
-        "titleOpen": "Qué ocurre ahora",
-        "now": "Ahora"
-      },
-      "missing": {
-        "refundRecordPrefix": "Registro de reembolso: ",
-        "notAFile": "Es información de Shopify, no un archivo que puedas añadir."
-      },
-      "group": {
-        "pack": {
-          "title": "En el paquete de pruebas",
-          "caption": "El paquete se creó pero no se presentó, así que ningún elemento tuvo un papel en una respuesta.",
-          "tag": "No presentado"
-        }
       }
     }
   },
@@ -4049,7 +3947,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalle de disputa en esta aplicación",
-          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda.\n\n**Si el pedido quedó retenido o se canceló y no se reembolsó**, un aviso lo indica. Su control de fraude marcó el pedido, no se envió nada y el pago sigue cobrado. En ese caso no hay prueba de entrega que presentar: la puntuación refleja lo que ocurrió con el pedido, no una falta en sus registros.\n\n**Cifras de su propia tienda.** En una disputa ganada o perdida, **Qué gana este tipo de disputa** puede mostrar con qué frecuencia se ganaron las disputas del mismo tipo en su tienda, y un paso de **La próxima vez** puede mostrar cuántas de sus disputas perdidas de ese tipo tuvieron el mismo problema. Solo aparecen cuando su tienda tiene suficientes disputas resueltas de ese tipo. Describen el historial de su tienda, no el razonamiento del banco en este caso.\n\n**Un resumen al principio de cada pestaña.** Cada pestaña empieza con el mismo resumen breve, escrito a partir de un único registro de hechos: lo que el cliente dijo a su banco, lo que Shopify registra sobre una devolución y un reembolso, si DisputeDesk presentó pruebas y, cuando el banco ya ha decidido, cómo decidió y por cuánto. Cada fila, etiqueta y paso de la cronología que aparece debajo repite esas mismas frases, de modo que la página nunca dice una cosa en un sitio y otra distinta en otro. Cuando hay una devolución registrada, el resumen indica su estado y la fecha en que se creó; una entrada de reembolso sin importe confirmado se describe exactamente así. Refleja el registro de Shopify en el momento en que DisputeDesk consultó el pedido por última vez. Es solo para ti y no forma parte de nada de lo que se envía al banco. Si DisputeDesk no presentó nada en una disputa ya decidida, las pestañas Evidencia y Revisar y reenviar muestran lo que había en el paquete de pruebas bajo **En el paquete de pruebas**, no como pruebas utilizadas."
+          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda.\n\n**Si el pedido quedó retenido o se canceló y no se reembolsó**, un aviso lo indica. Su control de fraude marcó el pedido, no se envió nada y el pago sigue cobrado. En ese caso no hay prueba de entrega que presentar: la puntuación refleja lo que ocurrió con el pedido, no una falta en sus registros.\n\n**Cifras de su propia tienda.** En una disputa ganada o perdida, **Qué gana este tipo de disputa** puede mostrar con qué frecuencia se ganaron las disputas del mismo tipo en su tienda, y un paso de **La próxima vez** puede mostrar cuántas de sus disputas perdidas de ese tipo tuvieron el mismo problema. Solo aparecen cuando su tienda tiene suficientes disputas resueltas de ese tipo. Describen el historial de su tienda, no el razonamiento del banco en este caso.\n\n**Una devolución en el pedido.** Cuando Shopify registra una devolución en el pedido disputado, el resumen y la pestaña de la carta muestran una nota que lo indica, con la fecha en que se creó la devolución si Shopify la proporciona y si se ha emitido un reembolso. La nota refleja el registro de Shopify en el momento de la última consulta de DisputeDesk. Es solo para ti y no forma parte de nada de lo que se envía al banco."
         },
         "reviewQueue": {
           "title": "La cola de revisión",

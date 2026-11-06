@@ -278,11 +278,9 @@ describe("copy and wiring invariants", () => {
     expect(builder).toContain("unavailableReasonToken(");
     expect(overview).not.toMatch(/\?\s*item\.unavailableReason\b/);
     expect(builder).not.toMatch(/\{item\.unavailableReason\}/);
-    // The dispute account (which replaced the blue OrderSituationNote banner) reads the
-    // refund statement only, never the situation's coarse refund flag.
-    const account = readFileSync(join(ROOT, "lib/disputes/disputeAccount.ts"), "utf8");
-    expect(account).toContain("i.refund");
-    expect(account).not.toMatch(/situation\??\.refund/);
+    const note = readFileSync(join(ROOT, "app/(embedded)/app/disputes/[id]/tabs/sections/OrderSituationNote.tsx"), "utf8");
+    expect(note).toContain("refundStatementTokens(");
+    expect(note).not.toMatch(/situation\.refund/);
     const viewer = readFileSync(join(ROOT, "components/packs/detail/EvidenceContentViewer.tsx"), "utf8");
     expect(viewer).not.toMatch(/refunded !== "0\.00"/);
     expect(viewer).toContain("isZeroAmount(payload.totals.refunded)");

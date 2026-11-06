@@ -2315,19 +2315,6 @@
       "unknown": {
         "title": "Statut du remboursement non enregistré",
         "detail": "Le statut du remboursement n’est pas enregistré pour cette commande."
-      },
-      "account": {
-        "none": "Shopify n'enregistre aucun remboursement sur cette commande. Le total remboursé est de {total}.",
-        "some": "Shopify enregistre {total} remboursés sur cette commande.",
-        "someDated": "Shopify enregistre {total} remboursés sur cette commande, le dernier le {date}.",
-        "entry": "Shopify enregistre {count, plural, one {une entrée de remboursement} other {# entrées de remboursement}} sur cette commande, sans montant confirmé. Le total remboursé est de {total}.",
-        "entryDated": "Shopify enregistre une entrée de remboursement sur cette commande, faite le {date}, sans montant confirmé. Le total remboursé est de {total}.",
-        "entryBefore": "Shopify enregistre une entrée de remboursement sur cette commande, faite le {date} avant le litige, sans montant confirmé. Le total remboursé est de {total}."
-      },
-      "pill": {
-        "none": "Aucun remboursement enregistré",
-        "some": "Remboursement enregistré",
-        "recordedNoAmount": "Aucun montant confirmé"
       }
     },
     "internalOnlyReason": {
@@ -2500,95 +2487,6 @@
         },
         "cancel": "Annuler",
         "add": "Ajouter au dossier"
-      }
-    },
-    "account": {
-      "ret": {
-        "returned": "Un retour pour cette commande est marqué comme reçu.",
-        "returnedDated": "Un retour pour cette commande a été créé le {date} et est marqué comme reçu.",
-        "inProgress": "Un retour est en cours pour cette commande. Il n'est pas encore marqué comme reçu.",
-        "inProgressDated": "Un retour pour cette commande a été créé le {date}. Il est en cours et pas encore marqué comme reçu.",
-        "requested": "Un retour a été demandé pour cette commande. Il n'est pas encore approuvé.",
-        "requestedDated": "Un retour pour cette commande a été créé le {date}. Il a été demandé et n'est pas encore approuvé.",
-        "failed": "Un retour pour cette commande est marqué comme échoué.",
-        "failedDated": "Un retour pour cette commande a été créé le {date} et est marqué comme échoué."
-      },
-      "match": {
-        "one": "Cet enregistrement correspond à ce que déclare le client.",
-        "many": "Ces enregistrements correspondent à ce que déclare le client."
-      },
-      "filed": {
-        "we": "DisputeDesk a déposé des preuves pour ce litige le {date}.",
-        "weNoDate": "DisputeDesk a déposé des preuves pour ce litige.",
-        "none": "DisputeDesk n'a rien déposé pour ce litige, donc aucune preuve de DisputeDesk n'a fait partie de la décision.",
-        "shopify": "DisputeDesk n'a rien déposé pour ce litige. Une réponse a été envoyée via Shopify le {date}.",
-        "shopifyNoDate": "DisputeDesk n'a rien déposé pour ce litige. Une réponse a été envoyée via Shopify.",
-        "beforeInstall": "Ce litige a été tranché avant l'installation de DisputeDesk sur votre boutique, donc DisputeDesk n'a rien déposé."
-      },
-      "delivery": {
-        "confirmed": "Le transporteur a confirmé la livraison."
-      },
-      "outcome": {
-        "won": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}. {amount} ont été récupérés.",
-        "wonSameDay": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}, le jour de l'ouverture du litige. {amount} ont été récupérés.",
-        "wonNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}.",
-        "wonSameDayNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}, le jour de l'ouverture du litige.",
-        "lost": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}. {amount} n'ont pas été restitués.",
-        "lostSameDay": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}, le jour de l'ouverture du litige. {amount} n'ont pas été restitués.",
-        "lostNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}.",
-        "lostSameDayNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}, le jour de l'ouverture du litige."
-      },
-      "noReason": "Aucun motif n'a été donné pour la décision.",
-      "order": {
-        "card": "Total de la commande {total}, payée par carte.",
-        "total": "Total de la commande {total}."
-      },
-      "tracking": {
-        "missing": "Le suivi d'expédition ne figure pas dans le dossier de preuves."
-      },
-      "opened": "Le litige a été ouvert le {date}.",
-      "due": "Une réponse est attendue avant le {date}.",
-      "pack": {
-        "none": "Aucun dossier de preuves n'a encore été créé, et rien n'a été enregistré dans Shopify.",
-        "built": "Un dossier de preuves a été créé, et rien n'a encore été enregistré dans Shopify.",
-        "saved": "Les preuves de ce litige ont été enregistrées dans Shopify le {date}.",
-        "forwarded": "Les preuves de ce litige ont été enregistrées dans Shopify, qui les a transmises à la banque.",
-        "building": "Un dossier de preuves est en cours de création, et rien n'a encore été enregistré dans Shopify."
-      },
-      "open": {
-        "title": {
-          "response_needed": "Réponse nécessaire",
-          "saved_to_shopify": "Enregistré dans Shopify",
-          "under_review": "En examen"
-        },
-        "chip": {
-          "due": "Ouvert · réponse attendue avant le {date}",
-          "open": "Ouvert",
-          "waiting": "Ouvert · en attente de la décision"
-        },
-        "amountLabel": "Montant en litige"
-      },
-      "step": {
-        "returnCreated": "Retour créé",
-        "refundEntry": "Entrée de remboursement enregistrée",
-        "opened": "Litige ouvert",
-        "decidedWon": "Tranché en votre faveur",
-        "decidedLost": "Tranché contre vous",
-        "pack": "Dossier de preuves",
-        "due": "Réponse attendue",
-        "titleOpen": "Ce qui se passe maintenant",
-        "now": "Maintenant"
-      },
-      "missing": {
-        "refundRecordPrefix": "Enregistrement du remboursement : ",
-        "notAFile": "C'est une information dans Shopify, pas un fichier que vous pouvez ajouter."
-      },
-      "group": {
-        "pack": {
-          "title": "Dans le dossier de preuves",
-          "caption": "Le dossier a été créé mais pas déposé, donc aucun élément n'a joué de rôle dans une réponse.",
-          "tag": "Non déposé"
-        }
       }
     }
   },
@@ -4049,7 +3947,7 @@
         },
         "disputeDetailPage": {
           "title": "Détail du litige dans cette application",
-          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers.\n\n**Des chiffres tirés de votre propre boutique.** Sur un litige gagné ou perdu, **Ce qui fait gagner ce type de litige** peut indiquer à quelle fréquence les litiges du même type ont été gagnés sur votre boutique, et une étape de **La prochaine fois** peut indiquer combien de vos litiges perdus de ce type présentaient le même problème. Ils n'apparaissent que lorsque votre boutique compte assez de litiges tranchés de ce type. Ils décrivent l'historique de votre boutique, pas le raisonnement de la banque sur ce dossier.\n\n**Un résumé en haut de chaque onglet.** Chaque onglet commence par le même court résumé, rédigé à partir d'un seul relevé de faits : ce que le client a déclaré à sa banque, ce que Shopify enregistre au sujet d'un retour et d'un remboursement, si DisputeDesk a déposé des preuves et, une fois la banque décidée, comment elle a tranché et pour quel montant. Chaque ligne, étiquette et étape de la chronologie qui suit reprend ces mêmes phrases, si bien que la page ne dit jamais une chose à un endroit et autre chose ailleurs. Lorsqu'un retour est enregistré, le résumé indique son état et la date de sa création ; une entrée de remboursement sans montant confirmé est décrite exactement ainsi. Il reflète l'enregistrement de Shopify au moment de la dernière collecte de la commande par DisputeDesk. Il vous est réservé et ne fait partie d'aucun élément envoyé à la banque. Si DisputeDesk n'a rien déposé pour un litige tranché, les onglets Preuves et Vérifier et transmettre listent le contenu du dossier de preuves sous **Dans le dossier de preuves**, et non comme des preuves utilisées."
+          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers.\n\n**Des chiffres tirés de votre propre boutique.** Sur un litige gagné ou perdu, **Ce qui fait gagner ce type de litige** peut indiquer à quelle fréquence les litiges du même type ont été gagnés sur votre boutique, et une étape de **La prochaine fois** peut indiquer combien de vos litiges perdus de ce type présentaient le même problème. Ils n'apparaissent que lorsque votre boutique compte assez de litiges tranchés de ce type. Ils décrivent l'historique de votre boutique, pas le raisonnement de la banque sur ce dossier.\n\n**Un retour sur la commande.** Lorsque Shopify enregistre un retour sur la commande contestée, l'aperçu et l'onglet de la lettre affichent une note qui l'indique, avec la date de création du retour si Shopify la fournit et si un remboursement a été effectué. La note reprend ce que Shopify indiquait lors de la dernière collecte par DisputeDesk. Elle vous est réservée et ne fait partie d'aucun élément envoyé à la banque."
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",

@@ -10,8 +10,7 @@
 
 "use client";
 
-import { useAccount } from "../workspace-components/AccountContext";
-import { AccountPackLine, AccountReviewBody } from "../workspace-components/AccountPanels";
+import { OrderSituationNote } from "./sections/OrderSituationNote";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
@@ -36,7 +35,6 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   const tExtra = useTranslations("disputes.evidenceTabExtra");
   const tChrome = useTranslations("disputes.reviewTab.chrome");
   const tRoot = useTranslations();
-  const account = useAccount();
 
   // ── Loading state ──
   if (clientState.loading && !data) {
@@ -45,19 +43,6 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         <Spinner accessibilityLabel={tChrome("loadingReview")} />
       </BlockStack>
     );
-  }
-
-  // A decided dispute DisputeDesk filed nothing for: the tab is the account's
-  // pack line and the pack's contents (design DecidedWorkspaceMock). The
-  // "ready to submit / saved" card below describes a filing that never happened.
-  if (account && data?.decidedView && account.account.filedNothing) {
-    return <AccountReviewBody page={account.page} />;
-  }
-
-  // An open dispute with no pack: the design's card with the pack line
-  // ("No evidence pack has been built yet...") replaces the old banner and the empty review.
-  if (account && !data?.decidedView && !data?.pack && !derived.isBuilding && !derived.isFailed) {
-    return <AccountReviewBody page={account.page} />;
   }
 
   // ── Failed / building / no-pack banners ──
@@ -79,7 +64,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   ) : null;
 
   const noPackBanner =
-    !account && !data?.pack && !derived.isBuilding && !derived.isFailed ? (
+    !data?.pack && !derived.isBuilding && !derived.isFailed ? (
       <Banner tone="warning" title={tExtra("noPackTitle")}>
         <p>{tExtra("noPackBodyReview")}</p>
       </Banner>
@@ -121,7 +106,11 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {noPackBanner}
       {noDefenceLetterBanner}
       {notAssessedBanner}
-      {account && !data?.decidedView && data?.pack ? <AccountPackLine page={account.page} /> : null}
+      {/* Merchant-only, and outside the card that mirrors the bank document. */}
+      <OrderSituationNote
+        situation={data?.dispute?.orderSituation ?? null}
+        refundStatement={data?.dispute?.refundStatement ?? null}
+      />
 
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,

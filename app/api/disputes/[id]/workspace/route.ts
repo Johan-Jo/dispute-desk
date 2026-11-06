@@ -496,16 +496,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     refundedAmount:
       ((packJsonSections.find((s) => (s.data as Record<string, unknown> | undefined)?.orderName)
         ?.data as { totals?: { refunded?: string | null } } | undefined)?.totals?.refunded) ?? null,
-    /* The order total, for the account's order sentence (merchant-only,
-     * lib/disputes/disputeAccount.ts). Read off the pack's order section. */
-    orderTotal: (() => {
-      const totals = (packJsonSections.find((s) => (s.data as Record<string, unknown> | undefined)?.orderName)
-        ?.data as { totals?: { total?: unknown; currency?: unknown } } | undefined)?.totals;
-      const amount = Number.parseFloat(String(totals?.total ?? ""));
-      return Number.isFinite(amount)
-        ? { amount, currency: typeof totals?.currency === "string" ? totals.currency : null }
-        : null;
-    })(),
     /* The order's return/refund situation, for the merchant-only note
      * (lib/disputes/orderSituation.ts). Read off the same pack sections, with
      * the date the pack was last built: the note states Shopify's record as
