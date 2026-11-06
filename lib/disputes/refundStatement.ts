@@ -87,7 +87,14 @@ export function refundStatementFromPackSections(
 
   // A refund section without a refunds[] array is an older shape: it says a
   // refund record exists but not what is in it.
-  if (refundData && !Array.isArray(refundData.refunds)) return { kind: "unknown", asOf };
+  // A stored order total above zero is a refund on record whatever shape the
+  // refund section has, so the legacy-shape short-circuit never hides it.
+  if (refundData && !Array.isArray(refundData.refunds)) {
+    if (storedTotal !== null && storedTotal > 0) {
+      return someStatement(String(totals?.refunded), currencyOf(), null, asOf);
+    }
+    return { kind: "unknown", asOf };
+  }
 
   const entries = (Array.isArray(refundData?.refunds) ? (refundData.refunds as unknown[]) : [])
     .map(asRecord)

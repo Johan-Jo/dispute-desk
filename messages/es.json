@@ -2327,6 +2327,7 @@
       "refundOnRecord": "Shopify registra un reembolso en este pedido.",
       "merchantSaysRequestReceived": "Nos indicaste que el cliente pidió devolver este pedido.",
       "returnedToSender": "El transportista te devolvió este paquete.",
+      "manualOnly": "No disponible automáticamente: súbalo manualmente si lo tiene.",
       "generic": "No aplica a este pedido."
     },
     "signalLabelValue": {

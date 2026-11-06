@@ -686,8 +686,10 @@ export function resolveItemStatus(
     };
   }
 
-  // The field half: a world precondition (e.g. a return is on record). Unset in
-  // every build-time caller, so this is a no-op there.
+  // The field half: a world precondition (e.g. a return is on record). A HOOK
+  // for the later build-time adoption (plan §5 step B1): no build caller sets
+  // `noReturnFact` today, so this is a no-op there. Setting it at build time
+  // changes stored statuses and the score, so it needs its own measured PR.
   if (field) {
     const world = fieldApplicability(field, ctx);
     if (!world.applicable) {

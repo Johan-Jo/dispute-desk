@@ -17,7 +17,11 @@
  */
 
 import type { Applicability } from "@/lib/automation/completeness";
-import { noReturnFactVerdict, type ReturnScopeInput } from "@/lib/disputes/returnRequestConfirmation";
+import {
+  isUnrecognisedReturnStatusOnly,
+  noReturnFactVerdict,
+  type ReturnScopeInput,
+} from "@/lib/disputes/returnRequestConfirmation";
 import { hasReturnedToSenderShipment } from "./contradictionGate";
 import type { EvidenceSection } from "./types";
 
@@ -37,6 +41,12 @@ export function noReturnApplicability(
 ): Applicability {
   const verdict = noReturnFactVerdict(input);
   if ("unknown" in verdict) return { applicable: true };
+  // The collector treats ANY non-null status other than NO_RETURN as "a return
+  // is on record" (and stays silent). At read time a status this code does not
+  // recognise is UNKNOWN, not a confirmed return: it never hides a row.
+  if (!verdict.emit && verdict.reason === "return_on_record" && isUnrecognisedReturnStatusOnly(input)) {
+    return { applicable: true };
+  }
   if (!verdict.emit) return { applicable: false, reason: verdict.reason };
   if (hasReturnedToSenderShipment((sections ?? []) as readonly EvidenceSection[])) {
     return { applicable: false, reason: "returned_to_sender" };

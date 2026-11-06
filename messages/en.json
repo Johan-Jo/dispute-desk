@@ -2327,6 +2327,7 @@
       "refundOnRecord": "Shopify records a refund on this order.",
       "merchantSaysRequestReceived": "You told us the customer asked to return this order.",
       "returnedToSender": "The carrier returned this parcel to you.",
+      "manualOnly": "Not available automatically — upload it manually if you have it.",
       "generic": "Not applicable to this order."
     },
     "signalLabelValue": {

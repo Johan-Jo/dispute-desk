@@ -2327,6 +2327,7 @@
       "refundOnRecord": "Shopify verzeichnet für diese Bestellung eine Rückerstattung.",
       "merchantSaysRequestReceived": "Sie haben uns mitgeteilt, dass der Kunde um eine Rücksendung dieser Bestellung gebeten hat.",
       "returnedToSender": "Der Zusteller hat dieses Paket an Sie zurückgesendet.",
+      "manualOnly": "Nicht automatisch verfügbar – laden Sie es manuell hoch, falls vorhanden.",
       "generic": "Für diese Bestellung nicht zutreffend."
     },
     "signalLabelValue": {

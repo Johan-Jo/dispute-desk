@@ -148,9 +148,16 @@ export async function POST(
   // recorded return) cannot be force-included: the fact does not exist, and
   // the row is not shown. force_exclude and clearing are unchanged.
   if (value === "force_include") {
+    // The same evidence items the workspace reads, so this guard cannot
+    // disagree with the page about a row a manual upload satisfied.
+    const { data: items } = await sb
+      .from("evidence_items")
+      .select("payload, source")
+      .eq("pack_id", packId);
     const { droppedForRecord } = assembleEffectiveChecklist({
       storedChecklist: pack.checklist_v2,
       packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
+      evidenceItems: items ?? [],
       returnScope: await loadReturnScopeForPack(sb, {
         shopId,
         disputeId: pack.dispute_id as string,

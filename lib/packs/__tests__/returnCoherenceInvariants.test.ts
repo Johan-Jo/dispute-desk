@@ -136,3 +136,26 @@ describe("loadReturnScopeForPack: the PACK's cycle decides, a failure reads as s
 
 // Keep the static import used (type-level guard that the module still exports).
 void loadReturnScopeForPack;
+
+describe("review follow-ups", () => {
+  it("a positive stored total is `some` even when the refund section has the older shape (no refunds[])", async () => {
+    const { refundStatementFromPackSections } = await import("@/lib/disputes/refundStatement");
+    const sections = [
+      { labelToken: { key: "packs.section.order" }, data: { totals: { refunded: "220.0", currency: "SEK" } } },
+      { labelToken: { key: "packs.section.refundHistory" }, data: { refundStatus: "processed", amount: "220.0" } },
+    ];
+    expect(refundStatementFromPackSections(sections, null)?.kind).toBe("some");
+    const zero = [
+      { labelToken: { key: "packs.section.order" }, data: { totals: { refunded: "0.0" } } },
+      { labelToken: { key: "packs.section.refundHistory" }, data: { refundStatus: "none" } },
+    ];
+    expect(refundStatementFromPackSections(zero, null)?.kind).toBe("unknown");
+  });
+
+  it("the stored 'upload manually' reason maps to a token, never to 'not applicable'", async () => {
+    const { unavailableReasonToken } = await import("@/lib/disputes/unavailableReasonToken");
+    expect(unavailableReasonToken("Not available automatically \u2014 upload manually if you have it")).toEqual({
+      key: "disputes.unavailableReason.manualOnly",
+    });
+  });
+});

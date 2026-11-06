@@ -30,6 +30,7 @@ const STORED_ENGLISH: Record<string, string> = {
   "AVS/CVV not returned by payment gateway": "avsCvvNotReturned",
   "No parcel on this order was returned to sender": "noParcelReturned",
   "Awaiting delivery confirmation": "awaitingDelivery",
+  "Not available automatically — upload manually if you have it": "manualOnly",
 };
 
 /** Reason codes -> token key suffix. */

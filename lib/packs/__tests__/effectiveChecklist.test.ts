@@ -97,8 +97,13 @@ describe("synthetic shapes from the plan (§2.7)", () => {
     expect(out.droppedForRecord).toEqual(["no_return_initiated"]);
   });
 
-  it("an unrecognised status is treated as a return on record", () => {
+  it("an unrecognised status is UNKNOWN at read time: it never hides the row (the collector stays silent, as before)", () => {
     const out = assemble([row("no_return_initiated", "missing")], [order("SOMETHING_NEW", "0.0")]);
+    expect(out.droppedForRecord).toEqual([]);
+  });
+
+  it("an unrecognised status WITH a refund on record is still a refund on record", () => {
+    const out = assemble([row("no_return_initiated", "missing")], [order("SOMETHING_NEW", "10.0")]);
     expect(out.droppedForRecord).toEqual(["no_return_initiated"]);
   });
 

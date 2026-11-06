@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopSettings } from "@/lib/automation/settings";
 import { refundStatementFromPackSections } from "@/lib/disputes/refundStatement";
-import { assembleEffectiveChecklist, merchantCompleteness } from "@/lib/packs/effectiveChecklist";
+import { assembleEffectiveChecklist } from "@/lib/packs/effectiveChecklist";
 import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
 import { loadReturnRequestConfirmation, packShowsReturnOrRefund, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
 import { orderSituationFromPackSections } from "@/lib/disputes/orderSituation";
@@ -582,9 +582,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         id: packRow.id,
         status: packRow.status,
         completenessScore: packRow.completeness_score ?? null,
-        // ADDED, never overwriting the stored score: the one merchant-facing
-        // percentage (plan §3.2), over the effective rows above.
-        merchantCompleteness: merchantCompleteness(reconciledChecklistV2),
         submissionReadiness: packRow.submission_readiness ?? null,
         checklistV2: reconciledChecklistV2,
         waivedItems: packRow.waived_items ?? [],

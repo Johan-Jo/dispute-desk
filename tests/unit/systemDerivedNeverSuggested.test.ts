@@ -36,6 +36,7 @@
  * added to a template would otherwise reproduce this exactly.
  */
 
+import { hintAsksForUnsuppliableSignal } from "@/lib/argument/improvementHint";
 import { describe, it, expect } from "vitest";
 import { calculateCaseStrength, calculateImprovement } from "@/lib/argument/caseStrength";
 import { buildCaseGateAssessment, gateNotProvided } from "@/lib/argument/caseGateAssessment";
@@ -104,20 +105,34 @@ describe("the improvement hint never names a system-derived field", () => {
     expect(r.improvementHintI18n).toBeNull();
   });
 
-  it("no longer asks for the two fields a merchant cannot supply (PR 1, F-1a)", () => {
-    /* `no_return_initiated` was the only live hint (merchant-suppliable and
-     * moderate). It is Shopify's return status, not a file the merchant owns,
-     * so the hint "add it" was untruthful; the merchant's real channel is the
-     * return-request answer. The registry holds no other strong/moderate
-     * merchant-suppliable field (see the pinned list above), so the hint path
-     * is intentionally empty until one is added. */
+  it("STILL fires for a genuinely merchant-supplied field", () => {
+    /* The gate must not silence every hint — that would trade a wrong
+     * instruction for no guidance, which is a quieter failure but still a
+     * failure. `no_return_initiated` is merchant-suppliable AND `moderate`,
+     * so it survives both `canMerchantUpload` and `affectsStrength`. */
     const r = calculateCaseStrength(
       [missing("no_return_initiated", "manual")],
       "CREDIT_NOT_PROCESSED",
       undefined,
       NO_GATES,
     );
-    expect(r.improvementHintI18n).toBeNull();
+    expect(r.improvementHintI18n, "the hint path is dead, not merely gated").not.toBeNull();
+  });
+
+  it("the stored hint for the refund signal is dropped at display time (PR 1)", () => {
+    // Stored output keeps the build-time rule (above); the display layer drops a
+    // hint that asks for a field only Shopify holds.
+    const r = calculateCaseStrength(
+      [missing("no_return_initiated", "manual")],
+      "CREDIT_NOT_PROCESSED",
+      undefined,
+      NO_GATES,
+    );
+    expect(hintAsksForUnsuppliableSignal(r.improvementHintI18n)).toBe(true);
+    expect(hintAsksForUnsuppliableSignal(null)).toBe(false);
+    expect(
+      hintAsksForUnsuppliableSignal({ key: "disputes.improvementHint", params: { label: { type: "i18n-key", key: "disputes.signalLabel.delivery" } } } as never),
+    ).toBe(false);
   });
 
   it("exactly two registry fields can ever be suggested — and both are real", () => {

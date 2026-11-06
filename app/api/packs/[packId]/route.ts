@@ -1,5 +1,6 @@
 import { assembleEffectiveChecklist, merchantCompleteness } from "@/lib/packs/effectiveChecklist";
 import { refundStatementFromPackSections } from "@/lib/disputes/refundStatement";
+import { normalizeChecklistV2Shape } from "@/lib/packs/checklistReconcile";
 import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -410,7 +411,11 @@ export async function GET(
     // them: automation, the save check and the decision hash read the stored
     // values. Dispute packs only (library packs have no record to judge by).
     let effectiveFields: Record<string, unknown> = {};
-    if (pack.dispute_id != null) {
+    // Only when a stored v2 checklist exists: a legacy pack with none keeps the
+    // page's v1 path (the effective rows would be just the collected fields and
+    // would read as 100% complete).
+    const storedV2 = normalizeChecklistV2Shape(pack.checklist_v2);
+    if (pack.dispute_id != null && storedV2 && storedV2.length > 0) {
       const effective = assembleEffectiveChecklist({
         storedChecklist: pack.checklist_v2 ?? null,
         packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,

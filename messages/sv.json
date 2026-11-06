@@ -2327,6 +2327,7 @@
       "refundOnRecord": "Shopify har en återbetalning registrerad för den här ordern.",
       "merchantSaysRequestReceived": "Du har berättat för oss att kunden bad om att få returnera den här ordern.",
       "returnedToSender": "Transportören returnerade paketet till dig.",
+      "manualOnly": "Inte tillgängligt automatiskt – ladda upp det manuellt om du har det.",
       "generic": "Gäller inte för den här ordern."
     },
     "signalLabelValue": {

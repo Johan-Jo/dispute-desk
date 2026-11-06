@@ -2327,6 +2327,7 @@
       "refundOnRecord": "Shopify enregistre un remboursement sur cette commande.",
       "merchantSaysRequestReceived": "Vous nous avez indiqué que le client a demandé à retourner cette commande.",
       "returnedToSender": "Le transporteur vous a retourné ce colis.",
+      "manualOnly": "Non disponible automatiquement : importez-le manuellement si vous l'avez.",
       "generic": "Sans objet pour cette commande."
     },
     "signalLabelValue": {

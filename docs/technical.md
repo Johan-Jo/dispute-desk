@@ -4028,8 +4028,9 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   `concreteContribution.ts`, applied inside `canMerchantUpload`): the first is Shopify's own refund record (a missing
   row already means "no confirmed refund amount"; 0 uploads ever), the second is a conclusion from Shopify's return
   status (the return-request answer is the real channel). Persisted `recommended_actions` keep the old rule through
-  `canMerchantUploadAtBuild`, so stored build output is byte-identical. The case-strength improvement hint therefore
-  has no live input until a merchant-suppliable strength field exists.
+  `canMerchantUploadAtBuild` (also used by `caseStrength`), so stored build output, including the stored improvement hint,
+  is byte-identical; the display layer drops a stored hint that asks for the refund signal
+  (`lib/argument/improvementHint.ts`), the only signal whose fields are all non-uploadable.
 - **Emission classification** (`lib/evidence/model/emissionClassification.ts`): every `auto`/`conditional_auto` field
   is classified `world_precondition` | `evidence_absent` | `needs_decision` with a written reason. A test enforces
   completeness against the code templates (plus the DB-only `tds_authentication` and `device_session_consistency`),

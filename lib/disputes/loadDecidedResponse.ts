@@ -230,10 +230,10 @@ export async function loadDecidedViewInputs(
         disputeId: row.id,
         packCycle: pack.response_cycle ?? 1,
       });
-      const ctx = {
+      const orderCtx = {
         noReturnFact: noReturnApplicability({ ...orderFactsFromSections(sections), returnScope: scope }, sections),
       } as OrderContext;
-      inapplicable = [...inapplicableFields(ctx)];
+      inapplicable = [...inapplicableFields(orderCtx)];
     }
     const fatal = (pack?.pack_json as { fatal_loss?: { reason?: string | null } } | null)?.fatal_loss;
     const amount = Number(
