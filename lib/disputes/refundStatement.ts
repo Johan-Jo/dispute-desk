@@ -43,6 +43,13 @@ export interface RefundStatement {
   currency?: string;
   /** Date of the latest refund entry with a positive amount; `some` only. */
   refundedAt?: string;
+  /** `recorded_no_amount` only: how many refund entries the order carries. */
+  entryCount?: number;
+  /** `recorded_no_amount` only: the entry's own date, set only when the
+   *  order carries exactly one entry (a date for several would be a guess). */
+  entryAt?: string;
+  /** `recorded_no_amount` only: currency of the (zero) refunded total. */
+  zeroCurrency?: string;
   /** When the pack was collected (ISO), or null when the caller has no date. */
   asOf: string | null;
 }
@@ -128,7 +135,16 @@ export function refundStatementFromPackSections(
       .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
     return someStatement(amount, currencyOf(), latest ?? null, asOf);
   }
-  return { kind: "recorded_no_amount", asOf };
+  const only = entries.length === 1 ? entries[0] : null;
+  const onlyAt = typeof only?.createdAt === "string" && Number.isFinite(Date.parse(only.createdAt)) ? only.createdAt : null;
+  const zeroCurrency = currencyOf();
+  return {
+    kind: "recorded_no_amount",
+    entryCount: entries.length,
+    ...(onlyAt ? { entryAt: onlyAt } : {}),
+    ...(zeroCurrency ? { zeroCurrency } : {}),
+    asOf,
+  };
 }
 
 function someStatement(

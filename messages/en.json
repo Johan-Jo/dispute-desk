@@ -2315,6 +2315,19 @@
       "unknown": {
         "title": "Refund status not recorded",
         "detail": "The refund status is not recorded for this order."
+      },
+      "account": {
+        "none": "Shopify records no refund on this order. The refunded total is {total}.",
+        "some": "Shopify records {total} refunded on this order.",
+        "someDated": "Shopify records {total} refunded on this order, most recently on {date}.",
+        "entry": "Shopify records {count, plural, one {one refund entry} other {# refund entries}} on this order with no confirmed amount. The refunded total is {total}.",
+        "entryDated": "Shopify records one refund entry on this order, made on {date}, with no confirmed amount. The refunded total is {total}.",
+        "entryBefore": "Shopify records one refund entry on this order, made on {date} before the dispute, with no confirmed amount. The refunded total is {total}."
+      },
+      "pill": {
+        "none": "No refund recorded",
+        "some": "Refund on record",
+        "recordedNoAmount": "No confirmed amount"
       }
     },
     "internalOnlyReason": {
@@ -2487,6 +2500,95 @@
         },
         "cancel": "Cancel",
         "add": "Add to package"
+      }
+    },
+    "account": {
+      "ret": {
+        "returned": "A return on this order is marked as received.",
+        "returnedDated": "A return on this order was created on {date} and is marked as received.",
+        "inProgress": "A return on this order is in progress. It is not yet marked as received.",
+        "inProgressDated": "A return on this order was created on {date}. It is in progress and not yet marked as received.",
+        "requested": "A return has been requested on this order. It has not been approved yet.",
+        "requestedDated": "A return on this order was created on {date}. It has been requested and not approved yet.",
+        "failed": "A return on this order is marked as failed.",
+        "failedDated": "A return on this order was created on {date} and is marked as failed."
+      },
+      "match": {
+        "one": "This record matches the customer's claim.",
+        "many": "These records match the customer's claim."
+      },
+      "filed": {
+        "we": "DisputeDesk filed evidence for this dispute on {date}.",
+        "weNoDate": "DisputeDesk filed evidence for this dispute.",
+        "none": "DisputeDesk filed nothing for this dispute, so no evidence from DisputeDesk was part of the decision.",
+        "shopify": "DisputeDesk filed nothing for this dispute. A response was sent through Shopify on {date}.",
+        "shopifyNoDate": "DisputeDesk filed nothing for this dispute. A response was sent through Shopify.",
+        "beforeInstall": "This dispute was decided before DisputeDesk was installed on your store, so DisputeDesk filed nothing for it."
+      },
+      "delivery": {
+        "confirmed": "The carrier confirmed delivery."
+      },
+      "outcome": {
+        "won": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}. {amount} was recovered.",
+        "wonSameDay": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}, the day the dispute opened. {amount} was recovered.",
+        "wonNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}, the day the dispute opened.",
+        "lost": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}. {amount} was not returned.",
+        "lostSameDay": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}, the day the dispute opened. {amount} was not returned.",
+        "lostNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}, the day the dispute opened."
+      },
+      "noReason": "No reason was given for the decision.",
+      "order": {
+        "card": "Order total {total}, placed with card payment.",
+        "total": "Order total {total}."
+      },
+      "tracking": {
+        "missing": "Shipping tracking is not in the evidence pack."
+      },
+      "opened": "The dispute opened on {date}.",
+      "due": "A response is due by {date}.",
+      "pack": {
+        "none": "No evidence pack has been built yet, and nothing has been saved to Shopify.",
+        "built": "An evidence pack has been built, and nothing has been saved to Shopify yet.",
+        "saved": "Evidence for this dispute was saved to Shopify on {date}.",
+        "forwarded": "Evidence for this dispute was saved to Shopify, which passed it on to the bank.",
+        "building": "An evidence pack is being built, and nothing has been saved to Shopify yet."
+      },
+      "open": {
+        "title": {
+          "response_needed": "Response needed",
+          "saved_to_shopify": "Evidence saved to Shopify",
+          "under_review": "Under review"
+        },
+        "chip": {
+          "due": "Open · response due {date}",
+          "open": "Open",
+          "waiting": "Open · waiting for the decision"
+        },
+        "amountLabel": "Amount in dispute"
+      },
+      "step": {
+        "returnCreated": "Return created",
+        "refundEntry": "Refund entry recorded",
+        "opened": "Dispute opened",
+        "decidedWon": "Decided in your favour",
+        "decidedLost": "Decided against you",
+        "pack": "Evidence pack",
+        "due": "Response due",
+        "titleOpen": "What happens now",
+        "now": "Now"
+      },
+      "missing": {
+        "refundRecordPrefix": "Refund record: ",
+        "notAFile": "This is information in Shopify, not a file you can add."
+      },
+      "group": {
+        "pack": {
+          "title": "In the evidence pack",
+          "caption": "The pack was built but not filed, so no item was given a role in a response.",
+          "tag": "Not filed"
+        }
       }
     }
   },
@@ -3946,7 +4048,7 @@
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
-          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case.\n\n**A return on the order.** When Shopify records a return on the disputed order, the Overview and the letter tab show a note saying so, with the date the return was created when Shopify gives one and whether a refund has been issued. The note states Shopify's record as of the last time DisputeDesk collected the order. It is for you only and is not part of anything sent to the bank."
+          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case.\n\n**One account at the top of every tab.** Each tab opens with the same short account, written from one record of facts: what the customer told their bank, what Shopify records about a return and a refund, whether DisputeDesk filed evidence, and, once the bank has decided, how it decided and for how much. Every row, pill and timeline step below repeats those same sentences, so the page never says one thing in one place and something else in another. When a return is on record the account gives its state and the date it was created; a refund entry with no confirmed amount is described as exactly that. It states Shopify's record as of the last time DisputeDesk collected the order. It is for you only and is not part of anything sent to the bank. If DisputeDesk filed nothing for a decided dispute, the Evidence and Review and Forward tabs list what was in the evidence pack under **In the evidence pack**, not as evidence that was used."
         },
         "reviewQueue": {
           "title": "The review queue",

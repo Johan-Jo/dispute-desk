@@ -2315,6 +2315,19 @@
       "unknown": {
         "title": "Status do reembolso não registrado",
         "detail": "O status do reembolso não está registrado para este pedido."
+      },
+      "account": {
+        "none": "A Shopify não registra nenhum reembolso neste pedido. O total reembolsado é {total}.",
+        "some": "A Shopify registra {total} reembolsados neste pedido.",
+        "someDated": "A Shopify registra {total} reembolsados neste pedido, o último em {date}.",
+        "entry": "A Shopify registra {count, plural, one {um lançamento de reembolso} other {# lançamentos de reembolso}} neste pedido, sem valor confirmado. O total reembolsado é {total}.",
+        "entryDated": "A Shopify registra um lançamento de reembolso neste pedido, feito em {date}, sem valor confirmado. O total reembolsado é {total}.",
+        "entryBefore": "A Shopify registra um lançamento de reembolso neste pedido, feito em {date} antes da contestação, sem valor confirmado. O total reembolsado é {total}."
+      },
+      "pill": {
+        "none": "Nenhum reembolso registrado",
+        "some": "Reembolso registrado",
+        "recordedNoAmount": "Sem valor confirmado"
       }
     },
     "internalOnlyReason": {
@@ -2487,6 +2500,95 @@
         },
         "cancel": "Cancelar",
         "add": "Adicionar ao pacote"
+      }
+    },
+    "account": {
+      "ret": {
+        "returned": "Uma devolução deste pedido está marcada como recebida.",
+        "returnedDated": "Uma devolução deste pedido foi criada em {date} e está marcada como recebida.",
+        "inProgress": "Há uma devolução em andamento neste pedido. Ela ainda não está marcada como recebida.",
+        "inProgressDated": "Uma devolução deste pedido foi criada em {date}. Ela está em andamento e ainda não está marcada como recebida.",
+        "requested": "Uma devolução foi solicitada neste pedido. Ela ainda não foi aprovada.",
+        "requestedDated": "Uma devolução deste pedido foi criada em {date}. Ela foi solicitada e ainda não foi aprovada.",
+        "failed": "Uma devolução deste pedido está marcada como malsucedida.",
+        "failedDated": "Uma devolução deste pedido foi criada em {date} e está marcada como malsucedida."
+      },
+      "match": {
+        "one": "Este registro corresponde ao que o cliente afirma.",
+        "many": "Estes registros correspondem ao que o cliente afirma."
+      },
+      "filed": {
+        "we": "O DisputeDesk enviou provas para esta contestação em {date}.",
+        "weNoDate": "O DisputeDesk enviou provas para esta contestação.",
+        "none": "O DisputeDesk não enviou nada para esta contestação, então nenhuma prova do DisputeDesk fez parte da decisão.",
+        "shopify": "O DisputeDesk não enviou nada para esta contestação. Uma resposta foi enviada pela Shopify em {date}.",
+        "shopifyNoDate": "O DisputeDesk não enviou nada para esta contestação. Uma resposta foi enviada pela Shopify.",
+        "beforeInstall": "Esta contestação foi decidida antes de o DisputeDesk ser instalado na sua loja, então o DisputeDesk não enviou nada."
+      },
+      "delivery": {
+        "confirmed": "A transportadora confirmou a entrega."
+      },
+      "outcome": {
+        "won": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}. {amount} foram recuperados.",
+        "wonSameDay": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}, o dia em que a contestação foi aberta. {amount} foram recuperados.",
+        "wonNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}, o dia em que a contestação foi aberta.",
+        "lost": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}. {amount} não foram devolvidos.",
+        "lostSameDay": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}, o dia em que a contestação foi aberta. {amount} não foram devolvidos.",
+        "lostNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}, o dia em que a contestação foi aberta."
+      },
+      "noReason": "Nenhum motivo foi informado para a decisão.",
+      "order": {
+        "card": "Total do pedido {total}, pago com cartão.",
+        "total": "Total do pedido {total}."
+      },
+      "tracking": {
+        "missing": "O rastreamento do envio não está no pacote de provas."
+      },
+      "opened": "A contestação foi aberta em {date}.",
+      "due": "É preciso responder até {date}.",
+      "pack": {
+        "none": "Nenhum pacote de provas foi criado ainda, e nada foi salvo na Shopify.",
+        "built": "Um pacote de provas foi criado, e nada foi salvo na Shopify ainda.",
+        "saved": "As provas desta contestação foram salvas na Shopify em {date}.",
+        "forwarded": "As provas desta contestação foram salvas na Shopify, que as encaminhou ao banco.",
+        "building": "Um pacote de provas está sendo criado, e nada foi salvo na Shopify ainda."
+      },
+      "open": {
+        "title": {
+          "response_needed": "Resposta necessária",
+          "saved_to_shopify": "Salvo na Shopify",
+          "under_review": "Em análise"
+        },
+        "chip": {
+          "due": "Aberta · responder até {date}",
+          "open": "Aberta",
+          "waiting": "Aberta · aguardando a decisão"
+        },
+        "amountLabel": "Valor em disputa"
+      },
+      "step": {
+        "returnCreated": "Devolução criada",
+        "refundEntry": "Lançamento de reembolso registrado",
+        "opened": "Contestação aberta",
+        "decidedWon": "Decidida a seu favor",
+        "decidedLost": "Decidida contra você",
+        "pack": "Pacote de provas",
+        "due": "Resposta devida",
+        "titleOpen": "O que acontece agora",
+        "now": "Agora"
+      },
+      "missing": {
+        "refundRecordPrefix": "Registro de reembolso: ",
+        "notAFile": "É uma informação na Shopify, não um arquivo que você possa adicionar."
+      },
+      "group": {
+        "pack": {
+          "title": "No pacote de provas",
+          "caption": "O pacote foi criado mas não enviado, então nenhum item teve um papel em uma resposta.",
+          "tag": "Não enviado"
+        }
       }
     }
   },
@@ -3947,7 +4049,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
-          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso.\n\n**Uma devolução no pedido.** Quando a Shopify registra uma devolução no pedido contestado, a visão geral e a aba da carta mostram uma nota informando isso, com a data em que a devolução foi criada, quando a Shopify a fornece, e se um reembolso foi emitido. A nota reflete o registro da Shopify na última consulta feita pelo DisputeDesk. Ela é só para você e não faz parte de nada que é enviado ao banco."
+          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso.\n\n**Um resumo no topo de cada aba.** Cada aba começa com o mesmo resumo curto, escrito a partir de um único registro de fatos: o que o cliente disse ao banco, o que a Shopify registra sobre uma devolução e um reembolso, se o DisputeDesk enviou provas e, quando o banco já decidiu, como decidiu e por quanto. Cada linha, etiqueta e etapa da linha do tempo abaixo repete essas mesmas frases, de modo que a página nunca diz uma coisa em um lugar e outra diferente em outro. Quando há uma devolução registrada, o resumo informa o estado dela e a data em que foi criada; um lançamento de reembolso sem valor confirmado é descrito exatamente assim. Ele reflete o registro da Shopify no momento em que o DisputeDesk consultou o pedido pela última vez. É só para você e não faz parte de nada que é enviado ao banco. Se o DisputeDesk não enviou nada em uma contestação já decidida, as abas Evidências e Revisar e encaminhar listam o que estava no pacote de provas em **No pacote de provas**, e não como provas utilizadas."
         },
         "reviewQueue": {
           "title": "A fila de revisão",
