@@ -2315,6 +2315,19 @@
       "unknown": {
         "title": "Status do reembolso não registrado",
         "detail": "O status do reembolso não está registrado para este pedido."
+      },
+      "account": {
+        "none": "A Shopify não registra nenhum reembolso neste pedido. O total reembolsado é {total}.",
+        "some": "A Shopify registra {total} reembolsados neste pedido.",
+        "someDated": "A Shopify registra {total} reembolsados neste pedido, o último em {date}.",
+        "entry": "A Shopify registra {count, plural, one {um lançamento de reembolso} other {# lançamentos de reembolso}} neste pedido, sem valor confirmado. O total reembolsado é {total}.",
+        "entryDated": "A Shopify registra um lançamento de reembolso neste pedido, feito em {date}, sem valor confirmado. O total reembolsado é {total}.",
+        "entryBefore": "A Shopify registra um lançamento de reembolso neste pedido, feito em {date} antes da contestação, sem valor confirmado. O total reembolsado é {total}."
+      },
+      "pill": {
+        "none": "Nenhum reembolso registrado",
+        "some": "Reembolso registrado",
+        "recordedNoAmount": "Sem valor confirmado"
       }
     },
     "internalOnlyReason": {
@@ -2487,6 +2500,93 @@
         },
         "cancel": "Cancelar",
         "add": "Adicionar ao pacote"
+      }
+    },
+    "account": {
+      "ret": {
+        "returned": "Uma devolução deste pedido está marcada como recebida.",
+        "returnedDated": "Uma devolução deste pedido foi criada em {date} e está marcada como recebida.",
+        "inProgress": "Há uma devolução em andamento neste pedido. Ela ainda não está marcada como recebida.",
+        "inProgressDated": "Uma devolução deste pedido foi criada em {date}. Ela está em andamento e ainda não está marcada como recebida.",
+        "requested": "Uma devolução foi solicitada neste pedido. Ela ainda não foi aprovada.",
+        "requestedDated": "Uma devolução deste pedido foi criada em {date}. Ela foi solicitada e ainda não foi aprovada.",
+        "failed": "Uma devolução deste pedido está marcada como malsucedida.",
+        "failedDated": "Uma devolução deste pedido foi criada em {date} e está marcada como malsucedida."
+      },
+      "match": {
+        "one": "Este registro corresponde ao que o cliente afirma.",
+        "many": "Estes registros correspondem ao que o cliente afirma."
+      },
+      "filed": {
+        "we": "O DisputeDesk enviou provas para esta contestação em {date}.",
+        "weNoDate": "O DisputeDesk enviou provas para esta contestação.",
+        "none": "O DisputeDesk não enviou nada para esta contestação, então nenhuma prova do DisputeDesk fez parte da decisão.",
+        "shopify": "O DisputeDesk não enviou nada para esta contestação. Uma resposta foi enviada pela Shopify em {date}.",
+        "shopifyNoDate": "O DisputeDesk não enviou nada para esta contestação. Uma resposta foi enviada pela Shopify.",
+        "beforeInstall": "Esta contestação foi decidida antes de o DisputeDesk ser instalado na sua loja, então o DisputeDesk não enviou nada."
+      },
+      "delivery": {
+        "confirmed": "A transportadora confirmou a entrega."
+      },
+      "outcome": {
+        "won": "O banco decidiu a seu favor em {date}. {amount} foram recuperados.",
+        "wonSameDay": "O banco decidiu a seu favor em {date}, o dia em que a contestação foi aberta. {amount} foram recuperados.",
+        "wonNoAmount": "O banco decidiu a seu favor em {date}.",
+        "wonSameDayNoAmount": "O banco decidiu a seu favor em {date}, o dia em que a contestação foi aberta.",
+        "lost": "O banco decidiu contra você em {date}. {amount} não foram devolvidos.",
+        "lostSameDay": "O banco decidiu contra você em {date}, o dia em que a contestação foi aberta. {amount} não foram devolvidos.",
+        "lostNoAmount": "O banco decidiu contra você em {date}.",
+        "lostSameDayNoAmount": "O banco decidiu contra você em {date}, o dia em que a contestação foi aberta."
+      },
+      "noReason": "Nenhum motivo foi informado para a decisão.",
+      "order": {
+        "card": "Total do pedido {total}, pago com cartão.",
+        "total": "Total do pedido {total}."
+      },
+      "tracking": {
+        "missing": "O rastreamento do envio não está no pacote de provas."
+      },
+      "opened": "A contestação foi aberta em {date}.",
+      "due": "É preciso responder até {date}.",
+      "pack": {
+        "none": "Nenhum pacote de provas foi criado ainda, e nada foi salvo na Shopify.",
+        "built": "Um pacote de provas foi criado, e nada foi salvo na Shopify ainda.",
+        "saved": "As provas desta contestação foram salvas na Shopify em {date}.",
+        "forwarded": "As provas desta contestação foram salvas na Shopify, que as encaminhou ao banco."
+      },
+      "open": {
+        "title": {
+          "response_needed": "Resposta necessária",
+          "saved_to_shopify": "Salvo na Shopify",
+          "under_review": "Em análise"
+        },
+        "chip": {
+          "due": "Aberta · responder até {date}",
+          "open": "Aberta",
+          "waiting": "Aberta · aguardando a decisão"
+        },
+        "amountLabel": "Valor em disputa"
+      },
+      "step": {
+        "returnCreated": "Devolução criada",
+        "refundEntry": "Lançamento de reembolso registrado",
+        "opened": "Contestação aberta",
+        "decidedWon": "Decidida a seu favor",
+        "decidedLost": "Decidida contra você",
+        "pack": "Pacote de provas",
+        "due": "Resposta devida",
+        "titleOpen": "O que acontece agora"
+      },
+      "missing": {
+        "refundRecordPrefix": "Registro de reembolso: ",
+        "notAFile": "É uma informação na Shopify, não um arquivo que você possa adicionar."
+      },
+      "group": {
+        "pack": {
+          "title": "No pacote de provas",
+          "caption": "O pacote foi criado mas não enviado, então nenhum item teve um papel em uma resposta.",
+          "tag": "Não enviado"
+        }
       }
     }
   },

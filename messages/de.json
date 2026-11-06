@@ -2315,6 +2315,19 @@
       "unknown": {
         "title": "Rückerstattungsstatus nicht erfasst",
         "detail": "Für diese Bestellung ist kein Rückerstattungsstatus erfasst."
+      },
+      "account": {
+        "none": "Shopify verzeichnet für diese Bestellung keine Rückerstattung. Die erstattete Summe beträgt {total}.",
+        "some": "Shopify verzeichnet für diese Bestellung {total} als erstattet.",
+        "someDated": "Shopify verzeichnet für diese Bestellung {total} als erstattet, zuletzt am {date}.",
+        "entry": "Shopify verzeichnet für diese Bestellung {count, plural, one {einen Rückerstattungseintrag} other {# Rückerstattungseinträge}} ohne bestätigten Betrag. Die erstattete Summe beträgt {total}.",
+        "entryDated": "Shopify verzeichnet für diese Bestellung einen Rückerstattungseintrag vom {date} ohne bestätigten Betrag. Die erstattete Summe beträgt {total}.",
+        "entryBefore": "Shopify verzeichnet für diese Bestellung einen Rückerstattungseintrag vom {date}, vor der Streitigkeit, ohne bestätigten Betrag. Die erstattete Summe beträgt {total}."
+      },
+      "pill": {
+        "none": "Keine Rückerstattung erfasst",
+        "some": "Rückerstattung erfasst",
+        "recordedNoAmount": "Kein bestätigter Betrag"
       }
     },
     "internalOnlyReason": {
@@ -2487,6 +2500,93 @@
         },
         "cancel": "Abbrechen",
         "add": "Zum Paket hinzufügen"
+      }
+    },
+    "account": {
+      "ret": {
+        "returned": "Eine Rücksendung zu dieser Bestellung ist als eingegangen markiert.",
+        "returnedDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt und ist als eingegangen markiert.",
+        "inProgress": "Eine Rücksendung zu dieser Bestellung läuft. Sie ist noch nicht als eingegangen markiert.",
+        "inProgressDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt. Sie läuft und ist noch nicht als eingegangen markiert.",
+        "requested": "Für diese Bestellung wurde eine Rücksendung angefragt. Sie ist noch nicht genehmigt.",
+        "requestedDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt. Sie wurde angefragt und ist noch nicht genehmigt.",
+        "failed": "Eine Rücksendung zu dieser Bestellung ist als fehlgeschlagen markiert.",
+        "failedDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt und ist als fehlgeschlagen markiert."
+      },
+      "match": {
+        "one": "Dieser Eintrag stimmt mit der Behauptung des Kunden überein.",
+        "many": "Diese Einträge stimmen mit der Behauptung des Kunden überein."
+      },
+      "filed": {
+        "we": "DisputeDesk hat am {date} Belege für diese Streitigkeit eingereicht.",
+        "weNoDate": "DisputeDesk hat Belege für diese Streitigkeit eingereicht.",
+        "none": "DisputeDesk hat für diese Streitigkeit nichts eingereicht, daher floss kein Beleg von DisputeDesk in die Entscheidung ein.",
+        "shopify": "DisputeDesk hat für diese Streitigkeit nichts eingereicht. Am {date} wurde eine Antwort über Shopify gesendet.",
+        "shopifyNoDate": "DisputeDesk hat für diese Streitigkeit nichts eingereicht. Eine Antwort wurde über Shopify gesendet.",
+        "beforeInstall": "Diese Streitigkeit wurde entschieden, bevor DisputeDesk in Ihrem Shop installiert war, daher hat DisputeDesk dafür nichts eingereicht."
+      },
+      "delivery": {
+        "confirmed": "Der Paketdienst hat die Zustellung bestätigt."
+      },
+      "outcome": {
+        "won": "Die Bank hat am {date} zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
+        "wonSameDay": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
+        "wonNoAmount": "Die Bank hat am {date} zu Ihren Gunsten entschieden.",
+        "wonSameDayNoAmount": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden.",
+        "lost": "Die Bank hat am {date} gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
+        "lostSameDay": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
+        "lostNoAmount": "Die Bank hat am {date} gegen Sie entschieden.",
+        "lostSameDayNoAmount": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden."
+      },
+      "noReason": "Für die Entscheidung wurde kein Grund genannt.",
+      "order": {
+        "card": "Bestellsumme {total}, bezahlt per Karte.",
+        "total": "Bestellsumme {total}."
+      },
+      "tracking": {
+        "missing": "Die Sendungsverfolgung ist nicht im Beweispaket enthalten."
+      },
+      "opened": "Die Streitigkeit wurde am {date} eröffnet.",
+      "due": "Eine Antwort ist bis zum {date} fällig.",
+      "pack": {
+        "none": "Es wurde noch kein Beweispaket erstellt, und es wurde nichts in Shopify gespeichert.",
+        "built": "Ein Beweispaket wurde erstellt, aber noch nichts in Shopify gespeichert.",
+        "saved": "Die Belege für diese Streitigkeit wurden am {date} in Shopify gespeichert.",
+        "forwarded": "Die Belege für diese Streitigkeit wurden in Shopify gespeichert, das sie an die Bank weitergeleitet hat."
+      },
+      "open": {
+        "title": {
+          "response_needed": "Antwort erforderlich",
+          "saved_to_shopify": "In Shopify gespeichert",
+          "under_review": "In Prüfung"
+        },
+        "chip": {
+          "due": "Offen · Antwort fällig am {date}",
+          "open": "Offen",
+          "waiting": "Offen · Entscheidung ausstehend"
+        },
+        "amountLabel": "Streitbetrag"
+      },
+      "step": {
+        "returnCreated": "Rücksendung angelegt",
+        "refundEntry": "Rückerstattungseintrag erfasst",
+        "opened": "Streitigkeit eröffnet",
+        "decidedWon": "Zu Ihren Gunsten entschieden",
+        "decidedLost": "Gegen Sie entschieden",
+        "pack": "Beweispaket",
+        "due": "Antwort fällig",
+        "titleOpen": "Was jetzt passiert"
+      },
+      "missing": {
+        "refundRecordPrefix": "Rückerstattungsbeleg: ",
+        "notAFile": "Das ist eine Information in Shopify, keine Datei, die Sie hinzufügen können."
+      },
+      "group": {
+        "pack": {
+          "title": "Im Beweispaket",
+          "caption": "Das Paket wurde erstellt, aber nicht eingereicht, daher erhielt kein Element eine Rolle in einer Antwort.",
+          "tag": "Nicht eingereicht"
+        }
       }
     }
   },
