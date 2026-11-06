@@ -1110,57 +1110,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             acknowledgement on a held case whose only open contribution is
             that acknowledgement (2026-08-02), and routes to that card.
           - Neither row renders on a decided case (order #360499). */}
-      {/* Live-case strength line, directly under the account hero (restored after
-          the old hero card was removed): the same chip, reason and "Next:" line the
-          hero carried, read from the same presentation resolver. Not a second hero. */}
-      {!isDecided && (
-        <div
-          data-testid="open-strength-line"
-          style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 4px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#1E2A4A" }}>
-              {tp("assessmentCard.title")}
-            </span>
-            {(() => {
-              /* `not_assessed` when the gate says so, whatever the sentinel says. */
-              const strengthKey = !assessed
-                ? "not_assessed"
-                : presentation?.strength
-                ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
-              const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
-              return (
-                <span
-                  style={{
-                    display: "inline-flex", alignItems: "center", padding: "2px 9px",
-                    borderRadius: 999, fontSize: 11.5, fontWeight: 600,
-                    background: tokens.bg, color: tokens.fg,
-                  }}
-                >
-                  {tRoot(`presentation.strength.detail.${strengthKey}`)}
-                </span>
-              );
-            })()}
-          </div>
-          {strengthReasonText ? (
-            <p
-              style={{
-                fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.6, maxWidth: 760,
-                textWrap: "pretty",
-              } as React.CSSProperties}
-            >
-              {strengthReasonText}
-            </p>
-          ) : null}
-          {heroNextStep && (
-            <p style={{ fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.5 }}>
-              <span style={{ fontWeight: 600, color: "#0B1220" }}>{tp("hero.nextLabel")}</span>{" "}
-              {heroNextStep}
-            </p>
-          )}
-        </div>
-      )}
-
       {(showStatusNotice || showEvidenceRow || showDecisionRow || (isDecided && !!outcomeExplanationText)) && (
       <div
         data-help-guide="detail-overview-hero"
@@ -1223,6 +1172,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             {/* Next milestone — Monitoring ≠ Done: active states always
                 name what happens next. With the decision row showing, it
                 states what the selected decision means. */}
+            {heroNextStep && (
+              <p style={{ fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.5 }}>
+                <span style={{ fontWeight: 600, color: "#0B1220" }}>{tp("hero.nextLabel")}</span>{" "}
+                {heroNextStep}
+              </p>
+            )}
             {/* Internal-issue transparency — neutral, no merchant action
                 implied (plan §3.1 internal failures). */}
             {presentation?.internalIssue && (

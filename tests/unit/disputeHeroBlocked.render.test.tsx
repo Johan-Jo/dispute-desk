@@ -43,7 +43,6 @@ const BLOCKING_SUB = messages.presentation.attentionBlockingSub;
  *  the workspace route resolves for it. */
 function workspaceFor(
   presentation: Record<string, unknown> | null,
-  over: { derived?: Record<string, unknown>; dispute?: Record<string, unknown>; decidedView?: unknown } = {},
 ): never {
   return {
     data: {
@@ -59,9 +58,7 @@ function workspaceFor(
         finalOutcome: null,
         phase: "inquiry",
         reviewState: null,
-        ...(over.dispute ?? {}),
       },
-      decidedView: over.decidedView ?? null,
       pack: null,
       packs: [],
       appliedRule: null,
@@ -93,21 +90,17 @@ function workspaceFor(
       },
       isFailed: false,
       failureCode: null,
-      ...(over.derived ?? {}),
     },
     clientState: { retrying: false },
     actions: {},
   } as never;
 }
 
-function render(
-  presentation: Record<string, unknown> | null,
-  over?: Parameters<typeof workspaceFor>[1],
-): string {
+function render(presentation: Record<string, unknown> | null): string {
   return renderToStaticMarkup(
     <AppProvider i18n={polarisEn}>
       <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
-        <OverviewTab workspace={workspaceFor(presentation, over)} />
+        <OverviewTab workspace={workspaceFor(presentation)} />
       </NextIntlClientProvider>
     </AppProvider>,
   );
@@ -187,46 +180,5 @@ describe("the unblocked path is untouched", () => {
   it("renders without a presentation object at all (older cached payload)", () => {
     // The page falls back to the inline lifecycle resolver; it must not throw.
     expect(() => render(null)).not.toThrow();
-  });
-});
-
-describe("open dispute: the strength line sits under the account hero", () => {
-  const ASSESSED = {
-    caseStrength: { overall: "moderate", heroVariant: "needs_strengthening" },
-    strengthReasonText: "Delivery is confirmed but the customer record is thin.",
-    assessment: {
-      mayRenderVerdict: true,
-      mayRenderRecommendation: true,
-      bodyToken: { key: "disputes.assessmentState.notAssessed.bodyAbsent" },
-    },
-  };
-  const OPEN = { ...BLOCKED_AUTO_BUILD_OFF, attention: "none", blockingReason: null, strength: "moderate" };
-
-  it("shows the assessment chip and reason, as a slim line, not a hero card", () => {
-    const html = render(OPEN, { derived: ASSESSED });
-    expect(html).toContain("open-strength-line");
-    expect(html).toContain(messages.presentation.strength.detail.moderate);
-    expect(html).toContain("Delivery is confirmed but the customer record is thin.");
-    expect(html).not.toContain("detail-overview-hero");
-  });
-
-  it("not assessed: the neutral not-assessed chip, never a band", () => {
-    const html = render({ ...OPEN, strength: null });
-    expect(html).toContain("open-strength-line");
-    expect(html).toContain(messages.presentation.strength.detail.not_assessed);
-    expect(html).not.toContain(messages.presentation.strength.detail.moderate);
-  });
-
-  it("carries the Next: line when the case has a next milestone", () => {
-    const html = render(OPEN, { derived: ASSESSED });
-    expect(html).toContain(messages.presentation.hero.nextLabel);
-  });
-
-  it("not on a decided dispute (decided pages carry no live-case verdict)", () => {
-    const html = render(
-      { ...OPEN, lifecycle: "won", outcome: "won" },
-      { dispute: { normalizedStatus: "won", finalOutcome: "won" }, derived: { ...ASSESSED, isReadOnly: true } },
-    );
-    expect(html).not.toContain("open-strength-line");
   });
 });
