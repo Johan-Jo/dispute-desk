@@ -10,7 +10,8 @@
 
 "use client";
 
-import { OrderSituationNote } from "./sections/OrderSituationNote";
+import { useAccount } from "../workspace-components/AccountContext";
+import { AccountReviewBody } from "../workspace-components/AccountPanels";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
@@ -35,6 +36,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   const tExtra = useTranslations("disputes.evidenceTabExtra");
   const tChrome = useTranslations("disputes.reviewTab.chrome");
   const tRoot = useTranslations();
+  const account = useAccount();
 
   // ── Loading state ──
   if (clientState.loading && !data) {
@@ -43,6 +45,13 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         <Spinner accessibilityLabel={tChrome("loadingReview")} />
       </BlockStack>
     );
+  }
+
+  // A decided dispute DisputeDesk filed nothing for: the tab is the account's
+  // pack line and the pack's contents (design DecidedWorkspaceMock). The
+  // "ready to submit / saved" card below describes a filing that never happened.
+  if (account && data?.decidedView && account.account.filedNothing) {
+    return <AccountReviewBody page={account.page} />;
   }
 
   // ── Failed / building / no-pack banners ──
@@ -106,12 +115,6 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {noPackBanner}
       {noDefenceLetterBanner}
       {notAssessedBanner}
-      {/* Merchant-only, and outside the card that mirrors the bank document. */}
-      <OrderSituationNote
-        situation={data?.dispute?.orderSituation ?? null}
-        refundStatement={data?.dispute?.refundStatement ?? null}
-      />
-
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,
           the "ready to resubmit" banner, and Finalize/Submit actions

@@ -67,8 +67,7 @@ import {
 } from "@/lib/automation/merchantUiHiddenFields";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
-import { OrderSituationNote } from "./sections/OrderSituationNote";
-import { refundStatementTokens } from "@/lib/disputes/refundStatement";
+import { useAccount } from "../workspace-components/AccountContext";
 import { unavailableReasonToken } from "@/lib/disputes/unavailableReasonToken";
 import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
 import {
@@ -255,6 +254,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const tp = useTranslations("presentation");
   const tDecision = useTranslations("disputes.overviewDecision");
   const { data, derived, actions, clientState } = workspace;
+  const account = useAccount();
 
   if (!data) return null;
 
@@ -1581,23 +1581,18 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           one PAID with 0.0 refunded, showed only "delivery proof unavailable /
           weak". Suppressed once submitted, like every other pre-submit advice
           block — the merchant can no longer act on it. */}
-      {/* A return on the order, stated to the merchant. The dispute page's
-          timeline is the bank letter's allow-list and drops return events, so
-          without this the merchant is never shown the one fact that explains
-          the case (whj8db-1q #21037). Shown after submission too: it is the
-          record, not advice. */}
-      <OrderSituationNote
-        situation={dispute.orderSituation ?? null}
-        refundStatement={dispute.refundStatement ?? null}
-      />
+      {/* The return and the refund are stated ONCE, in the account at the top
+          of the tab (lib/disputes/disputeAccount.ts). The blue "return on the
+          order" banner that used to sit here was a second, differently-worded
+          statement of the same facts and has been removed. */}
 
       {!submitted && heldReason && (
         <Banner tone="info" title={tExtra(`heldUnrefunded.title.${heldReason}`)}>
           <BlockStack gap="200">
             <Text as="p" variant="bodyMd">{tExtra("heldUnrefunded.body")}</Text>
-            {dispute.refundStatement && dispute.refundStatement.kind !== "unknown" && (
+            {account?.account.facts.refund && (
               <Text as="p" variant="bodyMd">
-                {resolveToken(tRoot, refundStatementTokens(dispute.refundStatement).detail)}
+                {resolveToken(tRoot, account.account.facts.refund)}
               </Text>
             )}
             <Text as="p" variant="bodySm" tone="subdued">
@@ -1730,7 +1725,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             // instead of the categorical "Refund status" — the merchant
             // must be able to answer "was this refunded?" from the card.
             const refundPresentation =
-              spec.signalId === "refund" ? buildRefundPresentation(payload, dispute.refundStatement ?? null)
+              spec.signalId === "refund" ? buildRefundPresentation(payload, dispute.refundStatement ?? null, account?.account.facts.refund ?? null)
                 : null;
             return {
               item: c,
@@ -1973,7 +1968,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             classification.status === "not_applicable" && item.unavailableReason
               ? (() => {
                   // Stored English (or a reason code) -> a token; never shown raw.
-                  const tok = unavailableReasonToken(item.unavailableReason, dispute.refundStatement ?? null);
+                  const tok = unavailableReasonToken(item.unavailableReason, dispute.refundStatement ?? null, account?.account.facts.refund ?? null);
                   return tok ? resolveToken(tRoot, tok) : null;
                 })()
               : waiveCaption

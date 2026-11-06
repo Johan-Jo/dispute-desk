@@ -71,6 +71,8 @@ export interface AccountPage {
   theme: AccountTheme;
   hero: {
     title: I18nToken;
+    /** "Customer says their refund was never processed" (the design's claimLine). */
+    claimLine: I18nToken;
     chip: I18nToken;
     amountLabel: I18nToken;
     account: I18nToken[];
@@ -263,10 +265,13 @@ export function buildAccountPage(
     theme,
     hero: {
       title,
+      claimLine: claimLineToken(i.reason),
       chip,
       amountLabel,
       account: accountTokens,
-      asOf: account.asOf,
+      // The "as recorded in Shopify" line states the date of the return/refund
+      // record, so it appears only when the account carries one of them.
+      asOf: account.sequence.includes("ret") || account.sequence.includes("refund") ? account.asOf : null,
       privateNote: { key: "disputes.overviewExtra.orderSituation.privateNote" },
     },
     seen,
@@ -283,4 +288,19 @@ function dateOf(account: DisputeAccount, key: "due"): string {
   // The due token carries the formatted date as its param.
   const p = account.facts[key]?.params?.date;
   return typeof p === "string" ? p : "";
+}
+
+const CLAIM_LINE_KEYS = [
+  "FRAUDULENT",
+  "UNRECOGNIZED",
+  "PRODUCT_NOT_RECEIVED",
+  "PRODUCT_UNACCEPTABLE",
+  "SUBSCRIPTION_CANCELLED",
+  "DUPLICATE",
+  "CREDIT_NOT_PROCESSED",
+];
+
+function claimLineToken(reason: string | null): I18nToken {
+  const key = (reason ?? "").toUpperCase();
+  return { key: `disputes.decidedView.claim.${CLAIM_LINE_KEYS.includes(key) ? key : "GENERAL"}` };
 }

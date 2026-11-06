@@ -17,6 +17,7 @@ import type { I18nToken } from "@/lib/i18n/token";
 import { buildDisputeAccount, type AccountInputs, type AccountFormat } from "@/lib/disputes/disputeAccount";
 import { buildAccountPage, type AccountEvidenceRowInput } from "@/lib/disputes/accountPage";
 import type { RefundStatement } from "@/lib/disputes/refundStatement";
+import type { ReturnSituation } from "@/lib/disputes/orderSituation";
 
 const LOCALES = ["en", "de", "es", "fr", "pt", "sv"] as const;
 const catalogs = Object.fromEntries(
@@ -51,7 +52,7 @@ const stmt = (over: Partial<RefundStatement> & { kind: RefundStatement["kind"] }
   zeroCurrency: "SEK",
   ...over,
 });
-const sit = (returns: AccountInputs["situation"] extends infer S ? NonNullable<S>["returns"] : never, opened: string | null) => ({
+const sit = (returns: ReturnSituation, opened: string | null) => ({
   returns,
   refund: "none" as const,
   returnOpenedAt: opened,

@@ -134,7 +134,13 @@ function Pill({
   );
 }
 
-export function CaseSummaryCard(props: CaseSummaryViewModel) {
+export function CaseSummaryCard(
+  props: CaseSummaryViewModel & {
+    /** A decided case DisputeDesk filed nothing for: a strength verdict about a
+     *  response that was never made would contradict the dispute account. */
+    hideStrength?: boolean;
+  },
+) {
   const t = useTranslations("disputes.evidenceTab.sections.summary");
   const tStrength = useTranslations("disputes.caseStrength");
   const tStatus = useTranslations(
@@ -169,6 +175,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
   const display = props.strength ? toDisplayStrength(props.strength) : null;
   const showExplanation =
     !notAssessed &&
+    !props.hideStrength &&
     props.strength !== "strong" &&
     (Boolean(props.strengthReasonText) || Boolean(props.improvementHintText));
 
@@ -232,7 +239,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
             {/* Pill-shaped strength badge — the dominant visual element
                 in the lead row. Slightly larger padding than the
                 right-side Status/Automation pills to match the design. */}
-            {display && strengthColors ? (
+            {props.hideStrength ? null : display && strengthColors ? (
               <span
                 style={{
                   display: "inline-flex",

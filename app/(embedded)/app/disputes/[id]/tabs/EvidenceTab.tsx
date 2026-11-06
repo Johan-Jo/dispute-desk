@@ -41,6 +41,8 @@ import { CardholderAcknowledgementCard } from "./sections/CardholderAcknowledgem
 import { ParcelOutcomeCard } from "./sections/ParcelOutcomeCard";
 import { ReturnRequestCard } from "./sections/ReturnRequestCard";
 import { GorgiasCommsReviewSection } from "./sections/GorgiasCommsReviewSection";
+import { useAccount } from "../workspace-components/AccountContext";
+import { AccountEvidenceBody } from "../workspace-components/AccountPanels";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -54,6 +56,9 @@ export default function EvidenceTab({ workspace }: Props) {
   const locale = useLocale();
   const { data, derived, clientState, actions } = workspace;
   const sections = useEvidenceSections(workspace);
+  const account = useAccount();
+  // Decided and nothing filed by DisputeDesk: the account owns the evidence rows.
+  const accountOwnsEvidence = !!account && !!data?.decidedView && account.account.filedNothing;
 
   // ── Loading state ──
   // Initial load before workspace fetch completes. Keep this brief
@@ -285,7 +290,7 @@ export default function EvidenceTab({ workspace }: Props) {
               pushed the case-strength "moderate / strong / weak" pill
               below the fold on dense flows (post-save success banner
               + rebuild outcome + window-open notice). */}
-      <CaseSummaryCard {...sections.caseSummary} />
+      <CaseSummaryCard {...sections.caseSummary} hideStrength={accountOwnsEvidence} />
 
       {failedBanner}
       {windowClosedBanner}
@@ -324,11 +329,15 @@ export default function EvidenceTab({ workspace }: Props) {
               "Internal-only signals" card below) are passed through as
               the third disposition bucket so the merchant sees one
               source of truth. */}
-      <EvidenceUsedSection
-        items={sections.usedInDefense}
-        lineItems={data?.evidenceLineItems ?? []}
-        internalSignals={sections.internalOnly}
-      />
+      {accountOwnsEvidence && account ? (
+        <AccountEvidenceBody page={account.page} />
+      ) : (
+        <EvidenceUsedSection
+          items={sections.usedInDefense}
+          lineItems={data?.evidenceLineItems ?? []}
+          internalSignals={sections.internalOnly}
+        />
+      )}
 
       {/* §3.5 — Gorgias communication evidence review (evidence core).
               Self-hides when the shop has no Gorgias integration or the
@@ -350,6 +359,7 @@ export default function EvidenceTab({ workspace }: Props) {
               backend calls. `focusField` + `onFocusCleared` drive the
               yellow-pulse highlight when the merchant arrives via the
               Overview tab's "Add this evidence" CTA. */}
+      {accountOwnsEvidence ? null : (
       <MissingOrWeakSection
         items={sections.missingOrWeak}
         uploadingField={clientState.uploadingField}
@@ -363,6 +373,7 @@ export default function EvidenceTab({ workspace }: Props) {
           void actions.waiveItem(field, reason);
         }}
       />
+      )}
 
       {/* Resubmission Window — confirmation modal opens after an
           upload succeeds with promptRebuild=true. Confirm calls

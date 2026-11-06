@@ -3963,7 +3963,7 @@ only be said when no entry exists.
   recordedNoAmount,some,unknown}` (six locales; `detailNoDate` when no date). `recorded_no_amount` copy never says
   pending, started, issued, failed or successful. A vitest invariant forbids "no refund" in `messages/en.json` outside
   this namespace (a reasoned baseline lists five pre-existing evidence-label keys).
-- Consumers: `OrderSituationNote`, the `heldUnrefunded` banner, `refundRecord.notIncluded` (now "Shopify records no
+- Consumers: the dispute account (`lib/disputes/disputeAccount.ts`, which replaced `OrderSituationNote`), the `heldUnrefunded` banner, `refundRecord.notIncluded` (now "Shopify records no
   confirmed refund amount on this order."), `buildRefundPresentation(payload, statement)` (a zero-amount refund entry can
   never render "No refund issued"; the NO_RETURN card is titled "No return initiated" and gains the refund clause only for
   `none`) and the pack viewer's zero guard. The workspace route exposes it as `dispute.refundStatement`.
@@ -4041,7 +4041,7 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
 - **Refund record and return-status rows on the pack page** go to the status-only bucket (no drop zone), and the upload
   route answers 409 `FIELD_NOT_UPLOADABLE` for them. Refund dates in `refundStatement` are `YYYY-MM-DD` (language-neutral).
 - **Merchant note.** The workspace route returns `dispute.orderSituation` (`{ ...situation, asOf }`, `asOf` = the
-  pack's last build). `OrderSituationNote` renders it on the Overview and above the letter card when a return is on
+  pack's last build). the dispute account (below) renders it at the top of every tab when a return is on
   record: the return's state, its date when known, the refund statement's sentence (see **Refund statement**
   below; not `situation.refund`), "as recorded on {asOf}", and that the note is for the merchant only. Copy: `disputes.overviewExtra.orderSituation.*`, six locales.
 - **Never bank-facing, structurally.** The module writes nothing to `pack_json`, provides no evidence field, and a test
@@ -4058,6 +4058,40 @@ the `read_returns` scope, which the app does not hold yet (`order.returns` answe
 is `ready`. The rule used to sit inside the review-mode approval gate, so in auto mode it never ran and the dispute
 resolved to `pack_prepared` ("No action required") while the letter tab said "Not enough bank-facing evidence" and
 nothing would be filed (whj8db-1q #21037). The evidence pack being ready is not the letter being ready.
+
+### The dispute account: one record of facts, one account per tab (2026-11-06, PR 2)
+
+Spec: Claude Design project `fca59ec9-5dd1-4154-904a-fd0914154668` ("Return Record Banner Design"),
+`DecidedWorkspaceMock.dc.html`, transcribed literally. Before this, one decided page could say "a return was received"
+(blue banner), "refund: pending" (checklist) and "positive argument" (evidence group) about the same order.
+
+- `lib/disputes/disputeAccount.ts` (pure, no English): `buildDisputeAccount(inputs, fmt)` derives ONE fact record per
+  dispute, a token per fact key (`claim`, `ret`, `refund`, `match`, `filed`, `delivery`, `outcome`, `noReason`, `order`,
+  `tracking`, `opened`, `due`, `pack`), and the ordered `sequence` the hero paragraph joins. Decided: claim, ret, refund,
+  match, filed, delivery, outcome, noReason. Open: claim, ret, refund, match, opened, due, pack. `createFactReader` is the
+  design's `use(key, where)`: every surface reads its sentence through it and the reader records where each fact appears
+  (the design's consistency table).
+- Derivation rules (all from the record, none hardcoded): the return sentence only when Shopify records a return (unknown
+  status is never a confirmed return; no return on record means no return text at all); the refund sentence is the
+  refund statement's (`recorded_no_amount` never reads pending/started/failed/issued/successful; unknown says nothing);
+  `match` only for a credit-not-processed claim when a return or a refund entry is on record and no confirmed amount;
+  "the day the dispute opened" only when the formatted open and close dates are equal; "DisputeDesk filed nothing" only
+  when the decided response says DisputeDesk did not file (`responder` none, shopify or before-install); the only reason
+  statement is "No reason was given for the decision" (the bank's reasoning is never claimed).
+- `lib/disputes/accountPage.ts`: the page model (`buildAccountPage`): hero, "What we saw in the record", the refund pill
+  of the checklist row, timeline steps, Evidence groups (nothing filed by DisputeDesk: one "In the evidence pack" group,
+  never "positive argument"/"context"), Missing or weak rows, the explainer and the pack line. Evidence and Review are
+  built from the same rows.
+- UI: `workspace-components/AccountHero.tsx` (hero card, 22px on Overview, 18px on Evidence and Review),
+  `AccountPanels.tsx` (Evidence and Review bodies), `AccountContext.tsx`, `hooks/useDisputeAccount.ts`. `DecidedWorkspace`
+  and the open `WorkspaceShell` provide the account; `OverviewTab`, `ReviewSubmitTab` and `EvidenceTab` read it. The blue
+  `OrderSituationNote` banner is gone. The held-order banner and the checklist/evidence-row refund reasons read the
+  account's refund sentence. A strength verdict is not shown on a decided case DisputeDesk filed nothing for.
+- Read-time and merchant-side only: nothing is written to `pack_json`; `dispute.orderTotal` is a new read-only field on
+  the workspace payload. Settings are not read. Tests: `lib/disputes/__tests__/disputeAccount.test.ts` (per state, no
+  contradictions, six locales), `tests/unit/disputeAccount.render.test.tsx` (rendered markup).
+- Copy: `disputes.account.*` plus `disputes.refundStatement.account.*` / `.pill.*` (refund sentences stay in the refund
+  statement's namespace, which the "no refund" invariant requires), six locales.
 
 ### Defence PDF — "Chargeback Response v2" design (2026-09-24, prompt 28)
 
