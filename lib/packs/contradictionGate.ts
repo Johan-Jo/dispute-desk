@@ -162,9 +162,16 @@ export function applyContradictionGate(
 export function hasReturnedToSenderShipment(
   sections: readonly EvidenceSection[],
 ): boolean {
+  // Null-safe (PR 0): this is also read from PERSISTED packs, where a section
+  // list can be null, a non-array, or hold a null entry or an entry without
+  // `fieldsProvided`. Such a shape means "nothing returned", never a throw.
+  // (Measured on prod, 2026-11-05: 0 of 446 latest packs have one.)
+  if (!Array.isArray(sections)) return false;
   return sections.some(
     (s) =>
-      s.fieldsProvided.some((f) => f === "shipping_tracking" || f === "delivery_proof") &&
+      s != null &&
+      Array.isArray(s.fieldsProvided) &&
+      s.fieldsProvided.some((f: string) => f === "shipping_tracking" || f === "delivery_proof") &&
       sectionShowsReturnToSender(s).returned,
   );
 }

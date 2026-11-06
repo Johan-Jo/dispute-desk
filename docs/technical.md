@@ -3938,6 +3938,18 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
 - `orderSituationFromPackSections(sections)` reads the persisted pack (order section `returnStatus`, `totals.refunded`;
   `access_log` events). `shopifyRecordsReturnOrRefund` / `packShowsReturnOrRefund` now read the same function; their
   answers are pinned by a parity test.
+- **One verdict for "should the no-return fact exist?"** (`docs/plans/single-source-architecture-audit.plan.md`, PR 0).
+  `noReturnFactVerdict({ returnStatus, totalRefunded, returnScope })` in `returnRequestConfirmation.ts` is the
+  collector's emission decision, extracted so a later PR can read the same answer for the checklist row. It is
+  three-state: `{ emit: true, scope }`, `{ emit: false, reason }` (`return_on_record` for any non-null status other
+  than `NO_RETURN`, `refund_on_record`, `merchant_says_request_received`), or `{ unknown: true, why: "status_absent" }`
+  for a pack whose return status was never recorded (built before 2026-10-02). `orderSource` emits on `emit: true`
+  and treats `unknown` as do-not-emit, exactly as before. `returnScopeFor(settings, confirmation)` is the pure half
+  of the build's returns context; `buildPack` keeps the settings/answer reads and the "unreadable settings = off"
+  fallback. In the same PR the two requirement-mode rule sets in `completeness.ts` became one body
+  (`modeApplicability`), and `hasReturnedToSenderShipment` stopped throwing on malformed persisted section lists.
+  Emission and completeness are pinned byte-for-byte against the pre-change code
+  (`orderSourceNoReturnParity.test.ts`, `completenessModeParity.test.ts`). No behaviour a merchant can see changes.
 - **Merchant note.** The workspace route returns `dispute.orderSituation` (`{ ...situation, asOf }`, `asOf` = the
   pack's last build). `OrderSituationNote` renders it on the Overview and above the letter card when a return is on
   record: the return's state, its date when known, whether a refund has been issued, "as recorded on {asOf}", and that
