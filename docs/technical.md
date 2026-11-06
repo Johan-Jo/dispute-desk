@@ -4025,7 +4025,17 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   upload. The stored `completeness_score` stays internal (auto-save gate, decision hash, deadline cron, save check).
   No merchant-facing copy quotes the stored score against a threshold (the timeline text omits both numbers), so no
   "at build" label was needed; the plan's premise that one did was wrong. The dispute page does not show a percentage.
-  Portal pages and the evidence PDF still show the stored score (PR 5).
+  **PR 5:** the portal pack page, the portal dispute page and the evidence-pack PDF use the same functions. The shared
+  wrapper is `lib/packs/effectivePackView.ts` (`effectivePackView` / `loadEffectivePackView` = `assembleEffectiveChecklist`
+  + `merchantCompleteness`, returning null when there is no stored non-empty v2 checklist; `toDisplayChecklistRows` maps
+  the effective rows to the v1 `{field,label,required,present}` shape). `GET /api/packs/:id` adds `effective_checklist`
+  (v1-shaped, labels localized like `checklist`) beside `effective_checklist_v2` / `merchant_completeness`;
+  `GET /api/disputes/:id` adds `merchant_completeness` to each pack (null = no stored v2; `pack_json` / `checklist_v2`
+  are read for it but not returned). The portal pack page shows `merchant_completeness ?? completeness_score` and
+  `effective_checklist ?? checklist`; the portal dispute page shows `merchant_completeness ?? completeness_score` in the
+  summary card and the packs table. The render_pdf job prints the effective percentage and rows (print-time only, nothing
+  persisted; stored fallback when there is no stored v2). Stored `completeness_score`, `checklist`, `checklist_v2`,
+  readiness, the bank letter and every automation path are unchanged. Tests: `lib/packs/__tests__/effectivePackSurfaces.test.ts`.
 - **`refund_record` and `no_return_initiated` are not merchant-uploadable** (`NEVER_MERCHANT_UPLOADABLE` in
   `concreteContribution.ts`, applied inside `canMerchantUpload`): the first is Shopify's own refund record (a missing
   row already means "no confirmed refund amount"; 0 uploads ever), the second is a conclusion from Shopify's return
