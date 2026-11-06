@@ -2315,6 +2315,19 @@
       "unknown": {
         "title": "Rückerstattungsstatus nicht erfasst",
         "detail": "Für diese Bestellung ist kein Rückerstattungsstatus erfasst."
+      },
+      "account": {
+        "none": "Shopify verzeichnet für diese Bestellung keine Rückerstattung. Die erstattete Summe beträgt {total}.",
+        "some": "Shopify verzeichnet für diese Bestellung {total} als erstattet.",
+        "someDated": "Shopify verzeichnet für diese Bestellung {total} als erstattet, zuletzt am {date}.",
+        "entry": "Shopify verzeichnet für diese Bestellung {count, plural, one {einen Rückerstattungseintrag} other {# Rückerstattungseinträge}} ohne bestätigten Betrag. Die erstattete Summe beträgt {total}.",
+        "entryDated": "Shopify verzeichnet für diese Bestellung einen Rückerstattungseintrag vom {date} ohne bestätigten Betrag. Die erstattete Summe beträgt {total}.",
+        "entryBefore": "Shopify verzeichnet für diese Bestellung einen Rückerstattungseintrag vom {date}, vor der Streitigkeit, ohne bestätigten Betrag. Die erstattete Summe beträgt {total}."
+      },
+      "pill": {
+        "none": "Keine Rückerstattung erfasst",
+        "some": "Rückerstattung erfasst",
+        "recordedNoAmount": "Kein bestätigter Betrag"
       }
     },
     "internalOnlyReason": {
@@ -2487,6 +2500,95 @@
         },
         "cancel": "Abbrechen",
         "add": "Zum Paket hinzufügen"
+      }
+    },
+    "account": {
+      "ret": {
+        "returned": "Eine Rücksendung zu dieser Bestellung ist als eingegangen markiert.",
+        "returnedDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt und ist als eingegangen markiert.",
+        "inProgress": "Eine Rücksendung zu dieser Bestellung läuft. Sie ist noch nicht als eingegangen markiert.",
+        "inProgressDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt. Sie läuft und ist noch nicht als eingegangen markiert.",
+        "requested": "Für diese Bestellung wurde eine Rücksendung angefragt. Sie ist noch nicht genehmigt.",
+        "requestedDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt. Sie wurde angefragt und ist noch nicht genehmigt.",
+        "failed": "Eine Rücksendung zu dieser Bestellung ist als fehlgeschlagen markiert.",
+        "failedDated": "Eine Rücksendung zu dieser Bestellung wurde am {date} angelegt und ist als fehlgeschlagen markiert."
+      },
+      "match": {
+        "one": "Dieser Eintrag stimmt mit der Behauptung des Kunden überein.",
+        "many": "Diese Einträge stimmen mit der Behauptung des Kunden überein."
+      },
+      "filed": {
+        "we": "DisputeDesk hat am {date} Belege für diese Streitigkeit eingereicht.",
+        "weNoDate": "DisputeDesk hat Belege für diese Streitigkeit eingereicht.",
+        "none": "DisputeDesk hat für diese Streitigkeit nichts eingereicht, daher floss kein Beleg von DisputeDesk in die Entscheidung ein.",
+        "shopify": "DisputeDesk hat für diese Streitigkeit nichts eingereicht. Am {date} wurde eine Antwort über Shopify gesendet.",
+        "shopifyNoDate": "DisputeDesk hat für diese Streitigkeit nichts eingereicht. Eine Antwort wurde über Shopify gesendet.",
+        "beforeInstall": "Diese Streitigkeit wurde entschieden, bevor DisputeDesk in Ihrem Shop installiert war, daher hat DisputeDesk dafür nichts eingereicht."
+      },
+      "delivery": {
+        "confirmed": "Der Paketdienst hat die Zustellung bestätigt."
+      },
+      "outcome": {
+        "won": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
+        "wonSameDay": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
+        "wonNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} zu Ihren Gunsten entschieden.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden.",
+        "lost": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
+        "lostSameDay": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
+        "lostNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} gegen Sie entschieden.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden."
+      },
+      "noReason": "Für die Entscheidung wurde kein Grund genannt.",
+      "order": {
+        "card": "Bestellsumme {total}, bezahlt per Karte.",
+        "total": "Bestellsumme {total}."
+      },
+      "tracking": {
+        "missing": "Die Sendungsverfolgung ist nicht im Beweispaket enthalten."
+      },
+      "opened": "Die Streitigkeit wurde am {date} eröffnet.",
+      "due": "Eine Antwort ist bis zum {date} fällig.",
+      "pack": {
+        "none": "Es wurde noch kein Beweispaket erstellt, und es wurde nichts in Shopify gespeichert.",
+        "built": "Ein Beweispaket wurde erstellt, aber noch nichts in Shopify gespeichert.",
+        "saved": "Die Belege für diese Streitigkeit wurden am {date} in Shopify gespeichert.",
+        "forwarded": "Die Belege für diese Streitigkeit wurden in Shopify gespeichert, das sie an die Bank weitergeleitet hat.",
+        "building": "Ein Beweispaket wird gerade erstellt, und es wurde noch nichts in Shopify gespeichert."
+      },
+      "open": {
+        "title": {
+          "response_needed": "Antwort erforderlich",
+          "saved_to_shopify": "In Shopify gespeichert",
+          "under_review": "In Prüfung"
+        },
+        "chip": {
+          "due": "Offen · Antwort fällig am {date}",
+          "open": "Offen",
+          "waiting": "Offen · Entscheidung ausstehend"
+        },
+        "amountLabel": "Streitbetrag"
+      },
+      "step": {
+        "returnCreated": "Rücksendung angelegt",
+        "refundEntry": "Rückerstattungseintrag erfasst",
+        "opened": "Streitigkeit eröffnet",
+        "decidedWon": "Zu Ihren Gunsten entschieden",
+        "decidedLost": "Gegen Sie entschieden",
+        "pack": "Beweispaket",
+        "due": "Antwort fällig",
+        "titleOpen": "Was jetzt passiert",
+        "now": "Jetzt"
+      },
+      "missing": {
+        "refundRecordPrefix": "Rückerstattungsbeleg: ",
+        "notAFile": "Das ist eine Information in Shopify, keine Datei, die Sie hinzufügen können."
+      },
+      "group": {
+        "pack": {
+          "title": "Im Beweispaket",
+          "caption": "Das Paket wurde erstellt, aber nicht eingereicht, daher erhielt kein Element eine Rolle in einer Antwort.",
+          "tag": "Nicht eingereicht"
+        }
       }
     }
   },
@@ -3947,7 +4049,7 @@
         },
         "disputeDetailPage": {
           "title": "Streitfall-Detail in dieser App",
-          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Eine Rücksendung zur Bestellung.** Wenn Shopify für die strittige Bestellung eine Rücksendung verzeichnet, zeigen die Übersicht und der Brief-Tab einen Hinweis darauf, mit dem Datum, an dem die Rücksendung angelegt wurde, sofern Shopify eines liefert, und ob eine Rückerstattung vorgenommen wurde. Der Hinweis gibt den Stand in Shopify zum Zeitpunkt des letzten Abrufs durch DisputeDesk wieder. Er ist nur für Sie und nicht Teil dessen, was an die Bank gesendet wird."
+          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Ein Überblick oben auf jedem Tab.** Jeder Tab beginnt mit demselben kurzen Überblick, geschrieben aus einer einzigen Faktenlage: was der Kunde seiner Bank gesagt hat, was Shopify zu Rücksendung und Rückerstattung verzeichnet, ob DisputeDesk Belege eingereicht hat und, sobald die Bank entschieden hat, wie und über welchen Betrag. Jede Zeile, jedes Etikett und jeder Zeitleisten-Schritt darunter wiederholt genau diese Sätze, sodass die Seite nie an einer Stelle das eine und an einer anderen etwas anderes sagt. Ist eine Rücksendung erfasst, nennt der Überblick ihren Status und das Datum, an dem sie angelegt wurde; ein Rückerstattungseintrag ohne bestätigten Betrag wird genau so beschrieben. Er gibt den Stand in Shopify wieder, als DisputeDesk die Bestellung zuletzt abgerufen hat. Er ist nur für Sie und nicht Teil dessen, was an die Bank gesendet wird. Hat DisputeDesk für eine entschiedene Streitigkeit nichts eingereicht, listen die Tabs Beweise und Prüfen und weiterleiten auf, was im Beweispaket war, unter **Im Beweispaket**, und nicht als verwendeten Beleg."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
