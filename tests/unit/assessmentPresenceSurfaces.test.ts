@@ -254,16 +254,17 @@ describe("every surface branches on the gate", () => {
     expect(src).toMatch(/display && strengthColors \? \(/);
   });
 
-  it("the open Overview no longer renders its own strength chip (one hero: the account)", () => {
-    /* The Overview hero's strength chip was removed with the old stacked hero
-     * (design: Return Record Banner). With it went the only place that mapped
-     * the gate to `not_assessed` there; the account carries no verdict, so an
-     * unassessed case cannot render a band on the Overview at all. */
+  it("the Overview strength chip reads `not_assessed` from the GATE, not from the band", () => {
+    /* The old expression reached `not_assessed` only via
+     * `overall === "insufficient"` — which is also a real verdict, so a
+     * genuinely insufficient case and an unassessed one were
+     * indistinguishable, and a stale assessment carrying any other band
+     * rendered that band as current. */
     const src = readFileSync(
       resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx"),
       "utf8",
     );
-    expect(src).not.toMatch(/presentation\.strength\.detail\.\$\{strengthKey\}/);
+    expect(src).toMatch(/!assessed\s*\n?\s*\?\s*"not_assessed"/);
   });
 });
 

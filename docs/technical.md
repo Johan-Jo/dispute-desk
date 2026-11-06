@@ -4092,7 +4092,8 @@ Spec: Claude Design project `fca59ec9-5dd1-4154-904a-fd0914154668` ("Return Reco
   three-step "What happens now" timeline (`AccountTimelineCard`) replaces the old one; with no pack the Evidence and
   Review bodies show the design's explainer and pack line from the same `pack` fact instead of the "No evidence pack
   yet" banners (there was no build action behind those banners; failed-build retry is unchanged). The old live-case
-  strength chip on the Overview hero is removed with it.
+  strength chip, its reason and the "Next:" line were restored as a slim line directly under the account hero on
+  open disputes (same presentation resolver, same not-assessed gate; never on decided pages).
 - Outcome wording: "The bank decided ..." is said only for a chargeback (`phase`); an inquiry reads "This was decided
   in your favour / against you ..." (ICU select on `phase`), because the decider of an inquiry is not verified.
 - Read-time and merchant-side only: nothing is written to `pack_json`; `dispute.orderTotal` is a new read-only field on
