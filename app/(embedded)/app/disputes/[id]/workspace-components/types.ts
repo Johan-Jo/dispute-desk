@@ -145,8 +145,6 @@ export interface WorkspaceDispute {
   /** Amount refunded, as the decimal string the pack persists ("0.0", "220.0").
    *  Null when the pack predates the field. */
   refundedAmount?: string | null;
-  /** The order total as the pack's order section stores it (merchant-only account sentence). */
-  orderTotal?: { amount: number; currency: string | null } | null;
   /** The order's return/refund situation as Shopify recorded it when the pack
    *  was last built (`asOf`). Merchant-only: drives the note on the Overview
    *  and the letter tab, and is never part of anything sent to the bank. */

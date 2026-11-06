@@ -2315,19 +2315,6 @@
       "unknown": {
         "title": "Återbetalningsstatus saknas",
         "detail": "Återbetalningsstatus är inte registrerad för den här ordern."
-      },
-      "account": {
-        "none": "Shopify har ingen återbetalning registrerad för den här ordern. Det återbetalda totalbeloppet är {total}.",
-        "some": "Shopify har {total} registrerat som återbetalt för den här ordern.",
-        "someDated": "Shopify har {total} registrerat som återbetalt för den här ordern, senast den {date}.",
-        "entry": "Shopify har {count, plural, one {en återbetalningspost} other {# återbetalningsposter}} registrerade för den här ordern, utan bekräftat belopp. Det återbetalda totalbeloppet är {total}.",
-        "entryDated": "Shopify har en återbetalningspost registrerad för den här ordern, gjord den {date}, utan bekräftat belopp. Det återbetalda totalbeloppet är {total}.",
-        "entryBefore": "Shopify har en återbetalningspost registrerad för den här ordern, gjord den {date} före tvisten, utan bekräftat belopp. Det återbetalda totalbeloppet är {total}."
-      },
-      "pill": {
-        "none": "Ingen återbetalning registrerad",
-        "some": "Återbetalning registrerad",
-        "recordedNoAmount": "Inget bekräftat belopp"
       }
     },
     "internalOnlyReason": {
@@ -2500,95 +2487,6 @@
         },
         "cancel": "Avbryt",
         "add": "Lägg till i paketet"
-      }
-    },
-    "account": {
-      "ret": {
-        "returned": "En retur för den här ordern är markerad som mottagen.",
-        "returnedDated": "En retur för den här ordern skapades den {date} och är markerad som mottagen.",
-        "inProgress": "En retur för den här ordern pågår. Den är ännu inte markerad som mottagen.",
-        "inProgressDated": "En retur för den här ordern skapades den {date}. Den pågår och är ännu inte markerad som mottagen.",
-        "requested": "En retur har begärts för den här ordern. Den är ännu inte godkänd.",
-        "requestedDated": "En retur för den här ordern skapades den {date}. Den har begärts och är ännu inte godkänd.",
-        "failed": "En retur för den här ordern är markerad som misslyckad.",
-        "failedDated": "En retur för den här ordern skapades den {date} och är markerad som misslyckad."
-      },
-      "match": {
-        "one": "Den här uppgiften stämmer med kundens påstående.",
-        "many": "De här uppgifterna stämmer med kundens påstående."
-      },
-      "filed": {
-        "we": "DisputeDesk skickade in bevis för den här tvisten den {date}.",
-        "weNoDate": "DisputeDesk skickade in bevis för den här tvisten.",
-        "none": "DisputeDesk skickade inte in något för den här tvisten, så inga bevis från DisputeDesk ingick i beslutet.",
-        "shopify": "DisputeDesk skickade inte in något för den här tvisten. Ett svar skickades via Shopify den {date}.",
-        "shopifyNoDate": "DisputeDesk skickade inte in något för den här tvisten. Ett svar skickades via Shopify.",
-        "beforeInstall": "Den här tvisten avgjordes innan DisputeDesk var installerat i din butik, så DisputeDesk skickade inte in något."
-      },
-      "delivery": {
-        "confirmed": "Transportören bekräftade leveransen."
-      },
-      "outcome": {
-        "won": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}. {amount} återfick du.",
-        "wonSameDay": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}, samma dag som tvisten öppnades. {amount} återfick du.",
-        "wonNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}.",
-        "wonSameDayNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}, samma dag som tvisten öppnades.",
-        "lost": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}. {amount} återfick du inte.",
-        "lostSameDay": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}, samma dag som tvisten öppnades. {amount} återfick du inte.",
-        "lostNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}.",
-        "lostSameDayNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}, samma dag som tvisten öppnades."
-      },
-      "noReason": "Ingen anledning angavs för beslutet.",
-      "order": {
-        "card": "Ordersumma {total}, betald med kort.",
-        "total": "Ordersumma {total}."
-      },
-      "tracking": {
-        "missing": "Spårning av försändelsen finns inte i bevispaketet."
-      },
-      "opened": "Tvisten öppnades den {date}.",
-      "due": "Ett svar ska vara inne senast den {date}.",
-      "pack": {
-        "none": "Inget bevispaket har byggts än, och ingenting har sparats i Shopify.",
-        "built": "Ett bevispaket har byggts, och ingenting har sparats i Shopify än.",
-        "saved": "Bevisen för den här tvisten sparades i Shopify den {date}.",
-        "forwarded": "Bevisen för den här tvisten sparades i Shopify, som vidarebefordrade dem till banken.",
-        "building": "Ett bevispaket håller på att byggas, och ingenting har sparats i Shopify än."
-      },
-      "open": {
-        "title": {
-          "response_needed": "Svar krävs",
-          "saved_to_shopify": "Sparat i Shopify",
-          "under_review": "Under granskning"
-        },
-        "chip": {
-          "due": "Öppen · svar senast {date}",
-          "open": "Öppen",
-          "waiting": "Öppen · väntar på beslut"
-        },
-        "amountLabel": "Belopp i tvist"
-      },
-      "step": {
-        "returnCreated": "Retur skapad",
-        "refundEntry": "Återbetalningspost registrerad",
-        "opened": "Tvisten öppnades",
-        "decidedWon": "Avgjord till din fördel",
-        "decidedLost": "Avgjord emot dig",
-        "pack": "Bevispaket",
-        "due": "Svar senast",
-        "titleOpen": "Vad som händer nu",
-        "now": "Nu"
-      },
-      "missing": {
-        "refundRecordPrefix": "Återbetalningsunderlag: ",
-        "notAFile": "Det här är information i Shopify, inte en fil som du kan lägga till."
-      },
-      "group": {
-        "pack": {
-          "title": "I bevispaketet",
-          "caption": "Paketet byggdes men skickades inte in, så ingen post fick någon roll i ett svar.",
-          "tag": "Inte inskickat"
-        }
       }
     }
   },
@@ -4049,7 +3947,7 @@
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
-          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**Ett sammanfattande stycke överst på varje flik.** Varje flik börjar med samma korta sammanfattning, skriven utifrån ett enda underlag av fakta: vad kunden sa till sin bank, vad Shopify har registrerat om en retur och en återbetalning, om DisputeDesk skickade in bevis och, när banken har beslutat, hur den beslutade och för hur mycket. Varje rad, etikett och steg i tidslinjen nedanför upprepar exakt samma meningar, så sidan säger aldrig en sak på ett ställe och något annat på ett annat. När en retur är registrerad anger sammanfattningen dess status och datumet då den skapades; en återbetalningspost utan bekräftat belopp beskrivs just så. Den återger Shopifys uppgifter när DisputeDesk senast hämtade ordern. Den är bara till för dig och ingår inte i något som skickas till banken. Om DisputeDesk inte skickade in något för en avgjord tvist visar flikarna Bevis och Granska vad som fanns i bevispaketet under **I bevispaketet**, inte som bevis som användes."
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**En retur på ordern.** När Shopify har registrerat en retur på den bestridda ordern visar översikten och brevfliken en notering om det, med datumet då returen skapades om Shopify anger det och om en återbetalning har gjorts. Noteringen visar vad Shopify angav senast DisputeDesk hämtade ordern. Den är bara till för dig och ingår inte i något som skickas till banken."
         },
         "reviewQueue": {
           "title": "Granskningskön",

@@ -11,9 +11,6 @@ import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
 import ReviewSubmitTab from "./tabs/ReviewSubmitTab";
 import DecidedWorkspace from "./DecidedWorkspace";
-import { useDisputeAccount } from "./hooks/useDisputeAccount";
-import { AccountContext } from "./workspace-components/AccountContext";
-import { AccountHero } from "./workspace-components/AccountHero";
 import { TAB_INDEX } from "./workspace-components/types";
 import {
   ATTENTION_CHIP,
@@ -62,8 +59,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const searchParams = useSearchParams();
   const workspace = useDisputeWorkspace(disputeId);
   const { data, derived, clientState, actions } = workspace;
-  // ONE record of facts per dispute; every tab reads the account from it.
-  const accountVm = useDisputeAccount(workspace);
 
   /** Resolve a Shopify dispute reason code to its merchant-facing
    *  translated label. Replaces the lib-side `merchantDisputeReasonLabel`
@@ -255,7 +250,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
    * has. The Evidence and Review tabs still render their normal bodies. */
   if (data.decidedView) {
     return (
-      <AccountContext.Provider value={accountVm}>
       <DecidedWorkspace
         dispute={dispute}
         inputs={data.decidedView}
@@ -274,7 +268,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
           ) : null
         }
       />
-      </AccountContext.Provider>
     );
   }
 
@@ -294,7 +287,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const banner = escalationBanner(escalationInput);
 
   return (
-    <AccountContext.Provider value={accountVm}>
     <Page
       backAction={{
         content: t("disputes.backToDisputes"),
@@ -564,13 +556,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
               padding: 20,
             }}
           >
-            {/* Every tab opens with the same account (design: Return Record
-                Banner). 22px on Overview, 18px on Evidence and Review. */}
-            {accountVm ? (
-              <div style={{ marginBottom: 20 }}>
-                <AccountHero vm={accountVm} size={clientState.activeTab === TAB_INDEX.overview ? 22 : 18} />
-              </div>
-            ) : null}
             {clientState.activeTab === TAB_INDEX.overview && (
               <OverviewTab workspace={workspace} />
             )}
@@ -584,6 +569,5 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
         </div>
       </BlockStack>
     </Page>
-    </AccountContext.Provider>
   );
 }
