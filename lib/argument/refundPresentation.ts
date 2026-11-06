@@ -41,6 +41,9 @@ export interface RefundPresentation {
 export function buildRefundPresentation(
   payload: Record<string, unknown> | null | undefined,
   refundStatement?: RefundStatement | null,
+  /** The dispute account's refund sentence, when the caller has one: the row
+   *  then says exactly what the account says (lib/disputes/disputeAccount.ts). */
+  accountRefundSentence?: I18nToken | null,
 ): RefundPresentation | null {
   const p = payload ?? {};
 
@@ -86,7 +89,7 @@ export function buildRefundPresentation(
   if (p.returnStatus === "NO_RETURN") {
     const factsTokens: I18nToken[] = [{ key: `${NS}.factsNoReturn` }];
     if (refundStatement?.kind === "none") {
-      factsTokens.push(refundStatementTokens(refundStatement).detail);
+      factsTokens.push(accountRefundSentence ?? refundStatementTokens(refundStatement).detail);
     }
     return { titleToken: { key: `${NS}.titleNoReturn` }, factsTokens };
   }

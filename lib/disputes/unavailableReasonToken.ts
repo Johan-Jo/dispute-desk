@@ -47,10 +47,14 @@ const NO_REFUND_ENGLISH = "No refund was issued on this order";
 export function unavailableReasonToken(
   reason: string | null | undefined,
   refundStatement?: RefundStatement | null,
+  /** The dispute account's refund sentence (lib/disputes/disputeAccount.ts):
+   *  on the dispute page the row says exactly what the account says. */
+  accountRefundSentence?: I18nToken | null,
 ): I18nToken | null {
   if (typeof reason !== "string" || reason.trim() === "") return null;
   const r = reason.trim();
   if (r === NO_REFUND_ENGLISH) {
+    if (accountRefundSentence) return accountRefundSentence;
     return refundStatementTokens(refundStatement ?? UNKNOWN_REFUND_STATEMENT).detail;
   }
   const suffix = STORED_ENGLISH[r] ?? CODES[r];

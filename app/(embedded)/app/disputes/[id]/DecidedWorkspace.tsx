@@ -22,7 +22,8 @@ import {
   type DecidedViewInputs,
   type TimelineTone,
 } from "@/lib/disputes/decidedView";
-import { decidedSummaryParagraph } from "@/lib/disputes/decidedViewText";
+import { useAccount } from "./workspace-components/AccountContext";
+import { AccountHero } from "./workspace-components/AccountHero";
 import type { WorkspaceDispute } from "./workspace-components/types";
 import { phaseLabel, phasePillColors } from "@/lib/disputes/phaseUtils";
 
@@ -57,35 +58,6 @@ const STEP: Record<TimelineTone, { ring: string; dot: string; title: string }> =
   danger: { ring: "#FEF3F2", dot: "#EF4444", title: "#B42318" },
   success: { ring: "#ECFDF3", dot: "#22C55E", title: "#067647" },
 };
-
-const HERO = {
-  lost: {
-    bg: "#F9FAFB",
-    border: DD.border,
-    divider: DD.border,
-    tileBg: "#E4E7EC",
-    tileFg: "#475467",
-    chipBg: "#EEF0F3",
-    chipFg: "#344054",
-    chipDot: "#98A2B3",
-    amount: DD.text,
-  },
-  won: {
-    bg: "#F0FDF4",
-    border: "#BBF7D0",
-    divider: "#D1FADF",
-    tileBg: "#D1FADF",
-    tileFg: "#067647",
-    chipBg: "#DCFCE7",
-    chipFg: "#067647",
-    chipDot: "#22C55E",
-    amount: "#067647",
-  },
-} as const;
-
-/** Indent that lines body text up under the title once the hero is wide
- *  enough (design: `clamp(0px, calc((100% - 420px) * 999), 56px)`). */
-const HERO_INDENT = "clamp(0px, calc((100% - 420px) * 999), 56px)";
 
 const panel: CSSProperties = { border: `1px solid ${DD.border}`, borderRadius: 8 };
 const softBox: CSSProperties = {
@@ -136,27 +108,94 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
       return iso.slice(5, 10);
     }
   };
+  const vm = useAccount();
   const fmtMoney = (amount: number, currency: string) =>
-    `${currency} ${Number.isFinite(amount) ? amount.toFixed(2) : amount}`;
+    vm
+      ? vm.fmt.money(amount, currency)
+      : `${currency} ${Number.isFinite(amount) ? amount.toFixed(2) : amount}`;
 
   const view = buildDecidedView(inputs, { date: fmtDate, short: fmtShort, money: fmtMoney });
   const r = (token: I18nToken) => resolveToken(t, token);
   const lost = inputs.outcome === "lost";
-  const hero = lost ? HERO.lost : HERO.won;
-  const summary = decidedSummaryParagraph(view, (tok) => r(tok), locale);
   const orderLabel = dispute.orderName?.trim() || dispute.id.slice(0, 8).toUpperCase();
   const headerTitle = t("disputes.workspaceShell.headerTitleOrder", {
     order: orderLabel,
     reason: props.reasonLabel,
   });
-  const had = view.checklist.filter((c) => c.state === "had").length;
 
+  // Design: the Customer fact is shown only when the record has a name.
   const headerFacts: Array<{ label: string; value: string }> = [
-    { label: t("disputes.workspaceShell.facts.amount"), value: `${dispute.currency} ${dispute.amount}` },
-    { label: t("disputes.workspaceShell.facts.customer"), value: dispute.customerName || "—" },
+    { label: t("disputes.workspaceShell.facts.amount"), value: fmtMoney(Number(dispute.amount), dispute.currency) },
+    ...(dispute.customerName
+      ? [{ label: t("disputes.workspaceShell.facts.customer"), value: dispute.customerName }]
+      : []),
     { label: t("disputes.workspaceShell.facts.dateFiled"), value: dispute.openedAt ? fmtDate(dispute.openedAt) : "—" },
     { label: t("disputes.workspaceShell.facts.disputeReason"), value: props.reasonLabel },
   ];
+
+  // ── The account's rows, merged with the decided view's own ──
+  const page = vm?.page ?? null;
+  const account = vm?.account ?? null;
+  const accountOwnsSeen = !!account && (account.filedNothing || lost);
+  const seenTitle: { title: I18nToken; sub: I18nToken } = accountOwnsSeen
+    ? { title: { key: "disputes.decidedView.facts.titleLost" }, sub: { key: "disputes.decidedView.facts.subLost" } }
+    : { title: view.facts.title, sub: view.facts.sub };
+  const seenRows: Array<{ text: I18nToken; source: I18nToken; color: string; weighted: boolean }> = [
+    ...(page?.seen ?? []).map((f) => ({
+      text: f.token,
+      source: f.source,
+      color: f.key === "delivery" ? "#98A2B3" : DD.primary,
+      weighted: false,
+    })),
+    // The carrier row above already states a confirmed delivery.
+    ...view.facts.items
+      .filter((f) => !(account?.facts.delivery && f.clause?.key === "disputes.decidedView.summary.clause.delivery_confirmed"))
+      .map((f) => ({
+        text: f.title,
+        source: f.source,
+        color: f.tone === "good" ? DD.success : DD.danger,
+        weighted: f.weighted,
+      })),
+  ];
+  // The checklist row "Refund record, or why no refund was due" reads the refund fact's kind.
+  // A return on record makes "No return was received" impossible: never show the row
+  // (the loader's `inapplicable` does this from the pack; this is the same rule read from the account).
+  const returnOnRecord = !!account && !!account.facts.ret;
+  const checklistRows = view.checklist
+    .filter((c) => !(returnOnRecord && c.item.key === "disputes.decidedView.checklist.item.noReturn"))
+    .map((c) =>
+    page?.refundPill && c.item.key === "disputes.decidedView.checklist.item.refundRecord"
+      ? {
+          ...c,
+          label: page.refundPill.label,
+          state: (account?.refundKind === "some" ? "had" : "none") as ChecklistState,
+        }
+      : c,
+  );
+  // Timeline: the account owns the opening, the decision, the return and the
+  // refund entry; the view keeps the steps only it knows (held, emailed, filed...).
+  const owned = new Set(page?.steps.map((s) => s.replaces).filter(Boolean));
+  const accountSteps = (page?.steps ?? []).map((s) => ({
+    at: s.at ?? "",
+    title: s.title,
+    line: s.line as I18nToken | null,
+    detail: null as I18nToken | null,
+    tone: (s.tone === "won" ? "success" : s.tone === "lost" ? "danger" : s.tone === "info" ? "primary" : "muted") as TimelineTone,
+    rank: s.replaces === "outcome" ? 2 : 1,
+  }));
+  const viewSteps = view.timeline
+    .filter(
+      (s) =>
+        !(s.kind === "opened" && owned.has("opened")) &&
+        !(s.kind === "outcome" && owned.has("outcome")) &&
+        !(s.kind === "gathered" && account?.filedNothing),
+    )
+    .map((s) => ({ ...s, line: null as I18nToken | null, rank: s.kind === "outcome" ? 2 : 1 }));
+  const timelineSteps = [...accountSteps, ...viewSteps]
+    .map((s, i) => ({ s, i, t: Date.parse(s.at) || 0 }))
+    .sort((a, b) => a.t - b.t || a.s.rank - b.s.rank || a.i - b.i)
+    .map(({ s }) => s);
+  const had = checklistRows.filter((c) => c.state === "had").length;
 
   const onOverview = props.activeTab === 0;
 
@@ -353,170 +392,70 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
             role="tabpanel"
             id={props.tabs[props.activeTab]?.panelId}
             aria-labelledby={`${props.tabs[props.activeTab]?.id}-tab`}
-            style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}
+            style={{ padding: 16, display: "flex", flexDirection: "column", gap: onOverview ? 14 : 20 }}
           >
+            {/* Every tab opens with the same account (design: Return Record
+                Banner / DecidedWorkspaceMock). 22px on Overview, 18px on
+                Evidence and Review. */}
+            {vm ? (
+              <AccountHero
+                vm={vm}
+                size={onOverview ? 22 : 18}
+                product={view.outcome.product ? r(view.outcome.product) : null}
+              />
+            ) : null}
             {!onOverview ? (
               props.renderTab(props.activeTab)
             ) : (
               <>
-                {/* Hero: outcome + executive summary + who responded */}
-                <div
-                  style={{
-                    background: hero.bg,
-                    border: `1px solid ${hero.border}`,
-                    borderRadius: 8,
-                    padding: 20,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 14,
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 8,
-                        background: hero.tileBg,
-                        color: hero.tileFg,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flex: "none",
-                      }}
-                    >
-                      {lost ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 21V4" />
-                          <path d="M4 4h12l-2 4 2 4H4" />
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
-                          <path d="M9 12l2 2 4-4" />
-                        </svg>
-                      )}
-                    </div>
-                    <div style={{ flex: "1 1 260px", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.015em", lineHeight: 1.2 }}>
-                        {r(view.outcome.title)}
-                      </div>
-                      <div style={{ color: DD.subtle, lineHeight: 1.5, ...pretty }}>
-                        {view.outcome.product
-                          ? `${r(view.outcome.product)} · ${r(view.outcome.claim)}`
-                          : r(view.outcome.claim)}
-                      </div>
-                      <span
-                        style={{
-                          alignSelf: "flex-start",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          marginTop: 2,
-                          padding: "2px 8px",
-                          borderRadius: 6,
-                          background: hero.chipBg,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: hero.chipFg,
-                        }}
-                      >
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: hero.chipDot }} />
-                        {r(view.outcome.chip)}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                        alignItems: "flex-end",
-                        flex: "none",
-                        marginLeft: "auto",
-                      }}
-                    >
-                      <span style={{ fontSize: 12, color: DD.subtle }}>{r(view.outcome.amountLabel)}</span>
-                      <span
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 700,
-                          letterSpacing: "-0.015em",
-                          fontVariantNumeric: "tabular-nums",
-                          color: hero.amount,
-                        }}
-                      >
-                        {fmtMoney(inputs.amount, inputs.currency)}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      marginLeft: HERO_INDENT,
-                      maxWidth: 720,
-                      fontSize: 14,
-                      lineHeight: 1.65,
-                      color: "#344054",
-                      ...pretty,
-                    }}
-                  >
-                    {summary}
-                  </div>
-                  {/* The design's "Who responded:" line was removed at the
-                      maintainer's request (2026-09-26): the summary paragraph
-                      above already states who filed. The outcome email keeps it. */}
-                </div>
-
-                {/* What we saw / What carried the case */}
-                {view.facts.items.length > 0 ? (
+                {/* What we saw in the record: the account's own facts (return, refund,
+                    carrier) first, then the other facts the view derived. */}
+                {seenRows.length > 0 ? (
                   <div style={{ ...panel, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      <span style={{ fontWeight: 600 }}>{r(view.facts.title)}</span>
-                      <span style={{ fontSize: 12, color: DD.subtle }}>{r(view.facts.sub)}</span>
+                      <span style={{ fontWeight: 600 }}>{r(seenTitle.title)}</span>
+                      <span style={{ fontSize: 12, color: DD.subtle }}>{r(seenTitle.sub)}</span>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {view.facts.items.map((f, i) => {
-                        const color = f.tone === "good" ? DD.success : DD.danger;
-                        return (
-                          <div key={i} style={softBox}>
-                            <span
-                              aria-hidden="true"
-                              style={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: "50%",
-                                border: `1.5px solid ${color}`,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flex: "none",
-                              }}
-                            >
-                              <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
-                            </span>
-                            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                              <span style={{ fontWeight: 600, ...pretty }}>{r(f.title)}</span>
-                              <span style={{ fontSize: 12, color: DD.subtle }}>{r(f.source)}</span>
-                              {f.weighted ? (
-                                <span
-                                  style={{
-                                    alignSelf: "flex-start",
-                                    marginTop: 4,
-                                    padding: "2px 8px",
-                                    borderRadius: 6,
-                                    background: "#EEF0F3",
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    color: "#344054",
-                                  }}
-                                >
-                                  {t("disputes.decidedView.facts.weightPill")}
-                                </span>
-                              ) : null}
-                            </div>
+                      {seenRows.map((f, i) => (
+                        <div key={i} style={softBox}>
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: "50%",
+                              border: `1.5px solid ${f.color}`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flex: "none",
+                            }}
+                          >
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: f.color }} />
+                          </span>
+                          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ fontWeight: 600, ...pretty }}>{r(f.text)}</span>
+                            <span style={{ fontSize: 12, color: DD.subtle, ...pretty }}>{r(f.source)}</span>
+                            {f.weighted ? (
+                              <span
+                                style={{
+                                  alignSelf: "flex-start",
+                                  marginTop: 4,
+                                  padding: "2px 8px",
+                                  borderRadius: 6,
+                                  background: "#EEF0F3",
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#344054",
+                                }}
+                              >
+                                {t("disputes.decidedView.facts.weightPill")}
+                              </span>
+                            ) : null}
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                     {view.facts.note ? (
                       <span style={{ fontSize: 12, color: DD.subtle, lineHeight: 1.55, ...pretty }}>
@@ -527,7 +466,7 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                 ) : null}
 
                 {/* What wins this type of dispute */}
-                {view.checklist.length > 0 ? (
+                {checklistRows.length > 0 ? (
                   <div style={{ ...panel, overflow: "hidden" }}>
                     <div style={{ padding: "18px 18px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                       <div
@@ -545,12 +484,12 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                           {had}{" "}
-                          <span style={{ color: "#98A2B3", fontWeight: 500 }}>/ {view.checklist.length}</span>
+                          <span style={{ color: "#98A2B3", fontWeight: 500 }}>/ {checklistRows.length}</span>
                         </span>
                         <span style={{ color: DD.subtle }}>{t("disputes.decidedView.checklist.coverage")}</span>
                       </div>
                       <div style={{ display: "flex", gap: 3, height: 8 }} aria-hidden="true">
-                        {view.checklist.map((c, i) => (
+                        {checklistRows.map((c, i) => (
                           <span key={i} style={{ flex: 1, borderRadius: 4, background: STATE[c.state].bar }} />
                         ))}
                       </div>
@@ -562,7 +501,7 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                         </span>
                       ) : null}
                     </div>
-                    {view.checklist.map((c, i) => (
+                    {checklistRows.map((c, i) => (
                       <div
                         key={i}
                         style={{
@@ -652,13 +591,13 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                 ) : null}
 
                 {/* What happened */}
-                {view.timeline.length > 0 ? (
+                {timelineSteps.length > 0 ? (
                   <div style={{ ...panel, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-                    <span style={{ fontWeight: 600 }}>{t("disputes.decidedView.timeline.title")}</span>
+                    <span style={{ fontWeight: 600 }}>{page ? r(page.stepsTitle) : t("disputes.decidedView.timeline.title")}</span>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      {view.timeline.map((s, i) => {
+                      {timelineSteps.map((s, i) => {
                         const k = STEP[s.tone];
-                        const last = i === view.timeline.length - 1;
+                        const last = i === timelineSteps.length - 1;
                         return (
                           <div
                             key={i}
@@ -692,7 +631,11 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "3px 0 16px" }}>
                               <span style={{ fontWeight: 600, color: k.title }}>{r(s.title)}</span>
                               <span style={{ fontSize: 12, color: DD.subtle, lineHeight: 1.5, ...pretty }}>
-                                {s.detail ? `${fmtShort(s.at)} · ${r(s.detail)}` : fmtShort(s.at)}
+                                {s.line
+                                  ? `${fmtShort(s.at)} · ${r(s.line)}`
+                                  : s.detail
+                                    ? `${fmtShort(s.at)} · ${r(s.detail)}`
+                                    : fmtShort(s.at)}
                               </span>
                             </div>
                           </div>
