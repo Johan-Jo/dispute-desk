@@ -10267,3 +10267,19 @@ platform-wide across four shops.
 `/admin/shops/[id]` merges views and actions into one actor-labelled timeline.
 A view and an action on the same dispute, interleaved, is what actually answers
 "what did they do".
+
+### Raw-read scan (return / refund record)
+
+`tests/unit/rawReadScan.test.ts` guards the single-source answer to "does this order have a return / refund on record"
+(release criterion 10 of `docs/plans/single-source-architecture-audit.plan.md`). The scanner (`tests/unit/rawReadScan.ts`,
+exported `scanSource` / `scanTree`) walks the merchant-facing roots `app/(embedded)`, `app/api`, `components`,
+`lib/disputes` and `lib/argument` (skipping `__tests__`, test files, `node_modules`, `.next`, `messages`; comments are
+stripped) and counts these patterns: the string literals `"no_return_initiated"` and `"noReturn"`, `"returnStatus"` or
+`.returnStatus` property access, `.select("...checklist_v2...")` raw checklist reads, and `totals.refunded`. Every hit
+must appear in `tests/unit/rawReadScan.baseline.ts` as `{ file, pattern, count, category, reason }` (keys are
+line-agnostic; the reason is at least 20 characters and says why the reader is legitimate, or is marked `open` for a
+known second reader). The test fails on an unbaselined hit, and on a stale or count-changed baseline entry. To fix a
+failure, prefer routing the new read through `assembleEffectiveChecklist`, `noReturnApplicability` or
+`refundStatementFromPackSections`; add a baseline entry only for a legitimate reader, and delete entries whose hit is
+gone. A meta-test plants each pattern and asserts the scanner reports it (and reports nothing for clean code). No
+`ci.yml` change: the baseline diff is reviewed in the PR.
