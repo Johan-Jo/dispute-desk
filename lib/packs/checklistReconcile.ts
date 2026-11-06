@@ -109,6 +109,13 @@ export function normalizeChecklistV2Shape(
 export function reconcileChecklistWithCollectedFields(
   checklist: ChecklistItemV2[] | null | undefined,
   collected: Set<string>,
+  options?: {
+    /** Read-time only. A row whose field is inapplicable is dropped unless it
+     *  is `available` (an available row the record contradicts is kept, never
+     *  hidden: hiding a row whose fact may be filed would show the merchant
+     *  less than the bank sees). The function carries no field names. */
+    applicability?: (field: string) => { applicable: boolean };
+  },
 ): ChecklistItemV2[] {
   // A NULL/unparseable `checklist_v2` is treated as an empty checklist, not as
   // "stop". Returning early here meant a pack that collected evidence but has
@@ -165,5 +172,8 @@ export function reconcileChecklistWithCollectedFields(
     });
   }
 
-  return appended.length > 0 ? [...flipped, ...appended] : flipped;
+  const all = appended.length > 0 ? [...flipped, ...appended] : flipped;
+  const applicability = options?.applicability;
+  if (!applicability) return all;
+  return all.filter((c) => c.status === "available" || applicability(c.field).applicable);
 }

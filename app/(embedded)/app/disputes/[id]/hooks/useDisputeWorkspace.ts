@@ -1,5 +1,6 @@
 "use client";
 
+import { hintAsksForUnsuppliableSignal } from "@/lib/argument/improvementHint";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type {
@@ -1187,7 +1188,8 @@ export function useDisputeWorkspace(disputeId: string) {
     // `strengthReasonText` / `improvementHintText`; the raw tokens stay on
     // `caseStrength.*I18n` for any consumer that needs them.
     const strengthReasonText: Localized = resolveToken(tRoot, caseStrength.strengthReasonI18n);
-    const improvementHintText: Localized | null = caseStrength.improvementHintI18n
+    const improvementHintText: Localized | null =
+      caseStrength.improvementHintI18n && !hintAsksForUnsuppliableSignal(caseStrength.improvementHintI18n)
       ? resolveToken(tRoot, caseStrength.improvementHintI18n)
       : null;
     // "What supports your case" and the improvement hint were BOTH computed

@@ -19,6 +19,7 @@ import {
   type VerificationOutcome,
 } from "@/lib/argument/paymentVerification";
 import type { AvsNormalizedResult } from "@/lib/argument/avsCodeMap";
+import { isZeroAmount } from "@/lib/disputes/refundStatement";
 
 /* ── Types ── */
 
@@ -319,7 +320,7 @@ function OrderContent({ payload }: { payload: EvidencePayload }) {
                 </Text>
               }
             />
-            {payload.totals.refunded && payload.totals.refunded !== "0.00" && (
+            {payload.totals.refunded && !isZeroAmount(payload.totals.refunded) && (
               <DataRow label="Refunded" value={formatCurrency(payload.totals.refunded, payload.totals.currency)} />
             )}
           </BlockStack>

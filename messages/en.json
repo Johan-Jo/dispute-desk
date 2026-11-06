@@ -852,7 +852,7 @@
       },
       "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed.",
       "returnedToSender": {
-        "returned_unrefunded": "The carrier returned this parcel to you and no refund has been issued, so you are holding both the goods and the payment. No proof of delivery can exist for this order, and without one the bank will normally decide for the customer. Tell us why the parcel came back — if the customer refused it or never collected it, that is not a valid return and it is worth arguing. If you kept the goods and the money, the fair answer is to refund."
+        "returned_unrefunded": "The carrier returned this parcel to you. The refund on record is less than the disputed amount. No proof of delivery can exist for this order, and without one the bank will normally decide for the customer. Tell us why the parcel came back — if the customer refused it or never collected it, that is not a valid return and it is worth arguing. If you kept the goods and the money, the fair answer is to refund."
       }
     },
     "outcomeExplanation": {
@@ -1214,7 +1214,7 @@
     },
     "whyText": {
       "customer_account_info": "Shows the customer's prior order history with your store — supports that the order was a genuine purchase",
-      "refund_record": "Proves a refund was actually issued on the order — decisive against 'refund not processed' claims",
+      "refund_record": "Shopify’s refund record, shown when a refund exists.",
       "no_return_initiated": "Shows the customer never initiated a return — grounds the argument that no refund was owed",
       "ip_location_check": "Places the order at the customer's usual location — supports that the cardholder placed it",
       "device_session_consistency": "Ties the order to the customer's known device and session — counters 'this wasn't me' claims",
@@ -1361,7 +1361,7 @@
           "held": "This order was held, not shipped",
           "cancelled": "This order was cancelled, not shipped"
         },
-        "body": "Your fraud screening flagged this order and nothing was shipped. The payment is still captured — no refund has been issued.",
+        "body": "Your fraud screening flagged this order and nothing was shipped. The payment is still captured.",
         "helper": "Because nothing shipped, there is no delivery evidence to submit — the strength score reflects that, not a gap in your records."
       },
       "orderSituation": {
@@ -1372,10 +1372,6 @@
           "failed": "A return on this order is marked as failed"
         },
         "opened": "The return was created on {date}.",
-        "refund": {
-          "none": "No refund has been issued on the order.",
-          "some": "A refund has been issued on the order."
-        },
         "asOf": "As recorded in Shopify when DisputeDesk last collected this order, on {date}.",
         "privateNote": "This note is for you only. It is not part of anything sent to the bank."
       }
@@ -2058,7 +2054,7 @@
             "notIncluded": "Delivery has not been confirmed yet. Once the carrier marks the order delivered (or you upload a signature/photo) this row will populate automatically."
           },
           "refundRecord": {
-            "notIncluded": "No refund has been issued on this order — so there is no refund record to show. For a \"credit / refund not processed\" dispute this is usually the stronger position: your defence is that no refund was owed, not that one was already paid."
+            "notIncluded": "Shopify records no confirmed refund amount on this order."
           },
           "tdsAuthentication": {
             "notIncluded": "The payment receipt does not include 3-D Secure authentication data for this transaction."
@@ -2294,11 +2290,49 @@
     },
     "refundStatus": {
       "titleIssued": "Refund issued",
-      "titleNone": "No refund issued",
+      "titleNoReturn": "No return initiated",
       "factsIssued": "{amount} {currency} refunded on {date}",
       "factsIssuedNoDate": "{amount} {currency} refunded",
       "factsIssuedDateOnly": "Refunded on {date}",
       "factsNoReturn": "The customer never initiated a return"
+    },
+    "refundStatement": {
+      "none": {
+        "title": "No refund on record",
+        "detail": "Shopify records no refund on this order (as of {date}).",
+        "detailNoDate": "Shopify records no refund on this order."
+      },
+      "recordedNoAmount": {
+        "title": "Refund entry without a confirmed amount",
+        "detail": "Shopify records a refund entry on this order with no confirmed amount (as of {date}).",
+        "detailNoDate": "Shopify records a refund entry on this order with no confirmed amount."
+      },
+      "some": {
+        "title": "Refund on record",
+        "detail": "{amount} refunded on {date}.",
+        "detailNoDate": "{amount} refunded."
+      },
+      "unknown": {
+        "title": "Refund status not recorded",
+        "detail": "The refund status is not recorded for this order."
+      }
+    },
+    "internalOnlyReason": {
+      "refundRecord": "Shopify’s refund record appears here when a refund with a confirmed amount exists. There is nothing to upload for it.",
+      "noReturnInitiated": "Taken from Shopify’s return status. There is nothing to upload for it."
+    },
+    "unavailableReason": {
+      "orderUnfulfilled": "This order has not been fulfilled.",
+      "noCardPayment": "There is no card payment on this order.",
+      "avsCvvNotReturned": "The payment gateway did not return an address or security-code check result for this order.",
+      "noParcelReturned": "No parcel on this order was returned to the sender.",
+      "awaitingDelivery": "Waiting for delivery confirmation.",
+      "returnOnRecord": "Shopify records a return on this order.",
+      "refundOnRecord": "Shopify records a refund on this order.",
+      "merchantSaysRequestReceived": "You told us the customer asked to return this order.",
+      "returnedToSender": "The carrier returned this parcel to you.",
+      "manualOnly": "Not available automatically — upload it manually if you have it.",
+      "generic": "Not applicable to this order."
     },
     "signalLabelValue": {
       "refundIssued": "Proof that the refund was already issued",

@@ -17,13 +17,19 @@
 import { Banner, BlockStack, Text } from "@shopify/polaris";
 import { useFormatter, useTranslations } from "next-intl";
 import { hasReturnOnRecord, type OrderSituation } from "@/lib/disputes/orderSituation";
+import { refundStatementTokens, type RefundStatement } from "@/lib/disputes/refundStatement";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 
 export function OrderSituationNote({
   situation,
+  refundStatement = null,
 }: {
   situation: (OrderSituation & { asOf: string | null }) | null;
+  /** The refund sentence comes from lib/disputes/refundStatement.ts, never from the situation's own coarse refund flag. */
+  refundStatement?: RefundStatement | null;
 }) {
   const t = useTranslations("disputes.overviewExtra.orderSituation");
+  const tRoot = useTranslations();
   const format = useFormatter();
   if (!situation || !hasReturnOnRecord(situation)) return null;
 
@@ -36,7 +42,9 @@ export function OrderSituationNote({
   const asOf = date(situation.asOf);
   const record = [
     opened ? t("opened", { date: opened }) : null,
-    situation.refund === "unknown" ? null : t(`refund.${situation.refund}`),
+    refundStatement && refundStatement.kind !== "unknown"
+      ? resolveToken(tRoot, refundStatementTokens(refundStatement, { withAsOf: false }).detail)
+      : null,
   ]
     .filter(Boolean)
     .join(" ");
