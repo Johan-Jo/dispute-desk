@@ -165,14 +165,16 @@ describe("every blocking reason reaches the markup", () => {
 });
 
 describe("the unblocked path is untouched", () => {
-  it("an ordinary building case still says it is building", () => {
+  it("an ordinary building case no longer stacks a second hero; the account carries the state", () => {
     const html = render({
       ...BLOCKED_AUTO_BUILD_OFF,
       attention: "none",
       blockingReason: null,
     });
-    expect(html).toContain("Building your evidence pack");
+    // One hero (the account, rendered by the shell): the old stacked hero card is gone.
+    expect(html).not.toContain("Building your evidence pack");
     expect(html).not.toContain(BLOCKING.auto_build_off);
+    expect(html).not.toContain("detail-overview-hero");
   });
 
   it("renders without a presentation object at all (older cached payload)", () => {

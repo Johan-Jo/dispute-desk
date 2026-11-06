@@ -2529,14 +2529,14 @@
         "confirmed": "El transportista confirmó la entrega."
       },
       "outcome": {
-        "won": "El banco decidió a tu favor el {date}. Se recuperaron {amount}.",
-        "wonSameDay": "El banco decidió a tu favor el {date}, el día en que se abrió la disputa. Se recuperaron {amount}.",
-        "wonNoAmount": "El banco decidió a tu favor el {date}.",
-        "wonSameDayNoAmount": "El banco decidió a tu favor el {date}, el día en que se abrió la disputa.",
-        "lost": "El banco decidió en tu contra el {date}. No se devolvieron {amount}.",
-        "lostSameDay": "El banco decidió en tu contra el {date}, el día en que se abrió la disputa. No se devolvieron {amount}.",
-        "lostNoAmount": "El banco decidió en tu contra el {date}.",
-        "lostSameDayNoAmount": "El banco decidió en tu contra el {date}, el día en que se abrió la disputa."
+        "won": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}. Se recuperaron {amount}.",
+        "wonSameDay": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}, el día en que se abrió la disputa. Se recuperaron {amount}.",
+        "wonNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} a tu favor el {date}, el día en que se abrió la disputa.",
+        "lost": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}. No se devolvieron {amount}.",
+        "lostSameDay": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}, el día en que se abrió la disputa. No se devolvieron {amount}.",
+        "lostNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {El banco decidió} other {Se decidió}} en tu contra el {date}, el día en que se abrió la disputa."
       },
       "noReason": "No se dio ningún motivo para la decisión.",
       "order": {
@@ -2552,7 +2552,8 @@
         "none": "Todavía no se ha creado ningún paquete de pruebas y no se ha guardado nada en Shopify.",
         "built": "Se ha creado un paquete de pruebas y todavía no se ha guardado nada en Shopify.",
         "saved": "Las pruebas de esta disputa se guardaron en Shopify el {date}.",
-        "forwarded": "Las pruebas de esta disputa se guardaron en Shopify, que las reenvió al banco."
+        "forwarded": "Las pruebas de esta disputa se guardaron en Shopify, que las reenvió al banco.",
+        "building": "Se está creando un paquete de pruebas y todavía no se ha guardado nada en Shopify."
       },
       "open": {
         "title": {
@@ -2575,7 +2576,8 @@
         "decidedLost": "Decidida en tu contra",
         "pack": "Paquete de pruebas",
         "due": "Respuesta debida",
-        "titleOpen": "Qué ocurre ahora"
+        "titleOpen": "Qué ocurre ahora",
+        "now": "Ahora"
       },
       "missing": {
         "refundRecordPrefix": "Registro de reembolso: ",

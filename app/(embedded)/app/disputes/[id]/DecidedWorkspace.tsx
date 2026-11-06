@@ -158,7 +158,12 @@ export default function DecidedWorkspace(props: DecidedWorkspaceProps) {
       })),
   ];
   // The checklist row "Refund record, or why no refund was due" reads the refund fact's kind.
-  const checklistRows = view.checklist.map((c) =>
+  // A return on record makes "No return was received" impossible: never show the row
+  // (the loader's `inapplicable` does this from the pack; this is the same rule read from the account).
+  const returnOnRecord = !!account && !!account.facts.ret;
+  const checklistRows = view.checklist
+    .filter((c) => !(returnOnRecord && c.item.key === "disputes.decidedView.checklist.item.noReturn"))
+    .map((c) =>
     page?.refundPill && c.item.key === "disputes.decidedView.checklist.item.refundRecord"
       ? {
           ...c,

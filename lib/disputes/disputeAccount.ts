@@ -71,6 +71,8 @@ export interface AccountFormat {
 
 export interface AccountInputs {
   reason: string | null;
+  /** inquiry or chargeback. "The bank decided" is said only for a chargeback. */
+  phase: "inquiry" | "chargeback";
   lifecycle: AccountLifecycle;
   /** Open disputes only: the presentation lifecycle, for the hero title. */
   openStage?: "response_needed" | "saved_to_shopify" | "under_review";
@@ -94,6 +96,8 @@ export interface AccountInputs {
   /** The evidence pack. Null = not read. */
   pack: {
     built: boolean;
+    /** A build is running (nothing built yet, or being rebuilt). */
+    building?: boolean;
     /** When the pack's evidence was saved to Shopify, if it was. */
     savedAt: string | null;
     forwarded: boolean;
@@ -233,13 +237,17 @@ function outcomeFact(i: AccountInputs, fmt: AccountFormat): I18nToken | null {
   const hasAmount = Number.isFinite(i.amount) && i.amount > 0;
   const money = fmt.money(i.amount, i.currency);
   const variant = `${won ? "won" : "lost"}${same ? "SameDay" : ""}${hasAmount ? "" : "NoAmount"}`;
-  return tk(`outcome.${variant}`, hasAmount ? { date, amount: money } : { date });
+  // Who decided is not known for an inquiry; "the bank" only where a real
+  // chargeback phase supports it (ICU select in the sentence).
+  const phase = i.phase === "chargeback" ? "chargeback" : "inquiry";
+  return tk(`outcome.${variant}`, hasAmount ? { date, amount: money, phase } : { date, phase });
 }
 
 function packFact(i: AccountInputs, fmt: AccountFormat): I18nToken | null {
   const p = i.pack;
   if (!p) return null;
   if (p.forwarded) return tk("pack.forwarded");
+  if (p.building && !p.savedAt) return tk("pack.building");
   if (p.savedAt) return tk("pack.saved", { date: fmt.date(p.savedAt) });
   if (p.built) return tk("pack.built");
   return tk("pack.none");

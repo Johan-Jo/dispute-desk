@@ -65,6 +65,7 @@ const sit = (returns: "returned" | "in_progress" | "none", opened: string | null
 const stmt = (o: Record<string, unknown>) => ({ asOf: "2026-11-05T09:00:00Z", zeroCurrency: "SEK", ...o }) as never;
 
 const common = {
+  phase: "inquiry",
   currency: "SEK",
   dueAt: null,
   filedAt: null,

@@ -2529,14 +2529,14 @@
         "confirmed": "Le transporteur a confirmé la livraison."
       },
       "outcome": {
-        "won": "La banque a tranché en votre faveur le {date}. {amount} ont été récupérés.",
-        "wonSameDay": "La banque a tranché en votre faveur le {date}, le jour de l'ouverture du litige. {amount} ont été récupérés.",
-        "wonNoAmount": "La banque a tranché en votre faveur le {date}.",
-        "wonSameDayNoAmount": "La banque a tranché en votre faveur le {date}, le jour de l'ouverture du litige.",
-        "lost": "La banque a tranché contre vous le {date}. {amount} n'ont pas été restitués.",
-        "lostSameDay": "La banque a tranché contre vous le {date}, le jour de l'ouverture du litige. {amount} n'ont pas été restitués.",
-        "lostNoAmount": "La banque a tranché contre vous le {date}.",
-        "lostSameDayNoAmount": "La banque a tranché contre vous le {date}, le jour de l'ouverture du litige."
+        "won": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}. {amount} ont été récupérés.",
+        "wonSameDay": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}, le jour de l'ouverture du litige. {amount} ont été récupérés.",
+        "wonNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} en votre faveur le {date}, le jour de l'ouverture du litige.",
+        "lost": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}. {amount} n'ont pas été restitués.",
+        "lostSameDay": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}, le jour de l'ouverture du litige. {amount} n'ont pas été restitués.",
+        "lostNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {La banque a tranché} other {Il a été tranché}} contre vous le {date}, le jour de l'ouverture du litige."
       },
       "noReason": "Aucun motif n'a été donné pour la décision.",
       "order": {
@@ -2552,7 +2552,8 @@
         "none": "Aucun dossier de preuves n'a encore été créé, et rien n'a été enregistré dans Shopify.",
         "built": "Un dossier de preuves a été créé, et rien n'a encore été enregistré dans Shopify.",
         "saved": "Les preuves de ce litige ont été enregistrées dans Shopify le {date}.",
-        "forwarded": "Les preuves de ce litige ont été enregistrées dans Shopify, qui les a transmises à la banque."
+        "forwarded": "Les preuves de ce litige ont été enregistrées dans Shopify, qui les a transmises à la banque.",
+        "building": "Un dossier de preuves est en cours de création, et rien n'a encore été enregistré dans Shopify."
       },
       "open": {
         "title": {
@@ -2575,7 +2576,8 @@
         "decidedLost": "Tranché contre vous",
         "pack": "Dossier de preuves",
         "due": "Réponse attendue",
-        "titleOpen": "Ce qui se passe maintenant"
+        "titleOpen": "Ce qui se passe maintenant",
+        "now": "Maintenant"
       },
       "missing": {
         "refundRecordPrefix": "Enregistrement du remboursement : ",

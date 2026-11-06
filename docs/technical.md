@@ -4087,6 +4087,14 @@ Spec: Claude Design project `fca59ec9-5dd1-4154-904a-fd0914154668` ("Return Reco
   and the open `WorkspaceShell` provide the account; `OverviewTab`, `ReviewSubmitTab` and `EvidenceTab` read it. The blue
   `OrderSituationNote` banner is gone. The held-order banner and the checklist/evidence-row refund reasons read the
   account's refund sentence. A strength verdict is not shown on a decided case DisputeDesk filed nothing for.
+- Open disputes follow the same pattern: one hero only (the old stacked Overview hero card is gone; a slim status card
+  remains only for a halt, a recorded decision, or the Evidence / Decide actions, which stay reachable); the design's
+  three-step "What happens now" timeline (`AccountTimelineCard`) replaces the old one; with no pack the Evidence and
+  Review bodies show the design's explainer and pack line from the same `pack` fact instead of the "No evidence pack
+  yet" banners (there was no build action behind those banners; failed-build retry is unchanged). The old live-case
+  strength chip on the Overview hero is removed with it.
+- Outcome wording: "The bank decided ..." is said only for a chargeback (`phase`); an inquiry reads "This was decided
+  in your favour / against you ..." (ICU select on `phase`), because the decider of an inquiry is not verified.
 - Read-time and merchant-side only: nothing is written to `pack_json`; `dispute.orderTotal` is a new read-only field on
   the workspace payload. Settings are not read. Tests: `lib/disputes/__tests__/disputeAccount.test.ts` (per state, no
   contradictions, six locales), `tests/unit/disputeAccount.render.test.tsx` (rendered markup).

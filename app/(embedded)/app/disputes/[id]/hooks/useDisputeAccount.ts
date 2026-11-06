@@ -71,7 +71,12 @@ export function useDisputeAccount(workspace: Workspace): DisputeAccountVm | null
     };
 
     const pack = data.pack ?? null;
-    const lifecycle = decidedView ? decidedView.outcome : "open";
+    // A decided dispute whose decided-view inputs failed to load is still decided.
+    const lifecycle: "won" | "lost" | "open" = decidedView
+      ? decidedView.outcome
+      : d.normalizedStatus === "won" || d.normalizedStatus === "lost"
+        ? d.normalizedStatus
+        : "open";
     const presentationLifecycle = data.presentation?.lifecycle ?? null;
     const forwarded =
       presentationLifecycle === "under_review" || d.submissionState === "submitted_confirmed";
@@ -81,10 +86,12 @@ export function useDisputeAccount(workspace: Workspace): DisputeAccountVm | null
           return Array.isArray(f) && f.some((x) => typeof x === "string" && DELIVERY_FIELDS.has(x));
         })
       : null;
-    const building = derived.isBuilding === true || derived.isFailed === true;
+    const building = derived.isBuilding === true;
+    const failed = derived.isFailed === true;
 
     const inputs: AccountInputs = {
       reason: d.reason ?? null,
+      phase: d.phase === "chargeback" ? "chargeback" : "inquiry",
       lifecycle,
       openStage:
         presentationLifecycle === "under_review"
@@ -92,11 +99,17 @@ export function useDisputeAccount(workspace: Workspace): DisputeAccountVm | null
           : presentationLifecycle === "saved_to_shopify"
             ? "saved_to_shopify"
             : "response_needed",
-      amount: decidedView ? decidedView.amount : Number(d.amount),
+      amount: decidedView
+        ? decidedView.amount
+        : lifecycle === "won"
+          ? Number(d.outcomeAmountRecovered ?? d.amount)
+          : lifecycle === "lost"
+            ? Number(d.outcomeAmountLost ?? d.amount)
+            : Number(d.amount),
       currency: decidedView ? decidedView.currency : d.currency,
       openedAt: d.openedAt ?? null,
       dueAt: d.dueAt ?? null,
-      closedAt: decidedView ? decidedView.closedAt : null,
+      closedAt: decidedView ? decidedView.closedAt : lifecycle === "open" ? null : d.closedAt ?? null,
       responder: decidedView?.response?.responder ?? null,
       filedAt: decidedView?.response?.filedAt ?? null,
       sentAt: decidedView?.response?.sentAt ?? null,
@@ -106,12 +119,11 @@ export function useDisputeAccount(workspace: Workspace): DisputeAccountVm | null
       order: d.orderTotal
         ? { total: d.orderTotal.amount, currency: d.orderTotal.currency, card: d.paymentFamily === "card" }
         : null,
-      pack:
-        building && !pack
-          ? null
-          : pack
-            ? { built: !building, savedAt: pack.savedToShopifyAt ?? null, forwarded, hasTracking }
-            : { built: false, savedAt: null, forwarded: false, hasTracking: null },
+      pack: failed
+        ? null
+        : pack
+          ? { built: !building, building, savedAt: pack.savedToShopifyAt ?? null, forwarded, hasTracking }
+          : { built: false, building, savedAt: null, forwarded: false, hasTracking: null },
     };
 
     const account = buildDisputeAccount(inputs, fmt);

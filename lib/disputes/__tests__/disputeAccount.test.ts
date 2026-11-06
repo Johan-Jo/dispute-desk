@@ -38,6 +38,7 @@ const fmt: AccountFormat = {
 };
 
 const base = {
+  phase: "inquiry",
   currency: "SEK",
   dueAt: null,
   filedAt: null,
@@ -138,7 +139,7 @@ describe("the account, per design state", () => {
     );
     expect(say(a.facts.delivery!)).toBe("The carrier confirmed delivery.");
     expect(say(a.facts.outcome!)).toBe(
-      "The bank decided in your favour on 4 Nov 2026, the day the dispute opened. 618,00 kr was recovered.",
+      "This was decided in your favour on 4 Nov 2026, the day the dispute opened. 618,00 kr was recovered.",
     );
     expect(say(a.facts.noReason!)).toBe("No reason was given for the decision.");
     expect(say(a.facts.order!)).toBe("Order total 757,00 kr, placed with card payment.");
@@ -151,7 +152,7 @@ describe("the account, per design state", () => {
     expect(say(a.facts.ret!)).toBe("A return on this order is in progress. It is not yet marked as received.");
     expect(say(a.facts.refund!)).toBe("Shopify records no refund on this order. The refunded total is 0,00 kr.");
     expect(say(a.facts.match!)).toBe("These records match the customer's claim.");
-    expect(say(a.facts.outcome!)).toBe("The bank decided in your favour on 4 Nov 2026. 899,00 kr was recovered.");
+    expect(say(a.facts.outcome!)).toBe("This was decided in your favour on 4 Nov 2026. 899,00 kr was recovered.");
     expect(a.facts.delivery).toBeUndefined();
   });
 
@@ -164,7 +165,7 @@ describe("the account, per design state", () => {
     );
     expect(say(a.facts.match!)).toBe("This record matches the customer's claim.");
     expect(say(a.facts.outcome!)).toBe(
-      "The bank decided in your favour on 30 Oct 2026, the day the dispute opened. 1 148,00 kr was recovered.",
+      "This was decided in your favour on 30 Oct 2026, the day the dispute opened. 1 148,00 kr was recovered.",
     );
     expect(say(a.facts.tracking!)).toBe("Shipping tracking is not in the evidence pack.");
   });
@@ -182,6 +183,20 @@ describe("derived from the record, never hardcoded", () => {
   it("'the day the dispute opened' only on the same calendar day", () => {
     expect(say(account(A).facts.outcome!)).toContain("the day the dispute opened");
     expect(say(account(B).facts.outcome!)).not.toContain("the day the dispute opened");
+  });
+
+  it("'the bank decided' only where a real chargeback phase supports it", () => {
+    expect(say(account(A).facts.outcome!)).toMatch(/^This was decided in your favour/);
+    const cb = account({ ...A, phase: "chargeback" });
+    expect(say(cb.facts.outcome!)).toMatch(/^The bank decided in your favour/);
+    const lostCb = account({ ...A, phase: "chargeback", lifecycle: "lost" });
+    expect(say(lostCb.facts.outcome!)).toMatch(/^The bank decided against you/);
+    for (const loc of LOCALES) {
+      expect(say(account(A).facts.outcome!, loc), loc).not.toMatch(/\{|\}|select/);
+      expect(say(cb.facts.outcome!, loc), loc).not.toMatch(/\{|\}|select/);
+    }
+    // No inquiry sentence names the bank as the decider, in any locale.
+    expect(say(account(B).facts.outcome!)).not.toMatch(/bank/i);
   });
 
   it("'DisputeDesk filed nothing' only when nothing was filed by DisputeDesk", () => {
@@ -237,7 +252,7 @@ describe("states the design does not cover (needs sign-off)", () => {
     const a = account(i);
     expect(a.sequence).toEqual(["claim", "refund", "filed", "delivery", "outcome", "noReason"]);
     expect(say(a.facts.outcome!)).toBe(
-      "The bank decided against you on 4 Nov 2026, the day the dispute opened. 618,00 kr was not returned.",
+      "This was decided against you on 4 Nov 2026, the day the dispute opened. 618,00 kr was not returned.",
     );
     expect(a.filedNothing).toBe(false);
   });

@@ -2529,14 +2529,14 @@
         "confirmed": "Der Paketdienst hat die Zustellung bestätigt."
       },
       "outcome": {
-        "won": "Die Bank hat am {date} zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
-        "wonSameDay": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
-        "wonNoAmount": "Die Bank hat am {date} zu Ihren Gunsten entschieden.",
-        "wonSameDayNoAmount": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden.",
-        "lost": "Die Bank hat am {date} gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
-        "lostSameDay": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
-        "lostNoAmount": "Die Bank hat am {date} gegen Sie entschieden.",
-        "lostSameDayNoAmount": "Die Bank hat am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden."
+        "won": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
+        "wonSameDay": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden. {amount} wurden zurückgeholt.",
+        "wonNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} zu Ihren Gunsten entschieden.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, zu Ihren Gunsten entschieden.",
+        "lost": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
+        "lostSameDay": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden. {amount} wurden nicht zurückgegeben.",
+        "lostNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date} gegen Sie entschieden.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {Die Bank hat} other {Es wurde}} am {date}, dem Tag der Eröffnung der Streitigkeit, gegen Sie entschieden."
       },
       "noReason": "Für die Entscheidung wurde kein Grund genannt.",
       "order": {
@@ -2552,7 +2552,8 @@
         "none": "Es wurde noch kein Beweispaket erstellt, und es wurde nichts in Shopify gespeichert.",
         "built": "Ein Beweispaket wurde erstellt, aber noch nichts in Shopify gespeichert.",
         "saved": "Die Belege für diese Streitigkeit wurden am {date} in Shopify gespeichert.",
-        "forwarded": "Die Belege für diese Streitigkeit wurden in Shopify gespeichert, das sie an die Bank weitergeleitet hat."
+        "forwarded": "Die Belege für diese Streitigkeit wurden in Shopify gespeichert, das sie an die Bank weitergeleitet hat.",
+        "building": "Ein Beweispaket wird gerade erstellt, und es wurde noch nichts in Shopify gespeichert."
       },
       "open": {
         "title": {
@@ -2575,7 +2576,8 @@
         "decidedLost": "Gegen Sie entschieden",
         "pack": "Beweispaket",
         "due": "Antwort fällig",
-        "titleOpen": "Was jetzt passiert"
+        "titleOpen": "Was jetzt passiert",
+        "now": "Jetzt"
       },
       "missing": {
         "refundRecordPrefix": "Rückerstattungsbeleg: ",

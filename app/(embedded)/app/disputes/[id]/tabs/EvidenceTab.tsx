@@ -258,8 +258,10 @@ export default function EvidenceTab({ workspace }: Props) {
   // ── No-pack state ──
   // Pack was never generated. The sections will render in their
   // empty-state forms; this banner is the merchant-facing prompt.
+  // An open dispute with no pack: the design's explainer ("No evidence pack has
+  // been built yet...") in the evidence card replaces this banner.
   const noPackBanner =
-    !data?.pack && !derived.isBuilding && !derived.isFailed ? (
+    !account && !data?.pack && !derived.isBuilding && !derived.isFailed ? (
       <Banner tone="warning" title={tExtra("noPackTitle")}>
         <p>{tExtra("noPackBody")}</p>
       </Banner>
@@ -329,7 +331,7 @@ export default function EvidenceTab({ workspace }: Props) {
               "Internal-only signals" card below) are passed through as
               the third disposition bucket so the merchant sees one
               source of truth. */}
-      {accountOwnsEvidence && account ? (
+      {(accountOwnsEvidence || (account && !data?.decidedView && (data?.evidenceLineItems ?? []).length === 0)) && account ? (
         <AccountEvidenceBody page={account.page} />
       ) : (
         <EvidenceUsedSection

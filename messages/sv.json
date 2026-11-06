@@ -2529,14 +2529,14 @@
         "confirmed": "Transportören bekräftade leveransen."
       },
       "outcome": {
-        "won": "Banken beslutade till din fördel den {date}. {amount} återfick du.",
-        "wonSameDay": "Banken beslutade till din fördel den {date}, samma dag som tvisten öppnades. {amount} återfick du.",
-        "wonNoAmount": "Banken beslutade till din fördel den {date}.",
-        "wonSameDayNoAmount": "Banken beslutade till din fördel den {date}, samma dag som tvisten öppnades.",
-        "lost": "Banken beslutade emot dig den {date}. {amount} återfick du inte.",
-        "lostSameDay": "Banken beslutade emot dig den {date}, samma dag som tvisten öppnades. {amount} återfick du inte.",
-        "lostNoAmount": "Banken beslutade emot dig den {date}.",
-        "lostSameDayNoAmount": "Banken beslutade emot dig den {date}, samma dag som tvisten öppnades."
+        "won": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}. {amount} återfick du.",
+        "wonSameDay": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}, samma dag som tvisten öppnades. {amount} återfick du.",
+        "wonNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} till din fördel den {date}, samma dag som tvisten öppnades.",
+        "lost": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}. {amount} återfick du inte.",
+        "lostSameDay": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}, samma dag som tvisten öppnades. {amount} återfick du inte.",
+        "lostNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {Banken beslutade} other {Det avgjordes}} emot dig den {date}, samma dag som tvisten öppnades."
       },
       "noReason": "Ingen anledning angavs för beslutet.",
       "order": {
@@ -2552,7 +2552,8 @@
         "none": "Inget bevispaket har byggts än, och ingenting har sparats i Shopify.",
         "built": "Ett bevispaket har byggts, och ingenting har sparats i Shopify än.",
         "saved": "Bevisen för den här tvisten sparades i Shopify den {date}.",
-        "forwarded": "Bevisen för den här tvisten sparades i Shopify, som vidarebefordrade dem till banken."
+        "forwarded": "Bevisen för den här tvisten sparades i Shopify, som vidarebefordrade dem till banken.",
+        "building": "Ett bevispaket håller på att byggas, och ingenting har sparats i Shopify än."
       },
       "open": {
         "title": {
@@ -2575,7 +2576,8 @@
         "decidedLost": "Avgjord emot dig",
         "pack": "Bevispaket",
         "due": "Svar senast",
-        "titleOpen": "Vad som händer nu"
+        "titleOpen": "Vad som händer nu",
+        "now": "Nu"
       },
       "missing": {
         "refundRecordPrefix": "Återbetalningsunderlag: ",

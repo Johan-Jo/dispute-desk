@@ -2529,14 +2529,14 @@
         "confirmed": "The carrier confirmed delivery."
       },
       "outcome": {
-        "won": "The bank decided in your favour on {date}. {amount} was recovered.",
-        "wonSameDay": "The bank decided in your favour on {date}, the day the dispute opened. {amount} was recovered.",
-        "wonNoAmount": "The bank decided in your favour on {date}.",
-        "wonSameDayNoAmount": "The bank decided in your favour on {date}, the day the dispute opened.",
-        "lost": "The bank decided against you on {date}. {amount} was not returned.",
-        "lostSameDay": "The bank decided against you on {date}, the day the dispute opened. {amount} was not returned.",
-        "lostNoAmount": "The bank decided against you on {date}.",
-        "lostSameDayNoAmount": "The bank decided against you on {date}, the day the dispute opened."
+        "won": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}. {amount} was recovered.",
+        "wonSameDay": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}, the day the dispute opened. {amount} was recovered.",
+        "wonNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} in your favour on {date}, the day the dispute opened.",
+        "lost": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}. {amount} was not returned.",
+        "lostSameDay": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}, the day the dispute opened. {amount} was not returned.",
+        "lostNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {The bank decided} other {This was decided}} against you on {date}, the day the dispute opened."
       },
       "noReason": "No reason was given for the decision.",
       "order": {
@@ -2552,7 +2552,8 @@
         "none": "No evidence pack has been built yet, and nothing has been saved to Shopify.",
         "built": "An evidence pack has been built, and nothing has been saved to Shopify yet.",
         "saved": "Evidence for this dispute was saved to Shopify on {date}.",
-        "forwarded": "Evidence for this dispute was saved to Shopify, which passed it on to the bank."
+        "forwarded": "Evidence for this dispute was saved to Shopify, which passed it on to the bank.",
+        "building": "An evidence pack is being built, and nothing has been saved to Shopify yet."
       },
       "open": {
         "title": {
@@ -2575,7 +2576,8 @@
         "decidedLost": "Decided against you",
         "pack": "Evidence pack",
         "due": "Response due",
-        "titleOpen": "What happens now"
+        "titleOpen": "What happens now",
+        "now": "Now"
       },
       "missing": {
         "refundRecordPrefix": "Refund record: ",

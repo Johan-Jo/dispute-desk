@@ -366,3 +366,88 @@ export function AccountReviewBody({ page }: { page: AccountPage }): ReactNode {
     </div>
   );
 }
+
+const STEP_TONE: Record<string, { ring: string; dot: string; title: string }> = {
+  done: { ring: "#F2F4F7", dot: "#98A2B3", title: "#0B1220" },
+  info: { ring: "#EFF4FF", dot: "#1D4ED8", title: "#0B1220" },
+  won: { ring: "#ECFDF3", dot: "#22C55E", title: "#067647" },
+  lost: { ring: "#FEF3F2", dot: "#EF4444", title: "#B42318" },
+  pending: { ring: "#FFFFFF", dot: "#D0D5DD", title: "#0B1220" },
+};
+
+/** "What happens now" (design state E): the account's own steps, each line the record's sentence. */
+export function AccountTimelineCard({
+  page,
+  shortDate,
+  nowLabel,
+}: {
+  page: AccountPage;
+  shortDate: (iso: string) => string;
+  nowLabel: string;
+}) {
+  const r = useR();
+  if (page.steps.length === 0) return null;
+  return (
+    <div
+      data-testid="account-timeline"
+      style={{ border: "1px solid #E5E7EB", borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}
+    >
+      <span style={{ fontWeight: 600 }}>{r(page.stepsTitle)}</span>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {page.steps.map((s, i) => {
+          const k = STEP_TONE[s.tone] ?? STEP_TONE.done;
+          const last = i === page.steps.length - 1;
+          return (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "28px minmax(0, 1fr)", gap: "0 12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <span
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: k.ring,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flex: "none",
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: k.dot }} />
+                </span>
+                <span style={{ width: 1, flex: 1, background: "#E5E7EB", minHeight: 10, opacity: last ? 0 : 1 }} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "3px 0 16px" }}>
+                <span style={{ fontWeight: 600, color: k.title }}>{r(s.title)}</span>
+                <span style={{ fontSize: 12, color: "#667085", lineHeight: 1.5, ...pretty }}>
+                  {`${s.at ? shortDate(s.at) : nowLabel} · ${r(s.line)}`}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** The pack line box of the design's "Complete Defence Package" card, for an open dispute that has a pack. */
+export function AccountPackLine({ page }: { page: AccountPage }) {
+  const r = useR();
+  if (!page.review.packLine) return null;
+  return (
+    <div
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #E1E3E5",
+        borderRadius: 8,
+        padding: "14px 16px",
+        fontSize: 13,
+        lineHeight: 1.55,
+        color: "#303030",
+        ...pretty,
+      }}
+    >
+      {r(page.review.packLine)}
+    </div>
+  );
+}

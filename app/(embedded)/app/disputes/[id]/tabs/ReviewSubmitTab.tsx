@@ -11,7 +11,7 @@
 "use client";
 
 import { useAccount } from "../workspace-components/AccountContext";
-import { AccountReviewBody } from "../workspace-components/AccountPanels";
+import { AccountPackLine, AccountReviewBody } from "../workspace-components/AccountPanels";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { PACK_LIMIT_REACHED, PackCreditNeededBanner } from "./sections/PackCreditNeededBanner";
@@ -54,6 +54,12 @@ export default function ReviewSubmitTab({ workspace }: Props) {
     return <AccountReviewBody page={account.page} />;
   }
 
+  // An open dispute with no pack: the design's card with the pack line
+  // ("No evidence pack has been built yet...") replaces the old banner and the empty review.
+  if (account && !data?.decidedView && !data?.pack && !derived.isBuilding && !derived.isFailed) {
+    return <AccountReviewBody page={account.page} />;
+  }
+
   // ── Failed / building / no-pack banners ──
   const failedBanner = derived.failureCode === PACK_LIMIT_REACHED ? (
     <PackCreditNeededBanner
@@ -73,7 +79,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   ) : null;
 
   const noPackBanner =
-    !data?.pack && !derived.isBuilding && !derived.isFailed ? (
+    !account && !data?.pack && !derived.isBuilding && !derived.isFailed ? (
       <Banner tone="warning" title={tExtra("noPackTitle")}>
         <p>{tExtra("noPackBodyReview")}</p>
       </Banner>
@@ -115,6 +121,8 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {noPackBanner}
       {noDefenceLetterBanner}
       {notAssessedBanner}
+      {account && !data?.decidedView && data?.pack ? <AccountPackLine page={account.page} /> : null}
+
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,
           the "ready to resubmit" banner, and Finalize/Submit actions

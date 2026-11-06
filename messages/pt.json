@@ -2529,14 +2529,14 @@
         "confirmed": "A transportadora confirmou a entrega."
       },
       "outcome": {
-        "won": "O banco decidiu a seu favor em {date}. {amount} foram recuperados.",
-        "wonSameDay": "O banco decidiu a seu favor em {date}, o dia em que a contestação foi aberta. {amount} foram recuperados.",
-        "wonNoAmount": "O banco decidiu a seu favor em {date}.",
-        "wonSameDayNoAmount": "O banco decidiu a seu favor em {date}, o dia em que a contestação foi aberta.",
-        "lost": "O banco decidiu contra você em {date}. {amount} não foram devolvidos.",
-        "lostSameDay": "O banco decidiu contra você em {date}, o dia em que a contestação foi aberta. {amount} não foram devolvidos.",
-        "lostNoAmount": "O banco decidiu contra você em {date}.",
-        "lostSameDayNoAmount": "O banco decidiu contra você em {date}, o dia em que a contestação foi aberta."
+        "won": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}. {amount} foram recuperados.",
+        "wonSameDay": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}, o dia em que a contestação foi aberta. {amount} foram recuperados.",
+        "wonNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}.",
+        "wonSameDayNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} a seu favor em {date}, o dia em que a contestação foi aberta.",
+        "lost": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}. {amount} não foram devolvidos.",
+        "lostSameDay": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}, o dia em que a contestação foi aberta. {amount} não foram devolvidos.",
+        "lostNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}.",
+        "lostSameDayNoAmount": "{phase, select, chargeback {O banco decidiu} other {Foi decidido}} contra você em {date}, o dia em que a contestação foi aberta."
       },
       "noReason": "Nenhum motivo foi informado para a decisão.",
       "order": {
@@ -2552,7 +2552,8 @@
         "none": "Nenhum pacote de provas foi criado ainda, e nada foi salvo na Shopify.",
         "built": "Um pacote de provas foi criado, e nada foi salvo na Shopify ainda.",
         "saved": "As provas desta contestação foram salvas na Shopify em {date}.",
-        "forwarded": "As provas desta contestação foram salvas na Shopify, que as encaminhou ao banco."
+        "forwarded": "As provas desta contestação foram salvas na Shopify, que as encaminhou ao banco.",
+        "building": "Um pacote de provas está sendo criado, e nada foi salvo na Shopify ainda."
       },
       "open": {
         "title": {
@@ -2575,7 +2576,8 @@
         "decidedLost": "Decidida contra você",
         "pack": "Pacote de provas",
         "due": "Resposta devida",
-        "titleOpen": "O que acontece agora"
+        "titleOpen": "O que acontece agora",
+        "now": "Agora"
       },
       "missing": {
         "refundRecordPrefix": "Registro de reembolso: ",

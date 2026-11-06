@@ -32,7 +32,7 @@ import {
   ShieldCheckMarkIcon,
 } from "@shopify/polaris-icons";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
@@ -68,6 +68,7 @@ import {
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
 import { useAccount } from "../workspace-components/AccountContext";
+import { AccountTimelineCard } from "../workspace-components/AccountPanels";
 import { unavailableReasonToken } from "@/lib/disputes/unavailableReasonToken";
 import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
 import {
@@ -255,6 +256,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const tDecision = useTranslations("disputes.overviewDecision");
   const { data, derived, actions, clientState } = workspace;
   const account = useAccount();
+  const locale = useLocale();
 
   if (!data) return null;
 
@@ -565,6 +567,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           ? "none"
           : null;
   const decisionOverridesHero = reviewDecision !== null && !showDecisionRow;
+  // One hero per dispute: the account (top of every tab). This card survives
+  // only for what the account does not carry: a halt the merchant must know about,
+  // a recorded decision taking over, and the actions below.
+  const showStatusNotice =
+    isTechProblem || decisionOverridesHero || presentation?.attention === "blocking" || !!presentation?.internalIssue;
   const deadlineShort = dispute.dueAt ? formatShortDate(dispute.dueAt) : null;
   const decisionNextLine =
     decisionKey === "submit"
@@ -1103,6 +1110,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             acknowledgement on a held case whose only open contribution is
             that acknowledgement (2026-08-02), and routes to that card.
           - Neither row renders on a decided case (order #360499). */}
+      {(showStatusNotice || showEvidenceRow || showDecisionRow || (isDecided && !!outcomeExplanationText)) && (
       <div
         data-help-guide="detail-overview-hero"
         style={{
@@ -1115,6 +1123,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           gap: 16,
         }}
       >
+        {showStatusNotice && (
         <div
           style={{
             width: 48, height: 48, borderRadius: 8,
@@ -1125,7 +1134,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         >
           <Icon source={isTechProblem ? AlertCircleIcon : ShieldCheckMarkIcon} />
         </div>
+        )}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+          {showStatusNotice && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 24, fontWeight: 600, color: heroTone.titleColor, lineHeight: 1.25 }}>
               {strengthLabel}
@@ -1188,6 +1199,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </div>
             )}
           </div>
+          )}
+          {/* Live-case strength verdict: not in the design's hero (removed). The decided
+              explanation below is the fallback for a decided dispute whose decided-view
+              inputs failed to load; the decided workspace owns it otherwise. */}
           {isDecided ? (
             /* Decided: one sentence saying what we filed and the likely
                deciding factor. No strength pill and no `strengthReasonText`
@@ -1223,54 +1238,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 ) : null}
               </div>
             ) : null
-          ) : (
-            <div
-              style={{
-                display: "flex", flexDirection: "column", gap: 8,
-                paddingTop: 16, borderTop: "1px solid #E1E6F0",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#1E2A4A" }}>
-                  {tp("assessmentCard.title")}
-                </span>
-                {(() => {
-                  /* `not_assessed` when the gate says so, whatever the sentinel
-                   * says. The old expression reached `not_assessed` only via
-                   * `overall === "insufficient"`, which is ALSO a real verdict —
-                   * so a genuinely insufficient case and an unassessed one were
-                   * indistinguishable, and a stale assessment with any other
-                   * band rendered that band as current. */
-                  const strengthKey = !assessed
-                    ? "not_assessed"
-                    : presentation?.strength
-                    ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
-                  const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
-                  return (
-                    <span
-                      style={{
-                        display: "inline-flex", alignItems: "center", padding: "2px 9px",
-                        borderRadius: 999, fontSize: 11.5, fontWeight: 600,
-                        background: tokens.bg, color: tokens.fg,
-                      }}
-                    >
-                      {tRoot(`presentation.strength.detail.${strengthKey}`)}
-                    </span>
-                  );
-                })()}
-              </div>
-              {strengthReasonText ? (
-                <p
-                  style={{
-                    fontSize: 13, color: "#667085", margin: 0, lineHeight: 1.6, maxWidth: 760,
-                    textWrap: "pretty",
-                  } as React.CSSProperties}
-                >
-                  {strengthReasonText}
-                </p>
-              ) : null}
-            </div>
-          )}
+          ) : null}
 
           {(showEvidenceRow || showDecisionRow) && (
             <>
@@ -1315,6 +1283,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           )}
         </div>
       </div>
+      )}
 
       {/* Outcome card (plan §6.2) — dedicated won/lost block: decision
           date + amount recovered / lost. Terminal disputes only. */}
@@ -1438,53 +1407,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           Live cases only: "What happens now" has no answer once the bank has
           ruled. A past-tense "What happened" timeline is PR 2 of
           docs/plans/decided-dispute-view.plan.md. */}
-      {!isDecided && (
-      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
-        <BlockStack gap="300">
-          <Text as="h3" variant="headingSm">{tExtra("whatHappensNow")}</Text>
-          <BlockStack gap="300">
-            {timeline.map((step, i) => {
-              const isLast = i === timeline.length - 1;
-              const dotBg = step.state === "done" ? "#D1FAE5" : step.state === "active" ? "#DBEAFE" : "#F1F2F4";
-              const dotColor = step.state === "done" ? "#059669" : step.state === "active" ? "#1D4ED8" : "#6B7280";
-              const titleColor = step.state === "done" ? "#059669" : step.state === "active" ? "#1E40AF" : "#6D7175";
-              const iconSrc = step.state === "done" ? CheckCircleIcon : step.state === "active" ? ClockIcon : null;
-              return (
-                <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-                    <div
-                      style={{
-                        width: 32, height: 32, borderRadius: 999,
-                        background: dotBg, color: dotColor,
-                        border: "2px solid #FFFFFF",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}
-                    >
-                      {iconSrc ? (
-                        <span style={{ width: 16, height: 16, display: "inline-flex" }}>
-                          <Icon source={iconSrc} />
-                        </span>
-                      ) : (
-                        <span style={{ width: 8, height: 8, borderRadius: 999, background: "#8C9196" }} />
-                      )}
-                    </div>
-                    {!isLast && (
-                      <div style={{ width: 2, flex: 1, minHeight: 24, background: "#E1E3E5" }} />
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, paddingTop: 4, paddingBottom: isLast ? 0 : 16 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: titleColor, margin: 0 }}>
-                      {step.title}
-                    </p>
-                    <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>{step.helper}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </BlockStack>
-        </BlockStack>
-      </div>
-      )}
+      {!isDecided && account ? (
+        <AccountTimelineCard
+          page={account.page}
+          shortDate={(iso) =>
+            new Date(iso).toLocaleDateString(locale || undefined, { month: "short", day: "numeric" })
+          }
+          nowLabel={tRoot("disputes.account.step.now")}
+        />
+      ) : null}
 
       {/* Merchant-attention card (plan §6.2) — driven by
           presentation.attention. Shown ONLY for `requested` — a real,
