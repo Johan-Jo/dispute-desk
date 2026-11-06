@@ -86,20 +86,6 @@ const BASELINE: ReadonlySet<string> = new Set(
     "app/(portal)/portal/disputes/page.tsx",
     "app/(portal)/portal/disputes/[id]/page.tsx",
     "app/(portal)/portal/packs/[packId]/page.tsx",
-    /* CORRECTED 2026-09-08. The earlier note deferred this to an unwritten
-     * "companion contract". That contract exists and partly shipped:
-     * `submission-confirmation-gap.plan.md` was trued up 2026-09-07, its §0
-     * urgency WITHDRAWN (129 of 136 saves reach submitted_confirmed unaided;
-     * Shopify auto-submits at the deadline per docs/technical.md:447), and
-     * its §3 detection shipped in PR #649 as
-     * `lib/automation/unconfirmedForwarding.ts`.
-     *
-     * So there is no pending redefinition of "saved" vs "transmitted" to wait
-     * for. This card already branches on real facts (isClosed /
-     * isNetworkSubmitted) and states no falsehood. What remains is adopting
-     * `unconfirmedForwarding`'s honest third state — "saved, forwarding not
-     * confirmed" — which is a copy addition, not a correction. */
-    "app/(embedded)/app/disputes/[id]/tabs/sections/CompleteDefencePackageCard.tsx",
     // Shared component — NOT in the plan's §5 migration table. Found by
     // this detector, which is the point: grep-based inventories miss
     // claim sites outside the dispute screens.

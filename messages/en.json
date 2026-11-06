@@ -2488,6 +2488,415 @@
         "cancel": "Cancel",
         "add": "Add to package"
       }
+    },
+    "record": {
+      "claim": {
+        "FRAUDULENT": "The cardholder told their bank they did not make this purchase.",
+        "UNRECOGNIZED": "The cardholder told their bank they did not recognise the charge.",
+        "PRODUCT_NOT_RECEIVED": "The cardholder told their bank the order never arrived.",
+        "PRODUCT_UNACCEPTABLE": "The cardholder told their bank the product was not as described.",
+        "SUBSCRIPTION_CANCELLED": "The cardholder told their bank they had already cancelled the subscription.",
+        "DUPLICATE": "The cardholder told their bank they were charged twice.",
+        "CREDIT_NOT_PROCESSED": "The cardholder told their bank a refund was never processed.",
+        "GENERAL": "The cardholder disputed the charge with their bank."
+      },
+      "claimShort": {
+        "FRAUDULENT": "Customer says they didn't make this purchase",
+        "UNRECOGNIZED": "Customer says they don't recognise the charge",
+        "PRODUCT_NOT_RECEIVED": "Customer says the order never arrived",
+        "PRODUCT_UNACCEPTABLE": "Customer says the product wasn't as described",
+        "SUBSCRIPTION_CANCELLED": "Customer says they already cancelled the subscription",
+        "DUPLICATE": "Customer says they were charged twice",
+        "CREDIT_NOT_PROCESSED": "Customer says a refund was never processed",
+        "GENERAL": "Customer disputes the charge"
+      },
+      "headline": {
+        "no_pack": "No defence package yet",
+        "building": "Building the defence package",
+        "failed": "The defence package could not be built",
+        "prepared": "Defence ready · not yet saved to Shopify",
+        "prepared_review": "Defence ready · waiting for your approval",
+        "held": "Defence ready · held until the deadline",
+        "needs_attention": "Needs your attention",
+        "covered": "Covered by Shopify Protect",
+        "fatal": "Hard to win",
+        "saved": "Defence saved to Shopify",
+        "under_review": "Under review",
+        "lost": "Dispute lost",
+        "won": "Dispute won",
+        "closed": "Dispute closed"
+      },
+      "chip": {
+        "no_pack": "No defence package yet",
+        "building": "Building",
+        "failed": "Build failed",
+        "prepared": "Not yet saved to Shopify",
+        "prepared_review": "Waiting for your approval",
+        "held": "Held until the deadline",
+        "needs_attention": "Needs attention",
+        "covered": "Covered",
+        "fatal": "Hard to win",
+        "saved": "Saved to Shopify",
+        "under_review": "Under review",
+        "lost": "Lost",
+        "won": "Won",
+        "closed": "Closed"
+      },
+      "amountLabel": {
+        "open": "Disputed",
+        "lost": "Not returned",
+        "won": "Recovered",
+        "closed": "Disputed"
+      },
+      "state": {
+        "noPack": "DisputeDesk has not prepared a defence package yet. Nothing has been saved to Shopify.",
+        "building": "DisputeDesk is building the defence package. Nothing has been saved to Shopify yet.",
+        "failed": "DisputeDesk could not build the defence package. Nothing has been saved to Shopify."
+      },
+      "reviewMode": {
+        "waiting": "In review mode, DisputeDesk saves it to Shopify only when you approve it.",
+        "approved": "You approved it. DisputeDesk saves it to Shopify on {date}, the deadline.",
+        "conceded": "You chose not to add a defence package, so DisputeDesk will not save it."
+      },
+      "held": "On Auto-pilot, DisputeDesk holds a case this thin until {date}, the deadline, in case more evidence arrives, then saves it to Shopify.",
+      "attention": {
+        "reason": "This needs your attention: {reason}.",
+        "plain": "This needs your attention before DisputeDesk can finish."
+      },
+      "covered": "Shopify Protect covers this order, so DisputeDesk does not file a defence for it. Shopify handles this dispute.",
+      "fatal": {
+        "refund": "DisputeDesk expects to lose this dispute: the order was already refunded for the disputed amount.",
+        "notFulfilled": "DisputeDesk expects to lose this dispute: the order was never fulfilled."
+      },
+      "underReview": "Shopify has passed it to the card network, which has not decided yet.",
+      "due": "Shopify's deadline is {date}.",
+      "reopened": "Shopify reopened this dispute on {date}.",
+      "escalated": "This inquiry became a chargeback on {date}.",
+      "filed": {
+        "shopify": "DisputeDesk filed nothing for this dispute. A response was sent through Shopify on {date}.",
+        "shopifyNoDate": "DisputeDesk filed nothing for this dispute. A response was sent through Shopify.",
+        "beforeInstall": "This dispute was decided before DisputeDesk was installed on your store, so DisputeDesk filed nothing for it.",
+        "none": "DisputeDesk filed nothing for this dispute, so no evidence from DisputeDesk was part of the decision.",
+        "version": "DisputeDesk saved defence package version {version} to Shopify on {date}.",
+        "versionDeadline": "DisputeDesk saved defence package version {version} to Shopify on {date}, the deadline.",
+        "plain": "DisputeDesk saved the defence package to Shopify on {date}.",
+        "plainDeadline": "DisputeDesk saved the defence package to Shopify on {date}, the deadline."
+      },
+      "action": {
+        "review": "Approve the package to have DisputeDesk save it to Shopify, or choose not to add a defence package.",
+        "evidence": "Adding the missing evidence on the Evidence tab would strengthen the case.",
+        "ack": "No action is required. Adding the cardholder's acknowledgement would strengthen the case.",
+        "none": "No action is required."
+      },
+      "outcome": {
+        "closed": "The dispute closed on {date}. No win or loss was recorded.",
+        "lost": {
+          "chargeback": "The bank decided in the customer's favour on {date}. {amount} was not returned.",
+          "chargebackNoAmount": "The bank decided in the customer's favour on {date}.",
+          "inquiry": "The inquiry was decided in the customer's favour on {date}. {amount} was not returned.",
+          "inquiryNoAmount": "The inquiry was decided in the customer's favour on {date}."
+        },
+        "won": {
+          "chargeback": "The bank decided in your favour on {date}. {amount} was recovered.",
+          "chargebackNoAmount": "The bank decided in your favour on {date}.",
+          "inquiry": "The inquiry was decided in your favour on {date}. {amount} was recovered.",
+          "inquiryNoAmount": "The inquiry was decided in your favour on {date}."
+        }
+      },
+      "item": {
+        "return": {
+          "requested": "A return has been requested on this order. It has not been approved yet.",
+          "inProgress": "A return on this order is in progress. It is not yet marked as received.",
+          "returned": "A return on this order is marked as received.",
+          "failed": "A return on this order is marked as failed.",
+          "refundSome": "A refund is on record for this order.",
+          "label": "Return and refund",
+          "none": "No return or refund is on record.",
+          "returnOnly": "No return is on record."
+        },
+        "pay": {
+          "label": "Payment authentication",
+          "both": "The card's security code and billing address matched the card issuer's records.",
+          "cvvOnly": "The card's security code matched the card issuer's records; the billing address did not.",
+          "avsOnly": "The billing address matched the card issuer's records; the card's security code did not.",
+          "avsMatch": "The billing address matched the card issuer's records.",
+          "neither": "Neither the billing address nor the card's security code matched the card issuer's records.",
+          "avsNo": "The billing address did not match the card issuer's records.",
+          "cvvMatch": "The card's security code matched the card issuer's records.",
+          "cvvNo": "The card's security code did not match the card issuer's records.",
+          "unchecked": "The card issuer returned no address or security-code check."
+        },
+        "name": {
+          "label": "Name on the card",
+          "detail": "The card is registered to {card}; the order was placed by {buyer}."
+        },
+        "screen": {
+          "label": "Pre-authorization fraud screening",
+          "accept": "Shopify's fraud screening recommended accepting this order.",
+          "cancel": "Shopify's fraud screening recommended cancelling this order.",
+          "investigate": "Shopify's fraud screening recommended investigating this order.",
+          "noVerdict": "Shopify's fraud screening ran on this order without a recommendation."
+        },
+        "ip": {
+          "label": "IP & location consistency",
+          "same": "The order was placed from the same country as the billing and shipping addresses, with no VPN, proxy or datacenter signals.",
+          "different": "The order was placed from a different country than the billing and shipping addresses.",
+          "anonymised": "The order was placed through a VPN, proxy or datacenter connection.",
+          "unknown": "The order's IP location could not be compared with the shipping address."
+        },
+        "delivery": {
+          "label": "Delivery",
+          "full": "{carrier} delivered the order on {date} (tracking {number}).",
+          "noNumber": "{carrier} delivered the order on {date}.",
+          "noCarrier": "The order was delivered on {date} (tracking {number}).",
+          "dateOnly": "The order was delivered on {date}.",
+          "pending": "{carrier} has not confirmed delivery (tracking {number}).",
+          "pendingNoNumber": "{carrier} has not confirmed delivery.",
+          "pendingNoCarrier": "Delivery has not been confirmed."
+        },
+        "signature": {
+          "label": "Delivery signature",
+          "detail": "Nobody signed for the delivery."
+        },
+        "order": {
+          "label": "Order record",
+          "fraud": "Confirms the order details. It does not by itself show who authorised the payment.",
+          "generic": "Confirms the order details."
+        },
+        "history": {
+          "label": "Customer account history",
+          "detail": "The customer's account record on your store."
+        },
+        "shipping": {
+          "label": "Shipping policy",
+          "detail": "Your shipping commitments as published."
+        },
+        "refundpol": {
+          "label": "Refund policy",
+          "detail": "Your refund terms as published."
+        },
+        "cancel": {
+          "label": "Cancellation policy",
+          "detail": "Your cancellation terms as published."
+        },
+        "addr": {
+          "labelAgree": "Billing and shipping addresses agree",
+          "labelDiffer": "Billing and shipping addresses differ",
+          "agree": "The billing and shipping addresses on the order have the same city and country. This is your own order record, not a check by the card issuer.",
+          "differ": "The billing and shipping addresses on the order have a different city or country. This is your own order record, not a check by the card issuer."
+        },
+        "tds": {
+          "label": "3-D Secure authentication",
+          "present": "The payment record shows 3-D Secure authentication.",
+          "none": "The payment record holds no 3-D Secure authentication data."
+        },
+        "comms": {
+          "label": "Customer communication",
+          "present": "Customer correspondence is on file for this order.",
+          "none": "No customer correspondence is on file for this order.",
+          "noneGorgias": "No support conversations were found for this customer."
+        },
+        "amounts": {
+          "label": "Amounts"
+        }
+      },
+      "phrase": {
+        "withheld": {
+          "returnOnRecord": "the return on record",
+          "refundOnRecord": "the refund on record",
+          "avsMismatch": "the billing address mismatch",
+          "cvvMismatch": "the security code mismatch",
+          "name": "the different name on the card",
+          "screen": "Shopify's fraud screening",
+          "ip": "the IP location",
+          "signature": "the unsigned delivery",
+          "addr": "the differing billing and shipping addresses"
+        },
+        "cited": {
+          "pay": "the payment check",
+          "screen": "Shopify's fraud screening",
+          "ip": "the IP location",
+          "delivery": "delivery",
+          "returnNone": "that no return or refund is on record",
+          "returnOnly": "that no return is on record"
+        }
+      },
+      "timeline": {
+        "t": {
+          "package": "Defence package",
+          "reopened": "Reopened",
+          "escalated": "Became a chargeback",
+          "response": "Response sent",
+          "placed": "Order placed",
+          "placedPaid": "Order placed and paid",
+          "shipped": "Order shipped",
+          "delivered": "Delivered",
+          "opened": "Dispute opened",
+          "prepared": "Defence package prepared",
+          "deadline": "Deadline",
+          "filed": "Saved to Shopify",
+          "decided": "Decided"
+        },
+        "titleOpen": "What has happened and what comes next",
+        "titleDecided": "What happened",
+        "placed": {
+          "card": "{amount} captured on a {network} ending in {last4}.",
+          "paid": "{amount} captured.",
+          "total": "The order total was {amount}.",
+          "plain": "The order was placed."
+        },
+        "shipped": {
+          "full": "{carrier}, tracking {number}.",
+          "carrier": "{carrier}.",
+          "number": "Tracking {number}.",
+          "plain": "The order was marked as shipped."
+        }
+      },
+      "ui": {
+        "approve": "Approve package",
+        "regenerate": "Regenerate",
+        "retryBuild": "Try again",
+        "decideTitle": "Your decision",
+        "decideSave": "Save it to Shopify on the deadline",
+        "decideNone": "Don't add a defence package",
+        "noLetter": "There is no letter yet. It appears here once the defence package is built.",
+        "deadline": "Deadline:",
+        "decided": "Decided:",
+        "daysLeft": "{count, plural, one {# day left} other {# days left}}",
+        "factAmount": "Disputed amount",
+        "factCustomer": "Customer",
+        "factOpened": "Opened",
+        "factReason": "Dispute reason",
+        "forYouOnly": "This note is for you only. It is not part of anything sent to the bank.",
+        "recordTitle": "The record",
+        "recordSub": "The facts this account is built from. This is not the bank's reasoning.",
+        "from": "From {source}",
+        "winsTitle": "What wins this type of dispute",
+        "coverageOf": "of the items banks look for are on record for this case",
+        "strengthenEyebrow": "WOULD STRENGTHEN THE CASE · OPTIONAL",
+        "evidenceByRole": "Evidence by role",
+        "pkgTitle": "Defence package",
+        "saveNow": "Save to Shopify now",
+        "saving": "Saving to Shopify…",
+        "viewPdf": "View PDF",
+        "letterEyebrow": "THE LETTER · BANK-FACING · GENERATED FROM THIS RECORD",
+        "reachesBank": "What reaches the bank",
+        "reachesBankNote": "Only the items cited to the bank appear in the letter's evidence basis.",
+        "pill": {
+          "strong": "Strong",
+          "moderate": "Moderate",
+          "supporting": "Supporting"
+        }
+      },
+      "roles": {
+        "open": "{cited, plural, one {# item is} other {# items are}} cited to the bank, {context} {context, plural, one {is} other {are}} context in the package, {internal} {internal, plural, one {is} other {are}} kept internal and {unavailable} {unavailable, plural, one {is} other {are}} not available.",
+        "decided": "{cited, plural, one {# item was} other {# items were}} cited to the bank, {context} {context, plural, one {was} other {were}} context in the package, {internal} {internal, plural, one {was} other {were}} kept internal and {unavailable} {unavailable, plural, one {was} other {were}} not available."
+      },
+      "prepared": {
+        "version": "DisputeDesk prepared defence package version {version} on {date}. Nothing has been saved to Shopify yet.",
+        "plain": "DisputeDesk prepared the defence package on {date}. Nothing has been saved to Shopify yet."
+      },
+      "autopilot": "On Auto-pilot, DisputeDesk saves it to Shopify on {date}, the deadline, unless you save it sooner.",
+      "strength": {
+        "plain": {
+          "strong": "The case is strong.",
+          "moderate": "The case is moderate.",
+          "weak": "The case is weak."
+        },
+        "withReasons": {
+          "strong": "The case is strong: {reasons}.",
+          "moderate": "The case is moderate: {reasons}.",
+          "weak": "The case is weak: {reasons}."
+        },
+        "reason": {
+          "pay": "the card's security code and billing address matched the card issuer's records",
+          "delivery": "{carrier} delivered the order on {date}",
+          "deliveryNoCarrier": "the order was delivered on {date}"
+        },
+        "reasons": {
+          "two": "{a}, and {b}"
+        }
+      },
+      "cited": {
+        "sentence": "The package cited {list}.",
+        "none": "The package cited nothing to the bank."
+      },
+      "withheld": {
+        "sentence": "It did not cite {list}, because DisputeDesk does not put facts that weaken your case in front of the bank."
+      },
+      "amounts": {
+        "timeline": "Shopify's order timeline lists this chargeback as {listed}; the disputed amount is {disputed}. The record does not explain the difference.",
+        "payment": "The payment was {paid}; the chargeback is for {disputed}."
+      },
+      "list": {
+        "and": {
+          "n1": "{a}",
+          "n2": "{a} and {b}",
+          "n3": "{a}, {b} and {c}",
+          "n4": "{a}, {b}, {c} and {d}",
+          "n5": "{a}, {b}, {c}, {d} and {e}",
+          "n6": "{a}, {b}, {c}, {d}, {e} and {f}"
+        },
+        "or": {
+          "n1": "{a}",
+          "n2": "{a} or {b}",
+          "n3": "{a}, {b} or {c}",
+          "n4": "{a}, {b}, {c} or {d}",
+          "n5": "{a}, {b}, {c}, {d} or {e}",
+          "n6": "{a}, {b}, {c}, {d}, {e} or {f}"
+        }
+      },
+      "source": {
+        "gateway": "{gateway}",
+        "shopify": "Shopify",
+        "ip": "Checkout IP address",
+        "carrier": "Carrier tracking",
+        "policy": "Store policy",
+        "order": "Your order record",
+        "gorgias": "Gorgias",
+        "upload": "Merchant upload",
+        "timeline": "Shopify order timeline"
+      },
+      "checklist": {
+        "state": {
+          "had": "On record",
+          "missing": "Missing",
+          "none": "None",
+          "notOnRecord": "Not on record",
+          "notConfirmed": "Not confirmed",
+          "notAvailable": "Not available"
+        },
+        "noteWonNone": "None of the {total, plural, =1 {one} =2 {two} =3 {three} =4 {four} =5 {five} =6 {six} other {#}} items banks usually look for in this type of dispute were on record. The package cited {list}, and the bank decided in your favour. Banks do not give their reasons."
+      },
+      "help": {
+        "openTitle": "What would still help",
+        "ack": {
+          "title": "Cardholder acknowledgement",
+          "detail": "An email or chat in which the cardholder confirms they placed and received this order. Takes about a minute: paste it from your inbox.",
+          "action": "Add acknowledgement"
+        },
+        "nextTime": "Next time",
+        "hold": {
+          "cancel": "Shopify's fraud screening recommended cancelling this order.",
+          "investigate": "Shopify's fraud screening recommended investigating this order.",
+          "only": "{first}"
+        },
+        "joinStat": "{detail} {stat}",
+        "noDetail": "Based on this case."
+      },
+      "role": {
+        "cited": "Cited to the bank",
+        "context": "Context in the package",
+        "internal": "Kept internal",
+        "unavailable": "Not available",
+        "record": "Record only"
+      },
+      "roleCap": {
+        "cited": "Named in the letter's evidence basis.",
+        "context": "In the defence package as background. Not named as proof.",
+        "internal": "Used for our assessment only. Never sent to Shopify or the bank.",
+        "unavailable": "Not in the order's records, so it cannot be used."
+      }
     }
   },
   "disputeReasons": {
@@ -3946,7 +4355,7 @@
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
-          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case.\n\n**A return on the order.** When Shopify records a return on the disputed order, the Overview and the letter tab show a note saying so, with the date the return was created when Shopify gives one and whether a refund has been issued. The note states Shopify's record as of the last time DisputeDesk collected the order. It is for you only and is not part of anything sent to the bank."
+          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case.\n\n**One account of the dispute.** The page opens with a short account of the dispute, and every tab reads the same facts, so a count, a date or a sentence never differs between **Overview**, **Evidence** and **Review and Forward**. **The record** lists the facts the account is built from, **What wins this type of dispute** shows how many of the items banks look for are on record, and **What has happened** is the timeline. Each piece of evidence has exactly one role: **cited to the bank**, **context in the package**, **kept internal** (used only for our assessment, so it is not part of what is sent to Shopify or the bank) or **not available**. A return or refund Shopify records on the order is stated once, in the record, with the same words everywhere. The page is for you only and is not part of anything sent to the bank; the letter on **Review and Forward** is the document the bank receives."
         },
         "reviewQueue": {
           "title": "The review queue",

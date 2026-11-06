@@ -324,15 +324,15 @@ describe("Invariant 5 — HTML view chronology mirrors the PDF (no parallel synt
     expect(src).toMatch(/buildChronologyEvents\(\s*\{/);
   });
 
-  it("ReviewSubmitTab threads timelineEvents into the HTML view dispute prop", async () => {
+  it("the dispute page threads timelineEvents into the HTML view dispute prop", async () => {
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const fp = path.resolve(
       process.cwd(),
-      "app/(embedded)/app/disputes/[id]/tabs/ReviewSubmitTab.tsx",
+      "app/(embedded)/app/disputes/[id]/record/RecordWorkspace.tsx",
     );
     const src = readFileSync(fp, "utf8");
-    expect(src).toMatch(/timelineEvents:\s*data\.dispute\.timelineEvents/);
+    expect(src).toMatch(/timelineEvents:\s*d\.timelineEvents/);
   });
 
   it("the PDF renderer also consumes the shared builder (no duplicate logic)", async () => {
