@@ -12,7 +12,7 @@
  * in buildPack.ts.
  */
 
-import { noReturnFactScope, shopifyRecordsReturnOrRefund } from "@/lib/disputes/returnRequestConfirmation";
+import { noReturnFactVerdict } from "@/lib/disputes/returnRequestConfirmation";
 import type { EvidenceSection, BuildContext } from "../types";
 import { classifyDeliveryEvent } from "@/lib/shopify/deliveryEventClassifier";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
@@ -268,18 +268,16 @@ export async function collectOrderEvidence(
   // Shopify", nothing more — and carries the shop's returns setting and the
   // merchant's answer. When the merchant says the customer DID ask, it is
   // not emitted at all (that answer never reaches the bank).
-  const returnScope = noReturnFactScope({
-    returnsOutsideShopify: ctx.returnScope?.returnsOutsideShopify === true,
-    answer: ctx.returnScope?.answer ?? null,
+  // The decision lives in `noReturnFactVerdict` (shared with the read-time
+  // applicability of the checklist row); `unknown` (no status recorded) is
+  // "do not emit", as it always was.
+  const noReturn = noReturnFactVerdict({
+    returnStatus: order.returnStatus,
+    totalRefunded: order.totalRefundedSet.shopMoney.amount,
+    returnScope: ctx.returnScope,
   });
-  if (
-    order.returnStatus === "NO_RETURN" &&
-    !shopifyRecordsReturnOrRefund({
-      returnStatus: order.returnStatus,
-      totalRefunded: order.totalRefundedSet.shopMoney.amount,
-    }) &&
-    returnScope.emit
-  ) {
+  if ("emit" in noReturn && noReturn.emit) {
+    const returnScope = noReturn.scope;
     sections.push({
       type: "order",
       labelToken: { key: "packs.section.noReturnRecordedInShopify" },
