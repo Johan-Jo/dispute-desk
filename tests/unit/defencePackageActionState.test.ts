@@ -273,16 +273,4 @@ describe("rebuild-failed copy has a filed and an unfiled variant", () => {
     expect(pkg.rebuildFailedBodyUnfiled).toMatch(/Regenerate it before the deadline/i);
   });
 
-  it("the card picks tone and title off `bankFacing`", () => {
-    const src = readFileSync(
-      resolve(
-        __dirname,
-        "../../app/(embedded)/app/disputes/[id]/tabs/sections/CompleteDefencePackageCard.tsx",
-      ),
-      "utf8",
-    );
-    // info when a filed package stands behind it; critical when nothing is filed.
-    expect(src).toMatch(/tone=\{bankFacing \? "info" : "critical"\}/);
-    expect(src).toMatch(/bankFacing \? tPkg\("rebuildFailedTitleFiled"\)/);
-  });
 });

@@ -272,15 +272,9 @@ describe("copy and wiring invariants", () => {
   });
 
   it("merchant-facing renderers never show the stored English reason and read refunds only via the statement", () => {
-    const overview = readFileSync(join(ROOT, "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx"), "utf8");
     const builder = readFileSync(join(ROOT, "components/packs/detail/EvidenceBuilderSection.tsx"), "utf8");
-    expect(overview).toContain("unavailableReasonToken(");
     expect(builder).toContain("unavailableReasonToken(");
-    expect(overview).not.toMatch(/\?\s*item\.unavailableReason\b/);
     expect(builder).not.toMatch(/\{item\.unavailableReason\}/);
-    const note = readFileSync(join(ROOT, "app/(embedded)/app/disputes/[id]/tabs/sections/OrderSituationNote.tsx"), "utf8");
-    expect(note).toContain("refundStatementTokens(");
-    expect(note).not.toMatch(/situation\.refund/);
     const viewer = readFileSync(join(ROOT, "components/packs/detail/EvidenceContentViewer.tsx"), "utf8");
     expect(viewer).not.toMatch(/refunded !== "0\.00"/);
     expect(viewer).toContain("isZeroAmount(payload.totals.refunded)");

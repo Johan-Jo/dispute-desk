@@ -49,13 +49,15 @@ const MIN_LEN = 20;
 
 interface Props {
   workspace: Workspace;
+  /** Open the form straight away (the dispute record page opens it from its own button). */
+  startExpanded?: boolean;
 }
 
-export function CardholderAcknowledgementCard({ workspace }: Props) {
+export function CardholderAcknowledgementCard({ workspace, startExpanded = false }: Props) {
   const t = useTranslations("disputes.evidenceTab.cardholderAck");
   const { data, derived, actions } = workspace;
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(startExpanded);
   const [text, setText] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);

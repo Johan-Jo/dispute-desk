@@ -2488,6 +2488,415 @@
         "cancel": "Cancelar",
         "add": "Añadir al paquete"
       }
+    },
+    "record": {
+      "claim": {
+        "FRAUDULENT": "El titular de la tarjeta dijo a su banco que no hizo esta compra.",
+        "UNRECOGNIZED": "El titular de la tarjeta dijo a su banco que no reconoce el cargo.",
+        "PRODUCT_NOT_RECEIVED": "El titular de la tarjeta dijo a su banco que el pedido nunca llegó.",
+        "PRODUCT_UNACCEPTABLE": "El titular de la tarjeta dijo a su banco que el producto no era como se describía.",
+        "SUBSCRIPTION_CANCELLED": "El titular de la tarjeta dijo a su banco que ya había cancelado la suscripción.",
+        "DUPLICATE": "El titular de la tarjeta dijo a su banco que le cobraron dos veces.",
+        "CREDIT_NOT_PROCESSED": "El titular de la tarjeta dijo a su banco que nunca se procesó un reembolso.",
+        "GENERAL": "El titular de la tarjeta disputó el cargo con su banco."
+      },
+      "claimShort": {
+        "FRAUDULENT": "El cliente dice que no hizo esta compra",
+        "UNRECOGNIZED": "El cliente dice que no reconoce el cargo",
+        "PRODUCT_NOT_RECEIVED": "El cliente dice que el pedido nunca llegó",
+        "PRODUCT_UNACCEPTABLE": "El cliente dice que el producto no era como se describía",
+        "SUBSCRIPTION_CANCELLED": "El cliente dice que ya canceló la suscripción",
+        "DUPLICATE": "El cliente dice que le cobraron dos veces",
+        "CREDIT_NOT_PROCESSED": "El cliente dice que nunca se procesó un reembolso",
+        "GENERAL": "El cliente disputa el cargo"
+      },
+      "headline": {
+        "no_pack": "Aún no hay paquete de defensa",
+        "building": "Creando el paquete de defensa",
+        "failed": "No se pudo crear el paquete de defensa",
+        "prepared": "Defensa lista · aún sin guardar en Shopify",
+        "prepared_review": "Defensa lista · esperando tu aprobación",
+        "held": "Defensa lista · retenida hasta la fecha límite",
+        "needs_attention": "Necesita tu atención",
+        "covered": "Cubierto por Shopify Protect",
+        "fatal": "Difícil de ganar",
+        "saved": "Defensa guardada en Shopify",
+        "under_review": "En revisión",
+        "lost": "Disputa perdida",
+        "won": "Disputa ganada",
+        "closed": "Disputa cerrada"
+      },
+      "chip": {
+        "no_pack": "Aún no hay paquete de defensa",
+        "building": "Creándose",
+        "failed": "Falló la creación",
+        "prepared": "Aún sin guardar en Shopify",
+        "prepared_review": "Esperando tu aprobación",
+        "held": "Retenido hasta la fecha límite",
+        "needs_attention": "Necesita atención",
+        "covered": "Cubierto",
+        "fatal": "Difícil de ganar",
+        "saved": "Guardado en Shopify",
+        "under_review": "En revisión",
+        "lost": "Perdida",
+        "won": "Ganada",
+        "closed": "Cerrada"
+      },
+      "amountLabel": {
+        "open": "En disputa",
+        "lost": "No devuelto",
+        "won": "Recuperado",
+        "closed": "En disputa"
+      },
+      "state": {
+        "noPack": "DisputeDesk aún no ha preparado un paquete de defensa. No se ha guardado nada en Shopify.",
+        "building": "DisputeDesk está creando el paquete de defensa. Todavía no se ha guardado nada en Shopify.",
+        "failed": "DisputeDesk no pudo crear el paquete de defensa. No se ha guardado nada en Shopify."
+      },
+      "reviewMode": {
+        "waiting": "En modo de revisión, DisputeDesk lo guarda en Shopify solo cuando lo apruebas.",
+        "approved": "Lo aprobaste. DisputeDesk lo guarda en Shopify el {date}, la fecha límite.",
+        "conceded": "Elegiste no añadir un paquete de defensa, así que DisputeDesk no lo guardará."
+      },
+      "held": "En piloto automático, DisputeDesk retiene un caso tan débil hasta el {date}, la fecha límite, por si llegan más pruebas, y luego lo guarda en Shopify.",
+      "attention": {
+        "reason": "Esto necesita tu atención: {reason}.",
+        "plain": "Esto necesita tu atención antes de que DisputeDesk pueda terminar."
+      },
+      "covered": "Shopify Protect cubre este pedido, así que DisputeDesk no presenta una defensa. Shopify gestiona esta disputa.",
+      "fatal": {
+        "refund": "DisputeDesk espera perder esta disputa: el pedido ya fue reembolsado por el importe en disputa.",
+        "notFulfilled": "DisputeDesk espera perder esta disputa: el pedido nunca se envió."
+      },
+      "underReview": "Shopify lo ha pasado a la red de tarjetas, que aún no ha decidido.",
+      "due": "La fecha límite de Shopify es el {date}.",
+      "reopened": "Shopify reabrió esta disputa el {date}.",
+      "escalated": "Esta consulta se convirtió en un contracargo el {date}.",
+      "filed": {
+        "shopify": "DisputeDesk no presentó nada para esta disputa. El {date} se envió una respuesta a través de Shopify.",
+        "shopifyNoDate": "DisputeDesk no presentó nada para esta disputa. Se envió una respuesta a través de Shopify.",
+        "beforeInstall": "Esta disputa se resolvió antes de que DisputeDesk se instalara en tu tienda, así que DisputeDesk no presentó nada.",
+        "none": "DisputeDesk no presentó nada para esta disputa, así que ninguna prueba de DisputeDesk formó parte de la decisión.",
+        "version": "DisputeDesk guardó la versión {version} del paquete de defensa en Shopify el {date}.",
+        "versionDeadline": "DisputeDesk guardó la versión {version} del paquete de defensa en Shopify el {date}, la fecha límite.",
+        "plain": "DisputeDesk guardó el paquete de defensa en Shopify el {date}.",
+        "plainDeadline": "DisputeDesk guardó el paquete de defensa en Shopify el {date}, la fecha límite."
+      },
+      "roles": {
+        "open": "Citado al banco: {cited}. Contexto en el paquete: {context}. Interno: {internal}. No disponible: {unavailable}.",
+        "decided": "Citado al banco: {cited}. Contexto en el paquete: {context}. Interno: {internal}. No disponible: {unavailable}."
+      },
+      "prepared": {
+        "version": "DisputeDesk preparó la versión {version} del paquete de defensa el {date}. Todavía no se ha guardado nada en Shopify.",
+        "plain": "DisputeDesk preparó el paquete de defensa el {date}. Todavía no se ha guardado nada en Shopify."
+      },
+      "autopilot": "En piloto automático, DisputeDesk lo guarda en Shopify el {date}, la fecha límite, salvo que lo guardes antes.",
+      "strength": {
+        "plain": {
+          "strong": "El caso es sólido.",
+          "moderate": "El caso es moderado.",
+          "weak": "El caso es débil."
+        },
+        "withReasons": {
+          "strong": "El caso es sólido: {reasons}.",
+          "moderate": "El caso es moderado: {reasons}.",
+          "weak": "El caso es débil: {reasons}."
+        },
+        "reason": {
+          "pay": "el código de seguridad y la dirección de facturación de la tarjeta coincidieron con los datos del banco emisor",
+          "delivery": "{carrier} entregó el pedido el {date}",
+          "deliveryNoCarrier": "el pedido se entregó el {date}"
+        },
+        "reasons": {
+          "two": "{a}, y {b}"
+        }
+      },
+      "action": {
+        "ack": "No hace falta hacer nada. Añadir la confirmación del titular de la tarjeta reforzaría el caso.",
+        "none": "No hace falta hacer nada.",
+        "review": "Aprueba el paquete para que DisputeDesk lo guarde en Shopify, o elige no añadir un paquete de defensa.",
+        "evidence": "Añadir la evidencia que falta en la pestaña Evidencia reforzaría el caso."
+      },
+      "cited": {
+        "sentence": "El paquete citó {list}.",
+        "none": "El paquete no citó nada al banco."
+      },
+      "withheld": {
+        "sentence": "No citó {list}, porque DisputeDesk no pone ante el banco hechos que debilitan tu caso."
+      },
+      "outcome": {
+        "lost": {
+          "chargeback": "El banco decidió a favor del cliente el {date}. No se devolvieron {amount}.",
+          "chargebackNoAmount": "El banco decidió a favor del cliente el {date}.",
+          "inquiry": "La consulta se resolvió a favor del cliente el {date}. No se devolvieron {amount}.",
+          "inquiryNoAmount": "La consulta se resolvió a favor del cliente el {date}."
+        },
+        "won": {
+          "chargeback": "El banco decidió a tu favor el {date}. Se recuperaron {amount}.",
+          "chargebackNoAmount": "El banco decidió a tu favor el {date}.",
+          "inquiry": "La consulta se resolvió a tu favor el {date}. Se recuperaron {amount}.",
+          "inquiryNoAmount": "La consulta se resolvió a tu favor el {date}."
+        },
+        "closed": "La disputa se cerró el {date}. No se registró ninguna victoria ni derrota."
+      },
+      "amounts": {
+        "timeline": "La cronología del pedido de Shopify muestra este contracargo como {listed}; el importe en disputa es {disputed}. El registro no explica la diferencia.",
+        "payment": "El pago fue de {paid}; el contracargo es de {disputed}."
+      },
+      "list": {
+        "and": {
+          "n1": "{a}",
+          "n2": "{a} y {b}",
+          "n3": "{a}, {b} y {c}",
+          "n4": "{a}, {b}, {c} y {d}",
+          "n5": "{a}, {b}, {c}, {d} y {e}",
+          "n6": "{a}, {b}, {c}, {d}, {e} y {f}"
+        },
+        "or": {
+          "n1": "{a}",
+          "n2": "{a} o {b}",
+          "n3": "{a}, {b} o {c}",
+          "n4": "{a}, {b}, {c} o {d}",
+          "n5": "{a}, {b}, {c}, {d} o {e}",
+          "n6": "{a}, {b}, {c}, {d}, {e} o {f}"
+        }
+      },
+      "phrase": {
+        "cited": {
+          "pay": "la comprobación del pago",
+          "screen": "el filtro antifraude de Shopify",
+          "ip": "la ubicación de la IP",
+          "delivery": "la entrega",
+          "returnNone": "que no consta ninguna devolución ni reembolso",
+          "returnOnly": "que no consta ninguna devolución"
+        },
+        "withheld": {
+          "avsMismatch": "la discrepancia en la dirección de facturación",
+          "cvvMismatch": "la discrepancia en el código de seguridad",
+          "name": "el nombre distinto en la tarjeta",
+          "screen": "el filtro antifraude de Shopify",
+          "ip": "la ubicación de la IP",
+          "signature": "la entrega sin firma",
+          "addr": "las direcciones de facturación y de envío distintas",
+          "returnOnRecord": "la devolución registrada",
+          "refundOnRecord": "el reembolso registrado"
+        }
+      },
+      "item": {
+        "pay": {
+          "label": "Autenticación del pago",
+          "both": "El código de seguridad y la dirección de facturación de la tarjeta coincidieron con los datos del banco emisor.",
+          "cvvOnly": "El código de seguridad de la tarjeta coincidió con los datos del banco emisor; la dirección de facturación no.",
+          "avsOnly": "La dirección de facturación coincidió con los datos del banco emisor; el código de seguridad de la tarjeta no.",
+          "avsMatch": "La dirección de facturación coincidió con los datos del banco emisor.",
+          "neither": "Ni la dirección de facturación ni el código de seguridad de la tarjeta coincidieron con los datos del banco emisor.",
+          "avsNo": "La dirección de facturación no coincidió con los datos del banco emisor.",
+          "cvvMatch": "El código de seguridad de la tarjeta coincidió con los datos del banco emisor.",
+          "cvvNo": "El código de seguridad de la tarjeta no coincidió con los datos del banco emisor.",
+          "unchecked": "El banco emisor no devolvió ninguna comprobación de dirección ni de código de seguridad."
+        },
+        "name": {
+          "label": "Nombre en la tarjeta",
+          "detail": "La tarjeta está registrada a nombre de {card}; el pedido lo hizo {buyer}."
+        },
+        "screen": {
+          "label": "Filtro antifraude previo a la autorización",
+          "accept": "El filtro antifraude de Shopify recomendó aceptar este pedido.",
+          "cancel": "El filtro antifraude de Shopify recomendó cancelar este pedido.",
+          "investigate": "El filtro antifraude de Shopify recomendó investigar este pedido.",
+          "noVerdict": "El filtro antifraude de Shopify analizó este pedido sin emitir una recomendación."
+        },
+        "ip": {
+          "label": "Coherencia de IP y ubicación",
+          "same": "El pedido se hizo desde el mismo país que las direcciones de facturación y de envío, sin señales de VPN, proxy ni centro de datos.",
+          "different": "El pedido se hizo desde un país distinto al de las direcciones de facturación y de envío.",
+          "anonymised": "El pedido se hizo a través de una conexión VPN, proxy o de centro de datos.",
+          "unknown": "La ubicación de la IP del pedido no se pudo comparar con la dirección de envío."
+        },
+        "delivery": {
+          "label": "Entrega",
+          "full": "{carrier} entregó el pedido el {date} (seguimiento {number}).",
+          "noNumber": "{carrier} entregó el pedido el {date}.",
+          "noCarrier": "El pedido se entregó el {date} (seguimiento {number}).",
+          "dateOnly": "El pedido se entregó el {date}.",
+          "pending": "{carrier} no ha confirmado la entrega (seguimiento {number}).",
+          "pendingNoNumber": "{carrier} no ha confirmado la entrega.",
+          "pendingNoCarrier": "No se ha confirmado la entrega."
+        },
+        "signature": {
+          "label": "Firma de entrega",
+          "detail": "Nadie firmó la entrega."
+        },
+        "return": {
+          "label": "Devolución y reembolso",
+          "none": "No consta ninguna devolución ni reembolso.",
+          "returnOnly": "No consta ninguna devolución.",
+          "requested": "Se ha solicitado una devolución de este pedido. Aún no está aprobada.",
+          "inProgress": "Hay una devolución de este pedido en curso. Aún no está marcada como recibida.",
+          "returned": "Una devolución de este pedido está marcada como recibida.",
+          "failed": "Una devolución de este pedido está marcada como fallida.",
+          "refundSome": "Consta un reembolso de este pedido."
+        },
+        "order": {
+          "label": "Registro del pedido",
+          "fraud": "Confirma los datos del pedido. Por sí solo no demuestra quién autorizó el pago.",
+          "generic": "Confirma los datos del pedido."
+        },
+        "history": {
+          "label": "Historial de la cuenta del cliente",
+          "detail": "El registro de la cuenta del cliente en tu tienda."
+        },
+        "shipping": {
+          "label": "Política de envíos",
+          "detail": "Tus compromisos de envío tal como están publicados."
+        },
+        "refundpol": {
+          "label": "Política de reembolsos",
+          "detail": "Tus condiciones de reembolso tal como están publicadas."
+        },
+        "cancel": {
+          "label": "Política de cancelación",
+          "detail": "Tus condiciones de cancelación tal como están publicadas."
+        },
+        "addr": {
+          "labelAgree": "Las direcciones de facturación y de envío coinciden",
+          "labelDiffer": "Las direcciones de facturación y de envío difieren",
+          "agree": "Las direcciones de facturación y de envío del pedido tienen la misma ciudad y el mismo país. Es tu propio registro del pedido, no una comprobación del banco emisor.",
+          "differ": "Las direcciones de facturación y de envío del pedido tienen distinta ciudad o país. Es tu propio registro del pedido, no una comprobación del banco emisor."
+        },
+        "tds": {
+          "label": "Autenticación 3-D Secure",
+          "present": "El registro del pago muestra autenticación 3-D Secure.",
+          "none": "El registro del pago no contiene datos de autenticación 3-D Secure."
+        },
+        "comms": {
+          "label": "Comunicación con el cliente",
+          "present": "Hay correspondencia con el cliente archivada para este pedido.",
+          "none": "No hay correspondencia con el cliente archivada para este pedido.",
+          "noneGorgias": "No se encontraron conversaciones de soporte de este cliente."
+        },
+        "amounts": {
+          "label": "Importes"
+        }
+      },
+      "source": {
+        "gateway": "{gateway}",
+        "shopify": "Shopify",
+        "ip": "Dirección IP del checkout",
+        "carrier": "Seguimiento del transportista",
+        "policy": "Política de la tienda",
+        "order": "Tu registro del pedido",
+        "gorgias": "Gorgias",
+        "upload": "Archivo del comerciante",
+        "timeline": "Cronología del pedido de Shopify"
+      },
+      "checklist": {
+        "state": {
+          "had": "Consta",
+          "missing": "Falta",
+          "none": "Ninguno",
+          "notOnRecord": "No consta",
+          "notConfirmed": "Sin confirmar",
+          "notAvailable": "No disponible"
+        },
+        "noteWonNone": "Ninguno de los {total, plural, =1 {un} =2 {dos} =3 {tres} =4 {cuatro} =5 {cinco} =6 {seis} other {#}} elementos que los bancos suelen buscar en este tipo de disputa constaba. El paquete citó {list}, y el banco decidió a tu favor. Los bancos no explican sus motivos."
+      },
+      "help": {
+        "openTitle": "Qué más ayudaría",
+        "ack": {
+          "title": "Confirmación del titular de la tarjeta",
+          "detail": "Un correo o chat en el que el titular confirma que hizo y recibió este pedido. Lleva un minuto: pégalo desde tu bandeja de entrada.",
+          "action": "Añadir confirmación"
+        },
+        "nextTime": "La próxima vez",
+        "hold": {
+          "cancel": "El filtro antifraude de Shopify recomendó cancelar este pedido.",
+          "investigate": "El filtro antifraude de Shopify recomendó investigar este pedido.",
+          "only": "{first}"
+        },
+        "joinStat": "{detail} {stat}",
+        "noDetail": "Basado en este caso."
+      },
+      "timeline": {
+        "titleOpen": "Qué ha pasado y qué viene ahora",
+        "titleDecided": "Qué pasó",
+        "t": {
+          "placed": "Pedido realizado",
+          "placedPaid": "Pedido realizado y pagado",
+          "shipped": "Pedido enviado",
+          "delivered": "Entregado",
+          "opened": "Disputa abierta",
+          "prepared": "Paquete de defensa preparado",
+          "deadline": "Fecha límite",
+          "filed": "Guardado en Shopify",
+          "decided": "Resuelta",
+          "package": "Paquete de defensa",
+          "reopened": "Reabierta",
+          "escalated": "Pasó a contracargo",
+          "response": "Respuesta enviada"
+        },
+        "placed": {
+          "card": "{amount} cobrados con una tarjeta {network} terminada en {last4}.",
+          "paid": "{amount} cobrados.",
+          "total": "El total del pedido fue {amount}.",
+          "plain": "Se realizó el pedido."
+        },
+        "shipped": {
+          "full": "{carrier}, seguimiento {number}.",
+          "carrier": "{carrier}.",
+          "number": "Seguimiento {number}.",
+          "plain": "El pedido se marcó como enviado."
+        }
+      },
+      "ui": {
+        "deadline": "Fecha límite:",
+        "decided": "Resuelta:",
+        "daysLeft": "{count, plural, one {queda # día} other {quedan # días}}",
+        "factAmount": "Importe en disputa",
+        "factCustomer": "Cliente",
+        "factOpened": "Abierta",
+        "factReason": "Motivo de la disputa",
+        "forYouOnly": "Esta nota es solo para ti. No forma parte de nada que se envíe al banco.",
+        "recordTitle": "El registro",
+        "recordSub": "Los hechos en los que se basa este resumen. No es el razonamiento del banco.",
+        "from": "Origen: {source}",
+        "winsTitle": "Qué gana este tipo de disputa",
+        "coverageOf": "de los elementos que miran los bancos constan en este caso",
+        "strengthenEyebrow": "REFORZARÍA EL CASO · OPCIONAL",
+        "evidenceByRole": "Evidencia por función",
+        "pkgTitle": "Paquete de defensa",
+        "saveNow": "Guardar en Shopify ahora",
+        "saving": "Guardando en Shopify…",
+        "viewPdf": "Ver PDF",
+        "letterEyebrow": "LA CARTA · DIRIGIDA AL BANCO · GENERADA A PARTIR DE ESTE REGISTRO",
+        "reachesBank": "Lo que llega al banco",
+        "reachesBankNote": "Solo los elementos citados al banco aparecen en la base probatoria de la carta.",
+        "pill": {
+          "strong": "Fuerte",
+          "moderate": "Moderado",
+          "supporting": "De apoyo"
+        },
+        "approve": "Aprobar paquete",
+        "regenerate": "Regenerar",
+        "retryBuild": "Intentarlo de nuevo",
+        "decideTitle": "Tu decisión",
+        "decideSave": "Guardarlo en Shopify en la fecha límite",
+        "decideNone": "No añadir un paquete de defensa",
+        "noLetter": "Todavía no hay carta. Aparecerá aquí cuando se cree el paquete de defensa."
+      },
+      "role": {
+        "cited": "Citado al banco",
+        "context": "Contexto en el paquete",
+        "internal": "Interno",
+        "unavailable": "No disponible",
+        "record": "Solo registro"
+      },
+      "roleCap": {
+        "cited": "Nombrado en la base probatoria de la carta.",
+        "context": "En el paquete de defensa como contexto. No se nombra como prueba.",
+        "internal": "Solo se usa para nuestra valoración. Nunca se envía a Shopify ni al banco.",
+        "unavailable": "No consta en los registros del pedido, así que no se puede usar."
+      }
     }
   },
   "disputeReasons": {
@@ -3947,7 +4356,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalle de disputa en esta aplicación",
-          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda.\n\n**Si el pedido quedó retenido o se canceló y no se reembolsó**, un aviso lo indica. Su control de fraude marcó el pedido, no se envió nada y el pago sigue cobrado. En ese caso no hay prueba de entrega que presentar: la puntuación refleja lo que ocurrió con el pedido, no una falta en sus registros.\n\n**Cifras de su propia tienda.** En una disputa ganada o perdida, **Qué gana este tipo de disputa** puede mostrar con qué frecuencia se ganaron las disputas del mismo tipo en su tienda, y un paso de **La próxima vez** puede mostrar cuántas de sus disputas perdidas de ese tipo tuvieron el mismo problema. Solo aparecen cuando su tienda tiene suficientes disputas resueltas de ese tipo. Describen el historial de su tienda, no el razonamiento del banco en este caso.\n\n**Una devolución en el pedido.** Cuando Shopify registra una devolución en el pedido disputado, el resumen y la pestaña de la carta muestran una nota que lo indica, con la fecha en que se creó la devolución si Shopify la proporciona y si se ha emitido un reembolso. La nota refleja el registro de Shopify en el momento de la última consulta de DisputeDesk. Es solo para ti y no forma parte de nada de lo que se envía al banco."
+          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda.\n\n**Si el pedido quedó retenido o se canceló y no se reembolsó**, un aviso lo indica. Su control de fraude marcó el pedido, no se envió nada y el pago sigue cobrado. En ese caso no hay prueba de entrega que presentar: la puntuación refleja lo que ocurrió con el pedido, no una falta en sus registros.\n\n**Cifras de su propia tienda.** En una disputa ganada o perdida, **Qué gana este tipo de disputa** puede mostrar con qué frecuencia se ganaron las disputas del mismo tipo en su tienda, y un paso de **La próxima vez** puede mostrar cuántas de sus disputas perdidas de ese tipo tuvieron el mismo problema. Solo aparecen cuando su tienda tiene suficientes disputas resueltas de ese tipo. Describen el historial de su tienda, no el razonamiento del banco en este caso.\n\n**Un único relato de la disputa.** La página se abre con un breve relato de la disputa, y todas las pestañas leen los mismos hechos, así que un número, una fecha o una frase nunca difieren entre **Resumen**, **Evidencia** y **Revisar y reenviar**. **El registro** enumera los hechos en los que se basa el relato, **Qué gana este tipo de disputa** muestra cuántos de los elementos que miran los bancos constan, y **Qué ha pasado** es la cronología. Cada prueba tiene exactamente una función: **citado al banco**, **contexto en el paquete**, **interno** (solo se usa para nuestra valoración y nunca se envía a Shopify ni al banco) o **no disponible**. Una devolución o un reembolso que Shopify registra en el pedido se indica una sola vez, en el registro, con las mismas palabras en todas partes. La página es solo para ti y no forma parte de nada que se envíe al banco; la carta de **Revisar y reenviar** es el documento que recibe el banco."
         },
         "reviewQueue": {
           "title": "La cola de revisión",
