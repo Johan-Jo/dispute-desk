@@ -107,7 +107,10 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {noDefenceLetterBanner}
       {notAssessedBanner}
       {/* Merchant-only, and outside the card that mirrors the bank document. */}
-      <OrderSituationNote situation={data?.dispute?.orderSituation ?? null} />
+      <OrderSituationNote
+        situation={data?.dispute?.orderSituation ?? null}
+        refundStatement={data?.dispute?.refundStatement ?? null}
+      />
 
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,

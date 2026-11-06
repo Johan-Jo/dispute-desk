@@ -43,7 +43,9 @@ import {
   type EvidenceCategory,
   type SignalId,
 } from "./canonicalEvidence";
-import { canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
+// Build-time rule on purpose: this result is persisted in pack_json, which PR 1
+// leaves byte-identical. The display layer filters (lib/argument/improvementHint.ts).
+import { canMerchantUploadAtBuild as canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
 import { resolveReasonFamily, type ReasonFamily } from "./reasonFamily";
 import { buildDeliveryPresentation } from "./deliveryPresentation";
 import {

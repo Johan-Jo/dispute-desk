@@ -1232,7 +1232,7 @@
             "notIncluded": "La livraison n'a pas encore été confirmée. Une fois que le transporteur marquera la commande comme livrée (ou que vous téléverserez une signature/photo), cette ligne se remplira automatiquement."
           },
           "refundRecord": {
-            "notIncluded": "Aucun remboursement n'a été effectué sur cette commande — il n'y a donc aucune trace de remboursement à afficher. Pour un litige « avoir/remboursement non traité », c'est généralement la position la plus solide : votre défense est qu'aucun remboursement n'était dû, et non qu'un remboursement a déjà été versé."
+            "notIncluded": "Shopify n’enregistre aucun montant de remboursement confirmé sur cette commande."
           },
           "tdsAuthentication": {
             "notIncluded": "Le reçu de paiement ne contient pas de données d'authentification 3-D Secure pour cette transaction."
@@ -1518,7 +1518,7 @@
       },
       "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir.",
       "returnedToSender": {
-        "returned_unrefunded": "Le transporteur vous a retourné ce colis et aucun remboursement n’a été effectué : vous détenez donc à la fois la marchandise et le paiement. Aucune confirmation de livraison ne peut exister pour cette commande et, sans elle, la banque tranche généralement en faveur du client. Dites-nous pourquoi le colis est revenu : si le client a refusé la livraison ou ne l’a jamais retiré, il ne s’agit pas d’un retour valable, et cela vaut la peine d’être plaidé. Si vous gardez la marchandise et l’argent, la réponse équitable est de rembourser."
+        "returned_unrefunded": "Le transporteur vous a retourné ce colis. Le remboursement enregistré est inférieur au montant contesté. Aucune confirmation de livraison ne peut exister pour cette commande et, sans elle, la banque tranche généralement en faveur du client. Dites-nous pourquoi le colis est revenu : si le client a refusé la livraison ou ne l’a jamais retiré, il ne s’agit pas d’un retour valable, et cela vaut la peine d’être plaidé. Si vous gardez la marchandise et l’argent, la réponse équitable est de rembourser."
       }
     },
     "outcomeExplanation": {
@@ -1880,7 +1880,7 @@
     },
     "whyText": {
       "customer_account_info": "Montre l'historique des commandes précédentes du client dans votre boutique — appuie le fait que la commande était un achat authentique",
-      "refund_record": "Prouve qu'un remboursement a réellement été effectué sur la commande — décisif contre les réclamations « remboursement non traité »",
+      "refund_record": "Le dossier de remboursement de Shopify, affiché lorsqu’un remboursement existe.",
       "no_return_initiated": "Montre que le client n'a jamais initié de retour — fonde l'argument qu'aucun remboursement n'était dû",
       "ip_location_check": "Situe la commande à l'emplacement habituel du client — conforte que le titulaire de la carte l'a passée",
       "device_session_consistency": "Relie la commande à l'appareil et à la session connus du client — réfute les allégations « ce n'était pas moi »",
@@ -2027,7 +2027,7 @@
           "held": "Cette commande a été mise en attente, pas expédiée",
           "cancelled": "Cette commande a été annulée, pas expédiée"
         },
-        "body": "Votre contrôle antifraude a signalé cette commande et rien n'a été expédié. Le paiement est toujours encaissé — aucun remboursement n'a été effectué.",
+        "body": "Votre contrôle antifraude a signalé cette commande et rien n'a été expédié. Le paiement est toujours encaissé.",
         "helper": "Comme rien n'a été expédié, il n'y a aucune preuve de livraison à soumettre — le score reflète cela, pas une lacune dans vos dossiers."
       },
       "orderSituation": {
@@ -2038,10 +2038,6 @@
           "failed": "Un retour pour cette commande est marqué comme échoué"
         },
         "opened": "Le retour a été créé le {date}.",
-        "refund": {
-          "none": "Aucun remboursement n'a été effectué pour la commande.",
-          "some": "Un remboursement a été effectué pour la commande."
-        },
         "asOf": "Selon Shopify lors de la dernière collecte de cette commande par DisputeDesk, le {date}.",
         "privateNote": "Cette note vous est réservée. Elle ne fait partie d'aucun élément envoyé à la banque."
       }
@@ -2294,11 +2290,49 @@
     },
     "refundStatus": {
       "titleIssued": "Remboursement effectué",
-      "titleNone": "Aucun remboursement effectué",
+      "titleNoReturn": "Aucun retour initié",
       "factsIssued": "{amount} {currency} remboursés le {date}",
       "factsIssuedNoDate": "{amount} {currency} remboursés",
       "factsIssuedDateOnly": "Remboursé le {date}",
       "factsNoReturn": "Le client n'a jamais initié de retour"
+    },
+    "refundStatement": {
+      "none": {
+        "title": "Aucun remboursement enregistré",
+        "detail": "Shopify n’enregistre aucun remboursement sur cette commande (au {date}).",
+        "detailNoDate": "Shopify n’enregistre aucun remboursement sur cette commande."
+      },
+      "recordedNoAmount": {
+        "title": "Entrée de remboursement sans montant confirmé",
+        "detail": "Shopify enregistre une entrée de remboursement sur cette commande, sans montant confirmé (au {date}).",
+        "detailNoDate": "Shopify enregistre une entrée de remboursement sur cette commande, sans montant confirmé."
+      },
+      "some": {
+        "title": "Remboursement enregistré",
+        "detail": "{amount} remboursés le {date}.",
+        "detailNoDate": "{amount} remboursés."
+      },
+      "unknown": {
+        "title": "Statut du remboursement non enregistré",
+        "detail": "Le statut du remboursement n’est pas enregistré pour cette commande."
+      }
+    },
+    "internalOnlyReason": {
+      "refundRecord": "Le dossier de remboursement de Shopify apparaît ici lorsqu’un remboursement avec un montant confirmé existe. Il n’y a rien à importer pour cet élément.",
+      "noReturnInitiated": "Repris du statut de retour de Shopify. Il n’y a rien à importer pour cet élément."
+    },
+    "unavailableReason": {
+      "orderUnfulfilled": "Cette commande n’a pas encore été traitée pour l’expédition.",
+      "noCardPayment": "Cette commande n’a aucun paiement par carte.",
+      "avsCvvNotReturned": "La passerelle de paiement n’a pas renvoyé de résultat de vérification de l’adresse et du code de sécurité pour cette commande.",
+      "noParcelReturned": "Aucun colis de cette commande n’a été retourné à l’expéditeur.",
+      "awaitingDelivery": "En attente de la confirmation de livraison.",
+      "returnOnRecord": "Shopify enregistre un retour sur cette commande.",
+      "refundOnRecord": "Shopify enregistre un remboursement sur cette commande.",
+      "merchantSaysRequestReceived": "Vous nous avez indiqué que le client a demandé à retourner cette commande.",
+      "returnedToSender": "Le transporteur vous a retourné ce colis.",
+      "manualOnly": "Non disponible automatiquement : importez-le manuellement si vous l'avez.",
+      "generic": "Sans objet pour cette commande."
     },
     "signalLabelValue": {
       "refundIssued": "Preuve que le remboursement a déjà été effectué",

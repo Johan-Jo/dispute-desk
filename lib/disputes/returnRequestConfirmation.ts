@@ -212,6 +212,21 @@ export function noReturnFactVerdict(input: {
 }
 
 /**
+ * True when the ONLY reason the collector reads "a return is on record" is a
+ * status string this code does not recognise (and no refund is on record). The
+ * collector stays silent for it, as before; a READER must not present it as a
+ * confirmed return (read-time applicability, plan PR 1).
+ */
+export function isUnrecognisedReturnStatusOnly(input: {
+  returnStatus: string | null | undefined;
+  totalRefunded: number | string | null | undefined;
+}): boolean {
+  if (input.returnStatus == null) return false;
+  const s = resolveOrderSituation({ returnStatus: input.returnStatus, refundedAmount: input.totalRefunded });
+  return s.returns === "unknown" && s.refund !== "some";
+}
+
+/**
  * C3: the scoring rule. With the setting on, the Shopify record alone does
  * not count; only the merchant's confirmation restores it. Setting off:
  * unchanged.

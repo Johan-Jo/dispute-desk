@@ -99,11 +99,47 @@ export function canMerchantUpload(item: {
   field: string;
   collectionType?: string;
 }): boolean {
+  if (NEVER_MERCHANT_UPLOADABLE.has(item.field)) return false;
+  return canMerchantUploadAtBuild(item);
+}
+
+/**
+ * The pre-F-1a rule, kept ONLY for the three call sites in
+ * `lib/automation/completeness.ts` that write `recommended_actions` into a
+ * persisted pack. Those outputs are stored and printed (PDF), so PR 1 leaves
+ * them byte-identical; the display surfaces (workspace, list, pack page)
+ * use `canMerchantUpload`. Do not call this from a display surface.
+ */
+export function canMerchantUploadAtBuild(item: {
+  field: string;
+  collectionType?: string;
+}): boolean {
   if (getCanonicalSpec(item.field)?.supportingOnly === true) return false;
   if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
   if (SYSTEM_DERIVED_FIELDS.has(item.field)) return false;
   return item.collectionType === "manual" || item.collectionType === "conditional_auto";
 }
+
+/**
+ * Fields a merchant can never satisfy by attaching a file (plan §3.1 F-1a, §4.2).
+ *
+ *  - `refund_record` is Shopify's own record of a refund. The collector adds it
+ *    only when the refunded total is above zero, so a MISSING row already means
+ *    "no confirmed refund amount" — an upload can only ever land as generic
+ *    manual evidence and was never the refund record (0 prod uploads ever).
+ *    Proof of a refund made outside Shopify belongs on `supporting_documents`.
+ *  - `no_return_initiated` is a conclusion drawn from Shopify's return status;
+ *    the merchant's real channel is the return-request answer.
+ *
+ * Field-level on purpose: the list (`serverFacts.ts`) selects only the stored
+ * checklist and cannot see the order, so this is the one rule every caller
+ * shares. It changes no score and no readiness (the rows are critical or
+ * skipped by the `recommended_actions` rule), only the upload affordance.
+ */
+export const NEVER_MERCHANT_UPLOADABLE: ReadonlySet<string> = new Set([
+  "refund_record",
+  "no_return_initiated",
+]);
 
 /** Minimal checklist-row shape the derivation needs (a subset of
  *  ChecklistItemV2 as persisted in `pack_json.checklistV2`). */

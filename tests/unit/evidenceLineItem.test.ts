@@ -1207,7 +1207,8 @@ describe("Test 24 — internal-only field with no payload routes to not_included
     });
     const row = lineItems.find((li) => li.field === "refund_record");
     expect(row?.submissionMethod).toBe("not_included");
-    expect(row?.reason).toMatch(/no refund has been issued/i);
+    expect(row?.reason).toMatch(/no confirmed refund amount/i);
+    expect(row?.reason).not.toMatch(/no refund has been issued|your defence is/i);
     expect(row?.reason).not.toMatch(/no usable evidence payload/i);
   });
 
