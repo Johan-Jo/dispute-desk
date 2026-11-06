@@ -20,7 +20,7 @@ import {
   merchantSuppliedAcknowledgementFromItems,
   resolveHeldState,
 } from "@/lib/disputes/heldState";
-import { loadDecidedViewInputs, type DecidedViewDisputeRow } from "@/lib/disputes/loadDecidedResponse";
+import { loadDecidedViewInputs, loadStorePatterns, type DecidedViewDisputeRow } from "@/lib/disputes/loadDecidedResponse";
 import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
@@ -1286,6 +1286,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       ? await loadDecidedViewInputs(sb, row as DecidedViewDisputeRow)
       : null;
   const decidedResponse = decidedView?.response ?? null;
+  // The dispute record page (open shape) reads the store win rate too, so an
+  // open dispute and a decided one grade "what wins this type" on the same
+  // numbers. Read-only; null on any failure (the page then shows no rate).
+  const recordStorePatterns =
+    decidedView || !packRow
+      ? null
+      : await loadStorePatterns(sb, row.shop_id as string, {
+          reason: effectiveReason,
+          phase: (row.phase === "inquiry" ? "inquiry" : "chargeback") as "inquiry" | "chargeback",
+        });
 
   // Fix C4b: asked only for a shop that takes returns outside Shopify.
   let returnRequest: { applies: boolean; answer: Awaited<ReturnType<typeof loadReturnRequestConfirmation>> } = {
@@ -1335,6 +1345,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     held,
     decidedResponse,
     decidedView,
+    recordStorePatterns,
     evidenceLineItems,
     submissionSummary,
     // Derived first-class attachment inventory for the dispute Review

@@ -198,23 +198,16 @@ const SURFACES: Array<{ file: string; mustRead: RegExp[] }> = [
     mustRead: [/resolveAssessmentGate\(/, /assessment: resolveAssessmentGate\(/],
   },
   {
-    file: "app/(embedded)/app/disputes/[id]/tabs/useReviewView.ts",
-    mustRead: [/derived\.assessment\.mayOfferFilingAction/, /"not_assessed"/],
-  },
-  {
     file: "app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts",
     mustRead: [/derived\.assessment\.mayRenderVerdict/, /kind: "not_assessed"/],
   },
   {
-    file: "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx",
-    mustRead: [
-      /derived\.assessment\.mayRenderVerdict/,
-      /derived\.assessment\.mayRenderRecommendation/,
-    ],
+    file: "app/(embedded)/app/disputes/[id]/WorkspaceShell.tsx",
+    mustRead: [/derived\.assessment\.mayRenderVerdict/],
   },
   {
-    file: "app/(embedded)/app/disputes/[id]/tabs/ReviewSubmitTab.tsx",
-    mustRead: [/view\.state === "not_assessed"/],
+    file: "app/(embedded)/app/disputes/[id]/record/RecordWorkspace.tsx",
+    mustRead: [/derived\.assessment\.mayOfferFilingAction/],
   },
 ];
 
@@ -241,57 +234,9 @@ describe("every surface branches on the gate", () => {
     expect(src).toMatch(/strength: CaseStrengthLevel \| null;/);
   });
 
-  it("the summary card renders no strength pill without a band", () => {
-    const src = readFileSync(
-      resolve(
-        ROOT,
-        "app/(embedded)/app/disputes/[id]/tabs/sections/CaseSummaryCard.tsx",
-      ),
-      "utf8",
-    );
-    // The coercion is guarded, and the pill is conditional on a real band.
-    expect(src).toMatch(/props\.strength \? toDisplayStrength\(props\.strength\) : null/);
-    expect(src).toMatch(/display && strengthColors \? \(/);
-  });
-
-  it("the Overview strength chip reads `not_assessed` from the GATE, not from the band", () => {
-    /* The old expression reached `not_assessed` only via
-     * `overall === "insufficient"` — which is also a real verdict, so a
-     * genuinely insufficient case and an unassessed one were
-     * indistinguishable, and a stale assessment carrying any other band
-     * rendered that band as current. */
-    const src = readFileSync(
-      resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx"),
-      "utf8",
-    );
-    expect(src).toMatch(/!assessed\s*\n?\s*\?\s*"not_assessed"/);
-  });
 });
 
 /* ── 4. No override, ever ────────────────────────────────────────────── */
-
-describe("an unassessed case is never offered a submission action", () => {
-  it("useReviewView withholds the CTA before it can read readiness", () => {
-    /* ORDER is the assertion. `requiresOverride` is computed from
-     * `derived.readiness`, which is `"blocked"` on the sentinel; the gate has
-     * to return first or the "Save anyway" relabel happens anyway. */
-    const src = readFileSync(
-      resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/useReviewView.ts"),
-      "utf8",
-    );
-    const gateAt = src.indexOf("mayOfferFilingAction");
-    const overrideAt = src.indexOf("const requiresOverride");
-    expect(gateAt).toBeGreaterThan(-1);
-    expect(overrideAt).toBeGreaterThan(-1);
-    expect(gateAt, "the gate must precede the override computation").toBeLessThan(
-      overrideAt,
-    );
-    // And the gated branch returns a null CTA rather than a disabled one: a
-    // disabled "Save anyway" still tells the merchant an override exists.
-    const gatedBranch = src.slice(gateAt, overrideAt);
-    expect(gatedBranch).toContain("cta: null");
-  });
-});
 
 /* ── 5. Six locales ──────────────────────────────────────────────────── */
 

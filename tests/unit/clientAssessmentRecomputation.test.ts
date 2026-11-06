@@ -47,11 +47,10 @@ const ROOT = process.cwd();
  */
 const CLIENT_SURFACES = [
   "app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts",
-  "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx",
-  "app/(embedded)/app/disputes/[id]/tabs/EvidenceTab.tsx",
-  "app/(embedded)/app/disputes/[id]/tabs/ReviewSubmitTab.tsx",
+  "app/(embedded)/app/disputes/[id]/WorkspaceShell.tsx",
+  "app/(embedded)/app/disputes/[id]/record/RecordWorkspace.tsx",
+  "app/(embedded)/app/disputes/[id]/record/recordInputs.ts",
   "app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts",
-  "app/(embedded)/app/disputes/[id]/tabs/useReviewView.ts",
 ] as const;
 
 /**
