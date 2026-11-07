@@ -166,7 +166,7 @@ function recordFor(s: Shape, stamp: { evidenceBasisRule: number } | null) {
   }
   w.evidenceLineItems = lines.map((l) => ({ id: `line:${l.field}`, label: l.field, ...l }));
   w.defencePackage.latest = { ...w.defencePackage.latest, facts_json: s.facts, narrative_json: null, document_provenance_json: stamp };
-  return buildDisputeRecord(recordInputsFromWorkspace(w, "2026-11-06T12:00:00Z"), createRecordFormat("en"));
+  return buildDisputeRecord(recordInputsFromWorkspace(w as unknown as Parameters<typeof recordInputsFromWorkspace>[0], "2026-11-06T12:00:00Z"), createRecordFormat("en"));
 }
 
 function citedItemFields(rec: ReturnType<typeof recordFor>): string[] {
