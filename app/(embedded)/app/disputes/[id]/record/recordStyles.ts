@@ -59,6 +59,7 @@ export const CHECK_STYLE: Record<"had" | "missing" | "none", [string, string, st
   none: ["#98A2B3", "#D0D5DD", "#EEF0F3", "#475467"],
 };
 
-const TAB: CSSProperties = { padding: "12px 14px 10px", marginBottom: -1 };
+/* No negative margin: it made the tab bar scroll vertically (a scrollbar on Windows). The bar draws its 1px line as a background at the bottom of the padding box instead; the active tab's 2px border covers it, so the look is unchanged. */
+const TAB: CSSProperties = { padding: "12px 14px 10px", marginBottom: 0 };
 export const TAB_ON: CSSProperties = { ...TAB, borderBottom: "2px solid var(--dd-primary)", color: "var(--dd-primary)", fontWeight: 500 };
 export const TAB_OFF: CSSProperties = { ...TAB, borderBottom: "2px solid transparent", color: "var(--dd-text-subtle)" };
