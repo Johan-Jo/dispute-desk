@@ -23,6 +23,7 @@ import { useSearchParams } from "next/navigation";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { I18nToken } from "@/lib/i18n/token";
 import { phaseLabel } from "@/lib/disputes/phaseUtils";
+import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { ROLE_ORDER, type DisputeRecord, type HelpItem, type RecordItem, type RecordRole } from "@/lib/disputes/disputeRecord";
 import type { RecordFormat } from "@/lib/disputes/recordFormat";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
@@ -170,6 +171,21 @@ export default function RecordWorkspace({
                 >
                   {r(record.hero.statusChip)}
                 </span>
+                {record.hero.strengthBand ? (
+                  <span
+                    data-testid="dispute-strength-pill"
+                    style={{
+                      borderRadius: 6,
+                      padding: "4px 8px",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      background: STRENGTH_CHIP[record.hero.strengthBand].bg,
+                      color: STRENGTH_CHIP[record.hero.strengthBand].fg,
+                    }}
+                  >
+                    {t(`presentation.strength.detail.${record.hero.strengthBand}`)}
+                  </span>
+                ) : null}
                 <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>
                   <strong style={{ color: "var(--dd-text)", fontWeight: 600 }}>
                     {t(decided ? "disputes.record.ui.decided" : "disputes.record.ui.deadline")}
