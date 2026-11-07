@@ -198,7 +198,14 @@ export interface DisputeRecord {
     daysLeft: number | null;
     decided: string | null;
   };
-  hero: { headline: I18nToken; claimShort: I18nToken; amountLabel: I18nToken; statusChip: I18nToken };
+  hero: {
+    headline: I18nToken;
+    claimShort: I18nToken;
+    amountLabel: I18nToken;
+    statusChip: I18nToken;
+    /** The live case-strength band, shown as a pill in the header while a package is prepared and not yet saved (same condition as the strength sentence). */
+    strengthBand: "strong" | "moderate" | "weak" | null;
+  };
   facts: Partial<Record<FactKey, I18nToken>>;
   /** The hero paragraph: fact keys, in reading order. */
   account: FactKey[];
@@ -1080,6 +1087,12 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       claimShort: tk(`claimShort.${claimKey(v.reason)}`),
       amountLabel: tk(`amountLabel.${status}`),
       statusChip: tk(`chip.${headlineKey}`),
+      strengthBand:
+        (i.strength === "strong" || i.strength === "moderate" || i.strength === "weak") &&
+        PREPARED_STAGES.includes(stage) &&
+        stage !== "fatal"
+          ? i.strength
+          : null,
     },
     facts: f,
     account,
