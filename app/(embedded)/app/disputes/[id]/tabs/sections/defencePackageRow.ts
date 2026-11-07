@@ -25,4 +25,7 @@ export interface DefencePackageRow {
   submitted_at: string | null;
   narrative_json: DefenceNarrativeOutput | null;
   facts_json: EvidenceFact[] | null;
+  /** What the document rendered; carries the Evidence Basis rule stamp
+   *  (`lib/defence/citedFacts.ts`). Absent on packages stored before it. */
+  document_provenance_json?: unknown;
 }

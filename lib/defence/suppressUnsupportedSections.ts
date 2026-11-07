@@ -49,7 +49,7 @@
  *    and the same reasoning that keeps the blocking flag off applies here.
  */
 
-import { isBankIncludedFact } from "./bankInclusion";
+import { ARGUMENT_SECTION_KEYS, isListableFact } from "./citedFacts";
 import type {
   DefenceNarrativeOutput,
   EvidenceFact,
@@ -61,15 +61,7 @@ import type {
  * Sections carrying an independent argument. Suppressing one of these removes a
  * claim; suppressing a summary would remove the letter's shape.
  */
-const ARGUMENT_SECTIONS: readonly NarrativeSectionKey[] = [
-  "transactionOverviewArgument",
-  "chronologyArgument",
-  "paymentAuthenticationArgument",
-  "fulfillmentArgument",
-  "communicationArgument",
-  "policyArgument",
-  "manualEvidenceArgument",
-];
+const ARGUMENT_SECTIONS: readonly NarrativeSectionKey[] = ARGUMENT_SECTION_KEYS;
 
 /** Recorded on the omission so a reader knows this was a rule, not a gap. */
 export const SUPPRESSION_REASON =
@@ -98,7 +90,7 @@ export function suppressUnsupportedSections(input: {
   const citable = new Set(
     input.approvedFacts
       .filter((f) => !internalOnly.has(f.id))
-      .filter(isBankIncludedFact)
+      .filter(isListableFact)
       .map((f) => f.id),
   );
 

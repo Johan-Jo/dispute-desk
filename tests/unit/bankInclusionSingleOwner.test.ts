@@ -150,6 +150,29 @@ describe("exactly one bank-inclusion predicate", () => {
     expect(PENDING_CONVERSION).toHaveLength(0);
   });
 
+  it("'cited to the bank' has ONE owner (citedFacts.ts): nobody else combines inclusion with record context", () => {
+    const owners = new Set([
+      path.join("lib", "defence", "citedFacts.ts"),
+      path.join("lib", "defence", "factClassifier.ts"), // defines isRecordContextFact itself
+    ]);
+    const offenders: string[] = [];
+    for (const { rel, text } of sourceFiles()) {
+      if (owners.has(rel)) continue;
+      const code = stripCommentsAndStrings(text);
+      if (/\bisRecordContextFact\b/.test(code)) offenders.push(`${rel}: spells the record-context test`);
+      if (/\bisCitedFact\b|\bcitedFacts\(/.test(code) && !/from "(\.\.?\/|@\/lib\/defence\/)*(pdf\/)?citedFacts"/.test(text)) {
+        offenders.push(`${rel}: uses the cited predicate without importing the owner`);
+      }
+    }
+    expect(offenders).toEqual([]);
+    // The suppressor and the validator ask the owner's `isListableFact`, never a spelling of their own.
+    for (const rel of ["suppressUnsupportedSections.ts", "validateNarrative.ts"]) {
+      const text = fs.readFileSync(path.join(process.cwd(), "lib", "defence", rel), "utf8");
+      expect(text, rel).toMatch(/isListableFact/);
+      expect(stripCommentsAndStrings(text), rel).not.toMatch(/\bisBankIncludedFact\b/);
+    }
+  });
+
   it("the three surfaces this epic owns delegate rather than re-spell", () => {
     const delegating = [
       path.join("lib", "defence", "factClassifier.ts"),
