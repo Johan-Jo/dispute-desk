@@ -78,6 +78,7 @@ function packRow(c: Case) {
 function embeddedOracle(c: Case) {
   const eff = assembleEffectiveChecklist({
     storedChecklist: c.checklist_v2,
+    disputeReason: null,
     packSections: c.sections,
     evidenceItems: c.items as never,
   });
@@ -270,8 +271,8 @@ describe("stored fallback when there is nothing to judge", () => {
   });
 
   it("effectivePackView returns null for null / empty stored checklists", () => {
-    expect(effectivePackView({ checklistV2: null, packSections: [] })).toBeNull();
-    expect(effectivePackView({ checklistV2: [], packSections: [] })).toBeNull();
+    expect(effectivePackView({ checklistV2: null, packSections: [], disputeReason: null })).toBeNull();
+    expect(effectivePackView({ checklistV2: [], packSections: [], disputeReason: null })).toBeNull();
   });
 });
 

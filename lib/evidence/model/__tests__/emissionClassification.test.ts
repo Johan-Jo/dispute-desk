@@ -42,7 +42,7 @@ describe("emission classification (reviewed, completeness-enforced; not a proof)
 
   it("needs_decision is shrink-only, owned, and limited to the checked-in baseline", () => {
     const open = Object.entries(EMISSION_CLASSIFICATION).filter(([, c]) => c.class === "needs_decision");
-    expect(open.map(([f]) => f)).toEqual(["refund_record"]); // BASELINE: may only shrink
+    expect(open.map(([f]) => f)).toEqual([]); // BASELINE: may only shrink (refund_record closed at READ time by F-1b)
     for (const [f, c] of open) expect(c.owner, `${f} needs an owner`).toBeTruthy();
   });
 
@@ -66,7 +66,7 @@ describe("emission classification (reviewed, completeness-enforced; not a proof)
       order_confirmation: "evidence_absent",
       product_description: "evidence_absent",
       refund_policy: "evidence_absent",
-      refund_record: "needs_decision",
+      refund_record: "world_precondition",
       shipping_policy: "evidence_absent",
       shipping_tracking: "evidence_absent",
       tds_authentication: "evidence_absent",
