@@ -337,3 +337,25 @@ describe("Building state: the list and the page use the same word, and no packag
     for (const n of ["no_pack", "building", "failed", "covered"]) expect(record(n).showRoles, n).toBe(false);
   });
 });
+
+describe("every return status Shopify can report has a sentence (production defect: in_progress had none)", () => {
+  for (const returns of ["requested", "in_progress", "returned", "failed"] as const) {
+    it(`${returns}: the Return and refund item resolves to a real sentence`, () => {
+      const w = workspaceVariant("prepared") as unknown as Record<string, any>;
+      w.dispute.orderSituation = { returns, refund: "none", returnOpenedAt: null, asOf: null };
+      const r = buildDisputeRecord(recordInputsFromWorkspace(w as never, NOW), fmt);
+      const it = r.items.find((x) => x.key === "return");
+      expect(it, returns).toBeTruthy();
+      const text = R(it!.detail);
+      expect(text.length).toBeGreaterThan(10);
+      expect(text).toMatch(/return/i);
+      expect(text).not.toMatch(/disputes\.record/);
+    });
+  }
+  it("in_progress says it is in progress and not yet received", () => {
+    const w = workspaceVariant("prepared") as unknown as Record<string, any>;
+    w.dispute.orderSituation = { returns: "in_progress", refund: "none", returnOpenedAt: null, asOf: null };
+    const r = buildDisputeRecord(recordInputsFromWorkspace(w as never, NOW), fmt);
+    expect(R(r.items.find((x) => x.key === "return")!.detail)).toBe("A return on this order is in progress. It is not yet marked as received.");
+  });
+});
