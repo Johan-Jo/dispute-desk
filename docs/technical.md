@@ -3969,12 +3969,46 @@ only be said when no entry exists.
   `none`) and the pack viewer's zero guard. The workspace route exposes it as `dispute.refundStatement`.
 - Stored English `unavailableReason` values in `checklist_v2` are never shown: `lib/disputes/unavailableReasonToken.ts`
   maps the known stored strings and the reason codes (`return_on_record`, `refund_on_record`,
-  `merchant_says_request_received`, `returned_to_sender`) to `disputes.unavailableReason.*` tokens at read time
+  `merchant_says_request_received`, `customer_asked_in_support`, `returned_to_sender`) to `disputes.unavailableReason.*` tokens at read time
   (unknown text becomes a neutral "Not applicable to this order"); "No refund was issued on this order" renders the refund
   statement instead. `strengthReason.returnedToSender.returned_unrefunded` now says "The refund on record is less than the
   disputed amount." (trigger unchanged).
 - Never bank-facing: the collector's `refundStatus` write, `no_return_initiated`, `hasRefund`, the fatal-loss gate, the
   fact classifier and the letters do not read it (a test pins the main ones).
+
+### Customer asked to return it in the support inbox (read-time only, 2026-11-07)
+
+A customer can ask for a return by email or chat, outside Shopify, where `returnStatus` stays `NO_RETURN`. The Gorgias
+detector (`RETURN_REQUEST_TEXT` in `lib/integrations/gorgias/internalNarrativeConstraints.ts`, six locales, messages
+matched to THIS order: `confirmed_match`, or `proposed_match` at high confidence, customer sender only) is now also read
+by the MERCHANT pages, at read time.
+
+- Signal: `loadCustomerReturnRequest(sb, { disputeId, shopId })` (selects only, shop-scoped, never throws; absent
+  integration or any error = no signal) over the one message reader `loadStoredMessagesForConstraints`.
+  `loadReturnScopeForPack` (the single read-time returns context) sets `ReturnScopeInput.customerAskedInSupport`.
+- Verdict: `noReturnFactVerdict` returns `{ emit: false, reason: "customer_asked_in_support" }` when the signal is set.
+  Precedence: a return or refund Shopify records (`return_on_record`, `refund_on_record`) wins; the merchant's explicit
+  "the customer asked" keeps `merchant_says_request_received`; the signal also beats an unknown status. The merchant's
+  answer "no request received" outweighs the detection only when it was recorded AFTER the latest detected message
+  (`customerRequestStands`); "not sure", no answer, an older answer or an unreadable time leave the detection standing
+  (the safe direction: never show a false "no return" claim).
+- Surfaces: the dispute record's "Return and refund" item says "A customer message in your support inbox asks to return
+  this order. No return is on record in Shopify." (role internal, adverse, named among the facts withheld, counts
+  recomputed from roles; the workspace payload carries `returnSignals.customerAskedInSupport`). The checklist row
+  `no_return_initiated` is dropped by `assembleEffectiveChecklist` like every other inapplicable reason, so the workspace
+  route, `GET /api/packs/[packId]`, the pack page and the decided view agree. Existing rule kept: a stored row that is
+  already `available` (the fact was filed at build) is NOT hidden, it is reported in `contradictedAvailable`.
+- Live merchant pages only: `loadReturnScopeForPack(..., { withSupportSignal: false })` is passed by the evidence-pack PDF
+  job (`renderPdfJob`) and by the outcome email (`loadDecidedViewInputs(..., { withSupportSignal: false })` from the
+  dispatcher), so no stored or sent artifact reads it. The `force_include` guard of the inclusion-override route shares
+  the checklist assembly, so it refuses a row the page no longer shows (409 `FIELD_NOT_APPLICABLE`).
+- When the filed letter already cites the no-return fact, the record item stays `cited` (adverse) beside the true
+  sentence; it is `internal` and named among the facts withheld when the letter does not cite it.
+- Known limit: the detector is a text match (an INR customer writing "how can I return it if I never got it" matches), a
+  merchant with "Customers request returns outside Shopify" off has no question to dismiss it with, and messages after the
+  dispute opened count. Measure on real messages before widening it to the letter.
+- Not changed (a separate, approved step would be needed): the bank letter, the build-time fact, counsel ledgers,
+  `plan_input_hash`, `completeness_score`, the stored checklist and `recommended_actions`. The build never sets the signal.
 
 ### Order situation: returns and refunds, merchant-side (2026-10-09)
 

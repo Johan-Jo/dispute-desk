@@ -280,6 +280,8 @@ export interface RecordInputs {
   fatalReason: string | null;
   /** Shopify's return situation for the order. */
   returns: "none" | "requested" | "in_progress" | "returned" | "failed" | "unknown";
+  /** A customer message in the support inbox asks to return this order (read-time, Gorgias). */
+  customerAskedInSupport?: boolean;
   canDecide: boolean;
   decision: "approved" | "conceded" | "in_review" | null;
 }
@@ -551,6 +553,23 @@ function buildItems(c: ItemCtx): RecordItem[] {
       source: src("shopify"),
       adverse: true,
       phrase: nest(returnOnRecord ? "phrase.withheld.returnOnRecord" : "phrase.withheld.refundOnRecord"),
+    });
+  } else if (i.customerAskedInSupport === true) {
+    // Shopify records no return, but a customer message in the support inbox asks
+    // to return the order: "no return on record" would be a false claim. Stated
+    // once, adverse, and named among the facts withheld. It is internal unless the
+    // letter that was built already cites the no-return fact: then the page must
+    // still say the bank was told so (role "cited"), beside the true sentence.
+    const filed = c.lineRole(RETURN_EVIDENCE_FIELD) === "cited";
+    add({
+      key: "return",
+      role: filed ? "cited" : "internal",
+      strength: null,
+      label: tk("item.return.label"),
+      detail: tk("item.return.askedInSupport"),
+      source: src("gorgias"),
+      adverse: true,
+      phrase: filed ? nest("phrase.cited.returnOnly") : nest("phrase.withheld.returnAskedInSupport"),
     });
   } else if (retLine?.hasEvidence) {
     const none = i.refund === "none";
