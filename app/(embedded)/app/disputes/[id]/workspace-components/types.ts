@@ -357,6 +357,8 @@ export interface WorkspaceData {
   dispute: WorkspaceDispute;
   bankClaim?: WorkspaceBankClaim;
   returnRequest?: WorkspaceReturnRequest;
+  /** Read-time return signals (merchant pages only; never stored, never in the letter). */
+  returnSignals?: { customerAskedInSupport: boolean };
   pack: WorkspacePack | null;
   /** Gorgias evidence core (null when the shop has no Gorgias
    *  integration — the review section self-hides). */

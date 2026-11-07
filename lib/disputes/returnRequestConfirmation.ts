@@ -138,6 +138,13 @@ export function noReturnFactScope(args: {
 export type ReturnScopeInput = {
   returnsOutsideShopify: boolean;
   answer: ReturnRequestAnswer | null;
+  /**
+   * READ-TIME ONLY. A customer message matched to this order, in the support
+   * inbox, asks to return it (Gorgias), and no newer merchant answer of "no
+   * request received" outweighs it (`loadReturnScopeForPack` decides that).
+   * Never set by a build, so nothing stored, scored, hashed or filed changes.
+   */
+  customerAskedInSupport?: boolean;
 };
 
 /** What the no-return fact carries (the output of `noReturnFactScope`). */
@@ -186,7 +193,10 @@ export function returnScopeFor(
  */
 export type NoReturnVerdict =
   | { emit: true; scope: NoReturnScopePayload }
-  | { emit: false; reason: "return_on_record" | "refund_on_record" | "merchant_says_request_received" }
+  | {
+      emit: false;
+      reason: "return_on_record" | "refund_on_record" | "merchant_says_request_received" | "customer_asked_in_support";
+    }
   | { unknown: true; why: "status_absent" };
 
 export function noReturnFactVerdict(input: {
@@ -201,6 +211,14 @@ export function noReturnFactVerdict(input: {
   const hasStatus = input.returnStatus != null;
   if (hasStatus && situation.returns !== "none") return { emit: false, reason: "return_on_record" };
   if (situation.refund === "some") return { emit: false, reason: "refund_on_record" };
+  // A customer's return request in the support inbox (read-time signal, never
+  // set by a build). Weaker than a record in Shopify (above), but it removes
+  // the claim "no return" whatever Shopify's status says, including an unknown
+  // one. The merchant's explicit "request_received" keeps its own reason.
+  const customerAsked = input.returnScope?.customerAskedInSupport === true;
+  if (customerAsked && input.returnScope?.answer !== "request_received") {
+    return { emit: false, reason: "customer_asked_in_support" };
+  }
   if (!hasStatus) return { unknown: true, why: "status_absent" };
 
   const scope = noReturnFactScope({

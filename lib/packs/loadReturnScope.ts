@@ -20,8 +20,33 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   loadReturnRequestConfirmation,
   returnScopeFor,
+  type ReturnRequestConfirmation,
   type ReturnScopeInput,
 } from "@/lib/disputes/returnRequestConfirmation";
+import { loadCustomerReturnRequest } from "@/lib/integrations/gorgias/internalNarrativeConstraints";
+
+/**
+ * Does the detected customer request outweigh the merchant's answer? Precedence
+ * (read-time only):
+ *   - the merchant said the customer DID ask ("request_received"): handled by its
+ *     own reason in the verdict, so the detection adds nothing here;
+ *   - the merchant said "no request received" AND answered AFTER the latest
+ *     detected message: the merchant, who sees their own inbox, wins;
+ *   - otherwise (no answer, "not sure", or an answer older than the message, or
+ *     an answer time we cannot read): the detection stands. The safe direction
+ *     is never to show a false "no return" claim.
+ */
+export function customerRequestStands(
+  request: { requested: boolean; latestSentAt: string | null },
+  confirmation: Pick<ReturnRequestConfirmation, "answer" | "answeredAt"> | null | undefined,
+): boolean {
+  if (!request.requested) return false;
+  if (confirmation?.answer !== "no_request_received") return true;
+  const answered = Date.parse(confirmation.answeredAt);
+  const asked = request.latestSentAt ? Date.parse(request.latestSentAt) : NaN;
+  if (!Number.isFinite(answered) || !Number.isFinite(asked)) return true;
+  return !(answered > asked);
+}
 
 export async function loadReturnScopeForPack(
   sb: SupabaseClient,
@@ -38,7 +63,13 @@ export async function loadReturnScopeForPack(
     const confirmation = settings.returns_outside_shopify
       ? await loadReturnRequestConfirmation(sb, args.disputeId, args.packCycle ?? 1)
       : null;
-    return returnScopeFor(settings, confirmation);
+    const base = returnScopeFor(settings, confirmation);
+
+    // READ-TIME signal: a customer asked to return it in the support inbox.
+    // Selects only; absence or failure = no signal (never throws).
+    const request = await loadCustomerReturnRequest(sb, { disputeId: args.disputeId, shopId: args.shopId });
+    if (!customerRequestStands(request, confirmation)) return base;
+    return { returnsOutsideShopify: false, answer: null, ...base, customerAskedInSupport: true };
   } catch (err) {
     console.warn(
       `[loadReturnScopeForPack] read failed for dispute ${args.disputeId}:`,

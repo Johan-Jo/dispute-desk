@@ -2332,7 +2332,8 @@
       "merchantSaysRequestReceived": "You told us the customer asked to return this order.",
       "returnedToSender": "The carrier returned this parcel to you.",
       "manualOnly": "Not available automatically — upload it manually if you have it.",
-      "generic": "Not applicable to this order."
+      "generic": "Not applicable to this order.",
+      "customerAskedInSupport": "A customer message in your support inbox asks to return this order."
     },
     "signalLabelValue": {
       "refundIssued": "Proof that the refund was already issued",
@@ -2612,7 +2613,8 @@
           "refundSome": "A refund is on record for this order.",
           "label": "Return and refund",
           "none": "No return or refund is on record.",
-          "returnOnly": "No return is on record."
+          "returnOnly": "No return is on record.",
+          "askedInSupport": "A customer message in your support inbox asks to return this order. No return is on record in Shopify."
         },
         "pay": {
           "label": "Payment authentication",
@@ -2710,7 +2712,8 @@
           "screen": "Shopify's fraud screening",
           "ip": "the IP location",
           "signature": "the unsigned delivery",
-          "addr": "the differing billing and shipping addresses"
+          "addr": "the differing billing and shipping addresses",
+          "returnAskedInSupport": "the customer's return request"
         },
         "cited": {
           "pay": "the payment check",
@@ -4171,7 +4174,7 @@
       },
       "evidenceChecklist": {
         "title": "Evidence checklist explained",
-        "body": "The Evidence Checklist shows what evidence has been collected and what's still missing.\n\nEach item in the checklist is marked as:\n- Collected (green check): this evidence has been found and included.\n- Required but missing (red, labeled \"required\"): this is a blocker — you need to provide this evidence.\n- Recommended (yellow): not strictly required, but providing it would strengthen your case.\n\nThe checklist is tailored to each dispute's reason code. For example:\n- Product Not Received: prioritizes tracking, delivery proof, and shipping policy.\n- Fraudulent: prioritizes order verification, customer details, and AVS/CVV match.\n- Credit Not Processed: prioritizes refund records and refund policy.\n\nFocusing on required items first will improve your completeness score and remove blockers that prevent auto-saving.\n\nNot As Described: DisputeDesk collects the product listing from your store automatically (the title, description, up to three images and the variant the customer chose) and adds it to the defence. It is your listing as it is today; Shopify doesn't keep how it looked when the order was placed. If a listing can't be collected (for example because the product was deleted), the checklist says why.\n\nReturns outside Shopify: Shopify only records returns made through Shopify. If your customers ask for returns or refunds by email, chat or phone, turn on \"Customers request returns outside Shopify\" in Settings → Automation. \"No return recorded in Shopify\" then no longer raises a case's strength on its own, and each not-as-described, refund or not-received dispute asks you on its Evidence tab whether the customer asked for a return or refund before the dispute. \"Did not ask\" is added to the response as your confirmation; \"asked\" is never shown to the bank. If Shopify already shows a refund or a return on the order, the question is not asked: Shopify's record already answers it."
+        "body": "The Evidence Checklist shows what evidence has been collected and what's still missing.\n\nEach item in the checklist is marked as:\n- Collected (green check): this evidence has been found and included.\n- Required but missing (red, labeled \"required\"): this is a blocker — you need to provide this evidence.\n- Recommended (yellow): not strictly required, but providing it would strengthen your case.\n\nThe checklist is tailored to each dispute's reason code. For example:\n- Product Not Received: prioritizes tracking, delivery proof, and shipping policy.\n- Fraudulent: prioritizes order verification, customer details, and AVS/CVV match.\n- Credit Not Processed: prioritizes refund records and refund policy.\n\nFocusing on required items first will improve your completeness score and remove blockers that prevent auto-saving.\n\nNot As Described: DisputeDesk collects the product listing from your store automatically (the title, description, up to three images and the variant the customer chose) and adds it to the defence. It is your listing as it is today; Shopify doesn't keep how it looked when the order was placed. If a listing can't be collected (for example because the product was deleted), the checklist says why.\n\nReturns outside Shopify: Shopify only records returns made through Shopify. If your customers ask for returns or refunds by email, chat or phone, turn on \"Customers request returns outside Shopify\" in Settings → Automation. \"No return recorded in Shopify\" then no longer raises a case's strength on its own, and each not-as-described, refund or not-received dispute asks you on its Evidence tab whether the customer asked for a return or refund before the dispute. \"Did not ask\" is added to the response as your confirmation; \"asked\" is never shown to the bank. If Shopify already shows a refund or a return on the order, the question is not asked: Shopify's record already answers it.\n\nIf your Gorgias inbox is connected and a customer's message about this order asks to return it, the dispute page says so and no longer says that no return is on record. This is shown only to you: it does not change the response sent to the bank. If you told us the customer did not ask, and that was after their message, your answer is kept."
       },
       "evidenceStrengthRubric": {
         "title": "Evidence strength rubric (Strong / Moderate / Supporting / Invalid)",

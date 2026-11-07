@@ -214,3 +214,64 @@ describe("every state renders through the same record", () => {
     expect(R(ret!.detail)).toBe("A return on this order is marked as received.");
   });
 });
+
+describe("a customer asked to return it in the support inbox (Gorgias, read-time)", () => {
+  const SENTENCE =
+    "A customer message in your support inbox asks to return this order. No return is on record in Shopify.";
+  const everySentence = (r: DisputeRecord) => {
+    const acc = r.account.map((k) => R(r.facts[k] as I18nToken));
+    const items = r.items.map((i) => R(i.detail));
+    return [...acc, ...items];
+  };
+
+  it("replaces 'No return or refund is on record', is internal and adverse, and is withheld from the bank", () => {
+    const r = record("customer_asked_in_support");
+    const ret = r.items.find((i) => i.key === "return");
+    expect(ret?.role).toBe("internal");
+    expect(ret?.adverse).toBe(true);
+    expect(R(ret!.detail)).toBe(SENTENCE);
+    const all = everySentence(r).join(" | ");
+    expect(all).not.toMatch(/No return or refund is on record|No return is on record\./);
+    expect(r.facts.withheld).toBeUndefined(); // the withheld sentence is a decided-state sentence
+  });
+
+  it("the counts are recomputed from the roles: the item moves from cited/context to internal", () => {
+    const base = record("prepared");
+    const r = record("customer_asked_in_support");
+    const baseRet = base.items.find((i) => i.key === "return");
+    expect(baseRet?.role).not.toBe("internal");
+    expect(r.counts.internal).toBe(base.counts.internal + 1);
+    expect(r.counts[baseRet!.role]).toBe(base.counts[baseRet!.role] - 1);
+    for (const role of ROLE_ORDER) expect(r.counts[role]).toBe(r.items.filter((i) => i.role === role).length);
+    const nums = (R(r.facts.roles as I18nToken).match(/\d+/g) ?? []).map(Number);
+    expect(nums).toEqual(ROLE_ORDER.map((role) => r.counts[role]));
+  });
+
+  it("one record, one sentence: the item is the only carrier, on every tab that reads the record", () => {
+    const r = record("customer_asked_in_support");
+    expect(r.items.filter((i) => R(i.detail) === SENTENCE)).toHaveLength(1);
+    expect(r.pkg.lines.map((k) => R(r.facts[k] as I18nToken)).join(" ")).not.toMatch(/support inbox/);
+  });
+
+  it("works on a decided dispute and never overrides a return Shopify records", () => {
+    const lost = workspaceVariant("lost") as unknown as Record<string, any>;
+    lost.returnSignals = { customerAskedInSupport: true };
+    const d = buildDisputeRecord(recordInputsFromWorkspace(lost as never, NOW), fmt);
+    expect(R(d.items.find((i) => i.key === "return")!.detail)).toBe(SENTENCE);
+    expect(d.items.find((i) => i.key === "return")!.role).toBe("internal");
+    expect(R(d.facts.withheld as I18nToken)).toContain("the customer's return request");
+
+    const rec = workspaceVariant("return_on_record") as unknown as Record<string, any>;
+    rec.returnSignals = { customerAskedInSupport: true };
+    const rr = buildDisputeRecord(recordInputsFromWorkspace(rec as never, NOW), fmt);
+    expect(R(rr.items.find((i) => i.key === "return")!.detail)).toBe("A return on this order is marked as received.");
+  });
+
+  it("an absent or false signal changes nothing", () => {
+    const a = workspaceVariant("prepared") as unknown as Record<string, any>;
+    a.returnSignals = { customerAskedInSupport: false };
+    expect(JSON.stringify(buildDisputeRecord(recordInputsFromWorkspace(a as never, NOW), fmt))).toBe(
+      JSON.stringify(record("prepared")),
+    );
+  });
+});

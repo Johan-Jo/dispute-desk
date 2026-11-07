@@ -280,6 +280,8 @@ export interface RecordInputs {
   fatalReason: string | null;
   /** Shopify's return situation for the order. */
   returns: "none" | "requested" | "in_progress" | "returned" | "failed" | "unknown";
+  /** A customer message in the support inbox asks to return this order (read-time, Gorgias). */
+  customerAskedInSupport?: boolean;
   canDecide: boolean;
   decision: "approved" | "conceded" | "in_review" | null;
 }
@@ -551,6 +553,20 @@ function buildItems(c: ItemCtx): RecordItem[] {
       source: src("shopify"),
       adverse: true,
       phrase: nest(returnOnRecord ? "phrase.withheld.returnOnRecord" : "phrase.withheld.refundOnRecord"),
+    });
+  } else if (i.customerAskedInSupport === true) {
+    // Shopify records no return, but a customer message in the support inbox asks
+    // to return the order: "no return on record" would be a false claim. Stated
+    // once, kept internal (never cited to the bank), named among the facts withheld.
+    add({
+      key: "return",
+      role: "internal",
+      strength: null,
+      label: tk("item.return.label"),
+      detail: tk("item.return.askedInSupport"),
+      source: src("shopify"),
+      adverse: true,
+      phrase: nest("phrase.withheld.returnAskedInSupport"),
     });
   } else if (retLine?.hasEvidence) {
     const none = i.refund === "none";
