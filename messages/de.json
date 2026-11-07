@@ -170,7 +170,7 @@
     "overview": "Übersicht",
     "automationSettings": "Automatisierungseinstellungen",
     "automationOn": "Automatisierung ist AN",
-    "automationBanner": "DisputeDesk erstellt automatisch Bewispakete und speichert Beweise zurück in Shopify. Die Einreichung erfolgt im Shopify Admin.",
+    "automationBanner": "DisputeDesk erstellt automatisch Beweispakete und speichert Beweise zurück in Shopify. Die Einreichung erfolgt im Shopify Admin.",
     "automationStatus": "Automatisierungsstatus",
     "openDisputes": "Offene Streitfälle",
     "winRate": "Gewinnrate",
@@ -394,7 +394,7 @@
     "summary": "Zusammenfassung",
     "linkedOrder": "Verknüpfte Bestellung",
     "syncInfo": "Sync-Info",
-    "evidencePacks": "Bewispakete",
+    "evidencePacks": "Beweispakete",
     "amount": "Betrag",
     "reason": "Grund",
     "initiated": "Initiiert",
@@ -411,8 +411,8 @@
     "openInShopify": "In Shopify Admin öffnen",
     "openDisputeInShopify": "Streitfall in Shopify öffnen",
     "generateNewPack": "Neues Paket erstellen",
-    "noPacks": "Noch keine Bewispakete. Erstellen Sie eines, um zu beginnen.",
-    "noPacksAuto": "Noch keine Bewispakete. Die Pipeline erstellt automatisch eines, oder klicken Sie auf Paket erstellen.",
+    "noPacks": "Noch keine Beweispakete. Erstellen Sie eines, um zu beginnen.",
+    "noPacksAuto": "Noch keine Beweispakete. Die Pipeline erstellt automatisch eines, oder klicken Sie auf Paket erstellen.",
     "noDisputes": "Keine aktiven Fälle. DisputeDesk synchronisiert neue Streitfälle automatisch, wenn sie in Shopify erscheinen.",
     "workQueueSubtitle": "Ihre aktiven Fälle — Anfragen und Chargebacks, die Aufmerksamkeit erfordern",
     "summaryTotal": "{count} aktive Fälle",
@@ -558,9 +558,9 @@
     "statusProgressTitle": "Streitfallstatus",
     "managedByDisputeDesk": "Verwaltet von DisputeDesk",
     "moreEvidenceTitle": "HABEN SIE WEITERE BEWEISE?",
-    "moreEvidenceBody": "Fügen Sie unterstützende Dateien im Bewispaket hinzu, nachdem die Beweise bei Shopify gespeichert wurden (auch durch Automatisierung).",
+    "moreEvidenceBody": "Fügen Sie unterstützende Dateien im Beweispaket hinzu, nachdem die Beweise bei Shopify gespeichert wurden (auch durch Automatisierung).",
     "moreEvidenceLocked": "Verfügbar, sobald Beweise bei Shopify gespeichert wurden.",
-    "moreEvidenceCta": "Bewispaket öffnen",
+    "moreEvidenceCta": "Beweispaket öffnen",
     "progress": {
       "badgeCompleted": "Abgeschlossen",
       "badgeCurrent": "Aktuell",
@@ -2493,7 +2493,7 @@
     "record": {
       "claim": {
         "FRAUDULENT": "Der Karteninhaber hat seiner Bank mitgeteilt, dass er diesen Kauf nicht getätigt hat.",
-        "UNRECOGNIZED": "Der Karteninhaber hat seiner Bank mitgeteilt, dass er die Abbuchung nicht kennt.",
+        "UNRECOGNIZED": "Der Karteninhaber hat seiner Bank mitgeteilt, dass er die Abbuchung nicht erkennt.",
         "PRODUCT_NOT_RECEIVED": "Der Karteninhaber hat seiner Bank mitgeteilt, dass die Bestellung nie angekommen ist.",
         "PRODUCT_UNACCEPTABLE": "Der Karteninhaber hat seiner Bank mitgeteilt, dass das Produkt nicht der Beschreibung entsprach.",
         "SUBSCRIPTION_CANCELLED": "Der Karteninhaber hat seiner Bank mitgeteilt, dass er das Abonnement bereits gekündigt hatte.",
@@ -2503,7 +2503,7 @@
       },
       "claimShort": {
         "FRAUDULENT": "Kunde gibt an, diesen Kauf nicht getätigt zu haben",
-        "UNRECOGNIZED": "Kunde gibt an, die Abbuchung nicht zu kennen",
+        "UNRECOGNIZED": "Kunde gibt an, die Abbuchung nicht zu erkennen",
         "PRODUCT_NOT_RECEIVED": "Kunde gibt an, die Bestellung sei nie angekommen",
         "PRODUCT_UNACCEPTABLE": "Kunde gibt an, das Produkt habe nicht der Beschreibung entsprochen",
         "SUBSCRIPTION_CANCELLED": "Kunde gibt an, das Abonnement bereits gekündigt zu haben",
@@ -2556,7 +2556,7 @@
       },
       "reviewMode": {
         "waiting": "Im Prüfmodus speichert DisputeDesk es nur in Shopify, wenn Sie es freigeben.",
-        "approved": "Sie haben es freigegeben. DisputeDesk speichert es am {date}, dem Stichtag der Frist, in Shopify.",
+        "approved": "Sie haben es freigegeben. DisputeDesk speichert es am {date}, dem Tag der Frist, in Shopify.",
         "conceded": "Sie haben sich gegen ein Verteidigungspaket entschieden, daher speichert DisputeDesk es nicht."
       },
       "held": "Im Autopilot hält DisputeDesk einen so dünnen Fall bis zum {date}, dem Tag der Frist, zurück, falls weitere Beweise eintreffen, und speichert ihn dann in Shopify.",
@@ -2968,8 +2968,8 @@
       },
       "productListings": "Produktinformationen ({count})"
     },
-    "title": "Bewispakete",
-    "subtitle": "Bewispakete anzeigen und verwalten",
+    "title": "Beweispakete",
+    "subtitle": "Beweispakete anzeigen und verwalten",
     "packTitle": "Beweispaket {id}",
     "created": "Erstellt {date} von {creator}",
     "backToDispute": "Zurück zum Streitfall",
@@ -3297,7 +3297,7 @@
     "currentPlanDesc": "$99/Monat · Nächstes Rechnungsdatum: 1. März 2026",
     "usageThisMonth": "Nutzung diesen Monat",
     "disputes": "Streitfälle",
-    "evidencePacks": "Bewispakete",
+    "evidencePacks": "Beweispakete",
     "apiCalls": "API-Aufrufe",
     "unlimited": "Unbegrenzt",
     "disputesUnit": "Streitfälle",
@@ -3344,16 +3344,16 @@
     "upgradeAction": "Plan upgraden",
     "topUpAction": "Aufladung kaufen",
     "starterFeature1": "Bis zu 25 Streitfälle/Monat",
-    "starterFeature2": "Grundlegende Bewispakete",
+    "starterFeature2": "Grundlegende Beweispakete",
     "starterFeature3": "E-Mail-Support",
     "starterFeature4": "Standardvorlagen",
     "proFeature1": "Bis zu 100 Streitfälle/Monat",
-    "proFeature2": "Erweiterte Bewispakete",
+    "proFeature2": "Erweiterte Beweispakete",
     "proFeature3": "Benutzerdefinierte Regel-Engine",
     "proFeature4": "Prioritäts-Support",
     "proFeature5": "API-Zugang",
     "entFeature1": "Unbegrenzte Streitfälle",
-    "entFeature2": "Unbegrenzte Bewispakete",
+    "entFeature2": "Unbegrenzte Beweispakete",
     "entFeature3": "Erweiterte Regeln + KI",
     "entFeature4": "Dedizierter Kundenbetreuer",
     "entFeature5": "Individuelle Integrationen",
@@ -3618,7 +3618,7 @@
     "notificationsSection": "Benachrichtigungen",
     "dangerZone": "Gefahrenzone",
     "automationBanner": "Beweise werden per API an Shopify übermittelt. Shopify leitet sie an das Kartennetzwerk weiter — DisputeDesk kontaktiert das Netzwerk nie direkt.",
-    "autoBuildLabel": "Bewispakete automatisch erstellen",
+    "autoBuildLabel": "Beweispakete automatisch erstellen",
     "autoBuildDesc": "Pakete automatisch generieren, wenn neue Streitfälle erkannt werden",
     "reviewDesc": "Pakete in der Warteschlange zur Genehmigung parken",
     "blockerLabel": "Null Blockierungen erzwingen",
@@ -3637,7 +3637,7 @@
     "deadlineReminders": "Fristen-Erinnerungen",
     "deadlineRemindersDesc": "E-Mail-Erinnerungen vor Antwortfristen",
     "packCompletion": "Paket fertiggestellt",
-    "packCompletionDesc": "Benachrichtigung wenn Bewispakete fertig sind",
+    "packCompletionDesc": "Benachrichtigung wenn Beweispakete fertig sind",
     "autoSaveConfirmations": "Auto-Speicher-Bestätigungen",
     "autoSaveConfirmationsDesc": "Benachrichtigung wenn Beweise automatisch gespeichert wurden",
     "securitySection": "Sicherheitseinstellungen",
@@ -3839,7 +3839,7 @@
   },
   "policies": {
     "title": "Richtlinien",
-    "subtitle": "Shop-Richtlinien für Bewispakete verwalten",
+    "subtitle": "Shop-Richtlinien für Beweispakete verwalten",
     "addPolicy": "Richtlinie hinzufügen",
     "updated": "Aktualisiert",
     "termsOfService": "Allgemeine Geschäftsbedingungen",
@@ -3854,7 +3854,7 @@
     "bestFor": "Ideal für",
     "merchantNotesLabel": "Hinweise für Händler",
     "aboutPolicyDocs": "Über Richtliniendokumente",
-    "aboutPolicyDocsDesc": "Richtliniendokumente werden in Bewispaketen verwendet.",
+    "aboutPolicyDocsDesc": "Richtliniendokumente werden in Beweispaketen verwendet.",
     "preview": "Vorschau",
     "previewNotAvailable": "Vorschau für diese Richtlinie nicht verfügbar.",
     "download": "Herunterladen",
@@ -4034,11 +4034,11 @@
       },
       "buildPack": {
         "title": "Beweispaket erstellen",
-        "description": "Erstellen und verwalten Sie Bewispakete.",
+        "description": "Erstellen und verwalten Sie Beweispakete.",
         "introTitle": "Erstes Beweispaket erstellen",
-        "introDesc": "Bewispakete sind Dokumentensammlungen für Ihren Fall. Schauen wir, wo sie sind und wie man eines erstellt.",
+        "introDesc": "Beweispakete sind Dokumentensammlungen für Ihren Fall. Schauen wir, wo sie sind und wie man eines erstellt.",
         "packsGridTitle": "Ihre Paket-Bibliothek",
-        "packsGridDesc": "Alle Bewispakete sind hier aufgelistet. Filtern Sie nach Status, Typ oder suchen Sie nach Name.",
+        "packsGridDesc": "Alle Beweispakete sind hier aufgelistet. Filtern Sie nach Status, Typ oder suchen Sie nach Name.",
         "createPackBtnTitle": "Paket erstellen",
         "createPackBtnDesc": "Klicken Sie hier, um ein neues Paket zu erstellen. Sie benennen es, wählen einen Streittyp und fügen Dokumente hinzu.",
         "templateBtnTitle": "Von Vorlage starten",
@@ -4077,7 +4077,7 @@
         "addPolicyBtnTitle": "Richtlinie hinzufügen",
         "addPolicyBtnDesc": "Klicken Sie, um eine neue Richtlinie hinzuzufügen.",
         "policyDocumentsTitle": "Ihre Richtlinien-Dokumente",
-        "policyDocumentsDesc": "Hier aufgelistete Richtlinien werden automatisch in relevante Bewispakete aufgenommen.",
+        "policyDocumentsDesc": "Hier aufgelistete Richtlinien werden automatisch in relevante Beweispakete aufgenommen.",
         "duration": "2 min"
       },
       "packBuilderAdvanced": {
@@ -4097,7 +4097,7 @@
       "gettingStartedDesc": "Shop verbinden, Streitfälle synchronisieren und Grundlagen lernen",
       "disputes": "Streitfälle",
       "disputesDesc": "Fälle in beiden Lebenszyklusphasen anzeigen, filtern und verwalten",
-      "evidencePacks": "Bewispakete",
+      "evidencePacks": "Beweispakete",
       "evidencePacksDesc": "Playbooks für Anfrage- und Chargeback-Antworten erstellen und verwalten",
       "automationRules": "Automatisierung & Regeln",
       "automationRulesDesc": "Konfigurieren, wie DisputeDesk jede Streitfallfamilie pro Lebenszyklusphase behandelt",
@@ -4139,7 +4139,7 @@
       },
       "disputeDetailPage": {
         "title": "Streitfall-Detailseite",
-        "body": "Öffnen Sie einen Streitfall aus der Liste für die vollständige Ansicht.\n\nInhalt:\n- KPI-Leiste: Betrag, Status, Fälligkeitsdatum, verbleibende Zeit.\n- Verwaltet von DisputeDesk: der Chargeback-Workflow wird in dieser App vorbereitet.\n- Streitfallstatus: fünf Schritte (Erstellt → Paket → Gespeichert → Prüfung → Ergebnis). Die Schritte aktualisieren sich, wenn Pakete gebaut und bei Shopify gespeichert werden; abgeschlossene Status (gewonnen, verloren usw.) markieren alle Schritte als erledigt.\n- Kunde und Bestellung: Profil- und Bestelldaten aus Shopify mit Links.\n- Zusätzliche Beweise: sobald mindestens ein Paket bei Shopify gespeichert wurde (manuell oder per Automatisierung), nutzen Sie „Bewispaket öffnen“, um weitere Dateien auf der Paketseite hochzuladen. Vorher erklärt der Bereich, dass Uploads nach dem Speichern bei Shopify möglich sind.\n- Zeitleiste: aktuelle Shopify-Bestellereignisse plus DisputeDesk-Ereignisse.\n- Bewispakete: alle Pakete mit Vollständigkeit und Links.\n\nNutzen Sie Paket erstellen, Erneut synchronisieren und Streitfall in Shopify öffnen. Änderungen der App-Locale können die Texte der Zeitleiste beeinflussen, wenn Shopify lokalisierte Ereignisse liefert."
+        "body": "Öffnen Sie einen Streitfall aus der Liste für die vollständige Ansicht.\n\nInhalt:\n- KPI-Leiste: Betrag, Status, Fälligkeitsdatum, verbleibende Zeit.\n- Verwaltet von DisputeDesk: der Chargeback-Workflow wird in dieser App vorbereitet.\n- Streitfallstatus: fünf Schritte (Erstellt → Paket → Gespeichert → Prüfung → Ergebnis). Die Schritte aktualisieren sich, wenn Pakete gebaut und bei Shopify gespeichert werden; abgeschlossene Status (gewonnen, verloren usw.) markieren alle Schritte als erledigt.\n- Kunde und Bestellung: Profil- und Bestelldaten aus Shopify mit Links.\n- Zusätzliche Beweise: sobald mindestens ein Paket bei Shopify gespeichert wurde (manuell oder per Automatisierung), nutzen Sie „Beweispaket öffnen“, um weitere Dateien auf der Paketseite hochzuladen. Vorher erklärt der Bereich, dass Uploads nach dem Speichern bei Shopify möglich sind.\n- Zeitleiste: aktuelle Shopify-Bestellereignisse plus DisputeDesk-Ereignisse.\n- Beweispakete: alle Pakete mit Vollständigkeit und Links.\n\nNutzen Sie Paket erstellen, Erneut synchronisieren und Streitfall in Shopify öffnen. Änderungen der App-Locale können die Texte der Zeitleiste beeinflussen, wenn Shopify lokalisierte Ereignisse liefert."
       },
       "syncingDisputes": {
         "title": "Streitfälle von Shopify synchronisieren",
@@ -4154,7 +4154,7 @@
         "body": "Wenn ein Fall in Ihrer Prüfliste liegt, hat DisputeDesk die Beweise bereits erstellt. Ihre Freigabe entscheidet nur, ob sie in Shopify gespeichert werden.\n\nSo geben Sie einen Fall frei:\n1. Öffnen Sie die Seite „Fälle“ und wechseln Sie zum Tab „Prüfliste“.\n2. Klicken Sie neben dem Fall auf „Freigeben“.\n3. Besteht das Paket Ihre Vollständigkeits- und Blocker-Prüfungen, werden die Beweise in Shopify gespeichert.\n\nSie können auch auf der Detailseite über „Freigeben & speichern“ freigeben.\n\nIm Autopilot wird ein zurückgehaltener Fall zur Frist in Shopify gespeichert, wenn Sie nichts unternehmen. Im Prüfmodus wird nichts gespeichert, solange Sie nicht freigeben. Wählen Sie „Kein Verteidigungspaket hinzufügen“, damit DisputeDesk in beiden Modi keines hinzufügt — ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten.\n\nAlle Freigaben werden im Audit-Trail protokolliert."
       },
       "howPacksBuilt": {
-        "title": "Wie Bewispakete automatisch erstellt werden",
+        "title": "Wie Beweispakete automatisch erstellt werden",
         "body": "DisputeDesk sammelt automatisch Beweise aus mehreren Quellen:\n\n- Bestelldaten: Positionen, Beträge, Adresse (nur Stadtebene).\n- Versand & Tracking: Spediteur, Sendungsnummern, Lieferstatus.\n- Shop-Richtlinien: Versand-, Rückgabe- und Stornierungsrichtlinien.\n- Helpdesk-Konversationen: Wenn Sie Gorgias verbinden (Einrichtung → Nachweisquellen oder Einstellungen → Integrationen), findet DisputeDesk die Support-Konversationen des Kunden zu jedem Streitfall, bewertet, wie stark jedes Ticket zur strittigen Bestellung passt, und schlägt die relevantesten Nachrichten als Nachweis vor. Nichts wird automatisch aufgenommen — Sie prüfen jeden Vorschlag im Nachweise-Tab des Streitfalls, geben die genaue Passage frei und erstellen das Paket neu, um sie aufzunehmen. Interne Agentennotizen werden nie erfasst.\n\nDas Paket wird nach Streitfallgrund strukturiert.\n\n**Bibliotheksvorlagen:** Eine unter „Packs“ installierte Vorlage ergänzt Ihre **Bibliothek** mit Abschnitten und Texten. Das ist getrennt vom **automatischen Aufbau pro Streitfall**, der die Sammler-Pipeline nutzt und Ihre Bibliotheksstruktur derzeit nicht automatisch übernimmt."
       },
       "generatingPackManually": {
@@ -4182,8 +4182,8 @@
         "body": "Im Beweise-Tab ist der **Fallbrief** das Narrativ, das DisputeDesk anhängt, wenn Sie Beweise in Shopify speichern (zusammen mit den strukturierten Feldern und allen sicheren Datei-Links).\n\n**Welche Streitfälle das strukturierte Bank-Narrativ verwenden**\n\nFür diese Shopify-Grundfamilien folgt der Brief einem festen sechsteiligen Ablauf: Einleitung (Rückbuchungs-Streitfall und Rückforderungsbitte), Transaktionslegitimität (wenn Zahlungssignale vorhanden sind), Zahlungsverifizierungszeilen (nur für Daten, die tatsächlich im Paket sind), Kunde und Checkout (wenn Bestellbestätigung vorhanden ist), Gerät und Standort (wenn IP-Anreicherung vorhanden ist, mit neutraler Formulierung, falls das Land von der Lieferung abweicht) und Abschluss (Rückforderungsbitte).\n\n- Betrügerische Transaktion\n- Nicht erkannt\n- Produkt nicht erhalten\n- Doppelte Belastung\n- Allgemein\n\n**Zahlungszeilen**\n\nAutorisierungs- und Capture-Sätze erscheinen nur, wenn das Paket sie stützt. AVS- und CVV-Zeilen verwenden nur die starken Match-Codes (Y bzw. M); andere Codes erzeugen keinen generischen AVS/CVV-Satz, sodass der Brief nicht überzieht.\n\n**Welche Streitfälle ein anderes Argument behalten**\n\nRückerstattung nicht bearbeitet, Abo storniert, Produkt entspricht nicht der Beschreibung und digitale Streitfälle behalten familienspezifische Argumente (z. B. Rückerstattung erfolgt, Stornierungs-Zeitlinie oder Produkt-Konformität) anstelle der Legitimitäts-Vorlage im Betrugsstil.\n\n**Datenquelle**\n\nDer Text wird aus Ihrem Beweispaket aufgebaut (Bestellung, Zahlungsverifizierung, IP-Prüfung, Checkliste). Er legt keine internen Scores, „bankfähig“-Flags oder Roh-JSON offen. Nachdem Sie Beweise geändert oder das Paket neu generiert haben, regenerieren Sie das Argument, wenn der Brief aktualisiert werden soll."
       },
       "evidencePackTemplates": {
-        "title": "Bewispaket-Vorlagen verwenden",
-        "body": "Die Paketseite hilft Ihnen, Beweispakete mit Vorlagen zu erstellen.\n\nWenn Sie noch keine Pakete haben, sehen Sie empfohlene Vorlagen — vorgefertigte Pakete für häufige Streitfalltypen (z. B. Betrug, Produkt nicht erhalten). Jede Vorlagenkarte hat einen „Installieren“-Button: Klicken Sie darauf, um ein neues Paket aus dieser Vorlage für Ihren Shop zu erstellen. Nach der Installation gelangen Sie zur Detailseite des Pakets; Sie können es jederzeit über die Paketliste öffnen. Nutzen Sie „Zurück zu Paketen“ auf der Paketseite, um zur Bibliothek zurückzukehren.\n\n„Alle Vorlagen durchsuchen“ öffnet die vollständige Vorlagenbibliothek, damit Sie jede Vorlage ansehen und installieren können. „Von Grund auf erstellen“ startet ein leeres Paket.\n\nWenn Sie mindestens ein Paket haben, erscheint ggf. ein kurzer Banner mit dem Hinweis, weitere Vorlagen zu erkunden; Sie können ihn schließen oder auf „Vorlagen durchsuchen“ klicken, um die Bibliothek erneut zu öffnen.\n\nVorlagen sind eine schnelle Möglichkeit, Beweispakete nach Best Practices zu erstellen; Sie können Dokumente und Einstellungen nach der Installation jederzeit bearbeiten.\n\n**Hinweis:** **Automatisierungsregeln** (Regelseite oder Einrichtung) steuern, ob neue Streitfälle automatisch gebaut oder zuerst in die Prüfwarteschlange gehen. Sie legen nicht pro automatischem Build eine bestimmte Bibliotheksvorlage fest — siehe „Wie Automatisierung funktioniert“ und „Wie Bewispakete automatisch erstellt werden“."
+        "title": "Beweispaket-Vorlagen verwenden",
+        "body": "Die Paketseite hilft Ihnen, Beweispakete mit Vorlagen zu erstellen.\n\nWenn Sie noch keine Pakete haben, sehen Sie empfohlene Vorlagen — vorgefertigte Pakete für häufige Streitfalltypen (z. B. Betrug, Produkt nicht erhalten). Jede Vorlagenkarte hat einen „Installieren“-Button: Klicken Sie darauf, um ein neues Paket aus dieser Vorlage für Ihren Shop zu erstellen. Nach der Installation gelangen Sie zur Detailseite des Pakets; Sie können es jederzeit über die Paketliste öffnen. Nutzen Sie „Zurück zu Paketen“ auf der Paketseite, um zur Bibliothek zurückzukehren.\n\n„Alle Vorlagen durchsuchen“ öffnet die vollständige Vorlagenbibliothek, damit Sie jede Vorlage ansehen und installieren können. „Von Grund auf erstellen“ startet ein leeres Paket.\n\nWenn Sie mindestens ein Paket haben, erscheint ggf. ein kurzer Banner mit dem Hinweis, weitere Vorlagen zu erkunden; Sie können ihn schließen oder auf „Vorlagen durchsuchen“ klicken, um die Bibliothek erneut zu öffnen.\n\nVorlagen sind eine schnelle Möglichkeit, Beweispakete nach Best Practices zu erstellen; Sie können Dokumente und Einstellungen nach der Installation jederzeit bearbeiten.\n\n**Hinweis:** **Automatisierungsregeln** (Regelseite oder Einrichtung) steuern, ob neue Streitfälle automatisch gebaut oder zuerst in die Prüfwarteschlange gehen. Sie legen nicht pro automatischem Build eine bestimmte Bibliotheksvorlage fest — siehe „Wie Automatisierung funktioniert“ und „Wie Beweispakete automatisch erstellt werden“."
       },
       "definingStorePolicies": {
         "title": "Shop-Richtlinien definieren",
@@ -4359,7 +4359,7 @@
         },
         "disputeDetailPage": {
           "title": "Streitfall-Detail in dieser App",
-          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Eine Darstellung des Falls.** Die Seite beginnt mit einer kurzen Darstellung des Falls, und jeder Tab liest dieselben Fakten, sodass eine Zahl, ein Datum oder ein Satz in **Übersicht**, **Beweise** und **Prüfen und weiterleiten** nie voneinander abweicht. **Die Unterlagen** listen die Fakten, auf denen die Darstellung beruht, **Was bei dieser Art von Fall gewinnt** zeigt, wie viele der Punkte, auf die Banken achten, vorliegen, und **Was geschah** ist die Zeitleiste. Jeder Nachweis hat genau eine Rolle: **der Bank genannt**, **Kontext im Paket**, **intern gehalten** (nur für unsere Einschätzung verwendet, nie an Shopify oder die Bank gesendet) oder **nicht verfügbar**. Die **der Bank genannten** Punkte sind die, auf die sich das Schreiben stützt: Die Beweisgrundlage führt sie auf, und eine Zustellung wird im Versandabschnitt dargestellt. Ihre Bestellunterlagen oder eine Shop-Richtlinie gelten nur dann als genannt, wenn sich die Argumentation des Schreibens darauf stützt; sonst bleiben sie Kontext. Ein früher erstelltes Schreiben behält die Beweisgrundlage, mit der es verfasst wurde, und diese Seite beschreibt genau dieses Schreiben. Eine Rücksendung oder Erstattung, die Shopify zur Bestellung erfasst, wird einmal in den Unterlagen genannt, überall mit denselben Worten. Die Seite ist nur für Sie und nicht Teil dessen, was an die Bank geht; das Schreiben unter **Prüfen und weiterleiten** ist das Dokument, das die Bank erhält."
+          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Beweispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Beweispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Eine Darstellung des Falls.** Die Seite beginnt mit einer kurzen Darstellung des Falls, und jeder Tab liest dieselben Fakten, sodass eine Zahl, ein Datum oder ein Satz in **Übersicht**, **Beweise** und **Prüfen und weiterleiten** nie voneinander abweicht. **Die Unterlagen** listen die Fakten, auf denen die Darstellung beruht, **Was bei dieser Art von Fall gewinnt** zeigt, wie viele der Punkte, auf die Banken achten, vorliegen, und **Was geschah** ist die Zeitleiste. Jeder Nachweis hat genau eine Rolle: **der Bank genannt**, **Kontext im Paket**, **intern gehalten** (nur für unsere Einschätzung verwendet, nie an Shopify oder die Bank gesendet) oder **nicht verfügbar**. Die **der Bank genannten** Punkte sind die, auf die sich das Schreiben stützt: Die Beweisgrundlage führt sie auf, und eine Zustellung wird im Versandabschnitt dargestellt. Ihre Bestelldaten oder eine Shop-Richtlinie gelten nur dann als genannt, wenn sich die Argumentation des Schreibens darauf stützt; sonst bleiben sie Kontext. Ein früher erstelltes Schreiben behält die Beweisgrundlage, mit der es verfasst wurde, und diese Seite beschreibt genau dieses Schreiben. Eine Rücksendung oder Erstattung, die Shopify zur Bestellung erfasst, wird einmal in den Unterlagen genannt, überall mit denselben Worten. Die Seite ist nur für Sie und nicht Teil dessen, was an die Bank geht; das Schreiben unter **Prüfen und weiterleiten** ist das Dokument, das die Bank erhält."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
@@ -4462,7 +4462,7 @@
     "policiesTitle": "Geschäftsrichtlinien",
     "policiesDesc": "Laden Sie Ihre Geschäftsrichtlinien hoch und verwalten Sie sie, um sie schnell als Beweismittel in Streitfällen einzusetzen.",
     "completeTitle": "Verbinden Sie Ihren Shop! 🚀",
-    "completeDesc": "Sie haben gesehen, was DisputeDesk kann. Verbinden Sie jetzt Ihren echten Shopify-Shop, um Streitfälle zu verwalten, Bewispakete zu erstellen und Rückbuchungen automatisch zu gewinnen.",
+    "completeDesc": "Sie haben gesehen, was DisputeDesk kann. Verbinden Sie jetzt Ihren echten Shopify-Shop, um Streitfälle zu verwalten, Beweispakete zu erstellen und Rückbuchungen automatisch zu gewinnen.",
     "connectStore": "Shop verbinden"
   },
   "marketing": {
