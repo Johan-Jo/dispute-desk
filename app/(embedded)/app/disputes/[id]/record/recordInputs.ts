@@ -15,6 +15,7 @@ import {
   type RecordStatus,
 } from "@/lib/disputes/disputeRecord";
 import { bankIncludedFacts } from "@/lib/defence/bankInclusion";
+import { letterCitations } from "@/lib/disputes/letterCitations";
 import type { EvidenceFact } from "@/lib/defence/types";
 import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 import type { StorePatterns } from "@/lib/disputes/storePatterns";
@@ -35,6 +36,9 @@ interface PackageRow {
   validation_status?: string | null;
   pdf_path?: string | null;
   facts_json?: unknown;
+  document_provenance_json?: unknown;
+  narrative_json?: unknown;
+  reason_code_module?: string | null;
 }
 
 function pkgRow(v: unknown): PackageRow | null {
@@ -148,6 +152,18 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
   }
 
   const latest = pkgRow(data.defencePackage?.latest);
+
+  // What the STORED letter cites. The same row the Review tab draws the letter
+  // from (decided / saved: the package that was filed; otherwise the newest),
+  // read through the same derivation as the letter's own Evidence Basis, under
+  // the rule that package was built with. A decided dispute with no submitted
+  // package has no letter of ours to describe (the page already says we did not
+  // file), so `latest` is never borrowed for it; a failed or skipped build
+  // printed no letter either (`letterCitations` returns null for those).
+  const savedForLetter = stage === "saved" || stage === "under_review";
+  const letterRow = decided ? bank : savedForLetter ? (bank ?? latest) : latest;
+  const letter = letterRow ? letterCitations(letterRow) : null;
+
   const run = data.gorgiasComms?.latestRun ?? null;
   const sit = d.orderSituation ?? null;
   const responder = dv?.response?.responder ?? null;
@@ -198,6 +214,7 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
       : { version, preparedAt: latest?.generated_at ?? null, filedAt: null },
     lines,
     bankCitedFields,
+    letter,
     refund: sit?.refund === "none" || sit?.refund === "some" ? sit.refund : "unknown",
     timelineEvents: (d.timelineEvents ?? []).map((e) => ({ at: e.at, text: e.text })),
     gorgiasFoundNone: data.gorgiasComms?.integrationStatus === "connected" && run?.status === "no_matches",

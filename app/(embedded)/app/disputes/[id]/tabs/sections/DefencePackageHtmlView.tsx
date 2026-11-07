@@ -34,7 +34,12 @@ import {
   SECTION_TITLES,
   sectionTitleFor,
 } from "@/lib/defence/render/sections";
-import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
+import {
+  argumentFactIdsOfNarrative,
+  argumentFactIdsOfProvenance,
+  EVIDENCE_BASIS_RULE_CITED,
+  evidenceBasisRuleOf,
+} from "@/lib/defence/citedFacts";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
 import { familyKeyForModule, ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
 import { buildCaseDetailsRows } from "@/lib/defence/render/caseDetails";
@@ -55,7 +60,7 @@ import {
   addressCard,
   laterOrderCard,
   productsOf,
-  deliveryFactIds,
+  evidenceBasisFor,
   shipmentCards,
   shipmentsOf,
   singleShipmentOf,
@@ -132,6 +137,9 @@ interface DefencePackageRow {
   validation_status: "ok" | "failed" | "skipped" | null;
   narrative_json: DefenceNarrativeOutput | null;
   facts_json: EvidenceFact[] | null;
+  /** Carries the Evidence Basis rule stamp (`lib/defence/citedFacts.ts`);
+   *  absent on a package stored before the stamp, which renders the legacy table. */
+  document_provenance_json?: unknown;
 }
 
 export interface DisputeContextLike {
@@ -515,8 +523,17 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   // Same as the PDF: a single parcel's carrier record is a card, and the
   // Evidence Basis leaves out what the card shows.
   const single = multiParcel ? null : singleShipmentOf(facts, chrono, dispute?.orderName ?? null);
-  const shownOnCard = single ? deliveryFactIds(facts) : new Set<string>();
-  const evidenceBasis = buildEvidenceBasisRows(facts).filter((r) => !shownOnCard.has(r.factId));
+  // The rule the stored letter was built under (absent = every package built
+  // before the marker, which keeps its table exactly). Same derivation as the PDF.
+  const evidenceRule = evidenceBasisRuleOf(row.document_provenance_json);
+  const basis = evidenceBasisFor(
+    facts,
+    evidenceRule,
+    evidenceRule === EVIDENCE_BASIS_RULE_CITED
+      ? (argumentFactIdsOfProvenance(row.document_provenance_json) ?? argumentFactIdsOfNarrative(narrative, moduleKey))
+      : undefined,
+  );
+  const evidenceBasis = basis.rows;
   const productNames = [...lineItems.map((it) => it.description), ...shipments.map(productsOf)];
   const caseContext = {
     orderName: dispute?.orderName ?? null,
@@ -726,7 +743,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
 
         {/* The PDF prints no Evidence Basis without rows; neither does the
             preview when a shipment card already shows the record. */}
-        {!multiParcel && !(single && evidenceBasis.length === 0) ? (
+        {basis.tableAllowed && !(single && evidenceBasis.length === 0) ? (
           <Section number={num()} title={t("evidenceBasis")}>
             {evidenceBasis.length === 0 ? (
               <p style={css.paragraph}>{t("noBankEligibleFacts")}</p>

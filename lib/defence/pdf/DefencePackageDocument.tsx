@@ -25,8 +25,14 @@ import React from "react";
 import { Document, Font, Image, Link, Page, Text, View } from "@react-pdf/renderer";
 import { exhibitCaption, type ProductListingExhibit } from "../productListingExhibit";
 import { COLORS, styles } from "./styles";
-import { buildEvidenceBasisRows } from "./evidenceBasisRows";
+import type { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
+import {
+  argumentFactIdsOfBlocks,
+  EVIDENCE_BASIS_RULE_CITED,
+  EVIDENCE_BASIS_RULE_LEGACY,
+  type EvidenceBasisRule,
+} from "../citedFacts";
 import { buildChronologyEvents, familyOmitsArrival, type ChronologyEvent } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
 import { buildLineItems, type LineItem } from "../render/lineItems";
@@ -35,7 +41,7 @@ import { formatMoneyDisplay, reasonCodeForNetwork } from "../render/formatting";
 // shared with the in-app preview, so the two cannot drift.
 import {
   dateParts,
-  deliveryFactIds,
+  evidenceBasisFor,
   describeChronologyEvent,
   emphasisSegments,
   lineItemsTotal,
@@ -156,6 +162,18 @@ export interface DefencePackageDocumentData {
    * byte-identical while the switch is off.
    */
   issuerSafeSupportingIndex?: boolean;
+  /**
+   * Which Evidence Basis rule this letter is built under
+   * (`lib/defence/citedFacts.ts`). 2 = the table lists the CITED facts only,
+   * the store's own records only when the letter's printed argument relies on
+   * them, and a delivery its carrier card already prints is not repeated.
+   * Absent keeps the shipped table exactly: every
+   * bank-included fact, so the legacy path is byte-identical.
+   */
+  evidenceBasisRule?: EvidenceBasisRule;
+  /** Rule 2: the facts the printed letter relies on, from its claims. Absent =
+   *  derive them from the composed blocks' `usedFactIds`. */
+  evidenceBasisArgued?: readonly string[];
 }
 
 /* ── Helpers ── */
@@ -687,8 +705,20 @@ export function DefencePackageDocument({
   // Single parcel: the carrier record as a card; the Evidence Basis then
   // leaves out the rows the card already shows.
   const single = multiParcel ? null : singleShipmentOf(approvedFacts, chronology, meta.orderName);
-  const shownOnCard = single ? deliveryFactIds(approvedFacts) : new Set<string>();
-  const evidenceRows = buildEvidenceBasisRows(approvedFacts).filter((r) => !shownOnCard.has(r.factId));
+  // One derivation for the rows and for whether the table prints at all,
+  // shared with the preview and the dispute page (`evidenceBasisFor`). A
+  // package carrying no marker is rule 1 and prints exactly what it always did.
+  const evidenceRule = data.evidenceBasisRule ?? EVIDENCE_BASIS_RULE_LEGACY;
+  const basis = evidenceBasisFor(
+    approvedFacts,
+    evidenceRule,
+    evidenceRule === EVIDENCE_BASIS_RULE_CITED
+      ? data.evidenceBasisArgued
+        ? new Set(data.evidenceBasisArgued)
+        : argumentFactIdsOfBlocks(composedBlocks)
+      : undefined,
+  );
+  const evidenceRows = basis.rows;
   const included = issuerSafe
     ? manualEvidence.filter(isBankIncludedManualEvidence)
     : manualEvidence.filter((m) => m.includeInPackage);
@@ -820,7 +850,7 @@ export function DefencePackageDocument({
             prose("policyArgument")
           )}
 
-          {!multiParcel && evidenceRows.length > 0 ? (
+          {basis.tableAllowed && evidenceRows.length > 0 ? (
             <Section number={num()} title="Evidence Basis" keepTogether={evidenceRows.length <= 8}>
               <EvidenceBasisTable rows={evidenceRows} />
             </Section>

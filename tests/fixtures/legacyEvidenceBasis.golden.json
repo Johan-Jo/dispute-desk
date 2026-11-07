@@ -1,0 +1,670 @@
+{
+ "captured:open_368528_v1": {
+  "allRows": [
+   {
+    "factId": "ip_location_check#0",
+    "category": "ip_location",
+    "label": "IP & location consistency",
+    "value": "IP geolocation matches the billing/shipping country",
+    "link": null
+   },
+   {
+    "factId": "delivery_proof#gid://shopify/Fulfillment/6780875505857",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Oct 25, 2026, 19:33 UTC",
+    "link": {
+     "url": "https://stallionexpress.ca/track/?tracking=261015NVT5",
+     "label": "Stallion Express 261015NVT5"
+    }
+   },
+   {
+    "factId": "order_confirmation#0",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "fraud_risk_screening#0",
+    "category": "fraud_screening",
+    "label": "Pre-authorization fraud screening",
+    "value": "Shopify recommended ACCEPT — Characteristics of this order are similar to non-fraudulent orders observed in the past; Card Verification Value (CVV) is correct; Billing street address matches credit card's registered address",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#0",
+    "category": "no_return_initiated",
+    "label": "No return recorded in Shopify",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "ip_location_check#0",
+    "category": "ip_location",
+    "label": "IP & location consistency",
+    "value": "IP geolocation matches the billing/shipping country",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#0",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "fraud_risk_screening#0",
+    "category": "fraud_screening",
+    "label": "Pre-authorization fraud screening",
+    "value": "Shopify recommended ACCEPT — Characteristics of this order are similar to non-fraudulent orders observed in the past; Card Verification Value (CVV) is correct; Billing street address matches credit card's registered address",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#0",
+    "category": "no_return_initiated",
+    "label": "No return recorded in Shopify",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "captured:decided_v11": {
+  "allRows": [
+   {
+    "factId": "ip_location_check#0",
+    "category": "ip_location",
+    "label": "IP & location consistency",
+    "value": "IP geolocation matches the billing/shipping country",
+    "link": null
+   },
+   {
+    "factId": "delivery_proof#gid://shopify/Fulfillment/6557125771457",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Jul 10, 2026, 19:28 UTC",
+    "link": {
+     "url": "https://tools.usps.com/tracking/420774699261290416102420763900",
+     "label": "TechSHIP 420774699261290416102420763900"
+    }
+   },
+   {
+    "factId": "no_return_initiated#0",
+    "category": "no_return_initiated",
+    "label": "No return initiated",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "ip_location_check#0",
+    "category": "ip_location",
+    "label": "IP & location consistency",
+    "value": "IP geolocation matches the billing/shipping country",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#0",
+    "category": "no_return_initiated",
+    "label": "No return initiated",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "captured:decided_v5_legacy_flags": {
+  "allRows": [
+   {
+    "factId": "f5",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Jul 9, 2026, 15:35 UTC",
+    "link": {
+     "url": "https://tools.usps.com/tracking/9261290416102420718795",
+     "label": "TechSHIP 420115809261290416102420718795"
+    }
+   },
+   {
+    "factId": "f1",
+    "category": "no_return_initiated",
+    "label": "No return initiated",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "f1",
+    "category": "no_return_initiated",
+    "label": "No return initiated",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "fraud_clean": {
+  "allRows": [
+   {
+    "factId": "avs_cvv_match#1",
+    "category": "payment_authentication",
+    "label": "Payment authentication",
+    "value": "The billing address matched the issuer's records and the card verification code matched the issuer's records",
+    "link": null
+   },
+   {
+    "factId": "ip_location_check#3",
+    "category": "ip_location",
+    "label": "IP & location consistency",
+    "value": "IP geolocation matches the billing/shipping country",
+    "link": null
+   },
+   {
+    "factId": "delivery_proof#5",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Oct 25, 2026, 19:33 UTC",
+    "link": {
+     "url": "https://example.test/t/TRK12345",
+     "label": "Northwind Express TRK12345"
+    }
+   },
+   {
+    "factId": "customer_account_info#8",
+    "category": "prior_customer_history",
+    "label": "Customer account history",
+    "value": "3 prior undisputed orders",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#7",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#9",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "fraud_risk_screening#2",
+    "category": "fraud_screening",
+    "label": "Pre-authorization fraud screening",
+    "value": "Shopify recommended ACCEPT — Characteristics of this order are similar to non-fraudulent orders observed in the past",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#6",
+    "category": "no_return_initiated",
+    "label": "No return recorded in Shopify",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "avs_cvv_match#1",
+    "category": "payment_authentication",
+    "label": "Payment authentication",
+    "value": "The billing address matched the issuer's records and the card verification code matched the issuer's records",
+    "link": null
+   },
+   {
+    "factId": "ip_location_check#3",
+    "category": "ip_location",
+    "label": "IP & location consistency",
+    "value": "IP geolocation matches the billing/shipping country",
+    "link": null
+   },
+   {
+    "factId": "customer_account_info#8",
+    "category": "prior_customer_history",
+    "label": "Customer account history",
+    "value": "3 prior undisputed orders",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#7",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#9",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "fraud_risk_screening#2",
+    "category": "fraud_screening",
+    "label": "Pre-authorization fraud screening",
+    "value": "Shopify recommended ACCEPT — Characteristics of this order are similar to non-fraudulent orders observed in the past",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#6",
+    "category": "no_return_initiated",
+    "label": "No return recorded in Shopify",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "not_received_delivered": {
+  "allRows": [
+   {
+    "factId": "delivery_proof#11",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Oct 25, 2026, 19:33 UTC",
+    "link": {
+     "url": "https://example.test/t/TRK12345",
+     "label": "Northwind Express TRK12345"
+    }
+   },
+   {
+    "factId": "customer_communication#16",
+    "category": "customer_communication",
+    "label": "Customer communication",
+    "value": "Customer confirmed order, Oct 20, 2026, 10:00 UTC",
+    "link": null
+   },
+   {
+    "factId": "customer_account_info#15",
+    "category": "prior_customer_history",
+    "label": "Customer account history",
+    "value": "3 prior undisputed orders",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#12",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#14",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "shipping_policy#13",
+    "category": "policy_shipping",
+    "label": "Shipping policy",
+    "value": "Published on the store",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "customer_communication#16",
+    "category": "customer_communication",
+    "label": "Customer communication",
+    "value": "Customer confirmed order, Oct 20, 2026, 10:00 UTC",
+    "link": null
+   },
+   {
+    "factId": "customer_account_info#15",
+    "category": "prior_customer_history",
+    "label": "Customer account history",
+    "value": "3 prior undisputed orders",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#12",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#14",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "shipping_policy#13",
+    "category": "policy_shipping",
+    "label": "Shipping policy",
+    "value": "Published on the store",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "not_received_multi_parcel": {
+  "allRows": [
+   {
+    "factId": "delivery_proof#18",
+    "category": "delivery_proof",
+    "label": "Shipment — Bundle",
+    "value": "Shipped by merchant Oct 16, 2026, 10:00 UTC · In transit with the carrier · GOFO GF1",
+    "link": null
+   },
+   {
+    "factId": "delivery_proof#18",
+    "category": "delivery_proof",
+    "label": "Shipment — Sunscreen",
+    "value": "Shipped by merchant Oct 17, 2026, 10:00 UTC · Delivered Oct 22, 2026, 10:00 UTC · USPS US1",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#19",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "shipping_policy#20",
+    "category": "policy_shipping",
+    "label": "Shipping policy",
+    "value": "Published on the store",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "delivery_proof#18",
+    "category": "delivery_proof",
+    "label": "Shipment — Bundle",
+    "value": "Shipped by merchant Oct 16, 2026, 10:00 UTC · In transit with the carrier · GOFO GF1",
+    "link": null
+   },
+   {
+    "factId": "delivery_proof#18",
+    "category": "delivery_proof",
+    "label": "Shipment — Sunscreen",
+    "value": "Shipped by merchant Oct 17, 2026, 10:00 UTC · Delivered Oct 22, 2026, 10:00 UTC · USPS US1",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#19",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "shipping_policy#20",
+    "category": "policy_shipping",
+    "label": "Shipping policy",
+    "value": "Published on the store",
+    "link": null
+   }
+  ],
+  "pdfTable": false,
+  "htmlTable": false
+ },
+ "not_received_in_transit": {
+  "allRows": [
+   {
+    "factId": "delivery_proof#22",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "In transit with the carrier · Northwind Express TRK9",
+    "link": null
+   }
+  ],
+  "letterRows": [],
+  "pdfTable": false,
+  "htmlTable": false
+ },
+ "credit_not_processed": {
+  "allRows": [
+   {
+    "factId": "customer_communication#24",
+    "category": "customer_communication",
+    "label": "Customer communication",
+    "value": "Customer confirmed order, Oct 20, 2026, 10:00 UTC",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#25",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#26",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#23",
+    "category": "no_return_initiated",
+    "label": "No return recorded in Shopify",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "customer_communication#24",
+    "category": "customer_communication",
+    "label": "Customer communication",
+    "value": "Customer confirmed order, Oct 20, 2026, 10:00 UTC",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#25",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#26",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "no_return_initiated#23",
+    "category": "no_return_initiated",
+    "label": "No return recorded in Shopify",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "not_as_described": {
+  "allRows": [
+   {
+    "factId": "delivery_proof#29",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Oct 25, 2026, 19:33 UTC",
+    "link": {
+     "url": "https://example.test/t/TRK12345",
+     "label": "Northwind Express TRK12345"
+    }
+   },
+   {
+    "factId": "order_confirmation#30",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#31",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "product_description#27",
+    "category": "manual_evidence",
+    "label": "Product listing",
+    "value": "Uploaded",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "order_confirmation#30",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#31",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "product_description#27",
+    "category": "manual_evidence",
+    "label": "Product listing",
+    "value": "Uploaded",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "subscription": {
+  "allRows": [
+   {
+    "factId": "customer_communication#33",
+    "category": "customer_communication",
+    "label": "Customer communication",
+    "value": "Customer confirmed order, Oct 20, 2026, 10:00 UTC",
+    "link": null
+   },
+   {
+    "factId": "customer_account_info#32",
+    "category": "prior_customer_history",
+    "label": "Customer account history",
+    "value": "3 prior undisputed orders",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#34",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#35",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "subscription_terms#36",
+    "category": "subscription_terms",
+    "label": "Subscription terms",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "customer_communication#33",
+    "category": "customer_communication",
+    "label": "Customer communication",
+    "value": "Customer confirmed order, Oct 20, 2026, 10:00 UTC",
+    "link": null
+   },
+   {
+    "factId": "customer_account_info#32",
+    "category": "prior_customer_history",
+    "label": "Customer account history",
+    "value": "3 prior undisputed orders",
+    "link": null
+   },
+   {
+    "factId": "order_confirmation#34",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   },
+   {
+    "factId": "refund_policy#35",
+    "category": "policy_refund",
+    "label": "Refund policy",
+    "value": "Published on the store",
+    "link": null
+   },
+   {
+    "factId": "subscription_terms#36",
+    "category": "subscription_terms",
+    "label": "Subscription terms",
+    "value": "Confirmed",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ },
+ "never_cited": {
+  "allRows": [
+   {
+    "factId": "delivery_proof#42",
+    "category": "delivery_proof",
+    "label": "Delivery confirmation",
+    "value": "Delivered Oct 25, 2026, 19:33 UTC",
+    "link": {
+     "url": "https://example.test/t/TRK12345",
+     "label": "Northwind Express TRK12345"
+    }
+   },
+   {
+    "factId": "order_confirmation#43",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   }
+  ],
+  "letterRows": [
+   {
+    "factId": "order_confirmation#43",
+    "category": "order_record",
+    "label": "Order record",
+    "value": "Order on record",
+    "link": null
+   }
+  ],
+  "pdfTable": true,
+  "htmlTable": true
+ }
+}
