@@ -37,6 +37,7 @@ export interface EffectivePackViewInput {
   packSections: unknown;
   evidenceItems?: Parameters<typeof assembleEffectiveChecklist>[0]["evidenceItems"];
   returnScope?: Parameters<typeof assembleEffectiveChecklist>[0]["returnScope"];
+  disputeReason: string | null;
 }
 
 /** Pure. null when there is no stored (non-empty) v2 checklist. */
@@ -48,6 +49,7 @@ export function effectivePackView(input: EffectivePackViewInput): EffectivePackV
     packSections: input.packSections,
     evidenceItems: input.evidenceItems,
     returnScope: input.returnScope,
+    disputeReason: input.disputeReason,
   });
   return {
     checklist: effective.checklist,
@@ -77,6 +79,7 @@ export async function loadEffectivePackView(
     checklistV2: unknown;
     packSections: unknown;
     evidenceItems?: EffectivePackViewInput["evidenceItems"];
+    disputeReason: string | null;
   },
 ): Promise<EffectivePackView | null> {
   if (args.disputeId == null) return null;
@@ -86,6 +89,7 @@ export async function loadEffectivePackView(
     checklistV2: args.checklistV2,
     packSections: args.packSections,
     evidenceItems: args.evidenceItems,
+    disputeReason: args.disputeReason,
     returnScope: await loadReturnScopeForPack(db, {
       shopId: args.shopId,
       disputeId: args.disputeId,

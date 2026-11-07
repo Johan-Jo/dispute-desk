@@ -4042,8 +4042,9 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   `no_return_initiated` row still reads `missing` (the collector rightly stayed silent), so every surface counted
   a row it could never fill and said "No return initiated" beside a recorded return. `assembleEffectiveChecklist`
   (`lib/packs/effectiveChecklist.ts`) applies the existing reconcile, then drops a row whose field is inapplicable
-  per `fieldApplicability` (`FIELD_PRECONDITIONS` in `completeness.ts`; the only entry is `no_return_initiated`,
-  delegating to `noReturnApplicability` = `noReturnFactVerdict` composed with `hasReturnedToSenderShipment`).
+  per `fieldApplicability` (`FIELD_PRECONDITIONS` in `completeness.ts`; entries: `no_return_initiated`,
+  delegating to `noReturnApplicability` = `noReturnFactVerdict` composed with `hasReturnedToSenderShipment`, and
+  `refund_record`, see F-1b below).
   Rules: an `available` row is never hidden (kept and logged as `contradictedAvailable`); waived rows are dropped;
   an UNKNOWN return status (packs built before 2026-10-02) is applicable and never a confirmed return on its own, but a carrier that reconciled a parcel to return-to-sender is independent evidence and still makes the row inapplicable; the merchant's
   "request received" answer counts only when the setting is on and only for the PACK's response cycle
@@ -4081,7 +4082,25 @@ Plan: `docs/plans/order-situation-drives-dispute.plan.md` (Phase A).
   is classified `world_precondition` | `evidence_absent` | `needs_decision` with a written reason. A test enforces
   completeness against the code templates (plus the DB-only `tds_authentication` and `device_session_consistency`),
   that `world_precondition` fields and `FIELD_PRECONDITIONS` entries are the same set, and that `needs_decision`
-  only shrinks (today: `refund_record`, owner maintainer, F-1b). It is a reviewed classification, not a proof.
+  only shrinks (today: empty). It is a reviewed classification, not a proof.
+- **F-1b, read time only: `refund_record` is inapplicable when no refund is on record** (plan §3.1).
+  `refundRecordApplicability` (`lib/packs/refundRecordApplicability.ts`) is the second `FIELD_PRECONDITIONS` entry.
+  On `CREDIT_NOT_PROCESSED` and `FRAUDULENT` disputes (the reasons whose template row is `critical`), a known
+  refunded total that is not above zero (`order.totals.refunded`, the same guard `orderSource` uses to emit the field)
+  makes the row inapplicable (`no_refund_on_record`, a code; there is no new copy because the row is simply not shown).
+  An unknown total (no order section), a missing reason, or any other reason is applicable (fail open); an `available`
+  row is never hidden. `recordOrderContext` (`effectiveChecklist.ts`) is the one builder of the read-time context for
+  the assembler and the decided loader, so the workspace, the embedded/portal pack pages, the include endpoint, the
+  evidence PDF and the dispute record (`buildDecidedView` omits an uncollected `refundRecord` row) agree. The assembler
+  takes the dispute's LIVE reason (`disputeReason`, required, from `disputes.reason`; never the build-time `pack_json.disputeReason`), and
+  the include endpoint now answers 409 `FIELD_NOT_APPLICABLE` to `force_include` on such a row. The refunded total is the
+  stored order section's, so a refund issued after the build keeps the row hidden until the pack is rebuilt (the same
+  staleness as the no-return row). **Not changed, and
+  not approved:** the CNP template mode, stored `checklist_v2`, `completeness_score`, submission readiness, the
+  auto-save gate and the automation decision (all still read the stored values); build time never sets
+  `OrderContext.refundRecordFact`. Effect: the merchant-facing percentage rises on the affected packs (up to +24).
+  Read-only measurement exports: `scripts/sql/f1b_latest_packs_export.sql`, `scripts/sql/f1b_enabled_rules_export.sql`
+  (run with `npm run db:query:prod -- --read-only --output json --file ...`).
 - **Refund record and return-status rows on the pack page** go to the status-only bucket (no drop zone), and the upload
   route answers 409 `FIELD_NOT_UPLOADABLE` for them. Refund dates in `refundStatement` are `YYYY-MM-DD` (language-neutral).
 - **Merchant note.** The workspace route returns `dispute.orderSituation` (`{ ...situation, asOf }`, `asOf` = the

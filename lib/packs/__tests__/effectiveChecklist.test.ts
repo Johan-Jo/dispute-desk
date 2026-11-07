@@ -27,6 +27,7 @@ function run(c: Case, returnScope?: Parameters<typeof assembleEffectiveChecklist
   const frozen = deepFreeze(structuredClone(c));
   return assembleEffectiveChecklist({
     storedChecklist: frozen.checklist_v2,
+    disputeReason: null,
     packSections: frozen.sections,
     evidenceItems: [],
     returnScope,
@@ -92,7 +93,7 @@ describe("synthetic shapes from the plan (§2.7)", () => {
     data: { ...(returnStatus ? { returnStatus } : {}), totals: refunded == null ? undefined : { refunded } },
   });
   const assemble = (rows: unknown, sections: unknown, scope?: Parameters<typeof assembleEffectiveChecklist>[0]["returnScope"]) =>
-    assembleEffectiveChecklist({ storedChecklist: rows, packSections: sections, returnScope: scope });
+    assembleEffectiveChecklist({ storedChecklist: rows, packSections: sections, disputeReason: null, returnScope: scope });
 
   it("a processed refund with no recorded status is a refund on record (3 prod packs)", () => {
     const out = assemble([row("no_return_initiated", "missing")], [order(null, "25.00")]);

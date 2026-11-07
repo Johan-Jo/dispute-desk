@@ -571,6 +571,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         packSections: (packRow.pack_json as { sections?: unknown } | null)?.sections,
         evidenceItems: itemsRes.data ?? [],
         returnScope: readReturnScope,
+        disputeReason: (row.reason as string | null) ?? null,
       })
     : null;
   const reconciledChecklistV2: ChecklistItemV2[] =

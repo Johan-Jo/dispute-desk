@@ -25,6 +25,7 @@ import {
   reconcileChecklistWithCollectedFields,
 } from "./checklistReconcile";
 import { noReturnApplicability } from "./noReturnApplicability";
+import { refundRecordApplicability } from "./refundRecordApplicability";
 import type { EvidenceSection } from "./types";
 
 export interface EffectiveChecklistInput {
@@ -35,6 +36,9 @@ export interface EffectiveChecklistInput {
    *  for the PACK's response cycle, plus the read-time support-inbox signal
    *  (`customerAskedInSupport`). `undefined` = setting off and no signal. */
   returnScope?: ReturnScopeInput | null;
+  /** The dispute's reason (Shopify enum). Gates the world preconditions that
+   *  are reason-specific (`refund_record`). Absent = applicable (fail open). */
+  disputeReason: string | null;
 }
 
 export interface EffectiveChecklist {
@@ -71,6 +75,27 @@ export function orderFactsFromSections(sections: readonly EvidenceSection[]): {
   };
 }
 
+/**
+ * What the record makes impossible, as an `OrderContext` for
+ * `fieldApplicability` / `inapplicableFields`. The ONE builder: the assembler
+ * (workspace, pack pages, include endpoint) and the decided loader both call it,
+ * so a page and the dispute record can never disagree about a row.
+ */
+export function recordOrderContext(input: {
+  sections: readonly EvidenceSection[];
+  returnScope?: ReturnScopeInput | null;
+  disputeReason: string | null;
+}): OrderContext {
+  const facts = orderFactsFromSections(input.sections);
+  return {
+    noReturnFact: noReturnApplicability({ ...facts, returnScope: input.returnScope }, input.sections),
+    refundRecordFact: refundRecordApplicability({
+      disputeReason: input.disputeReason,
+      totalRefunded: facts.totalRefunded,
+    }),
+  } as OrderContext;
+}
+
 export function assembleEffectiveChecklist(input: EffectiveChecklistInput): EffectiveChecklist {
   const stored = normalizeChecklistV2Shape(input.storedChecklist) ?? [];
   const sections = normaliseSections(input.packSections);
@@ -78,8 +103,11 @@ export function assembleEffectiveChecklist(input: EffectiveChecklistInput): Effe
     sections: sections as Array<{ fieldsProvided?: string[] | null }>,
     evidenceItems: input.evidenceItems ?? [],
   });
-  const facts = orderFactsFromSections(sections);
-  const ctx = { noReturnFact: noReturnApplicability({ ...facts, returnScope: input.returnScope }, sections) } as OrderContext;
+  const ctx = recordOrderContext({
+    sections,
+    returnScope: input.returnScope,
+    disputeReason: input.disputeReason,
+  });
 
   const reconciled = reconcileChecklistWithCollectedFields(stored, collected);
   const checklist = reconcileChecklistWithCollectedFields(stored, collected, {
