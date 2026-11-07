@@ -19,7 +19,8 @@ import { DefencePackageHtmlView } from "@/app/(embedded)/app/disputes/[id]/tabs/
 import { DefencePackageDocument, type DefencePackageDocumentData } from "@/lib/defence/pdf/DefencePackageDocument";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
 import { buildDocumentProvenance } from "@/lib/defence/package/documentProvenance";
-import { argumentFactIdsOfDraft, toNarrative } from "@/lib/defence/counsel/checks";
+import { argumentFactIdsBySlot, argumentFactIdsOfDraft, toNarrative } from "@/lib/defence/counsel/checks";
+import { narrativeJson } from "../fixtures/defencePackageShapes";
 import { CREDIT_NOT_PROCESSED_BRIEF } from "@/lib/defence/counsel/briefs";
 import { buildCreditNotProcessedLedger } from "@/lib/defence/counsel/creditNotProcessedLedger";
 import { buildItemNotReceivedLedger } from "@/lib/defence/counsel/claimLedger";
@@ -27,7 +28,7 @@ import { disputeFrame, requestLine } from "@/lib/defence/counsel/frame";
 import { writeLetter, type ModelCall } from "@/lib/defence/counsel/generate";
 import { NOT_AS_DESCRIBED } from "@/lib/defence/counsel/playbooks";
 import { ledgerForBrief } from "@/lib/defence/counsel/run";
-import { CURRENT_EVIDENCE_BASIS_RULE } from "@/lib/defence/citedFacts";
+import { argumentFactIdsFromClaims, argumentFactIdsOfLetter, CURRENT_EVIDENCE_BASIS_RULE } from "@/lib/defence/citedFacts";
 import { letterCitations } from "@/lib/disputes/letterCitations";
 import type { CounselDraft, LedgerClaim, LedgerInput } from "@/lib/defence/counsel/types";
 import type { DefenceNarrativeOutput, EvidenceFact } from "@/lib/defence/types";
@@ -278,5 +279,89 @@ describe("a real counsel letter (item not received): the shipping policy", () =>
       NR_FACTS,
     );
     expect(ids).toContain("order_confirmation#0");
+  });
+});
+
+/* ── the relied-on set of a FINISHED letter ── */
+
+describe("argumentFactIdsOfLetter / argumentFactIdsFromClaims", () => {
+  const F = [
+    { id: "order#0", value: { fieldKey: "order_confirmation" } },
+    { id: "ship_policy#0", value: { fieldKey: "shipping_policy" } },
+    { id: "refund_policy#0", value: { fieldKey: "refund_policy" } },
+    { id: "delivery#0", value: { fieldKey: "delivery_proof" } },
+  ];
+  const claim = (id: string, sources: string[]) => ({ id, sources });
+
+  it.each([
+    ["pack.order.lineItems", "order#0"],
+    ["pack.order.createdAt", "order#0"],
+    ["pack.order.totals.presentment", "order#0"],
+    ["pack.order.shippingAddressFull", "order#0"],
+    ["pack.order.billingAddressFull", "order#0"],
+    ["pack.shipping_policy", "ship_policy#0"],
+    ["policy_snapshots.extracted_text", "refund_policy#0"],
+    ["delivery#0", "delivery#0"],
+  ])("a claim sourced from %s relies on %s", (source, factId) => {
+    expect(argumentFactIdsFromClaims([["c"]], [claim("c", [source])], F)).toEqual([factId]);
+  });
+
+  it.each(["pack.order.returnStatus", "dispute.reason", "pack.payment.avsResultCode", "pack.shipping.fulfillments.items"])(
+    "a claim sourced from %s relies on no store record",
+    (source) => {
+      expect(argumentFactIdsFromClaims([["c"]], [claim("c", [source])], F)).toEqual([]);
+    },
+  );
+
+  const narrativeWith = (slots: Record<string, string>, omitted: string[] = []) => {
+    const n = narrativeJson({}) as unknown as Record<string, any>;
+    for (const [k, text] of Object.entries(slots)) n[k] = { text, usedFactIds: [] };
+    n.omittedSections = omitted.map((sectionKey) => ({ sectionKey, reason: "x" }));
+    return n as unknown as DefenceNarrativeOutput;
+  };
+
+  it("only slots that still print count: a section emptied or omitted after the draft is dropped", () => {
+    const bySlot = { executiveSummary: ["delivery#0"], fulfillmentArgument: ["order#0"], policyArgument: ["ship_policy#0"] };
+    const kept = argumentFactIdsOfLetter(bySlot, narrativeWith({ executiveSummary: "Delivered.", fulfillmentArgument: "Shipped.", policyArgument: "x" }), F);
+    expect(kept).toEqual(["delivery#0", "order#0", "ship_policy#0"]);
+    const dropped = argumentFactIdsOfLetter(bySlot, narrativeWith({ executiveSummary: "Delivered.", fulfillmentArgument: "", policyArgument: "x" }, ["policyArgument"]), F);
+    expect(dropped).toEqual(["delivery#0"]);
+  });
+
+  it("a printed sentence that names a store policy lists it even when no claim id does", () => {
+    const n = narrativeWith({ executiveSummary: "The store's refund policy is published on the store." });
+    expect(argumentFactIdsOfLetter({}, n, F)).toEqual(["refund_policy#0"]);
+    expect(argumentFactIdsOfLetter({}, narrativeWith({ executiveSummary: "The carrier recorded delivery." }), F)).toEqual([]);
+    // an omitted section's sentence prints nothing
+    expect(argumentFactIdsOfLetter({}, narrativeWith({ policyArgument: "The shipping policy is published." }, ["policyArgument"]), F)).toEqual([]);
+  });
+
+  it("the address card prints from the order record, so the order record is relied on", () => {
+    const n = narrativeWith({ executiveSummary: "x" });
+    (n as unknown as { addressExhibit: object }).addressExhibit = { shippingLines: [], billingLines: [] };
+    expect(argumentFactIdsOfLetter({}, n, F)).toEqual(["order#0"]);
+  });
+
+  it("a draft section with claim ids but no text relies on nothing", () => {
+    const ledger = [claim("pol", ["pack.shipping_policy"])] as never[];
+    const d: CounselDraft = {
+      summary: { paragraphs: ["x"], claimIds: [] },
+      evidenceSections: [{ key: "policy", paragraphs: ["  "], claimIds: ["pol"] }],
+      conclusion: { paragraphs: [], claimIds: [] },
+    };
+    expect(argumentFactIdsBySlot(d, ledger, F)).toEqual({ executiveSummary: [] });
+  });
+});
+
+describe("the build job passes ONE relied-on set to both the PDF and the provenance column", () => {
+  it("the PDF's evidenceBasisArgued and the stored argumentFactIds are the same variable, computed from the final narrative", async () => {
+    const fs = await import("node:fs");
+    const job = fs.readFileSync("lib/jobs/handlers/buildDefencePackageJob.ts", "utf8");
+    expect(job).toMatch(/const reliedOnFactIds = argumentFactIdsOfLetter\(counselRes\.argumentFactIdsBySlot, narrativeRes\.narrative, planFacts\)/);
+    expect(job).toMatch(/evidenceBasisArgued: reliedOnFactIds/);
+    expect(job).toMatch(/argumentFactIds: reliedOnFactIds/);
+    expect(job.indexOf("const reliedOnFactIds")).toBeLessThan(job.indexOf("evidenceBasisArgued: reliedOnFactIds"));
+    const run = fs.readFileSync("lib/defence/counsel/run.ts", "utf8");
+    expect(run).toMatch(/argumentFactIdsBySlot: argumentFactIdsBySlot\(draft, ledger, args\.facts\)/);
   });
 });

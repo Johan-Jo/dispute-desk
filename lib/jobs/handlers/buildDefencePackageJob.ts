@@ -87,7 +87,7 @@ import {
   type PlanForCase,
 } from "@/lib/argument/plan";
 import { buildDocumentProvenance } from "@/lib/defence/package/documentProvenance";
-import { CURRENT_EVIDENCE_BASIS_RULE } from "@/lib/defence/citedFacts";
+import { argumentFactIdsOfLetter, CURRENT_EVIDENCE_BASIS_RULE } from "@/lib/defence/citedFacts";
 import {
   bankIncludedFacts,
   isBankIncludedManualEvidence,
@@ -1347,6 +1347,10 @@ export async function handleBuildDefencePackage(
   // Render PDF — driven by the validated composedBlocks. The
   // renderer is presentational over those blocks (Phase 4); it
   // never composes prose.
+  // What the PRINTED letter relies on, after every step that can empty a
+  // section (denied, suppressed, stripped): the claim-derived facts of the slots
+  // that still print, plus any store policy a printed sentence names.
+  const reliedOnFactIds = argumentFactIdsOfLetter(counselRes.argumentFactIdsBySlot, narrativeRes.narrative, planFacts);
   const docData: DefencePackageDocumentData = {
     meta: {
       packageId,
@@ -1429,7 +1433,7 @@ export async function handleBuildDefencePackage(
     evidenceBasisRule: CURRENT_EVIDENCE_BASIS_RULE,
     // Which of the store's own records the printed letter really relies on:
     // from its claims, because every counsel section carries ALL fact ids.
-    evidenceBasisArgued: counselRes.argumentFactIds,
+    evidenceBasisArgued: reliedOnFactIds,
   };
 
   let pdfPath: string;
@@ -1677,7 +1681,7 @@ export async function handleBuildDefencePackage(
         blocks: composedBlocks,
         composedFacts: planFacts,
         evidenceBasisRule: CURRENT_EVIDENCE_BASIS_RULE,
-        argumentFactIds: counselRes.argumentFactIds,
+        argumentFactIds: reliedOnFactIds,
       }) as unknown as Record<string, unknown>,
       package_mode: classification.packageMode,
       llm_model: narrativeRes.modelUsed,

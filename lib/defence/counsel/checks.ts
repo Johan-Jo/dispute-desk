@@ -372,13 +372,37 @@ export function argumentFactIdsOfDraft(
   ledger: readonly LedgerClaim[],
   facts: ReadonlyArray<Pick<EvidenceFact, "id" | "value">>,
 ): string[] {
+  return [...new Set(Object.values(argumentFactIdsBySlot(d, ledger, facts)).flat())].sort();
+}
+
+/** The evidence-section key -> the narrative slot it prints in (toNarrative). */
+const SLOT_OF_SECTION: Record<EvidenceSectionKey, string> = {
+  shipping: "fulfillmentArgument",
+  lineItems: "transactionOverviewArgument",
+  chronology: "chronologyArgument",
+  policy: "policyArgument",
+};
+
+/**
+ * The same, kept PER NARRATIVE SLOT, so the job can drop the slots that did not
+ * survive the later steps (denied, suppressed, stripped to nothing) before it
+ * decides what the letter relies on (`argumentFactIdsOfLetter`).
+ */
+export function argumentFactIdsBySlot(
+  d: CounselDraft,
+  ledger: readonly LedgerClaim[],
+  facts: ReadonlyArray<Pick<EvidenceFact, "id" | "value">>,
+): Record<string, string[]> {
   const printed = (s: { paragraphs?: string[]; claimIds?: string[] } | undefined) =>
-    s && (s.paragraphs ?? []).some((p) => p.trim()) ? [s.claimIds ?? []] : [];
-  return argumentFactIdsFromClaims(
-    [...printed(d.summary), ...(d.evidenceSections ?? []).flatMap(printed), ...printed(d.conclusion)],
-    ledger,
-    facts,
-  );
+    s && (s.paragraphs ?? []).some((p) => p.trim()) ? s.claimIds ?? [] : null;
+  const out: Record<string, string[]> = {};
+  const add = (slot: string, ids: string[] | null) => {
+    if (ids) out[slot] = argumentFactIdsFromClaims([ids], ledger, facts);
+  };
+  add("executiveSummary", printed(d.summary));
+  for (const s of d.evidenceSections ?? []) add(SLOT_OF_SECTION[s.key], printed(s));
+  add("conclusion", printed(d.conclusion));
+  return out;
 }
 
 /**

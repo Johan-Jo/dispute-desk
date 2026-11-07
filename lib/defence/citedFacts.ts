@@ -144,10 +144,12 @@ export function argumentFactIdsOfBlocks(blocks: readonly ComposedDocumentBlock[]
  * the store's own records. Only those paths matter: every other fact is cited
  * by the predicate without being argued.
  */
-const RECORD_SOURCE_FIELD: ReadonlyArray<readonly [RegExp, string]> = [
+export const RECORD_SOURCE_FIELD: ReadonlyArray<readonly [RegExp, string]> = [
+  // `pack.order.returnStatus` is deliberately NOT here: it stands for the
+  // no-return fact (cited by itself), not for the order record.
   [/^pack\.order\.(lineItems|createdAt|totals|shippingAddressFull|billingAddressFull)\b/, "order_confirmation"],
   [/^pack\.shipping_policy\b/, "shipping_policy"],
-  [/^pack\.refund_policy\b/, "refund_policy"],
+  // Only the refund-policy claim (`return_route_open`) reads a policy snapshot.
   [/^policy_snapshots\b/, "refund_policy"],
 ];
 
@@ -171,6 +173,50 @@ export function argumentFactIdsFromClaims(
         for (const f of facts) if (f.value?.fieldKey === field) out.add(f.id);
       }
     }
+  }
+  return [...out].sort();
+}
+
+/** The store's policies, by what a printed sentence calls them. */
+const POLICY_TEXT: ReadonlyArray<readonly [RegExp, string]> = [
+  [/refund polic|return polic/i, "refund_policy"],
+  [/shipping polic|dispatch polic/i, "shipping_policy"],
+];
+
+/**
+ * THE relied-on set for a finished counsel letter: the claim-derived facts of
+ * every slot that STILL PRINTS (`narrative[slot].text` non-empty and not
+ * omitted, after the job denied, suppressed or stripped sections), plus any
+ * store policy a printed sentence names. The claim ids are model-written and
+ * only checked for existence, so the printed text backs them up in the one
+ * direction that matters for the table: a paragraph that says "the refund
+ * policy is published" never prints with the policy missing from the table.
+ */
+export function argumentFactIdsOfLetter(
+  bySlot: Readonly<Record<string, readonly string[]>> | null | undefined,
+  narrative: DefenceNarrativeOutput,
+  facts: ReadonlyArray<Pick<EvidenceFact, "id" | "value">>,
+): string[] {
+  const omitted = new Set((narrative.omittedSections ?? []).map((o) => o.sectionKey));
+  const out = new Set<string>();
+  const texts: string[] = [];
+  const slots = [...ARGUMENT_SECTION_KEYS, "executiveSummary", "conclusion"] as const;
+  for (const slot of slots) {
+    const s = (narrative as unknown as Record<string, { text?: string } | undefined>)[slot];
+    if (!s?.text?.trim() || omitted.has(slot as NarrativeSectionKey)) continue;
+    texts.push(s.text);
+    for (const id of bySlot?.[slot] ?? []) out.add(id);
+  }
+  const prose = texts.join(" ");
+  for (const [re, field] of POLICY_TEXT) {
+    if (!re.test(prose)) continue;
+    for (const f of facts) if (f.value?.fieldKey === field) out.add(f.id);
+  }
+  // The address card prints from the order record whenever the letter carries
+  // it, whether or not a sentence mentions it (toNarrative): the exhibit is the
+  // evidence, so the order record is relied on.
+  if (narrative.addressExhibit) {
+    for (const f of facts) if (f.value?.fieldKey === "order_confirmation") out.add(f.id);
   }
   return [...out].sort();
 }
@@ -206,12 +252,12 @@ export function citedFacts(facts: readonly EvidenceFact[], argued?: ReadonlySet<
  * May the Evidence Basis list this fact at all? The suppressor and the
  * validator ask whether a section's support is listable: it is
  * `isBankIncludedFact` under the name that says what they mean. Every
- * bank-included fact a printed argument section cites is listed, except two
- * cases that are deliberate and unchanged: the delivery a carrier card already
- * prints (cited by that section instead), and a rule-1 multi-parcel letter,
- * which prints no table. Validator rule 5 also checks the summary and the
- * conclusion, which the narrative-based reader does not count as "argued"
- * (warning-only); the counsel claim-based set does count their claims.
+ * bank-included fact is listable, but the table lists a bank-included fact only
+ * when it is cited: not record context, or relied on by the letter (for
+ * counsel letters the claim-derived set; otherwise the narrative's printed
+ * argument sections). The delivery a carrier card prints is cited by that
+ * section instead of a row, and a rule-1 multi-parcel letter prints no table.
+ * Validator rule 5 also checks the summary and the conclusion (warning-only).
  */
 export function isListableFact(fact: BankInclusionFlags): boolean {
   return isBankIncludedFact(fact);
