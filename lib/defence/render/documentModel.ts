@@ -13,7 +13,9 @@
  * "delivered" ONLY when a carrier recorded the delivery.
  */
 
-import type { AddressExhibit, EvidenceFact, LaterOrderExhibit } from "../types";
+import type { AddressExhibit, EvidenceBasisRow, EvidenceFact, LaterOrderExhibit } from "../types";
+import { EVIDENCE_BASIS_RULE_CITED, type EvidenceBasisRule } from "../citedFacts";
+import { buildEvidenceBasisRows } from "../pdf/evidenceBasisRows";
 import { classifyChronologyEvent, type ChronologyEvent } from "../chronology";
 import type { LineItem } from "./lineItems";
 
@@ -104,6 +106,36 @@ export function deliveryFactIds(facts: readonly EvidenceFact[]): Set<string> {
   return new Set(
     facts.filter((f) => f.category === "delivery_proof" || f.category === "shipping_tracking").map((f) => f.id),
   );
+}
+
+/**
+ * The Evidence Basis rows a letter prints, and whether it prints the table.
+ * ONE derivation for the PDF, the in-app preview and the dispute page, so the
+ * three cannot disagree (`lib/defence/citedFacts.ts` explains the two rules).
+ *
+ *   rule 1 (every package built before the marker): every bank-included fact,
+ *     minus the delivery rows a single-parcel carrier card already shows, and
+ *     no table at all on a multi-parcel letter.
+ *   rule 2: the CITED facts only, the delivery included. The carrier card and
+ *     the section about it stay; the table states the delivery once more
+ *     because the dispute page lists it as cited and the table must agree.
+ */
+export function evidenceBasisFor(
+  facts: readonly EvidenceFact[],
+  rule: EvidenceBasisRule,
+): { rows: EvidenceBasisRow[]; multiParcel: boolean; single: boolean; tableAllowed: boolean } {
+  const multiParcel = shipmentsOf(facts).length > 1;
+  // `singleShipmentOf` reads the events only to date the merchant's shipping
+  // time; whether a card exists does not depend on them.
+  const single = !multiParcel && singleShipmentOf(facts, [], null) !== null;
+  const all = buildEvidenceBasisRows([...facts], rule);
+  const hidden = rule === EVIDENCE_BASIS_RULE_CITED || !single ? new Set<string>() : deliveryFactIds(facts);
+  return {
+    rows: all.filter((r) => !hidden.has(r.factId)),
+    multiParcel,
+    single,
+    tableAllowed: rule === EVIDENCE_BASIS_RULE_CITED || !multiParcel,
+  };
 }
 
 export function productsOf(s: Shipment): string {

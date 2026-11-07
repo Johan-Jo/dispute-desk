@@ -14,6 +14,12 @@
 
 import type { EvidenceBasisRow, EvidenceFact, EvidenceFactCategory } from "../types";
 import { bankIncludedFacts } from "../bankInclusion";
+import {
+  citedFacts,
+  EVIDENCE_BASIS_RULE_CITED,
+  EVIDENCE_BASIS_RULE_LEGACY,
+  type EvidenceBasisRule,
+} from "../citedFacts";
 import { formatChronologyTimestamp } from "../chronology";
 import {
   citableVerificationPartsEn,
@@ -445,12 +451,24 @@ function dedupeRows(rows: EvidenceBasisRow[]): EvidenceBasisRow[] {
   });
 }
 
-export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[] {
-  // The ONE bank-inclusion predicate (`lib/defence/bankInclusion.ts`). The rule
-  // used to be spelled inline here, in the classifier, in the workspace route
-  // and — differently — in the LLM payload filter; delegating is what lets
+export function buildEvidenceBasisRows(
+  facts: EvidenceFact[],
+  /**
+   * The rule the letter was built under (`lib/defence/citedFacts.ts`). Defaults
+   * to the legacy rule, so a caller that does not know a package's marker — and
+   * every package built before the marker existed — gets the table it was
+   * printed with.
+   */
+  rule: EvidenceBasisRule = EVIDENCE_BASIS_RULE_LEGACY,
+): EvidenceBasisRow[] {
+  // The inclusion predicates are owned by `bankInclusion.ts` (may the issuer see
+  // it) and `citedFacts.ts` (is it argument or context). The rule used to be
+  // spelled inline here, in the classifier, in the workspace route and —
+  // differently — in the LLM payload filter; delegating is what lets
   // `tests/unit/bankInclusionSingleOwner.test.ts` prove there is one owner.
-  const filtered = collapseDeliveryPair(bankIncludedFacts(facts));
+  const filtered = collapseDeliveryPair(
+    rule === EVIDENCE_BASIS_RULE_CITED ? citedFacts(facts) : bankIncludedFacts(facts),
+  );
   const sorted = [...filtered].sort((a, b) => {
     const r = categoryRank(a.category) - categoryRank(b.category);
     if (r !== 0) return r;

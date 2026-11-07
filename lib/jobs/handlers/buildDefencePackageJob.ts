@@ -87,6 +87,7 @@ import {
   type PlanForCase,
 } from "@/lib/argument/plan";
 import { buildDocumentProvenance } from "@/lib/defence/package/documentProvenance";
+import { CURRENT_EVIDENCE_BASIS_RULE } from "@/lib/defence/citedFacts";
 import {
   bankIncludedFacts,
   isBankIncludedManualEvidence,
@@ -1417,6 +1418,15 @@ export async function handleBuildDefencePackage(
       ? classification.manual.filter(isBankIncludedManualEvidence)
       : classification.manual,
     issuerSafeSupportingIndex: canonical,
+    /* The Evidence Basis lists what the dispute page calls CITED, not every
+     * bank-included fact (lib/defence/citedFacts.ts). Stamped on the stored
+     * narrative below, so the preview re-renders this letter the way the PDF
+     * was printed — and a package stored before this carries no stamp.
+     * The stamp lives in `document_provenance_json` (written below, on this
+     * same success path) and NOT in `narrative_json`: the package-safety parser
+     * refuses a narrative with an unknown top-level key, so a stamp there would
+     * make every new package unfileable. */
+    evidenceBasisRule: CURRENT_EVIDENCE_BASIS_RULE,
   };
 
   let pdfPath: string;
@@ -1663,6 +1673,7 @@ export async function handleBuildDefencePackage(
       document_provenance_json: buildDocumentProvenance({
         blocks: composedBlocks,
         composedFacts: planFacts,
+        evidenceBasisRule: CURRENT_EVIDENCE_BASIS_RULE,
       }) as unknown as Record<string, unknown>,
       package_mode: classification.packageMode,
       llm_model: narrativeRes.modelUsed,
