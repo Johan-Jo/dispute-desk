@@ -296,3 +296,25 @@ describe("a customer asked to return it in the support inbox (Gorgias, read-time
     );
   });
 });
+
+describe("the case-strength pill in the header (one band, read from the record)", () => {
+  it("prepared and held-for-review packages carry the band; it matches the strength sentence", () => {
+    const r = record("prepared");
+    expect(r.hero.strengthBand).toBe("strong");
+    expect(R(r.facts.strength as I18nToken)).toContain("The case is strong");
+  });
+  it("is absent wherever the strength sentence is absent: building, no pack, saved, under review, decided, fatal-loss", () => {
+    for (const n of ["building", "no_pack", "failed", "covered", "saved", "under_review", "lost", "won", "fatal_refund"]) {
+      if (!ALL_VARIANTS.includes(n as never)) continue;
+      expect(record(n).hero.strengthBand, n).toBeNull();
+    }
+  });
+  it("the pill label reuses the existing presentation.strength.detail copy in every locale", async () => {
+    for (const loc of ["en", "de", "es", "fr", "pt", "sv"]) {
+      const m = (await import(`../../messages/${loc}.json`)).default as { presentation: { strength: { detail: Record<string, string> } } };
+      for (const band of ["strong", "moderate", "weak"]) {
+        expect(m.presentation.strength.detail[band], `${loc}.${band}`).toBeTruthy();
+      }
+    }
+  });
+});
