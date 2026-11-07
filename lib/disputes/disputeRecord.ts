@@ -335,6 +335,14 @@ function sameAddress(a: unknown, b: unknown): boolean | null {
   return keys.every((k) => norm(x[k]) === norm(y[k]));
 }
 
+/** One message key per return status. The status is snake_case (in_progress); the message key is camelCase (inProgress). Building the key by string interpolation produced a key that did not exist for IN_PROGRESS returns. */
+const RETURN_DETAIL_KEY = {
+  requested: "item.return.requested",
+  in_progress: "item.return.inProgress",
+  returned: "item.return.returned",
+  failed: "item.return.failed",
+} as const;
+
 function strengthPill(s: string | undefined): StrengthPill | null {
   switch ((s ?? "").toLowerCase()) {
     case "strong":
@@ -552,7 +560,7 @@ function buildItems(c: ItemCtx): RecordItem[] {
   if (returnOnRecord || i.refund === "some") {
     // The order carries a return or a refund: stated once, kept internal (it is
     // not evidence the bank is given), and named among the facts withheld.
-    const detail = returnOnRecord ? `item.return.${i.returns}` : "item.return.refundSome";
+    const detail = returnOnRecord ? RETURN_DETAIL_KEY[i.returns as keyof typeof RETURN_DETAIL_KEY] : "item.return.refundSome";
     add({
       key: "return",
       role: "internal",
