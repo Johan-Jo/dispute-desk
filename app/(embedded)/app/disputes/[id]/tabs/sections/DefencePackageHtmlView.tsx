@@ -34,7 +34,11 @@ import {
   SECTION_TITLES,
   sectionTitleFor,
 } from "@/lib/defence/render/sections";
-import { evidenceBasisRuleOf } from "@/lib/defence/citedFacts";
+import {
+  argumentFactIdsOfNarrative,
+  EVIDENCE_BASIS_RULE_CITED,
+  evidenceBasisRuleOf,
+} from "@/lib/defence/citedFacts";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
 import { exhibitCaption, type ProductListingExhibit } from "@/lib/defence/productListingExhibit";
 import { familyKeyForModule, ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
@@ -573,7 +577,12 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const single = multiParcel ? null : singleShipmentOf(facts, chrono, dispute?.orderName ?? null);
   // The rule the stored letter was built under (absent = every package built
   // before the marker, which keeps its table exactly). Same derivation as the PDF.
-  const basis = evidenceBasisFor(facts, evidenceBasisRuleOf(row.document_provenance_json));
+  const evidenceRule = evidenceBasisRuleOf(row.document_provenance_json);
+  const basis = evidenceBasisFor(
+    facts,
+    evidenceRule,
+    evidenceRule === EVIDENCE_BASIS_RULE_CITED ? argumentFactIdsOfNarrative(narrative, moduleKey) : undefined,
+  );
   const evidenceBasis = basis.rows;
   const productNames = [...lineItems.map((it) => it.description), ...shipments.map(productsOf)];
   const caseContext = {

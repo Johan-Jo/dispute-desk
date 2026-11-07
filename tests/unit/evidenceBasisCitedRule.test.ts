@@ -1,6 +1,7 @@
 /**
  * ONE rule for "cited to the bank": the letter's Evidence Basis and the dispute
  * page's roles answer it from the same predicate (lib/defence/citedFacts.ts).
+ * An item is cited iff the letter relies on it.
  *
  * The change is FORWARD-ONLY. The Evidence Basis views are rendered at view time
  * from stored `facts_json`, so the new rule is gated by a stamp only a new build
@@ -15,6 +16,7 @@ import { describe, expect, it } from "vitest";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
 import { evidenceBasisFor } from "@/lib/defence/render/documentModel";
 import {
+  argumentFactIdsOfNarrative,
   CURRENT_EVIDENCE_BASIS_RULE,
   EVIDENCE_BASIS_RULE_CITED,
   EVIDENCE_BASIS_RULE_LEGACY,
@@ -26,14 +28,41 @@ import { buildDocumentProvenance } from "@/lib/defence/package/documentProvenanc
 import { evidenceFieldOfFact, letterCitations } from "@/lib/disputes/letterCitations";
 import { buildDisputeRecord, type ItemKey } from "@/lib/disputes/disputeRecord";
 import { createRecordFormat } from "@/lib/disputes/recordFormat";
+import type { DefenceNarrativeOutput } from "@/lib/defence/types";
 import { recordInputsFromWorkspace } from "../../app/(embedded)/app/disputes/[id]/record/recordInputs";
 import { openWorkspace } from "../fixtures/disputeRecordFixture";
+import { narrativeJson } from "../fixtures/defencePackageShapes";
 import { SHAPES, type Shape } from "../fixtures/evidenceBasisShapes";
 import golden from "../fixtures/legacyEvidenceBasis.golden.json";
 
 const facts = (s: Shape) => s.facts as never[];
 const shape = (name: string) => SHAPES.find((s) => s.name === name) as Shape;
 const labels = (rows: Array<{ label: string }>) => rows.map((r) => r.label);
+const idOf = (s: Shape, category: string) => (s.facts.find((f) => f.category === category) as { id: string }).id;
+
+type SectionKey =
+  | "executiveSummary"
+  | "transactionOverviewArgument"
+  | "chronologyArgument"
+  | "paymentAuthenticationArgument"
+  | "fulfillmentArgument"
+  | "communicationArgument"
+  | "policyArgument"
+  | "manualEvidenceArgument"
+  | "conclusion";
+
+/** A counsel-style narrative whose named sections print prose citing the given fact ids. */
+function narrativeCiting(cites: Partial<Record<SectionKey, string[]>>, omitted: SectionKey[] = []): DefenceNarrativeOutput {
+  const n = narrativeJson(Object.fromEntries(Object.keys(cites).map((k) => [k, "Prose."]))) as unknown as Record<string, any>;
+  for (const [k, ids] of Object.entries(cites)) n[k].usedFactIds = ids;
+  n.omittedSections = omitted.map((sectionKey) => ({ sectionKey, reason: "none" }));
+  return n as unknown as DefenceNarrativeOutput;
+}
+
+/** Table rows of a NEW package whose letter prints `narrative`. */
+function newRows(s: Shape, narrative?: DefenceNarrativeOutput) {
+  return evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_CITED, argumentFactIdsOfNarrative(narrative, null));
+}
 
 describe("legacy packages render exactly as they did before the change", () => {
   for (const s of SHAPES) {
@@ -69,69 +98,103 @@ describe("legacy packages render exactly as they did before the change", () => {
   });
 });
 
-describe("the cited rule", () => {
-  it("dispute #368528: the table lists what the page marks cited, and Delivery gets its row", () => {
+describe("the cited rule: an item is cited iff the letter relies on it", () => {
+  it("dispute #368528: the table lists what the page marks cited; the delivery is cited by its section", () => {
     const s = shape("captured:open_368528_v1");
     const legacy = evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_LEGACY).rows;
-    const cited = evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_CITED).rows;
-    // The page before: cited = fraud screening, IP, delivery, return; context = order record, ...
+    const cited = newRows(s).rows;
     expect(labels(legacy)).toContain("Order record");
-    expect(labels(legacy)).not.toContain("Delivery confirmation");
     expect(labels(cited).sort()).toEqual(
-      ["Delivery confirmation", "IP & location consistency", "No return recorded in Shopify", "Pre-authorization fraud screening"].sort(),
+      ["IP & location consistency", "No return recorded in Shopify", "Pre-authorization fraud screening"].sort(),
     );
-    expect(cited.find((r) => r.label === "Delivery confirmation")?.value).toMatch(/^Delivered /);
+    // each fact once: the carrier card prints the delivery, the table does not repeat it
+    expect(labels(cited)).not.toContain("Delivery confirmation");
+    expect(letterCitations({ facts_json: s.facts, document_provenance_json: { evidenceBasisRule: 2 } })?.citedFields).toContain(
+      "shipping_tracking",
+    );
+  });
+
+  it("a delivery with no carrier card still prints its row, as it always did", () => {
+    const s = shape("not_received_delivered");
+    const noCard = s.facts.map((f) =>
+      f.category === "delivery_proof" || f.category === "shipping_tracking"
+        ? { ...f, value: { ...f.value, carrier: null, trackingNumber: null, trackingUrl: null } }
+        : f,
+    );
+    const rows = evidenceBasisFor(noCard as never[], EVIDENCE_BASIS_RULE_CITED).rows;
+    expect(labels(rows)).toContain("Delivery confirmation");
+    expect(labels(rows)).not.toContain("Order record");
   });
 
   for (const s of SHAPES) {
-    it(`${s.name}: every row is a cited fact, no context row, nothing the legacy rule hid`, () => {
-      const rows = evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_CITED).rows;
-      const byId = new Map(s.facts.map((f) => [f.id, f]));
-      for (const r of rows) {
-        const f = byId.get(r.factId) as never as (typeof s.facts)[number];
-        expect(isBankIncludedFact(f), `${r.label} must be bank-included`).toBe(true);
-        expect(isCitedFact(f), `${r.label} must be cited`).toBe(true);
-        expect(f.submissionRisk).toBe(false);
-        expect(f.bankEligible).toBe(true);
+    it(`${s.name}: even when the letter cites EVERY fact, only bank-included cited facts are listed`, () => {
+      const everything = narrativeCiting({
+        policyArgument: s.facts.map((f) => f.id),
+        fulfillmentArgument: s.facts.map((f) => f.id),
+      });
+      for (const narrative of [undefined, everything]) {
+        const rows = newRows(s, narrative).rows;
+        const byId = new Map(s.facts.map((f) => [f.id, f]));
+        const argued = argumentFactIdsOfNarrative(narrative, null);
+        for (const r of rows) {
+          const f = byId.get(r.factId) as never as (typeof s.facts)[number];
+          expect(isBankIncludedFact(f as never), `${r.label} must be bank-included`).toBe(true);
+          expect(isCitedFact(f as never, argued), `${r.label} must be cited`).toBe(true);
+          expect(f.submissionRisk).toBe(false);
+          expect(f.bankEligible).toBe(true);
+        }
+        // PROPERTY: every bank-included fact a printed argument cites is listed
+        // (or is the delivery a carrier card prints), so a section never argues
+        // from something the table refuses to show.
+        for (const id of argued) {
+          const f = byId.get(id);
+          if (!f || !isBankIncludedFact(f as never)) continue;
+          const isDelivery = f.category === "delivery_proof" || f.category === "shipping_tracking";
+          expect(isDelivery || rows.some((r) => r.factId === id), `${f.label} is argued but not listed`).toBe(true);
+        }
       }
-      // Never a superset of the legacy table's FACTS (delivery rows excepted: the
-      // legacy letter showed them on a carrier card).
-      const legacyIds = new Set(buildEvidenceBasisRows(facts(s)).map((r) => r.factId));
-      for (const r of rows) {
-        expect(legacyIds.has(r.factId) || /delivery|shipping|shipment/i.test(r.category + r.label)).toBe(true);
-      }
-      // A bank-included delivery fact always has its row (the page lists it as cited).
-      const hasDelivery = s.facts.some(
-        (f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && isBankIncludedFact(f as never),
-      );
-      if (hasDelivery) expect(rows.some((r) => /delivery|shipment|shipping/i.test(r.category + r.label))).toBe(true);
     });
   }
 
-  it("what must stay internal never reaches the table", () => {
+  it("adverse facts are never listed, whatever the narrative cites", () => {
     const s = shape("never_cited");
-    const text = JSON.stringify(evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_CITED).rows);
-    expect(labels(evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_CITED).rows)).toEqual(["Delivery confirmation"]);
-    expect(text).not.toMatch(/CANCEL|different|AVS|Payment authentication|Pre-authorization|IP &/i);
+    const all = narrativeCiting({ policyArgument: s.facts.map((f) => f.id), paymentAuthenticationArgument: s.facts.map((f) => f.id) });
+    expect(newRows(s).rows).toEqual([]);
+    // The order record is the one bank-included record fact: listed only because it is argued.
+    expect(labels(newRows(s, all).rows)).toEqual(["Order record"]);
+    expect(JSON.stringify(newRows(s, all).rows)).not.toMatch(/CANCEL|different|AVS|Payment authentication|Pre-authorization|IP &/i);
   });
 
-  it("record context (order record, policies) is not listed as proof; arguments that are never scored still are", () => {
-    expect(labels(evidenceBasisFor(facts(shape("not_received_delivered")), 2).rows)).not.toEqual(
-      expect.arrayContaining(["Order record"]),
-    );
-    expect(labels(evidenceBasisFor(facts(shape("not_received_in_transit")), 2).rows)).toEqual(["Delivery confirmation"]);
-    expect(labels(evidenceBasisFor(facts(shape("not_as_described")), 2).rows)).toEqual(
-      expect.arrayContaining(["Product listing", "Delivery confirmation"]),
-    );
-    expect(labels(evidenceBasisFor(facts(shape("not_as_described")), 2).rows)).not.toContain("Refund policy");
+  it("credit-not-processed: the refund policy is listed iff the letter argues from it", () => {
+    const s = shape("credit_not_processed");
+    const policy = idOf(s, "policy_refund");
+    expect(labels(newRows(s).rows)).not.toContain("Refund policy");
+    expect(labels(newRows(s, narrativeCiting({ policyArgument: [policy] })).rows)).toContain("Refund policy");
+    // the summary and conclusion restate the case; they do not make a policy "relied on"
+    expect(labels(newRows(s, narrativeCiting({ executiveSummary: [policy], conclusion: [policy] })).rows)).not.toContain("Refund policy");
+    // an omitted section prints nothing, so it relies on nothing
+    expect(labels(newRows(s, narrativeCiting({ policyArgument: [policy] }, ["policyArgument"])).rows)).not.toContain("Refund policy");
+    // the order record is context unless argued, too
+    expect(labels(newRows(s).rows)).not.toContain("Order record");
   });
 
-  it("a multi-parcel letter now prints the table too, so the page's claim holds for it", () => {
+  it("not-received: the shipping policy is listed iff the letter argues from it", () => {
+    const s = shape("not_received_delivered");
+    const policy = idOf(s, "policy_shipping");
+    expect(labels(newRows(s).rows)).not.toContain("Shipping policy");
+    expect(labels(newRows(s, narrativeCiting({ fulfillmentArgument: [policy] })).rows)).toContain("Shipping policy");
+  });
+
+  it("record context and arguments that are never scored: the in-transit shipment and the listing are cited", () => {
+    expect(labels(newRows(shape("not_as_described")).rows)).toEqual(["Product listing"]);
+  });
+
+  it("a multi-parcel letter prints the table too, without repeating its parcel cards", () => {
     const s = shape("not_received_multi_parcel");
     expect(evidenceBasisFor(facts(s), 1).tableAllowed).toBe(false);
-    const n = evidenceBasisFor(facts(s), 2);
+    const n = newRows(s);
     expect(n.tableAllowed).toBe(true);
-    expect(n.rows.length).toBe(2);
+    expect(n.rows).toEqual([]);
   });
 });
 
@@ -151,13 +214,14 @@ const FIELD_FOR_ITEM: Partial<Record<ItemKey, string>> = {
   tds: "tds_authentication",
   comms: "customer_communication",
 };
+const ITEM_FIELDS = new Set(Object.values(FIELD_FOR_ITEM) as string[]);
 const ALL_LINE_FIELDS = [
   "avs_cvv_match", "tds_authentication", "fraud_risk_screening", "order_confirmation", "ip_location_check",
   "customer_communication", "shipping_tracking", "no_return_initiated", "activity_log", "shipping_policy",
   "refund_policy", "cancellation_policy",
 ];
 
-function recordFor(s: Shape, stamp: { evidenceBasisRule: number } | null) {
+function recordFor(s: Shape, stamp: { evidenceBasisRule: number } | null, narrative: DefenceNarrativeOutput | null = null, status = "final") {
   const w = JSON.parse(JSON.stringify(openWorkspace())) as Record<string, any>;
   const have = new Set(s.lines.map((l) => l.field));
   const lines = [...s.lines];
@@ -165,7 +229,13 @@ function recordFor(s: Shape, stamp: { evidenceBasisRule: number } | null) {
     if (!have.has(field)) lines.push({ field, hasEvidence: false, submissionMethod: "not_included", strengthContribution: "none" });
   }
   w.evidenceLineItems = lines.map((l) => ({ id: `line:${l.field}`, label: l.field, ...l }));
-  w.defencePackage.latest = { ...w.defencePackage.latest, facts_json: s.facts, narrative_json: null, document_provenance_json: stamp };
+  w.defencePackage.latest = {
+    ...w.defencePackage.latest,
+    status,
+    facts_json: s.facts,
+    narrative_json: narrative,
+    document_provenance_json: stamp,
+  };
   return buildDisputeRecord(recordInputsFromWorkspace(w as unknown as Parameters<typeof recordInputsFromWorkspace>[0], "2026-11-06T12:00:00Z"), createRecordFormat("en"));
 }
 
@@ -177,24 +247,28 @@ function citedItemFields(rec: ReturnType<typeof recordFor>): string[] {
     .sort();
 }
 
+/** What a NEW letter cites: its table rows, plus the delivery its section sets out. */
+function expectedNewCited(s: Shape, narrative?: DefenceNarrativeOutput): string[] {
+  const byId = new Map(s.facts.map((f) => [f.id, f]));
+  const out = new Set<string>();
+  for (const r of newRows(s, narrative).rows) {
+    const f = byId.get(r.factId);
+    const field = f ? evidenceFieldOfFact(f as never) : null;
+    if (field && ITEM_FIELDS.has(field)) out.add(field);
+  }
+  if (s.facts.some((f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && isBankIncludedFact(f as never))) {
+    out.add("shipping_tracking");
+  }
+  return [...out].sort();
+}
+
 describe("the dispute page and the letter's Evidence Basis cite the same items", () => {
+  const stamp = { evidenceBasisRule: 2 };
   for (const s of SHAPES) {
-    it(`${s.name} (new package): the page's cited set equals the table's items`, () => {
-      const stamp = { evidenceBasisRule: 2 };
-      const rec = recordFor(s, stamp);
-      const basis = evidenceBasisFor(facts(s), EVIDENCE_BASIS_RULE_CITED);
-      const byId = new Map(s.facts.map((f) => [f.id, f]));
-      const tableFields = new Set<string>();
-      for (const r of basis.rows) {
-        const f = byId.get(r.factId);
-        const field = f ? evidenceFieldOfFact(f as never) : null;
-        if (field && Object.values(FIELD_FOR_ITEM).includes(field)) tableFields.add(field);
-      }
-      expect(citedItemFields(rec)).toEqual([...tableFields].sort());
-      // and the page says so about the stored letter itself
-      expect(letterCitations(s.facts, stamp)?.citedFields.filter((f) => Object.values(FIELD_FOR_ITEM).includes(f))).toEqual(
-        [...tableFields].sort(),
-      );
+    it(`${s.name} (new package): the page's cited set equals what the letter relies on`, () => {
+      expect(citedItemFields(recordFor(s, stamp))).toEqual(expectedNewCited(s));
+      const everything = narrativeCiting({ policyArgument: s.facts.map((f) => f.id) });
+      expect(citedItemFields(recordFor(s, stamp, everything))).toEqual(expectedNewCited(s, everything));
     });
 
     it(`${s.name} (legacy package): the page says only what the stored letter says`, () => {
@@ -209,7 +283,6 @@ describe("the dispute page and the letter's Evidence Basis cite the same items",
           if (field) listed.add(field);
         }
       }
-      // the legacy letter argues the delivery in its own section
       if (s.facts.some((f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && isBankIncludedFact(f as never))) {
         listed.add("shipping_tracking");
       }
@@ -217,14 +290,34 @@ describe("the dispute page and the letter's Evidence Basis cite the same items",
     });
   }
 
+  it("a policy the letter argues from is cited on the page AND listed; one it does not is context and not listed", () => {
+    const s = shape("credit_not_processed");
+    const policy = idOf(s, "policy_refund");
+    const argued = narrativeCiting({ policyArgument: [policy] });
+    const withArgument = recordFor(s, stamp, argued);
+    const without = recordFor(s, stamp, narrativeCiting({ chronologyArgument: [idOf(s, "no_return_initiated")] }));
+    expect(withArgument.items.find((i) => i.key === "refundpol")?.role).toBe("cited");
+    expect(labels(newRows(s, argued).rows)).toContain("Refund policy");
+    expect(without.items.find((i) => i.key === "refundpol")?.role).toBe("context");
+    expect(labels(newRows(s, narrativeCiting({ chronologyArgument: [idOf(s, "no_return_initiated")] })).rows)).not.toContain("Refund policy");
+  });
+
   it("the open case: Order record is context on the new page, cited on a legacy one (that is what its letter lists)", () => {
     const s = shape("captured:open_368528_v1");
-    const fresh = recordFor(s, { evidenceBasisRule: 2 });
+    const fresh = recordFor(s, stamp);
     const legacy = recordFor(s, null);
     expect(fresh.items.find((i) => i.key === "order")?.role).toBe("context");
     expect(fresh.items.filter((i) => i.role === "cited").map((i) => i.key).sort()).toEqual(["delivery", "ip", "return", "screen"]);
     expect(legacy.items.find((i) => i.key === "order")?.role).toBe("cited");
     expect(legacy.items.find((i) => i.key === "delivery")?.role).toBe("cited");
+  });
+
+  it("a failed or skipped build printed no letter: the page keeps the live evidence reading", () => {
+    const s = shape("captured:open_368528_v1");
+    for (const status of ["failed", "skipped"]) {
+      expect(letterCitations({ facts_json: s.facts, status })).toBeNull();
+    }
+    expect(letterCitations({ facts_json: s.facts, status: "final" })).not.toBeNull();
   });
 });
 

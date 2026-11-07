@@ -27,7 +27,12 @@ import { exhibitCaption, type ProductListingExhibit } from "../productListingExh
 import { COLORS, styles } from "./styles";
 import type { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import { isBankIncludedManualEvidence } from "../bankInclusion";
-import { EVIDENCE_BASIS_RULE_LEGACY, type EvidenceBasisRule } from "../citedFacts";
+import {
+  argumentFactIdsOfBlocks,
+  EVIDENCE_BASIS_RULE_CITED,
+  EVIDENCE_BASIS_RULE_LEGACY,
+  type EvidenceBasisRule,
+} from "../citedFacts";
 import { buildChronologyEvents, familyOmitsArrival, type ChronologyEvent } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
 import { buildLineItems, type LineItem } from "../render/lineItems";
@@ -160,7 +165,9 @@ export interface DefencePackageDocumentData {
   /**
    * Which Evidence Basis rule this letter is built under
    * (`lib/defence/citedFacts.ts`). 2 = the table lists the CITED facts only,
-   * the delivery included. Absent keeps the shipped table exactly: every
+   * the store's own records only when the letter's printed argument relies on
+   * them, and a delivery its carrier card already prints is not repeated.
+   * Absent keeps the shipped table exactly: every
    * bank-included fact, so the legacy path is byte-identical.
    */
   evidenceBasisRule?: EvidenceBasisRule;
@@ -698,7 +705,12 @@ export function DefencePackageDocument({
   // One derivation for the rows and for whether the table prints at all,
   // shared with the preview and the dispute page (`evidenceBasisFor`). A
   // package carrying no marker is rule 1 and prints exactly what it always did.
-  const basis = evidenceBasisFor(approvedFacts, data.evidenceBasisRule ?? EVIDENCE_BASIS_RULE_LEGACY);
+  const evidenceRule = data.evidenceBasisRule ?? EVIDENCE_BASIS_RULE_LEGACY;
+  const basis = evidenceBasisFor(
+    approvedFacts,
+    evidenceRule,
+    evidenceRule === EVIDENCE_BASIS_RULE_CITED ? argumentFactIdsOfBlocks(composedBlocks) : undefined,
+  );
   const evidenceRows = basis.rows;
   const included = issuerSafe
     ? manualEvidence.filter(isBankIncludedManualEvidence)

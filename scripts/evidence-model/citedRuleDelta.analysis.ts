@@ -15,10 +15,15 @@
  */
 
 import fs from "node:fs";
-import type { EvidenceFact } from "../../lib/defence/types";
+import type { DefenceNarrativeOutput, EvidenceFact } from "../../lib/defence/types";
 import { evidenceBasisFor } from "../../lib/defence/render/documentModel";
-import { EVIDENCE_BASIS_RULE_CITED, EVIDENCE_BASIS_RULE_LEGACY } from "../../lib/defence/citedFacts";
+import {
+  argumentFactIdsOfNarrative,
+  EVIDENCE_BASIS_RULE_CITED,
+  EVIDENCE_BASIS_RULE_LEGACY,
+} from "../../lib/defence/citedFacts";
 import { isBankIncludedFact } from "../../lib/defence/bankInclusion";
+import { buildEvidenceBasisRows } from "../../lib/defence/pdf/evidenceBasisRows";
 import { evidenceFieldOfFact } from "../../lib/disputes/letterCitations";
 
 interface Row {
@@ -29,6 +34,7 @@ interface Row {
   status: string;
   generated_at: string;
   facts_json: EvidenceFact[];
+  narrative_json: DefenceNarrativeOutput;
 }
 
 const raw = fs.readFileSync(process.argv[2], "utf8");
@@ -67,6 +73,12 @@ let tableAppears = 0;
 let tableDisappears = 0;
 let adverseLeak = 0;
 let previouslyCitedGone = 0;
+let contextArguedLegacy = 0;
+let contextArguedKept = 0;
+let contextUnargued = 0;
+let contextUnarguedStillListed = 0;
+let arguedButUnlisted = 0;
+const unlistedWhy = new Map<string, number>();
 const unrepresented = new Map<string, number>();
 const examples: string[] = [];
 
@@ -76,7 +88,8 @@ for (const r of rows) {
   count(byFamily, family(r.reason_code_module));
   count(modules, r.reason_code_module ?? "null");
   const L = evidenceBasisFor(facts, EVIDENCE_BASIS_RULE_LEGACY);
-  const N = evidenceBasisFor(facts, EVIDENCE_BASIS_RULE_CITED);
+  const argued = argumentFactIdsOfNarrative(r.narrative_json, r.reason_code_module);
+  const N = evidenceBasisFor(facts, EVIDENCE_BASIS_RULE_CITED, argued);
   const printsLegacy = L.tableAllowed && L.rows.length > 0;
   const printsNew = N.tableAllowed && N.rows.length > 0;
   if (N.multiParcel) multiParcel += 1;
@@ -115,12 +128,35 @@ for (const r of rows) {
     const field = f ? evidenceFieldOfFact(f) : null;
     if (field && !KNOWN_ITEM_FIELDS.has(field)) count(unrepresented, field);
   }
-  // Anything the legacy table printed that is NOT record context must survive.
+  // Anything the legacy table printed that is NOT record context must survive;
+  // record-context rows survive exactly when the letter's printed argument cites them.
   const nLabels = new Set((printsNew ? N.rows : []).map((x) => x.label));
   for (const row of printsLegacy ? L.rows : []) {
     const f = byId.get(row.factId);
     const isContext = f?.strength === "supporting" && ["order_confirmation", "refund_policy", "shipping_policy"].includes(String(f.value?.fieldKey));
     if (!isContext && !nLabels.has(row.label)) previouslyCitedGone += 1;
+    if (isContext && f) {
+      if (argued.has(f.id)) {
+        contextArguedLegacy += 1;
+        if (nLabels.has(row.label)) contextArguedKept += 1;
+      } else {
+        contextUnargued += 1;
+        if (nLabels.has(row.label)) contextUnarguedStillListed += 1;
+      }
+    }
+  }
+  // PROPERTY: every bank-included fact a printed argument cites is listed, bar a delivery under its card.
+  for (const id of argued) {
+    const f = byId.get(id);
+    if (!f || !isBankIncludedFact(f)) continue;
+    const delivery = f.category === "delivery_proof" || f.category === "shipping_tracking";
+    // Facts the legacy rule's own row builder also yields no row for (nothing
+    // citable to print, or an identical row already printed) are not this change's.
+    const legacyHasRow = buildEvidenceBasisRows(facts).some((x) => x.factId === id);
+    if (!delivery && legacyHasRow && !(printsNew ? N.rows : []).some((x) => x.factId === id)) {
+      arguedButUnlisted += 1;
+      count(unlistedWhy, `${f.category}${f.strength === "supporting" ? "/supporting" : ""}${N.multiParcel ? "/multi" : ""}`);
+    }
   }
 }
 
@@ -134,5 +170,8 @@ console.log(`rows REMOVED (by label):\n  ${fmt(removed)}`);
 console.log(`rows ADDED (by label):\n  ${fmt(added)}`);
 console.log(`ADVERSE/INTERNAL rows newly visible (must be 0): ${adverseLeak}`);
 console.log(`non-context legacy rows that vanish (must be 0): ${previouslyCitedGone}`);
+console.log(`record-context rows the legacy table listed: argued by the letter ${contextArguedLegacy} (kept ${contextArguedKept}), not argued ${contextUnargued} (still listed ${contextUnarguedStillListed}, must be 0)`);
+console.log(`bank-included facts a printed argument cites but the table omits (must be 0): ${arguedButUnlisted}`);
+console.log(`  by category:\n  ${fmt(unlistedWhy)}`);
 console.log(`cited fields with no item on the dispute page:\n  ${fmt(unrepresented) || "(none)"}`);
 console.log(`examples:\n${examples.join("\n")}`);

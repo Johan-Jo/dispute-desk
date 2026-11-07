@@ -9,8 +9,10 @@
  * (`evidenceBasisRuleOf`), so the page cannot claim what the letter does not
  * say.
  *
- *   rule 2 (new packages): the table rows ARE the cited facts, delivery
- *     included — page and letter agree by construction.
+ *   rule 2 (new packages): the table rows ARE the cited facts (the store's
+ *     records only when the letter's printed argument relies on them), plus
+ *     the delivery its carrier card / section sets out — page and letter
+ *     agree by construction.
  *   rule 1 (every package stored before the marker): the table as it was
  *     printed — every bank-included fact, except the delivery a single-parcel
  *     carrier card showed and the whole table on a multi-parcel letter — PLUS
@@ -21,9 +23,10 @@
  * Read-time and merchant-side only. Nothing here writes, rebuilds or re-scores.
  */
 
-import type { EvidenceFact } from "@/lib/defence/types";
+import type { DefenceNarrativeOutput, EvidenceFact } from "@/lib/defence/types";
 import { isBankIncludedFact } from "@/lib/defence/bankInclusion";
 import {
+  argumentFactIdsOfNarrative,
   EVIDENCE_BASIS_RULE_CITED,
   evidenceBasisRuleOf,
   type EvidenceBasisRule,
@@ -67,18 +70,30 @@ export interface LetterCitations {
 }
 
 /**
- * The fields the letter cites, for a stored package. `provenance` is the
- * package's `document_provenance_json`, which carries the rule stamp; `facts`
- * is the stored `facts_json`. Null when there is no stored letter to read (the
- * caller keeps its existing behaviour).
+ * The fields the letter cites, for a stored package row (`facts_json`,
+ * `narrative_json`, `document_provenance_json` with the rule stamp,
+ * `reason_code_module`, `status`). Null when there is no stored LETTER to read
+ * (the caller keeps its existing behaviour): no facts, or a build that failed
+ * or was skipped (those rows keep `facts_json` but never printed a letter).
  */
-export function letterCitations(facts: unknown, provenance: unknown): LetterCitations | null {
-  // No stored facts (never built, skipped, or a bare fixture) is no letter to
-  // read: the caller keeps the live evidence line's reading.
+export function letterCitations(row: {
+  facts_json?: unknown;
+  narrative_json?: unknown;
+  document_provenance_json?: unknown;
+  reason_code_module?: string | null;
+  status?: string | null;
+}): LetterCitations | null {
+  if (row.status === "failed" || row.status === "skipped") return null;
+  const facts = row.facts_json;
+  // No stored facts (never built, or a bare fixture) is no letter to read.
   if (!Array.isArray(facts) || facts.length === 0) return null;
   const list = facts as EvidenceFact[];
-  const rule = evidenceBasisRuleOf(provenance);
-  const basis = evidenceBasisFor(list, rule);
+  const rule = evidenceBasisRuleOf(row.document_provenance_json);
+  const argued =
+    rule === EVIDENCE_BASIS_RULE_CITED
+      ? argumentFactIdsOfNarrative(row.narrative_json as DefenceNarrativeOutput | null, row.reason_code_module)
+      : undefined;
+  const basis = evidenceBasisFor(list, rule, argued);
   const byId = new Map(list.map((f) => [f.id, f]));
   const fields = new Set<string>();
 
@@ -89,14 +104,12 @@ export function letterCitations(facts: unknown, provenance: unknown): LetterCita
       if (field) fields.add(field);
     }
   }
-  // A legacy letter argues the delivery in its own section even when its table
-  // leaves the row out (a carrier card, or a multi-parcel letter). Under rule 2
-  // the table already lists it.
-  if (rule !== EVIDENCE_BASIS_RULE_CITED) {
-    for (const f of list) {
-      if ((f.category === "delivery_proof" || f.category === "shipping_tracking") && isBankIncludedFact(f)) {
-        fields.add("shipping_tracking");
-      }
+  // The delivery is cited by its own section when a carrier card prints it (a
+  // single or multi-parcel letter), and by its table row otherwise; either way
+  // a bank-included delivery fact is cited.
+  for (const f of list) {
+    if ((f.category === "delivery_proof" || f.category === "shipping_tracking") && isBankIncludedFact(f)) {
+      fields.add("shipping_tracking");
     }
   }
   return { rule, citedFields: [...fields].sort() };

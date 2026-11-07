@@ -116,20 +116,26 @@ export function deliveryFactIds(facts: readonly EvidenceFact[]): Set<string> {
  *   rule 1 (every package built before the marker): every bank-included fact,
  *     minus the delivery rows a single-parcel carrier card already shows, and
  *     no table at all on a multi-parcel letter.
- *   rule 2: the CITED facts only, the delivery included. The carrier card and
- *     the section about it stay; the table states the delivery once more
- *     because the dispute page lists it as cited and the table must agree.
+ *   rule 2: the CITED facts only (the store's own records only when the
+ *     letter's printed argument relies on them: `argued`). Each fact is stated
+ *     once: where a carrier card (single or multi-parcel) prints the delivery,
+ *     the table does not repeat it. The delivery is cited by its section, and
+ *     the dispute page says so. A multi-parcel letter prints the table too.
  */
 export function evidenceBasisFor(
   facts: readonly EvidenceFact[],
   rule: EvidenceBasisRule,
+  argued?: ReadonlySet<string>,
 ): { rows: EvidenceBasisRow[]; multiParcel: boolean; single: boolean; tableAllowed: boolean } {
   const multiParcel = shipmentsOf(facts).length > 1;
   // `singleShipmentOf` reads the events only to date the merchant's shipping
   // time; whether a card exists does not depend on them.
   const single = !multiParcel && singleShipmentOf(facts, [], null) !== null;
-  const all = buildEvidenceBasisRows([...facts], rule);
-  const hidden = rule === EVIDENCE_BASIS_RULE_CITED || !single ? new Set<string>() : deliveryFactIds(facts);
+  const all = buildEvidenceBasisRows([...facts], rule, argued);
+  // Rule 1 hides the delivery only under a single-parcel card (its multi-parcel
+  // letters print no table); rule 2 also hides it under multi-parcel cards.
+  const cardShown = rule === EVIDENCE_BASIS_RULE_CITED ? single || multiParcel : single;
+  const hidden = cardShown ? deliveryFactIds(facts) : new Set<string>();
   return {
     rows: all.filter((r) => !hidden.has(r.factId)),
     multiParcel,

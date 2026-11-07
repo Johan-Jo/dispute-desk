@@ -460,6 +460,8 @@ export function buildEvidenceBasisRows(
    * printed with.
    */
   rule: EvidenceBasisRule = EVIDENCE_BASIS_RULE_LEGACY,
+  /** Rule 2 only: the facts the letter's printed argument relies on. */
+  argued?: ReadonlySet<string>,
 ): EvidenceBasisRow[] {
   // The inclusion predicates are owned by `bankInclusion.ts` (may the issuer see
   // it) and `citedFacts.ts` (is it argument or context). The rule used to be
@@ -467,7 +469,7 @@ export function buildEvidenceBasisRows(
   // differently — in the LLM payload filter; delegating is what lets
   // `tests/unit/bankInclusionSingleOwner.test.ts` prove there is one owner.
   const filtered = collapseDeliveryPair(
-    rule === EVIDENCE_BASIS_RULE_CITED ? citedFacts(facts) : bankIncludedFacts(facts),
+    rule === EVIDENCE_BASIS_RULE_CITED ? citedFacts(facts, argued) : bankIncludedFacts(facts),
   );
   const sorted = [...filtered].sort((a, b) => {
     const r = categoryRank(a.category) - categoryRank(b.category);

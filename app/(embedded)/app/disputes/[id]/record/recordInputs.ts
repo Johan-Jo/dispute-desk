@@ -37,6 +37,8 @@ interface PackageRow {
   pdf_path?: string | null;
   facts_json?: unknown;
   document_provenance_json?: unknown;
+  narrative_json?: unknown;
+  reason_code_module?: string | null;
 }
 
 function pkgRow(v: unknown): PackageRow | null {
@@ -154,14 +156,15 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
   // What the STORED letter cites. The same row the Review tab draws the letter
   // from (decided / saved: the package that was filed; otherwise the newest),
   // read through the same derivation as the letter's own Evidence Basis, under
-  // the rule that package was built with.
+  // the rule that package was built with. A decided dispute with no submitted
+  // package has no letter of ours to describe (the page already says we did not
+  // file), so `latest` is never borrowed for it; a failed or skipped build
+  // printed no letter either (`letterCitations` returns null for those).
   const savedForLetter = stage === "saved" || stage === "under_review";
-  const letterRow = decided || savedForLetter ? (bank ?? latest) : latest;
-  const letter = letterRow
-    ? letterCitations(letterRow.facts_json, letterRow.document_provenance_json)
-    : null;
+  const letterRow = decided ? bank : savedForLetter ? (bank ?? latest) : latest;
+  const letter = letterRow ? letterCitations(letterRow) : null;
 
-  const run =data.gorgiasComms?.latestRun ?? null;
+  const run = data.gorgiasComms?.latestRun ?? null;
   const sit = d.orderSituation ?? null;
   const responder = dv?.response?.responder ?? null;
   const savedStage = stage === "saved" || stage === "under_review";
