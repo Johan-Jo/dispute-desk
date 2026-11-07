@@ -270,9 +270,13 @@ export default function RecordWorkspace({
               display: "flex",
               alignItems: "flex-end",
               gap: 4,
-              borderBottom: "1px solid var(--dd-border)",
+              backgroundImage: "linear-gradient(var(--dd-border), var(--dd-border))",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "100% 1px",
+              backgroundPosition: "left bottom",
               padding: "0 8px",
               overflowX: "auto",
+              overflowY: "hidden",
               whiteSpace: "nowrap",
             }}
           >
