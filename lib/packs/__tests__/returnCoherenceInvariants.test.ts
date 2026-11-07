@@ -130,7 +130,8 @@ describe("loadReturnScopeForPack: read-only, the PACK's cycle decides, a failure
   it("a shop with NO settings row reads as setting off, and no row is created", async () => {
     const { sb, log } = stub({ row: null });
     await expect(run(sb, 1)).resolves.toBeUndefined();
-    expect(log).toEqual(["from:shop_settings"]);
+    // Then the read-only Gorgias signal look-up (one select; no tickets = no signal).
+    expect(log).toEqual(["from:shop_settings", "from:gorgias_matched_tickets"]);
   });
 
   it("cycle-1 pack + cycle-2 answer: the answer is ignored", async () => {
@@ -164,6 +165,7 @@ describe("loadReturnScopeForPack: read-only, the PACK's cycle decides, a failure
       "lib/packs/loadReturnScope.ts",
       "lib/packs/effectiveChecklist.ts",
       "lib/packs/noReturnApplicability.ts",
+      "lib/integrations/gorgias/internalNarrativeConstraints.ts",
       "lib/disputes/loadDecidedResponse.ts",
       "app/api/packs/[packId]/route.ts",
       "app/api/packs/[packId]/inclusion-override/route.ts",

@@ -179,6 +179,9 @@ export const DECIDED_VIEW_DISPUTE_COLUMNS =
 export async function loadDecidedViewInputs(
   sb: SupabaseClient,
   row: DecidedViewDisputeRow,
+  /** `withSupportSignal: false` for a SENT artifact (the outcome email): the read-time
+   *  support-inbox return signal is for the merchant's own pages only. */
+  opts?: { withSupportSignal?: boolean },
 ): Promise<DecidedViewInputs | null> {
   const outcome =
     row.normalized_status === "won" || row.normalized_status === "lost" ? row.normalized_status : null;
@@ -229,6 +232,7 @@ export async function loadDecidedViewInputs(
         shopId: row.shop_id,
         disputeId: row.id,
         packCycle: pack.response_cycle ?? 1,
+        withSupportSignal: opts?.withSupportSignal,
       });
       const orderCtx = {
         noReturnFact: noReturnApplicability({ ...orderFactsFromSections(sections), returnScope: scope }, sections),

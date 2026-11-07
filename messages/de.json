@@ -2332,7 +2332,8 @@
       "merchantSaysRequestReceived": "Sie haben uns mitgeteilt, dass der Kunde um eine Rücksendung dieser Bestellung gebeten hat.",
       "returnedToSender": "Der Zusteller hat dieses Paket an Sie zurückgesendet.",
       "manualOnly": "Nicht automatisch verfügbar – laden Sie es manuell hoch, falls vorhanden.",
-      "generic": "Für diese Bestellung nicht zutreffend."
+      "generic": "Für diese Bestellung nicht zutreffend.",
+      "customerAskedInSupport": "Eine Kundennachricht in Ihrem Support-Postfach bittet darum, diese Bestellung zurückzusenden."
     },
     "signalLabelValue": {
       "refundIssued": "Nachweis, dass die Rückerstattung bereits erfolgt ist",
@@ -2679,7 +2680,8 @@
           "signature": "die Zustellung ohne Unterschrift",
           "addr": "die voneinander abweichenden Rechnungs- und Lieferadressen",
           "returnOnRecord": "die erfasste Rücksendung",
-          "refundOnRecord": "die erfasste Erstattung"
+          "refundOnRecord": "die erfasste Erstattung",
+          "returnAskedInSupport": "die Rücksendeanfrage des Kunden"
         }
       },
       "item": {
@@ -2735,7 +2737,8 @@
           "inProgress": "Eine Rücksendung zu dieser Bestellung läuft. Sie ist noch nicht als erhalten markiert.",
           "returned": "Eine Rücksendung zu dieser Bestellung ist als erhalten markiert.",
           "failed": "Eine Rücksendung zu dieser Bestellung ist als fehlgeschlagen markiert.",
-          "refundSome": "Zu dieser Bestellung liegt eine Erstattung vor."
+          "refundSome": "Zu dieser Bestellung liegt eine Erstattung vor.",
+          "askedInSupport": "Eine Kundennachricht in Ihrem Support-Postfach bittet darum, diese Bestellung zurückzusenden. In Shopify ist keine Rücksendung erfasst."
         },
         "order": {
           "label": "Bestelldaten",
@@ -4172,7 +4175,7 @@
       },
       "evidenceChecklist": {
         "title": "Die Beweischeckliste erklärt",
-        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten.\n\nNicht wie beschrieben: DisputeDesk übernimmt die Produktinformation automatisch aus Ihrem Shop (Titel, Beschreibung, bis zu drei Bilder und die gewählte Variante) und fügt sie der Verteidigung hinzu. Es ist Ihre Produktinformation in der heutigen Fassung; Shopify speichert nicht, wie sie bei der Bestellung aussah. Kann sie nicht übernommen werden (etwa weil das Produkt gelöscht wurde), nennt die Checkliste den Grund.\n\nRücksendungen außerhalb von Shopify: Shopify erfasst nur Rücksendungen über Shopify. Wenn Ihre Kunden Rücksendungen oder Erstattungen per E-Mail, Chat oder Telefon anfragen, aktivieren Sie „Kunden fordern Rücksendungen außerhalb von Shopify an“ unter Einstellungen → Automatisierung. „Keine Rücksendung in Shopify erfasst“ stärkt einen Fall dann nicht mehr allein, und jeder Streitfall wegen nicht wie beschrieben, Erstattung oder nicht erhalten fragt Sie im Tab Beweise, ob der Kunde vorher eine Rücksendung oder Erstattung angefragt hat. „Nicht angefragt“ wird der Antwort als Ihre Bestätigung hinzugefügt; „angefragt“ wird der Bank nie gezeigt. Zeigt Shopify für die Bestellung bereits eine Erstattung oder Rücksendung, wird die Frage nicht gestellt: Der Shopify-Eintrag beantwortet sie bereits."
+        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten.\n\nNicht wie beschrieben: DisputeDesk übernimmt die Produktinformation automatisch aus Ihrem Shop (Titel, Beschreibung, bis zu drei Bilder und die gewählte Variante) und fügt sie der Verteidigung hinzu. Es ist Ihre Produktinformation in der heutigen Fassung; Shopify speichert nicht, wie sie bei der Bestellung aussah. Kann sie nicht übernommen werden (etwa weil das Produkt gelöscht wurde), nennt die Checkliste den Grund.\n\nRücksendungen außerhalb von Shopify: Shopify erfasst nur Rücksendungen über Shopify. Wenn Ihre Kunden Rücksendungen oder Erstattungen per E-Mail, Chat oder Telefon anfragen, aktivieren Sie „Kunden fordern Rücksendungen außerhalb von Shopify an“ unter Einstellungen → Automatisierung. „Keine Rücksendung in Shopify erfasst“ stärkt einen Fall dann nicht mehr allein, und jeder Streitfall wegen nicht wie beschrieben, Erstattung oder nicht erhalten fragt Sie im Tab Beweise, ob der Kunde vorher eine Rücksendung oder Erstattung angefragt hat. „Nicht angefragt“ wird der Antwort als Ihre Bestätigung hinzugefügt; „angefragt“ wird der Bank nie gezeigt. Zeigt Shopify für die Bestellung bereits eine Erstattung oder Rücksendung, wird die Frage nicht gestellt: Der Shopify-Eintrag beantwortet sie bereits.\n\nIst Ihr Gorgias-Postfach verbunden und bittet eine Kundennachricht zu dieser Bestellung um eine Rücksendung, sagt die Streitfallseite das und behauptet nicht mehr, dass keine Rücksendung erfasst ist. Das sehen nur Sie: Die an die Bank gesendete Antwort ändert sich dadurch nicht. Haben Sie uns mitgeteilt, dass der Kunde nicht gefragt hat, und das nach seiner Nachricht, bleibt Ihre Angabe bestehen."
       },
       "defenseLetterRebuttal": {
         "title": "Verteidigungsschreiben und automatischer Widerredestext",

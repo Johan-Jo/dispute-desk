@@ -75,6 +75,8 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
             shopId: pack.shop_id,
             disputeId: pack.dispute_id,
             packCycle: (pack as { response_cycle?: number | null }).response_cycle ?? 1,
+            // A stored artifact: the read-time support-inbox signal is for live merchant pages only.
+            withSupportSignal: false,
             checklistV2: storedV2,
             packSections: sections,
             evidenceItems:

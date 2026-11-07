@@ -25,6 +25,7 @@
  * that the validator refuses a sentence DENYING a refund request.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   NO_INTERNAL_CONSTRAINTS,
@@ -115,37 +116,82 @@ export async function loadInternalNarrativeConstraints(
   disputeId: string,
 ): Promise<InternalNarrativeConstraints> {
   try {
-    const sb = getServiceClient();
-    const { data: tickets, error: tErr } = await sb
-      .from("gorgias_matched_tickets")
-      .select("id, match_status, confidence")
-      .eq("dispute_id", disputeId);
-    if (tErr || !tickets || tickets.length === 0) return NO_INTERNAL_CONSTRAINTS;
-
-    const { data: messages, error: mErr } = await sb
-      .from("gorgias_evidence_messages")
-      .select("id, matched_ticket_id, sender_type, sent_at, message_text, evidence_category")
-      .eq("dispute_id", disputeId);
-    if (mErr || !messages) return NO_INTERNAL_CONSTRAINTS;
-
-    const ticketById = new Map(
-      tickets.map((t) => [t.id as string, t as { match_status: string | null; confidence: string | null }]),
-    );
-    return deriveInternalNarrativeConstraints(
-      messages.map((m) => {
-        const t = ticketById.get(m.matched_ticket_id as string);
-        return {
-          id: m.id as string,
-          senderType: m.sender_type as string,
-          sentAt: (m.sent_at as string | null) ?? null,
-          messageText: (m.message_text as string | null) ?? null,
-          evidenceCategory: (m.evidence_category as string | null) ?? null,
-          ticketMatchStatus: t?.match_status ?? null,
-          ticketConfidence: t?.confidence ?? null,
-        };
-      }),
-    );
+    const messages = await loadStoredMessagesForConstraints(getServiceClient(), disputeId);
+    return messages ? deriveInternalNarrativeConstraints(messages) : NO_INTERNAL_CONSTRAINTS;
   } catch {
     return NO_INTERNAL_CONSTRAINTS;
   }
+}
+
+/**
+ * READ-TIME ONLY (merchant pages): did a customer message matched to this
+ * order ask to return the goods? Same predicates as `returnRequested` above
+ * (one definition of "asks to return" and of "matched to this order"), but it
+ * also reports WHEN the latest such message was sent, so a merchant's later
+ * answer can be weighed against it. Never feeds a letter, a hash or a score.
+ */
+export function deriveCustomerReturnRequest(
+  messages: readonly StoredMessageForConstraints[],
+): { requested: boolean; latestSentAt: string | null } {
+  const asks = messages.filter((m) => m.senderType === "customer" && isOrderMatched(m) && asksToReturn(m));
+  const dates = asks
+    .map((m) => m.sentAt)
+    .filter((d): d is string => typeof d === "string")
+    .sort();
+  return { requested: asks.length > 0, latestSentAt: dates[dates.length - 1] ?? null };
+}
+
+/**
+ * READ-ONLY (selects only): the customer-asked-to-return signal for a merchant
+ * page. Absent integration, no matched tickets, a read error or a throw all
+ * read as "no signal"; this never throws.
+ */
+export async function loadCustomerReturnRequest(
+  sb: SupabaseClient,
+  args: { disputeId: string; shopId: string },
+): Promise<{ requested: boolean; latestSentAt: string | null }> {
+  try {
+    const messages = await loadStoredMessagesForConstraints(sb, args.disputeId, args.shopId);
+    return messages ? deriveCustomerReturnRequest(messages) : { requested: false, latestSentAt: null };
+  } catch {
+    return { requested: false, latestSentAt: null };
+  }
+}
+
+/**
+ * The ONE reader of the dispute's stored helpdesk messages for these
+ * derivations: two plain selects, scoped to the dispute (and the shop when
+ * given). Null on any read error or when nothing is matched.
+ */
+export async function loadStoredMessagesForConstraints(
+  sb: SupabaseClient,
+  disputeId: string,
+  shopId?: string,
+): Promise<StoredMessageForConstraints[] | null> {
+  const tq = sb.from("gorgias_matched_tickets").select("id, match_status, confidence").eq("dispute_id", disputeId);
+  const { data: tickets, error: tErr } = await (shopId ? tq.eq("shop_id", shopId) : tq);
+  if (tErr || !tickets || tickets.length === 0) return null;
+
+  const mq = sb
+    .from("gorgias_evidence_messages")
+    .select("id, matched_ticket_id, sender_type, sent_at, message_text, evidence_category")
+    .eq("dispute_id", disputeId);
+  const { data: messages, error: mErr } = await (shopId ? mq.eq("shop_id", shopId) : mq);
+  if (mErr || !messages) return null;
+
+  const ticketById = new Map(
+    tickets.map((t) => [t.id as string, t as { match_status: string | null; confidence: string | null }]),
+  );
+  return messages.map((m) => {
+    const t = ticketById.get(m.matched_ticket_id as string);
+    return {
+      id: m.id as string,
+      senderType: m.sender_type as string,
+      sentAt: (m.sent_at as string | null) ?? null,
+      messageText: (m.message_text as string | null) ?? null,
+      evidenceCategory: (m.evidence_category as string | null) ?? null,
+      ticketMatchStatus: t?.match_status ?? null,
+      ticketConfidence: t?.confidence ?? null,
+    };
+  });
 }
