@@ -272,6 +272,8 @@ export interface RecordInputs {
   /** Open only: automation mode the package is filed under. */
   automationMode: "auto" | "review" | null;
   stage: RecordStage;
+  /** The dispute list already calls this state "Pack prepared" (the evidence pack is ready while the defence package is still being built). The header chip then uses the same word from the same key, so list and page cannot disagree. */
+  packPrepared?: boolean;
   /** A defence package exists for the roles to describe. */
   hasPackage: boolean;
   /** Decided: who responded. */
@@ -1086,7 +1088,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       headline: tk(`headline.${headlineKey}`),
       claimShort: tk(`claimShort.${claimKey(v.reason)}`),
       amountLabel: tk(`amountLabel.${status}`),
-      statusChip: tk(`chip.${headlineKey}`),
+      statusChip: stage === "building" && i.packPrepared ? ({ key: "presentation.lifecycle.pack_prepared" } as I18nToken) : tk(`chip.${headlineKey}`),
       strengthBand:
         (i.strength === "strong" || i.strength === "moderate" || i.strength === "weak") &&
         PREPARED_STAGES.includes(stage) &&

@@ -221,6 +221,7 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
     offerAck,
     automationMode: decided ? null : p?.automationMode === "review" || data.appliedRule?.mode === "review" ? "review" : "auto",
     stage,
+    packPrepared: p?.lifecycle === "pack_prepared",
     hasPackage,
     responder,
     sentAt: dv?.response?.sentAt ?? null,
