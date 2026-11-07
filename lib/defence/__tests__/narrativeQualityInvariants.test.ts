@@ -505,11 +505,19 @@ describe("Invariant 7 — both renderers import every shared helper", () => {
   });
 
   it("both renderers consume the shared evidence-basis row builder", async () => {
-    const { html } = await readBoth();
-    expect(html).toMatch(/buildEvidenceBasisRows/);
-    expect(html).toMatch(
-      /from\s+["']@\/lib\/defence\/pdf\/evidenceBasisRows["']/,
+    const { pdf, html } = await readBoth();
+    // Both renderers (and the dispute page) take the rows from ONE derivation,
+    // `evidenceBasisFor`, which wraps the shared row builder and decides the
+    // rule the stored letter was built under.
+    expect(html).toMatch(/evidenceBasisFor/);
+    expect(html).toMatch(/from\s+["']@\/lib\/defence\/render\/documentModel["']/);
+    expect(pdf).toMatch(/evidenceBasisFor/);
+    const model = (await import("node:fs")).readFileSync(
+      (await import("node:path")).resolve(process.cwd(), "lib/defence/render/documentModel.ts"),
+      "utf8",
     );
+    expect(model).toMatch(/buildEvidenceBasisRows/);
+    expect(model).toMatch(/from\s+["']\.\.\/pdf\/evidenceBasisRows["']/);
     // The old local renderFactValue is gone — the formatter is
     // owned by evidenceBasisRows.ts.
     expect(html).not.toMatch(/^function renderFactValue\(/m);

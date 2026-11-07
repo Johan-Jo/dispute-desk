@@ -1,0 +1,700 @@
+{
+ "open_368528_v1": {
+  "reason": "FRAUDULENT",
+  "facts": [
+   {
+    "id": "order_confirmation#0",
+    "label": "Order record",
+    "value": {
+     "channel": "web",
+     "fieldKey": "order_confirmation",
+     "confirmationSent": false,
+     "fulfillmentStatus": "FULFILLED"
+    },
+    "source": "shopify_order",
+    "category": "order_record",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "no_return_initiated#0",
+    "label": "No return recorded in Shopify",
+    "value": {
+     "fieldKey": "no_return_initiated",
+     "recordScope": "shopify_returns",
+     "returnStatus": "NO_RETURN",
+     "returnInitiated": false
+    },
+    "source": "shopify_order",
+    "category": "no_return_initiated",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "shipping_tracking#gid://shopify/Fulfillment/6780875505857",
+    "label": "Shipping tracking",
+    "value": {
+     "carrier": "Stallion Express",
+     "fieldKey": "shipping_tracking",
+     "proofType": "delivered_confirmed",
+     "returnedAt": null,
+     "deliveredAt": "2026-10-25T19:33:59Z",
+     "trackingUrl": "https://stallionexpress.ca/track/?tracking=261015NVT5",
+     "signedByName": null,
+     "shipmentIndex": [
+      {
+       "carrier": "Stallion Express",
+       "proofType": "delivered_confirmed",
+       "instanceKey": "gid://shopify/Fulfillment/6780875505857",
+       "trackingNumber": "261015NVT5"
+      }
+     ],
+     "trackingNumber": "261015NVT5",
+     "deliveryStatuses": [
+      "Delivered"
+     ]
+    },
+    "source": "shopify_fulfillments",
+    "category": "shipping_tracking",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "delivery_proof#gid://shopify/Fulfillment/6780875505857",
+    "label": "Delivery confirmation",
+    "value": {
+     "carrier": "Stallion Express",
+     "fieldKey": "delivery_proof",
+     "proofType": "delivered_confirmed",
+     "returnedAt": null,
+     "deliveredAt": "2026-10-25T19:33:59Z",
+     "trackingUrl": "https://stallionexpress.ca/track/?tracking=261015NVT5",
+     "signedByName": null,
+     "shipmentIndex": [
+      {
+       "carrier": "Stallion Express",
+       "proofType": "delivered_confirmed",
+       "instanceKey": "gid://shopify/Fulfillment/6780875505857",
+       "trackingNumber": "261015NVT5"
+      }
+     ],
+     "trackingNumber": "261015NVT5",
+     "deliveryStatuses": [
+      "Delivered"
+     ]
+    },
+    "source": "shopify_fulfillments",
+    "category": "delivery_proof",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "fraud_risk_screening#0",
+    "label": "Pre-authorization fraud screening",
+    "value": {
+     "fieldKey": "fraud_risk_screening",
+     "riskLevel": "LOW",
+     "positiveFacts": [
+      "Characteristics of this order are similar to non-fraudulent orders observed in the past",
+      "Card Verification Value (CVV) is correct",
+      "Billing street address matches credit card's registered address"
+     ],
+     "recommendation": "ACCEPT",
+     "positiveFactCount": 3
+    },
+    "source": "shopify_order_risk_assessments",
+    "category": "fraud_screening",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "ip_location_check#0",
+    "label": "IP & location consistency",
+    "value": {
+     "fieldKey": "ip_location_check",
+     "locationMatch": "same_country",
+     "bankLocationSummary": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals."
+    },
+    "source": "ipinfo_io",
+    "category": "ip_location",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   }
+  ],
+  "lines": [
+   {
+    "field": "avs_cvv_match",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "strong"
+   },
+   {
+    "field": "tds_authentication",
+    "hasEvidence": false,
+    "submissionMethod": "not_included",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "fraud_risk_screening",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "order_confirmation",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "ip_location_check",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "customer_communication",
+    "hasEvidence": false,
+    "submissionMethod": "not_included",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "shipping_tracking",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "no_return_initiated",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "activity_log",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "shipping_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "refund_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "cancellation_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   }
+  ]
+ },
+ "decided_v11": {
+  "reason": "FRAUDULENT",
+  "facts": [
+   {
+    "id": "no_return_initiated#0",
+    "label": "No return initiated",
+    "value": {
+     "fieldKey": "no_return_initiated",
+     "returnStatus": "NO_RETURN",
+     "returnInitiated": false
+    },
+    "source": "shopify_order",
+    "category": "no_return_initiated",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "shipping_tracking#gid://shopify/Fulfillment/6557125771457",
+    "label": "Shipping tracking",
+    "value": {
+     "carrier": "TechSHIP",
+     "fieldKey": "shipping_tracking",
+     "proofType": "delivered_confirmed",
+     "deliveredAt": "2026-07-10T19:28:00Z",
+     "trackingUrl": "https://tools.usps.com/tracking/9261290416102420763900",
+     "signedByName": null,
+     "trackingNumber": "420774699261290416102420763900"
+    },
+    "source": "shopify_fulfillments",
+    "category": "shipping_tracking",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "delivery_proof#gid://shopify/Fulfillment/6557125771457",
+    "label": "Delivery confirmation",
+    "value": {
+     "carrier": "TechSHIP",
+     "fieldKey": "delivery_proof",
+     "proofType": "delivered_confirmed",
+     "deliveredAt": "2026-07-10T19:28:00Z",
+     "trackingUrl": "https://tools.usps.com/tracking/9261290416102420763900",
+     "signedByName": null,
+     "trackingNumber": "420774699261290416102420763900"
+    },
+    "source": "shopify_fulfillments",
+    "category": "delivery_proof",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "ip_location_check#0",
+    "label": "IP & location consistency",
+    "value": {
+     "fieldKey": "ip_location_check",
+     "locationMatch": "same_country",
+     "bankLocationSummary": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals."
+    },
+    "source": "ipinfo_io",
+    "category": "ip_location",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   }
+  ],
+  "lines": [
+   {
+    "field": "avs_cvv_match",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "tds_authentication",
+    "hasEvidence": false,
+    "submissionMethod": "not_included",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "fraud_risk_screening",
+    "hasEvidence": true,
+    "submissionMethod": "internal_only",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "order_confirmation",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "ip_location_check",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "customer_communication",
+    "hasEvidence": false,
+    "submissionMethod": "not_included",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "shipping_tracking",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "no_return_initiated",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "activity_log",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "shipping_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "refund_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "cancellation_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   }
+  ]
+ },
+ "decided_v5_legacy_flags": {
+  "reason": "FRAUDULENT",
+  "facts": [
+   {
+    "id": "f0",
+    "label": "Order record",
+    "value": {
+     "channel": "web",
+     "fieldKey": "order_confirmation",
+     "confirmationSent": false,
+     "fulfillmentStatus": "FULFILLED"
+    },
+    "source": "shopify_order",
+    "category": "order_record",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f1",
+    "label": "No return initiated",
+    "value": {
+     "fieldKey": "no_return_initiated",
+     "returnStatus": "NO_RETURN",
+     "returnInitiated": false
+    },
+    "source": "shopify_order",
+    "category": "no_return_initiated",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "f2",
+    "label": "Customer activity log",
+    "value": {
+     "fieldKey": "activity_log",
+     "lastAccessAt": null,
+     "digitalAccessUsed": false,
+     "decisiveSessionProof": false
+    },
+    "source": "shopify_order",
+    "category": "prior_customer_history",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f3",
+    "label": "Customer account history",
+    "value": {
+     "fieldKey": "customer_account_info",
+     "priorOrderCount": 0,
+     "disputeFreeHistory": true
+    },
+    "source": "shopify_order",
+    "category": "prior_customer_history",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f4",
+    "label": "Shipping tracking",
+    "value": {
+     "carrier": "TechSHIP",
+     "fieldKey": "shipping_tracking",
+     "proofType": "delivered_confirmed",
+     "deliveredAt": "2026-07-09T15:35:00Z",
+     "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=420115809261290416102420718795&tracking-id=420115809261290416102420718795",
+     "signedByName": null,
+     "trackingNumber": "420115809261290416102420718795"
+    },
+    "source": "shopify_fulfillments",
+    "category": "shipping_tracking",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "f5",
+    "label": "Delivery confirmation",
+    "value": {
+     "carrier": "TechSHIP",
+     "fieldKey": "delivery_proof",
+     "proofType": "delivered_confirmed",
+     "deliveredAt": "2026-07-09T15:35:00Z",
+     "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=420115809261290416102420718795&tracking-id=420115809261290416102420718795",
+     "signedByName": null,
+     "trackingNumber": "420115809261290416102420718795"
+    },
+    "source": "shopify_fulfillments",
+    "category": "delivery_proof",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": true,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": true
+   },
+   {
+    "id": "f6",
+    "label": "Cancellation policy",
+    "value": {
+     "fieldKey": "cancellation_policy",
+     "acceptedAtCheckout": false,
+     "acceptanceTimestamp": null
+    },
+    "source": "policy_snapshots",
+    "category": "policy_cancellation",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f7",
+    "label": "Shipping policy",
+    "value": {
+     "fieldKey": "shipping_policy",
+     "acceptedAtCheckout": false,
+     "acceptanceTimestamp": null
+    },
+    "source": "policy_snapshots",
+    "category": "policy_shipping",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f8",
+    "label": "Refund policy",
+    "value": {
+     "fieldKey": "refund_policy",
+     "acceptedAtCheckout": false,
+     "acceptanceTimestamp": null
+    },
+    "source": "policy_snapshots",
+    "category": "policy_refund",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f9",
+    "label": "Payment authentication",
+    "value": {
+     "network": "mastercard",
+     "fieldKey": "avs_cvv_match",
+     "avsResult": null,
+     "cvvResult": null,
+     "addressVerified": false,
+     "verificationSummary": null,
+     "securityCodeVerified": true
+    },
+    "source": "shopify_transactions",
+    "category": "payment_authentication",
+    "strength": "moderate",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   },
+   {
+    "id": "f10",
+    "label": "IP & location consistency",
+    "value": {
+     "fieldKey": "ip_location_check",
+     "locationMatch": "same_country",
+     "bankLocationSummary": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals."
+    },
+    "source": "ipinfo_io",
+    "category": "ip_location",
+    "strength": "supporting",
+    "sourceRef": null,
+    "confidence": null,
+    "bankEligible": false,
+    "internalOnly": false,
+    "submissionRisk": false,
+    "merchantVisible": true,
+    "includeInBankNarrative": false
+   }
+  ],
+  "lines": [
+   {
+    "field": "avs_cvv_match",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "tds_authentication",
+    "hasEvidence": false,
+    "submissionMethod": "not_included",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "fraud_risk_screening",
+    "hasEvidence": true,
+    "submissionMethod": "internal_only",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "order_confirmation",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "ip_location_check",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "customer_communication",
+    "hasEvidence": false,
+    "submissionMethod": "not_included",
+    "strengthContribution": "none"
+   },
+   {
+    "field": "shipping_tracking",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "no_return_initiated",
+    "hasEvidence": true,
+    "submissionMethod": "bank_argument",
+    "strengthContribution": "moderate"
+   },
+   {
+    "field": "activity_log",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "shipping_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "refund_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   },
+   {
+    "field": "cancellation_policy",
+    "hasEvidence": true,
+    "submissionMethod": "context_only",
+    "strengthContribution": "supporting"
+   }
+  ]
+ }
+}

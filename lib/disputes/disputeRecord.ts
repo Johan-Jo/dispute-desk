@@ -246,6 +246,15 @@ export interface RecordInputs {
   /** Decided only: evidence fields the SUBMITTED package carried as bank-eligible
    *  narrative. Null = unknown (an open dispute, or no submitted package read). */
   bankCitedFields: string[] | null;
+  /**
+   * What the STORED letter cites (`lib/disputes/letterCitations.ts`): the
+   * evidence fields its Evidence Basis lists, under the rule the package was
+   * built with. When present it IS the cited set — the page says "only the items
+   * cited to the bank appear in the letter's evidence basis", and this is how
+   * that sentence stays true for a new package and for a legacy one. Absent
+   * (no stored letter yet) keeps the live evidence line's own reading.
+   */
+  letter?: { rule: 1 | 2; citedFields: string[] } | null;
   /** Shopify's refund situation for the order. */
   refund: "none" | "some" | "unknown";
   timelineEvents: Array<{ at?: string; text?: string }>;
@@ -342,6 +351,14 @@ interface ItemCtx {
 
 function roleFromLine(i: RecordInputs, line: RecordLine | undefined, field: string): RecordRole {
   if (!line || !line.hasEvidence) return "unavailable";
+  // The stored letter decides what is cited: a field is cited exactly when the
+  // letter's Evidence Basis lists it. Everything else the package carries is
+  // context (the package holds it, the argument does not rest on it) or, when
+  // the evidence line routes it away from the bank, internal.
+  if (i.letter) {
+    if (i.letter.citedFields.includes(field)) return "cited";
+    return line.method === "bank_argument" || line.method === "context_only" ? "context" : "internal";
+  }
   let role: RecordRole;
   switch (line.method) {
     case "bank_argument":
@@ -592,7 +609,7 @@ function buildItems(c: ItemCtx): RecordItem[] {
   const tds = facts.tds_authentication;
   add({
     key: "tds",
-    role: tds ? "context" : "unavailable",
+    role: tds ? (i.letter?.citedFields.includes("tds_authentication") ? "cited" : "context") : "unavailable",
     strength: tds ? strengthPill(c.line("tds_authentication")?.strength) : null,
     label: tk("item.tds.label"),
     detail: tk(tds ? "item.tds.present" : "item.tds.none"),

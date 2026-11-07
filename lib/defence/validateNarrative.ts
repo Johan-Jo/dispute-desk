@@ -30,7 +30,7 @@ import {
   internalConstraintViolations,
   type InternalNarrativeConstraints,
 } from "./internalConstraints";
-import { isBankIncludedFact } from "./bankInclusion";
+import { isListableFact } from "./citedFacts";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
@@ -760,7 +760,7 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
   // Uses THE bank-inclusion predicate rather than a local re-spelling; that
   // rule has one owner for the reason C-1 exists (lib/defence/bankInclusion.ts).
   const citableFactIds = new Set(
-    input.approvedFacts.filter(isBankIncludedFact).map((f) => f.id),
+    input.approvedFacts.filter(isListableFact).map((f) => f.id),
   );
   for (const sectionKey of SECTION_KEYS) {
     const section = input.narrative[sectionKey];

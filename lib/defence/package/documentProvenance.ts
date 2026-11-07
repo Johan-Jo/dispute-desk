@@ -40,6 +40,7 @@
 
 import type { ComposedDocumentBlock, EvidenceFact } from "../types";
 import { buildEvidenceBasisRows } from "../pdf/evidenceBasisRows";
+import { EVIDENCE_BASIS_RULE_CITED, type EvidenceBasisRule } from "../citedFacts";
 import { hasFulfillmentClaimAuthority } from "./fulfillmentClaimAuthority";
 
 /** Bumped when the MAP's shape changes. */
@@ -75,6 +76,13 @@ export interface DocumentProvenanceMap {
   records: Record<string, RecordProvenance>;
   /** Rendered content that no record could be tied to. */
   unattributedSurfaces: DocumentSurface[];
+  /**
+   * Which Evidence Basis rule the document was rendered under
+   * (`lib/defence/citedFacts.ts`). Present ONLY on a package built under the
+   * cited rule; absent on every package stored before it, which is how the
+   * preview and the dispute page know to keep rendering the legacy table.
+   */
+  evidenceBasisRule?: number;
 }
 
 export interface BuildProvenanceInput {
@@ -82,6 +90,10 @@ export interface BuildProvenanceInput {
   blocks: readonly ComposedDocumentBlock[];
   /** The facts the document was composed from (already record-id labelled). */
   composedFacts: readonly EvidenceFact[];
+  /** The Evidence Basis rule the document was rendered under. Absent = legacy. */
+  evidenceBasisRule?: EvidenceBasisRule;
+  /** The facts the printed letter relies on (counsel claims); rule 2 only. */
+  argumentFactIds?: readonly string[];
 }
 
 function add(
@@ -112,7 +124,8 @@ export function buildDocumentProvenance(
   /* Surface 1 — Evidence Basis. Built from the WHOLE composed fact list, so
    * a fact reaches it having been cited in no prose at all. This is the
    * surface a narrative-only reading misses. */
-  for (const row of buildEvidenceBasisRows([...input.composedFacts])) {
+  const argued = input.argumentFactIds ? new Set(input.argumentFactIds) : undefined;
+  for (const row of buildEvidenceBasisRows([...input.composedFacts], input.evidenceBasisRule, argued)) {
     if (row.factId) add(surfaces, row.factId, "evidence_basis");
   }
 
@@ -175,6 +188,14 @@ export function buildDocumentProvenance(
     complete: true,
     records,
     unattributedSurfaces: [...unattributed].sort(),
+    // Stamped only for the cited rule; the legacy rule stays unmarked so a map
+    // built the way it always was is byte-identical.
+    ...(input.evidenceBasisRule === EVIDENCE_BASIS_RULE_CITED
+      ? {
+          evidenceBasisRule: EVIDENCE_BASIS_RULE_CITED,
+          ...(input.argumentFactIds ? { argumentFactIds: [...input.argumentFactIds].sort() } : {}),
+        }
+      : {}),
   };
 }
 

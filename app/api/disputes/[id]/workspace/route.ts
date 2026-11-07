@@ -785,7 +785,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // `factsJson` for the evidence-line-item derivation below comes from
   // `latest.facts_json` — no separate single-column query needed.
   const DEFENCE_SELECT_COLS =
-    "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json, plan_json, plan_input_hash, plan_deadline_only, plan_no_safe_argument, document_validation_passed";
+    "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json, plan_json, plan_input_hash, plan_deadline_only, plan_no_safe_argument, document_validation_passed, document_provenance_json";
   let defencePackageLatest: Record<string, unknown> | null = null;
   let defencePackageBankFacing: Record<string, unknown> | null = null;
   let defencePackageBuilding = false;
