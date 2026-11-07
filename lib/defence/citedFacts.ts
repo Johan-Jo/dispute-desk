@@ -120,10 +120,72 @@ export function argumentFactIdsOfBlocks(blocks: readonly ComposedDocumentBlock[]
   const out = new Set<string>();
   for (const b of blocks) {
     if (!ARGUMENT_SECTION_KEYS.includes(b.sectionKey)) continue;
-    if (!(b.llmText.trim() || b.fallbackText.trim())) continue;
+    // Only model/record prose counts, exactly like the narrative reader: a
+    // deterministic fallback block (the fulfilment sentence) names no fact.
+    if (!b.llmText.trim()) continue;
     for (const id of b.usedFactIds) out.add(id);
   }
   return out;
+}
+
+/**
+ * COUNSEL V2 LETTERS: which facts the letter really relies on.
+ *
+ * Every counsel section carries `usedFactIds = ALL fact ids` (checks.ts
+ * `toNarrative`), so for these letters the narrative cannot say which facts a
+ * section rests on. The claim ledger can: each claim lists the records it is
+ * derived from (`sources`: fact ids and pack paths), and each printed section
+ * (summary, evidence sections, conclusion) lists the claim ids it was written
+ * from. The build derives the set here, stores it in the provenance column
+ * (`argumentFactIds`), and the Evidence Basis, the preview and the dispute page
+ * read it from there. `narrative_json` is untouched.
+ *
+ * A source is a fact id (matched exactly) or a pack path that stands for one of
+ * the store's own records. Only those paths matter: every other fact is cited
+ * by the predicate without being argued.
+ */
+const RECORD_SOURCE_FIELD: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^pack\.order\.(lineItems|createdAt|totals|shippingAddressFull|billingAddressFull)\b/, "order_confirmation"],
+  [/^pack\.shipping_policy\b/, "shipping_policy"],
+  [/^pack\.refund_policy\b/, "refund_policy"],
+  [/^policy_snapshots\b/, "refund_policy"],
+];
+
+export function argumentFactIdsFromClaims(
+  claimIdGroups: ReadonlyArray<readonly string[]>,
+  ledger: ReadonlyArray<{ id: string; sources: readonly string[] }>,
+  facts: ReadonlyArray<Pick<EvidenceFact, "id" | "value">>,
+): string[] {
+  const byClaim = new Map(ledger.map((c) => [c.id, c]));
+  const factIds = new Set(facts.map((f) => f.id));
+  const out = new Set<string>();
+  for (const group of claimIdGroups) {
+    for (const claimId of group) {
+      for (const source of byClaim.get(claimId)?.sources ?? []) {
+        if (factIds.has(source)) {
+          out.add(source);
+          continue;
+        }
+        const field = RECORD_SOURCE_FIELD.find(([re]) => re.test(source))?.[1];
+        if (!field) continue;
+        for (const f of facts) if (f.value?.fieldKey === field) out.add(f.id);
+      }
+    }
+  }
+  return [...out].sort();
+}
+
+/**
+ * The relied-on fact ids a package's provenance records (`argumentFactIds`),
+ * or null when it records none (then the narrative's own `usedFactIds` decide).
+ */
+export function argumentFactIdsOfProvenance(provenance: unknown): Set<string> | null {
+  const list =
+    provenance !== null && typeof provenance === "object"
+      ? (provenance as { argumentFactIds?: unknown }).argumentFactIds
+      : undefined;
+  if (!Array.isArray(list) || !list.every((x) => typeof x === "string")) return null;
+  return new Set(list as string[]);
 }
 
 /**
@@ -142,9 +204,14 @@ export function citedFacts(facts: readonly EvidenceFact[], argued?: ReadonlySet<
 
 /**
  * May the Evidence Basis list this fact at all? The suppressor and the
- * validator ask whether a section's support is listable; under either rule
- * every bank-included fact a printed argument cites IS listed, so this is
- * `isBankIncludedFact` under the name that says what they mean.
+ * validator ask whether a section's support is listable: it is
+ * `isBankIncludedFact` under the name that says what they mean. Every
+ * bank-included fact a printed argument section cites is listed, except two
+ * cases that are deliberate and unchanged: the delivery a carrier card already
+ * prints (cited by that section instead), and a rule-1 multi-parcel letter,
+ * which prints no table. Validator rule 5 also checks the summary and the
+ * conclusion, which the narrative-based reader does not count as "argued"
+ * (warning-only); the counsel claim-based set does count their claims.
  */
 export function isListableFact(fact: BankInclusionFlags): boolean {
   return isBankIncludedFact(fact);

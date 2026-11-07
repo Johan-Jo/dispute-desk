@@ -171,6 +171,9 @@ export interface DefencePackageDocumentData {
    * bank-included fact, so the legacy path is byte-identical.
    */
   evidenceBasisRule?: EvidenceBasisRule;
+  /** Rule 2: the facts the printed letter relies on, from its claims. Absent =
+   *  derive them from the composed blocks' `usedFactIds`. */
+  evidenceBasisArgued?: readonly string[];
 }
 
 /* ── Helpers ── */
@@ -709,7 +712,11 @@ export function DefencePackageDocument({
   const basis = evidenceBasisFor(
     approvedFacts,
     evidenceRule,
-    evidenceRule === EVIDENCE_BASIS_RULE_CITED ? argumentFactIdsOfBlocks(composedBlocks) : undefined,
+    evidenceRule === EVIDENCE_BASIS_RULE_CITED
+      ? data.evidenceBasisArgued
+        ? new Set(data.evidenceBasisArgued)
+        : argumentFactIdsOfBlocks(composedBlocks)
+      : undefined,
   );
   const evidenceRows = basis.rows;
   const included = issuerSafe

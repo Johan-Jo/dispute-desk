@@ -27,6 +27,7 @@ import type { DefenceNarrativeOutput, EvidenceFact } from "@/lib/defence/types";
 import { isBankIncludedFact } from "@/lib/defence/bankInclusion";
 import {
   argumentFactIdsOfNarrative,
+  argumentFactIdsOfProvenance,
   EVIDENCE_BASIS_RULE_CITED,
   evidenceBasisRuleOf,
   type EvidenceBasisRule,
@@ -82,8 +83,11 @@ export function letterCitations(row: {
   document_provenance_json?: unknown;
   reason_code_module?: string | null;
   status?: string | null;
+  pdf_path?: string | null;
 }): LetterCitations | null {
-  if (row.status === "failed" || row.status === "skipped") return null;
+  // A failed or skipped build, or a row whose letter was never printed (no PDF),
+  // has no stored letter to describe.
+  if (row.status === "failed" || row.status === "skipped" || !row.pdf_path) return null;
   const facts = row.facts_json;
   // No stored facts (never built, or a bare fixture) is no letter to read.
   if (!Array.isArray(facts) || facts.length === 0) return null;
@@ -91,7 +95,8 @@ export function letterCitations(row: {
   const rule = evidenceBasisRuleOf(row.document_provenance_json);
   const argued =
     rule === EVIDENCE_BASIS_RULE_CITED
-      ? argumentFactIdsOfNarrative(row.narrative_json as DefenceNarrativeOutput | null, row.reason_code_module)
+      ? (argumentFactIdsOfProvenance(row.document_provenance_json) ??
+        argumentFactIdsOfNarrative(row.narrative_json as DefenceNarrativeOutput | null, row.reason_code_module))
       : undefined;
   const basis = evidenceBasisFor(list, rule, argued);
   const byId = new Map(list.map((f) => [f.id, f]));
@@ -104,13 +109,13 @@ export function letterCitations(row: {
       if (field) fields.add(field);
     }
   }
-  // The delivery is cited by its own section when a carrier card prints it (a
-  // single or multi-parcel letter), and by its table row otherwise; either way
-  // a bank-included delivery fact is cited.
-  for (const f of list) {
-    if ((f.category === "delivery_proof" || f.category === "shipping_tracking") && isBankIncludedFact(f)) {
-      fields.add("shipping_tracking");
-    }
+  // The delivery is cited only where the letter actually PRINTS it: by its
+  // carrier card (single or multi-parcel) or by its table row.
+  const isDelivery = (c: string) => c === "delivery_proof" || c === "shipping_tracking";
+  const deliveryPrinted =
+    basis.single || basis.multiParcel || (basis.tableAllowed && basis.rows.some((r) => isDelivery(r.category)));
+  if (deliveryPrinted && list.some((f) => isDelivery(f.category) && isBankIncludedFact(f))) {
+    fields.add("shipping_tracking");
   }
   return { rule, citedFields: [...fields].sort() };
 }

@@ -25,6 +25,7 @@ import type { ReasonCodeFamilyKey } from "../types";
 import { deliveryPostDatesDispute, NO_INTERNAL_CONSTRAINTS } from "../internalConstraints";
 import type { DefenceNarrativeOutput, EvidenceFact, NarrativeSection } from "../types";
 import type { CounselDraft, EvidenceSectionKey, LedgerClaim, Playbook } from "./types";
+import { argumentFactIdsFromClaims } from "../citedFacts";
 
 export interface CheckContext {
   ledger: readonly LedgerClaim[];
@@ -358,6 +359,26 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   for (const e of res.errors) issues.push(`truth (${e.section}): ${e.message}`);
 
   return [...new Set(issues)];
+}
+
+/**
+ * The facts the PRINTED letter relies on, from the claims its printed sections
+ * were written from (not from `usedFactIds`, which `toNarrative` fills with
+ * every fact id). Feeds the Evidence Basis through the provenance column; see
+ * `argumentFactIdsFromClaims`.
+ */
+export function argumentFactIdsOfDraft(
+  d: CounselDraft,
+  ledger: readonly LedgerClaim[],
+  facts: ReadonlyArray<Pick<EvidenceFact, "id" | "value">>,
+): string[] {
+  const printed = (s: { paragraphs?: string[]; claimIds?: string[] } | undefined) =>
+    s && (s.paragraphs ?? []).some((p) => p.trim()) ? [s.claimIds ?? []] : [];
+  return argumentFactIdsFromClaims(
+    [...printed(d.summary), ...(d.evidenceSections ?? []).flatMap(printed), ...printed(d.conclusion)],
+    ledger,
+    facts,
+  );
 }
 
 /**

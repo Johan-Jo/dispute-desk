@@ -36,6 +36,7 @@ import {
 } from "@/lib/defence/render/sections";
 import {
   argumentFactIdsOfNarrative,
+  argumentFactIdsOfProvenance,
   EVIDENCE_BASIS_RULE_CITED,
   evidenceBasisRuleOf,
 } from "@/lib/defence/citedFacts";
@@ -581,7 +582,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const basis = evidenceBasisFor(
     facts,
     evidenceRule,
-    evidenceRule === EVIDENCE_BASIS_RULE_CITED ? argumentFactIdsOfNarrative(narrative, moduleKey) : undefined,
+    evidenceRule === EVIDENCE_BASIS_RULE_CITED
+      ? (argumentFactIdsOfProvenance(row.document_provenance_json) ?? argumentFactIdsOfNarrative(narrative, moduleKey))
+      : undefined,
   );
   const evidenceBasis = basis.rows;
   const productNames = [...lineItems.map((it) => it.description), ...shipments.map(productsOf)];

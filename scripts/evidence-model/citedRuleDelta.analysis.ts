@@ -18,6 +18,7 @@ import fs from "node:fs";
 import type { DefenceNarrativeOutput, EvidenceFact } from "../../lib/defence/types";
 import { evidenceBasisFor } from "../../lib/defence/render/documentModel";
 import {
+  ARGUMENT_SECTION_KEYS,
   argumentFactIdsOfNarrative,
   EVIDENCE_BASIS_RULE_CITED,
   EVIDENCE_BASIS_RULE_LEGACY,
@@ -35,6 +36,7 @@ interface Row {
   generated_at: string;
   facts_json: EvidenceFact[];
   narrative_json: DefenceNarrativeOutput;
+  prompt_family: string | null;
 }
 
 const raw = fs.readFileSync(process.argv[2], "utf8");
@@ -57,6 +59,35 @@ const KNOWN_ITEM_FIELDS = new Set([
   "no_return_initiated", "order_confirmation", "activity_log", "shipping_policy", "refund_policy",
   "cancellation_policy", "customer_communication",
 ]);
+
+const byGroup = new Map<string, number>();
+const printedSections = new Map<string, number>();
+const allFactSections = new Map<string, number>();
+const contextTotal = new Map<string, number>();
+const contextByProse = new Map<string, number>();
+const contextByNarrative = new Map<string, number>();
+
+/** What the printed prose of a letter says about the store's own records. */
+const TOPIC: Record<string, RegExp> = {
+  shipping_policy: /shipping policy|dispatch|ships? within|business days/i,
+  refund_policy: /refund policy|return policy|returned within|policy.{0,40}refund|refund.{0,40}policy/i,
+  order_confirmation: /line items?|items? (listed|ordered|purchased)|(the|this) order (was|is) (placed|paid)|order record|purchased items/i,
+};
+function proseReliance(n: DefenceNarrativeOutput, moduleKey: string | null, facts: EvidenceFact[]): Set<string> {
+  const omitted = new Set((n.omittedSections ?? []).map((o) => o.sectionKey));
+  const text = [...ARGUMENT_SECTION_KEYS, "executiveSummary", "conclusion"]
+    .map((k) => {
+      const s = (n as unknown as Record<string, { text?: string }>)[k as string];
+      return s?.text?.trim() && !omitted.has(k as never) ? s.text : "";
+    })
+    .join(" ");
+  const out = new Set<string>();
+  for (const f of facts) {
+    const re = TOPIC[String(f.value?.fieldKey)];
+    if (re && re.test(text)) out.add(f.id);
+  }
+  return out;
+}
 
 const count = <K extends string>(m: Map<K, number>, k: K, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
 const shops = new Set<string>();
@@ -88,7 +119,29 @@ for (const r of rows) {
   count(byFamily, family(r.reason_code_module));
   count(modules, r.reason_code_module ?? "null");
   const L = evidenceBasisFor(facts, EVIDENCE_BASIS_RULE_LEGACY);
-  const argued = argumentFactIdsOfNarrative(r.narrative_json, r.reason_code_module);
+  // INDEPENDENT reliance: does the PRINTED PROSE of the letter mention the
+  // record? (Not usedFactIds, which counsel v2 fills with every fact id.)
+  const argued = proseReliance(r.narrative_json, r.reason_code_module, facts);
+  // The narrative-based reader, for the collapse statistic only.
+  const viaNarrative = argumentFactIdsOfNarrative(r.narrative_json, r.reason_code_module);
+  const grp = r.prompt_family === "counsel_v2" ? "counsel_v2" : "pre-counsel";
+  count(byGroup, grp);
+  for (const key of ARGUMENT_SECTION_KEYS) {
+    const s = r.narrative_json?.[key];
+    if (s?.text?.trim() && s.usedFactIds?.length > 0) {
+      count(printedSections, grp);
+      if (s.usedFactIds.length === facts.length) count(allFactSections, grp);
+    }
+  }
+  const stat = (m: Map<string, number>, k: string) => m.set(`${grp}/${k}`, (m.get(`${grp}/${k}`) ?? 0) + 1);
+  for (const f of facts) {
+    const key = String(f.value?.fieldKey);
+    if (f.strength === "supporting" && ["order_confirmation", "refund_policy", "shipping_policy"].includes(key) && isBankIncludedFact(f)) {
+      stat(contextTotal, key);
+      if (argued.has(f.id)) stat(contextByProse, key);
+      if (viaNarrative.has(f.id)) stat(contextByNarrative, key);
+    }
+  }
   const N = evidenceBasisFor(facts, EVIDENCE_BASIS_RULE_CITED, argued);
   const printsLegacy = L.tableAllowed && L.rows.length > 0;
   const printsNew = N.tableAllowed && N.rows.length > 0;
@@ -171,6 +224,12 @@ console.log(`rows ADDED (by label):\n  ${fmt(added)}`);
 console.log(`ADVERSE/INTERNAL rows newly visible (must be 0): ${adverseLeak}`);
 console.log(`non-context legacy rows that vanish (must be 0): ${previouslyCitedGone}`);
 console.log(`record-context rows the legacy table listed: argued by the letter ${contextArguedLegacy} (kept ${contextArguedKept}), not argued ${contextUnargued} (still listed ${contextUnarguedStillListed}, must be 0)`);
+console.log(`groups: ${fmt(byGroup).replace(/\n\s*/g, "; ")}`);
+console.log(`printed argument sections naming facts: ${fmt(printedSections).replace(/\n\s*/g, "; ")}`);
+console.log(`... of which usedFactIds == ALL facts: ${fmt(allFactSections).replace(/\n\s*/g, "; ")}`);
+console.log(`record-context bank-included facts by group/field:\n  ${fmt(contextTotal)}`);
+console.log(`... named in the printed PROSE (independent):\n  ${fmt(contextByProse)}`);
+console.log(`... named by the narrative's usedFactIds reader:\n  ${fmt(contextByNarrative)}`);
 console.log(`bank-included facts a printed argument cites but the table omits (must be 0): ${arguedButUnlisted}`);
 console.log(`  by category:\n  ${fmt(unlistedWhy)}`);
 console.log(`cited fields with no item on the dispute page:\n  ${fmt(unrepresented) || "(none)"}`);

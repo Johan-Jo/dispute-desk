@@ -26,7 +26,7 @@ import { buildCreditNotProcessedLedger } from "./creditNotProcessedLedger";
 import { extractReturnWindow } from "./policyTerms";
 import { translateListing } from "../listingTranslation";
 import { getServiceClient } from "@/lib/supabase/server";
-import { checkDraft, toNarrative, type CheckContext } from "./checks";
+import { argumentFactIdsOfDraft, checkDraft, toNarrative, type CheckContext } from "./checks";
 import { composeDraft, writeLetter, type CounselStage, type ModelCall } from "./generate";
 import { NOT_AS_DESCRIBED, playbookForModule } from "./playbooks";
 import { briefForModule, deliveryOnRecord, GENERAL_BRIEF, sectionApplies, type Brief } from "./briefs";
@@ -255,6 +255,9 @@ export interface CounselStageUsage {
 
 export interface CounselRunResult {
   narrative: DefenceNarrativeOutput;
+  /** The facts the printed letter relies on (from its claims). Stored in the
+   *  provenance column for the Evidence Basis; never in `narrative_json`. */
+  argumentFactIds: string[];
   ledger: LedgerClaim[];
   modelUsed: string;
   promptVersion: number;
@@ -598,6 +601,7 @@ export async function runCounsel(args: {
   const result = (draft: CounselDraft, reused: boolean): CounselRunResult => ({
     policyExhibit,
     narrative: finish(draft),
+    argumentFactIds: argumentFactIdsOfDraft(draft, ledger, args.facts),
     ledger,
     modelUsed: model,
     promptVersion: COUNSEL_PROMPT_VERSION,

@@ -209,6 +209,25 @@ describe("facts the real classifier keeps internal are never cited or listed", (
     } as unknown as ClassifyFactsInput["reasonCodeModule"],
   } as unknown as ClassifyFactsInput);
 
+  it("an address-match-only Mastercard verification is never cited; Visa AVS Y is the one primary-sourced cell (lib/argument/avsCodeMap.ts)", () => {
+    for (const cardCompany of ["Mastercard"]) {
+      const r = classifyFacts({
+        ...input(),
+        sections: [
+          { type: "payment", label: "Payment authentication", source: "shopify_order", data: { avsResultCode: "Y", cardCompany }, fieldsProvided: ["avs_cvv_match"] },
+        ],
+      } as unknown as ClassifyFactsInput);
+      const all = [...r.approved, ...r.internalOnly, ...r.submissionRisk] as EvidenceFact[];
+      const pay = all.filter((f) => f.category === "payment_authentication");
+      const n = narrativeJson({ paymentAuthenticationArgument: "x" }) as unknown as DefenceNarrativeOutput;
+      n.paymentAuthenticationArgument.usedFactIds = all.map((f) => f.id);
+      const argued = argumentFactIdsOfNarrative(n, null);
+      expect(pay.length, `${cardCompany}: the classifier still records it internally`).toBeGreaterThan(0);
+      expect(citedFacts(all, argued).filter((f) => f.category === "payment_authentication")).toEqual([]);
+      expect(buildEvidenceBasisRows(all, 2, argued)).toEqual([]);
+    }
+  });
+
   it("none of AVS mismatch, CANCEL screening, different-country IP or a different name is cited", () => {
     const r = classifyFacts(input());
     // Worst case: hand EVERY classified fact to the renderer, approved or not,

@@ -92,6 +92,8 @@ export interface BuildProvenanceInput {
   composedFacts: readonly EvidenceFact[];
   /** The Evidence Basis rule the document was rendered under. Absent = legacy. */
   evidenceBasisRule?: EvidenceBasisRule;
+  /** The facts the printed letter relies on (counsel claims); rule 2 only. */
+  argumentFactIds?: readonly string[];
 }
 
 function add(
@@ -122,7 +124,8 @@ export function buildDocumentProvenance(
   /* Surface 1 — Evidence Basis. Built from the WHOLE composed fact list, so
    * a fact reaches it having been cited in no prose at all. This is the
    * surface a narrative-only reading misses. */
-  for (const row of buildEvidenceBasisRows([...input.composedFacts], input.evidenceBasisRule)) {
+  const argued = input.argumentFactIds ? new Set(input.argumentFactIds) : undefined;
+  for (const row of buildEvidenceBasisRows([...input.composedFacts], input.evidenceBasisRule, argued)) {
     if (row.factId) add(surfaces, row.factId, "evidence_basis");
   }
 
@@ -188,7 +191,10 @@ export function buildDocumentProvenance(
     // Stamped only for the cited rule; the legacy rule stays unmarked so a map
     // built the way it always was is byte-identical.
     ...(input.evidenceBasisRule === EVIDENCE_BASIS_RULE_CITED
-      ? { evidenceBasisRule: EVIDENCE_BASIS_RULE_CITED }
+      ? {
+          evidenceBasisRule: EVIDENCE_BASIS_RULE_CITED,
+          ...(input.argumentFactIds ? { argumentFactIds: [...input.argumentFactIds].sort() } : {}),
+        }
       : {}),
   };
 }

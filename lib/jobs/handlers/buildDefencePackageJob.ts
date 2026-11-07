@@ -1427,6 +1427,9 @@ export async function handleBuildDefencePackage(
      * refuses a narrative with an unknown top-level key, so a stamp there would
      * make every new package unfileable. */
     evidenceBasisRule: CURRENT_EVIDENCE_BASIS_RULE,
+    // Which of the store's own records the printed letter really relies on:
+    // from its claims, because every counsel section carries ALL fact ids.
+    evidenceBasisArgued: counselRes.argumentFactIds,
   };
 
   let pdfPath: string;
@@ -1674,6 +1677,7 @@ export async function handleBuildDefencePackage(
         blocks: composedBlocks,
         composedFacts: planFacts,
         evidenceBasisRule: CURRENT_EVIDENCE_BASIS_RULE,
+        argumentFactIds: counselRes.argumentFactIds,
       }) as unknown as Record<string, unknown>,
       package_mode: classification.packageMode,
       llm_model: narrativeRes.modelUsed,

@@ -12,6 +12,7 @@ select
   dp.shop_id,
   dp.reason_code_module,
   dp.package_mode,
+  dp.prompt_family,
   dp.status,
   dp.generated_at,
   dp.facts_json,

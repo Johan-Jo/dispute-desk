@@ -109,7 +109,7 @@ describe("the cited rule: an item is cited iff the letter relies on it", () => {
     );
     // each fact once: the carrier card prints the delivery, the table does not repeat it
     expect(labels(cited)).not.toContain("Delivery confirmation");
-    expect(letterCitations({ facts_json: s.facts, document_provenance_json: { evidenceBasisRule: 2 } })?.citedFields).toContain(
+    expect(letterCitations({ facts_json: s.facts, document_provenance_json: { evidenceBasisRule: 2 }, pdf_path: "x.pdf" })?.citedFields).toContain(
       "shipping_tracking",
     );
   });
@@ -315,9 +315,46 @@ describe("the dispute page and the letter's Evidence Basis cite the same items",
   it("a failed or skipped build printed no letter: the page keeps the live evidence reading", () => {
     const s = shape("captured:open_368528_v1");
     for (const status of ["failed", "skipped"]) {
-      expect(letterCitations({ facts_json: s.facts, status })).toBeNull();
+      expect(letterCitations({ facts_json: s.facts, status, pdf_path: "x.pdf" })).toBeNull();
     }
-    expect(letterCitations({ facts_json: s.facts, status: "final" })).not.toBeNull();
+    expect(letterCitations({ facts_json: s.facts, status: "final", pdf_path: "x.pdf" })).not.toBeNull();
+    // a row whose letter was never printed (no PDF) is no letter either
+    expect(letterCitations({ facts_json: s.facts, status: "superseded", pdf_path: null })).toBeNull();
+  });
+
+  it("the delivery is cited only where the letter prints it (card or table row)", () => {
+    const s = shape("not_received_delivered");
+    // no carrier card (no carrier / tracking) but a table row: still cited
+    const noCard = s.facts.map((f) =>
+      f.category === "delivery_proof" || f.category === "shipping_tracking"
+        ? { ...f, value: { ...f.value, carrier: null, trackingNumber: null, trackingUrl: null } }
+        : f,
+    );
+    const stamp = { evidenceBasisRule: 2 };
+    expect(letterCitations({ facts_json: noCard, document_provenance_json: stamp, pdf_path: "x" })?.citedFields).toContain("shipping_tracking");
+    // a delivery fact the letter does not list and no card prints is not claimed
+    const hidden = s.facts.map((f) => (f.category === "delivery_proof" || f.category === "shipping_tracking" ? { ...f, includeInBankNarrative: false } : f));
+    expect(letterCitations({ facts_json: hidden, document_provenance_json: stamp, pdf_path: "x" })?.citedFields).not.toContain("shipping_tracking");
+  });
+
+  it("argumentFactIdsOfNarrative counts only printed argument sections (mutation guards)", () => {
+    const policy = idOf(shape("credit_not_processed"), "policy_refund");
+    const n = narrativeCiting({ policyArgument: [policy] });
+    expect(argumentFactIdsOfNarrative(n, null).has(policy)).toBe(true);
+    // an omitted section prints nothing (guards the `omitted` check)
+    expect(argumentFactIdsOfNarrative(narrativeCiting({ policyArgument: [policy] }, ["policyArgument"]), null).has(policy)).toBe(false);
+    // a model-written section the reason code denies prints nothing (guards the `isSectionShown` check)
+    expect(argumentFactIdsOfNarrative(n, "visa_10_4_fraud").has(policy)).toBe(false);
+    // ...but a record-built one prints even there
+    const record = narrativeCiting({ policyArgument: [policy] });
+    (record.policyArgument as { source?: string }).source = "record";
+    expect(argumentFactIdsOfNarrative(record, "visa_10_4_fraud").has(policy)).toBe(true);
+    // empty text prints nothing
+    const empty = narrativeCiting({ policyArgument: [policy] });
+    empty.policyArgument.text = "  ";
+    expect(argumentFactIdsOfNarrative(empty, null).has(policy)).toBe(false);
+    // the summary and conclusion never count in the narrative reader
+    expect(argumentFactIdsOfNarrative(narrativeCiting({ executiveSummary: [policy], conclusion: [policy] }), null).has(policy)).toBe(false);
   });
 });
 
