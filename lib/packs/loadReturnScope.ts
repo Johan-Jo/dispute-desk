@@ -11,6 +11,8 @@
  * READ-ONLY: this runs on presentation paths (workspace, pack API, the decided
  * loader on the webhook path). It must never go through `getShopSettings`, whose
  * `ensure_shop_settings` RPC inserts a defaults row for a shop that has none.
+ * A defined scope no longer means "setting on": with the setting off it can carry only
+ * the read-time `customerAskedInSupport` signal (`returnsOutsideShopify: false`).
  * A shop with no settings row is "setting off", the established default
  * (`shop_settings.returns_outside_shopify` defaults to false). Build time is
  * unchanged and keeps `getShopSettings`.
@@ -50,7 +52,14 @@ export function customerRequestStands(
 
 export async function loadReturnScopeForPack(
   sb: SupabaseClient,
-  args: { shopId: string; disputeId: string; packCycle: number | null | undefined },
+  args: {
+    shopId: string;
+    disputeId: string;
+    packCycle: number | null | undefined;
+    /** Default true. False for a STORED or SENT artifact (the evidence-pack PDF, the
+     *  outcome email): the support-inbox return signal is for live merchant pages only. */
+    withSupportSignal?: boolean;
+  },
 ): Promise<ReturnScopeInput | undefined> {
   try {
     const { data, error } = await sb
@@ -67,6 +76,7 @@ export async function loadReturnScopeForPack(
 
     // READ-TIME signal: a customer asked to return it in the support inbox.
     // Selects only; absence or failure = no signal (never throws).
+    if (args.withSupportSignal === false) return base;
     const request = await loadCustomerReturnRequest(sb, { disputeId: args.disputeId, shopId: args.shopId });
     if (!customerRequestStands(request, confirmation)) return base;
     return { returnsOutsideShopify: false, answer: null, ...base, customerAskedInSupport: true };

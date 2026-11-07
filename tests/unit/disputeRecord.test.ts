@@ -224,8 +224,15 @@ describe("a customer asked to return it in the support inbox (Gorgias, read-time
     return [...acc, ...items];
   };
 
-  it("replaces 'No return or refund is on record', is internal and adverse, and is withheld from the bank", () => {
-    const r = record("customer_asked_in_support");
+  /** The record with the stored letter overridden: which fields its Evidence Basis cites. */
+  const recordWithLetter = (name: string, citedFields: string[]): DisputeRecord => {
+    const inputs = recordInputsFromWorkspace(workspaceVariant(name), NOW);
+    inputs.letter = { rule: 1, citedFields };
+    return buildDisputeRecord(inputs, fmt);
+  };
+
+  it("letter does NOT cite the no-return fact: replaces 'No return or refund is on record', internal, adverse", () => {
+    const r = recordWithLetter("customer_asked_in_support", []);
     const ret = r.items.find((i) => i.key === "return");
     expect(ret?.role).toBe("internal");
     expect(ret?.adverse).toBe(true);
@@ -235,20 +242,20 @@ describe("a customer asked to return it in the support inbox (Gorgias, read-time
     expect(r.facts.withheld).toBeUndefined(); // the withheld sentence is a decided-state sentence
   });
 
-  it("the counts are recomputed from the roles: the item moves from cited/context to internal", () => {
-    const base = record("prepared");
-    const r = record("customer_asked_in_support");
+  it("the counts are recomputed from the roles: the item moves from context to internal", () => {
+    const base = recordWithLetter("prepared", []);
+    const r = recordWithLetter("customer_asked_in_support", []);
     const baseRet = base.items.find((i) => i.key === "return");
-    expect(baseRet?.role).not.toBe("internal");
+    expect(baseRet?.role).toBe("context");
     expect(r.counts.internal).toBe(base.counts.internal + 1);
-    expect(r.counts[baseRet!.role]).toBe(base.counts[baseRet!.role] - 1);
+    expect(r.counts.context).toBe(base.counts.context - 1);
     for (const role of ROLE_ORDER) expect(r.counts[role]).toBe(r.items.filter((i) => i.role === role).length);
     const nums = (R(r.facts.roles as I18nToken).match(/\d+/g) ?? []).map(Number);
     expect(nums).toEqual(ROLE_ORDER.map((role) => r.counts[role]));
   });
 
   it("one record, one sentence: the item is the only carrier, on every tab that reads the record", () => {
-    const r = record("customer_asked_in_support");
+    const r = recordWithLetter("customer_asked_in_support", []);
     expect(r.items.filter((i) => R(i.detail) === SENTENCE)).toHaveLength(1);
     expect(r.pkg.lines.map((k) => R(r.facts[k] as I18nToken)).join(" ")).not.toMatch(/support inbox/);
   });
@@ -256,7 +263,10 @@ describe("a customer asked to return it in the support inbox (Gorgias, read-time
   it("works on a decided dispute and never overrides a return Shopify records", () => {
     const lost = workspaceVariant("lost") as unknown as Record<string, any>;
     lost.returnSignals = { customerAskedInSupport: true };
-    const d = buildDisputeRecord(recordInputsFromWorkspace(lost as never, NOW), fmt);
+    const lostInputs = recordInputsFromWorkspace(lost as never, NOW);
+    lostInputs.bankCitedFields = [];
+    lostInputs.letter = { rule: 1, citedFields: [] };
+    const d = buildDisputeRecord(lostInputs, fmt);
     expect(R(d.items.find((i) => i.key === "return")!.detail)).toBe(SENTENCE);
     expect(d.items.find((i) => i.key === "return")!.role).toBe("internal");
     expect(R(d.facts.withheld as I18nToken)).toContain("the customer's return request");
@@ -265,6 +275,17 @@ describe("a customer asked to return it in the support inbox (Gorgias, read-time
     rec.returnSignals = { customerAskedInSupport: true };
     const rr = buildDisputeRecord(recordInputsFromWorkspace(rec as never, NOW), fmt);
     expect(R(rr.items.find((i) => i.key === "return")!.detail)).toBe("A return on this order is marked as received.");
+  });
+
+  it("when the letter that was built already cites the no-return fact, the page still says it was cited, beside the true sentence", () => {
+    const inputs = recordInputsFromWorkspace(workspaceVariant("customer_asked_in_support"), NOW);
+    inputs.letter = { rule: 1, citedFields: ["no_return_initiated"] };
+    const r = buildDisputeRecord(inputs, fmt);
+    const ret = r.items.find((i) => i.key === "return")!;
+    expect(ret.role).toBe("cited");
+    expect(ret.adverse).toBe(true);
+    expect(R(ret.detail)).toBe(SENTENCE);
+    for (const role of ROLE_ORDER) expect(r.counts[role]).toBe(r.items.filter((i) => i.role === role).length);
   });
 
   it("an absent or false signal changes nothing", () => {

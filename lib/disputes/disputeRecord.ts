@@ -557,16 +557,19 @@ function buildItems(c: ItemCtx): RecordItem[] {
   } else if (i.customerAskedInSupport === true) {
     // Shopify records no return, but a customer message in the support inbox asks
     // to return the order: "no return on record" would be a false claim. Stated
-    // once, kept internal (never cited to the bank), named among the facts withheld.
+    // once, adverse, and named among the facts withheld. It is internal unless the
+    // letter that was built already cites the no-return fact: then the page must
+    // still say the bank was told so (role "cited"), beside the true sentence.
+    const filed = c.lineRole(RETURN_EVIDENCE_FIELD) === "cited";
     add({
       key: "return",
-      role: "internal",
+      role: filed ? "cited" : "internal",
       strength: null,
       label: tk("item.return.label"),
       detail: tk("item.return.askedInSupport"),
-      source: src("shopify"),
+      source: src("gorgias"),
       adverse: true,
-      phrase: nest("phrase.withheld.returnAskedInSupport"),
+      phrase: filed ? nest("phrase.cited.returnOnly") : nest("phrase.withheld.returnAskedInSupport"),
     });
   } else if (retLine?.hasEvidence) {
     const none = i.refund === "none";

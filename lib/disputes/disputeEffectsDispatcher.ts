@@ -565,7 +565,7 @@ async function dispatchOutcomeDetected(
           ? await loadDecidedViewInputs(sb, {
               ...(row as unknown as DecidedViewDisputeRow),
               normalized_status: variant,
-            })
+            }, { withSupportSignal: false })
           : null;
       const decidedResponse = decidedView?.response ?? null;
       // The submitted defence package, when we built one. Presence — not

@@ -29,9 +29,11 @@ describe("the one verdict", () => {
   });
 
   it("without the signal the verdict is exactly what it was", () => {
-    expect(noReturnFactVerdict({ returnStatus: "NO_RETURN", totalRefunded: "0.00" }).emit).toBe(true);
+    expect(noReturnFactVerdict({ returnStatus: "NO_RETURN", totalRefunded: "0.00" })).toMatchObject({ emit: true });
     const off = { returnsOutsideShopify: false, answer: null, customerAskedInSupport: false };
-    expect(noReturnFactVerdict({ returnStatus: "NO_RETURN", totalRefunded: "0.00", returnScope: off }).emit).toBe(true);
+    expect(noReturnFactVerdict({ returnStatus: "NO_RETURN", totalRefunded: "0.00", returnScope: off })).toMatchObject({
+      emit: true,
+    });
   });
 
   it("an unknown status stays applicable unless the signal fires", () => {
@@ -57,6 +59,15 @@ describe("the one verdict", () => {
     const v = noReturnFactVerdict({
       returnStatus: "NO_RETURN",
       totalRefunded: "0",
+      returnScope: { ...ASKED, returnsOutsideShopify: true, answer: "request_received" },
+    });
+    expect(v).toEqual({ emit: false, reason: "merchant_says_request_received" });
+  });
+
+  it("an unknown status with the merchant's 'request_received' and the signal keeps the merchant's reason", () => {
+    const v = noReturnFactVerdict({
+      returnStatus: null,
+      totalRefunded: null,
       returnScope: { ...ASKED, returnsOutsideShopify: true, answer: "request_received" },
     });
     expect(v).toEqual({ emit: false, reason: "merchant_says_request_received" });
@@ -202,6 +213,12 @@ describe("loader: read-only, shop-scoped, never throws", () => {
     const scope = await loadReturnScopeForPack(sb as never, { shopId: "s1", disputeId: "d1", packCycle: 1 });
     expect(scope).toEqual({ returnsOutsideShopify: false, answer: null, customerAskedInSupport: true });
     expect(log.filter((l) => l === "rpc" || l.startsWith("WRITE:"))).toEqual([]);
+  });
+  it("withSupportSignal:false (the evidence-pack PDF, the outcome email) never reads Gorgias", async () => {
+    const { sb, log } = gorgiasStub({ tickets: [TICKET], messages: [MSG], settings: false });
+    const scope = await loadReturnScopeForPack(sb as never, { shopId: "s1", disputeId: "d1", packCycle: 1, withSupportSignal: false });
+    expect(scope).toBeUndefined();
+    expect(log.some((l) => l.startsWith("from:gorgias"))).toBe(false);
   });
   it("loadReturnScopeForPack: no request = unchanged (undefined when the setting is off)", async () => {
     const { sb } = gorgiasStub({ tickets: [], settings: false });

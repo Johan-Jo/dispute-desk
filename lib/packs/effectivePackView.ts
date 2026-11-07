@@ -72,6 +72,8 @@ export async function loadEffectivePackView(
     shopId: string;
     disputeId: string | null;
     packCycle: number | null | undefined;
+    /** Default true. False for a stored or sent artifact (see `loadReturnScopeForPack`). */
+    withSupportSignal?: boolean;
     checklistV2: unknown;
     packSections: unknown;
     evidenceItems?: EffectivePackViewInput["evidenceItems"];
@@ -88,6 +90,7 @@ export async function loadEffectivePackView(
       shopId: args.shopId,
       disputeId: args.disputeId,
       packCycle: args.packCycle,
+      withSupportSignal: args.withSupportSignal,
     }),
   });
 }

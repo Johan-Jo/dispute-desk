@@ -3998,6 +3998,15 @@ by the MERCHANT pages, at read time.
   `no_return_initiated` is dropped by `assembleEffectiveChecklist` like every other inapplicable reason, so the workspace
   route, `GET /api/packs/[packId]`, the pack page and the decided view agree. Existing rule kept: a stored row that is
   already `available` (the fact was filed at build) is NOT hidden, it is reported in `contradictedAvailable`.
+- Live merchant pages only: `loadReturnScopeForPack(..., { withSupportSignal: false })` is passed by the evidence-pack PDF
+  job (`renderPdfJob`) and by the outcome email (`loadDecidedViewInputs(..., { withSupportSignal: false })` from the
+  dispatcher), so no stored or sent artifact reads it. The `force_include` guard of the inclusion-override route shares
+  the checklist assembly, so it refuses a row the page no longer shows (409 `FIELD_NOT_APPLICABLE`).
+- When the filed letter already cites the no-return fact, the record item stays `cited` (adverse) beside the true
+  sentence; it is `internal` and named among the facts withheld when the letter does not cite it.
+- Known limit: the detector is a text match (an INR customer writing "how can I return it if I never got it" matches), a
+  merchant with "Customers request returns outside Shopify" off has no question to dismiss it with, and messages after the
+  dispute opened count. Measure on real messages before widening it to the letter.
 - Not changed (a separate, approved step would be needed): the bank letter, the build-time fact, counsel ledgers,
   `plan_input_hash`, `completeness_score`, the stored checklist and `recommended_actions`. The build never sets the signal.
 

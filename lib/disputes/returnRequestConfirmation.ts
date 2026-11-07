@@ -216,8 +216,11 @@ export function noReturnFactVerdict(input: {
   // the claim "no return" whatever Shopify's status says, including an unknown
   // one. The merchant's explicit "request_received" keeps its own reason.
   const customerAsked = input.returnScope?.customerAskedInSupport === true;
-  if (customerAsked && input.returnScope?.answer !== "request_received") {
-    return { emit: false, reason: "customer_asked_in_support" };
+  if (customerAsked) {
+    return {
+      emit: false,
+      reason: input.returnScope?.answer === "request_received" ? "merchant_says_request_received" : "customer_asked_in_support",
+    };
   }
   if (!hasStatus) return { unknown: true, why: "status_absent" };
 
