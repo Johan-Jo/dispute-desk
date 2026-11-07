@@ -541,6 +541,7 @@ function OverviewBody({
                 </span>
                 <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{t("disputes.record.ui.from", { source })}</span>
               </div>
+              {row === "amounts" || record.showRoles ? (
               <span
                 style={{
                   padding: "2px 8px",
@@ -554,6 +555,7 @@ function OverviewBody({
               >
                 {t(`disputes.record.role.${roleKey}`)}
               </span>
+              ) : null}
             </div>
           );
         })}
