@@ -31,6 +31,7 @@ export type NoReturnInapplicableReason =
   | "return_on_record"
   | "refund_on_record"
   | "merchant_says_request_received"
+  | "customer_asked_in_support"
   | "returned_to_sender";
 
 export function noReturnApplicability(

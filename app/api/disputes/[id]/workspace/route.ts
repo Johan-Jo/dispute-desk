@@ -555,16 +555,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // The EFFECTIVE checklist: the reconcile above, then rows the record makes
   // impossible are dropped (a "No return initiated" row beside a recorded
   // return). Stored rows, score and readiness are untouched (plan §2.6).
+  const readReturnScope = packRow
+    ? await loadReturnScopeForPack(sb, {
+        shopId: row.shop_id as string,
+        disputeId,
+        packCycle: (packRow.response_cycle as number | null) ?? 1,
+      })
+    : undefined;
+  // Read-time signal (Gorgias): a customer asked, in the support inbox, to
+  // return this order. Merchant pages only; the build never sees it.
+  const customerAskedInSupport = readReturnScope?.customerAskedInSupport === true;
   const effective = packRow
     ? assembleEffectiveChecklist({
         storedChecklist: packRow.checklist_v2 ?? null,
         packSections: (packRow.pack_json as { sections?: unknown } | null)?.sections,
         evidenceItems: itemsRes.data ?? [],
-        returnScope: await loadReturnScopeForPack(sb, {
-          shopId: row.shop_id as string,
-          disputeId,
-          packCycle: (packRow.response_cycle as number | null) ?? 1,
-        }),
+        returnScope: readReturnScope,
       })
     : null;
   const reconciledChecklistV2: ChecklistItemV2[] =
@@ -1321,6 +1327,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     dispute,
     bankClaim,
     returnRequest,
+    returnSignals: { customerAskedInSupport },
     pack,
     gorgiasComms,
     argumentMap,

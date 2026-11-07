@@ -235,6 +235,10 @@ export function workspaceVariant(name: string): WorkspaceWithPatterns {
     case "return_on_record":
       w.dispute.orderSituation = { returns: "returned", refund: "none", returnOpenedAt: null, asOf: null };
       break;
+    case "customer_asked_in_support":
+      // Shopify: NO_RETURN, no refund. The support inbox (Gorgias): the customer asked to return it.
+      w.returnSignals = { customerAskedInSupport: true };
+      break;
     case "won":
       decide("won", "we");
       break;
@@ -285,6 +289,7 @@ export const ALL_VARIANTS = [
   "escalated",
   "inquiry",
   "return_on_record",
+  "customer_asked_in_support",
   "won",
   "lost",
   "won_inquiry",

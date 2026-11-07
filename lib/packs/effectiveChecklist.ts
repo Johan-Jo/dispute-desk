@@ -32,7 +32,8 @@ export interface EffectiveChecklistInput {
   packSections: unknown;
   evidenceItems?: Parameters<typeof collectedFieldsFromPack>[0]["evidenceItems"];
   /** Already resolved by the caller: `returnScopeFor(settings, confirmation)`
-   *  for the PACK's response cycle. `undefined` = setting off. */
+   *  for the PACK's response cycle, plus the read-time support-inbox signal
+   *  (`customerAskedInSupport`). `undefined` = setting off and no signal. */
   returnScope?: ReturnScopeInput | null;
 }
 

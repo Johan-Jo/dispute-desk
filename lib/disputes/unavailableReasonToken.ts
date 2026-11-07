@@ -38,6 +38,7 @@ const CODES: Record<string, string> = {
   return_on_record: "returnOnRecord",
   refund_on_record: "refundOnRecord",
   merchant_says_request_received: "merchantSaysRequestReceived",
+  customer_asked_in_support: "customerAskedInSupport",
   returned_to_sender: "returnedToSender",
 };
 
