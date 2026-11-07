@@ -456,3 +456,34 @@ describe("decided checklist: a recorded return removes the impossible 'no return
     expect(v.checklist.find((c) => c.item.key.endsWith("noReturn"))!.state).toBe("had");
   });
 });
+
+describe("decided checklist: no refund on record removes the impossible 'refund record' row (F-1b, read time)", () => {
+  const cnp = (over: Partial<DecidedViewInputs>) =>
+    buildDecidedView(
+      inputs360499({
+        outcome: "lost",
+        reason: "CREDIT_NOT_PROCESSED",
+        facts: { refund_policy: { policy: "x" }, customer_communication: { n: 1 } },
+        ...over,
+      }),
+      fmt,
+    );
+  const items = (v: ReturnType<typeof cnp>) => v.checklist.map((c) => c.item.key.split(".").pop());
+
+  it("omits the row when no refund is on record and nothing was collected", () => {
+    expect(items(cnp({ inapplicable: ["refund_record"] }))).not.toContain("refundRecord");
+  });
+
+  it("shows it as missing when nothing makes it impossible (unchanged)", () => {
+    const v = cnp({});
+    expect(v.checklist.find((c) => c.item.key.endsWith("refundRecord"))!.state).toBe("missing");
+  });
+
+  it("never hides a refund record that WAS collected", () => {
+    const v = cnp({
+      inapplicable: ["refund_record"],
+      facts: { refund_policy: { policy: "x" }, refund_record: { refundStatus: "processed" } },
+    });
+    expect(v.checklist.find((c) => c.item.key.endsWith("refundRecord"))!.state).toBe("had");
+  });
+});

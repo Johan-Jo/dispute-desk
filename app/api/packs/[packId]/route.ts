@@ -422,6 +422,7 @@ export async function GET(
             packCycle: (pack as { response_cycle?: number | null }).response_cycle ?? 1,
             checklistV2: pack.checklist_v2 ?? null,
             packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
+            disputeReason: dispute_reason,
             evidenceItems: itemsRes.data ?? [],
           })
         : null;

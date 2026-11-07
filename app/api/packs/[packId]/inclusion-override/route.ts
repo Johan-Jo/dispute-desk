@@ -154,10 +154,18 @@ export async function POST(
       .from("evidence_items")
       .select("payload, source")
       .eq("pack_id", packId);
+    // The LIVE dispute reason, like the workspace and the pack API (never the
+    // build-time snapshot in pack_json, which can predate or differ from it).
+    const { data: disputeForReason } = await sb
+      .from("disputes")
+      .select("reason")
+      .eq("id", pack.dispute_id as string)
+      .maybeSingle();
     const { droppedForRecord } = assembleEffectiveChecklist({
       storedChecklist: pack.checklist_v2,
       packSections: (pack.pack_json as { sections?: unknown } | null)?.sections,
       evidenceItems: items ?? [],
+      disputeReason: (disputeForReason?.reason as string | null | undefined) ?? null,
       returnScope: await loadReturnScopeForPack(sb, {
         shopId,
         disputeId: pack.dispute_id as string,

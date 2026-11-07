@@ -79,6 +79,7 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
             withSupportSignal: false,
             checklistV2: storedV2,
             packSections: sections,
+            disputeReason: dispute?.reason ?? null,
             evidenceItems:
               (await db.from("evidence_items").select("source, payload").eq("pack_id", packId))
                 .data ?? [],

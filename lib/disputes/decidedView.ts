@@ -323,6 +323,13 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
     if (!had_ && input.inapplicable?.includes("no_return_initiated")) return null;
     return had("noReturn", had_);
   };
+  // Same rule for the refund record (plan F-1b): with no refund on record the
+  // fact cannot exist, so the row is omitted rather than shown as "missing".
+  const refundRecord = (): Row | null => {
+    const had_ = c.has("refund_record");
+    if (!had_ && input.inapplicable?.includes("refund_record")) return null;
+    return had("refundRecord", had_);
+  };
   let rows: Array<Row | null>;
   switch (c.family) {
     case "delivery":
@@ -373,7 +380,7 @@ function checklistSection(c: CaseFacts, input: DecidedViewInputs): DecidedView["
     case "refund":
       rows = [
         had("refundPolicy", c.has("refund_policy"), "missing", "policy"),
-        had("refundRecord", c.has("refund_record")),
+        refundRecord(),
         noReturn(),
         comms,
       ];
