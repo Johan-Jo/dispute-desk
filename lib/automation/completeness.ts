@@ -90,6 +90,13 @@ export interface OrderContext {
    * the read-time assembler (`lib/packs/effectiveChecklist.ts`).
    */
   noReturnFact?: Applicability;
+  /**
+   * Whether a refund is on record, for the `refund_record` row on credit-not-
+   * processed / fraudulent disputes. UNSET = unknown = applicable. Read-time
+   * only (plan F-1b): build time never sets it, so stored rows, score and the
+   * auto-save gate are byte-identical.
+   */
+  refundRecordFact?: Applicability;
 }
 
 /** Whether a checklist field can exist at all for this order. `reason` is a
@@ -104,6 +111,7 @@ export type Applicability = { applicable: true } | { applicable: false; reason: 
  */
 export const FIELD_PRECONDITIONS: Readonly<Record<string, (ctx: OrderContext) => Applicability>> = {
   no_return_initiated: (ctx) => ctx.noReturnFact ?? { applicable: true },
+  refund_record: (ctx) => ctx.refundRecordFact ?? { applicable: true },
 };
 
 export function fieldApplicability(field: string, ctx: OrderContext): Applicability {

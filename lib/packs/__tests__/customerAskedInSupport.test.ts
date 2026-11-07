@@ -231,11 +231,11 @@ describe("real stored pack #24215 (NO_RETURN, zero refund) with a synthetic Gorg
   const sections = normaliseSections(c.sections);
   const facts = orderFactsFromSections(sections);
   it("without the signal the row stays (the pre-existing behaviour)", () => {
-    const eff = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections });
+    const eff = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections, disputeReason: null });
     expect(eff.checklist.some((x) => x.field === "no_return_initiated")).toBe(true);
   });
   it("an AVAILABLE stored row is kept by the existing rule (never hide a row whose fact the letter files) and reported as contradicted", () => {
-    const eff = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections, returnScope: ASKED });
+    const eff = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections, disputeReason: null, returnScope: ASKED });
     expect(eff.checklist.some((x) => x.field === "no_return_initiated")).toBe(true);
     expect(eff.contradictedAvailable).toContain("no_return_initiated");
   });
@@ -248,7 +248,7 @@ describe("real stored pack #24215 (NO_RETURN, zero refund) with a synthetic Gorg
       ...s,
       fieldsProvided: ((s as { fieldsProvided?: string[] }).fieldsProvided ?? []).filter((f) => f !== "no_return_initiated"),
     }));
-    const eff = assembleEffectiveChecklist({ storedChecklist: stored, packSections: bare, returnScope: ASKED });
+    const eff = assembleEffectiveChecklist({ storedChecklist: stored, packSections: bare, disputeReason: null, returnScope: ASKED });
     expect(eff.checklist.some((x) => x.field === "no_return_initiated")).toBe(false);
     expect(eff.droppedForRecord).toContain("no_return_initiated");
     const ctx = { noReturnFact: noReturnApplicability({ ...facts, returnScope: ASKED }, sections) } as OrderContext;

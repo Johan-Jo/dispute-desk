@@ -27,10 +27,13 @@ const row = (field: string, status: string) => ({
   field, label: "", status, priority: "recommended", blocking: false, source: "auto_shopify",
 });
 
-function client(pack: Record<string, unknown>) {
+function client(pack: Record<string, unknown>, disputeReason: string | null = null) {
   const updates: unknown[] = [];
   const sb = {
     from: (table: string) => {
+      if (table === "disputes") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { reason: disputeReason } }) }) }) };
+      }
       if (table === "evidence_items") {
         return { select: () => ({ eq: async () => ({ data: [] }) }) };
       }
@@ -95,6 +98,34 @@ describe("inclusion-override: force_include on an inapplicable field", () => {
   });
 });
 
+describe("inclusion-override: refund_record with no refund on record (F-1b, read time)", () => {
+  const cnpPack = (refunded: string) => ({
+    id: "p", shop_id: "shop-1", dispute_id: "d", status: "ready", response_cycle: 1,
+    pack_json: { sections: [order("NO_RETURN", refunded)] },
+    checklist_v2: [row("refund_record", "missing")],
+  });
+
+  it("409 FIELD_NOT_APPLICABLE for force_include on CNP with a zero refunded total, nothing written", async () => {
+    const updates = client(cnpPack("0.0"), "CREDIT_NOT_PROCESSED");
+    const res = await call({ field: "refund_record", value: "force_include" });
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("FIELD_NOT_APPLICABLE");
+    expect(updates).toEqual([]);
+  });
+
+  it("still allowed when a refund is on record", async () => {
+    client(cnpPack("25.00"), "CREDIT_NOT_PROCESSED");
+    expect((await call({ field: "refund_record", value: "force_include" })).status).toBe(200);
+  });
+
+  it("still allowed on other reasons and when the reason is unknown (fail open)", async () => {
+    client(cnpPack("0.0"), "PRODUCT_UNACCEPTABLE");
+    expect((await call({ field: "refund_record", value: "force_include" })).status).toBe(200);
+    client(cnpPack("0.0"), null);
+    expect((await call({ field: "refund_record", value: "force_include" })).status).toBe(200);
+  });
+});
+
 describe("wiring pins: stored outputs keep the build-time upload rule", () => {
   it("completeness.ts and caseStrength.ts import canMerchantUploadAtBuild, never the display rule", async () => {
     const { readFileSync } = await import("node:fs");
@@ -126,7 +157,7 @@ describe("wiring pins: stored outputs keep the build-time upload rule", () => {
       ["app/api/disputes/[id]/workspace/route.ts", /assembleEffectiveChecklist\(/],
       ["app/api/packs/[packId]/route.ts", /loadEffectivePackView\(/],
       ["lib/packs/effectivePackView.ts", /assembleEffectiveChecklist\(/],
-      ["lib/disputes/loadDecidedResponse.ts", /noReturnApplicability\(/],
+      ["lib/disputes/loadDecidedResponse.ts", /recordOrderContext\(/],
       ["app/api/packs/[packId]/inclusion-override/route.ts", /assembleEffectiveChecklist\(/],
     ];
     for (const [f, re] of need) expect(readFileSync(join(process.cwd(), f), "utf8"), f).toMatch(re);

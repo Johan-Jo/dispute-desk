@@ -7,10 +7,9 @@
  * then render nothing rather than a guess.
  */
 
-import { inapplicableFields, type OrderContext } from "@/lib/automation/completeness";
-import { normaliseSections, orderFactsFromSections } from "@/lib/packs/effectiveChecklist";
+import { inapplicableFields } from "@/lib/automation/completeness";
+import { normaliseSections, recordOrderContext } from "@/lib/packs/effectiveChecklist";
 import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
-import { noReturnApplicability } from "@/lib/packs/noReturnApplicability";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DECIDED_AUDIT_EVENT_TYPES,
@@ -234,9 +233,7 @@ export async function loadDecidedViewInputs(
         packCycle: pack.response_cycle ?? 1,
         withSupportSignal: opts?.withSupportSignal,
       });
-      const orderCtx = {
-        noReturnFact: noReturnApplicability({ ...orderFactsFromSections(sections), returnScope: scope }, sections),
-      } as OrderContext;
+      const orderCtx = recordOrderContext({ sections, returnScope: scope, disputeReason: row.reason });
       inapplicable = [...inapplicableFields(orderCtx)];
     }
     const fatal = (pack?.pack_json as { fatal_loss?: { reason?: string | null } } | null)?.fatal_loss;

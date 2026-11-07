@@ -69,6 +69,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         packCycle: response_cycle ?? 1,
         checklistV2: checklist_v2 ?? null,
         packSections: pack_json?.sections,
+        disputeReason: (dispute as { reason?: string | null }).reason ?? null,
         evidenceItems: (itemRows ?? []).filter((i) => i.pack_id === row.id) as never,
       });
       return {

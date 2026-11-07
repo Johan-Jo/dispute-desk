@@ -28,7 +28,7 @@ function say(token: I18nToken | null | undefined): string {
 function surfaces(name: keyof typeof cases) {
   const c = cases[name];
   const stmt = refundStatementFromPackSections(c.sections, "2026-11-05T10:00:00Z");
-  const effective = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections });
+  const effective = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections, disputeReason: null });
   const sections = normaliseSections(c.sections);
   const ctx = { noReturnFact: noReturnApplicability(orderFactsFromSections(sections), sections) } as OrderContext;
   const refundSec = c.sections.find((s) => s.labelToken.key === "packs.section.refundHistory");
@@ -95,7 +95,7 @@ describe("pre-stamp pack with a MISSING no-return row and nothing refunded (6 pr
     c.sections = c.sections
       .filter((s) => s.labelToken.key !== "packs.section.refundHistory")
       .map((s) => ({ ...s, fieldsProvided: s.fieldsProvided.filter((f) => f !== "no_return_initiated") }));
-    const out = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections });
+    const out = assembleEffectiveChecklist({ storedChecklist: c.checklist_v2, packSections: c.sections, disputeReason: null });
     expect(out.checklist.find((r) => r.field === "no_return_initiated")?.status).toBe("missing");
     expect(out.droppedForRecord).toEqual([]);
   });

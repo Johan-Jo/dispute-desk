@@ -49,9 +49,8 @@ export const EMISSION_CLASSIFICATION: Readonly<Record<string, EmissionClassifica
     why: "orderSource emits only when noReturnFactVerdict says emit; a return or refund on record, a merchant answer, or a returned parcel makes it impossible.",
   },
   refund_record: {
-    class: "needs_decision",
-    why: "Emitted only when the refunded total is above zero; on CNP the template row is critical with mode recommended, so a never-refunded order holds a never-satisfiable row (plan 3.1). Upload is closed (F-1a); applicability is F-1b.",
-    owner: "maintainer (plan 3.1 F-1b)",
+    class: "world_precondition",
+    why: "orderSource emits only when the refunded total is above zero; on CNP/FRAUDULENT the template row is critical, so a never-refunded order holds a never-satisfiable row. Read-time only (plan 3.1 F-1b): the build-time template change and anything altering the stored score or auto-save is NOT approved.",
   },
   customer_communication: {
     class: "evidence_absent",
