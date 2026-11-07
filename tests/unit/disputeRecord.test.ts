@@ -318,3 +318,22 @@ describe("the case-strength pill in the header (one band, read from the record)"
     }
   });
 });
+
+describe("Building state: the list and the page use the same word, and no package means no roles", () => {
+  it("a ready evidence pack with the defence package still being built reads 'Pack prepared' in the header, from the list's own key", () => {
+    const w = workspaceVariant("building") as unknown as Record<string, any>;
+    w.presentation = { ...(w.presentation ?? {}), lifecycle: "pack_prepared" };
+    const r = buildDisputeRecord(recordInputsFromWorkspace(w as never, NOW), fmt);
+    expect(r.stage).toBe("building");
+    expect(r.hero.statusChip).toEqual({ key: "presentation.lifecycle.pack_prepared" });
+    expect(R(r.hero.statusChip)).toBe("Pack prepared");
+  });
+  it("without that lifecycle the chip stays 'Building'", () => {
+    const w = workspaceVariant("building") as unknown as Record<string, any>;
+    w.presentation = { ...(w.presentation ?? {}), lifecycle: "building_evidence" };
+    expect(R(buildDisputeRecord(recordInputsFromWorkspace(w as never, NOW), fmt).hero.statusChip)).toBe("Building");
+  });
+  it("showRoles is false for every state without a package (the page hides the role pills there)", () => {
+    for (const n of ["no_pack", "building", "failed", "covered"]) expect(record(n).showRoles, n).toBe(false);
+  });
+});
