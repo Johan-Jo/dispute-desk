@@ -1,10 +1,11 @@
 /**
- * Raw-read scanner (single-source architecture audit, PR 3).
+ * Raw-read scanner (single-source architecture audit, PR 3; extended by the
+ * dispute-page single-source plan 3.4).
  *
- * Finds independent re-interpretations of the return / refund record in
- * merchant-facing source. The single answer lives in
- * lib/packs/effectiveChecklist.ts, lib/packs/noReturnApplicability.ts and
- * lib/disputes/refundStatement.ts; any other reader must be baselined with a reason.
+ * Finds independent re-interpretations of an owner's field in merchant-facing
+ * source. The single answers live in lib/packs/effectiveChecklist.ts,
+ * lib/packs/noReturnApplicability.ts, lib/disputes/refundStatement.ts and
+ * lib/disputes/presentation/**; any other reader must be baselined with a reason.
  *
  * Shared by rawReadScan.test.ts (real tree + meta-test) so both use one code path.
  */
@@ -16,17 +17,25 @@ export type ScanPattern =
   | "literal:noReturn"
   | "returnStatus"
   | "select:checklist_v2"
-  | "totals.refunded";
+  | "totals.refunded"
+  // Plan 3.4: owner-bypass patterns, scoped to the dispute page and the record builder.
+  | "savedToShopifyAt"
+  | "appliedRule.mode"
+  | "orderSituation.refund"
+  | "bankIncludedFacts("
+  | "FACT_CATEGORY_FIELD"
+  | "DELIVERY_CONFIRMED";
 
-export const PATTERNS: Record<ScanPattern, RegExp> = {
-  "literal:no_return_initiated": /["'`]no_return_initiated["'`]/g,
-  "literal:noReturn": /["'`]noReturn["'`]/g,
-  // string literal "returnStatus" OR property access .returnStatus / ?.returnStatus
-  returnStatus: /["'`]returnStatus["'`]|\.returnStatus\b/g,
-  // .select("...checklist_v2...") raw checklist column read
-  "select:checklist_v2": /\.select\(\s*["'`][^"'`]*checklist_v2/g,
-  "totals.refunded": /\btotals\??\.refunded\b/g,
-};
+/**
+ * A pattern, the repo-relative paths it applies to (a path ending in "/" is a
+ * directory prefix, anything else an exact file), and the owner paths exempt
+ * from it (the places that are SUPPOSED to read the raw field).
+ */
+export interface PatternSpec {
+  re: RegExp;
+  scope: readonly string[];
+  allow: readonly string[];
+}
 
 /** Merchant-facing roots (repo-relative, forward slashes). */
 export const SCAN_ROOTS = [
@@ -36,6 +45,50 @@ export const SCAN_ROOTS = [
   "lib/disputes",
   "lib/argument",
 ] as const;
+
+/** Legacy patterns apply to every scan root, as before. */
+const ALL_ROOTS: readonly string[] = SCAN_ROOTS.map((r) => `${r}/`);
+/** The dispute page and the record builder: where a second reader of an owner's field must not appear. */
+const DISPUTE_PAGE_SCOPE: readonly string[] = ["app/(embedded)/app/disputes/", "lib/disputes/disputeRecord.ts"];
+/** The owners of the raw fields: the workspace route, the presentation model, the payload enrichment. */
+const OWNERS: readonly string[] = [
+  "app/api/disputes/[id]/workspace/route.ts",
+  "lib/disputes/presentation/",
+  "lib/disputes/workspacePayload/",
+];
+
+export const PATTERN_SPECS: Record<ScanPattern, PatternSpec> = {
+  "literal:no_return_initiated": { re: /["'`]no_return_initiated["'`]/g, scope: ALL_ROOTS, allow: [] },
+  "literal:noReturn": { re: /["'`]noReturn["'`]/g, scope: ALL_ROOTS, allow: [] },
+  // string literal "returnStatus" OR property access .returnStatus / ?.returnStatus
+  returnStatus: { re: /["'`]returnStatus["'`]|\.returnStatus\b/g, scope: ALL_ROOTS, allow: [] },
+  // .select("...checklist_v2...") raw checklist column read
+  "select:checklist_v2": { re: /\.select\(\s*["'`][^"'`]*checklist_v2/g, scope: ALL_ROOTS, allow: [] },
+  "totals.refunded": { re: /\btotals\??\.refunded\b/g, scope: ALL_ROOTS, allow: [] },
+  savedToShopifyAt: { re: /\bsavedToShopifyAt\b/g, scope: DISPUTE_PAGE_SCOPE, allow: OWNERS },
+  "appliedRule.mode": { re: /appliedRule\??\.mode/g, scope: DISPUTE_PAGE_SCOPE, allow: OWNERS },
+  "orderSituation.refund": { re: /orderSituation\??\.refund\b/g, scope: DISPUTE_PAGE_SCOPE, allow: OWNERS },
+  "bankIncludedFacts(": { re: /\bbankIncludedFacts\(/g, scope: DISPUTE_PAGE_SCOPE, allow: OWNERS },
+  FACT_CATEGORY_FIELD: { re: /\bFACT_CATEGORY_FIELD\b/g, scope: DISPUTE_PAGE_SCOPE, allow: OWNERS },
+  DELIVERY_CONFIRMED: { re: /\bDELIVERY_CONFIRMED\b/g, scope: DISPUTE_PAGE_SCOPE, allow: OWNERS },
+};
+
+export const PATTERNS: Record<ScanPattern, RegExp> = Object.fromEntries(
+  Object.entries(PATTERN_SPECS).map(([k, v]) => [k, v.re]),
+) as Record<ScanPattern, RegExp>;
+
+/** Patterns added by plan 3.4: their baseline entries are classified `open` (names the removing PR) or `allowed`. */
+export const OWNER_BYPASS_PATTERNS: readonly ScanPattern[] = [
+  "savedToShopifyAt",
+  "appliedRule.mode",
+  "orderSituation.refund",
+  "bankIncludedFacts(",
+  "FACT_CATEGORY_FIELD",
+  "DELIVERY_CONFIRMED",
+];
+
+const within = (rel: string, paths: readonly string[]) =>
+  paths.some((p) => (p.endsWith("/") ? rel.startsWith(p) : rel === p));
 
 const EXCLUDED_DIRS = new Set(["__tests__", "node_modules", ".next", "messages"]);
 const EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs"]);
@@ -47,12 +100,17 @@ export function stripComments(src: string): string {
     .replace(/(^|[^:"'`\\])\/\/[^\n]*/g, "$1");
 }
 
-/** Count pattern hits in one source string. Returns only patterns with count > 0. */
-export function scanSource(src: string): Partial<Record<ScanPattern, number>> {
+/**
+ * Count pattern hits in one source string. Returns only patterns with count > 0.
+ * With `relPath`, each pattern applies only inside its scope and outside its
+ * owner allow-list; without it (scanner unit tests) every pattern applies.
+ */
+export function scanSource(src: string, relPath?: string): Partial<Record<ScanPattern, number>> {
   const code = stripComments(src);
   const out: Partial<Record<ScanPattern, number>> = {};
-  for (const [name, re] of Object.entries(PATTERNS) as [ScanPattern, RegExp][]) {
-    const n = (code.match(new RegExp(re.source, re.flags)) ?? []).length;
+  for (const [name, spec] of Object.entries(PATTERN_SPECS) as [ScanPattern, PatternSpec][]) {
+    if (relPath !== undefined && (!within(relPath, spec.scope) || within(relPath, spec.allow))) continue;
+    const n = (code.match(new RegExp(spec.re.source, spec.re.flags)) ?? []).length;
     if (n > 0) out[name] = n;
   }
   return out;
@@ -80,7 +138,7 @@ export function scanTree(repoRoot: string): Record<string, number> {
   const out: Record<string, number> = {};
   for (const f of files.sort()) {
     const rel = path.relative(repoRoot, f).split(path.sep).join("/");
-    const hits = scanSource(fs.readFileSync(f, "utf8"));
+    const hits = scanSource(fs.readFileSync(f, "utf8"), rel);
     for (const [p, n] of Object.entries(hits)) out[`${rel}::${p}`] = n as number;
   }
   return out;
