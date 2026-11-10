@@ -80,7 +80,7 @@ const plan = {
 } as never;
 
 const WRITE = JSON.stringify({
-  summary: ["The record shows no return in Shopify for this order, and the store's refund policy is published on the store. The merchant respectfully requests that this inquiry be closed in its favour."],
+  summary: ["No return has been recorded in Shopify for this order. The store's refund policy is published on the store. The merchant respectfully requests that this inquiry be closed in its favour."],
   summaryClaimIds: ["no_return_recorded", "refund_policy_published"],
   sections: {
     shipping: { text: "The carrier recorded delivery on 22 October.", claimIds: ["carrier_delivered"] },

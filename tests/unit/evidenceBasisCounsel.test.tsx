@@ -103,9 +103,9 @@ const WITH_POLICY = {
     "The store's refund policy is published on the store, and the carrier recorded delivery of the order before the dispute was opened. " +
     "The claim that a refund is outstanding is not supported by the record.",
   summaryClaimIds: ["claim_is_credit_not_processed", "no_return_recorded", "refund_policy_published", "carrier_delivered"],
-  sections: { shipping: { text: "The delivery shown on the card above is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
+  sections: { shipping: { text: "The delivery shown on the shipment card is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
   conclusion: {
-    text: "The order was delivered, and no return is recorded in Shopify. The claim that a refund is outstanding is not supported by the record.",
+    text: "The order was delivered. No return is recorded in Shopify for this order. The claim that a refund is outstanding is not supported by the record.",
     claimIds: ["carrier_delivered", "no_return_recorded"],
   },
 };

@@ -74,6 +74,7 @@ export function buildCreditNotProcessedLedger(input: LedgerInput, extras: Credit
       specifics: {},
       weight: "strong",
       sources: [absenceFact.id, "pack.order.returnStatus"],
+      notInEvidenceSections: true,
       mustNot: [
         "State it in the claim's own words, in a sentence of its own with no date or timing word. It belongs in the summary and, at most once more, in the conclusion; never in a section.",
         "Never say the customer did not return, did not try to return, never asked to return or did not request a return: Shopify does not see requests made by email or chat.",
