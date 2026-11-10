@@ -37,7 +37,7 @@ const summaryJson = (s: string) =>
   JSON.stringify({
     summary: [s],
     summaryClaimIds: ["carrier_delivered"],
-    sections: { shipping: { text: "The delivery on the card above is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
+    sections: { shipping: { text: "The delivery on the shipment card is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
     conclusion: { text: "The carrier recorded delivery of the order. The non-receipt claim is not supported by the record.", claimIds: ["carrier_delivered"] },
   });
 const CLEAN = JSON.stringify({ errors: [], unclear: [] });

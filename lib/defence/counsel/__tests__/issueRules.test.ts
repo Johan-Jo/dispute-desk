@@ -37,6 +37,9 @@ const SAMPLES: Array<[issue: string, rule: string, section: string]> = [
   ['copy: "same four digits" is used 3 times; at most twice', "copy.phrase_repeated", "letter"],
   ['copy: "3 july" is used 2 times (summary, conclusion); once only — elsewhere refer to the event ("the delivery", "that order")', "copy.specific_repeated", "letter"],
   ['chronology: "timeline above" — the timeline and the table print BELOW the text; say "the timeline below" or just "the timeline"', "copy.exhibit_position", "chronology"],
+  ["conclusion: the recorded absence shares a sentence with a timing clause — \"A further order was placed before any return was recorded.\" (it carries a date, duration or ordering word; write only: 'No return has been recorded in Shopify for this order.')", "truth.absence_with_timing", "conclusion"],
+  ["shipping: the recorded absence is in an evidence section — \"No return has been recorded in Shopify for this order.\" (it belongs in the summary and, at most once more, in the conclusion)", "truth.absence_placement", "shipping"],
+  ["shipping: positional reference to where an exhibit sits (above) — \"As shown in the order card above.\" (name the exhibit by what it is, never by where it sits)", "copy.positional_reference", "shipping"],
   ["truth (executiveSummary): Section claims delivery but no delivery fact is approved.", "truth.validator", "executiveSummary"],
   ['fact-check: "The shipment card records its delivery." — The ledger holds no delivery.', "review.fact_check", "letter"],
   ['unclear: "It was that order." — rewrite it plainly', "review.unclear", "letter"],
@@ -92,7 +95,7 @@ describe("counsel issue rules", () => {
    * until SAMPLES (and RULES) cover it. */
   it("pins the number of issue producers in checks.ts", () => {
     const src = readFileSync(join(__dirname, "..", "checks.ts"), "utf8");
-    expect(src.match(/issues\.push\(/g)?.length).toBe(26);
+    expect(src.match(/issues\.push\(/g)?.length).toBe(28);
     expect(SAMPLES.every(([issue]) => classifyIssue(issue).rule !== "unclassified")).toBe(true);
   });
 });

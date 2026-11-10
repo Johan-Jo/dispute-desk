@@ -3937,6 +3937,30 @@ interval in the claim, lists it in the reviewer's events block (`prompts.ts`), a
 phrase names its anchor ("after the delivery" / "after the inquiry was opened"), never a bare "the following day". A later
 order before the dispute is unchanged. A derived date relation, not a new source of facts.
 
+**Two deterministic letter checks (2026-11-10, whj8db-1q #24285 v21).** v21 passed every check and carried two wrong
+sentences. (1) "...a further order was placed one day after the dispute was opened and before any return was recorded":
+no return was ever recorded, and "before" implied one came later. The `no_return_recorded` claim already said "no date or
+timing word", but only as a prompt instruction. (2) "...as shown in the order card above": the card prints on a later page.
+`checkDraft` (`checks.ts`) now enforces both, in the single writer (any brief), through the same issue strings the one
+correction pass already feeds back; no new retry. **Return statement:** a sentence is a return statement when it says a
+return was/was not recorded, initiated, made... (`isReturnStatement`: "no return has been recorded", "before any return was
+recorded", "without a return being recorded", "no return was initiated"; "return policy/period" is not one, and the broad
+detector runs only when the ledger holds `no_return_recorded`). It fails with `truth.absence_with_timing` if the sentence
+carries a date, number, duration or ordering word (before, after, then, later, since, until, when, within, yet, X days...)
+or another fact (delivery, order, dispute, policy...) - it stands alone: "No return has been recorded in Shopify for this
+order." - and with `truth.absence_placement` if the claim has `notInEvidenceSections` (set by `creditNotProcessedLedger.ts`:
+summary, and at most once more in the conclusion, never a section). The count cap stays `absenceMaxMentions`. **Positional
+references:** `copy.positional_reference` rejects "above", "below", "overleaf", "on the previous/next page", "as shown in the
+... card/table", "see below" in every part of every brief; an exhibit is named by what it is ("the carrier's tracking
+record"), never where it sits. This replaces the earlier instruction to say "the timeline below"/"the card above" (the old
+`copy.exhibit_position` check now only guards the legacy playbook path). Both rejected sentences are stored with the rule in
+`outcome_detail.counsel.rejected`. The writer is told in `constitution.ts` (COPY and TRUTH); `CONSTITUTION_VERSION` 9 and
+`COUNSEL_PROMPT_VERSION` 4. Counsel letters store `prompt_version` = `COUNSEL_PROMPT_VERSION`, which never equalled the
+narrative writer's `CURRENT_PROMPT_VERSION` that `enqueue.ts` compares, so the bump changes no stale/idempotency outcome and
+queues no rebuild; it enters only the counsel input hash, whose reuse is currently off (`runCounsel`, plan §2.7). Pinned by
+`counsel/__tests__/returnTimingAndPositional.test.ts` (the two real sentences). This makes bank-facing wording rules
+stricter; it adds no facts.
+
 **What was rejected, kept internally (2026-11-10).** The rule id alone could not say WHICH sentence a reviewer flagged.
 `issueEvidence` (`issueRules.ts`) adds `{ text, reason }` per blocking finding (for `review.fact_check`: the flagged
 sentence and the reviewer's note; for a code check: its quoted span and the check's own message), each truncated to

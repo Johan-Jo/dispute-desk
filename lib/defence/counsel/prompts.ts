@@ -25,7 +25,7 @@ import type { Theory } from "./recordSections";
 
 /** Bump on any change to a prompt OR to recordSections.ts wording: it is part
  *  of the reuse hash, so a bump makes every rebuild write a fresh letter. */
-export const COUNSEL_PROMPT_VERSION = 3;
+export const COUNSEL_PROMPT_VERSION = 4;
 
 export const SUMMARY_SYSTEM = `You are the merchant's chargeback counsel. You write the executive summary of a response to an item-not-received chargeback. Third person. Your job is to win the case.
 
