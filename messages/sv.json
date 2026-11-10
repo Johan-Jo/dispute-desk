@@ -2491,6 +2491,150 @@
       }
     },
     "record": {
+      "status": {
+        "chip": {
+          "ask": "Svar behövs",
+          "approval": "Godkännande behövs",
+          "scheduled": "Schemalagt",
+          "conceded": "Inget svar",
+          "filing": "Lämnas in",
+          "filed": "Inlämnat",
+          "sent_by_shopify": "Skickat via Shopify",
+          "unconfirmed": "Ej bekräftat",
+          "save_failed": "Kunde inte lämnas in",
+          "build_failed": "Inte skrivet än",
+          "build_paused": "Pausat",
+          "nothing_to_argue": "Inget svar",
+          "covered": "Täckt",
+          "plan_limit": "Plangräns",
+          "preparing": "Förbereds",
+          "attention": "Behöver uppmärksamhet",
+          "won": "Vunnet",
+          "lost": "Förlorat",
+          "closed": "Avslutat"
+        },
+        "label": {
+          "happened": "Vad som har hänt",
+          "need": "Vad vi behöver av dig",
+          "can": "Vad du kan göra",
+          "optional": "För att stärka ärendet (valfritt)",
+          "next": "Vad som händer sedan",
+          "done": "Klart hittills"
+        },
+        "phase": {
+          "inquiry": "Förfrågan",
+          "chargeback": "Chargeback"
+        },
+        "subline": {
+          "open": "{phase} · {amount} · Shopifys frist är den {date}",
+          "openToday": "{phase} · {amount} · Shopifys frist är i dag, den {date}",
+          "decided": "{phase} · {amount} · Avgjord {date}",
+          "plain": "{phase} · {amount}"
+        },
+        "fact": {
+          "returnedToSender": "Transportören skickade tillbaka paketet till dig, så något leveransbevis kan inte finnas."
+        },
+        "headline": {
+          "askParcel": "Vi behöver ditt svar: varför kom paketet tillbaka till dig?",
+          "askParcelToday": "Vi behöver ditt svar i dag: varför kom paketet tillbaka till dig?",
+          "askReturn": "Vi behöver ditt svar: bad kunden om en retur eller återbetalning?",
+          "askReturnToday": "Vi behöver ditt svar i dag: bad kunden om en retur eller återbetalning?",
+          "askBank": "Vi behöver din hjälp: lägg till bankens anspråk från Shopify",
+          "askBankToday": "Vi behöver din hjälp i dag: lägg till bankens anspråk från Shopify",
+          "approval": "Vi behöver ditt godkännande: svaret är klart",
+          "scheduled": "Inget att göra. Svaret är schemalagt till den {date}",
+          "scheduledNoDate": "Inget att göra. Svaret är schemalagt till fristen",
+          "filing": "Inget att göra. Svaret lämnas in just nu",
+          "filed": "Inget att göra. Svaret är inlämnat",
+          "sentByShopify": "Inget att göra. Ett svar skickades via Shopify",
+          "saveFailed": "DisputeDesk kunde inte lämna in svaret",
+          "unconfirmed": "Inget att göra. Shopify har inte bekräftat svaret än",
+          "buildFailed": "DisputeDesk har inte kunnat skriva svaret än",
+          "buildPaused": "DisputeDesk har pausat arbetet med svaret",
+          "nothingToArgue": "DisputeDesk lämnar inget svar: underlaget räcker inte till",
+          "covered": "Inget att göra. Shopify Protect täcker ordern",
+          "conceded": "Inget att göra. Du valde att inte lägga till något svar",
+          "planLimit": "Du behöver uppgradera: månadens gräns i din plan är nådd",
+          "preparing": "Inget att göra. DisputeDesk förbereder svaret",
+          "won": "Vunnet: {amount} stannar hos dig",
+          "wonNoAmount": "Vunnet",
+          "lost": "Förlorat: {amount} gick tillbaka till kunden",
+          "lostNoAmount": "Förlorat"
+        },
+        "happened": {
+          "filedWe": "DisputeDesk lämnade in ett svar den {date}.",
+          "relied": "Det byggde på {list}.",
+          "filed": "DisputeDesk lämnade in svaret via Shopify den {date}.",
+          "filedNoDate": "DisputeDesk lämnade in svaret via Shopify.",
+          "relies": "Det bygger på {list}.",
+          "sentByShopify": "DisputeDesk lämnade inget för den här tvisten. Ett svar skickades via Shopify.",
+          "saveFailed": "Svaret är klart, men Shopify tog inte emot filen när vi skickade den (senaste försöket den {date}). Inget från DisputeDesk har nått banken.",
+          "saveFailedNoDate": "Svaret är klart, men Shopify tog inte emot filen när vi skickade den. Inget från DisputeDesk har nått banken.",
+          "unconfirmed": "DisputeDesk köade svaret för Shopify den {date}, men Shopify har inte bekräftat att det togs emot.",
+          "unconfirmedNoDate": "DisputeDesk köade svaret för Shopify, men Shopify har inte bekräftat att det togs emot.",
+          "buildFailed": "Underlaget är insamlat, men svaret klarade inte våra kontroller (senaste försöket den {date}). Inget har lämnats in.",
+          "buildFailedNoDate": "Underlaget är insamlat, men svaret klarade inte våra kontroller. Inget har lämnats in.",
+          "buildPaused": "Underlaget är insamlat, men arbetet med svaret är pausat av en daglig gräns. Inget har lämnats in.",
+          "refundCovers": "Den registrerade återbetalningen täcker det bestridda beloppet.",
+          "notFulfilled": "Ordern skickades aldrig.",
+          "noFacts": "Inget i underlaget kan visas för banken till stöd för ärendet.",
+          "planLimit": "DisputeDesk har inte förberett något svar för den här tvisten eftersom månadsgränsen i din plan är nådd."
+        },
+        "need": {
+          "parcel": "Bara du vet varför paketet kom tillbaka. Om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är det enda argument som finns kvar i ärendet. Utan ditt svar blir vårt svar till banken svagt.",
+          "return": "Shopify registrerar bara returer som görs via Shopify, så bara du kan säga om kunden bad om en retur eller återbetalning innan tvisten öppnades.",
+          "bank": "Bankens skäl syns bara i Shopify. Klistra in det här så att svaret tar upp precis det som frågades.",
+          "review": "Läs svaret och välj.",
+          "nothing": "Vi behöver inget av dig just nu.",
+          "plan": "Välj en plan som passar din volym."
+        },
+        "can": {
+          "evidence": "Har du bevis som vi inte kan se, till exempel en leveransbekräftelse från transportören, lägger du till dem på fliken Bevis."
+        },
+        "optional": {
+          "ack": "Kortinnehavarens bekräftelse skulle stärka ärendet."
+        },
+        "action": {
+          "answer": "Svara på frågan",
+          "approve": "Godkänn",
+          "concede": "Lägg inte till något svar",
+          "evidence": "Lägg till bevis",
+          "ack": "Lägg till bekräftelse",
+          "plans": "Se planer"
+        },
+        "next": {
+          "parcelAnswer": "Om du svarar läggs ditt svar till i svaret till banken, och du bestämmer om det ska lämnas in.",
+          "parcelNone": "Om du inte gör det lämnar DisputeDesk inte in något på egen hand. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
+          "returnAnswer": "Om du svarar skriver DisputeDesk om svaret med ditt svar.",
+          "bankAnswer": "När du har lagt till det skriver DisputeDesk om svaret.",
+          "bankNone": "Tills dess lämnar DisputeDesk inte in något för den här tvisten. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
+          "reviewApprove": "Om du godkänner är det schemalagt att lämnas in via Shopify vid fristen, den {date}, efter en ny kontroll.",
+          "reviewNone": "Om du inte gör något lämnar DisputeDesk inte in något. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
+          "covered": "Shopify hanterar tvisten själv. DisputeDesk lämnar inte in något för den.",
+          "passed": "Shopify har skickat det vidare till banken.",
+          "passes": "Shopify skickar det vidare till banken.",
+          "inquiry": "Om banken nöjer sig stängs förfrågan. Annars kan den bli en chargeback, och DisputeDesk förbereder ett nytt svar.",
+          "chargeback": "Banken beslutar.",
+          "email": "Du får ett mejl när resultatet är klart, om mejl om utfall är påslagna i Inställningar.",
+          "filing": "DisputeDesk skickar svaret till Shopify just nu.",
+          "saveRetry": "Ett nytt försök är schemalagt till fristen, den {date}, efter att svaret har kontrollerats igen.",
+          "unconfirmed": "En ny kontroll är schemalagd till fristen, den {date}.",
+          "rebuild": "DisputeDesk är schemalagt att bygga svaret igen vid fristen, den {date}.",
+          "buildNoFile": "Om inget svar klarar kontrollerna lämnar DisputeDesk inte in något, du får ett mejl, och Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
+          "buildNoFileQuiet": "Om inget svar klarar kontrollerna lämnar DisputeDesk inte in något. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
+          "buildPaused": "DisputeDesk försöker igen varje dag fram till fristen.",
+          "shopifySends": "DisputeDesk lämnar inte in något för den här tvisten. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
+          "expectLoss": "DisputeDesk räknar med att förlora den här tvisten.",
+          "scheduled": "Det är schemalagt att lämnas in via Shopify vid fristen, den {date}. DisputeDesk bevakar om mer bevis tillkommer och kontrollerar svaret igen innan något skickas.",
+          "scheduledNoDate": "Det är schemalagt att lämnas in via Shopify vid fristen. DisputeDesk bevakar om mer bevis tillkommer och kontrollerar svaret igen innan något skickas.",
+          "planLimit": "När planen har ändrats förbereder DisputeDesk svaret. Shopifys frist är den {date}.",
+          "planLimitNoDate": "När planen har ändrats förbereder DisputeDesk svaret."
+        },
+        "done": {
+          "drafted": "Underlaget är insamlat och ett svar är skrivet. Inget har lämnats in.",
+          "evidence": "Underlaget är insamlat. Inget har lämnats in."
+        }
+      },
       "claim": {
         "FRAUDULENT": "Kortinnehavaren sa till sin bank att hen inte gjorde köpet.",
         "UNRECOGNIZED": "Kortinnehavaren sa till sin bank att hen inte känner igen debiteringen.",
@@ -2572,7 +2716,7 @@
       "underReview": "Shopify har skickat det vidare till kortnätverket, som inte har avgjort än.",
       "due": "Shopifys frist är den {date}.",
       "reopened": "Shopify öppnade tvisten igen den {date}.",
-      "escalated": "Förfrågan blev ett återbetalningskrav den {date}.",
+      "escalated": "Förfrågan blev en chargeback den {date}.",
       "filed": {
         "shopify": "DisputeDesk lämnade inget för den här tvisten. Ett svar skickades via Shopify den {date}.",
         "shopifyNoDate": "DisputeDesk lämnade inget för den här tvisten. Ett svar skickades via Shopify.",
@@ -2835,7 +2979,7 @@
           "decided": "Avgjord",
           "package": "Försvarspaket",
           "reopened": "Öppnad igen",
-          "escalated": "Blev ett återbetalningskrav",
+          "escalated": "Blev en chargeback",
           "response": "Svar skickat"
         },
         "placed": {
@@ -4359,7 +4503,7 @@
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
-          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**En enda redogörelse för tvisten.** Sidan öppnas med en kort redogörelse för tvisten, och alla flikar läser samma fakta, så ett tal, ett datum eller en mening skiljer sig aldrig mellan **Översikt**, **Bevis** och **Granska och vidarebefordra**. **Underlaget** listar de fakta som redogörelsen bygger på, **Det som vinner den här typen av tvist** visar hur många av de underlag bankerna tittar efter som finns registrerade, och **Vad som hände** är tidslinjen. Varje bevis har exakt en roll: **angivet för banken**, **sammanhang i paketet**, **hålls internt** (används bara för vår bedömning, skickas aldrig till Shopify eller banken) eller **inte tillgängligt**. De delar som är **angivna för banken** är de som brevet stödjer sig på: bevisunderlaget listar dem, och en leverans redovisas i fraktavsnittet. Orderuppgifterna eller en butikspolicy anges bara när brevets argumentation stödjer sig på dem; annars förblir de sammanhang. Ett brev som förberetts tidigare behåller det bevisunderlag det skrevs med, och den här sidan beskriver det brevet. En retur eller återbetalning som Shopify registrerar på ordern anges en gång, i underlaget, med samma ord överallt. Sidan är bara till dig och ingår inte i något som skickas till banken; brevet under **Granska och vidarebefordra** är dokumentet som banken får.\n\n**Frågor som bara du kan svara på.** När tvisten behöver ett svar från dig (bankens påstående, varför ett returnerat paket kom tillbaka, om kunden bad om en retur eller ditt beslut om ett paket som väntar på godkännande) visas den under **Översikt** som ett kort under sammanfattningen, och sammanfattningen nämner den först. Det som bara hjälper, som att lägga till kortinnehavarens bekräftelse eller saknade bevis, finns kvar under **Bevis**."
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**En enda redogörelse för tvisten.** Sidan öppnas med en kort redogörelse för tvisten, och alla flikar läser samma fakta, så ett tal, ett datum eller en mening skiljer sig aldrig mellan **Översikt**, **Bevis** och **Granska och vidarebefordra**. **Underlaget** listar de fakta som redogörelsen bygger på, **Det som vinner den här typen av tvist** visar hur många av de underlag bankerna tittar efter som finns registrerade, och **Vad som hände** är tidslinjen. Varje bevis har exakt en roll: **angivet för banken**, **sammanhang i paketet**, **hålls internt** (används bara för vår bedömning, skickas aldrig till Shopify eller banken) eller **inte tillgängligt**. De delar som är **angivna för banken** är de som brevet stödjer sig på: bevisunderlaget listar dem, och en leverans redovisas i fraktavsnittet. Orderuppgifterna eller en butikspolicy anges bara när brevets argumentation stödjer sig på dem; annars förblir de sammanhang. Ett brev som förberetts tidigare behåller det bevisunderlag det skrevs med, och den här sidan beskriver det brevet. En retur eller återbetalning som Shopify registrerar på ordern anges en gång, i underlaget, med samma ord överallt. Sidan är bara till dig och ingår inte i något som skickas till banken; brevet under **Granska och vidarebefordra** är dokumentet som banken får.\n\n**Frågor som bara du kan svara på.** När tvisten behöver ett svar från dig (bankens påstående, varför ett returnerat paket kom tillbaka, om kunden bad om en retur eller ditt beslut om ett paket som väntar på godkännande) visas den under **Översikt** som ett kort under sammanfattningen, och statusblocket överst på sidan nämner den först, med en knapp som tar dig dit. Det som bara hjälper, som att lägga till kortinnehavarens bekräftelse eller saknade bevis, finns kvar under **Bevis**.\n\n**Statusblocket överst.** Rubriken är det enda som behöver göras, eller börjar med ”Inget att göra.” när inget behövs. Under den finns **Vad som har hänt**, **Vad vi behöver av dig** (med knappen för frågan, direkt på sidan), **Vad som händer sedan** och **Klart hittills**. De är korta och visas bara när det finns något sant att säga. Interna versionsnummer och bevisantal ingår inte. ”Schemalagt” betyder att DisputeDesk kontrollerar svaret igen vid fristen innan något skickas. Om DisputeDesk inte lämnar in något körs Shopifys egen fristprocess ändå, med de orderuppgifter Shopify redan har."
         },
         "reviewQueue": {
           "title": "Granskningskön",

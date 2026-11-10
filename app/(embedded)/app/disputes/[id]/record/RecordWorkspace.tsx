@@ -16,7 +16,7 @@
  * letter slot, unchanged.
  */
 
-import { Page } from "@shopify/polaris";
+import { Button, Page } from "@shopify/polaris";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -24,6 +24,8 @@ import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { I18nToken } from "@/lib/i18n/token";
 import { phaseLabel } from "@/lib/disputes/phaseUtils";
 import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import type { StatusActionId, StatusCopy } from "@/lib/disputes/presentation/statusCopy";
+import { withShopParams } from "@/lib/withShopParams";
 import { ROLE_ORDER, type DisputeRecord, type HelpItem, type RecordItem, type RecordRole } from "@/lib/disputes/disputeRecord";
 import type { RecordFormat } from "@/lib/disputes/recordFormat";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
@@ -100,7 +102,17 @@ export default function RecordWorkspace({
     { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
   ];
 
-  const account = record.account.map((k) => r(record.facts[k] as I18nToken)).join(" ");
+  const { actions } = workspace;
+  const onStatusAction = (id: StatusActionId) => {
+    if (id === "decide:approved") return void actions.setReviewDecision("approve");
+    if (id === "decide:conceded") return void actions.setReviewDecision("concede");
+    if (id === "tab:evidence") return actions.setActiveTab(TAB_INDEX.evidence);
+    if (id === "ack") return setAckOpen(true);
+    if (id === "plans") return;
+    // An ask: its card is on the Overview. Go there and bring it into view.
+    if (tab !== TAB_INDEX.overview) actions.setActiveTab(TAB_INDEX.overview);
+    setTimeout(() => document.getElementById(`dd-ask-${id.slice(4)}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
   const metaValue = decided
     ? record.header.decided ?? ""
     : [
@@ -348,9 +360,9 @@ export default function RecordWorkspace({
                 </div>
                 <div style={{ flex: "1 1 260px", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.015em", lineHeight: 1.2 }}>
-                    {r(record.hero.headline)}
+                    {r(record.statusCopy.headline)}
                   </div>
-                  <div style={{ color: "var(--dd-text-subtle)" }}>{r(record.hero.claimShort)}</div>
+                  <div style={{ color: "var(--dd-text-subtle)" }}>{r(record.statusCopy.subline)}</div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end", marginLeft: "auto" }}>
                   <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{r(record.hero.amountLabel)}</span>
@@ -367,39 +379,22 @@ export default function RecordWorkspace({
                   gap: 12,
                 }}
               >
-                <p
-                  data-testid="dispute-record-account"
-                  style={{ margin: 0, fontSize: 14, lineHeight: 1.65, color: "#344054", textWrap: "pretty" } as CSSProperties}
-                >
-                  {account}
-                </p>
-                <div style={{ display: record.showRoles ? "flex" : "none", gap: 8, flexWrap: "wrap" }}>
-                  {ROLE_ORDER.map((role) => (
-                    <span
-                      key={role}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                        background: ROLE_STYLE[role].bg,
-                        color: ROLE_STYLE[role].fg,
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: ROLE_STYLE[role].dot }} />
-                      {t(`disputes.record.role.${role}`)} · {record.counts[role]}
-                    </span>
-                  ))}
-                </div>
+                <StatusParts
+                  copy={record.statusCopy}
+                  r={r}
+                  onAction={onStatusAction}
+                  plansUrl={withShopParams("/app/billing", searchParams)}
+                  busy={actions.reviewSaving === true}
+                />
                 <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{t("disputes.record.ui.forYouOnly")}</span>
               </div>
             </div>
 
             <PackBanners workspace={workspace} t={t} />
-            {record.canDecide ? <DecisionRow workspace={workspace} record={record} t={t} /> : null}
+            {/* While the hero itself asks for the approval (its Approve / Don't add buttons) this row would repeat them. */}
+            {record.canDecide && record.statusCopy.state !== "approval" ? (
+              <DecisionRow workspace={workspace} record={record} t={t} />
+            ) : null}
 
             {tab === TAB_INDEX.overview ? (
               <OverviewBody
@@ -506,10 +501,20 @@ function OverviewBody({
       ) : null}
       {ack}
 
-      <BankClaimCard workspace={workspace} />
+      <div id="dd-ask-bank_claim">
+        <BankClaimCard workspace={workspace} />
+      </div>
       {/* The other required asks, from the registry (lib/disputes/merchantAsks): the same cards the Evidence tab renders, so the first screen shows what the hero asks for. */}
-      {requiredAskIds.has("parcel_outcome") ? <ParcelOutcomeCard workspace={workspace} /> : null}
-      {requiredAskIds.has("return_request") ? <ReturnRequestCard workspace={workspace} /> : null}
+      {requiredAskIds.has("parcel_outcome") ? (
+        <div id="dd-ask-parcel_outcome">
+          <ParcelOutcomeCard workspace={workspace} />
+        </div>
+      ) : null}
+      {requiredAskIds.has("return_request") ? (
+        <div id="dd-ask-return_request">
+          <ReturnRequestCard workspace={workspace} />
+        </div>
+      ) : null}
       <LiabilityShiftPanel disputeId={workspace.data?.dispute?.id ?? ""} />
 
       {record.recordRows.length > 0 ? (
@@ -724,6 +729,72 @@ function PrimaryAction({ label, onClick }: { label: string; onClick: () => void 
     >
       {label}
     </button>
+  );
+}
+
+/** The labelled parts of the status block (`record.statusCopy`). Renders tokens only; every sentence was composed in lib/. */
+function StatusParts({
+  copy,
+  r,
+  onAction,
+  plansUrl,
+  busy,
+}: {
+  copy: StatusCopy;
+  r: R;
+  onAction: (id: StatusActionId) => void;
+  plansUrl: string;
+  busy: boolean;
+}) {
+  return (
+    <div data-testid="dispute-record-account" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {copy.parts.map((p) => (
+        <div key={p.kind} data-part={p.kind} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--dd-text-subtle)" }}>{r(p.label)}</span>
+          {p.lines.map((line, idx) => (
+            <p key={idx} style={{ margin: 0, fontSize: 14, lineHeight: 1.65, color: "#344054", textWrap: "pretty" } as CSSProperties}>
+              {r(line)}
+            </p>
+          ))}
+          {p.actions.length > 0 ? (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
+              {p.actions.map((a) =>
+                a.id === "plans" ? (
+                  <Button key={a.id} variant="primary" url={plansUrl}>
+                    {r(a.label)}
+                  </Button>
+                ) : a.id === "decide:conceded" ? (
+                  <button
+                    key={a.id}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onAction(a.id)}
+                    style={{
+                      background: "#FFFFFF",
+                      color: "inherit",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      fontWeight: 600,
+                      border: "1px solid var(--dd-border)",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: "inherit",
+                    }}
+                  >
+                    {r(a.label)}
+                  </button>
+                ) : (
+                  <span key={a.id} style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                    <PrimaryAction label={r(a.label)} onClick={() => onAction(a.id)} />
+                    {a.meta ? <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{r(a.meta)}</span> : null}
+                  </span>
+                ),
+              )}
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </div>
   );
 }
 

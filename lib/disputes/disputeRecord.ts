@@ -43,6 +43,10 @@ import {
 import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
 import { utcDaysUntil, type RecordFormat } from "@/lib/disputes/recordFormat";
 import { askActionKey, isAskOffered, primaryAsk, type Ask } from "@/lib/disputes/merchantAsks";
+import { composeStatusCopy, type StatusCopy } from "@/lib/disputes/presentation/statusCopy";
+import { resolveSaveAttempt } from "@/lib/disputes/presentation/resolveSaveAttempt";
+import type { BuildAttemptState } from "@/lib/disputes/presentation/resolveBuildAttempt";
+import type { OperationalLifecycle } from "@/lib/disputes/presentation/types";
 
 const NS = "disputes.record";
 const tk = (key: string, params?: I18nToken["params"]): I18nToken => ({
@@ -207,8 +211,10 @@ export interface DisputeRecord {
     /** The live case-strength band, shown as a pill in the header while a package is prepared and not yet saved (same condition as the strength sentence). */
     strengthBand: "strong" | "moderate" | "weak" | null;
   };
+  /** The action-first status block at the top of the page (`composeStatusCopy`). The component only renders it. */
+  statusCopy: StatusCopy;
   facts: Partial<Record<FactKey, I18nToken>>;
-  /** The hero paragraph: fact keys, in reading order. */
+  /** Fact keys in reading order. No longer the hero (that is `statusCopy`); kept for the sentence tests. */
   account: FactKey[];
   counts: Record<RecordRole, number>;
   items: RecordItem[];
@@ -294,6 +300,19 @@ export interface RecordInputs {
   customerAskedInSupport?: boolean;
   canDecide: boolean;
   decision: "approved" | "conceded" | "in_review" | null;
+  /** `presentation.lifecycle` (the owner of "where it stands", incl. save_queued / save_failed). */
+  lifecycle?: OperationalLifecycle | null;
+  /** `presentation.blockingReason`. */
+  blockingReason?: string | null;
+  /** `disputes.submission_state`. */
+  submissionState?: string | null;
+  /** Latest `evidence_packs.status` and its `updated_at` (the instant a failed save was settled). */
+  packStatus?: string | null;
+  packUpdatedAt?: string | null;
+  /** The latest defence-package attempt, through `resolveBuildAttempt`. `packageWritten`: a response letter exists (not failed / skipped). */
+  build?: { state: BuildAttemptState; cause: string | null; packageWritten: boolean; at: string | null } | null;
+  /** The returned-to-sender gate fired (`caseStrength.returnedToSender.triggered`). */
+  returnedToSender?: boolean;
 }
 
 /* ── Readers ── */
@@ -739,7 +758,13 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
   const facts = v.facts;
   const status = i.status;
   const stage = i.stage;
-  const offerAck = isAskOffered(i.asks, "cardholder_ack");
+  // The cardholder's acknowledgement does not fit a parcel that came back, a return on the record, or an order that never arrived.
+  const returnOnRecord = i.returns !== "none" && i.returns !== "unknown";
+  const ackFits =
+    i.returnedToSender !== true &&
+    !returnOnRecord &&
+    !(claimKey(i.view.reason) === "PRODUCT_NOT_RECEIVED" && deliveryParts(i.view.facts)?.confirmed !== true);
+  const offerAck = isAskOffered(i.asks, "cardholder_ack") && ackFits;
   const decided = status !== "open";
   const family = resolveReasonFamily(v.reason);
   const fraud = family === "fraud";
@@ -777,6 +802,18 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
 
   const phase = v.phase;
   const version = i.pkg.version;
+
+  // Sentence order is the order a person would say them in, not the row order.
+  const byPhrase = (order: ItemKey[]) => (a: RecordItem, b: RecordItem) => order.indexOf(a.key) - order.indexOf(b.key);
+  const citedListToken = i.hasPackage
+    ? listToken(
+        "cited",
+        items
+          .filter((x) => x.role === "cited" && x.phrase)
+          .sort(byPhrase(["pay", "screen", "delivery", "ip", "return"]))
+          .map((x) => x.phrase as I18nKeyParam),
+      )
+    : null;
 
   /** The "DisputeDesk saved defence package ... to Shopify" sentence. */
   const savedToken = (atIso: string): I18nToken => {
@@ -863,13 +900,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     }
 
     if (i.hasPackage) {
-      // Sentence order is the order a person would say them in, not the row order.
-      const byPhrase = (order: ItemKey[]) => (a: RecordItem, b: RecordItem) => order.indexOf(a.key) - order.indexOf(b.key);
-      const citedPhrases = items
-        .filter((x) => x.role === "cited" && x.phrase)
-        .sort(byPhrase(["pay", "screen", "delivery", "ip", "return"]))
-        .map((x) => x.phrase as I18nKeyParam);
-      const citedList = listToken("cited", citedPhrases);
+      const citedList = citedListToken;
       f.cited = citedList ? tk("cited.sentence", { list: nestFrom(citedList) }) : tk("cited.none");
 
       const adversePhrases = items
@@ -1081,9 +1112,55 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
                       : ["state"]
   ) as FactKey[];
 
+  /* The action-first status block. Everything it says is a token the record or an owner already produced. */
+  const returnItem = item("return");
+  const caseFact: I18nToken | null = i.returnedToSender
+    ? tk("status.fact.returnedToSender")
+    : returnItem?.adverse
+      ? returnItem.detail
+      : dl?.confirmed && deliveryItem
+        ? deliveryItem.detail
+        : null;
+  const statusCopy = composeStatusCopy({
+    status,
+    stage,
+    phase,
+    amount: fmt.money(v.amount, v.currency),
+    hasAmount: v.amount > 0,
+    dueDay,
+    deadlineToday: !decided && v.dueAt ? utcDaysUntil(v.dueAt, i.now) === 0 : false,
+    decidedDay: date(v.closedAt),
+    lifecycle: i.lifecycle ?? null,
+    save: resolveSaveAttempt({ packStatus: i.packStatus ?? null, submissionState: i.submissionState ?? null }),
+    submissionState: i.submissionState ?? null,
+    automationMode: i.automationMode,
+    decision: i.decision,
+    build: i.build ? { state: i.build.state, cause: i.build.cause, packageWritten: i.build.packageWritten } : null,
+    blockingReason: i.blockingReason ?? null,
+    fatalReason: i.fatalReason,
+    asks: i.asks,
+    ackFits,
+    recordSituation: returnOnRecord ? "return" : i.refund === "some" ? "refund" : null,
+    claim: f.claim as I18nToken,
+    caseFact,
+    citedList: citedListToken ? nestFrom(citedListToken) : null,
+    dates: {
+      saveAttempt: date(i.packUpdatedAt),
+      buildAttempt: date(i.build?.at),
+      filed: date(decided ? i.pkg.filedAt : i.savedAt),
+      queued: date(i.savedAt),
+    },
+    responder: i.responder,
+    decided: { outcome: f.outcome ?? null, filedElsewhere: i.responder === "we" ? null : f.filed ?? null },
+    stateToken: f.state ?? null,
+    attentionToken: f.attention ?? null,
+    hasPackage: i.hasPackage,
+  });
+
   return {
     status,
     stage,
+    statusCopy,
     showRoles: i.hasPackage,
     phase,
     header: {
@@ -1099,7 +1176,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       headline: tk(`headline.${headlineKey}`),
       claimShort: tk(`claimShort.${claimKey(v.reason)}`),
       amountLabel: tk(`amountLabel.${status}`),
-      statusChip: stage === "building" && i.packPrepared ? ({ key: "presentation.lifecycle.pack_prepared" } as I18nToken) : tk(`chip.${headlineKey}`),
+      statusChip: stage === "building" && i.packPrepared ? ({ key: "presentation.lifecycle.pack_prepared" } as I18nToken) : statusCopy.chip,
       strengthBand:
         (i.strength === "strong" || i.strength === "moderate" || i.strength === "weak") &&
         PREPARED_STAGES.includes(stage) &&
