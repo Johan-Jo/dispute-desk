@@ -170,20 +170,18 @@ export const styles = StyleSheet.create({
   },
 
   // ─── Running header / footer ─────────────────────────────────────────
-  runningHeaderSlot: {
+  // The header is three independently positioned fixed elements (title,
+  // case reference, rule) rather than one bordered flex row inside a
+  // render-prop View. The bordered row's computed height was garbage
+  // (145 x 100^page: 1.45e6 on page 2, 1.45e10 on page 4) and the bottom
+  // border was drawn at that Y; a coordinate beyond 2^31 makes Shopify's
+  // dispute_file_uploads validator answer 422. Every element here has an
+  // explicit position and the rule an explicit height, so nothing is
+  // derived from a measured height.
+  runningLeft: {
     position: "absolute",
     top: 28,
     left: MX,
-    right: MX,
-  },
-  runningHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingBottom: 8,
-    borderBottomWidth: 0.75,
-    borderBottomColor: C.hairline,
-  },
-  runningLeft: {
     fontSize: 7.5,
     fontWeight: 700,
     color: C.accent,
@@ -191,8 +189,22 @@ export const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   runningRight: {
+    position: "absolute",
+    top: 28,
+    right: MX,
     fontSize: 8,
     color: C.muted,
+  },
+  runningRuleSlot: {
+    position: "absolute",
+    top: 45,
+    left: MX,
+    right: MX,
+    height: 0.75,
+  },
+  runningRule: {
+    height: 0.75,
+    backgroundColor: C.hairline,
   },
   // Positioned from the TOP (Letter = 792pt). A render-prop element anchored
   // with `bottom` did not draw in this document; the running header, anchored

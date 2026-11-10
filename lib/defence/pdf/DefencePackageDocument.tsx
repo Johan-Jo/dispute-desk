@@ -262,20 +262,29 @@ function Footer({ meta }: { meta: DefencePackageMeta }) {
 
 function RunningHeader({ meta }: { meta: DefencePackageMeta }) {
   return (
-    <View
-      style={styles.runningHeaderSlot}
-      fixed
-      render={({ pageNumber }) =>
-        // Pages 2+ only; the border belongs to the rendered row so page 1
-        // shows no stray rule.
-        pageNumber === 1 ? null : (
-          <View style={styles.runningHeader}>
-            <Text style={styles.runningLeft}>{meta.responseTitle ?? "Chargeback response"}</Text>
-            <Text style={styles.runningRight}>{caseRef(meta)}</Text>
-          </View>
-        )
-      }
-    />
+    // Pages 2+ only: on page 1 both texts render empty and the rule renders
+    // nothing. See styles.runningLeft for why this is not one bordered row.
+    <>
+      <Text
+        style={styles.runningLeft}
+        fixed
+        render={({ pageNumber }) =>
+          pageNumber === 1 ? "" : (meta.responseTitle ?? "Chargeback response")
+        }
+      />
+      <Text
+        style={styles.runningRight}
+        fixed
+        render={({ pageNumber }) => (pageNumber === 1 ? "" : caseRef(meta))}
+      />
+      <View
+        style={styles.runningRuleSlot}
+        fixed
+        render={({ pageNumber }) =>
+          pageNumber === 1 ? null : <View style={styles.runningRule} />
+        }
+      />
+    </>
   );
 }
 
