@@ -33,6 +33,7 @@ import type {
   ChecklistItemV2,
   WaiveReason,
 } from "@/lib/types/evidenceItem";
+import { RETIRED_ASK_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 import styles from "@/app/(embedded)/app/packs/[packId]/pack-detail.module.css";
 
 /** Priority order for required evidence fields (highest impact first). */
@@ -153,7 +154,7 @@ interface EvidenceBuilderSectionProps {
 }
 
 export function EvidenceBuilderSection({
-  checklist,
+  checklist: checklistProp,
   includedItems,
   evidenceItems = [],
   onUpload,
@@ -168,6 +169,8 @@ export function EvidenceBuilderSection({
   readOnly = false,
   refundStatement = null,
 }: EvidenceBuilderSectionProps) {
+  // A retired ask's unanswered row is not something to supply (lib/automation/merchantUiHiddenFields).
+  const checklist = checklistProp.filter((c) => !(c.status === "missing" && RETIRED_ASK_FIELDS.has(c.field)));
   const [includedOpen, setIncludedOpen] = useState(readOnly);
   const [selectedTab, setSelectedTab] = useState(0);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());

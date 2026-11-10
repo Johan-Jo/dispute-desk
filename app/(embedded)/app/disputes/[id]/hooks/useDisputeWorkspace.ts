@@ -605,60 +605,6 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
-  /** Record the merchant's answer to the returned-parcel question.
-   *
-   *  Same shape as `submitCardholderAcknowledgement` above — POST, refetch
-   *  regardless, surface the regenerate prompt when the dispute is still in
-   *  the resubmission window. `disposition` is merchant-only and never
-   *  reaches bank-facing text; the split is enforced server-side (see the
-   *  route and `lib/defence/factClassifier.ts`). */
-  const submitParcelOutcome = useCallback(
-    async (
-      reason: string,
-      disposition: string,
-      note: string | null,
-    ): Promise<{
-      ok: boolean;
-      promptRebuild?: boolean;
-      evidenceItemId?: string;
-      error?: string;
-      code?: string;
-    }> => {
-      if (!data?.pack) return { ok: false, error: "No pack" };
-      const res = await fetch(`/api/packs/${data.pack.id}/parcel-outcome`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason, disposition, note }),
-      });
-      const body = (await res.json().catch(() => null)) as
-        | { evidenceItemId?: string; promptRebuild?: boolean; error?: string; code?: string }
-        | null;
-      fetchAll();
-      if (!res.ok) {
-        return {
-          ok: false,
-          error: body?.error ?? `Server error (${res.status})`,
-          code: body?.code,
-        };
-      }
-      if (body?.promptRebuild && body?.evidenceItemId) {
-        setClientState((s) => ({
-          ...s,
-          pendingRegeneratePrompt: {
-            packId: data.pack!.id,
-            evidenceItemId: body.evidenceItemId!,
-          },
-        }));
-      }
-      return {
-        ok: true,
-        promptRebuild: body?.promptRebuild,
-        evidenceItemId: body?.evidenceItemId,
-      };
-    },
-    [data?.pack, fetchAll],
-  );
-
   /** Fix C4b: record whether the customer asked for a return or refund.
    *  The route stores it per response cycle and queues a rebuild. */
   const submitReturnRequestConfirmation = useCallback(
@@ -929,7 +875,6 @@ export function useDisputeWorkspace(disputeId: string) {
       unwaiveItem,
       toggleInclusionOverride,
       submitCardholderAcknowledgement,
-      submitParcelOutcome,
       submitReturnRequestConfirmation,
       submitBankClaim,
       withdrawBankClaim,

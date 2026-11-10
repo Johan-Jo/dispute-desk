@@ -27,8 +27,6 @@
 
 import {
   canOfferCardholderAcknowledgement,
-  canOfferParcelOutcome,
-  merchantAnsweredParcelOutcomeFromItems,
   merchantSuppliedAcknowledgementFromItems,
   type EvidenceItemPayloadRow,
 } from "@/lib/disputes/heldState";
@@ -40,7 +38,6 @@ import type { WorkspaceData } from "@/app/(embedded)/app/disputes/[id]/workspace
 export const ASK_IDS = [
   "review_decision",
   "bank_claim",
-  "parcel_outcome",
   "return_request",
   "missing_evidence",
   "gorgias_review",
@@ -57,6 +54,15 @@ export interface Ask {
   offered: boolean;
   /** Offered AND still waiting on the merchant (not yet answered / decided). */
   pending: boolean;
+  /**
+   * The module that READS the merchant's answer to this ask and lets it change
+   * a filing decision or a sentence of the response. A REQUIRED ask must name
+   * one (a path under the repo root that exists): we do not ask the merchant
+   * for something that cannot change the outcome. The returned-parcel question
+   * was removed 2026-11-10 for exactly this: its answer reached no letter claim.
+   * `tests/unit/merchantAsks.test.tsx` enforces it.
+   */
+  consumedBy: string | null;
 }
 
 /* ── Gates moved verbatim out of components ── */
@@ -128,12 +134,6 @@ export interface MerchantAskInputs {
 
 /** The ordered registry. Order is the order the hero and the Overview rank asks in. */
 export function resolveMerchantAsks(i: MerchantAskInputs): Ask[] {
-  const parcel = canOfferParcelOutcome({
-    returnedToSender: i.returnedToSender,
-    merchantAnsweredParcelOutcome: merchantAnsweredParcelOutcomeFromItems(i.evidenceItems),
-    submissionState: i.submissionState,
-    finalOutcome: i.finalOutcome,
-  });
   const returnOffered = returnRequestOffered({
     applies: i.returnRequestApplies,
     finalOutcome: i.finalOutcome,
@@ -148,14 +148,31 @@ export function resolveMerchantAsks(i: MerchantAskInputs): Ask[] {
   });
   const gorgias = gorgiasReviewOffered(i.gorgiasComms);
   return [
-    { id: "review_decision", priority: "required", offered: i.canDecide, pending: i.canDecide && i.reviewPending },
-    { id: "bank_claim", priority: "required", offered: bankOffered, pending: bankOffered && !i.bankClaimAnswered },
-    { id: "parcel_outcome", priority: "required", offered: parcel, pending: parcel },
-    { id: "return_request", priority: "required", offered: returnOffered, pending: returnOffered && !i.returnRequestAnswered },
-    { id: "missing_evidence", priority: "optional", offered: missing, pending: missing },
+    {
+      id: "review_decision",
+      priority: "required",
+      offered: i.canDecide,
+      pending: i.canDecide && i.reviewPending,
+      consumedBy: "lib/automation/merchantApprovalGate.ts",
+    },
+    {
+      id: "bank_claim",
+      priority: "required",
+      offered: bankOffered,
+      pending: bankOffered && !i.bankClaimAnswered,
+      consumedBy: "lib/defence/counsel/briefs/index.ts",
+    },
+    {
+      id: "return_request",
+      priority: "required",
+      offered: returnOffered,
+      pending: returnOffered && !i.returnRequestAnswered,
+      consumedBy: "lib/defence/counsel/creditNotProcessedLedger.ts",
+    },
+    { id: "missing_evidence", priority: "optional", offered: missing, pending: missing, consumedBy: null },
     // Informational: the review section lists conversations; it never names a task for the hero.
-    { id: "gorgias_review", priority: "optional", offered: gorgias, pending: false },
-    { id: "cardholder_ack", priority: "optional", offered: ack, pending: ack },
+    { id: "gorgias_review", priority: "optional", offered: gorgias, pending: false, consumedBy: null },
+    { id: "cardholder_ack", priority: "optional", offered: ack, pending: ack, consumedBy: null },
   ];
 }
 
@@ -217,8 +234,6 @@ export function askActionKey(id: AskId): string | null {
       return "disputes.record.action.review";
     case "bank_claim":
       return "disputes.bankClaim.title";
-    case "parcel_outcome":
-      return "disputes.evidenceTab.parcelOutcome.title";
     case "return_request":
       return "disputes.evidenceTab.returnRequest.title";
     case "missing_evidence":
