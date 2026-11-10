@@ -593,7 +593,10 @@ export async function runCounsel(args: {
   const inputHash = counselInputHash({ ledger, pageContext: `${pageContext}\n${frameRule(frame)}`, merchantName: args.merchantName, check, writeModel: model, reviewModel });
   // Multi-parcel: each card prints its own link.
   const trackingLine = trackingUrl && !multi ? `Carrier tracking record: ${trackingUrl}` : null;
-  const factIds = facts.map((f) => f.id);
+  // What sections may CITE is the plan's facts only. The exhibit facts are
+  // document metadata (the card), not plan records: citing their positional ids
+  // is an orphaned claim on the canonical route (#24285 v20, 2026-11-10).
+  const factIds = args.facts.map((f) => f.id);
   const finish = (draft: CounselDraft): DefenceNarrativeOutput => ({
     ...toNarrative(draft, factIds, trackingLine, ledger),
     counsel: { inputHash, summary: draft.summary.paragraphs },
@@ -613,7 +616,7 @@ export async function runCounsel(args: {
     policyExhibit,
     exhibitFacts,
     narrative: finish(draft),
-    argumentFactIdsBySlot: argumentFactIdsBySlot(draft, ledger, facts),
+    argumentFactIdsBySlot: argumentFactIdsBySlot(draft, ledger, args.facts),
     ledger,
     modelUsed: model,
     promptVersion: COUNSEL_PROMPT_VERSION,

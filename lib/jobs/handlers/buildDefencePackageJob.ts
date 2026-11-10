@@ -795,11 +795,13 @@ export async function handleBuildDefencePackage(
   };
   usedCounsel = !!counselRes;
   // The carrier record the letter argues is shown in the document, whatever the
-  // module's plan kept (lib/defence/counsel/carrierExhibit.ts). Added to the
-  // ONE list the validator, the chronology, the card and the Evidence Basis read.
-  if (counselRes.exhibitFacts?.length) {
-    planFacts = [...planFacts, ...(counselRes.exhibitFacts ?? [])] as typeof planFacts;
-  }
+  // module's plan kept (lib/defence/counsel/carrierExhibit.ts). It is DOCUMENT
+  // metadata, not a plan record: `planFacts` stays the plan's authority (the
+  // projection, the validator, the evidence hash, the sections' citations) and
+  // `documentFacts` is what the card, the chronology and `facts_json` read.
+  // Adding it to `planFacts` made every section cite an id the plan does not
+  // authorise: `orphaned_claim`, #24285 v20.
+  const documentFacts = [...planFacts, ...(counselRes.exhibitFacts ?? [])] as typeof planFacts;
 
   if (narrativeRes.capReached) {
     return await markFailed(sb, pkg, narrativeRes.error ?? "daily cap reached", "daily_cap_reached", true);
@@ -1422,7 +1424,7 @@ export async function handleBuildDefencePackage(
       generatedBy: pkg.generated_by as "system" | "merchant" | "admin",
     },
     composedBlocks,
-    approvedFacts: planFacts,
+    approvedFacts: documentFacts,
     // F3. `classification.manual` is the full merchant-visible list, and the
     // renderer used to select from it on `includeInPackage` — a routing flag
     // that has never meant "the issuer may see this". On the canonical route
@@ -1674,7 +1676,7 @@ export async function handleBuildDefencePackage(
       status: targetStatus,
       pdf_path: pdfPath,
       narrative_json: narrativeRes.narrative,
-      facts_json: planFacts,
+      facts_json: documentFacts,
       /* WHAT THE DOCUMENT ACTUALLY RENDERED, recorded only here.
        *
        * This is the success path — `pdfPath` exists, so a document was
