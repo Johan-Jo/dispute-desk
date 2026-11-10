@@ -50,11 +50,12 @@ export async function POST(
   }
 
   // Hard status gate. Only a successfully built pack (status === "ready")
-  // can be submitted. Packs in "failed", "queued", "building", "saving",
-  // "saved_to_shopify*", or "save_failed" must not be submittable.
+  // or one whose filing failed ("save_failed", re-savable since Track S —
+  // the pack itself was built fine) can be submitted. Packs in "failed",
+  // "queued", "building", "saving" or "saved_to_shopify*" must not be.
   // Evidence-derived fields (submission_readiness, completeness_score)
-  // are only meaningful when status === "ready".
-  if (pack.status !== "ready") {
+  // are only meaningful for a built pack.
+  if (pack.status !== "ready" && pack.status !== "save_failed") {
     return NextResponse.json(
       {
         error: "PACK_NOT_READY",
