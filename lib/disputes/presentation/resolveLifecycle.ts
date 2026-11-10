@@ -32,6 +32,7 @@
  */
 
 import type { OperationalLifecycle } from "./types";
+import { resolveSaveAttempt, isSaveInFlight } from "./resolveSaveAttempt";
 
 /** Recognized `disputes.submission_state` values
  *  (migration 20260413100000:66-68). */
@@ -52,13 +53,15 @@ const SHOPIFY_OBSERVED_UNDER_REVIEW = new Set([
   "under_review_unattributed",
 ]);
 
-/** Pack statuses that mean a build is in progress. */
-const PACK_BUILDING = new Set(["queued", "building", "saving"]);
+/** Pack statuses that mean a build is in progress. `saving` is NOT one: a
+ *  pack waiting for Shopify is `save_queued`, not "building evidence"
+ *  (Track S, 2026-11-10). */
+const PACK_BUILDING = new Set(["queued", "building"]);
 
 /** Pack statuses that prove a completed-but-not-saved package exists.
- *  `ready` is the canonical verified state; `save_failed` can only be
- *  reached from `ready` (the save path), so the prepared fact stands. */
-const PACK_PREPARED = new Set(["ready", "save_failed"]);
+ *  `save_failed` is not here any more: a package whose filing failed is
+ *  `save_failed`, and calling it "prepared" hid the failure for nine days. */
+const PACK_PREPARED = new Set(["ready"]);
 
 /** Pack statuses under which monitoring is genuinely occurring at rung 6
  *  (a completed package exists and the pipeline is not failed/halted).
@@ -82,6 +85,13 @@ export interface LifecycleInput {
   normalizedStatus: string | null;
   /** Latest evidence pack `status`, or null when no pack exists. */
   packStatus: string | null;
+  /**
+   * `jobs.status` of an active `save_to_shopify` job for the latest pack, when
+   * the caller read jobs. The deadline cron's RPC enqueues a save without
+   * touching pack status, so this is the only signal that path leaves. Absent
+   * or null means "not read", never "no job".
+   */
+  saveJobStatus?: string | null;
   /**
    * Does a completed, validated document actually exist?
    *
@@ -179,6 +189,17 @@ export function resolveLifecycle(input: LifecycleInput): OperationalLifecycle {
   } else if (input.presentationSavedFallback) {
     return "saved_to_shopify";
   }
+
+  // Rung 3b — a filing attempt (Track S). Ahead of rung 4 because a pack that
+  // is `ready` with a save job in flight is queued for Shopify, not merely
+  // prepared; and a `save_failed` pack is a failed filing, not a prepared one.
+  const saveAttempt = resolveSaveAttempt({
+    packStatus: input.packStatus,
+    submissionState: input.submissionState,
+    activeJobStatus: input.saveJobStatus ?? null,
+  });
+  if (isSaveInFlight(saveAttempt)) return "save_queued";
+  if (saveAttempt === "failed") return "save_failed";
 
   // Rung 4 — verified completed-but-not-saved package.
   //

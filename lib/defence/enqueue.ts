@@ -80,7 +80,14 @@ export async function maybeEnqueueDefencePackage(
   if (!pack.dispute_id) {
     return { enqueued: false, reason: "no_dispute", packageId: null, version: null, status: null };
   }
-  if (pack.status !== "ready" && pack.status !== "saved_to_shopify" && pack.status !== "saving") {
+  if (
+    pack.status !== "ready" &&
+    pack.status !== "saved_to_shopify" &&
+    pack.status !== "saving" &&
+    // A failed filing is re-savable (Track S): rebuilding the package is how
+    // the stale-PDF defence and the merchant's retry both recover.
+    pack.status !== "save_failed"
+  ) {
     return { enqueued: false, reason: `pack_status_${pack.status}`, packageId: null, version: null, status: null };
   }
 

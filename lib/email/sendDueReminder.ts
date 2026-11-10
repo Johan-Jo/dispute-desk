@@ -53,6 +53,7 @@ interface S {
   approvedNoAction: string;
   awaitingApproval: string;
   packNotStarted: string;
+  packSaveFailed: string;
   packSaved: string;
   due: string;
   order: string;
@@ -72,6 +73,7 @@ const STRINGS: Record<Locale, S> = {
     approvedNoAction: "You've approved this response, so you don't need to do anything. DisputeDesk will file it with Shopify on the deadline.",
     awaitingApproval: "Your store is set to require your approval, so nothing is filed until you approve it. Open the dispute to review and approve the response before the deadline — otherwise no response will be filed.",
     packNotStarted: "No evidence pack has been started yet. Open the dispute to build one.",
+    packSaveFailed: "Saving the evidence to Shopify failed. DisputeDesk is looking into it; open the dispute to save it again.",
     packSaved: "Your response has already been submitted to Shopify for this dispute.",
     due: "Due",
     order: "Order",
@@ -88,6 +90,7 @@ const STRINGS: Record<Locale, S> = {
     approvedNoAction: "Ya aprobaste esta respuesta, así que no necesitas hacer nada. DisputeDesk la enviará a Shopify en la fecha límite.",
     awaitingApproval: "Tu tienda está configurada para requerir tu aprobación, así que no se envía nada hasta que la apruebes. Abre la disputa para revisar y aprobar la respuesta antes de la fecha límite; de lo contrario, no se enviará ninguna respuesta.",
     packNotStarted: "Aún no se ha iniciado ningún paquete de evidencia. Abre la disputa para crear uno.",
+    packSaveFailed: "No se pudo guardar la evidencia en Shopify. DisputeDesk lo está revisando; abre la disputa para guardarla de nuevo.",
     packSaved: "Tu respuesta ya se ha enviado a Shopify para esta disputa.",
     due: "Vence",
     order: "Pedido",
@@ -104,6 +107,7 @@ const STRINGS: Record<Locale, S> = {
     approvedNoAction: "Você já aprovou esta resposta, então não precisa fazer nada. O DisputeDesk a enviará ao Shopify no prazo.",
     awaitingApproval: "A sua loja está configurada para exigir a sua aprovação, então nada é enviado até você aprovar. Abra a disputa para revisar e aprovar a resposta antes do prazo — caso contrário, nenhuma resposta será enviada.",
     packNotStarted: "Nenhum pacote de evidência foi iniciado ainda. Abra a disputa para criar um.",
+    packSaveFailed: "Não foi possível guardar a evidência no Shopify. O DisputeDesk está a analisar; abra a disputa para a guardar novamente.",
     packSaved: "A sua resposta já foi enviada ao Shopify para esta disputa.",
     due: "Prazo",
     order: "Pedido",
@@ -120,6 +124,7 @@ const STRINGS: Record<Locale, S> = {
     approvedNoAction: "Vous avez approuvé cette réponse : vous n'avez rien à faire. DisputeDesk l'enverra à Shopify à la date limite.",
     awaitingApproval: "Votre boutique exige votre approbation : rien n'est envoyé tant que vous n'avez pas approuvé. Ouvrez le litige pour vérifier et approuver la réponse avant la date limite — sinon, aucune réponse ne sera envoyée.",
     packNotStarted: "Aucun dossier de preuves n'a été commencé. Ouvrez le litige pour en créer un.",
+    packSaveFailed: "L'enregistrement des preuves dans Shopify a échoué. DisputeDesk examine le problème ; ouvrez le litige pour réessayer.",
     packSaved: "Votre réponse a déjà été envoyée à Shopify pour ce litige.",
     due: "Échéance",
     order: "Commande",
@@ -136,6 +141,7 @@ const STRINGS: Record<Locale, S> = {
     approvedNoAction: "Sie haben diese Antwort freigegeben – Sie müssen nichts tun. DisputeDesk reicht sie zur Frist bei Shopify ein.",
     awaitingApproval: "Ihr Shop verlangt Ihre Freigabe – ohne Freigabe wird nichts eingereicht. Öffnen Sie die Reklamation, um die Antwort vor der Frist zu prüfen und freizugeben. Andernfalls wird keine Antwort eingereicht.",
     packNotStarted: "Es wurde noch kein Beweispaket erstellt. Öffnen Sie die Reklamation, um eines zu erstellen.",
+    packSaveFailed: "Das Speichern der Beweise in Shopify ist fehlgeschlagen. DisputeDesk prüft das; öffnen Sie die Reklamation, um es erneut zu speichern.",
     packSaved: "Ihre Antwort wurde für diese Reklamation bereits an Shopify übermittelt.",
     due: "Fällig",
     order: "Bestellung",
@@ -152,6 +158,7 @@ const STRINGS: Record<Locale, S> = {
     approvedNoAction: "Du har godkänt svaret, så du behöver inte göra något. DisputeDesk skickar in det till Shopify på deadline.",
     awaitingApproval: "Din butik kräver ditt godkännande, så inget skickas in förrän du godkänner. Öppna tvisten och granska och godkänn svaret före deadline – annars skickas inget svar in.",
     packNotStarted: "Inget bevispaket har skapats ännu. Öppna tvisten för att skapa ett.",
+    packSaveFailed: "Det gick inte att spara bevisen i Shopify. DisputeDesk undersöker det; öppna tvisten för att spara igen.",
     packSaved: "Ditt svar har redan skickats till Shopify för den här tvisten.",
     due: "Förfaller",
     order: "Order",
@@ -198,7 +205,9 @@ const SAVED_STATUSES = new Set([
   "saved_to_shopify_unverified",
   "saved_to_shopify_verified",
 ]);
-const PACK_IN_HAND = new Set(["ready", "queued", "building"]);
+// `saving` = a save is queued or retrying (Track S): the pack exists and the
+// filing is in hand. `save_failed` is deliberately NOT here: it has its own text.
+const PACK_IN_HAND = new Set(["ready", "queued", "building", "saving"]);
 
 /**
  * What the merchant needs to know for this dispute, and whether they need to
@@ -211,6 +220,7 @@ export function dueReminderHint(
 ): { text: string; actionNeeded: boolean } {
   if (status && SAVED_STATUSES.has(status)) return { text: s.packSaved, actionNeeded: false };
   if (mode === "awaiting_approval") return { text: s.awaitingApproval, actionNeeded: true };
+  if (status === "save_failed") return { text: s.packSaveFailed, actionNeeded: true };
   if (!status || !PACK_IN_HAND.has(status)) return { text: s.packNotStarted, actionNeeded: true };
   if (mode === "approved") return { text: s.approvedNoAction, actionNeeded: false };
   return { text: s.autoNoAction, actionNeeded: false };
