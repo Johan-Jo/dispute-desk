@@ -2552,7 +2552,8 @@
           "plan": "Elige un plan que cubra tu volumen."
         },
         "can": {
-          "evidence": "Si tienes pruebas que no podemos ver, como una confirmación de entrega del transportista, añádelas en la pestaña Evidencia."
+          "evidence": "Si tienes pruebas que no podemos ver, como una confirmación de entrega del transportista, añádelas en la pestaña Evidencia.",
+          "refundInquiry": "Reembolsa el pedido completo desde Shopify Admin. Esto sigue siendo una consulta, así que no se ha retirado dinero y un reembolso completo la cierra. Si se convierte en un contracargo, Shopify bloquea los reembolsos y el importe se pierde."
         },
         "optional": {
           "ack": "El reconocimiento del titular de la tarjeta reforzaría el caso."

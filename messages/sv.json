@@ -2552,7 +2552,8 @@
           "plan": "Välj en plan som passar din volym."
         },
         "can": {
-          "evidence": "Har du bevis som vi inte kan se, till exempel en leveransbekräftelse från transportören, lägger du till dem på fliken Bevis."
+          "evidence": "Har du bevis som vi inte kan se, till exempel en leveransbekräftelse från transportören, lägger du till dem på fliken Bevis.",
+          "refundInquiry": "Återbetala hela ordern i Shopify Admin. Det här är fortfarande en förfrågan, så inga pengar har dragits och en full återbetalning avslutar den. Om den blir en chargeback blockerar Shopify återbetalningar och beloppet är förlorat."
         },
         "optional": {
           "ack": "Kortinnehavarens bekräftelse skulle stärka ärendet."
