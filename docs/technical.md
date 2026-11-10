@@ -10346,6 +10346,45 @@ failure, prefer routing the new read through `assembleEffectiveChecklist`, `noRe
 gone. A meta-test plants each pattern and asserts the scanner reports it (and reports nothing for clean code). No
 `ci.yml` change: the baseline diff is reviewed in the PR.
 
+**Per-pattern scopes and owner bypass patterns** (`docs/plans/dispute-page-single-source.plan.md` 3.4). Each pattern now
+carries a `scope` (path prefixes it applies to) and an owner `allow` list (`PATTERN_SPECS` in `rawReadScan.ts`; `scanSource(src, relPath)`
+applies both). The legacy patterns keep the whole-root scope. Six owner-bypass patterns are scoped to
+`app/(embedded)/app/disputes/` and `lib/disputes/disputeRecord.ts`, and exempt the owners (the workspace route,
+`lib/disputes/presentation/`, `lib/disputes/workspacePayload/`): `savedToShopifyAt`, `appliedRule?.mode`,
+`orderSituation?.refund`, `bankIncludedFacts(`, `FACT_CATEGORY_FIELD`, `DELIVERY_CONFIRMED`. Their baseline entries are
+`open` (with `removedBy: "PR n"`) or `allowed` (with the reason). `orderSituation?.refund` matches only that exact spelling:
+an alias such as `const sit = d.orderSituation; sit?.refund` is not caught (the owner-coverage test is the net for that).
+
+### Dispute page enforcement (rendered real cases, owner coverage, surface enumeration)
+
+Plan: `docs/plans/dispute-page-single-source.plan.md` (PR 1). The tests exist so that the next redesign of the dispute page
+fails CI instead of drifting from the data it is drawn from.
+
+- **`deriveWorkspace(data, clientState, translators)`** (`app/(embedded)/app/disputes/[id]/hooks/deriveWorkspace.ts`) is the
+  hook's former inline `derived` computation as a pure function; `useDisputeWorkspace` calls it. `tests/unit/deriveWorkspaceParity.test.ts`
+  pins it against a frozen copy of the old code (`deriveWorkspaceLegacy.ts`) on every fixture.
+- **Fixtures** (`tests/fixtures/workspace/*.json`): scrubbed real workspace payloads of seven prod disputes plus an
+  `EnrichSourceRows` sidecar, captured by `node scripts/fixtures/capture-workspace-fixture.mjs` (READ-ONLY: runs the real route;
+  every database read goes through `npm run db:query:prod -- --read-only` behind `guard-db-target.mjs prod`, a replacement `fetch`
+  turns supabase-js GETs into SELECTs and refuses any other verb; the one named exception is `ensure_shop_settings`, answered with a
+  plain SELECT). Names, emails, addresses, phones, IPs, order numbers, tracking numbers, shop domains, GIDs and shop ids are replaced
+  with stable placeholders and a leak scan fails the capture. The "won, filed" and "review-awaiting" cases are picked by query; their
+  ids are in each fixture's `meta`.
+- **`enrichWorkspacePayload(payload, sourceRows)`** (`lib/disputes/workspacePayload/enrich.ts`) is the one place payload fields derived
+  from `EnrichSourceRows` (`loadEnrichSourceRows`, `sourceRows.ts`) are added; the route and the tests both call it, so frozen fixtures
+  gain a field when it is added there. `ENRICHED_PATHS` lists what it adds (the capture strips those). PR 1 adds none.
+- **Render harness** (`tests/harness/renderDisputePage.tsx`): `renderToStaticMarkup(<WorkspaceShell/>)` with real `en` messages and a
+  Polaris `AppProvider`; the test file mocks `next/navigation` and `useDisputeWorkspace` with `tests/harness/workspaceHookMock.ts`
+  (real `deriveWorkspace`, no-op actions). Overview or Evidence selectable.
+- **`tests/unit/disputePage.renderedRealCases.test.tsx`**: what each real case must (not) show. One `it.fails` per assertion the page does
+  not yet meet, each naming the PR that flips it; vitest reports a passing `it.fails` as a failure, so a fix forces the marker off.
+- **`tests/unit/ownerCoverage.test.tsx`**: each owner key (`tests/harness/ownerKeys.ts`) must be READ at a leaf by a live builder
+  (pure builders + the harness over all fixtures and tabs) through `tests/harness/trackReads.ts`; spread, enumeration, `JSON.stringify` and
+  passing an object along do not count (planted meta-tests). Unread owners are baselined with a reason or are an `it.fails`.
+- **`tests/unit/surfaceEnumeration.test.tsx`**: every `.ts`/`.tsx` under `app/**` and `components/**` importing the payload type, the
+  hook or `lib/disputes/presentation` and exporting a function must have an exported function EXECUTED during the harness run (V8
+  precise function coverage via `node:inspector`, not the import graph) or be a baselined exemption.
+
 
 ## Dispute page: one record, one layout (Claude Design `NewDispute`)
 

@@ -211,15 +211,26 @@ export function workspaceVariant(name: string): WorkspaceWithPatterns {
     case "fatal_unfulfilled":
       w.workspaceAssessment.caseStrength.fatalLoss = { triggered: true, reason: "inr_no_fulfillment" };
       break;
+    // Single-source plan 3.5 (fixture honesty). A SAVED dispute is saved because its lifecycle and
+    // submission_state say so (the owner is presentation.lifecycle); the old fixture also set
+    // pack.savedToShopifyAt, which let a re-derivation from that stamp pass unnoticed.
     case "saved":
       w.presentation.lifecycle = "saved_to_shopify";
-      w.pack.savedToShopifyAt = "2026-11-07T10:00:00Z";
+      w.dispute.submissionState = "saved_to_shopify";
+      w.dispute.submittedAt = "2026-11-07T10:00:00Z";
       w.defencePackage.bankFacing = { ...w.defencePackage.latest, status: "submitted" };
       break;
     case "under_review":
       w.presentation.lifecycle = "under_review";
-      w.pack.savedToShopifyAt = "2026-11-07T10:00:00Z";
+      w.dispute.submissionState = "saved_to_shopify";
+      w.dispute.submittedAt = "2026-11-07T10:00:00Z";
       w.defencePackage.bankFacing = { ...w.defencePackage.latest, status: "submitted" };
+      break;
+    // The #23750 shape: the pack row carries a saved_to_shopify_at stamp, the dispute says
+    // submission_state=not_saved and the lifecycle is still a prepared pack. NOT saved.
+    case "stamped_not_saved":
+      w.pack.savedToShopifyAt = "2026-11-07T10:00:00Z";
+      w.dispute.submissionState = "not_saved";
       break;
     case "reopened":
       w.dispute.reopenedAt = "2026-11-05T09:00:00Z";
