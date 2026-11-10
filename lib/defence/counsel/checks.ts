@@ -159,6 +159,12 @@ function parts(d: CounselDraft, productNames: readonly string[] = []): Array<{ w
  * the summary-only shortener in `writeLetter`. More than SUMMARY_SLACK_WORDS
  * over still blocks. */
 export const SUMMARY_SLACK_WORDS = 10;
+/** The summary's word limit: 80, or 90 when the letter argues three or more
+ *  sections (maintainer, 2026-09-28: the reasons must be stated). */
+export const SUMMARY_LIMIT_WORDS = 80;
+export const SUMMARY_LIMIT_WORDS_MANY_SECTIONS = 90;
+export const summaryLimitFor = (d: CounselDraft, ctx: CheckContext): number =>
+  ctx.brief && (d.evidenceSections?.length ?? 0) >= 3 ? SUMMARY_LIMIT_WORDS_MANY_SECTIONS : SUMMARY_LIMIT_WORDS;
 export const SUMMARY_OVER_PREFIX = "length: ";
 export const isSoftLengthIssue = (issue: string): boolean => issue.startsWith(SUMMARY_OVER_PREFIX);
 
@@ -214,7 +220,7 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
   // A letter that argues three or more sections carries more reasons in its
   // summary (maintainer, 2026-09-28: the reasons must be stated); 90 words then.
-  const summaryLimit = ctx.brief && (d.evidenceSections?.length ?? 0) >= 3 ? 90 : 80;
+  const summaryLimit = summaryLimitFor(d, ctx);
   if (words(summaryText) > summaryLimit) {
     issues.push(
       `${words(summaryText) - summaryLimit <= SUMMARY_SLACK_WORDS ? SUMMARY_OVER_PREFIX : ""}` +
