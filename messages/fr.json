@@ -2552,7 +2552,8 @@
           "plan": "Choisissez un forfait adapté à votre volume."
         },
         "can": {
-          "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves."
+          "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves.",
+          "refundInquiry": "Remboursez la commande intégralement depuis Shopify Admin. Il s'agit encore d'une demande d'information : aucun argent n'a été prélevé et un remboursement intégral la clôt. Si elle devient une rétrofacturation, Shopify bloque les remboursements et le montant est perdu."
         },
         "optional": {
           "ack": "La reconnaissance du titulaire de la carte renforcerait le dossier."

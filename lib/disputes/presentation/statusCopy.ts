@@ -203,15 +203,33 @@ const DONE_NOT_FILED_EVIDENCE = "done.evidence";
 
 /* ── The composer ── */
 
+/**
+ * Refunding is only on the table while the dispute is an INQUIRY: no money has moved, and a full refund
+ * closes it. Once it is a chargeback the amount is already debited and Shopify blocks refunds, so this
+ * advice must never appear there. It applies when the carrier returned the parcel and the order is not
+ * already refunded in full. States where a response is already filed, or the dispute is decided, never
+ * carry it.
+ */
+const REFUND_ADVICE_STATES: ReadonlySet<StatusState> = new Set<StatusState>([
+  "ask", "approval", "scheduled", "conceded", "nothing_to_argue", "attention", "build_failed", "build_paused", "preparing",
+]);
+
+export function shouldAdviseRefund(i: Pick<StatusCopyInput, "status" | "phase" | "returnedToSender" | "fatalReason">): boolean {
+  return i.status === "open" && i.phase === "inquiry" && i.returnedToSender && i.fatalReason !== "refund_issued";
+}
+
 export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
   const sub = subline(i);
-  const make = (state: StatusState, headline: I18nToken, parts: Array<StatusPart | null>): StatusCopy => ({
-    state,
-    headline,
-    chip: s(`chip.${state}`),
-    subline: sub,
-    parts: parts.filter((p): p is StatusPart => p !== null),
-  });
+  const adviseRefund = shouldAdviseRefund(i);
+  const make = (state: StatusState, headline: I18nToken, parts: Array<StatusPart | null>): StatusCopy => {
+    const kept = parts.filter((p): p is StatusPart => p !== null);
+    if (adviseRefund && REFUND_ADVICE_STATES.has(state)) {
+      const at = kept.findIndex((p) => p.kind !== "happened");
+      const advice = part("can", [s("can.refundInquiry")]);
+      if (advice) kept.splice(at < 0 ? kept.length : at, 0, advice);
+    }
+    return { state, headline, chip: s(`chip.${state}`), subline: sub, parts: kept };
+  };
   const happened = (...extra: Array<I18nToken | null>) => part("happened", [i.claim, ...extra]);
   const happenedWithFact = () => happened(i.caseFact);
   const doneLine = () =>

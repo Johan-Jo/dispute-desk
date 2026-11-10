@@ -2552,7 +2552,8 @@
           "plan": "Choose a plan that covers your volume."
         },
         "can": {
-          "evidence": "If you have proof we cannot see, such as a delivery confirmation from the carrier, add it on the Evidence tab."
+          "evidence": "If you have proof we cannot see, such as a delivery confirmation from the carrier, add it on the Evidence tab.",
+          "refundInquiry": "Refund the order in full from Shopify Admin. This is still an inquiry, so no money has been taken and a full refund closes it. If it turns into a chargeback, Shopify blocks refunds and the amount is lost."
         },
         "optional": {
           "ack": "The cardholder's acknowledgement would strengthen the case."
