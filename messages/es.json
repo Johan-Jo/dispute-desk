@@ -2589,7 +2589,8 @@
           "scheduled": "Está programada para presentarse a través de Shopify en la fecha límite, el {date}. DisputeDesk sigue atento a nuevas pruebas y comprueba de nuevo la respuesta antes de enviar nada.",
           "scheduledNoDate": "Está programada para presentarse a través de Shopify en la fecha límite. DisputeDesk sigue atento a nuevas pruebas y comprueba de nuevo la respuesta antes de enviar nada.",
           "planLimit": "En cuanto cambies el plan, DisputeDesk prepara la respuesta. La fecha límite de Shopify es el {date}.",
-          "planLimitNoDate": "En cuanto cambies el plan, DisputeDesk prepara la respuesta."
+          "planLimitNoDate": "En cuanto cambies el plan, DisputeDesk prepara la respuesta.",
+          "recheck": "DisputeDesk revisa el registro una vez más el día de la fecha límite, el {date}. Si nada ha cambiado, no presenta nada y Shopify sigue enviando una respuesta con los datos del propio pedido."
         },
         "done": {
           "drafted": "Las pruebas están reunidas y hay una respuesta redactada. No se ha presentado nada.",
@@ -2657,7 +2658,8 @@
       "state": {
         "noPack": "DisputeDesk aún no ha preparado un paquete de defensa. No se ha guardado nada en Shopify.",
         "building": "DisputeDesk está creando el paquete de defensa. Todavía no se ha guardado nada en Shopify.",
-        "failed": "DisputeDesk no pudo crear el paquete de defensa. No se ha guardado nada en Shopify."
+        "failed": "DisputeDesk no pudo crear el paquete de defensa. No se ha guardado nada en Shopify.",
+        "noResponse": "DisputeDesk revisó el registro el {date} y no redactó ninguna respuesta."
       },
       "reviewMode": {
         "waiting": "En modo de revisión, DisputeDesk lo guarda en Shopify solo cuando lo apruebas.",
@@ -2941,7 +2943,8 @@
           "package": "Paquete de defensa",
           "reopened": "Reabierta",
           "escalated": "Pasó a contracargo",
-          "response": "Respuesta enviada"
+          "response": "Respuesta enviada",
+          "checked": "Registro revisado"
         },
         "placed": {
           "card": "{amount} cobrados con una tarjeta {network} terminada en {last4}.",

@@ -2589,7 +2589,8 @@
           "scheduled": "Die Einreichung über Shopify ist zur Frist am {date} eingeplant. DisputeDesk achtet bis dahin auf weitere Beweise und prüft die Antwort noch einmal, bevor etwas gesendet wird.",
           "scheduledNoDate": "Die Einreichung über Shopify ist zur Frist eingeplant. DisputeDesk achtet bis dahin auf weitere Beweise und prüft die Antwort noch einmal, bevor etwas gesendet wird.",
           "planLimit": "Sobald der Tarif geändert ist, bereitet DisputeDesk die Antwort vor. Die Frist von Shopify ist der {date}.",
-          "planLimitNoDate": "Sobald der Tarif geändert ist, bereitet DisputeDesk die Antwort vor."
+          "planLimitNoDate": "Sobald der Tarif geändert ist, bereitet DisputeDesk die Antwort vor.",
+          "recheck": "DisputeDesk prüft die Unterlagen am Fristtag, dem {date}, noch einmal. Hat sich nichts geändert, übermittelt es nichts, und Shopify sendet weiterhin eine Stellungnahme aus den eigenen Bestelldaten."
         },
         "done": {
           "drafted": "Die Beweise sind gesammelt und eine Antwort ist erstellt. Es wurde nichts eingereicht.",
@@ -2657,7 +2658,8 @@
       "state": {
         "noPack": "DisputeDesk hat noch kein Verteidigungspaket vorbereitet. In Shopify wurde nichts gespeichert.",
         "building": "DisputeDesk erstellt das Verteidigungspaket. In Shopify wurde noch nichts gespeichert.",
-        "failed": "DisputeDesk konnte das Verteidigungspaket nicht erstellen. In Shopify wurde nichts gespeichert."
+        "failed": "DisputeDesk konnte das Verteidigungspaket nicht erstellen. In Shopify wurde nichts gespeichert.",
+        "noResponse": "DisputeDesk hat die Unterlagen am {date} geprüft und keine Stellungnahme verfasst."
       },
       "reviewMode": {
         "waiting": "Im Prüfmodus speichert DisputeDesk es nur in Shopify, wenn Sie es freigeben.",
@@ -2941,7 +2943,8 @@
           "package": "Verteidigungspaket",
           "reopened": "Wieder geöffnet",
           "escalated": "Zur Rückbuchung geworden",
-          "response": "Antwort gesendet"
+          "response": "Antwort gesendet",
+          "checked": "Unterlagen geprüft"
         },
         "placed": {
           "card": "{amount} eingezogen mit einer {network}-Karte, endend auf {last4}.",

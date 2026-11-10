@@ -387,9 +387,10 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
       refundOnly || i.returnedToSender
         ? null
         : part("can", [s("can.evidence")], [{ id: "tab:evidence", label: s("action.evidence") }]),
+      // One coherent sentence: the deadline-rebuild cron (06:00 UTC, every open unfiled dispute due in the window)
+      // re-checks the record; if it still yields no response, nothing is filed and Shopify sends its own.
       part("next", [
-        refundOnly ? null : deadlineTail("next.rebuild"),
-        s("next.shopifySends"),
+        !refundOnly && i.dueDay ? s("next.recheck", { date: i.dueDay }) : s("next.shopifySends"),
         fatal ? s("next.expectLoss") : null,
       ]),
       part("done", [s(DONE_NOT_FILED_EVIDENCE)]),

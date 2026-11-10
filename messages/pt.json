@@ -2589,7 +2589,8 @@
           "scheduled": "Está agendada a apresentação através da Shopify no prazo, a {date}. O DisputeDesk continua atento a novas provas e verifica de novo a resposta antes de enviar o que quer que seja.",
           "scheduledNoDate": "Está agendada a apresentação através da Shopify no prazo. O DisputeDesk continua atento a novas provas e verifica de novo a resposta antes de enviar o que quer que seja.",
           "planLimit": "Assim que o plano for alterado, o DisputeDesk prepara a resposta. O prazo da Shopify é {date}.",
-          "planLimitNoDate": "Assim que o plano for alterado, o DisputeDesk prepara a resposta."
+          "planLimitNoDate": "Assim que o plano for alterado, o DisputeDesk prepara a resposta.",
+          "recheck": "A DisputeDesk verifica o registo mais uma vez no dia da data-limite, {date}. Se nada tiver mudado, não apresenta nada e o Shopify continua a enviar uma resposta com os dados do próprio pedido."
         },
         "done": {
           "drafted": "As provas estão reunidas e há uma resposta redigida. Nada foi apresentado.",
@@ -2657,7 +2658,8 @@
       "state": {
         "noPack": "O DisputeDesk ainda não preparou um pacote de defesa. Nada foi guardado na Shopify.",
         "building": "O DisputeDesk está a criar o pacote de defesa. Ainda nada foi guardado na Shopify.",
-        "failed": "O DisputeDesk não conseguiu criar o pacote de defesa. Nada foi guardado na Shopify."
+        "failed": "O DisputeDesk não conseguiu criar o pacote de defesa. Nada foi guardado na Shopify.",
+        "noResponse": "A DisputeDesk verificou o registo em {date} e não redigiu nenhuma resposta."
       },
       "reviewMode": {
         "waiting": "No modo de revisão, o DisputeDesk só o guarda na Shopify quando o aprovar.",
@@ -2941,7 +2943,8 @@
           "package": "Pacote de defesa",
           "reopened": "Reaberta",
           "escalated": "Passou a chargeback",
-          "response": "Resposta enviada"
+          "response": "Resposta enviada",
+          "checked": "Registo verificado"
         },
         "placed": {
           "card": "{amount} cobrados com um cartão {network} terminado em {last4}.",

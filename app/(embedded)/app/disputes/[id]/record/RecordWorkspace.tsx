@@ -391,7 +391,8 @@ export default function RecordWorkspace({
 
             <PackBanners workspace={workspace} t={t} />
             {/* While the hero itself asks for the approval (its Approve / Don't add buttons) this row would repeat them. */}
-            {record.canDecide && record.statusCopy.state !== "approval" ? (
+            {/* Not while nothing could be filed: with no response (skipped / nothing to argue) "save it on the deadline" and "add no package" decide nothing. */}
+            {record.canDecide && record.statusCopy.state !== "approval" && record.statusCopy.state !== "nothing_to_argue" ? (
               <DecisionRow workspace={workspace} record={record} t={t} />
             ) : null}
 

@@ -174,7 +174,8 @@ describe("composeStatusCopy: every state x phase", () => {
     expect(out.headline.key).toBe("disputes.record.status.headline.nothingToArgue");
     const keys = out.parts.flatMap((p) => p.lines.map((l) => l.key));
     expect(keys).toContain("disputes.record.status.fact.returnedToSender");
-    expect(keys).toContain("disputes.record.status.next.shopifySends");
+    expect(keys).toContain("disputes.record.status.next.recheck");
+    expect(keys).not.toContain("disputes.record.status.next.shopifySends");
     expect(keys).not.toContain("disputes.record.status.next.expectLoss");
     expect(out.parts.map((p) => p.kind)).not.toContain("need");
     expect(out.parts.map((p) => p.kind)).not.toContain("can");
