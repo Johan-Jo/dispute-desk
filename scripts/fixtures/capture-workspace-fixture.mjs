@@ -56,7 +56,7 @@ const cases = [
   ["24285-latest-build-failed", byPrefix("d65b7220"), "#24285 latest build failed"],
 ];
 
-// Won and filed (blume-box): newest won dispute whose submitted defence package exists.
+// Won and filed: newest won dispute whose submitted defence package exists.
 const wonFiled = sqlJ(`
   select d.id from disputes d
   join shops s on s.id = d.shop_id
@@ -65,7 +65,7 @@ const wonFiled = sqlJ(`
   where s.shop_domain like 'blume-box%' and d.normalized_status = 'won' and d.final_outcome = 'won'
   order by d.closed_at desc nulls last limit 1`);
 if (wonFiled.length !== 1) throw new Error("no won+filed blume-box dispute found");
-cases.push(["won-filed-blume-box", wonFiled[0].id, "won, filed (blume-box), picked by query"]);
+cases.push(["won-filed", wonFiled[0].id, "won, filed, picked by query"]);
 
 // Review-awaiting on shop 6a8848-dd: open, a prepared defence package exists, and the merchant has not yet
 // decided (needs_review, review_state null). A pack-less needs_review dispute cannot show the review ask,
@@ -76,8 +76,8 @@ const review = sqlJ(`
     and d.needs_review = true and d.review_state is null and d.submission_state = 'not_saved'
     and exists (select 1 from defence_packages dp join evidence_packs p on p.id = dp.source_pack_id where p.dispute_id = d.id)
   order by d.created_at desc limit 1`);
-if (review.length !== 1) throw new Error("no review-awaiting dispute found on 6a8848-dd");
-cases.push(["review-awaiting-6a8848-dd", review[0].id, "review-awaiting (6a8848-dd), picked by query"]);
+if (review.length !== 1) throw new Error("no review-awaiting dispute found");
+cases.push(["review-awaiting", review[0].id, "review-awaiting, picked by query"]);
 
 console.log("cases:\n" + cases.map(([n, id]) => `  ${n}  ${id}`).join("\n"));
 

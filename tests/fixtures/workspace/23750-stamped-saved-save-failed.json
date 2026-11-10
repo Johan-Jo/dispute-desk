@@ -99,7 +99,7 @@
     },
     {
      "at": "2026-10-06T13:26:16Z",
-     "text": "DHL eCom Sweden marked 2 items as fulfilled from Hem & Trend Gävle."
+     "text": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle."
     },
     {
      "at": "2026-10-06T13:26:17Z",
@@ -111,7 +111,7 @@
     },
     {
      "at": "2026-10-12T13:09:54Z",
-     "text": "Alice Sjökvist (\"Hem & Trend\" <customer@example.test>) sent a follow-up email to Customer 1 (customer@example.test)."
+     "text": "Alice Sjökvist (\"Merchant B\" <customer@example.test>) sent a follow-up email to Customer 1 (customer@example.test)."
     },
     {
      "at": "2026-10-12T13:10:03Z",
@@ -308,7 +308,7 @@
         "presentmentTotal": "549.0",
         "quantity": 1,
         "sku": null,
-        "title": "MdcUma - svart",
+        "title": "Product 1",
         "total": "549.0",
         "variant": "S/M"
        },
@@ -319,7 +319,7 @@
         "presentmentTotal": "699.0",
         "quantity": 1,
         "sku": null,
-        "title": "MdcSecret Shirt - black",
+        "title": "Product 2",
         "total": "699.0",
         "variant": "S/M"
        }
@@ -452,12 +452,12 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "MdcUma - svart"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "MdcSecret Shirt - black"
+          "title": "Product 2"
          }
         ],
         "shipmentProofType": "delivered_confirmed",
@@ -502,7 +502,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2556,
-        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-31T14:02:41.671+00:00",
@@ -513,7 +513,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 16176,
-        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-26T18:42:42.42+00:00",
@@ -524,7 +524,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2907,
-        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
        },
        {
         "capturedAt": "2026-10-09T09:29:04.34+00:00",
@@ -535,7 +535,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 23004,
-        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-09T09:29:03.418+00:00",
@@ -546,7 +546,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 131,
-        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
        }
       ]
      },
@@ -632,7 +632,7 @@
        {
         "createdAt": "2026-10-06T13:26:16Z",
         "id": "gid://shopify/Scrubbed/1",
-        "message": "DHL eCom Sweden marked 2 items as fulfilled from Hem &amp; Trend Gävle.",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle.",
         "source": "system"
        },
        {
@@ -650,7 +650,7 @@
        {
         "createdAt": "2026-10-12T13:09:54Z",
         "id": "gid://shopify/Scrubbed/1",
-        "message": "Alice Sjökvist (\"Hem &amp; Trend\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test).",
+        "message": "Alice Sjökvist (\"Merchant B\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test).",
         "source": "merchant_comment"
        },
        {
@@ -808,7 +808,7 @@
         "presentmentTotal": "549.0",
         "quantity": 1,
         "sku": null,
-        "title": "MdcUma - svart",
+        "title": "Product 1",
         "total": "549.0",
         "variant": "S/M"
        },
@@ -819,7 +819,7 @@
         "presentmentTotal": "699.0",
         "quantity": 1,
         "sku": null,
-        "title": "MdcSecret Shirt - black",
+        "title": "Product 2",
         "total": "699.0",
         "variant": "S/M"
        }
@@ -952,12 +952,12 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "MdcUma - svart"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "MdcSecret Shirt - black"
+          "title": "Product 2"
          }
         ],
         "shipmentProofType": "delivered_confirmed",
@@ -1018,12 +1018,12 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "MdcUma - svart"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "MdcSecret Shirt - black"
+          "title": "Product 2"
          }
         ],
         "shipmentProofType": "delivered_confirmed",
@@ -1068,7 +1068,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2556,
-        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-31T14:02:41.671+00:00",
@@ -1079,7 +1079,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 16176,
-        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-26T18:42:42.42+00:00",
@@ -1090,7 +1090,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2907,
-        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
        },
        {
         "capturedAt": "2026-10-09T09:29:04.34+00:00",
@@ -1101,7 +1101,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 23004,
-        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-09T09:29:03.418+00:00",
@@ -1112,7 +1112,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 131,
-        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
        }
       ]
      },
@@ -1141,7 +1141,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2556,
-        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-31T14:02:41.671+00:00",
@@ -1152,7 +1152,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 16176,
-        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-26T18:42:42.42+00:00",
@@ -1163,7 +1163,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2907,
-        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
        },
        {
         "capturedAt": "2026-10-09T09:29:04.34+00:00",
@@ -1174,7 +1174,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 23004,
-        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-09T09:29:03.418+00:00",
@@ -1185,7 +1185,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 131,
-        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
        }
       ]
      },
@@ -1214,7 +1214,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2556,
-        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-31T14:02:41.671+00:00",
@@ -1225,7 +1225,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 16176,
-        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-26T18:42:42.42+00:00",
@@ -1236,7 +1236,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2907,
-        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
        },
        {
         "capturedAt": "2026-10-09T09:29:04.34+00:00",
@@ -1247,7 +1247,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 23004,
-        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-10-09T09:29:03.418+00:00",
@@ -1258,7 +1258,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 131,
-        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
        }
       ]
      },
@@ -1344,7 +1344,7 @@
        {
         "createdAt": "2026-10-06T13:26:16Z",
         "id": "gid://shopify/Scrubbed/1",
-        "message": "DHL eCom Sweden marked 2 items as fulfilled from Hem &amp; Trend Gävle.",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle.",
         "source": "system"
        },
        {
@@ -1362,7 +1362,7 @@
        {
         "createdAt": "2026-10-12T13:09:54Z",
         "id": "gid://shopify/Scrubbed/1",
-        "message": "Alice Sjökvist (\"Hem &amp; Trend\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test).",
+        "message": "Alice Sjökvist (\"Merchant B\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test).",
         "source": "merchant_comment"
        },
        {
@@ -1525,7 +1525,7 @@
        },
        {
         "createdAt": "2026-10-06T13:26:16Z",
-        "message": "DHL eCom Sweden marked 2 items as fulfilled from Hem &amp; Trend Gävle."
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle."
        },
        {
         "createdAt": "2026-10-06T13:26:17Z",
@@ -1537,7 +1537,7 @@
        },
        {
         "createdAt": "2026-10-12T13:09:54Z",
-        "message": "Alice Sjökvist (\"Hem &amp; Trend\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test)."
+        "message": "Alice Sjökvist (\"Merchant B\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test)."
        },
        {
         "createdAt": "2026-10-12T13:10:03Z",

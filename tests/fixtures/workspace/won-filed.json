@@ -1,8 +1,8 @@
 {
  "meta": {
-  "case": "won-filed-blume-box",
+  "case": "won-filed",
   "disputeId": "d00d141b-dba1-4c61-894f-9caa53353284",
-  "note": "\"won, filed (blume-box), picked by query\"",
+  "note": "won, filed, picked by query",
   "capturedAt": "2026-11-10T11:02:44.891Z",
   "source": "prod, read-only"
  },
@@ -19,7 +19,7 @@
    "customerName": "Customer 1",
    "shopId": "00000000-0000-4000-8000-000000000001",
    "shopDomain": "shop-1.example.test",
-   "merchantDomain": "blume.com",
+   "merchantDomain": "Merchant D",
    "disputeGid": "gid://shopify/Scrubbed/1",
    "disputeEvidenceGid": "gid://shopify/Scrubbed/1",
    "dueAt": "2026-09-10T23:00:00+00:00",
@@ -100,15 +100,15 @@
     },
     {
      "at": "2026-07-01T03:33:31Z",
-     "text": "Blume-Verde accepted the request for fulfillment of 2 items."
+     "text": "Merchant D-Verde accepted the request for fulfillment of 2 items."
     },
     {
      "at": "2026-07-01T16:14:05Z",
-     "text": "Blume-Verde fulfilled 2 items via Verde Fulfillment FS."
+     "text": "Merchant D-Verde fulfilled 2 items via Verde Fulfillment FS."
     },
     {
      "at": "2026-07-01T16:14:05Z",
-     "text": "Blume-Verde sent a shipping confirmation email to Customer 1 (customer@example.test)."
+     "text": "Merchant D-Verde sent a shipping confirmation email to Customer 1 (customer@example.test)."
     },
     {
      "at": "2026-07-01T16:14:06Z",
@@ -307,7 +307,7 @@
         "currency": "USD",
         "quantity": 1,
         "sku": "50106",
-        "title": "Blume Knot Bag",
+        "title": "Product 1",
         "total": "18.0",
         "variant": null
        },
@@ -315,7 +315,7 @@
         "currency": "USD",
         "quantity": 1,
         "sku": "60089",
-        "title": "Meltdown Acne Oil Treatment",
+        "title": "Product 2",
         "total": "210.0",
         "variant": "6 Units"
        }
@@ -410,11 +410,11 @@
         "items": [
          {
           "quantity": 1,
-          "title": "Blume Knot Bag"
+          "title": "Product 1"
          },
          {
           "quantity": 1,
-          "title": "Meltdown Acne Oil Treatment"
+          "title": "Product 2"
          }
         ],
         "sourceConflict": false,
@@ -458,7 +458,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 33920,
-        "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -469,7 +469,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 3019,
-        "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -480,7 +480,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 42,
-        "textPreview": "Orders will ship within 1-3 business days."
+        "textPreview": "Policy text placeholder. Policy text place"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -491,7 +491,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 233,
-        "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -502,7 +502,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 29175,
-        "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -513,7 +513,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 25,
-        "textPreview": "Please email customer@example.test"
+        "textPreview": "Policy text placeholder. Policy te"
        }
       ]
      },
@@ -663,7 +663,7 @@
         "currency": "USD",
         "quantity": 1,
         "sku": "50106",
-        "title": "Blume Knot Bag",
+        "title": "Product 1",
         "total": "18.0",
         "variant": null
        },
@@ -671,7 +671,7 @@
         "currency": "USD",
         "quantity": 1,
         "sku": "60089",
-        "title": "Meltdown Acne Oil Treatment",
+        "title": "Product 2",
         "total": "210.0",
         "variant": "6 Units"
        }
@@ -766,11 +766,11 @@
         "items": [
          {
           "quantity": 1,
-          "title": "Blume Knot Bag"
+          "title": "Product 1"
          },
          {
           "quantity": 1,
-          "title": "Meltdown Acne Oil Treatment"
+          "title": "Product 2"
          }
         ],
         "sourceConflict": false,
@@ -826,11 +826,11 @@
         "items": [
          {
           "quantity": 1,
-          "title": "Blume Knot Bag"
+          "title": "Product 1"
          },
          {
           "quantity": 1,
-          "title": "Meltdown Acne Oil Treatment"
+          "title": "Product 2"
          }
         ],
         "sourceConflict": false,
@@ -874,7 +874,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 33920,
-        "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -885,7 +885,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 3019,
-        "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -896,7 +896,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 42,
-        "textPreview": "Orders will ship within 1-3 business days."
+        "textPreview": "Policy text placeholder. Policy text place"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -907,7 +907,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 233,
-        "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -918,7 +918,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 29175,
-        "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -929,7 +929,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 25,
-        "textPreview": "Please email customer@example.test"
+        "textPreview": "Policy text placeholder. Policy te"
        }
       ]
      },
@@ -958,7 +958,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 33920,
-        "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -969,7 +969,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 3019,
-        "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -980,7 +980,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 42,
-        "textPreview": "Orders will ship within 1-3 business days."
+        "textPreview": "Policy text placeholder. Policy text place"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -991,7 +991,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 233,
-        "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -1002,7 +1002,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 29175,
-        "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -1013,7 +1013,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 25,
-        "textPreview": "Please email customer@example.test"
+        "textPreview": "Policy text placeholder. Policy te"
        }
       ]
      },
@@ -1042,7 +1042,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 33920,
-        "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -1053,7 +1053,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 3019,
-        "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -1064,7 +1064,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 42,
-        "textPreview": "Orders will ship within 1-3 business days."
+        "textPreview": "Policy text placeholder. Policy text place"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -1075,7 +1075,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 233,
-        "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
        },
        {
         "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -1086,7 +1086,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 29175,
-        "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -1097,7 +1097,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 25,
-        "textPreview": "Please email customer@example.test"
+        "textPreview": "Policy text placeholder. Policy te"
        }
       ]
      },
@@ -1270,15 +1270,15 @@
        },
        {
         "createdAt": "2026-07-01T03:33:31Z",
-        "message": "Blume-Verde accepted the request for fulfillment of 2 items."
+        "message": "Merchant D-Verde accepted the request for fulfillment of 2 items."
        },
        {
         "createdAt": "2026-07-01T16:14:05Z",
-        "message": "Blume-Verde fulfilled 2 items via Verde Fulfillment FS."
+        "message": "Merchant D-Verde fulfilled 2 items via Verde Fulfillment FS."
        },
        {
         "createdAt": "2026-07-01T16:14:05Z",
-        "message": "Blume-Verde sent a shipping confirmation email to Customer 1 (customer@example.test)."
+        "message": "Merchant D-Verde sent a shipping confirmation email to Customer 1 (customer@example.test)."
        },
        {
         "createdAt": "2026-07-01T16:14:06Z",
@@ -2540,11 +2540,11 @@
    },
    "lineItems": [
     {
-     "title": "Blume Knot Bag",
+     "title": "Product 1",
      "quantity": 1
     },
     {
-     "title": "Meltdown Acne Oil Treatment",
+     "title": "Product 2",
      "quantity": 1
     }
    ],
@@ -2573,7 +2573,7 @@
        "currency": "USD",
        "quantity": 1,
        "sku": "50106",
-       "title": "Blume Knot Bag",
+       "title": "Product 1",
        "total": "18.0",
        "variant": null
       },
@@ -2581,7 +2581,7 @@
        "currency": "USD",
        "quantity": 1,
        "sku": "60089",
-       "title": "Meltdown Acne Oil Treatment",
+       "title": "Product 2",
        "total": "210.0",
        "variant": "6 Units"
       }
@@ -2649,11 +2649,11 @@
        "items": [
         {
          "quantity": 1,
-         "title": "Blume Knot Bag"
+         "title": "Product 1"
         },
         {
          "quantity": 1,
-         "title": "Meltdown Acne Oil Treatment"
+         "title": "Product 2"
         }
        ],
        "sourceConflict": false,
@@ -2700,11 +2700,11 @@
        "items": [
         {
          "quantity": 1,
-         "title": "Blume Knot Bag"
+         "title": "Product 1"
         },
         {
          "quantity": 1,
-         "title": "Meltdown Acne Oil Treatment"
+         "title": "Product 2"
         }
        ],
        "sourceConflict": false,
@@ -2739,7 +2739,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 33920,
-       "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -2750,7 +2750,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 3019,
-       "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -2761,7 +2761,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 42,
-       "textPreview": "Orders will ship within 1-3 business days."
+       "textPreview": "Policy text placeholder. Policy text place"
       },
       {
        "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -2772,7 +2772,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 233,
-       "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
       },
       {
        "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -2783,7 +2783,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 29175,
-       "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -2794,7 +2794,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 25,
-       "textPreview": "Please email customer@example.test"
+       "textPreview": "Policy text placeholder. Policy te"
       }
      ]
     },
@@ -2814,7 +2814,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 33920,
-       "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -2825,7 +2825,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 3019,
-       "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -2836,7 +2836,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 42,
-       "textPreview": "Orders will ship within 1-3 business days."
+       "textPreview": "Policy text placeholder. Policy text place"
       },
       {
        "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -2847,7 +2847,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 233,
-       "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
       },
       {
        "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -2858,7 +2858,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 29175,
-       "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -2869,7 +2869,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 25,
-       "textPreview": "Please email customer@example.test"
+       "textPreview": "Policy text placeholder. Policy te"
       }
      ]
     },
@@ -2889,7 +2889,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 33920,
-       "textPreview": "Welcome to Blume and our Terms of Use (the “Agreement”).\n\nBy accessing or using the website, or blog (collectively, the “Site”) provided by Blume, including www.meetblume.com, you agree to be bound be the terms and conditions in this Agreement and other terms incorporated herein by reference. This Agreement applies to all users of the Site.\n\nThe website www.meetblume.com is a subscription based marketplace platform for services performed by its users. The following terms and conditions are the T"
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:36.574+00:00",
@@ -2900,7 +2900,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 3019,
-       "textPreview": "Cancellation Policy\nSome items in our store may be offered to you as a subscription, a pre-order or try before you buy. This cancellation policy lays out how you can change or cancel these kinds of purchases.\n\nSubscriptions\nWhen you purchase a subscription you'll receive repeat deliveries. These are based on the subscription duration and frequency that you select.\nYour payment details will be stored securely and you'll be charged for each of these deliveries, unless you choose to pay in advance."
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:36.363+00:00",
@@ -2911,7 +2911,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 42,
-       "textPreview": "Orders will ship within 1-3 business days."
+       "textPreview": "Policy text placeholder. Policy text place"
       },
       {
        "capturedAt": "2026-07-20T16:52:35.876+00:00",
@@ -2922,7 +2922,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 233,
-       "textPreview": "We want you to love what you receive but we totally understand if you need a refund. Email us at customer@example.test within 30 days of your order and we’ll help you process a return. Please note that our pads and tampons are final sale."
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text p"
       },
       {
        "capturedAt": "2026-07-20T16:52:35.618+00:00",
@@ -2933,7 +2933,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 29175,
-       "textPreview": "This Privacy Policy (this \"Policy\") describes the privacy practices of Blume with respect to information collected when you sign up for, use, access or otherwise interact with www.meetblume.com (the \"Site\") and any online services and products of Blume, including mobile applications and websites or applications operated by Blume and connected products and services (collectively, including the Sites, the \"Services\") that reference this Policy, and how we use and share that information. By using t"
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
       },
       {
        "capturedAt": "2026-07-20T16:52:35.337+00:00",
@@ -2944,7 +2944,7 @@
        "source": "shopify_published",
        "storagePath": null,
        "textLength": 25,
-       "textPreview": "Please email customer@example.test"
+       "textPreview": "Policy text placeholder. Policy te"
       }
      ]
     },

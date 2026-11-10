@@ -150,8 +150,8 @@ describe("#24285 latest build failed (d65b7220)", () => {
   });
 });
 
-describe("won and filed (blume-box, d00d141b)", () => {
-  const f = () => at(fixtureByCase("won-filed-blume-box"));
+describe("won and filed (d00d141b)", () => {
+  const f = () => at(fixtureByCase("won-filed"));
   it("shows the outcome line", () => {
     const text = page(f(), "overview");
     expect(text).toContain("The bank decided in your favour on 31 Oct 2026");
@@ -172,8 +172,8 @@ describe("won and filed (blume-box, d00d141b)", () => {
   });
 });
 
-describe("review-awaiting (6a8848-dd, fc1971af)", () => {
-  const f = () => at(fixtureByCase("review-awaiting-6a8848-dd"));
+describe("review-awaiting (fc1971af)", () => {
+  const f = () => at(fixtureByCase("review-awaiting"));
   // KNOWN GAP -> PR 3 (review_decision ask). done when: passes without .fails
   it.fails("the review ask is the action", () => {
     expect(recordOf(f()).facts.action?.key).toBe("disputes.record.action.review");
