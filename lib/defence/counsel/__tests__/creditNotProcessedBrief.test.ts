@@ -145,9 +145,9 @@ describe("the checks", () => {
       ],
       claimIds: ["claim_is_credit_not_processed", "no_return_recorded", "refund_policy_published", "carrier_delivered"],
     },
-    evidenceSections: [{ key: "shipping", paragraphs: ["The delivery shown on the card above is the carrier's own scan."], claimIds: ["carrier_delivered"] }],
+    evidenceSections: [{ key: "shipping", paragraphs: ["The delivery shown on the shipment card is the carrier's own scan."], claimIds: ["carrier_delivered"] }],
     conclusion: {
-      paragraphs: ["The order was delivered, and no return is recorded in Shopify. The claim that a refund is outstanding is not supported by the record."],
+      paragraphs: ["The order was delivered. No return is recorded in Shopify for this order. The claim that a refund is outstanding is not supported by the record."],
       claimIds: ["carrier_delivered", "no_return_recorded"],
     },
   };
@@ -214,7 +214,7 @@ describe("a later order from the same customer (whj8db-1q #24285)", () => {
       { key: "shipping", paragraphs: ["The carrier recorded delivery, and the same customer account placed a further order five days after delivery."], claimIds: ["carrier_delivered", "later_order"] },
     ],
     conclusion: {
-      paragraphs: ["The order was delivered, and no return is recorded in Shopify. The claim that a refund is outstanding is not supported by the record."],
+      paragraphs: ["The order was delivered. No return is recorded in Shopify for this order. The claim that a refund is outstanding is not supported by the record."],
       claimIds: ["carrier_delivered", "no_return_recorded"],
     },
   };
@@ -250,9 +250,9 @@ describe("the writer end to end (stubbed model)", () => {
         `The claim that a refund is outstanding is not supported by the record. ${request}`,
     ],
     summaryClaimIds: ["claim_is_credit_not_processed", "no_return_recorded", "refund_policy_published", "carrier_delivered"],
-    sections: { shipping: { text: "The delivery shown on the card above is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
+    sections: { shipping: { text: "The delivery shown on the shipment card is the carrier's own scan.", claimIds: ["carrier_delivered"] } },
     conclusion: {
-      text: "The order was delivered, and no return is recorded in Shopify. The claim that a refund is outstanding is not supported by the record.",
+      text: "The order was delivered. No return is recorded in Shopify for this order. The claim that a refund is outstanding is not supported by the record.",
       claimIds: ["carrier_delivered", "no_return_recorded"],
     },
   });
@@ -295,6 +295,6 @@ describe("the writer end to end (stubbed model)", () => {
     expect(r.ok).toBe(true);
     expect(r.theory.name).toBe("no_return_policy_delivered");
     expect(r.draft.summary.paragraphs.join(" ")).toContain("No return has been recorded in Shopify for this order.");
-    expect(r.draft.conclusion.paragraphs.join(" ")).toMatch(/no return is recorded in Shopify/);
+    expect(r.draft.conclusion.paragraphs.join(" ")).toMatch(/No return is recorded in Shopify/);
   });
 });

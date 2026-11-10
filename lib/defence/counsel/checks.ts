@@ -131,14 +131,52 @@ export const LINT: Array<[RegExp, string]> = [
   [/\b(?:independent(?:ly)?|corroborat\w*)\b/i, "independence claim"],
   [/\b(?:did not|never) (?:complain|contact|reach out|return|report)\w*\b/i, "absence argument"],
   [/\b(?:instead|rather than|without first|chose|opted|bypass(?:ed)?|skipped|never tried)\b/i, "a statement about the customer's choice (plan §4.1)"],
-  [/\bon this page\b|\bon the (?:next|previous|following) page\b/i, "page position: exhibits are \"below\" or \"above\", never a page"],
+  [/\bon this page\b|\bon the (?:next|previous|following) page\b/i, "page position: never refer to where an exhibit sits"],
   [/\b(?:too late|out of time|time[- ]barred|late claim)\b/i, "lateness under network rules"],
   [/\b(?:informed|aware|knew|kept .{0,20}updated)\b/i, "an email was sent, not read"],
   [/\b(?:consistent with|normal|typical|usual|standard|expected|as promised|on time)\b/i, "a characterisation no record supports"],
   [/\baddress\b(?! on the order)/i, "the word 'address' outside 'the email address on the order'"],
 ];
 
-type Where = "summary" | EvidenceSectionKey | "conclusion";
+/** The recorded-absence statement ("No return has been recorded…") in any of
+ *  the phrasings the writer produces: "before any return was recorded",
+ *  "without a return being recorded", "no return was initiated". Under the
+ *  ledger's `no_return_recorded` claim only; without it the narrower old
+ *  pattern applies. "A return policy" is not a statement about a return. */
+const RETURN_NOUN = /\b(?:no|any|a|one|without|not|nor)\s+(?:\w+\s+){0,2}?returns?\b(?!\s+(?:policy|policies|period|window|route|address|label|shipping|reason))/i;
+const RETURN_VERB = /\b(?:record(?:ed|s)?|on record|initiat\w+|made|logged|registered|started|opened|filed|lodged|requested|created|raised|submitted|come back|came back)\b/i;
+const OLD_ABSENCE = /\bno (?:return|refund request)s?\b[^.]*\b(?:recorded|on record)\b|\bnot (?:been )?returned\b|\bhas not come back\b/i;
+export const isReturnStatement = (sentence: string, claimInLedger: boolean): boolean =>
+  OLD_ABSENCE.test(sentence) || (claimInLedger && RETURN_NOUN.test(sentence) && RETURN_VERB.test(sentence));
+
+/** A date, duration or ordering word: anything that relates the statement to
+ *  another event. The allowed form, "No return has been recorded in Shopify
+ *  for this order.", contains none. */
+const ORDERING_WORD = /\b(?:before|after|until|till|since|when|whenever|while|then|later|earlier|prior|following|followed|subsequent\w*|afterwards?|by the time|within|during|yet|ago|already|today|now|so far|to date|as of|previously|eventually|at the time|days?|weeks?|months?|years?|hours?|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+const MONTH_RE = new RegExp(`\\b${MONTH}\\b`);
+/** Another event in the same sentence: the statement must stand alone. */
+const OTHER_EVENT = /\b(?:deliver\w*|ship\w*|dispatch\w*|dispute\w*|chargeback|purchase\w*|placed|ordered|polic\w*|refund(?!\s+requests?)\w*|opened|(?:further|later|another|second|new|earlier) orders?)\b/i;
+
+/** Why a return statement is tied to something else, or null when it stands alone. */
+export function returnStatementTie(sentence: string): string | null {
+  if (ORDERING_WORD.test(sentence) || MONTH_RE.test(sentence) || /\d/.test(sentence) || specificsIn(sentence).length) return "a date, duration or ordering word";
+  if (OTHER_EVENT.test(sentence)) return "another fact";
+  return null;
+}
+
+/** Prose never points at where an exhibit sits: the page's layout is not the
+ *  letter's. Name the exhibit by what it is. */
+export const POSITIONAL_REFERENCE = new RegExp(
+  [
+    "\\b(?:above|below|overleaf|hereunder)\\b",
+    "\\bon the (?:previous|preceding|next|following|facing|opposite) page\\b",
+    "\\bas (?:shown|seen|printed|displayed|set out|listed|illustrated) (?:in|on|under) the\\b[^.]{0,40}\\b(?:card|table|timeline|exhibit|section|page|box)\\b",
+    "\\bsee (?:the )?(?:following|next|preceding)\\b",
+  ].join("|"),
+  "i",
+);
+
+type Where ="summary" | EvidenceSectionKey | "conclusion";
 
 function parts(d: CounselDraft, productNames: readonly string[] = []): Array<{ where: Where; text: string; claimIds: string[] }> {
   // Longest first, so a name that contains another is masked whole.
@@ -225,7 +263,7 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     issues.push(
       `${words(summaryText) - summaryLimit <= SUMMARY_SLACK_WORDS ? SUMMARY_OVER_PREFIX : ""}` +
         `summary: ${words(summaryText)} words, the limit is ${summaryLimit} — rewrite it to about ${summaryLimit - 15} words. ` +
-        "Name the item in a few words (its kind, and colour or size only when they matter; the table below carries the full description); " +
+        "Name the item in a few words (its kind, and colour or size only when they matter; the line-items table carries the full description); " +
         "drop a supporting detail (a notification, dispatch timing, a date that repeats an interval) or a clause that restates another; " +
         "keep the claim, each reason, and the request.",
     );
@@ -251,17 +289,23 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     }
   }
   if (ctx.brief) {
-    // Recorded absence (plan §4.1): once in the whole letter, in a sentence of
-    // its own, never beside a timing clause.
+    // Recorded absence (plan §4.1): in a sentence of its own, never beside a
+    // date, a timing word or another fact; where the ledger says it belongs.
+    const absenceClaim = byId.get("no_return_recorded");
     const sentences = modelParts.flatMap((p) => p.text.split(/(?<=[.!?])\s+/).map((t) => ({ where: p.where, t })));
-    const absences = sentences.filter((x) => /\bno (?:return|refund request)s?\b[^.]*\b(?:recorded|on record)\b|\bnot (?:been )?returned\b|\bhas not come back\b/i.test(x.t));
+    const absences = sentences.filter((x) => isReturnStatement(x.t, !!absenceClaim));
     const maxAbsences = ctx.brief.absenceMaxMentions ?? 1;
     if (absences.length > maxAbsences) {
       issues.push(`copy: the recorded absence appears ${absences.length} times; state it ${maxAbsences === 1 ? "once" : `at most ${maxAbsences} times (the summary and the conclusion)`}`);
     }
+    const quote = (t: string) => t.replace(/"/g, "'");
     for (const a of absences) {
-      if (/\b(?:days?|after|before|while|within|later|since|until|when)\b/i.test(a.t)) {
-        issues.push(`${a.where}: the recorded absence shares a sentence with a timing clause — "${a.t}"`);
+      const tie = returnStatementTie(a.t);
+      if (tie) {
+        issues.push(`${a.where}: the recorded absence shares a sentence with a timing clause — "${quote(a.t)}" (it carries ${tie}; write only: 'No return has been recorded in Shopify for this order.')`);
+      }
+      if (absenceClaim?.notInEvidenceSections && a.where !== "summary" && a.where !== "conclusion") {
+        issues.push(`${a.where}: the recorded absence is in an evidence section — "${quote(a.t)}" (it belongs in the summary and, at most once more, in the conclusion)`);
       }
     }
     // The brief's limits, where they can be checked mechanically.
@@ -327,7 +371,15 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
   }
   // The exhibits' positions: prose prints ABOVE the timeline and the tracking
   // link prints below the shipping prose.
-  for (const p of P) {
+  if (ctx.brief) {
+    for (const p of P) {
+      for (const sentence of p.text.split(/(?<=[.!?])\s+/)) {
+        const m = sentence.match(POSITIONAL_REFERENCE);
+        if (m) issues.push(`${p.where}: positional reference to where an exhibit sits (${m[0]}) — "${sentence.replace(/"/g, "'")}" (name the exhibit by what it is, never by where it sits)`);
+      }
+    }
+  }
+  for (const p of ctx.brief ? [] : P) {
     const m = p.text.match(/\b(?:timeline|table|chronology) above\b|\babove(?: the| this)? (?:timeline|table|chronology)\b/i);
     if (m) issues.push(`${p.where}: "${m[0]}" — the timeline and the table print BELOW the text; say "the timeline below" or just "the timeline"`);
   }
