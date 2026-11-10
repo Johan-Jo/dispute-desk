@@ -5,6 +5,7 @@
  * the fields that state is defined by.
  */
 import type { WorkspaceWithPatterns } from "../../app/(embedded)/app/disputes/[id]/record/recordInputs";
+import { enrichWorkspacePayload } from "@/lib/disputes/workspacePayload/enrich";
 
 const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o)) as T;
 
@@ -279,7 +280,8 @@ export function workspaceVariant(name: string): WorkspaceWithPatterns {
     default:
       throw new Error(`unknown variant ${name}`);
   }
-  return w as unknown as WorkspaceWithPatterns;
+  // The payload as the route sends it: the shared enrichment adds the merchant asks.
+  return enrichWorkspacePayload(w, { evidenceSavedToShopifyAt: null, automationMode: null, assessmentReadOk: true, outcomeInputs: null }) as unknown as WorkspaceWithPatterns;
 }
 
 export const ALL_VARIANTS = [
