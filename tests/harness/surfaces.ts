@@ -117,16 +117,10 @@ export function startFunctionCoverage(repoRoot: string): CoverageRun {
       post("Profiler.stopPreciseCoverage");
       post("Profiler.disable");
       session.disconnect();
-      const root = repoRoot.split(path.sep).join("/").toLowerCase();
       const ran = new Map<string, Set<string>>();
       for (const script of res?.result ?? []) {
-        let p = script.url;
-        if (p.startsWith("file://")) p = decodeURIComponent(p.replace(/^file:\/\/\/?/, ""));
-        p = p.split("\\").join("/");
-        const lower = p.toLowerCase();
-        const at = lower.indexOf(root);
-        if (at === -1) continue;
-        const rel = p.slice(at + root.length).replace(/^\//, "");
+        const rel = scriptUrlToRepoRelative(script.url, repoRoot);
+        if (rel === null) continue;
         const names = ran.get(rel) ?? new Set<string>();
         for (const fn of script.functions) {
           if (fn.functionName && (fn.ranges[0]?.count ?? 0) > 0) names.add(fn.functionName);
@@ -136,6 +130,27 @@ export function startFunctionCoverage(repoRoot: string): CoverageRun {
       return ran;
     },
   };
+}
+
+/**
+ * V8 script url -> repo-relative POSIX path, or null if outside the repo.
+ * Handles `file:///C:/x` (Windows), `file:///home/x` (POSIX: the leading slash
+ * is part of the path), plain paths, backslashes, percent-encoding and a
+ * trailing `?query`/`#hash`. Comparison is case-insensitive (Windows drives).
+ */
+export function scriptUrlToRepoRelative(url: string, repoRoot: string): string | null {
+  let p = url.replace(/[?#].*$/, "");
+  if (p.startsWith("file://")) p = p.slice("file://".length);
+  try {
+    p = decodeURIComponent(p);
+  } catch {
+    /* keep raw */
+  }
+  p = p.split("\\").join("/");
+  const root = repoRoot.split("\\").join("/").replace(/\/+$/, "").toLowerCase();
+  const at = p.toLowerCase().indexOf(root + "/");
+  if (at === -1) return null;
+  return p.slice(at + root.length + 1);
 }
 
 /** Surfaces whose exported function ran. */
