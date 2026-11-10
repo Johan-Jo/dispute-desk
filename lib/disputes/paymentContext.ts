@@ -28,10 +28,8 @@
 
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
 import type { CardNetwork } from "./reasonCodeCatalog";
-import {
-  deriveCardNetwork,
-  pickPrimaryCardTransaction,
-} from "./enrichNetworkReasonCode";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
+import { deriveCardNetwork } from "./enrichNetworkReasonCode";
 
 /**
  * Payment-method family. `bnpl` is a coarse grouping used only when a
@@ -211,7 +209,7 @@ export function derivePaymentContext(
   };
   if (!order) return empty;
 
-  const tx = pickPrimaryCardTransaction(order.transactions);
+  const tx = pickPrimaryTransaction(order.transactions);
   if (!tx) return empty;
 
   const pd = tx.paymentDetails as

@@ -15,6 +15,7 @@ import type {
   OrderTransaction,
   CardPaymentDetails,
 } from "@/lib/shopify/queries/orders";
+import { successfulPayments } from "@/lib/shopify/transactions/primaryTransaction";
 import type { EvidenceSection, BuildContext } from "../types";
 
 function isCardPayment(
@@ -68,21 +69,13 @@ function collectCardEvidence(
   if (!transactions?.length) return null;
 
   // Find the first successful SALE or AUTHORIZATION with card payment details
-  const cardTx = transactions.find(
-    (t) =>
-      (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-      t.status === "SUCCESS" &&
-      isCardPayment(t.paymentDetails),
-  );
+  const payments = successfulPayments(transactions);
+  const cardTx = payments.find((t) => isCardPayment(t.paymentDetails));
 
   // Non-card payment — not an error, just not applicable
   if (!cardTx || !isCardPayment(cardTx.paymentDetails)) {
     // Check if there's ANY successful transaction (non-card)
-    const anySuccessTx = transactions.find(
-      (t) =>
-        (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-        t.status === "SUCCESS",
-    );
+    const anySuccessTx = payments[0];
     if (!anySuccessTx) return null;
 
     // Non-card payment exists — record status as not_applicable

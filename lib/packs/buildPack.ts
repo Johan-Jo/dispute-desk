@@ -72,6 +72,7 @@ import {
 } from "@/lib/automation/riskWeakness";
 import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetworkReasonCode";
 import { derivePaymentContext } from "@/lib/disputes/paymentContext";
+import { successfulPayments } from "@/lib/shopify/transactions/primaryTransaction";
 import { klarnaInquiryTemplateOverride } from "@/lib/packs/klarnaInquiryTemplate";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
@@ -711,19 +712,22 @@ export async function buildPack(
   const isFulfilled =
     order?.displayFulfillmentStatus !== "UNFULFILLED" &&
     (order?.fulfillments?.length ?? 0) > 0;
-  const hasCardPayment =
-    order?.transactions?.some(transactionExposesCardCodes) ?? false;
+  // Only transactions that actually moved money count: a failed card
+  // attempt that preceded a successful Klarna payment must not make the
+  // order look card-backed.
+  const paidTransactions = successfulPayments(order?.transactions);
+  const hasCardPayment = paidTransactions.some(transactionExposesCardCodes);
   // AVS/CVV is only "available" if the transaction actually returned codes.
   // External gateways (Stripe via Shopify, Adyen, etc.) often return null
   // even for card payments — this must NOT block or penalize the pack.
   const avsCvvAvailable =
-    order?.transactions?.some((t) => {
+    paidTransactions.some((t) => {
       if (!transactionExposesCardCodes(t)) return false;
       const d = t.paymentDetails as Record<string, unknown> | null;
       const avs = typeof d?.avsResultCode === "string" ? d.avsResultCode : null;
       const cvv = typeof d?.cvvResultCode === "string" ? d.cvvResultCode : null;
       return (avs != null && avs !== "") || (cvv != null && cvv !== "");
-    }) ?? false;
+    });
   // Has at least one fulfillment record carrying tracking — used to
   // distinguish "Order is unfulfilled" from "Awaiting delivery
   // confirmation" when the order ships but Shopify hasn't moved
