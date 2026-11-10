@@ -4227,6 +4227,20 @@ delivery row. Prose restraint is unchanged: the ledger's `mustNot`s still forbid
 parcel was delivered or that the customer received it; the card shows the carrier's record, the prose only
 dates the sequence. `familyOmitsArrival` is empty (since 2026-09-28) and was not the cause.
 
+**Canonical route (fix, 2026-11-10, #1116 follow-up).** The exhibit is DOCUMENT metadata, never a plan
+record. #1116 first appended the exhibit facts to `planFacts`; their ids are the classifier's positional
+ids, the plan authorises record ids, and every counsel section cites the facts it is handed, so with
+`CANONICAL_PIPELINE=on` every section was an orphaned claim and #24285 v20 failed `orphaned_claim`.
+Now: `runCounsel` hands sections (`usedFactIds`) and the relied-on set only the plan's facts
+(`args.facts`); the job keeps `planFacts` as the plan's authority (projection, `validatePackageDocument`,
+evidence hash, thesis, provenance) and builds `documentFacts = planFacts + exhibitFacts` for the PDF's
+`approvedFacts` and `facts_json` only. `plan_input_hash`, `evidence_hash` and the fileability ladder read
+nothing the exhibit touches, so no existing package turns stale. The dispute page and `letterCitations`
+read `facts_json`, so they see the card and cite the delivery the same way the PDF prints it.
+`lib/defence/package/__tests__/carrierExhibitCanonical.test.ts` runs the real writer, the real projection and
+the real `validatePackageDocument` (credit not processed, duplicate processing, cancelled recurring) and
+asserts the #1116 shape yields `orphaned_claim`.
+
 **Bank-facing effect.** Credit-not-processed, duplicate-processing, cancelled-recurring and any other
 GENERAL-brief module now print the carrier card and delivery row whenever their letter cites the delivery.
 Item-not-received and not-as-described already did.
