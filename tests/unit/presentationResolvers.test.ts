@@ -215,16 +215,16 @@ describe("resolveLifecycle", () => {
     expect(lc).toBe("pack_prepared");
   });
 
-  it("pack_prepared only from the verified ready state (and save_failed, which implies ready)", () => {
+  it("pack_prepared only from the verified ready state (save_failed is its own lifecycle, Track S)", () => {
     expect(resolveLifecycle({ ...baseLifecycle, packStatus: "ready" })).toBe("pack_prepared");
-    expect(resolveLifecycle({ ...baseLifecycle, packStatus: "save_failed" })).toBe("pack_prepared");
+    expect(resolveLifecycle({ ...baseLifecycle, packStatus: "save_failed" })).toBe("save_failed");
     // Mere existence of a draft/blocked record is NOT prepared (§9).
     expect(resolveLifecycle({ ...baseLifecycle, packStatus: "draft" })).toBe("building_evidence");
     expect(resolveLifecycle({ ...baseLifecycle, packStatus: "blocked" })).toBe("building_evidence");
   });
 
   it("build in progress → building_evidence", () => {
-    for (const s of ["queued", "building", "saving"]) {
+    for (const s of ["queued", "building"]) {
       expect(resolveLifecycle({ ...baseLifecycle, packStatus: s })).toBe("building_evidence");
     }
   });

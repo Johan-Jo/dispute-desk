@@ -616,6 +616,8 @@ export function figmaDueDate(
   const savedEditable =
     d.presentation?.lifecycle === "saved_to_shopify" ||
     d.presentation?.lifecycle === "pack_prepared" ||
+    d.presentation?.lifecycle === "save_queued" ||
+    d.presentation?.lifecycle === "save_failed" ||
     d.presentation?.lifecycle === "monitoring" ||
     d.presentation?.lifecycle === "building_evidence";
   if (

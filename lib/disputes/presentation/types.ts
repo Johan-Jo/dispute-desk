@@ -24,6 +24,8 @@ export type OperationalLifecycle =
   | "building_evidence"
   | "monitoring"
   | "pack_prepared"
+  | "save_queued"
+  | "save_failed"
   | "saved_to_shopify"
   | "under_review"
   | "won"

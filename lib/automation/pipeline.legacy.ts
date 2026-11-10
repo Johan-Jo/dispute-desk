@@ -534,6 +534,7 @@ export async function evaluateAndMaybeAutoSaveLegacy(packId: string): Promise<{
     }
     const reason = guardVerdict.message;
     const alreadySaved =
+      pack.status === "saving" ||
       pack.status === "saved_to_shopify" ||
       pack.status === "saved_to_shopify_unverified" ||
       pack.status === "saved_to_shopify_verified";
@@ -649,6 +650,7 @@ export async function evaluateAndMaybeAutoSaveLegacy(packId: string): Promise<{
     // pack is still submitted — flipping status back to "ready" would make
     // the UI say "Not submitted" even though saved_to_shopify_at is set.
     const alreadySaved =
+      pack.status === "saving" ||
       pack.status === "saved_to_shopify" ||
       pack.status === "saved_to_shopify_unverified" ||
       pack.status === "saved_to_shopify_verified";
@@ -791,8 +793,10 @@ export async function evaluateAndMaybeAutoSaveLegacy(packId: string): Promise<{
     await sb
       .from("evidence_packs")
       .update({
-        status: "saved_to_shopify",
-        saved_to_shopify_at: new Date().toISOString(),
+        // `saving`, not `saved_to_shopify`: nothing has been accepted by
+        // Shopify yet. The save handler stamps the saved statuses and
+        // `saved_to_shopify_at` itself on success (Track S).
+        status: "saving",
         updated_at: new Date().toISOString(),
       })
       .eq("id", packId);
