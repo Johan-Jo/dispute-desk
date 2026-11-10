@@ -73,6 +73,7 @@ const { json, literals } = scrubFixture(
     sourceRows,
   },
   domains,
+  domains.map((d) => d.replace(/\.myshopify\.com$/i, "").replace(/^www\./i, "").replace(/\.[a-z.]+$/i, "")),
 );
 const text = JSON.stringify(json, null, 1);
 const leaks = findLeaks(text, literals);

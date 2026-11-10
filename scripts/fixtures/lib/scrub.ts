@@ -7,6 +7,8 @@
  * knows to be sensitive survived. The PR diff is still reviewed by a human.
  */
 
+import { findMerchantLeaks, scrubMerchant } from "./merchantScrub";
+
 const PERSON_KEYS = new Set([
   "customerName", "cardholderName", "customer_name", "cardholder_name",
   "customerFirstName", "customerLastName", "firstName", "lastName", "first_name", "last_name",
@@ -41,7 +43,7 @@ export interface ScrubResult {
   literals: string[];
 }
 
-export function scrubFixture(input: unknown, knownDomains: string[] = []): ScrubResult {
+export function scrubFixture(input: unknown, knownDomains: string[] = [], extraBrands: string[] = []): ScrubResult {
   const people = new Map<string, string>();
   const addresses = new Map<string, string>();
   const orders = new Map<string, string>();
@@ -125,7 +127,7 @@ export function scrubFixture(input: unknown, knownDomains: string[] = []): Scrub
     }
     return node;
   };
-  const parsed = mapStrings(input);
+  const parsed = scrubMerchant(mapStrings(input), extraBrands);
 
   return {
     json: parsed,
@@ -152,6 +154,7 @@ export function findLeaks(scrubbedText: string, literals: string[]): string[] {
   for (const gid of scrubbedText.match(GID_RE) ?? []) {
     if (gid !== "gid://shopify/Scrubbed/1") leaks.push(`gid: ${gid}`);
   }
+  leaks.push(...findMerchantLeaks(scrubbedText));
   for (const l of literals) {
     if (l.length < 4) continue;
     const escaped = l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

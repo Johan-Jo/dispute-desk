@@ -43,6 +43,9 @@ describe("fixture scrubber", () => {
     expect(findLeaks(text + " mail me at someone@real.example", literals)).not.toEqual([]);
     expect(findLeaks(text + " Storgatan", literals)).not.toEqual([]);
     expect(findLeaks(text + " gid://shopify/Order/999", literals)).not.toEqual([]);
+    for (const brand of ["Blume", "Hem & Trend", "Mein Maison", "real-shop.myshopify.com"]) {
+      expect(findLeaks(text + ` ${brand}`, literals), brand).not.toEqual([]);
+    }
   });
 
   it("keeps structure: same keys, scrubbed values stay strings", () => {
@@ -129,8 +132,8 @@ describe("enrichWorkspacePayload (the one enrichment path)", () => {
       "23750-stamped-saved-save-failed",
       "24285-latest-build-failed",
       "24612-return-received-cnp-won",
-      "review-awaiting-6a8848-dd",
-      "won-filed-blume-box",
+      "review-awaiting",
+      "won-filed",
     ]);
   });
 });

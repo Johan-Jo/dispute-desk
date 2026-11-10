@@ -104,11 +104,11 @@
     },
     {
      "at": "2026-10-06T15:10:46Z",
-     "text": "Alfredssons.com marked 6 items as fulfilled from a New Flow."
+     "text": "Merchant A marked 6 items as fulfilled from a New Flow."
     },
     {
      "at": "2026-10-06T15:10:46Z",
-     "text": "Alfredssons.com sent a shipping confirmation email to Customer 1 (customer@example.test)."
+     "text": "Merchant A sent a shipping confirmation email to Customer 1 (customer@example.test)."
     },
     {
      "at": "2026-10-06T15:10:46Z",
@@ -290,7 +290,7 @@
         "presentmentTotal": "429.0",
         "quantity": 1,
         "sku": "FRAME-ART-50X70-DARKOAK",
-        "title": "Dark Oak Frame",
+        "title": "Product 1",
         "total": "429.0",
         "variant": "Standard / 50x70 cm"
        },
@@ -301,7 +301,7 @@
         "presentmentTotal": "599.0",
         "quantity": 1,
         "sku": "POD-REMO-1005-50x70",
-        "title": "Girl dinner with red jacket - Poster",
+        "title": "Product 2",
         "total": "599.0",
         "variant": "50x70"
        },
@@ -312,7 +312,7 @@
         "presentmentTotal": "429.0",
         "quantity": 1,
         "sku": "FRAME-ART-50X70-DARKOAK",
-        "title": "Dark Oak Frame",
+        "title": "Product 1",
         "total": "429.0",
         "variant": "Standard / 50x70 cm"
        },
@@ -323,7 +323,7 @@
         "presentmentTotal": "499.0",
         "quantity": 1,
         "sku": "POD-TIÄD-1007-50x70",
-        "title": "Pour me some wine - Print",
+        "title": "Product 3",
         "total": "499.0",
         "variant": "50x70 cm"
        },
@@ -334,7 +334,7 @@
         "presentmentTotal": "429.0",
         "quantity": 1,
         "sku": "FRAME-ART-50X70-DARKOAK",
-        "title": "Dark Oak Frame",
+        "title": "Product 1",
         "total": "429.0",
         "variant": "Standard / 50x70 cm"
        },
@@ -345,7 +345,7 @@
         "presentmentTotal": "649.0",
         "quantity": 1,
         "sku": "POD-LAPT-2013-50x70",
-        "title": "Konversation \"Är du ute?\" Poster",
+        "title": "Product 4",
         "total": "649.0",
         "variant": "50x70 cm"
        }
@@ -447,32 +447,32 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Konversation \"Är du ute?\" Poster"
+          "title": "Product 4"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Girl dinner with red jacket - Poster"
+          "title": "Product 2"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Pour me some wine - Print"
+          "title": "Product 3"
          }
         ],
         "shipmentProofType": "returned_to_sender",
@@ -517,7 +517,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1118,
-        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.608+00:00",
@@ -528,7 +528,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1425,
-        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.38+00:00",
@@ -539,7 +539,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1854,
-        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.166+00:00",
@@ -550,7 +550,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2712,
-        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-02T12:22:06.669+00:00",
@@ -561,7 +561,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 96,
-        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeho"
        }
       ]
      },
@@ -676,7 +676,7 @@
         "presentmentTotal": "429.0",
         "quantity": 1,
         "sku": "FRAME-ART-50X70-DARKOAK",
-        "title": "Dark Oak Frame",
+        "title": "Product 1",
         "total": "429.0",
         "variant": "Standard / 50x70 cm"
        },
@@ -687,7 +687,7 @@
         "presentmentTotal": "599.0",
         "quantity": 1,
         "sku": "POD-REMO-1005-50x70",
-        "title": "Girl dinner with red jacket - Poster",
+        "title": "Product 2",
         "total": "599.0",
         "variant": "50x70"
        },
@@ -698,7 +698,7 @@
         "presentmentTotal": "429.0",
         "quantity": 1,
         "sku": "FRAME-ART-50X70-DARKOAK",
-        "title": "Dark Oak Frame",
+        "title": "Product 1",
         "total": "429.0",
         "variant": "Standard / 50x70 cm"
        },
@@ -709,7 +709,7 @@
         "presentmentTotal": "499.0",
         "quantity": 1,
         "sku": "POD-TIÄD-1007-50x70",
-        "title": "Pour me some wine - Print",
+        "title": "Product 3",
         "total": "499.0",
         "variant": "50x70 cm"
        },
@@ -720,7 +720,7 @@
         "presentmentTotal": "429.0",
         "quantity": 1,
         "sku": "FRAME-ART-50X70-DARKOAK",
-        "title": "Dark Oak Frame",
+        "title": "Product 1",
         "total": "429.0",
         "variant": "Standard / 50x70 cm"
        },
@@ -731,7 +731,7 @@
         "presentmentTotal": "649.0",
         "quantity": 1,
         "sku": "POD-LAPT-2013-50x70",
-        "title": "Konversation \"Är du ute?\" Poster",
+        "title": "Product 4",
         "total": "649.0",
         "variant": "50x70 cm"
        }
@@ -833,32 +833,32 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Konversation \"Är du ute?\" Poster"
+          "title": "Product 4"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Girl dinner with red jacket - Poster"
+          "title": "Product 2"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Pour me some wine - Print"
+          "title": "Product 3"
          }
         ],
         "shipmentProofType": "returned_to_sender",
@@ -918,32 +918,32 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Konversation \"Är du ute?\" Poster"
+          "title": "Product 4"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Dark Oak Frame"
+          "title": "Product 1"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Girl dinner with red jacket - Poster"
+          "title": "Product 2"
          },
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Pour me some wine - Print"
+          "title": "Product 3"
          }
         ],
         "shipmentProofType": "returned_to_sender",
@@ -988,7 +988,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1118,
-        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.608+00:00",
@@ -999,7 +999,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1425,
-        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.38+00:00",
@@ -1010,7 +1010,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1854,
-        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.166+00:00",
@@ -1021,7 +1021,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2712,
-        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-02T12:22:06.669+00:00",
@@ -1032,7 +1032,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 96,
-        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeho"
        }
       ]
      },
@@ -1061,7 +1061,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1118,
-        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.608+00:00",
@@ -1072,7 +1072,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1425,
-        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.38+00:00",
@@ -1083,7 +1083,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1854,
-        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.166+00:00",
@@ -1094,7 +1094,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2712,
-        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-02T12:22:06.669+00:00",
@@ -1105,7 +1105,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 96,
-        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeho"
        }
       ]
      },
@@ -1134,7 +1134,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1118,
-        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.608+00:00",
@@ -1145,7 +1145,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1425,
-        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.38+00:00",
@@ -1156,7 +1156,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1854,
-        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-06T20:28:47.166+00:00",
@@ -1167,7 +1167,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 2712,
-        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-07-02T12:22:06.669+00:00",
@@ -1178,7 +1178,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 96,
-        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeho"
        }
       ]
      },
@@ -1306,11 +1306,11 @@
        },
        {
         "createdAt": "2026-10-06T15:10:46Z",
-        "message": "Alfredssons.com marked 6 items as fulfilled from a New Flow."
+        "message": "Merchant A marked 6 items as fulfilled from a New Flow."
        },
        {
         "createdAt": "2026-10-06T15:10:46Z",
-        "message": "Alfredssons.com sent a shipping confirmation email to Customer 1 (customer@example.test)."
+        "message": "Merchant A sent a shipping confirmation email to Customer 1 (customer@example.test)."
        },
        {
         "createdAt": "2026-10-06T15:10:46Z",

@@ -1,8 +1,8 @@
 {
  "meta": {
-  "case": "review-awaiting-6a8848-dd",
+  "case": "review-awaiting",
   "disputeId": "fc1971af-5ad5-46ad-a2e7-815de799a044",
-  "note": "\"review-awaiting (6a8848-dd), picked by query\"",
+  "note": "review-awaiting, picked by query",
   "capturedAt": "2026-11-10T11:02:50.220Z",
   "source": "prod, read-only"
  },
@@ -321,7 +321,7 @@
         "presentmentTotal": "53.95",
         "quantity": 1,
         "sku": null,
-        "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB",
+        "title": "Product 1",
         "total": "53.95",
         "variant": null
        }
@@ -436,7 +436,7 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB"
+          "title": "Product 1"
          }
         ],
         "shipmentProofType": "delivered_confirmed",
@@ -481,7 +481,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 24295,
-        "textPreview": "Artikel 1 - Begriffsbestimmungen\n\nIn diesen Geschäftsbedingungen gelten die folgenden Definitionen:\nWiderrufsfrist: die Frist, innerhalb derer der Verbraucher von seinem Widerrufsrecht Gebrauch machen kann;\n\nVerbraucher: die natürliche Person, die nicht in Ausübung eines Berufes oder Gewerbes handelt und die einen Fernabsatzvertrag mit dem Unternehmer abschließt;\n\nTag: Kalendertag;\n\nDauertransaktion: ein Fernabsatzvertrag, der sich auf eine Reihe von Produkten und/oder Dienstleistungen bezieht, "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.291+00:00",
@@ -492,7 +492,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 5423,
-        "textPreview": "Versand\n\nLieferung und Versand werden von Uvives übernommen. Jedes Paket ist mit Track & Trace versehen und ist völlig kostenlos für Sie, den Kunden.\n\nIhr Paket wird von uns innerhalb von 0-3 Tagen verschickt. Das Paket wird direkt vom Lieferanten verschickt, was für Sie als Kunde günstiger ist. Das kann bedeuten, dass es etwas länger dauert, bis Sie Ihr Paket erhalten, als Sie es vielleicht von anderen Anbietern gewohnt sind.\n\nDie Lieferzeit beträgt 7-15 Werktage, darin ist die Bearbeitungszeit"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.083+00:00",
@@ -503,7 +503,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 4440,
-        "textPreview": "Wenn Sie mit Ihrem Kauf aus irgendeinem Grund nicht zufrieden sind, können Sie ihn innerhalb von 14 Tagen nach Lieferung an uns zurücksenden. Sie müssen uns per E-Mail oder telefonisch benachrichtigen und uns den Grund für die Rückgabe mitteilen. Nach Erhalt Ihrer Rücksendung erstatten wir Ihnen den Kaufpreis innerhalb von 7 Tagen auf Ihr Konto.\n\n1 Ihre Rückgabe anmelden\n\nUm Ihre Rückgabe anzumelden, wenden Sie sich einfach an customer@example.test Unser Kundendienstteam wird Ihnen so schnell wie m"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Pol"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.801+00:00",
@@ -514,7 +514,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 20038,
-        "textPreview": "Letzte Aktualisierung: 4. Dezember 2024\n\nDiese Datenschutzrichtlinie beschreibt, wie Mein Maison (die „Website“, „wir“, „uns“ oder „unser“) persönliche Daten sammelt, verwendet und weitergibt, wenn Sie shop-2.example.test (die „Website“) besuchen, unsere Dienste nutzen, einen Kauf dort tätigen oder auf andere Weise bezüglich der Website mit uns kommunizieren (zusammen die „Dienste“). Im Sinne dieser Datenschutzrichtlinie beziehen sich „Sie“ und „Ihr“ auf Sie als Benutzer der Dienste, unabhängig davon,"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.531+00:00",
@@ -525,7 +525,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1597,
-        "textPreview": "Haben Sie eine Frage zu Ihrer Bestellung oder unseren Produkten? Ihre Frage ist wahrscheinlich schon in unseren häufig gestellten Fragen beantwortet worden. Schauen Sie sich zuerst unsere Seite mit den Häufig Gestellten Fragen an, denn wahrscheinlich ist Ihre Frage hier bereits beantwortet!\n\nHaben Sie noch eine Frage? Unser Team ist an 5 Tagen in der Woche (Montag bis Freitag) per E-Mail erreichbar.\n\nMontag-Freitag: 09:00 - 17:00\nSamstag und Sonntag: Geschlossen\n\nSenden Sie uns eine Nachricht mi"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        }
       ]
      },
@@ -840,7 +840,7 @@
       "listings": [
        {
         "contentHash": "4f0f9404e17c78b42c2e02fae4985ce55890b7e3fb16515896f54f522d52e920",
-        "excerpt": "Mit dem LumoBeam Mini-Projektor verwandelst du jeden Ort in dein persönliches Kino. Ob für Filme, Gaming oder Business-Präsentationen – dieser kompakte Beamer liefert gestochen scharfe Bilder mit beeindruckender Helligkeit von 3000 Lumen. 📌 Helle & klare Projektion – 3000 Lumen für lebendige Bilder, selbst in hellen Räumen. ✨ Kompakt & tragbar – Passt in jede Tasche und ist ideal für unterwegs. 📌 Vielseitige Anschlüsse – Kompatibel mit USB, HDMI & HDTV für Laptop, Smartphone oder Konsole. ✨ Innen & außen nutzbar – Perfekt für Heimkino-Abende oder Open-Air-Filmnächte. 📌 Energieeffizientes…",
+        "excerpt": "Product text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. ",
         "fetchedAt": "2026-10-27T16:56:42.11+00:00",
         "imagePaths": [
          "00000000-0000-4000-8000-000000000001/product-listings/fc1971af-5ad5-46ad-a2e7-815de799a044/545b0e787cdeaa2c6e34612484e8404b7093789ee4913295113adfdcbe47e888.jpg",
@@ -851,15 +851,15 @@
         "lineTotal": 53.95,
         "productGid": "gid://shopify/Scrubbed/1",
         "snapshotId": "daea3e15-d2ba-4060-8f34-173433854e12",
-        "sourceUrl": "https://shop-2.example.test/products/mini-beamer-lumobeam-3000-lumen-tragbar-energiesparend-hdmi-usb",
-        "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB",
+        "sourceUrl": "https://shop-2.example.test/products/product C-3000-lumen-tragbar-energiesparend-hdmi-usb",
+        "title": "Product 1",
         "variantOptions": [
          {
           "name": "Title",
-          "value": "Default Title"
+          "value": "Product 2"
          }
         ],
-        "variantTitle": "Default Title"
+        "variantTitle": "Product 2"
        }
       ],
       "outcomes": [
@@ -918,7 +918,7 @@
         "presentmentTotal": "53.95",
         "quantity": 1,
         "sku": null,
-        "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB",
+        "title": "Product 1",
         "total": "53.95",
         "variant": null
        }
@@ -1033,7 +1033,7 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB"
+          "title": "Product 1"
          }
         ],
         "shipmentProofType": "delivered_confirmed",
@@ -1089,7 +1089,7 @@
          {
           "lineItemId": "gid://shopify/Scrubbed/1",
           "quantity": 1,
-          "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB"
+          "title": "Product 1"
          }
         ],
         "shipmentProofType": "delivered_confirmed",
@@ -1134,7 +1134,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 24295,
-        "textPreview": "Artikel 1 - Begriffsbestimmungen\n\nIn diesen Geschäftsbedingungen gelten die folgenden Definitionen:\nWiderrufsfrist: die Frist, innerhalb derer der Verbraucher von seinem Widerrufsrecht Gebrauch machen kann;\n\nVerbraucher: die natürliche Person, die nicht in Ausübung eines Berufes oder Gewerbes handelt und die einen Fernabsatzvertrag mit dem Unternehmer abschließt;\n\nTag: Kalendertag;\n\nDauertransaktion: ein Fernabsatzvertrag, der sich auf eine Reihe von Produkten und/oder Dienstleistungen bezieht, "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.291+00:00",
@@ -1145,7 +1145,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 5423,
-        "textPreview": "Versand\n\nLieferung und Versand werden von Uvives übernommen. Jedes Paket ist mit Track & Trace versehen und ist völlig kostenlos für Sie, den Kunden.\n\nIhr Paket wird von uns innerhalb von 0-3 Tagen verschickt. Das Paket wird direkt vom Lieferanten verschickt, was für Sie als Kunde günstiger ist. Das kann bedeuten, dass es etwas länger dauert, bis Sie Ihr Paket erhalten, als Sie es vielleicht von anderen Anbietern gewohnt sind.\n\nDie Lieferzeit beträgt 7-15 Werktage, darin ist die Bearbeitungszeit"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.083+00:00",
@@ -1156,7 +1156,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 4440,
-        "textPreview": "Wenn Sie mit Ihrem Kauf aus irgendeinem Grund nicht zufrieden sind, können Sie ihn innerhalb von 14 Tagen nach Lieferung an uns zurücksenden. Sie müssen uns per E-Mail oder telefonisch benachrichtigen und uns den Grund für die Rückgabe mitteilen. Nach Erhalt Ihrer Rücksendung erstatten wir Ihnen den Kaufpreis innerhalb von 7 Tagen auf Ihr Konto.\n\n1 Ihre Rückgabe anmelden\n\nUm Ihre Rückgabe anzumelden, wenden Sie sich einfach an customer@example.test Unser Kundendienstteam wird Ihnen so schnell wie m"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Pol"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.801+00:00",
@@ -1167,7 +1167,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 20038,
-        "textPreview": "Letzte Aktualisierung: 4. Dezember 2024\n\nDiese Datenschutzrichtlinie beschreibt, wie Mein Maison (die „Website“, „wir“, „uns“ oder „unser“) persönliche Daten sammelt, verwendet und weitergibt, wenn Sie shop-2.example.test (die „Website“) besuchen, unsere Dienste nutzen, einen Kauf dort tätigen oder auf andere Weise bezüglich der Website mit uns kommunizieren (zusammen die „Dienste“). Im Sinne dieser Datenschutzrichtlinie beziehen sich „Sie“ und „Ihr“ auf Sie als Benutzer der Dienste, unabhängig davon,"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.531+00:00",
@@ -1178,7 +1178,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1597,
-        "textPreview": "Haben Sie eine Frage zu Ihrer Bestellung oder unseren Produkten? Ihre Frage ist wahrscheinlich schon in unseren häufig gestellten Fragen beantwortet worden. Schauen Sie sich zuerst unsere Seite mit den Häufig Gestellten Fragen an, denn wahrscheinlich ist Ihre Frage hier bereits beantwortet!\n\nHaben Sie noch eine Frage? Unser Team ist an 5 Tagen in der Woche (Montag bis Freitag) per E-Mail erreichbar.\n\nMontag-Freitag: 09:00 - 17:00\nSamstag und Sonntag: Geschlossen\n\nSenden Sie uns eine Nachricht mi"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        }
       ]
      },
@@ -1207,7 +1207,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 24295,
-        "textPreview": "Artikel 1 - Begriffsbestimmungen\n\nIn diesen Geschäftsbedingungen gelten die folgenden Definitionen:\nWiderrufsfrist: die Frist, innerhalb derer der Verbraucher von seinem Widerrufsrecht Gebrauch machen kann;\n\nVerbraucher: die natürliche Person, die nicht in Ausübung eines Berufes oder Gewerbes handelt und die einen Fernabsatzvertrag mit dem Unternehmer abschließt;\n\nTag: Kalendertag;\n\nDauertransaktion: ein Fernabsatzvertrag, der sich auf eine Reihe von Produkten und/oder Dienstleistungen bezieht, "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.291+00:00",
@@ -1218,7 +1218,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 5423,
-        "textPreview": "Versand\n\nLieferung und Versand werden von Uvives übernommen. Jedes Paket ist mit Track & Trace versehen und ist völlig kostenlos für Sie, den Kunden.\n\nIhr Paket wird von uns innerhalb von 0-3 Tagen verschickt. Das Paket wird direkt vom Lieferanten verschickt, was für Sie als Kunde günstiger ist. Das kann bedeuten, dass es etwas länger dauert, bis Sie Ihr Paket erhalten, als Sie es vielleicht von anderen Anbietern gewohnt sind.\n\nDie Lieferzeit beträgt 7-15 Werktage, darin ist die Bearbeitungszeit"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.083+00:00",
@@ -1229,7 +1229,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 4440,
-        "textPreview": "Wenn Sie mit Ihrem Kauf aus irgendeinem Grund nicht zufrieden sind, können Sie ihn innerhalb von 14 Tagen nach Lieferung an uns zurücksenden. Sie müssen uns per E-Mail oder telefonisch benachrichtigen und uns den Grund für die Rückgabe mitteilen. Nach Erhalt Ihrer Rücksendung erstatten wir Ihnen den Kaufpreis innerhalb von 7 Tagen auf Ihr Konto.\n\n1 Ihre Rückgabe anmelden\n\nUm Ihre Rückgabe anzumelden, wenden Sie sich einfach an customer@example.test Unser Kundendienstteam wird Ihnen so schnell wie m"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Pol"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.801+00:00",
@@ -1240,7 +1240,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 20038,
-        "textPreview": "Letzte Aktualisierung: 4. Dezember 2024\n\nDiese Datenschutzrichtlinie beschreibt, wie Mein Maison (die „Website“, „wir“, „uns“ oder „unser“) persönliche Daten sammelt, verwendet und weitergibt, wenn Sie shop-2.example.test (die „Website“) besuchen, unsere Dienste nutzen, einen Kauf dort tätigen oder auf andere Weise bezüglich der Website mit uns kommunizieren (zusammen die „Dienste“). Im Sinne dieser Datenschutzrichtlinie beziehen sich „Sie“ und „Ihr“ auf Sie als Benutzer der Dienste, unabhängig davon,"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.531+00:00",
@@ -1251,7 +1251,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1597,
-        "textPreview": "Haben Sie eine Frage zu Ihrer Bestellung oder unseren Produkten? Ihre Frage ist wahrscheinlich schon in unseren häufig gestellten Fragen beantwortet worden. Schauen Sie sich zuerst unsere Seite mit den Häufig Gestellten Fragen an, denn wahrscheinlich ist Ihre Frage hier bereits beantwortet!\n\nHaben Sie noch eine Frage? Unser Team ist an 5 Tagen in der Woche (Montag bis Freitag) per E-Mail erreichbar.\n\nMontag-Freitag: 09:00 - 17:00\nSamstag und Sonntag: Geschlossen\n\nSenden Sie uns eine Nachricht mi"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        }
       ]
      },
@@ -1280,7 +1280,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 24295,
-        "textPreview": "Artikel 1 - Begriffsbestimmungen\n\nIn diesen Geschäftsbedingungen gelten die folgenden Definitionen:\nWiderrufsfrist: die Frist, innerhalb derer der Verbraucher von seinem Widerrufsrecht Gebrauch machen kann;\n\nVerbraucher: die natürliche Person, die nicht in Ausübung eines Berufes oder Gewerbes handelt und die einen Fernabsatzvertrag mit dem Unternehmer abschließt;\n\nTag: Kalendertag;\n\nDauertransaktion: ein Fernabsatzvertrag, der sich auf eine Reihe von Produkten und/oder Dienstleistungen bezieht, "
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.291+00:00",
@@ -1291,7 +1291,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 5423,
-        "textPreview": "Versand\n\nLieferung und Versand werden von Uvives übernommen. Jedes Paket ist mit Track & Trace versehen und ist völlig kostenlos für Sie, den Kunden.\n\nIhr Paket wird von uns innerhalb von 0-3 Tagen verschickt. Das Paket wird direkt vom Lieferanten verschickt, was für Sie als Kunde günstiger ist. Das kann bedeuten, dass es etwas länger dauert, bis Sie Ihr Paket erhalten, als Sie es vielleicht von anderen Anbietern gewohnt sind.\n\nDie Lieferzeit beträgt 7-15 Werktage, darin ist die Bearbeitungszeit"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        },
        {
         "capturedAt": "2026-08-29T10:31:30.083+00:00",
@@ -1302,7 +1302,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 4440,
-        "textPreview": "Wenn Sie mit Ihrem Kauf aus irgendeinem Grund nicht zufrieden sind, können Sie ihn innerhalb von 14 Tagen nach Lieferung an uns zurücksenden. Sie müssen uns per E-Mail oder telefonisch benachrichtigen und uns den Grund für die Rückgabe mitteilen. Nach Erhalt Ihrer Rücksendung erstatten wir Ihnen den Kaufpreis innerhalb von 7 Tagen auf Ihr Konto.\n\n1 Ihre Rückgabe anmelden\n\nUm Ihre Rückgabe anzumelden, wenden Sie sich einfach an customer@example.test Unser Kundendienstteam wird Ihnen so schnell wie m"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Pol"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.801+00:00",
@@ -1313,7 +1313,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 20038,
-        "textPreview": "Letzte Aktualisierung: 4. Dezember 2024\n\nDiese Datenschutzrichtlinie beschreibt, wie Mein Maison (die „Website“, „wir“, „uns“ oder „unser“) persönliche Daten sammelt, verwendet und weitergibt, wenn Sie shop-2.example.test (die „Website“) besuchen, unsere Dienste nutzen, einen Kauf dort tätigen oder auf andere Weise bezüglich der Website mit uns kommunizieren (zusammen die „Dienste“). Im Sinne dieser Datenschutzrichtlinie beziehen sich „Sie“ und „Ihr“ auf Sie als Benutzer der Dienste, unabhängig davon,"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy"
        },
        {
         "capturedAt": "2026-08-29T10:31:29.531+00:00",
@@ -1324,7 +1324,7 @@
         "source": "shopify_published",
         "storagePath": null,
         "textLength": 1597,
-        "textPreview": "Haben Sie eine Frage zu Ihrer Bestellung oder unseren Produkten? Ihre Frage ist wahrscheinlich schon in unseren häufig gestellten Fragen beantwortet worden. Schauen Sie sich zuerst unsere Seite mit den Häufig Gestellten Fragen an, denn wahrscheinlich ist Ihre Frage hier bereits beantwortet!\n\nHaben Sie noch eine Frage? Unser Team ist an 5 Tagen in der Woche (Montag bis Freitag) per E-Mail erreichbar.\n\nMontag-Freitag: 09:00 - 17:00\nSamstag und Sonntag: Geschlossen\n\nSenden Sie uns eine Nachricht mi"
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
        }
       ]
      },
@@ -1639,7 +1639,7 @@
       "listings": [
        {
         "contentHash": "4f0f9404e17c78b42c2e02fae4985ce55890b7e3fb16515896f54f522d52e920",
-        "excerpt": "Mit dem LumoBeam Mini-Projektor verwandelst du jeden Ort in dein persönliches Kino. Ob für Filme, Gaming oder Business-Präsentationen – dieser kompakte Beamer liefert gestochen scharfe Bilder mit beeindruckender Helligkeit von 3000 Lumen. 📌 Helle & klare Projektion – 3000 Lumen für lebendige Bilder, selbst in hellen Räumen. ✨ Kompakt & tragbar – Passt in jede Tasche und ist ideal für unterwegs. 📌 Vielseitige Anschlüsse – Kompatibel mit USB, HDMI & HDTV für Laptop, Smartphone oder Konsole. ✨ Innen & außen nutzbar – Perfekt für Heimkino-Abende oder Open-Air-Filmnächte. 📌 Energieeffizientes…",
+        "excerpt": "Product text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. ",
         "fetchedAt": "2026-10-27T16:56:42.11+00:00",
         "imagePaths": [
          "00000000-0000-4000-8000-000000000001/product-listings/fc1971af-5ad5-46ad-a2e7-815de799a044/545b0e787cdeaa2c6e34612484e8404b7093789ee4913295113adfdcbe47e888.jpg",
@@ -1650,15 +1650,15 @@
         "lineTotal": 53.95,
         "productGid": "gid://shopify/Scrubbed/1",
         "snapshotId": "daea3e15-d2ba-4060-8f34-173433854e12",
-        "sourceUrl": "https://shop-2.example.test/products/mini-beamer-lumobeam-3000-lumen-tragbar-energiesparend-hdmi-usb",
-        "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB",
+        "sourceUrl": "https://shop-2.example.test/products/product C-3000-lumen-tragbar-energiesparend-hdmi-usb",
+        "title": "Product 1",
         "variantOptions": [
          {
           "name": "Title",
-          "value": "Default Title"
+          "value": "Product 2"
          }
         ],
-        "variantTitle": "Default Title"
+        "variantTitle": "Product 2"
        }
       ],
       "outcomes": [
@@ -2950,13 +2950,13 @@
       "submissionRisk": false,
       "value": {
        "collected": true,
-       "excerpt": "Mit dem LumoBeam Mini-Projektor verwandelst du jeden Ort in dein persönliches Kino. Ob für Filme, Gaming oder Business-Präsentationen – dieser kompakte Beamer liefert gestochen scharfe Bilder mit beeindruckender Helligkeit von 3000 Lumen. 📌 Helle & klare Projektion – 3000 Lumen für lebendige Bilder, selbst in hellen Räumen. ✨ Kompakt & tragbar – Passt in jede Tasche und ist ideal für unterwegs. 📌 Vielseitige Anschlüsse – Kompatibel mit USB, HDMI & HDTV für Laptop, Smartphone oder Konsole. ✨ Innen & außen nutzbar – Perfekt für Heimkino-Abende oder Open-Air-Filmnächte. 📌 Energieeffizientes…",
+       "excerpt": "Product text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. ",
        "fieldKey": "product_description",
        "hasListing": true,
        "listingCount": 1,
        "retrievedAt": "2026-10-27T16:56:42.11+00:00",
-       "sourceUrl": "https://shop-2.example.test/products/mini-beamer-lumobeam-3000-lumen-tragbar-energiesparend-hdmi-usb",
-       "title": "Mini Beamer | LumoBeam | 3000 Lumen | Tragbar & Energiesparend | HDMI & USB",
+       "sourceUrl": "https://shop-2.example.test/products/product C-3000-lumen-tragbar-energiesparend-hdmi-usb",
+       "title": "Product 1",
        "variantOptions": [],
        "variantTitle": null
       }
@@ -2980,7 +2980,7 @@
      },
      "conclusion": {
       "source": "record",
-      "text": "Mein Maison fulfilled the order exactly as placed, the carrier delivered it, and the store's own remedy was available when the dispute was opened. The record does not support a finding that the item was significantly different from its description.",
+      "text": "Merchant C fulfilled the order exactly as placed, the carrier delivered it, and the store's own remedy was available when the dispute was opened. The record does not support a finding that the item was significantly different from its description.",
       "usedFactIds": [
        "order_confirmation#0",
        "shipping_tracking#gid://shopify/Scrubbed/1",
