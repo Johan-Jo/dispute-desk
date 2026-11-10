@@ -194,7 +194,8 @@ describe("resolveAssessmentGate", () => {
  */
 const SURFACES: Array<{ file: string; mustRead: RegExp[] }> = [
   {
-    file: "app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts",
+    // The hook's `derived` computation lives in deriveWorkspace.ts since the single-source plan 3.0 extraction.
+    file: "app/(embedded)/app/disputes/[id]/hooks/deriveWorkspace.ts",
     mustRead: [/resolveAssessmentGate\(/, /assessment: resolveAssessmentGate\(/],
   },
   {

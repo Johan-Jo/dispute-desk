@@ -1,0 +1,3135 @@
+{
+ "meta": {
+  "case": "21037-return-in-progress",
+  "disputeId": "defa8294-38cb-435f-b09c-5c354ea509d5",
+  "note": "\"#21037 return in progress\"",
+  "capturedAt": "2026-11-10T11:02:33.541Z",
+  "source": "prod, read-only"
+ },
+ "payload": {
+  "dispute": {
+   "id": "defa8294-38cb-435f-b09c-5c354ea509d5",
+   "reason": "CREDIT_NOT_PROCESSED",
+   "shopifyReason": "CREDIT_NOT_PROCESSED",
+   "phase": "chargeback",
+   "amount": 967,
+   "currency": "SEK",
+   "orderName": "#1001",
+   "orderGid": "gid://shopify/Scrubbed/1",
+   "customerName": "Customer 1",
+   "shopId": "00000000-0000-4000-8000-000000000001",
+   "shopDomain": "shop-1.example.test",
+   "merchantDomain": "shop-2.example.test",
+   "disputeGid": "gid://shopify/Scrubbed/1",
+   "disputeEvidenceGid": "gid://shopify/Scrubbed/1",
+   "dueAt": "2026-10-24T22:00:00+00:00",
+   "openedAt": "2026-09-22T06:38:44+00:00",
+   "normalizedStatus": "won",
+   "submissionState": "submitted_confirmed",
+   "needsReview": false,
+   "needsAttention": false,
+   "attentionReason": "bank_claim_needed",
+   "reviewState": null,
+   "reviewDueAt": null,
+   "submittedAt": "2026-10-25T04:21:24+00:00",
+   "finalOutcome": "won",
+   "closedAt": "2026-10-27T06:05:27+00:00",
+   "outcomeAmountRecovered": 967,
+   "outcomeAmountLost": 0,
+   "cardNetwork": null,
+   "paymentFamily": "klarna",
+   "paymentLabel": "Klarna — Pay Later",
+   "cardLast4": null,
+   "transactionDate": "2026-08-10T18:11:33Z",
+   "paymentGateway": "Shopify Payments",
+   "financialStatus": "PAID",
+   "fulfillmentStatus": "FULFILLED",
+   "cancelledAt": null,
+   "refundedAmount": "0.0",
+   "orderSituation": {
+    "returns": "in_progress",
+    "refund": "none",
+    "returnOpenedAt": "2026-08-27T20:01:04Z",
+    "asOf": "2026-10-24T06:04:45.636+00:00"
+   },
+   "refundStatement": {
+    "kind": "none",
+    "asOf": "2026-10-24T06:04:45.636+00:00"
+   },
+   "cardholderName": "Customer 1",
+   "timelineEvents": [
+    {
+     "at": "2026-08-10T18:11:33Z",
+     "text": "Customer 1 placed this order on Online Store (checkout #68040797782341)."
+    },
+    {
+     "at": "2026-08-10T18:11:33Z",
+     "text": "Confirmation #NEFYK68EF was generated for this order."
+    },
+    {
+     "at": "2026-08-10T18:11:33Z",
+     "text": "A kr967.00 SEK payment was processed on Klarna."
+    },
+    {
+     "at": "2026-08-10T18:11:33Z",
+     "text": "kr934.09 SEK will be added to your Aug 13, 2026 payout."
+    },
+    {
+     "at": "2026-08-10T18:11:34Z",
+     "text": "Unknown event Order#tax_finalization_capture_started..."
+    },
+    {
+     "at": "2026-08-10T18:11:35Z",
+     "text": "Order confirmation email was sent to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-08-10T18:11:35Z",
+     "text": "Received new order #1001 by Customer 1."
+    },
+    {
+     "at": "2026-08-11T00:34:09Z",
+     "text": "kr934.09 SEK was added to your Aug 13, 2026 payout."
+    },
+    {
+     "at": "2026-08-12T08:41:17Z",
+     "text": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle."
+    },
+    {
+     "at": "2026-08-12T08:41:18Z",
+     "text": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-08-12T08:41:18Z",
+     "text": "This order was archived."
+    },
+    {
+     "at": "2026-08-27T20:01:03Z",
+     "text": "Alice Sjökvist unarchived this order."
+    },
+    {
+     "at": "2026-08-27T20:01:04Z",
+     "text": "Alice Sjökvist added tracking information to return #1001-R1."
+    },
+    {
+     "at": "2026-08-27T20:01:04Z",
+     "text": "Alice Sjökvist created return #1001-R1."
+    },
+    {
+     "at": "2026-08-27T20:01:04Z",
+     "text": "Alice Sjökvist sent a return instructions email to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-09-22T06:38:47Z",
+     "text": "The customer opened an inquiry totaling kr1,133.58."
+    },
+    {
+     "at": "2026-10-11T06:12:44Z",
+     "text": "An inquiry response was sent to the customer’s bank."
+    },
+    {
+     "at": "2026-10-13T06:44:53Z",
+     "text": "The customer’s bank reviewed the inquiry evidence and decided to open a chargeback. kr1,133.58 will be taken from your next payout."
+    },
+    {
+     "at": "2026-10-13T06:45:38Z",
+     "text": "kr1,133.58 SEK will be deducted from your next payout because of a chargeback."
+    },
+    {
+     "at": "2026-10-15T00:10:13Z",
+     "text": "kr1,133.58 SEK was deducted from your Oct 19, 2026 payout because of a chargeback."
+    }
+   ],
+   "responseCycle": 2,
+   "reopenedAt": "2026-10-13T06:44:55.653+00:00",
+   "reopenedAfterCloseAt": null,
+   "escalatedFromInquiryAt": "2026-10-13T06:44:55.653+00:00",
+   "shopifyStatus": "won"
+  },
+  "bankClaim": {
+   "trigger": null,
+   "answer": null
+  },
+  "returnRequest": {
+   "applies": false,
+   "answer": null
+  },
+  "returnSignals": {
+   "customerAskedInSupport": false
+  },
+  "pack": {
+   "id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+   "status": "ready",
+   "completenessScore": 76,
+   "submissionReadiness": "ready_with_warnings",
+   "checklistV2": [
+    {
+     "blocking": false,
+     "field": "order_confirmation",
+     "label": "Order confirmation",
+     "priority": "critical",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "credit_statement",
+     "label": "External credit / store credit record",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "missing"
+    },
+    {
+     "blocking": false,
+     "field": "processing_timeline_note",
+     "label": "Note: refund processing timeline",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "missing"
+    },
+    {
+     "blocking": false,
+     "field": "delivery_proof",
+     "label": "Delivery confirmation",
+     "priority": "recommended",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "refund_policy",
+     "label": "Refund / return policy",
+     "priority": "critical",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "customer_communication",
+     "label": "Customer correspondence about refund",
+     "priority": "recommended",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "activity_log",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "customer_account_info",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "shipping_tracking",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "shipping_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "cancellation_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "avs_cvv_match",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "ip_location_check",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    }
+   ],
+   "waivedItems": [],
+   "evidenceItems": [
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:42.48011+00:00",
+     "id": "69cdfb41-22d0-4223-9a41-00c33707a181",
+     "label": "Order #1001",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "billingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "billingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "cancelledAt": null,
+      "channel": "web",
+      "createdAt": "2026-08-10T18:11:33Z",
+      "customerTenure": {
+       "customerSince": "2025-08-26T19:06:17Z",
+       "totalOrders": "4"
+      },
+      "email": "customer@example.test",
+      "fieldsProvided": [
+       "order_confirmation"
+      ],
+      "financialStatus": "PAID",
+      "fulfillmentStatus": "FULFILLED",
+      "lineItems": [
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "399.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "Product 1",
+        "total": "399.0",
+        "variant": null
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "499.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "Product 2",
+        "total": "499.0",
+        "variant": "38"
+       }
+      ],
+      "orderId": "gid://shopify/Scrubbed/1",
+      "orderName": "#1001",
+      "returnStatus": "IN_PROGRESS",
+      "shippingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "shippingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "totals": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "presentment": {
+        "currency": "SEK",
+        "discounts": "0.0",
+        "shipping": "69.0",
+        "subtotal": "898.0",
+        "tax": "193.4",
+        "total": "967.0"
+       },
+       "refunded": "0.0",
+       "shipping": "69.0",
+       "subtotal": "898.0",
+       "tax": "193.4",
+       "total": "967.0"
+      }
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:42.782152+00:00",
+     "id": "41abda06-f4d3-469e-b9c0-8f1eb177c16d",
+     "label": "Customer account details",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "customerNote": null,
+      "customerSince": "2025-08-26T19:06:17Z",
+      "disputeFreeHistory": true,
+      "fieldsProvided": [
+       "customer_account_info"
+      ],
+      "isRepeatCustomer": true,
+      "priorUndisputedOrders": 3,
+      "totalOrders": 4
+     },
+     "source": "shopify_order",
+     "type": "other"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.209503+00:00",
+     "id": "f07a1b98-79e9-45e1-8dbd-80b918ced217",
+     "label": "Fulfillments (1)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "deliveredAt": "2026-08-24T12:40:00+00:00",
+      "deliveryCoverage": "complete",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "finalDeliveryVerified": true,
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-10-24T06:04:41.216Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-08-24T12:40:00+00:00",
+         "message": null
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": "2026-08-24T12:40:00+00:00",
+         "deliveryStatus": "CollectedAtPickup",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-08-12T08:41:17Z",
+        "deliveredAt": "2026-08-24T12:40:00+00:00",
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Product 1"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Product 2"
+         }
+        ],
+        "shipmentProofType": "delivered_confirmed",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight (Sweden) AB",
+          "number": "TRK000001",
+          "url": "https://hamta.dhl.com/TRK000001"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "delivered_confirmed",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.458003+00:00",
+     "id": "23789bcf-db33-42a5-a8c2-3d4c5a13b02d",
+     "label": "Store policies (5)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.123+00:00",
+        "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+        "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1810,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.886+00:00",
+        "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+        "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2843,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.63+00:00",
+        "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+        "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 18551,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:44.354356+00:00",
+     "id": "7bed7f0b-7684-43d8-8818-fde2712c107b",
+     "label": "Customer communication",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "buyerAttributes": [],
+      "customerNote": null,
+      "fieldsProvided": [
+       "customer_communication"
+      ],
+      "orderNote": null,
+      "summary": {
+       "buyerAttributeCount": 0,
+       "confirmationEventCount": 2,
+       "customerNotePresent": false,
+       "merchantCommentCount": 4,
+       "staffNotePresent": false,
+       "timelineEventCount": 20
+      },
+      "timelineEvents": [
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Customer 1 placed this order on Online Store (checkout #68040797782341).",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Confirmation #NEFYK68EF was generated for this order.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "A kr967.00 SEK payment was processed on Klarna.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr934.09 SEK will be added to your Aug 13, 2026 payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:34Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Unknown event Order#tax_finalization_capture_started...",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:35Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:35Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13317998707013\">#1001</a> by Customer 1.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-11T00:34:09Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr934.09 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/162686730565\">Aug 13, 2026</a> payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-12T08:41:17Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-12T08:41:18Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-08-12T08:41:18Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "This order was archived.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:03Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist unarchived this order.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist added tracking information to return #1001-R1.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist created return #1001-R1.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist sent a return instructions email to Customer 1 (customer@example.test).",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-09-22T06:38:47Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "The customer opened an inquiry totaling kr1,133.58.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-11T06:12:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "An inquiry response was sent to the customer’s bank.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-13T06:44:53Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "The customer’s bank reviewed the inquiry evidence and decided to open a chargeback. kr1,133.58 will be taken from your next payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-13T06:45:38Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,133.58 SEK will be deducted from your next payout because of a chargeback.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-15T00:10:13Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,133.58 SEK was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout because of a chargeback.",
+        "source": "system"
+       }
+      ]
+     },
+     "source": "shopify_timeline",
+     "type": "comms"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:44.743352+00:00",
+     "id": "1cbc2035-d17b-4703-b103-c8f7547a92a0",
+     "label": "Payment verification",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "avsCvvStatus": "not_applicable",
+      "avsResultCode": null,
+      "cvvResultCode": null,
+      "fieldsProvided": [
+       "avs_cvv_match"
+      ],
+      "gateway": "shopify_payments"
+     },
+     "source": "shopify_transactions",
+     "type": "other"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:45.113813+00:00",
+     "id": "3ed0c366-7710-413e-ae22-3138ecb99626",
+     "label": "IP & location check",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "bankEligible": true,
+      "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+      "distanceKm": null,
+      "fieldsProvided": [
+       "ip_location_check"
+      ],
+      "ip": "203.0.113.1",
+      "ipConsistencyLevel": "first_seen",
+      "ipReuseCount": 0,
+      "ipinfo": {
+       "city": "Address 6",
+       "country": "SE",
+       "ip": "203.0.113.1",
+       "loc": "63.2909,18.7153",
+       "org": "AS3301 Telia Company AB",
+       "privacy": {
+        "hosting": false,
+        "proxy": false,
+        "vpn": false
+       },
+       "region": "Västernorrland"
+      },
+      "locationMatch": "same_country",
+      "merchantGuidance": null,
+      "riskLevel": "low",
+      "score": "Moderate",
+      "shippingAddress": {
+       "city": "Address 1",
+       "country": "SE",
+       "region": null
+      },
+      "source": "order_client_ip",
+      "summary": "Location matches shipping country."
+     },
+     "source": "ipinfo_io",
+     "type": "other"
+    }
+   ],
+   "evidenceItemsByField": {
+    "order_confirmation": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:42.48011+00:00",
+     "id": "69cdfb41-22d0-4223-9a41-00c33707a181",
+     "label": "Order #1001",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "billingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "billingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "cancelledAt": null,
+      "channel": "web",
+      "createdAt": "2026-08-10T18:11:33Z",
+      "customerTenure": {
+       "customerSince": "2025-08-26T19:06:17Z",
+       "totalOrders": "4"
+      },
+      "email": "customer@example.test",
+      "fieldsProvided": [
+       "order_confirmation"
+      ],
+      "financialStatus": "PAID",
+      "fulfillmentStatus": "FULFILLED",
+      "lineItems": [
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "399.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "Product 1",
+        "total": "399.0",
+        "variant": null
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "499.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "Product 2",
+        "total": "499.0",
+        "variant": "38"
+       }
+      ],
+      "orderId": "gid://shopify/Scrubbed/1",
+      "orderName": "#1001",
+      "returnStatus": "IN_PROGRESS",
+      "shippingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "shippingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "totals": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "presentment": {
+        "currency": "SEK",
+        "discounts": "0.0",
+        "shipping": "69.0",
+        "subtotal": "898.0",
+        "tax": "193.4",
+        "total": "967.0"
+       },
+       "refunded": "0.0",
+       "shipping": "69.0",
+       "subtotal": "898.0",
+       "tax": "193.4",
+       "total": "967.0"
+      }
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    "customer_account_info": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:42.782152+00:00",
+     "id": "41abda06-f4d3-469e-b9c0-8f1eb177c16d",
+     "label": "Customer account details",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "customerNote": null,
+      "customerSince": "2025-08-26T19:06:17Z",
+      "disputeFreeHistory": true,
+      "fieldsProvided": [
+       "customer_account_info"
+      ],
+      "isRepeatCustomer": true,
+      "priorUndisputedOrders": 3,
+      "totalOrders": 4
+     },
+     "source": "shopify_order",
+     "type": "other"
+    },
+    "shipping_tracking": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.209503+00:00",
+     "id": "f07a1b98-79e9-45e1-8dbd-80b918ced217",
+     "label": "Fulfillments (1)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "deliveredAt": "2026-08-24T12:40:00+00:00",
+      "deliveryCoverage": "complete",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "finalDeliveryVerified": true,
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-10-24T06:04:41.216Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-08-24T12:40:00+00:00",
+         "message": null
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": "2026-08-24T12:40:00+00:00",
+         "deliveryStatus": "CollectedAtPickup",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-08-12T08:41:17Z",
+        "deliveredAt": "2026-08-24T12:40:00+00:00",
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Product 1"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Product 2"
+         }
+        ],
+        "shipmentProofType": "delivered_confirmed",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight (Sweden) AB",
+          "number": "TRK000001",
+          "url": "https://hamta.dhl.com/TRK000001"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "delivered_confirmed",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    "delivery_proof": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.209503+00:00",
+     "id": "f07a1b98-79e9-45e1-8dbd-80b918ced217",
+     "label": "Fulfillments (1)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "deliveredAt": "2026-08-24T12:40:00+00:00",
+      "deliveryCoverage": "complete",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "finalDeliveryVerified": true,
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-10-24T06:04:41.216Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-08-24T12:40:00+00:00",
+         "message": null
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": "2026-08-24T12:40:00+00:00",
+         "deliveryStatus": "CollectedAtPickup",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-08-12T08:41:17Z",
+        "deliveredAt": "2026-08-24T12:40:00+00:00",
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Product 1"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Product 2"
+         }
+        ],
+        "shipmentProofType": "delivered_confirmed",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight (Sweden) AB",
+          "number": "TRK000001",
+          "url": "https://hamta.dhl.com/TRK000001"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "delivered_confirmed",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    "cancellation_policy": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.458003+00:00",
+     "id": "23789bcf-db33-42a5-a8c2-3d4c5a13b02d",
+     "label": "Store policies (5)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.123+00:00",
+        "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+        "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1810,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.886+00:00",
+        "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+        "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2843,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.63+00:00",
+        "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+        "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 18551,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "shipping_policy": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.458003+00:00",
+     "id": "23789bcf-db33-42a5-a8c2-3d4c5a13b02d",
+     "label": "Store policies (5)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.123+00:00",
+        "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+        "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1810,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.886+00:00",
+        "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+        "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2843,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.63+00:00",
+        "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+        "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 18551,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "refund_policy": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:43.458003+00:00",
+     "id": "23789bcf-db33-42a5-a8c2-3d4c5a13b02d",
+     "label": "Store policies (5)",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.123+00:00",
+        "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+        "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1810,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.886+00:00",
+        "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+        "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2843,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.63+00:00",
+        "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+        "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 18551,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "customer_communication": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:44.354356+00:00",
+     "id": "7bed7f0b-7684-43d8-8818-fde2712c107b",
+     "label": "Customer communication",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "buyerAttributes": [],
+      "customerNote": null,
+      "fieldsProvided": [
+       "customer_communication"
+      ],
+      "orderNote": null,
+      "summary": {
+       "buyerAttributeCount": 0,
+       "confirmationEventCount": 2,
+       "customerNotePresent": false,
+       "merchantCommentCount": 4,
+       "staffNotePresent": false,
+       "timelineEventCount": 20
+      },
+      "timelineEvents": [
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Customer 1 placed this order on Online Store (checkout #68040797782341).",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Confirmation #NEFYK68EF was generated for this order.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "A kr967.00 SEK payment was processed on Klarna.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr934.09 SEK will be added to your Aug 13, 2026 payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:34Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Unknown event Order#tax_finalization_capture_started...",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:35Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-08-10T18:11:35Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13317998707013\">#1001</a> by Customer 1.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-11T00:34:09Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr934.09 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/162686730565\">Aug 13, 2026</a> payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-12T08:41:17Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-12T08:41:18Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-08-12T08:41:18Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "This order was archived.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:03Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist unarchived this order.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist added tracking information to return #1001-R1.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist created return #1001-R1.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist sent a return instructions email to Customer 1 (customer@example.test).",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-09-22T06:38:47Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "The customer opened an inquiry totaling kr1,133.58.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-11T06:12:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "An inquiry response was sent to the customer’s bank.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-13T06:44:53Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "The customer’s bank reviewed the inquiry evidence and decided to open a chargeback. kr1,133.58 will be taken from your next payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-13T06:45:38Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,133.58 SEK will be deducted from your next payout because of a chargeback.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-15T00:10:13Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,133.58 SEK was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout because of a chargeback.",
+        "source": "system"
+       }
+      ]
+     },
+     "source": "shopify_timeline",
+     "type": "comms"
+    },
+    "avs_cvv_match": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:44.743352+00:00",
+     "id": "1cbc2035-d17b-4703-b103-c8f7547a92a0",
+     "label": "Payment verification",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "avsCvvStatus": "not_applicable",
+      "avsResultCode": null,
+      "cvvResultCode": null,
+      "fieldsProvided": [
+       "avs_cvv_match"
+      ],
+      "gateway": "shopify_payments"
+     },
+     "source": "shopify_transactions",
+     "type": "other"
+    },
+    "ip_location_check": {
+     "confidence": null,
+     "created_at": "2026-10-24T06:04:45.113813+00:00",
+     "id": "3ed0c366-7710-413e-ae22-3138ecb99626",
+     "label": "IP & location check",
+     "pack_id": "5f38922d-e750-4a37-bb43-7af5fa224406",
+     "payload": {
+      "bankEligible": true,
+      "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+      "distanceKm": null,
+      "fieldsProvided": [
+       "ip_location_check"
+      ],
+      "ip": "203.0.113.1",
+      "ipConsistencyLevel": "first_seen",
+      "ipReuseCount": 0,
+      "ipinfo": {
+       "city": "Address 6",
+       "country": "SE",
+       "ip": "203.0.113.1",
+       "loc": "63.2909,18.7153",
+       "org": "AS3301 Telia Company AB",
+       "privacy": {
+        "hosting": false,
+        "proxy": false,
+        "vpn": false
+       },
+       "region": "Västernorrland"
+      },
+      "locationMatch": "same_country",
+      "merchantGuidance": null,
+      "riskLevel": "low",
+      "score": "Moderate",
+      "shippingAddress": {
+       "city": "Address 1",
+       "country": "SE",
+       "region": null
+      },
+      "source": "order_client_ip",
+      "summary": "Location matches shipping country."
+     },
+     "source": "ipinfo_io",
+     "type": "other"
+    },
+    "activity_log": {
+     "id": "pack-section:activity_log",
+     "type": "access_log",
+     "label": "Customer activity log",
+     "source": "shopify_order",
+     "payload": {
+      "customerTenure": {
+       "customerNote": null,
+       "customerSince": "2025-08-26T19:06:17Z",
+       "totalOrders": "4"
+      },
+      "timelineEventCount": 20,
+      "timelineEvents": [
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "message": "Customer 1 placed this order on Online Store (checkout #68040797782341)."
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "message": "Confirmation #NEFYK68EF was generated for this order."
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "message": "A kr967.00 SEK payment was processed on Klarna."
+       },
+       {
+        "createdAt": "2026-08-10T18:11:33Z",
+        "message": "kr934.09 SEK will be added to your Aug 13, 2026 payout."
+       },
+       {
+        "createdAt": "2026-08-10T18:11:34Z",
+        "message": "Unknown event Order#tax_finalization_capture_started..."
+       },
+       {
+        "createdAt": "2026-08-10T18:11:35Z",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-08-10T18:11:35Z",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13317998707013\">#1001</a> by Customer 1."
+       },
+       {
+        "createdAt": "2026-08-11T00:34:09Z",
+        "message": "kr934.09 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/162686730565\">Aug 13, 2026</a> payout."
+       },
+       {
+        "createdAt": "2026-08-12T08:41:17Z",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle."
+       },
+       {
+        "createdAt": "2026-08-12T08:41:18Z",
+        "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-08-12T08:41:18Z",
+        "message": "This order was archived."
+       },
+       {
+        "createdAt": "2026-08-27T20:01:03Z",
+        "message": "Alice Sjökvist unarchived this order."
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "message": "Alice Sjökvist added tracking information to return #1001-R1."
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "message": "Alice Sjökvist created return #1001-R1."
+       },
+       {
+        "createdAt": "2026-08-27T20:01:04Z",
+        "message": "Alice Sjökvist sent a return instructions email to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-09-22T06:38:47Z",
+        "message": "The customer opened an inquiry totaling kr1,133.58."
+       },
+       {
+        "createdAt": "2026-10-11T06:12:44Z",
+        "message": "An inquiry response was sent to the customer’s bank."
+       },
+       {
+        "createdAt": "2026-10-13T06:44:53Z",
+        "message": "The customer’s bank reviewed the inquiry evidence and decided to open a chargeback. kr1,133.58 will be taken from your next payout."
+       },
+       {
+        "createdAt": "2026-10-13T06:45:38Z",
+        "message": "kr1,133.58 SEK will be deducted from your next payout because of a chargeback."
+       },
+       {
+        "createdAt": "2026-10-15T00:10:13Z",
+        "message": "kr1,133.58 SEK was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout because of a chargeback."
+       }
+      ],
+      "fieldsProvided": [
+       "activity_log"
+      ]
+     }
+    }
+   },
+   "auditEvents": [
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:44:59.242242+00:00",
+     "event_payload": {
+      "trigger": "automation_pipeline"
+     },
+     "event_type": "auto_build_enqueued",
+     "id": "2936f6ed-96ec-4524-8ff9-33294e831e0a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:38.768523+00:00",
+     "event_payload": {
+      "jobId": "bd06d18d-181a-4a38-8450-27d5503c8876",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "10a93551-584f-48f1-9de7-7fa28e8e63ca"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:42.327081+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "f8368d15-7895-4f07-a845-8a00f1b7ee11"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:42.623881+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "39f18185-47f5-4f05-b367-fa7987994c4c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:42.821643+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "4bb370c5-2222-48f0-b6ad-a9aaf3cbad14"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:43.014133+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "b44ceb03-7550-49ac-924f-4360ca674555"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:43.539843+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "408450da-0141-4c9b-9637-270a230ce564"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:43.733712+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "aea545f1-4920-4cfc-a4c8-4518ddb1939a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:43.926538+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ab42e7cb-edb9-40e9-b520-928f3b1db3ce"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:44.64438+00:00",
+     "event_payload": {
+      "blockers": [
+       "Shopify refund record"
+      ],
+      "completenessScore": 76,
+      "itemsCreated": 7,
+      "jobId": "bd06d18d-181a-4a38-8450-27d5503c8876",
+      "sectionsCollected": 11
+     },
+     "event_type": "pack_created",
+     "id": "6bc6082e-321f-4fcd-b23b-777ed9444d84"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:45.109432+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "bd06d18d-181a-4a38-8450-27d5503c8876",
+      "remaining": 2
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "4715b3a4-9dd6-406f-8f72-b6a1a0c51621"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:46:45.91573+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "fbe6dfe8-cb3d-45c1-8206-ef227c68ed56"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-13T06:48:39.675824+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "fe70e7a1-7540-4e02-97b2-47cb49c5a85a",
+      "version": 4
+     },
+     "event_type": "defence_package_skipped",
+     "id": "c65a6411-3047-49c2-93f5-dd25ed13ea80"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:00:45.313534+00:00",
+     "event_payload": {
+      "dueAt": "2026-10-24T22:00:00+00:00",
+      "packPreviousUpdatedAt": "2026-10-13T06:46:44.426+00:00",
+      "trigger": "deadline_rebuild_cron"
+     },
+     "event_type": "auto_build_enqueued",
+     "id": "40796fa5-25cb-4610-9b73-169da55c14df"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:38.754466+00:00",
+     "event_payload": {
+      "jobId": "a6550f23-1333-430c-9600-3b5cc6d5b754",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "e2f4aed4-f9d9-4093-9db0-f6b36759c7d1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:42.584796+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "7617a5a2-1a73-4d01-b298-a49b9464d02f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:43.097835+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "cd84fbde-56eb-48a3-8577-afefbea4476a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:43.337024+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "18ecb48c-8dd4-4d54-90a2-157d0383a1e1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:43.745699+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "fb59ffd1-fc95-4d4b-9c2c-a9faee8a39d5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:44.653732+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "73e8d56d-ca33-4a13-8278-e7dfe4a06254"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:45.011997+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "b0ee800f-4179-4820-b9b5-9b28561b763f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:45.223606+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "1abe5a30-1984-451a-bc6b-0242dc7b657b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:45.935036+00:00",
+     "event_payload": {
+      "blockers": [
+       "Shopify refund record"
+      ],
+      "completenessScore": 76,
+      "itemsCreated": 7,
+      "jobId": "a6550f23-1333-430c-9600-3b5cc6d5b754",
+      "sectionsCollected": 11
+     },
+     "event_type": "pack_created",
+     "id": "9776ac36-bdc4-4b23-85da-2d8f9f909530"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:46.552252+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "a6550f23-1333-430c-9600-3b5cc6d5b754",
+      "remaining": 220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "f876ee9b-5a30-4794-ac99-e61c5163ec1e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:04:47.593673+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "030f7917-7750-49c9-8841-819bbda7c170"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T06:06:40.220147+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "10160a89-8c10-4fa5-ae9a-c41e65273ee1",
+      "version": 5
+     },
+     "event_type": "defence_package_skipped",
+     "id": "be2382fd-b03c-4cba-b924-269fef7b1a1f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T08:00:01.461275+00:00",
+     "event_payload": {
+      "cycle": 2,
+      "trigger": "reopened"
+     },
+     "event_type": "deadline_submit_refused_bank_claim_missing",
+     "id": "b7eaf7ba-3046-4432-9e36-0258b7d82064"
+    }
+   ],
+   "pdfPath": null,
+   "savedToShopifyAt": null,
+   "creditAlreadyIssued": {
+    "triggered": false,
+    "coversDisputedAmount": false
+   },
+   "updatedAt": "2026-10-24T06:04:45.636+00:00",
+   "rebuildPending": false,
+   "lastRebuildOutcome": null,
+   "lastRebuildAt": null,
+   "lastRebuildReason": null,
+   "activeBuildJob": null,
+   "failureCode": null,
+   "failureReason": null,
+   "coverage": {
+    "isCovered": false,
+    "shopifyProtectStatus": null,
+    "state": "not_covered"
+   },
+   "gorgiasEvidenceStale": false
+  },
+  "gorgiasComms": null,
+  "argumentMap": null,
+  "rebuttalDraft": null,
+  "rebuttalOutdated": false,
+  "presentationStatus": "CLOSED_WON",
+  "presentation": {
+   "lifecycle": "won",
+   "attention": "none",
+   "blockingReason": null,
+   "strength": "weak",
+   "transmissionConfirmed": true,
+   "editable": false,
+   "terminal": true,
+   "outcome": "won",
+   "internalIssue": false,
+   "needsMerchantAction": false,
+   "isActive": false,
+   "automationMode": "auto"
+  },
+  "workspaceAssessment": {
+   "caseStrength": {
+    "coverage": {
+     "shopifyProtectStatus": null,
+     "state": "not_covered"
+    },
+    "coveragePercent": 100,
+    "deliveryInTransit": false,
+    "fatalLoss": {
+     "messageToken": null,
+     "reason": null,
+     "triggered": false
+    },
+    "heroVariant": "hard_to_win",
+    "improvementHintI18n": null,
+    "moderateCount": 1,
+    "nameMismatch": {
+     "capApplied": false,
+     "cardholderName": null,
+     "customerName": "Customer 1",
+     "triggered": false
+    },
+    "overall": "weak",
+    "returnedToSender": {
+     "messageToken": null,
+     "reason": null,
+     "returnedAt": null,
+     "triggered": false
+    },
+    "riskWeakness": {
+     "diagnostics": {
+      "fulfillmentCount": 1,
+      "recommendation": "ACCEPT",
+      "riskLevel": "LOW"
+     },
+     "message": null,
+     "reason": null,
+     "triggered": false
+    },
+    "score": 2,
+    "strengthReasonI18n": {
+     "key": "disputes.strengthReason.weak.moderateOnly",
+     "params": {
+      "hint": {
+       "key": "disputes.decisiveHint.refund",
+       "type": "i18n-key"
+      },
+      "label1": {
+       "key": "disputes.signalLabel.delivery",
+       "type": "i18n-key"
+      },
+      "label2": "empty"
+     }
+    },
+    "strongCount": 0,
+    "supportedClaims": 0,
+    "supportingCount": 4,
+    "totalClaims": 0
+   },
+   "assessment": {
+    "caseId": "defa8294-38cb-435f-b09c-5c354ea509d5",
+    "needsRecalculation": false,
+    "strengthBand": "weak",
+    "completenessScore": 61,
+    "readiness": "ready_with_warnings",
+    "reviewItems": [],
+    "recalculationReason": null
+   },
+   "filing": {
+    "titleToken": {
+     "key": "disputes.deadlineOnly.normal.title"
+    },
+    "bodyToken": {
+     "key": "disputes.deadlineOnly.normal.body"
+    },
+    "actionToken": null,
+    "filingOutcome": "adding_now",
+    "state": {
+     "kind": "normal"
+    }
+   },
+   "readiness": "ready_with_warnings",
+   "blockerCount": 0,
+   "warningCount": 0,
+   "submitOverrideGaps": [],
+   "contributions": {
+    "strong": [
+     {
+      "signalId": "account_history",
+      "category": "strong",
+      "labelToken": {
+       "key": "disputes.signalLabel.account_history"
+      },
+      "evidenceFieldKey": "customer_account_info"
+     }
+    ],
+    "moderate": [
+     {
+      "signalId": "delivery",
+      "category": "moderate",
+      "labelToken": {
+       "key": "disputes.signalLabel.delivery"
+      },
+      "evidenceFieldKey": "delivery_proof"
+     },
+     {
+      "signalId": "ip_location",
+      "category": "moderate",
+      "labelToken": {
+       "key": "disputes.signalLabel.ip_location"
+      },
+      "evidenceFieldKey": "ip_location_check"
+     }
+    ]
+   },
+   "improvement": null
+  },
+  "held": {
+   "held": true,
+   "reason": "weak_strength",
+   "offer": null,
+   "offerFlipsToStrong": false
+  },
+  "decidedResponse": {
+   "filedAt": null,
+   "sentAt": "2026-10-25T04:21:24+00:00",
+   "closedAt": "2026-10-27T06:05:27+00:00",
+   "decidedBeforeDeadline": false,
+   "holdReason": "thin_evidence",
+   "responder": "shopify"
+  },
+  "decidedView": {
+   "outcome": "won",
+   "phase": "chargeback",
+   "reason": "CREDIT_NOT_PROCESSED",
+   "amount": 967,
+   "currency": "SEK",
+   "openedAt": "2026-09-22T06:38:44+00:00",
+   "dueAt": "2026-10-24T22:00:00+00:00",
+   "closedAt": "2026-10-27T06:05:27+00:00",
+   "response": {
+    "filedAt": null,
+    "sentAt": "2026-10-25T04:21:24+00:00",
+    "closedAt": "2026-10-27T06:05:27+00:00",
+    "decidedBeforeDeadline": false,
+    "holdReason": "thin_evidence",
+    "responder": "shopify"
+   },
+   "order": {
+    "createdAt": "2026-08-10T18:11:33+00:00",
+    "fulfillmentStatus": "FULFILLED",
+    "fulfilledAt": "2026-08-12T08:41:17+00:00",
+    "cancelledAt": null,
+    "riskRecommendation": "ACCEPT"
+   },
+   "lineItems": [
+    {
+     "title": "Product 1",
+     "quantity": 1
+    },
+    {
+     "title": "Product 2",
+     "quantity": 1
+    }
+   ],
+   "facts": {
+    "order_confirmation": {
+     "billingAddress": {
+      "city": "Address 1",
+      "countryCode": "SE",
+      "provinceCode": null,
+      "zipPrefix": "Address 2"
+     },
+     "billingAddressFull": {
+      "address1": "Address 3",
+      "address2": null,
+      "city": "Address 1",
+      "country": "Sweden",
+      "countryCode": "SE",
+      "province": null,
+      "provinceCode": null,
+      "zip": "Address 5"
+     },
+     "cancelledAt": null,
+     "channel": "web",
+     "createdAt": "2026-08-10T18:11:33Z",
+     "customerTenure": {
+      "customerSince": "2025-08-26T19:06:17Z",
+      "totalOrders": "4"
+     },
+     "email": "customer@example.test",
+     "fieldsProvided": [
+      "order_confirmation"
+     ],
+     "financialStatus": "PAID",
+     "fulfillmentStatus": "FULFILLED",
+     "lineItems": [
+      {
+       "currency": "SEK",
+       "lineItemId": "gid://shopify/Scrubbed/1",
+       "presentmentCurrency": "SEK",
+       "presentmentTotal": "399.0",
+       "quantity": 1,
+       "sku": null,
+       "title": "Product 1",
+       "total": "399.0",
+       "variant": null
+      },
+      {
+       "currency": "SEK",
+       "lineItemId": "gid://shopify/Scrubbed/1",
+       "presentmentCurrency": "SEK",
+       "presentmentTotal": "499.0",
+       "quantity": 1,
+       "sku": null,
+       "title": "Product 2",
+       "total": "499.0",
+       "variant": "38"
+      }
+     ],
+     "orderId": "gid://shopify/Scrubbed/1",
+     "orderName": "#1001",
+     "returnStatus": "IN_PROGRESS",
+     "shippingAddress": {
+      "city": "Address 1",
+      "countryCode": "SE",
+      "provinceCode": null,
+      "zipPrefix": "Address 2"
+     },
+     "shippingAddressFull": {
+      "address1": "Address 3",
+      "address2": null,
+      "city": "Address 1",
+      "country": "Sweden",
+      "countryCode": "SE",
+      "province": null,
+      "provinceCode": null,
+      "zip": "Address 5"
+     },
+     "totals": {
+      "currency": "SEK",
+      "discounts": "0.0",
+      "presentment": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "shipping": "69.0",
+       "subtotal": "898.0",
+       "tax": "193.4",
+       "total": "967.0"
+      },
+      "refunded": "0.0",
+      "shipping": "69.0",
+      "subtotal": "898.0",
+      "tax": "193.4",
+      "total": "967.0"
+     }
+    },
+    "customer_account_info": {
+     "customerNote": null,
+     "customerSince": "2025-08-26T19:06:17Z",
+     "disputeFreeHistory": true,
+     "fieldsProvided": [
+      "customer_account_info"
+     ],
+     "isRepeatCustomer": true,
+     "priorUndisputedOrders": 3,
+     "totalOrders": 4
+    },
+    "shipping_tracking": {
+     "deliveredAt": "2026-08-24T12:40:00+00:00",
+     "deliveryCoverage": "complete",
+     "fieldsProvided": [
+      "shipping_tracking",
+      "delivery_proof"
+     ],
+     "finalDeliveryVerified": true,
+     "fulfillmentCount": 1,
+     "fulfillments": [
+      {
+       "carrierStatusObservedAt": "2026-10-24T06:04:41.216Z",
+       "carrierTerminalEvent": {
+        "happenedAt": "2026-08-24T12:40:00+00:00",
+        "message": null
+       },
+       "carrierTracking": {
+        "deliveredAtTracking": "2026-08-24T12:40:00+00:00",
+        "deliveryStatus": "CollectedAtPickup",
+        "returnReason": null,
+        "signedByName": null,
+        "trackingSource": "carrier_api_dhl"
+       },
+       "createdAt": "2026-08-12T08:41:17Z",
+       "deliveredAt": "2026-08-24T12:40:00+00:00",
+       "displayStatus": "FULFILLED",
+       "estimatedDeliveryAt": null,
+       "fulfillmentId": "gid://shopify/Scrubbed/1",
+       "items": [
+        {
+         "lineItemId": "gid://shopify/Scrubbed/1",
+         "quantity": 1,
+         "title": "Product 1"
+        },
+        {
+         "lineItemId": "gid://shopify/Scrubbed/1",
+         "quantity": 1,
+         "title": "Product 2"
+        }
+       ],
+       "shipmentProofType": "delivered_confirmed",
+       "sourceConflict": false,
+       "status": "SUCCESS",
+       "tracking": [
+        {
+         "carrier": "DHL Freight (Sweden) AB",
+         "number": "TRK000001",
+         "url": "https://hamta.dhl.com/TRK000001"
+        }
+       ]
+      }
+     ],
+     "overallStatus": "FULFILLED",
+     "proofType": "delivered_confirmed",
+     "signedByName": null,
+     "sourceConflict": false
+    },
+    "delivery_proof": {
+     "deliveredAt": "2026-08-24T12:40:00+00:00",
+     "deliveryCoverage": "complete",
+     "fieldsProvided": [
+      "shipping_tracking",
+      "delivery_proof"
+     ],
+     "finalDeliveryVerified": true,
+     "fulfillmentCount": 1,
+     "fulfillments": [
+      {
+       "carrierStatusObservedAt": "2026-10-24T06:04:41.216Z",
+       "carrierTerminalEvent": {
+        "happenedAt": "2026-08-24T12:40:00+00:00",
+        "message": null
+       },
+       "carrierTracking": {
+        "deliveredAtTracking": "2026-08-24T12:40:00+00:00",
+        "deliveryStatus": "CollectedAtPickup",
+        "returnReason": null,
+        "signedByName": null,
+        "trackingSource": "carrier_api_dhl"
+       },
+       "createdAt": "2026-08-12T08:41:17Z",
+       "deliveredAt": "2026-08-24T12:40:00+00:00",
+       "displayStatus": "FULFILLED",
+       "estimatedDeliveryAt": null,
+       "fulfillmentId": "gid://shopify/Scrubbed/1",
+       "items": [
+        {
+         "lineItemId": "gid://shopify/Scrubbed/1",
+         "quantity": 1,
+         "title": "Product 1"
+        },
+        {
+         "lineItemId": "gid://shopify/Scrubbed/1",
+         "quantity": 1,
+         "title": "Product 2"
+        }
+       ],
+       "shipmentProofType": "delivered_confirmed",
+       "sourceConflict": false,
+       "status": "SUCCESS",
+       "tracking": [
+        {
+         "carrier": "DHL Freight (Sweden) AB",
+         "number": "TRK000001",
+         "url": "https://hamta.dhl.com/TRK000001"
+        }
+       ]
+      }
+     ],
+     "overallStatus": "FULFILLED",
+     "proofType": "delivered_confirmed",
+     "signedByName": null,
+     "sourceConflict": false
+    },
+    "cancellation_policy": {
+     "fieldsProvided": [
+      "cancellation_policy",
+      "shipping_policy",
+      "refund_policy"
+     ],
+     "policies": [
+      {
+       "capturedAt": "2026-10-09T09:29:04.34+00:00",
+       "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+       "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+       "policyType": "terms",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 23004,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:04.123+00:00",
+       "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+       "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+       "policyType": "shipping",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 1810,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.886+00:00",
+       "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+       "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+       "policyType": "refunds",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 2843,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.63+00:00",
+       "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+       "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+       "policyType": "privacy",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 18551,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.418+00:00",
+       "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+       "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+       "policyType": "contact",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 131,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+      }
+     ]
+    },
+    "shipping_policy": {
+     "fieldsProvided": [
+      "cancellation_policy",
+      "shipping_policy",
+      "refund_policy"
+     ],
+     "policies": [
+      {
+       "capturedAt": "2026-10-09T09:29:04.34+00:00",
+       "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+       "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+       "policyType": "terms",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 23004,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:04.123+00:00",
+       "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+       "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+       "policyType": "shipping",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 1810,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.886+00:00",
+       "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+       "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+       "policyType": "refunds",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 2843,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.63+00:00",
+       "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+       "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+       "policyType": "privacy",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 18551,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.418+00:00",
+       "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+       "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+       "policyType": "contact",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 131,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+      }
+     ]
+    },
+    "refund_policy": {
+     "fieldsProvided": [
+      "cancellation_policy",
+      "shipping_policy",
+      "refund_policy"
+     ],
+     "policies": [
+      {
+       "capturedAt": "2026-10-09T09:29:04.34+00:00",
+       "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+       "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+       "policyType": "terms",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 23004,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:04.123+00:00",
+       "contentHash": "e93ef8eafc850e53a5396bc2ad59ac05ff08adf76281ba317bb7f79dc8efb965",
+       "policySnapshotId": "8b90b267-da0e-450c-ba44-01fc8a3e5e65",
+       "policyType": "shipping",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 1810,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. "
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.886+00:00",
+       "contentHash": "89c53a14acf1d610acc14bfc558f8c8643be202406b796e09de9a61695dbfb32",
+       "policySnapshotId": "d73e7cc7-189d-47e6-be44-30cc2a94dcc5",
+       "policyType": "refunds",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 2843,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Po"
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.63+00:00",
+       "contentHash": "fa317718d848a84308d5eb61b88dc37aa1db6a738397f74848f690cf758432aa",
+       "policySnapshotId": "6aa36785-915c-45dd-944f-919b39fed878",
+       "policyType": "privacy",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 18551,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Polic"
+      },
+      {
+       "capturedAt": "2026-10-09T09:29:03.418+00:00",
+       "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+       "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+       "policyType": "contact",
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+       "source": "shopify_published",
+       "storagePath": null,
+       "textLength": 131,
+       "textPreview": "Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy text placeholder. Policy t"
+      }
+     ]
+    },
+    "customer_communication": {
+     "buyerAttributes": [],
+     "customerNote": null,
+     "fieldsProvided": [
+      "customer_communication"
+     ],
+     "orderNote": null,
+     "summary": {
+      "buyerAttributeCount": 0,
+      "confirmationEventCount": 2,
+      "customerNotePresent": false,
+      "merchantCommentCount": 4,
+      "staffNotePresent": false,
+      "timelineEventCount": 20
+     },
+     "timelineEvents": [
+      {
+       "createdAt": "2026-08-10T18:11:33Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Customer 1 placed this order on Online Store (checkout #68040797782341).",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-10T18:11:33Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Confirmation #NEFYK68EF was generated for this order.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-10T18:11:33Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "A kr967.00 SEK payment was processed on Klarna.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-10T18:11:33Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "kr934.09 SEK will be added to your Aug 13, 2026 payout.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-10T18:11:34Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Unknown event Order#tax_finalization_capture_started...",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-10T18:11:35Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Order confirmation email was sent to Customer 1 (customer@example.test).",
+       "source": "customer_confirmation_email"
+      },
+      {
+       "createdAt": "2026-08-10T18:11:35Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13317998707013\">#1001</a> by Customer 1.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-11T00:34:09Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "kr934.09 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/162686730565\">Aug 13, 2026</a> payout.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-12T08:41:17Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "DHL eCom Sweden marked 2 items as fulfilled from Merchant B Gävle.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-12T08:41:18Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test).",
+       "source": "customer_confirmation_email"
+      },
+      {
+       "createdAt": "2026-08-12T08:41:18Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "This order was archived.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-08-27T20:01:03Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Alice Sjökvist unarchived this order.",
+       "source": "merchant_comment"
+      },
+      {
+       "createdAt": "2026-08-27T20:01:04Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Alice Sjökvist added tracking information to return #1001-R1.",
+       "source": "merchant_comment"
+      },
+      {
+       "createdAt": "2026-08-27T20:01:04Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Alice Sjökvist created return #1001-R1.",
+       "source": "merchant_comment"
+      },
+      {
+       "createdAt": "2026-08-27T20:01:04Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "Alice Sjökvist sent a return instructions email to Customer 1 (customer@example.test).",
+       "source": "merchant_comment"
+      },
+      {
+       "createdAt": "2026-09-22T06:38:47Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "The customer opened an inquiry totaling kr1,133.58.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-10-11T06:12:44Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "An inquiry response was sent to the customer’s bank.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-10-13T06:44:53Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "The customer’s bank reviewed the inquiry evidence and decided to open a chargeback. kr1,133.58 will be taken from your next payout.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-10-13T06:45:38Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "kr1,133.58 SEK will be deducted from your next payout because of a chargeback.",
+       "source": "system"
+      },
+      {
+       "createdAt": "2026-10-15T00:10:13Z",
+       "id": "gid://shopify/Scrubbed/1",
+       "message": "kr1,133.58 SEK was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout because of a chargeback.",
+       "source": "system"
+      }
+     ]
+    },
+    "avs_cvv_match": {
+     "avsCvvStatus": "not_applicable",
+     "avsResultCode": null,
+     "cvvResultCode": null,
+     "fieldsProvided": [
+      "avs_cvv_match"
+     ],
+     "gateway": "shopify_payments"
+    },
+    "ip_location_check": {
+     "bankEligible": true,
+     "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+     "distanceKm": null,
+     "fieldsProvided": [
+      "ip_location_check"
+     ],
+     "ip": "203.0.113.1",
+     "ipConsistencyLevel": "first_seen",
+     "ipReuseCount": 0,
+     "ipinfo": {
+      "city": "Address 6",
+      "country": "SE",
+      "ip": "203.0.113.1",
+      "loc": "63.2909,18.7153",
+      "org": "AS3301 Telia Company AB",
+      "privacy": {
+       "hosting": false,
+       "proxy": false,
+       "vpn": false
+      },
+      "region": "Västernorrland"
+     },
+     "locationMatch": "same_country",
+     "merchantGuidance": null,
+     "riskLevel": "low",
+     "score": "Moderate",
+     "shippingAddress": {
+      "city": "Address 1",
+      "country": "SE",
+      "region": null
+     },
+     "source": "order_client_ip",
+     "summary": "Location matches shipping country."
+    }
+   },
+   "fatalLossReason": null,
+   "firstPackAt": "2026-10-09T10:05:08.652369+00:00",
+   "events": [
+    {
+     "created_at": "2026-10-09T11:42:46.109736+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked"
+    },
+    {
+     "created_at": "2026-10-09T17:14:46.267288+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked"
+    },
+    {
+     "created_at": "2026-10-10T06:03:18.019362+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked"
+    },
+    {
+     "created_at": "2026-10-10T08:00:01.051398+00:00",
+     "event_payload": {
+      "deadlineConditions": {
+       "hasCurrentCanonicalDecision": true,
+       "hasCurrentValidatedSafePackage": false,
+       "noAmbiguity": true,
+       "noHardBlock": true,
+       "noUnsupportedArgument": true,
+       "notStale": false
+      },
+      "deadlineWindow": "in_window",
+      "decisionAction": "hold_for_deadline",
+      "decisionInputHash": "01ccb40e05a2f09942d3d91f11e76b9062b7eef86770c17706b27d9775887fc9",
+      "decisionReasonCodes": [
+       "strength_insufficient"
+      ],
+      "dueAt": "2026-10-10T23:00:00+00:00",
+      "fallbackReason": "unsafe_address_claim",
+      "packageId": "d172bc12-0f5e-49e1-bebc-3ad9c9f97684",
+      "selectionReason": "stale",
+      "trigger": "deadline_cron_no_fallback",
+      "version": 3
+     },
+     "event_type": "defence_package_blocked_unsafe_claim"
+    },
+    {
+     "created_at": "2026-10-13T06:46:45.91573+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked"
+    },
+    {
+     "created_at": "2026-10-24T06:04:47.593673+00:00",
+     "event_payload": {
+      "case_strength": "weak",
+      "decision_reason_codes": [
+       "strength_insufficient"
+      ],
+      "reasons": [
+       "Auto-mode case strength is Weak — auto-submit blocked per PRD §9"
+      ]
+     },
+     "event_type": "auto_save_blocked"
+    }
+   ],
+   "storePatterns": {
+    "baseRate": {
+     "won": 11,
+     "decided": 35
+    },
+    "patterns": {}
+   },
+   "inapplicable": [
+    "no_return_initiated",
+    "refund_record"
+   ]
+  },
+  "recordStorePatterns": null,
+  "evidenceLineItems": [
+   {
+    "id": "line:order_confirmation",
+    "field": "order_confirmation",
+    "label": "Order confirmation",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Confirms order details, but does not prove the customer authorized the transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.orderConfirmation.contextOnly"
+    },
+    "canBeForceIncluded": false,
+    "internalSignals": [
+     {
+      "id": "internal:billing_shipping_agree",
+      "label": "Billing and shipping addresses on the order agree",
+      "reason": "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence: it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row.",
+      "severity": "info"
+     }
+    ]
+   },
+   {
+    "id": "line:delivery_proof",
+    "field": "delivery_proof",
+    "label": "Delivery confirmation",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "moderate",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": true,
+    "usedAsPositiveBankEvidence": true,
+    "submittedToShopify": false,
+    "submissionMethod": "bank_argument",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The carrier confirmed delivery with a timestamp — strong support that the order arrived.",
+    "reasonToken": {
+     "key": "disputes.deliveryProof.whyCarrierConfirmed"
+    },
+    "canBeForceIncluded": false,
+    "displayLabelToken": {
+     "key": "disputes.deliveryProof.titleCollectedOn",
+     "params": {
+      "date": "Aug 24"
+     }
+    },
+    "factsTokens": [
+     {
+      "key": "disputes.deliveryProof.factsShippedVia",
+      "params": {
+       "date": "Aug 12",
+       "carrier": "DHL Freight (Sweden) AB"
+      }
+     },
+     {
+      "key": "disputes.deliveryProof.factsCollected",
+      "params": {
+       "date": "Aug 24"
+      }
+     }
+    ],
+    "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=TRK000001&tracking-id=TRK000001",
+    "trackingNumber": "TRK000001",
+    "parcels": []
+   },
+   {
+    "id": "line:refund_policy",
+    "field": "refund_policy",
+    "label": "Refund / return policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents merchant policy, but does not by itself prove authorization for this fraud dispute.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.refundPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:customer_communication",
+    "field": "customer_communication",
+    "label": "Customer correspondence about refund",
+    "source": "merchant_upload",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Included in the defence package as context, not as decisive proof.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.method.context_only"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:activity_log",
+    "field": "activity_log",
+    "label": "activity_log",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Included in the defence package as context, not as decisive proof.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.method.context_only"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:customer_account_info",
+    "field": "customer_account_info",
+    "label": "customer_account_info",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "strong",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": true,
+    "usedAsPositiveBankEvidence": true,
+    "submittedToShopify": false,
+    "submissionMethod": "bank_argument",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Returning customer with 3 prior undisputed orders on this account (customer since August 2025). Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.customerAccount.returningBankPluralSince",
+     "params": {
+      "prior": 3,
+      "sinceLabel": "August 2025"
+     }
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:shipping_policy",
+    "field": "shipping_policy",
+    "label": "shipping_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents shipping commitments; supporting context only.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.shippingPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:cancellation_policy",
+    "field": "cancellation_policy",
+    "label": "cancellation_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents cancellation rules; supporting context only.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.cancellationPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:avs_cvv_match",
+    "field": "avs_cvv_match",
+    "label": "avs_cvv_match",
+    "source": "derived",
+    "hasEvidence": true,
+    "strengthContribution": "none",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": false,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "not_included",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.avsCvv.notIncluded"
+    },
+    "canBeForceIncluded": true
+   },
+   {
+    "id": "line:ip_location_check",
+    "field": "ip_location_check",
+    "label": "ip_location_check",
+    "source": "derived",
+    "hasEvidence": true,
+    "strengthContribution": "moderate",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": true,
+    "usedAsPositiveBankEvidence": true,
+    "submittedToShopify": false,
+    "submissionMethod": "bank_argument",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with a cardholder-originated transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.ipLocation.sameCountryBank"
+    },
+    "canBeForceIncluded": false
+   }
+  ],
+  "submissionSummary": {
+   "pdfFileName": null,
+   "shopifyStructuredFields": [
+    {
+     "field": "customer_first_name",
+     "value": "Name2"
+    },
+    {
+     "field": "customer_last_name",
+     "value": "Name3"
+    },
+    {
+     "field": "customer_email",
+     "value": "customer@example.test"
+    }
+   ],
+   "factsInPdf": [],
+   "counts": {
+    "usedAsPositiveBankArgument": 3,
+    "contextOnly": 6,
+    "internalOnly": 0,
+    "excluded": 0,
+    "notSupported": 0,
+    "failedUpload": 0,
+    "waived": 0
+   }
+  },
+  "attachments": [],
+  "appliedRule": {
+   "mode": "auto"
+  },
+  "caseTypeInfo": {
+   "disputeType": "General dispute",
+   "toWin": [
+    "Transaction was legitimate",
+    "Order was fulfilled as described"
+   ],
+   "strongestEvidence": [
+    "Order confirmation",
+    "Shipping tracking",
+    "Customer communication"
+   ],
+   "issuerClaim": "Customer disputes this transaction"
+  },
+  "defencePackage": {
+   "latest": {
+    "document_provenance_json": null,
+    "document_validation_passed": null,
+    "evidence_hash": "0c9ddfa9aa01af187411f44018b15a13a09c932f909d413ce72f17ddef5a7734",
+    "facts_json": null,
+    "failure_code": "no_bank_eligible_facts",
+    "failure_reason": "Only the store's own records (policies, the order) are citable; they are context, not an argument.",
+    "generated_at": "2026-10-24T06:04:48.336272+00:00",
+    "generated_by": "system",
+    "id": "10160a89-8c10-4fa5-ae9a-c41e65273ee1",
+    "llm_model": null,
+    "narrative_json": null,
+    "package_mode": null,
+    "pdf_path": null,
+    "plan_deadline_only": null,
+    "plan_input_hash": null,
+    "plan_json": null,
+    "plan_no_safe_argument": null,
+    "prompt_family": null,
+    "prompt_version": null,
+    "reason_code_module": "credit_not_processed",
+    "status": "skipped",
+    "submitted_at": null,
+    "validation_errors": [],
+    "validation_status": null,
+    "version": 5
+   },
+   "bankFacing": null,
+   "currentPromptVersion": 42,
+   "building": false,
+   "safety": {
+    "blocked": false,
+    "reasons": [],
+    "message": ""
+   }
+  }
+ },
+ "sourceRows": {
+  "evidenceSavedToShopifyAt": null,
+  "automationMode": "auto",
+  "assessmentReadOk": true,
+  "outcomeInputs": null
+ }
+}
