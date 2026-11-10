@@ -1,0 +1,5422 @@
+{
+ "meta": {
+  "case": "17066-returned-to-sender",
+  "disputeId": "7aa8536c-65ea-43b4-bf49-322c73513b79",
+  "note": "\"#17066 returned-to-sender, unanswered\"",
+  "capturedAt": "2026-11-10T11:02:19.591Z",
+  "source": "prod, read-only"
+ },
+ "payload": {
+  "dispute": {
+   "id": "7aa8536c-65ea-43b4-bf49-322c73513b79",
+   "reason": "CREDIT_NOT_PROCESSED",
+   "shopifyReason": "CREDIT_NOT_PROCESSED",
+   "phase": "inquiry",
+   "amount": 3021.65,
+   "currency": "SEK",
+   "orderName": "#1001",
+   "orderGid": "gid://shopify/Scrubbed/1",
+   "customerName": "Customer 1",
+   "shopId": "00000000-0000-4000-8000-000000000001",
+   "shopDomain": "shop-1.example.test",
+   "merchantDomain": "shop-2.example.test",
+   "disputeGid": "gid://shopify/Scrubbed/1",
+   "disputeEvidenceGid": "gid://shopify/Scrubbed/1",
+   "dueAt": "2026-11-10T23:00:00+00:00",
+   "openedAt": "2026-10-23T10:00:34+00:00",
+   "normalizedStatus": "new",
+   "submissionState": "not_saved",
+   "needsReview": false,
+   "needsAttention": true,
+   "attentionReason": null,
+   "reviewState": null,
+   "reviewDueAt": null,
+   "submittedAt": null,
+   "finalOutcome": null,
+   "closedAt": null,
+   "outcomeAmountRecovered": null,
+   "outcomeAmountLost": null,
+   "cardNetwork": null,
+   "paymentFamily": "klarna",
+   "paymentLabel": "Klarna — Pay Later",
+   "cardLast4": null,
+   "transactionDate": "2026-10-02T19:51:49Z",
+   "paymentGateway": "Shopify Payments",
+   "financialStatus": "PAID",
+   "fulfillmentStatus": "FULFILLED",
+   "cancelledAt": null,
+   "refundedAmount": "0.0",
+   "orderSituation": {
+    "returns": "none",
+    "refund": "none",
+    "returnOpenedAt": null,
+    "asOf": "2026-11-10T02:32:57.627+00:00"
+   },
+   "refundStatement": {
+    "kind": "none",
+    "asOf": "2026-11-10T02:32:57.627+00:00"
+   },
+   "cardholderName": "Customer 1",
+   "timelineEvents": [
+    {
+     "at": "2026-10-02T19:51:49Z",
+     "text": "Customer 1 placed this order on Online Store (checkout #53214973853962)."
+    },
+    {
+     "at": "2026-10-02T19:51:49Z",
+     "text": "Confirmation #8AZJ0Z7ZU was generated for this order."
+    },
+    {
+     "at": "2026-10-02T19:51:49Z",
+     "text": "A kr3,021.65 SEK payment was processed on Klarna."
+    },
+    {
+     "at": "2026-10-02T19:51:49Z",
+     "text": "kr2,927.30 SEK will be added to your Oct 12, 2026 payout."
+    },
+    {
+     "at": "2026-10-02T19:51:50Z",
+     "text": "Unknown event Order#tax_finalization_capture_started..."
+    },
+    {
+     "at": "2026-10-02T19:51:51Z",
+     "text": "Shopify assessed this order for fraudulent chargeback risk and detected a low risk level"
+    },
+    {
+     "at": "2026-10-02T19:51:51Z",
+     "text": "Order confirmation email was sent to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-10-02T19:51:51Z",
+     "text": "Received new order #1001 by Customer 1."
+    },
+    {
+     "at": "2026-10-02T19:51:54Z",
+     "text": "AutomateOrders split the fulfillment for 3 items."
+    },
+    {
+     "at": "2026-10-02T19:51:55Z",
+     "text": "AutomateOrders split the fulfillment for 1 item."
+    },
+    {
+     "at": "2026-10-02T19:51:55Z",
+     "text": "AutomateOrders split the fulfillment for 1 item."
+    },
+    {
+     "at": "2026-10-06T15:10:46Z",
+     "text": "Alfredssons.com marked 6 items as fulfilled from a New Flow."
+    },
+    {
+     "at": "2026-10-06T15:10:46Z",
+     "text": "Alfredssons.com sent a shipping confirmation email to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-10-06T15:10:46Z",
+     "text": "This order was archived."
+    },
+    {
+     "at": "2026-10-08T00:51:59Z",
+     "text": "kr2,927.30 SEK was added to your Oct 12, 2026 payout."
+    },
+    {
+     "at": "2026-10-23T10:00:37Z",
+     "text": "The customer opened an inquiry totaling kr3,021.65."
+    }
+   ],
+   "responseCycle": 1,
+   "reopenedAt": null,
+   "reopenedAfterCloseAt": null,
+   "escalatedFromInquiryAt": null,
+   "shopifyStatus": "needs_response"
+  },
+  "bankClaim": {
+   "trigger": null,
+   "answer": null
+  },
+  "returnRequest": {
+   "applies": false,
+   "answer": null
+  },
+  "returnSignals": {
+   "customerAskedInSupport": false
+  },
+  "pack": {
+   "id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+   "status": "ready",
+   "completenessScore": 47,
+   "submissionReadiness": "ready_with_warnings",
+   "checklistV2": [
+    {
+     "blocking": false,
+     "field": "refund_policy",
+     "label": "Refund / return policy",
+     "priority": "critical",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "customer_communication",
+     "label": "Customer correspondence",
+     "priority": "recommended",
+     "source": "auto_shopify",
+     "status": "missing"
+    },
+    {
+     "blocking": false,
+     "field": "shipping_tracking",
+     "label": "Tracking status",
+     "priority": "recommended",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "delivery_proof",
+     "label": "Proof of delivery",
+     "priority": "recommended",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "collectionType": "manual",
+     "field": "returned_parcel_outcome",
+     "label": "Returned Parcel Outcome",
+     "priority": "critical",
+     "source": "manual_upload",
+     "status": "missing"
+    },
+    {
+     "blocking": false,
+     "field": "order_confirmation",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "activity_log",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "customer_account_info",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "shipping_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "cancellation_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "avs_cvv_match",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "ip_location_check",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    }
+   ],
+   "waivedItems": [],
+   "evidenceItems": [
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.013102+00:00",
+     "id": "ae7a6749-1f8f-421c-a17f-17bae766a755",
+     "label": "Order #1001",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "billingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "billingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "cancelledAt": null,
+      "channel": "web",
+      "createdAt": "2026-10-02T19:51:49Z",
+      "customerTenure": {
+       "customerSince": "2026-10-02T19:51:47Z",
+       "totalOrders": "1"
+      },
+      "email": "customer@example.test",
+      "fieldsProvided": [
+       "order_confirmation"
+      ],
+      "financialStatus": "PAID",
+      "fulfillmentStatus": "FULFILLED",
+      "lineItems": [
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "429.0",
+        "quantity": 1,
+        "sku": "FRAME-ART-50X70-DARKOAK",
+        "title": "Dark Oak Frame",
+        "total": "429.0",
+        "variant": "Standard / 50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "599.0",
+        "quantity": 1,
+        "sku": "POD-REMO-1005-50x70",
+        "title": "Girl dinner with red jacket - Poster",
+        "total": "599.0",
+        "variant": "50x70"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "429.0",
+        "quantity": 1,
+        "sku": "FRAME-ART-50X70-DARKOAK",
+        "title": "Dark Oak Frame",
+        "total": "429.0",
+        "variant": "Standard / 50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "499.0",
+        "quantity": 1,
+        "sku": "POD-TIÄD-1007-50x70",
+        "title": "Pour me some wine - Print",
+        "total": "499.0",
+        "variant": "50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "429.0",
+        "quantity": 1,
+        "sku": "FRAME-ART-50X70-DARKOAK",
+        "title": "Dark Oak Frame",
+        "total": "429.0",
+        "variant": "Standard / 50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "649.0",
+        "quantity": 1,
+        "sku": "POD-LAPT-2013-50x70",
+        "title": "Konversation \"Är du ute?\" Poster",
+        "total": "649.0",
+        "variant": "50x70 cm"
+       }
+      ],
+      "orderId": "gid://shopify/Scrubbed/1",
+      "orderName": "#1001",
+      "returnStatus": "NO_RETURN",
+      "shippingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "shippingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "totals": {
+       "currency": "SEK",
+       "discounts": "87.35",
+       "presentment": {
+        "currency": "SEK",
+        "discounts": "87.35",
+        "shipping": "75.0",
+        "subtotal": "2946.65",
+        "tax": "487.62",
+        "total": "3021.65"
+       },
+       "refunded": "0.0",
+       "shipping": "75.0",
+       "subtotal": "2946.65",
+       "tax": "487.62",
+       "total": "3021.65"
+      }
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.505438+00:00",
+     "id": "59c01f5a-ee81-4c04-a5c6-fb10da387bc7",
+     "label": "Customer account details",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "customerNote": null,
+      "customerSince": "2026-10-02T19:51:47Z",
+      "disputeFreeHistory": true,
+      "fieldsProvided": [
+       "customer_account_info"
+      ],
+      "isRepeatCustomer": false,
+      "priorUndisputedOrders": 0,
+      "totalOrders": 1
+     },
+     "source": "shopify_order",
+     "type": "other"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.890707+00:00",
+     "id": "e5f2a932-dff2-493c-80b9-efe2c71688f3",
+     "label": "Fulfillments (1)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "deliveredAt": null,
+      "deliveryCoverage": "none",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-11-10T02:32:54.427Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-10-18T21:18:00",
+         "message": "Shipment returned to sender"
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": null,
+         "deliveryStatus": "Returned",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-10-06T15:10:46Z",
+        "deliveredAt": null,
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Konversation \"Är du ute?\" Poster"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Girl dinner with red jacket - Poster"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Pour me some wine - Print"
+         }
+        ],
+        "shipmentProofType": "returned_to_sender",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight",
+          "number": "TRK000001",
+          "url": "https://www.logistics.dhl/se-en/home/tracking/tracking-freight.html?tracking-id=473325380071604146"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "returned_to_sender",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.145808+00:00",
+     "id": "055438f7-d6d5-4e20-af39-140b5f357e24",
+     "label": "Store policies (5)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-07-06T20:28:48.036+00:00",
+        "contentHash": "4685b724f7f3b231d149fcee6b4edf1aec2680437bd7555b81cb16c8f0cb336f",
+        "policySnapshotId": "75c68d32-7d79-4cce-9e59-c7081627ef84",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911548170.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1118,
+        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.608+00:00",
+        "contentHash": "174d9893d09726d5fa378641c2a0fb9a007da2cbb6b28f3dba2ec7fcaae0de62",
+        "policySnapshotId": "f8a37e37-84a0-4ff0-9fb4-0bdb75e2f8de",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911580938.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1425,
+        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.38+00:00",
+        "contentHash": "f9c30867b3f06733d3b98f8a3018ded410be404a9eff668d1b3f2243ab263930",
+        "policySnapshotId": "96e5891e-2f50-498f-ad3b-882ee6608216",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911482634.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1854,
+        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.166+00:00",
+        "contentHash": "6df34cfc868b737b3d2471faeae4f8bd191c666bf303cff5a47e47fcf772055a",
+        "policySnapshotId": "ee45a8b2-9441-4d0d-80f3-c8f38a068889",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911515402.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2712,
+        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+       },
+       {
+        "capturedAt": "2026-07-02T12:22:06.669+00:00",
+        "contentHash": "c19c82a8dbdf68cc4db41d6f48089e4bd5fc6d743dde401e3330bc58c5c3f1be",
+        "policySnapshotId": "46fe0374-d71b-4043-898e-73766156ce6c",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911613706.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 96,
+        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.744106+00:00",
+     "id": "c98413d7-4be5-4bf7-b9eb-c60cb0a75be7",
+     "label": "Payment verification",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "avsCvvStatus": "not_applicable",
+      "avsResultCode": null,
+      "cvvResultCode": null,
+      "fieldsProvided": [
+       "avs_cvv_match"
+      ],
+      "gateway": "shopify_payments"
+     },
+     "source": "shopify_transactions",
+     "type": "other"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.957686+00:00",
+     "id": "545c9867-bc57-42ce-85df-d22609e4fed4",
+     "label": "IP & location check",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "bankEligible": true,
+      "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+      "distanceKm": null,
+      "fieldsProvided": [
+       "ip_location_check"
+      ],
+      "ip": "203.0.113.1",
+      "ipConsistencyLevel": "first_seen",
+      "ipReuseCount": 0,
+      "ipinfo": {
+       "city": "Address 6",
+       "country": "SE",
+       "ip": "203.0.113.1",
+       "loc": "63.8284,20.2597",
+       "org": "AS3301 Telia Company AB",
+       "privacy": {
+        "hosting": false,
+        "proxy": false,
+        "vpn": false
+       },
+       "region": "Västerbotten"
+      },
+      "locationMatch": "same_country",
+      "merchantGuidance": null,
+      "riskLevel": "low",
+      "score": "Moderate",
+      "shippingAddress": {
+       "city": "Address 1",
+       "country": "SE",
+       "region": null
+      },
+      "source": "order_client_ip",
+      "summary": "Location matches shipping country."
+     },
+     "source": "ipinfo_io",
+     "type": "other"
+    }
+   ],
+   "evidenceItemsByField": {
+    "order_confirmation": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.013102+00:00",
+     "id": "ae7a6749-1f8f-421c-a17f-17bae766a755",
+     "label": "Order #1001",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "billingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "billingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "cancelledAt": null,
+      "channel": "web",
+      "createdAt": "2026-10-02T19:51:49Z",
+      "customerTenure": {
+       "customerSince": "2026-10-02T19:51:47Z",
+       "totalOrders": "1"
+      },
+      "email": "customer@example.test",
+      "fieldsProvided": [
+       "order_confirmation"
+      ],
+      "financialStatus": "PAID",
+      "fulfillmentStatus": "FULFILLED",
+      "lineItems": [
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "429.0",
+        "quantity": 1,
+        "sku": "FRAME-ART-50X70-DARKOAK",
+        "title": "Dark Oak Frame",
+        "total": "429.0",
+        "variant": "Standard / 50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "599.0",
+        "quantity": 1,
+        "sku": "POD-REMO-1005-50x70",
+        "title": "Girl dinner with red jacket - Poster",
+        "total": "599.0",
+        "variant": "50x70"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "429.0",
+        "quantity": 1,
+        "sku": "FRAME-ART-50X70-DARKOAK",
+        "title": "Dark Oak Frame",
+        "total": "429.0",
+        "variant": "Standard / 50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "499.0",
+        "quantity": 1,
+        "sku": "POD-TIÄD-1007-50x70",
+        "title": "Pour me some wine - Print",
+        "total": "499.0",
+        "variant": "50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "429.0",
+        "quantity": 1,
+        "sku": "FRAME-ART-50X70-DARKOAK",
+        "title": "Dark Oak Frame",
+        "total": "429.0",
+        "variant": "Standard / 50x70 cm"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "649.0",
+        "quantity": 1,
+        "sku": "POD-LAPT-2013-50x70",
+        "title": "Konversation \"Är du ute?\" Poster",
+        "total": "649.0",
+        "variant": "50x70 cm"
+       }
+      ],
+      "orderId": "gid://shopify/Scrubbed/1",
+      "orderName": "#1001",
+      "returnStatus": "NO_RETURN",
+      "shippingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "shippingAddressFull": {
+       "address1": "Address 3",
+       "address2": null,
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 5"
+      },
+      "totals": {
+       "currency": "SEK",
+       "discounts": "87.35",
+       "presentment": {
+        "currency": "SEK",
+        "discounts": "87.35",
+        "shipping": "75.0",
+        "subtotal": "2946.65",
+        "tax": "487.62",
+        "total": "3021.65"
+       },
+       "refunded": "0.0",
+       "shipping": "75.0",
+       "subtotal": "2946.65",
+       "tax": "487.62",
+       "total": "3021.65"
+      }
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    "customer_account_info": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.505438+00:00",
+     "id": "59c01f5a-ee81-4c04-a5c6-fb10da387bc7",
+     "label": "Customer account details",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "customerNote": null,
+      "customerSince": "2026-10-02T19:51:47Z",
+      "disputeFreeHistory": true,
+      "fieldsProvided": [
+       "customer_account_info"
+      ],
+      "isRepeatCustomer": false,
+      "priorUndisputedOrders": 0,
+      "totalOrders": 1
+     },
+     "source": "shopify_order",
+     "type": "other"
+    },
+    "shipping_tracking": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.890707+00:00",
+     "id": "e5f2a932-dff2-493c-80b9-efe2c71688f3",
+     "label": "Fulfillments (1)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "deliveredAt": null,
+      "deliveryCoverage": "none",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-11-10T02:32:54.427Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-10-18T21:18:00",
+         "message": "Shipment returned to sender"
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": null,
+         "deliveryStatus": "Returned",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-10-06T15:10:46Z",
+        "deliveredAt": null,
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Konversation \"Är du ute?\" Poster"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Girl dinner with red jacket - Poster"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Pour me some wine - Print"
+         }
+        ],
+        "shipmentProofType": "returned_to_sender",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight",
+          "number": "TRK000001",
+          "url": "https://www.logistics.dhl/se-en/home/tracking/tracking-freight.html?tracking-id=473325380071604146"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "returned_to_sender",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    "delivery_proof": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:55.890707+00:00",
+     "id": "e5f2a932-dff2-493c-80b9-efe2c71688f3",
+     "label": "Fulfillments (1)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "deliveredAt": null,
+      "deliveryCoverage": "none",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-11-10T02:32:54.427Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-10-18T21:18:00",
+         "message": "Shipment returned to sender"
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": null,
+         "deliveryStatus": "Returned",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-10-06T15:10:46Z",
+        "deliveredAt": null,
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Konversation \"Är du ute?\" Poster"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Dark Oak Frame"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Girl dinner with red jacket - Poster"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "Pour me some wine - Print"
+         }
+        ],
+        "shipmentProofType": "returned_to_sender",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight",
+          "number": "TRK000001",
+          "url": "https://www.logistics.dhl/se-en/home/tracking/tracking-freight.html?tracking-id=473325380071604146"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "returned_to_sender",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    "cancellation_policy": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.145808+00:00",
+     "id": "055438f7-d6d5-4e20-af39-140b5f357e24",
+     "label": "Store policies (5)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-07-06T20:28:48.036+00:00",
+        "contentHash": "4685b724f7f3b231d149fcee6b4edf1aec2680437bd7555b81cb16c8f0cb336f",
+        "policySnapshotId": "75c68d32-7d79-4cce-9e59-c7081627ef84",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911548170.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1118,
+        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.608+00:00",
+        "contentHash": "174d9893d09726d5fa378641c2a0fb9a007da2cbb6b28f3dba2ec7fcaae0de62",
+        "policySnapshotId": "f8a37e37-84a0-4ff0-9fb4-0bdb75e2f8de",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911580938.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1425,
+        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.38+00:00",
+        "contentHash": "f9c30867b3f06733d3b98f8a3018ded410be404a9eff668d1b3f2243ab263930",
+        "policySnapshotId": "96e5891e-2f50-498f-ad3b-882ee6608216",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911482634.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1854,
+        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.166+00:00",
+        "contentHash": "6df34cfc868b737b3d2471faeae4f8bd191c666bf303cff5a47e47fcf772055a",
+        "policySnapshotId": "ee45a8b2-9441-4d0d-80f3-c8f38a068889",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911515402.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2712,
+        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+       },
+       {
+        "capturedAt": "2026-07-02T12:22:06.669+00:00",
+        "contentHash": "c19c82a8dbdf68cc4db41d6f48089e4bd5fc6d743dde401e3330bc58c5c3f1be",
+        "policySnapshotId": "46fe0374-d71b-4043-898e-73766156ce6c",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911613706.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 96,
+        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "shipping_policy": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.145808+00:00",
+     "id": "055438f7-d6d5-4e20-af39-140b5f357e24",
+     "label": "Store policies (5)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-07-06T20:28:48.036+00:00",
+        "contentHash": "4685b724f7f3b231d149fcee6b4edf1aec2680437bd7555b81cb16c8f0cb336f",
+        "policySnapshotId": "75c68d32-7d79-4cce-9e59-c7081627ef84",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911548170.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1118,
+        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.608+00:00",
+        "contentHash": "174d9893d09726d5fa378641c2a0fb9a007da2cbb6b28f3dba2ec7fcaae0de62",
+        "policySnapshotId": "f8a37e37-84a0-4ff0-9fb4-0bdb75e2f8de",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911580938.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1425,
+        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.38+00:00",
+        "contentHash": "f9c30867b3f06733d3b98f8a3018ded410be404a9eff668d1b3f2243ab263930",
+        "policySnapshotId": "96e5891e-2f50-498f-ad3b-882ee6608216",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911482634.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1854,
+        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.166+00:00",
+        "contentHash": "6df34cfc868b737b3d2471faeae4f8bd191c666bf303cff5a47e47fcf772055a",
+        "policySnapshotId": "ee45a8b2-9441-4d0d-80f3-c8f38a068889",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911515402.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2712,
+        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+       },
+       {
+        "capturedAt": "2026-07-02T12:22:06.669+00:00",
+        "contentHash": "c19c82a8dbdf68cc4db41d6f48089e4bd5fc6d743dde401e3330bc58c5c3f1be",
+        "policySnapshotId": "46fe0374-d71b-4043-898e-73766156ce6c",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911613706.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 96,
+        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "refund_policy": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.145808+00:00",
+     "id": "055438f7-d6d5-4e20-af39-140b5f357e24",
+     "label": "Store policies (5)",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "fieldsProvided": [
+       "cancellation_policy",
+       "shipping_policy",
+       "refund_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-07-06T20:28:48.036+00:00",
+        "contentHash": "4685b724f7f3b231d149fcee6b4edf1aec2680437bd7555b81cb16c8f0cb336f",
+        "policySnapshotId": "75c68d32-7d79-4cce-9e59-c7081627ef84",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911548170.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1118,
+        "textPreview": "Allmänna villkor: Genom att använda denna webbplats accepterar du dessa villkor. Om du inte godkänner dessa villkor, får du inte använda denna webbplats.\n\n Ändringar i villkoren: Vi förbehåller oss rätten att uppdatera eller ändra dessa Villkor när som helst utan föregående meddelande. Din fortsatta användning av webbplatsen efter att vi har publicerat eventuella ändringar av Villkoren innebär att du accepterar dessa ändringar.\n\n Personlig information: Din inskickning av personlig information ge"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.608+00:00",
+        "contentHash": "174d9893d09726d5fa378641c2a0fb9a007da2cbb6b28f3dba2ec7fcaae0de62",
+        "policySnapshotId": "f8a37e37-84a0-4ff0-9fb4-0bdb75e2f8de",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911580938.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1425,
+        "textPreview": "Delivery: Our creators ship orders to addresses across the EU. Delivery times vary depending on the seller and the product, but orders are typically delivered within 5–7 business days after the order has been placed and payment has been received.\n\nShipping Costs: Shipping costs are calculated at checkout and depend on the weight of your order and the delivery address.\n\nTracking: Once your order has been shipped, you will receive an email with tracking information.\n\nDelayed Deliveries: If your or"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.38+00:00",
+        "contentHash": "f9c30867b3f06733d3b98f8a3018ded410be404a9eff668d1b3f2243ab263930",
+        "policySnapshotId": "96e5891e-2f50-498f-ad3b-882ee6608216",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911482634.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 1854,
+        "textPreview": "Returns\n\nIf you need to return or exchange an item, you have to contact the seller you purchased your order from. Each seller on Cay Collective manages their own orders, and makes decisions about cancellations, refunds, and returns. You can starta a claim using the link in the SMS and email that you received when placing your order or through the “Track and manage” email.\n\nHow do refunds and returns work on Cay Collective?\n\nAll sellers on Cay Collective are required to accept a return if you con"
+       },
+       {
+        "capturedAt": "2026-07-06T20:28:47.166+00:00",
+        "contentHash": "6df34cfc868b737b3d2471faeae4f8bd191c666bf303cff5a47e47fcf772055a",
+        "policySnapshotId": "ee45a8b2-9441-4d0d-80f3-c8f38a068889",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911515402.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2712,
+        "textPreview": "We respect your privacy. If you are located in the European Economic Area (EEA), you have certain rights under the General Data Protection Regulation (GDPR). Use the options below to exercise your rights regarding the personal data we hold about you.\n\n How we process your request When you submit a request through this page, our compliance provider (Consentmo) processes your email address and technical information (such as IP address) only to verify and fulfill your request, prevent misuse, and k"
+       },
+       {
+        "capturedAt": "2026-07-02T12:22:06.669+00:00",
+        "contentHash": "c19c82a8dbdf68cc4db41d6f48089e4bd5fc6d743dde401e3330bc58c5c3f1be",
+        "policySnapshotId": "46fe0374-d71b-4043-898e-73766156ce6c",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/69768315146/policies/29911613706.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 96,
+        "textPreview": "Bolag: Cay Collective AB\n\nE-post: customer@example.test\n\nAdress: Sveavägen 45, 11134 Stockholm"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "avs_cvv_match": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.744106+00:00",
+     "id": "c98413d7-4be5-4bf7-b9eb-c60cb0a75be7",
+     "label": "Payment verification",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "avsCvvStatus": "not_applicable",
+      "avsResultCode": null,
+      "cvvResultCode": null,
+      "fieldsProvided": [
+       "avs_cvv_match"
+      ],
+      "gateway": "shopify_payments"
+     },
+     "source": "shopify_transactions",
+     "type": "other"
+    },
+    "ip_location_check": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:32:56.957686+00:00",
+     "id": "545c9867-bc57-42ce-85df-d22609e4fed4",
+     "label": "IP & location check",
+     "pack_id": "4e351e6b-4a3b-4eb2-aede-04e2e1c91fe2",
+     "payload": {
+      "bankEligible": true,
+      "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+      "distanceKm": null,
+      "fieldsProvided": [
+       "ip_location_check"
+      ],
+      "ip": "203.0.113.1",
+      "ipConsistencyLevel": "first_seen",
+      "ipReuseCount": 0,
+      "ipinfo": {
+       "city": "Address 6",
+       "country": "SE",
+       "ip": "203.0.113.1",
+       "loc": "63.8284,20.2597",
+       "org": "AS3301 Telia Company AB",
+       "privacy": {
+        "hosting": false,
+        "proxy": false,
+        "vpn": false
+       },
+       "region": "Västerbotten"
+      },
+      "locationMatch": "same_country",
+      "merchantGuidance": null,
+      "riskLevel": "low",
+      "score": "Moderate",
+      "shippingAddress": {
+       "city": "Address 1",
+       "country": "SE",
+       "region": null
+      },
+      "source": "order_client_ip",
+      "summary": "Location matches shipping country."
+     },
+     "source": "ipinfo_io",
+     "type": "other"
+    },
+    "activity_log": {
+     "id": "pack-section:activity_log",
+     "type": "access_log",
+     "label": "Customer activity log",
+     "source": "shopify_order",
+     "payload": {
+      "customerTenure": {
+       "customerNote": null,
+       "customerSince": "2026-10-02T19:51:47Z",
+       "totalOrders": "1"
+      },
+      "timelineEventCount": 16,
+      "timelineEvents": [
+       {
+        "createdAt": "2026-10-02T19:51:49Z",
+        "message": "Customer 1 placed this order on Online Store (checkout #53214973853962)."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:49Z",
+        "message": "Confirmation #8AZJ0Z7ZU was generated for this order."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:49Z",
+        "message": "A kr3,021.65 SEK payment was processed on Klarna."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:49Z",
+        "message": "kr2,927.30 SEK will be added to your Oct 12, 2026 payout."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:50Z",
+        "message": "Unknown event Order#tax_finalization_capture_started..."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:51Z",
+        "message": "Shopify assessed this order for fraudulent chargeback risk and detected a low risk level"
+       },
+       {
+        "createdAt": "2026-10-02T19:51:51Z",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:51Z",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/8532534788362\">#1001</a> by Customer 1."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:54Z",
+        "message": "AutomateOrders split the fulfillment for 3 items."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:55Z",
+        "message": "AutomateOrders split the fulfillment for 1 item."
+       },
+       {
+        "createdAt": "2026-10-02T19:51:55Z",
+        "message": "AutomateOrders split the fulfillment for 1 item."
+       },
+       {
+        "createdAt": "2026-10-06T15:10:46Z",
+        "message": "Alfredssons.com marked 6 items as fulfilled from a New Flow."
+       },
+       {
+        "createdAt": "2026-10-06T15:10:46Z",
+        "message": "Alfredssons.com sent a shipping confirmation email to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-10-06T15:10:46Z",
+        "message": "This order was archived."
+       },
+       {
+        "createdAt": "2026-10-08T00:51:59Z",
+        "message": "kr2,927.30 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/154585661706\">Oct 12, 2026</a> payout."
+       },
+       {
+        "createdAt": "2026-10-23T10:00:37Z",
+        "message": "The customer opened an inquiry totaling kr3,021.65."
+       }
+      ],
+      "fieldsProvided": [
+       "activity_log"
+      ]
+     }
+    }
+   },
+   "auditEvents": [
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:00:42.103209+00:00",
+     "event_payload": {
+      "trigger": "automation_pipeline"
+     },
+     "event_type": "auto_build_enqueued",
+     "id": "dd8ac59e-5536-4607-8134-739de0228682"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:38.703924+00:00",
+     "event_payload": {
+      "jobId": "6787c1e0-1612-4f0d-931f-249e3a7bba11",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "cfd38e2e-f529-4485-a71b-56a00f790f77"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:41.482924+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "141f14fb-93af-4457-91e6-3ea63e549035"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:42.007202+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "1a3f80e3-5449-4b90-ae2b-ea38f3e5d3d2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:42.404415+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "b121f4f5-7973-4696-a557-79fcfa5faa56"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:42.652538+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "c9e19126-2451-4732-a281-a82dbc04723f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:42.885846+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "22e776a6-3817-4cef-b998-1a72289a099f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:43.421498+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "fcb963a2-396a-4db3-865f-dff9fa0514f6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:43.827527+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "4438e9bb-ae22-4616-9d7f-5427e0693ffb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:44.483692+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "6787c1e0-1612-4f0d-931f-249e3a7bba11",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "9a228f58-536a-408a-b826-f5794e272c27"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:45.135283+00:00",
+     "event_payload": {
+      "consumed": 1,
+      "jobId": "6787c1e0-1612-4f0d-931f-249e3a7bba11",
+      "remaining": 1226
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "9d3b0060-8e0a-4316-b75d-31ba415d8d7b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:08:46.197325+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "b734331e-0246-4d77-8437-2aaa143f6c3e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-23T10:10:39.365415+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "0fe6192f-2a6f-419d-9c60-ce9aad1adb6b",
+      "version": 1
+     },
+     "event_type": "defence_package_skipped",
+     "id": "c126c3e3-413f-462b-86bb-3471d49712e6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:32:28.375173+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "fca30759-7fc2-4dca-8022-651ee1ec4cd9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:49.641508+00:00",
+     "event_payload": {
+      "jobId": "f3eb508c-c948-4b99-b8fc-3251710812e5",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "b6de0eb8-b0dd-4a77-8bfe-0b589f7e9b23"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:52.120847+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "e4539a43-1b79-4243-bedf-067e5648791d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:52.490565+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "5ebff740-9190-4665-b95f-88409cf4d84d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:52.815002+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "84cf8d40-a984-4992-ba39-6b966f6c38b8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:53.050741+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "157b11d4-04de-4c43-bb1e-f5bed987c12d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:53.279674+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "2b7309ab-c7a2-4af4-afcc-0c33e56a6b8d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:53.756034+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "8886d629-fbd9-4674-8c84-34f9ab23e90f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:53.9677+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "80edab1e-b9bf-45a8-9499-9673321d0828"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:54.550257+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "f3eb508c-c948-4b99-b8fc-3251710812e5",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "61825049-155b-4371-8baa-c8bcee1bc684"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:54.994995+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "f3eb508c-c948-4b99-b8fc-3251710812e5",
+      "remaining": 1226
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "346d202d-ad19-4254-97e8-86023396244c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:34:55.83281+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "1aa790a0-e227-433b-b5d0-ea68ceda0b21"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-24T02:38:47.870742+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "8b065d77-6d83-461c-8122-d9cdf1aa2a7a",
+      "version": 2
+     },
+     "event_type": "defence_package_skipped",
+     "id": "fa23817c-92f7-436e-9af3-6def679fb126"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:32:32.092416+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "9c478c1a-a324-4dde-b855-2f76e3b636f2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:51.794402+00:00",
+     "event_payload": {
+      "jobId": "387babd7-67a7-488d-8bde-64cc8742ed49",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "7ef85c52-1abb-404d-8ebe-570d1e55a165"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:54.44024+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "4d265fd2-df56-4126-878f-6c782fa6b4bf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:54.752785+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "e8c81136-4f81-47f9-b93a-5e58a99b7db4"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:55.237369+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "0536903e-7bfb-4664-b87b-d3feec838db8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:55.479423+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "b1fee333-965c-4c22-83c3-fbf68bb63b04"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:55.695116+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "3d3e3e75-0de6-459c-95bd-cd648d0e245f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:56.184941+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "1dbf0e04-7745-49f7-a96d-2fa11a14515c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:56.394761+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "4dddb831-19da-426e-9242-4d8c25915e9f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:57.271381+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "387babd7-67a7-488d-8bde-64cc8742ed49",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "3da6751f-476c-464d-b35d-4b8ff2d1d079"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:58.170957+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "387babd7-67a7-488d-8bde-64cc8742ed49",
+      "remaining": 1226
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "2d6f09b5-6857-4907-ab3f-6d3c318afacf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:34:59.007397+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "57468ea1-71d5-4d2c-804b-5e03b0fe2373"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-25T02:38:49.908112+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "58572bf1-d377-4673-bff2-38d657470e20",
+      "version": 3
+     },
+     "event_type": "defence_package_skipped",
+     "id": "4ca17f27-5510-4281-841a-36b1e4043309"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:32:29.459193+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "126a8935-052d-4ec5-8bda-f1e7ed688bbd"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:50.48413+00:00",
+     "event_payload": {
+      "jobId": "5bdfe07f-c2e7-4b01-b771-cc1f53775fb2",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "f3f17c04-4a82-4a5e-991e-0e3b1481c940"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:53.042499+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "2ad5ba6a-2d47-4ed7-84ba-0277a9b1ffc2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:53.366281+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "179688ff-b9dc-4adf-855d-b9e1b02f5e1a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:53.677981+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ec3a3917-b9c6-4916-a398-07352001a742"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:53.893755+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "c94cf93b-6cce-4ea7-8600-140d928577b7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:54.107232+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "207112df-1a34-4f46-aee1-7b806ad417cf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:54.663352+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ba300ad0-206a-4f3c-bfde-44dd444128ae"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:54.902765+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ef03facc-c27d-4dc0-9c5e-6bb48bfd7ed3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:55.673108+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "5bdfe07f-c2e7-4b01-b771-cc1f53775fb2",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "3d06fef1-ba54-48db-a89a-f1da452a2db5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:56.545624+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "5bdfe07f-c2e7-4b01-b771-cc1f53775fb2",
+      "remaining": 1226
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "75b6e1e6-f918-40a5-9378-252918bd4ade"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:34:57.411563+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "df288001-b8ad-4642-b505-a28f2bfecee0"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-26T02:38:50.142432+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "57e65e5b-3679-455f-948f-10f7895754b4",
+      "version": 4
+     },
+     "event_type": "defence_package_skipped",
+     "id": "19fb2400-b1d7-4939-9bc2-ab45c8961253"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:32:28.082592+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "b3477535-c13e-4a19-8c94-b41539ec203d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:48.275768+00:00",
+     "event_payload": {
+      "jobId": "32289d75-c163-4a1f-977d-804d608af506",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "8a590c22-4122-401c-a9a9-d9b11dbf52ad"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:51.278952+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "3516ee92-5fa2-45d1-a00c-6331a819b8f0"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:51.690797+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "e07a826e-e3e1-4d5c-8a68-1b0bafd79021"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:52.191308+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "32e77331-53f5-49bb-bfcc-d78e14d1997c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:52.429788+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "bb5086d9-8259-4630-a20c-bb547aa6868f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:52.827257+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "de405ac8-7c28-473b-8965-6e48523872a3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:53.411776+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "209411b6-8db4-4f6d-8cb8-d109a8715a60"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:53.649983+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "69c88623-a153-4a33-8535-2fc346e7e425"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:54.267754+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "32289d75-c163-4a1f-977d-804d608af506",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "edd8a6de-9924-4065-86d2-0427350b00b5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:55.195891+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "32289d75-c163-4a1f-977d-804d608af506",
+      "remaining": 1225
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "90b63d77-c37b-4298-9762-19ea5a9b9dd0"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:34:56.163827+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "39c579e8-073d-43a9-a9c8-5236812890df"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-27T02:38:52.86599+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "0ef8c313-2fe7-4712-b3de-efde4ed8d08e",
+      "version": 5
+     },
+     "event_type": "defence_package_skipped",
+     "id": "b4d39b1f-7fcc-4206-8d79-0934b828a4bc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:32:12.951879+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "11367b9f-3a75-4f0c-8689-2449eb003267"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:49.554409+00:00",
+     "event_payload": {
+      "jobId": "6fe04721-a716-4133-9250-b66f7e07e235",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "79119083-9511-4a9e-bc77-7c099087c36c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:52.234387+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "856a3780-c0d4-4285-9e18-b56a9ea709de"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:52.569694+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "2a89a53e-fbb9-4ea8-b76d-944378990b77"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:52.896533+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "d3fcbf22-dafb-45a7-81ec-2461e27f9d1e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:53.108309+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "f7f27418-f579-4444-b98f-ac387a2e598c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:53.318587+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "0b07e494-baa4-4a25-a3b3-31188b93687a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:53.836974+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "67640c76-b9c3-4c14-a6fa-14c7058b06c3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:54.069072+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "01f8e6fc-a5d5-4118-80a6-b9898bc0d38a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:54.717979+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "6fe04721-a716-4133-9250-b66f7e07e235",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "7d930536-2454-401b-bc69-6c6325bf2804"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:55.152672+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "6fe04721-a716-4133-9250-b66f7e07e235",
+      "remaining": 1224
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "839aef43-69dd-4f50-a8ea-fefd0526a21b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:34:56.109231+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "c9b9abda-60ea-4cdd-8aec-e21d50213b99"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-28T02:38:49.652735+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "c2c78836-e896-45f5-82b9-1a9653bfe9d3",
+      "version": 6
+     },
+     "event_type": "defence_package_skipped",
+     "id": "61c6cf5f-630b-490c-bff7-34033d57f63c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:32:26.582751+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "f6da8c8d-895c-49a0-a230-c099271c254f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:50.936734+00:00",
+     "event_payload": {
+      "jobId": "7b8f0c92-c88d-4ce2-9e85-325b8f157386",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "42a94907-d866-46d7-a6e7-5d7574757adc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:53.750563+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "acf3fb9f-f0b7-462d-a5d7-be9edf31f3a6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:54.085125+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "541e3763-28aa-413b-a0df-9b7a67ee90bb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:54.628788+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "6c2eb7ae-f4bf-4407-936f-9757bc140394"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:54.871393+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "b3ca02f2-3096-49b1-99f5-59804d65c5fa"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:55.247239+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "e7c731fc-0508-47e8-b500-cf9b78a38832"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:55.966589+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "0d86356b-7563-460c-b73f-8f1650810713"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:56.198969+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "469768e4-ddb7-4329-a093-f690070ac990"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:57.07805+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "7b8f0c92-c88d-4ce2-9e85-325b8f157386",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "e8cdf50c-a752-486d-8d74-9c0137d43682"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:57.555295+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "7b8f0c92-c88d-4ce2-9e85-325b8f157386",
+      "remaining": 1223
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "a933cbb7-9d9a-4d01-81ef-face5313211f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:34:58.510558+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "1356a8af-8a7d-4c1f-abd1-d155ea66f4c2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-29T02:38:49.491899+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "383e06bb-ce0f-4224-9864-622873b606e6",
+      "version": 7
+     },
+     "event_type": "defence_package_skipped",
+     "id": "39a49261-2051-4e89-ad78-ccda1789f7d8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:31:54.826078+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "9268dbef-a9c3-43f2-86ec-32936ee634ce"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:50.423742+00:00",
+     "event_payload": {
+      "jobId": "fc7bc645-9c83-4f1f-a134-9e542f689f09",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "6a87f443-e978-4503-8ed8-e246c6171173"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:53.444919+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "de9c57a3-78a9-4c74-83a3-6b740ffc1f9f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:53.786695+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "5585f521-965d-4936-94f3-b12d7b504a5a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:54.136995+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "e08c78e6-8871-4335-9ad2-63ce9ac7eb36"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:54.378632+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "dfc771fa-f7ae-471d-85f3-ee9247977740"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:54.77019+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "8413ae8d-b8b9-44b9-8e6c-e25e0be8b900"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:55.317237+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ec37926a-d56d-4e8f-b734-cadbf9f8270a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:55.522833+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "32fb53f8-4b35-4588-b276-e36c9e706b9b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:56.115125+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "fc7bc645-9c83-4f1f-a134-9e542f689f09",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "97a2935e-5be0-4524-a3d9-0d100512f813"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:56.540711+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "fc7bc645-9c83-4f1f-a134-9e542f689f09",
+      "remaining": 1223
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "5032bcef-f861-43e2-86af-d384452aa0ae"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:34:57.580997+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "8fa7e983-d6bc-4921-9db6-301bf68e5901"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-30T02:38:42.753068+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "9fc8364f-0948-47ef-bcde-46837e167939",
+      "version": 8
+     },
+     "event_type": "defence_package_skipped",
+     "id": "cda3c13b-6177-49e0-812a-e5b52e2882f8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:31:42.719123+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "0688bd31-10ee-4fca-8a09-f965b7b7dd37"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:38.985446+00:00",
+     "event_payload": {
+      "jobId": "879e2483-905a-4c65-9aba-51e760f5622c",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "2a4566aa-2d5e-4cc2-a74c-7b8f83e4ea9f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:42.383704+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "fc90012c-9ec8-4276-b06a-c57d679fbf62"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:42.712117+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "a90d86bf-39a0-4229-b3bd-e57c9472d5f3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:43.054262+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "44517a8b-ee95-4e15-bd26-51bc90619209"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:43.407128+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "2ff171fa-9488-4704-9cbb-834a04026c6a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:43.652207+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "a5598e5d-7aba-4024-a34f-ebdc5f56e893"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:44.225716+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "017cb566-e5bc-46bb-9871-fdeca11369be"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:44.45464+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "8c0cbcce-e5e5-424c-8e4c-4152cdbaeb0b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:45.17512+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "879e2483-905a-4c65-9aba-51e760f5622c",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "1fa6a641-4bc1-452a-be5b-863c635353d4"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:45.846729+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "879e2483-905a-4c65-9aba-51e760f5622c",
+      "remaining": 1222
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "c3c7843f-a3cf-4135-88a7-cf49009f13bb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:36:46.916669+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "52b64c82-c9a9-40d7-8e0c-c5514cfe030f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-10-31T02:42:39.698254+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "188a624e-ab9a-44e4-8ae6-3a1eda7ef838",
+      "version": 9
+     },
+     "event_type": "defence_package_skipped",
+     "id": "833857b1-4554-4bd9-a938-0fd55ecfe6ba"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:31:33.087174+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "a2edb9ab-a81f-4a94-9a68-171763fca39a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:49.431002+00:00",
+     "event_payload": {
+      "jobId": "02afdff0-b382-43ad-9318-682886a01b64",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "3fa48435-6e0f-48f8-95bd-bfd5907f2b1c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:52.229596+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "5eec0015-cb45-408c-929e-1b8a987e159c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:52.681836+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "e63d145a-06ab-4760-9047-74a75273c037"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:53.167841+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "bfede14d-f115-4e25-b02d-c8a0e783ac72"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:53.533383+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "917deb5b-7a85-4cec-b241-031e1f0d27f9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:53.758703+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "76b5b304-f583-4352-a160-13cafa543dd5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:54.308054+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ecc14835-f07a-4b4d-930a-eaa090df0cc6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:54.499936+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "cf2ca7b3-bd5d-411b-a2d1-604fef828dca"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:55.232518+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "02afdff0-b382-43ad-9318-682886a01b64",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "2df46475-881c-48b0-aaf1-cc9e623f27d3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:55.819065+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "02afdff0-b382-43ad-9318-682886a01b64",
+      "remaining": 1222
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "131f3c24-4c17-4d2e-b944-e1e560b7f51a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:34:56.677838+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "eb9a5fa9-b5a2-4097-a183-84480c65ee8d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-01T02:38:41.144056+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "4765a193-c5de-4335-863e-2e221ada35b7",
+      "version": 10
+     },
+     "event_type": "defence_package_skipped",
+     "id": "859ac1ca-c0fe-4480-8eef-7453a117ab0d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:31:36.151184+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "2b946b0d-bf05-495b-bf28-6b1633fe98fe"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:49.309966+00:00",
+     "event_payload": {
+      "jobId": "b6cf7f05-41c7-4090-85ed-904c77c7ce32",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "e25f1137-2f9a-43d1-a2a0-ad3deb74cce8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:51.922503+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "4bbd3c73-0606-4eaa-b623-4b010873b20a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:52.434917+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "5eaa4cb8-e10a-4508-a518-6fa26b5ee99c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:52.768292+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "43e14978-57f7-4712-bc69-9b8787ac3ae6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:52.982159+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "9b51a553-440c-420b-9c7d-57afe551a9c9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:53.210078+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "bf0cbe34-b2ee-425b-a045-8e97570b6141"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:53.854563+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "1234ec60-5177-48fb-8b14-6a184bff517f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:54.070338+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "76b296f3-63fd-4e41-a999-32a0620dc895"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:54.680108+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "b6cf7f05-41c7-4090-85ed-904c77c7ce32",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "36e7f8d2-0164-4f03-9498-13f796679f88"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:55.144886+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "b6cf7f05-41c7-4090-85ed-904c77c7ce32",
+      "remaining": 1222
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "e93c3280-fbac-43fd-94c2-77990753f5e9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:34:56.048673+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "6036550e-5ed7-4106-bef0-14579573d27e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T02:38:51.737364+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "aa60477e-8570-4086-a1ff-fae3e9cab27c",
+      "version": 11
+     },
+     "event_type": "defence_package_skipped",
+     "id": "7648e2ed-2779-448d-8f68-7dfb51139a7d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:31:46.600357+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "71ef72b7-bba6-4bab-a8eb-267bba6e9cc9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:49.214573+00:00",
+     "event_payload": {
+      "jobId": "6d0c2615-2fe0-4bf1-846d-53f6c33bb78e",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "3512a391-59dc-4518-9167-2a3ec16f642a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:52.133126+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "dd771f12-341e-422f-a030-d061c73c8d04"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:52.475416+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "9886e9ee-f924-4814-a43e-62aad8caaf55"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:52.890865+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "d7334591-0167-4908-a6a3-ef29743680f5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:53.252468+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "77ffe8f1-1f13-48c1-aabc-19bd60309ed1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:53.474416+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "a5681e4b-d687-4bdd-93f8-fa9d7ecb530b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:54.057945+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "e80352b5-7ea5-4733-9083-a6fe95983a6f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:54.289695+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "0a673359-a6a0-41d1-a668-ac8fa0299f2e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:54.870836+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "6d0c2615-2fe0-4bf1-846d-53f6c33bb78e",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "2031d655-1f04-4254-a5bc-deb102cd8ed1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:55.299674+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "6d0c2615-2fe0-4bf1-846d-53f6c33bb78e",
+      "remaining": 1222
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "fe5e3fdd-0d65-4412-b9fe-2aa78a791208"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:34:56.395756+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "c29396c1-ff31-4474-aa81-e3f663d03b45"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:38:48.82856+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "c9578f39-34dc-4781-9532-78b072ff59f6",
+      "version": 12
+     },
+     "event_type": "defence_package_skipped",
+     "id": "7bfc14cc-20a1-46dd-bde0-99f0d43bf264"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:31:27.274698+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "94e5100e-1b70-4714-9e8c-1fd89fbe295f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:38.982164+00:00",
+     "event_payload": {
+      "jobId": "1712a17a-1929-4153-a951-f60165569d12",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "ce625cbe-b095-4eb7-989b-002ab75fc6d3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:41.758044+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "4fc0e834-00b0-47b7-83ce-08b5aa3f3c26"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:42.260699+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "f0bd1ff8-27a3-4512-a98f-eb9efa7f0f15"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:42.673199+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "337f49c5-84b6-49ad-a0d7-11eb683c38d5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:42.910633+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "647009ca-fa7b-406a-ba3d-a1beb78a3102"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:43.151941+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "0707fe5a-e14b-4446-b2aa-966c0e43cd85"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:43.950619+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "9ad1d64e-1db3-40c7-b595-251ee22bee83"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:44.173957+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "039ef3dc-31ec-449f-959b-8e7a906176fe"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:44.813792+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "1712a17a-1929-4153-a951-f60165569d12",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "8567fc52-f1aa-4caf-998e-9f304d2d2c15"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:45.355313+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "1712a17a-1929-4153-a951-f60165569d12",
+      "remaining": 1221
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "01f5b770-fd25-4b8d-ae93-e1e604c5f3b6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:34:46.386984+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "93e6f0af-cc28-41b2-9ad8-11ff1d2973cb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:40:49.495162+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "7c6fe857-22fe-450f-9e67-11c43be6544f",
+      "version": 13
+     },
+     "event_type": "defence_package_skipped",
+     "id": "4e5a82c9-f13c-41dd-a357-8d8e624c61a6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:31:35.234348+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "5bcf1f8e-1f76-4338-b4f2-708000f8561d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:38.947326+00:00",
+     "event_payload": {
+      "jobId": "5e6d5936-57ee-4db4-9fbf-9668152e92ec",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "d51effd3-a73c-4ea4-86f5-5aebc6366bed"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:42.679774+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "143a3ca9-38e4-4613-9044-c66defd53c8a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:43.431548+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "e28ee695-dcfd-4196-b605-01d8f4531dcf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:43.953893+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "56905fcb-f43e-4060-bce2-3e5820c007e2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:44.214352+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "8e181ac5-375e-4a30-b1b6-94493f855c1e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:44.633015+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "387bc1c8-4bf9-49ec-8236-980873e4dbb5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:45.412443+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "79a150d4-7ef1-407d-829b-40657df1feea"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:45.669975+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "1d6bed57-7a2e-4e61-b2d1-a1a754c1c6c5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:46.264273+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "5e6d5936-57ee-4db4-9fbf-9668152e92ec",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "47b09dd8-8da2-4d61-9ea8-7158a903a596"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:46.886371+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "5e6d5936-57ee-4db4-9fbf-9668152e92ec",
+      "remaining": 1220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "7a078b03-a412-47f8-9545-a542c08f0838"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:34:48.049017+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "2685ca94-dd0b-4356-9c2a-83aab98a5e6f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:40:53.913603+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "c5d46ec4-3196-4c56-9120-1b7100bb87b2",
+      "version": 14
+     },
+     "event_type": "defence_package_skipped",
+     "id": "e6858f63-55e6-4dde-8e7d-4aaeaaad3161"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:31:24.531318+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "a5e4f071-8bcd-49f7-88fd-2347e94b536a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:38.756447+00:00",
+     "event_payload": {
+      "jobId": "7fcb2542-8d03-488a-b74a-dc7cb4af1d25",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "f82abf9f-f555-40a2-b13a-4c28a8f7ec79"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:42.142572+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "672791d2-cc40-4c8c-86a0-31b5c8011986"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:42.670703+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "1efb5a9b-359d-4fca-9622-77b900d58bba"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:43.006026+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "0beddc34-4520-40ce-84e7-b713a4830dc7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:43.23699+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "49a79984-024e-4c2f-b4c6-f24d0cbfffb6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:43.443624+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "2ae7265d-8e5e-4ef8-8b38-eef844d41edc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:44.015541+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "9057a039-2a93-4d52-982e-ee905d0a38e8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:44.230743+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "5892acf0-081e-4769-9658-4bb8c9be0bfb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:45.004237+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "7fcb2542-8d03-488a-b74a-dc7cb4af1d25",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "7cfed1f1-b024-4885-b70b-49ab67fe202f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:45.50678+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "7fcb2542-8d03-488a-b74a-dc7cb4af1d25",
+      "remaining": 1220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "8e63a99e-d6e0-4226-8330-fbdbab1db29d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:34:46.429697+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "fe2be124-1af0-4627-83e6-c75e39bc39e8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:40:50.17677+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "0ce5cc0d-caab-41fa-8d9a-97e6855ef9b9",
+      "version": 15
+     },
+     "event_type": "defence_package_skipped",
+     "id": "69a545cf-32a6-4e4e-8bec-b9fa437c9e8f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:31:32.02505+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "ffc12861-6c2b-49de-baf6-d8febbe91829"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:38.747025+00:00",
+     "event_payload": {
+      "jobId": "da0bc33c-84d0-4016-9188-88bc7528f22b",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "462ec50b-e511-447a-b0e8-6635d15c3238"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:42.1208+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "cb032168-97c5-486d-9c23-52a8ddf44b84"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:42.594467+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "3e56034d-0eef-4173-aebb-745cc2ede82a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:42.924517+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "59303af8-edd0-4844-8c80-80eb3bbae4bf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:43.371195+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "d23cff81-aeae-4e66-90b7-2bcbab37a9e0"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:43.757886+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "05d08758-4ca6-419c-8c46-bb33693be931"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:44.296024+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "109e1fe8-0f24-4c89-a01d-7d9180cd0206"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:44.637352+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "4058355a-abfc-4811-a1b7-48f8a253071e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:45.198023+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "da0bc33c-84d0-4016-9188-88bc7528f22b",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "8e04aed1-ba18-4eaa-8038-834b06d5e8f9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:45.868185+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "da0bc33c-84d0-4016-9188-88bc7528f22b",
+      "remaining": 1220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "cb13add0-b59c-4d29-9c4e-0d4a939f8ac7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:34:47.025683+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "0dc149d0-72ef-43e0-9993-8f2bbb76d5eb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:40:49.523079+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "db2144d0-5efa-495f-805d-5f484017c1b1",
+      "version": 16
+     },
+     "event_type": "defence_package_skipped",
+     "id": "be35e63f-de62-4b02-8955-6ec9afe07bc8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:31:16.75872+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "ed99edeb-864a-495d-884e-da87be3f4cc7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:52.454362+00:00",
+     "event_payload": {
+      "jobId": "cc8d6952-72ac-4681-a540-90a6d5bf9b7f",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "8d901567-10c3-46d0-bc71-a345b5f932ed"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:55.142498+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "54e67c35-8239-4c83-b145-d02f3d0eba31"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:55.50938+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "a45ecfd3-d205-4efc-a56d-1ca01784d593"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:55.876022+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "abb865f8-8921-47e3-a12e-05c9403bc1a0"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:56.110549+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "1e957668-c2fa-471e-b802-14d6981e3ebe"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:56.323203+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "54301fb1-1651-4b43-b28d-fefb0afb93a2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:56.882089+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "b872adf0-1748-4ac1-84a7-755c7caa2d7d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:57.096378+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "57ffee13-1661-447f-97a5-f46ef11d6d05"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:57.677552+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "cc8d6952-72ac-4681-a540-90a6d5bf9b7f",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "3d1d435d-57b9-4a9c-ac8a-285aa5a49924"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:58.128011+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "cc8d6952-72ac-4681-a540-90a6d5bf9b7f",
+      "remaining": 1220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "bfb32f04-e11d-4ce9-8a14-fa217ed9f5bc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:32:59.080232+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "8b4825d4-0a6b-482c-ac04-f4c0e33ba59e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:50.611133+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "ffd17527-84b8-45af-898e-49c01783fa52",
+      "version": 17
+     },
+     "event_type": "defence_package_skipped",
+     "id": "cde4199e-7de1-411d-affd-a35694288c9b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:31:16.755202+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "fb8563d8-128b-436f-8cfa-ac599148f5a8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:51.344442+00:00",
+     "event_payload": {
+      "jobId": "987cdb6a-941d-43f5-bab2-b09fca1415fb",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "55aa3fc9-af4b-4fa5-9798-e5f215fe8253"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:54.017148+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "be584b3f-f046-4987-afaa-3b149335ec19"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:54.366553+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "f379e192-913a-472d-8091-fd4bc488e3f9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:54.846027+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "b7f24066-814d-4013-9249-22593e4090b3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:55.127167+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "c8764cd7-40a8-4b55-be69-67bb1ebeaeaf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:55.366081+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "dbf40266-3363-407a-ae4b-9f3afcbd1ae1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:55.897766+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "0492bf02-8205-490e-a658-3d7071fe3c08"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:56.117011+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "42c995b3-30c0-4505-b1cc-871affc00468"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:56.745982+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "987cdb6a-941d-43f5-bab2-b09fca1415fb",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "d28471c9-a4d8-4ff1-8b85-6a69e56611c7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:57.396706+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "987cdb6a-941d-43f5-bab2-b09fca1415fb",
+      "remaining": 1220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "94325a5a-e800-4eb0-9aaf-f8704b986b97"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:32:58.327158+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "381a3185-20ab-46dd-94dc-2c445fb6ee5a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:50.813859+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "6eeb2bc2-0b34-401d-bcaa-4171adc72f2a",
+      "version": 18
+     },
+     "event_type": "defence_package_skipped",
+     "id": "7217210f-5c16-4911-bd6b-143a7525fad2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:31:13.155238+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "Returned",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "d902425e-f879-4b99-87ab-bf756cc44905"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:51.725281+00:00",
+     "event_payload": {
+      "jobId": "7ceb8eac-02b5-4385-9fc6-c516ed9f6b5c",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "5b714677-7a3f-40f5-b304-931a4efc3272"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:54.772814+00:00",
+     "event_payload": {
+      "contradictions": [
+       {
+        "detail": "Shopify Order.returnStatus is NO_RETURN, but the carrier reconciled this order's shipment to Returned on 2026-10-18T21:18:00. The goods are back with the merchant, so 'the customer never returned the goods, therefore no refund was owed' is not an available argument.",
+        "refutedBy": "carrier_delivery_state",
+        "rule": "no_return_vs_returned_to_sender",
+        "suppressedField": "no_return_initiated"
+       }
+      ]
+     },
+     "event_type": "evidence_contradiction_suppressed",
+     "id": "fc65dd27-b738-4191-8429-7d44c427c7f1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:55.135503+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "951691c9-5195-451a-be6c-5e56c996a7a6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:55.762401+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "a31709e9-979a-4f5f-aef4-6ab7e34d613e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:56.024289+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "2fbaf9de-22ad-4a5f-abf5-5b849d1850ce"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:56.267736+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "662902e6-1fce-47c9-9bd4-6ced33b2479f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:56.862084+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "c9b179e3-4a91-459f-9f5b-0dd10d8eeee4"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:57.238442+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "609d25f3-7a8d-4271-a1eb-48eed772b066"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:57.939628+00:00",
+     "event_payload": {
+      "blockers": [
+       "Refund status",
+       "Returned Parcel Outcome"
+      ],
+      "completenessScore": 47,
+      "itemsCreated": 6,
+      "jobId": "7ceb8eac-02b5-4385-9fc6-c516ed9f6b5c",
+      "sectionsCollected": 10
+     },
+     "event_type": "pack_created",
+     "id": "f07ff47d-1a07-4a34-8861-fe7ca6065d81"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:32:58.860202+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "7ceb8eac-02b5-4385-9fc6-c516ed9f6b5c",
+      "remaining": 1220
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "55337f48-1e37-42c5-8f06-f757ef4ff958"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:33:00.061554+00:00",
+     "event_payload": {
+      "completeness_score": 47,
+      "completeness_source": "legacy",
+      "completeness_threshold": 80,
+      "decision_input_hash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decision_reason_codes": [
+       "returned_to_sender"
+      ],
+      "reasons": [
+       "returned_to_sender"
+      ]
+     },
+     "event_type": "auto_save_blocked",
+     "id": "c47621e1-8e37-4c6a-93b7-2b3cc8bfb1cd"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:49.372581+00:00",
+     "event_payload": {
+      "exit": "record_context_only",
+      "failureCode": "no_bank_eligible_facts",
+      "packageId": "be413275-0941-43e8-9273-e04dde5ab903",
+      "version": 19
+     },
+     "event_type": "defence_package_skipped",
+     "id": "1e2378c0-2a66-4b7e-a5d3-6b8ea51d24ac"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T08:00:04.379497+00:00",
+     "event_payload": {
+      "deadlineConditions": {
+       "hasCurrentCanonicalDecision": true,
+       "hasCurrentValidatedSafePackage": false,
+       "noAmbiguity": true,
+       "noHardBlock": false,
+       "noUnsupportedArgument": true,
+       "notStale": true
+      },
+      "deadlineWindow": "in_window",
+      "decisionAction": "block",
+      "decisionInputHash": "5a2fbaaacd4ccb742fa228a5f754c10b282da160563bb3db2a6da7d10ebd67f8",
+      "decisionReasonCodes": [
+       "returned_to_sender"
+      ],
+      "dueAt": "2026-11-10T23:00:00+00:00",
+      "fallbackReason": "unsafe_address_claim",
+      "packageId": "be413275-0941-43e8-9273-e04dde5ab903",
+      "selectionReason": "coverage_or_concession",
+      "trigger": "deadline_cron_no_fallback",
+      "version": 19
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "daa405e3-df6e-4046-a6e9-b9f51d24778e"
+    }
+   ],
+   "pdfPath": null,
+   "savedToShopifyAt": null,
+   "creditAlreadyIssued": {
+    "triggered": false,
+    "coversDisputedAmount": false
+   },
+   "updatedAt": "2026-11-10T02:32:57.627+00:00",
+   "rebuildPending": false,
+   "lastRebuildOutcome": null,
+   "lastRebuildAt": null,
+   "lastRebuildReason": null,
+   "activeBuildJob": null,
+   "failureCode": null,
+   "failureReason": null,
+   "coverage": {
+    "isCovered": false,
+    "shopifyProtectStatus": null,
+    "state": "not_covered"
+   },
+   "gorgiasEvidenceStale": false
+  },
+  "gorgiasComms": null,
+  "argumentMap": null,
+  "rebuttalDraft": null,
+  "rebuttalOutdated": false,
+  "presentationStatus": "DRAFT",
+  "presentation": {
+   "lifecycle": "pack_prepared",
+   "attention": "blocking",
+   "blockingReason": "missing_required_evidence",
+   "strength": "weak",
+   "transmissionConfirmed": false,
+   "editable": true,
+   "terminal": false,
+   "outcome": "pending",
+   "internalIssue": false,
+   "needsMerchantAction": true,
+   "isActive": true,
+   "automationMode": "auto"
+  },
+  "workspaceAssessment": {
+   "caseStrength": {
+    "coverage": {
+     "shopifyProtectStatus": null,
+     "state": "not_covered"
+    },
+    "coveragePercent": 60,
+    "deliveryInTransit": false,
+    "fatalLoss": {
+     "messageToken": null,
+     "reason": null,
+     "triggered": false
+    },
+    "heroVariant": "hard_to_win",
+    "improvementHintI18n": null,
+    "moderateCount": 0,
+    "nameMismatch": {
+     "capApplied": false,
+     "cardholderName": null,
+     "customerName": "Customer 1",
+     "triggered": false
+    },
+    "overall": "weak",
+    "returnedToSender": {
+     "messageToken": {
+      "key": "disputes.strengthReason.returnedToSender.returned_unrefunded"
+     },
+     "reason": "returned_unrefunded",
+     "returnedAt": "2026-10-18T21:18:00",
+     "triggered": true
+    },
+    "riskWeakness": {
+     "diagnostics": {
+      "fulfillmentCount": 1,
+      "recommendation": "ACCEPT",
+      "riskLevel": "LOW"
+     },
+     "message": null,
+     "reason": null,
+     "triggered": false
+    },
+    "score": 0,
+    "strengthReasonI18n": {
+     "key": "disputes.strengthReason.returnedToSender.returned_unrefunded"
+    },
+    "strongCount": 0,
+    "supportedClaims": 0,
+    "supportingCount": 3,
+    "totalClaims": 0
+   },
+   "assessment": {
+    "caseId": "7aa8536c-65ea-43b4-bf49-322c73513b79",
+    "needsRecalculation": false,
+    "strengthBand": "weak",
+    "completenessScore": 38,
+    "readiness": "ready_with_warnings",
+    "reviewItems": [],
+    "recalculationReason": null
+   },
+   "filing": {
+    "titleToken": {
+     "key": "disputes.deadlineOnly.normal.title"
+    },
+    "bodyToken": {
+     "key": "disputes.deadlineOnly.normal.body"
+    },
+    "actionToken": null,
+    "filingOutcome": "adding_now",
+    "state": {
+     "kind": "normal"
+    }
+   },
+   "readiness": "ready_with_warnings",
+   "blockerCount": 0,
+   "warningCount": 1,
+   "submitOverrideGaps": [
+    {
+     "field": "returned_parcel_outcome",
+     "label": "Returned Parcel Outcome"
+    }
+   ],
+   "contributions": {
+    "strong": [],
+    "moderate": [
+     {
+      "signalId": "ip_location",
+      "category": "moderate",
+      "labelToken": {
+       "key": "disputes.signalLabel.ip_location"
+      },
+      "evidenceFieldKey": "ip_location_check"
+     }
+    ]
+   },
+   "improvement": null
+  },
+  "held": {
+   "held": false,
+   "reason": null,
+   "offer": null,
+   "offerFlipsToStrong": false
+  },
+  "decidedResponse": null,
+  "decidedView": null,
+  "recordStorePatterns": {
+   "baseRate": {
+    "won": 48,
+    "decided": 48
+   },
+   "patterns": {}
+  },
+  "evidenceLineItems": [
+   {
+    "id": "line:refund_policy",
+    "field": "refund_policy",
+    "label": "Refund / return policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents merchant policy, but does not by itself prove authorization for this fraud dispute.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.refundPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:customer_communication",
+    "field": "customer_communication",
+    "label": "Customer correspondence",
+    "source": "merchant_upload",
+    "hasEvidence": false,
+    "strengthContribution": "none",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": false,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "not_included",
+    "isNegativeOrAmbiguous": false,
+    "reason": "No customer correspondence is on file for this order. Upload a transcript from your helpdesk to add one.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.customerCommunication.notIncluded"
+    },
+    "canBeForceIncluded": true
+   },
+   {
+    "id": "line:shipping_tracking",
+    "field": "shipping_tracking",
+    "label": "Tracking status",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "none",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": false,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "not_included",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The carrier delivered this parcel back to you. Because the customer never took delivery, no proof of delivery can exist for this order — so the case cannot be argued on delivery. What matters now is why it came back, and what you did with the goods.",
+    "reasonToken": {
+     "key": "disputes.deliveryProof.whyReturnedToSender"
+    },
+    "canBeForceIncluded": true,
+    "displayLabelToken": {
+     "key": "disputes.deliveryProof.titleReturnedToSenderOn",
+     "params": {
+      "date": "Oct 19"
+     }
+    },
+    "factsTokens": [
+     {
+      "key": "disputes.deliveryProof.factsShippedVia",
+      "params": {
+       "date": "Oct 6",
+       "carrier": "DHL Freight"
+      }
+     },
+     {
+      "key": "disputes.deliveryProof.factsReturnedToSenderOn",
+      "params": {
+       "date": "Oct 19"
+      }
+     }
+    ],
+    "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=TRK000001&tracking-id=TRK000001",
+    "trackingNumber": "TRK000001",
+    "parcels": []
+   },
+   {
+    "id": "line:returned_parcel_outcome",
+    "field": "returned_parcel_outcome",
+    "label": "Returned Parcel Outcome",
+    "source": "shopify",
+    "hasEvidence": false,
+    "strengthContribution": "none",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": false,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "not_included",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Field is on file but no usable evidence payload was emitted.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.method.not_included"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:order_confirmation",
+    "field": "order_confirmation",
+    "label": "order_confirmation",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Confirms order details, but does not prove the customer authorized the transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.orderConfirmation.contextOnly"
+    },
+    "canBeForceIncluded": false,
+    "internalSignals": [
+     {
+      "id": "internal:billing_shipping_agree",
+      "label": "Billing and shipping addresses on the order agree",
+      "reason": "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence: it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row.",
+      "severity": "info"
+     }
+    ]
+   },
+   {
+    "id": "line:activity_log",
+    "field": "activity_log",
+    "label": "activity_log",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Included in the defence package as context, not as decisive proof.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.method.context_only"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:customer_account_info",
+    "field": "customer_account_info",
+    "label": "customer_account_info",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "First-time customer (account created October 2026, no prior orders). Included as context only — there is no prior order history to corroborate this transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.customerAccount.firstTimeSince",
+     "params": {
+      "sinceLabel": "October 2026"
+     }
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:shipping_policy",
+    "field": "shipping_policy",
+    "label": "shipping_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents shipping commitments; supporting context only.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.shippingPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:cancellation_policy",
+    "field": "cancellation_policy",
+    "label": "cancellation_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents cancellation rules; supporting context only.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.cancellationPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:avs_cvv_match",
+    "field": "avs_cvv_match",
+    "label": "avs_cvv_match",
+    "source": "derived",
+    "hasEvidence": true,
+    "strengthContribution": "none",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": false,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "not_included",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.avsCvv.notIncluded"
+    },
+    "canBeForceIncluded": true
+   },
+   {
+    "id": "line:ip_location_check",
+    "field": "ip_location_check",
+    "label": "ip_location_check",
+    "source": "derived",
+    "hasEvidence": true,
+    "strengthContribution": "moderate",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": true,
+    "usedAsPositiveBankEvidence": true,
+    "submittedToShopify": false,
+    "submissionMethod": "bank_argument",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with a cardholder-originated transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.ipLocation.sameCountryBank"
+    },
+    "canBeForceIncluded": false
+   }
+  ],
+  "submissionSummary": {
+   "pdfFileName": null,
+   "shopifyStructuredFields": [
+    {
+     "field": "customer_first_name",
+     "value": "Name2"
+    },
+    {
+     "field": "customer_last_name",
+     "value": "Name3"
+    },
+    {
+     "field": "customer_email",
+     "value": "customer@example.test"
+    }
+   ],
+   "factsInPdf": [],
+   "counts": {
+    "usedAsPositiveBankArgument": 1,
+    "contextOnly": 6,
+    "internalOnly": 0,
+    "excluded": 0,
+    "notSupported": 0,
+    "failedUpload": 0,
+    "waived": 0
+   }
+  },
+  "attachments": [],
+  "appliedRule": {
+   "mode": "auto"
+  },
+  "caseTypeInfo": {
+   "disputeType": "General dispute",
+   "toWin": [
+    "Transaction was legitimate",
+    "Order was fulfilled as described"
+   ],
+   "strongestEvidence": [
+    "Order confirmation",
+    "Shipping tracking",
+    "Customer communication"
+   ],
+   "issuerClaim": "Customer disputes this transaction"
+  },
+  "defencePackage": {
+   "latest": {
+    "document_provenance_json": null,
+    "document_validation_passed": null,
+    "evidence_hash": "30779aceb7f17c048b67934d76def5a023004b00980c7c4bdaf6f6e4170e7a22",
+    "facts_json": null,
+    "failure_code": "no_bank_eligible_facts",
+    "failure_reason": "Only the store's own records (policies, the order) are citable; they are context, not an argument.",
+    "generated_at": "2026-11-10T02:33:01.317181+00:00",
+    "generated_by": "system",
+    "id": "be413275-0941-43e8-9273-e04dde5ab903",
+    "llm_model": null,
+    "narrative_json": null,
+    "package_mode": null,
+    "pdf_path": null,
+    "plan_deadline_only": null,
+    "plan_input_hash": null,
+    "plan_json": null,
+    "plan_no_safe_argument": null,
+    "prompt_family": null,
+    "prompt_version": null,
+    "reason_code_module": "credit_not_processed",
+    "status": "skipped",
+    "submitted_at": null,
+    "validation_errors": [],
+    "validation_status": null,
+    "version": 19
+   },
+   "bankFacing": null,
+   "currentPromptVersion": 42,
+   "building": false,
+   "safety": {
+    "blocked": false,
+    "reasons": [],
+    "message": ""
+   }
+  }
+ },
+ "sourceRows": {
+  "evidenceSavedToShopifyAt": null,
+  "automationMode": "auto",
+  "assessmentReadOk": true,
+  "outcomeInputs": null
+ }
+}

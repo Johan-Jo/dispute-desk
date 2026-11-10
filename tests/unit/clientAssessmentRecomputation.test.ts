@@ -47,6 +47,8 @@ const ROOT = process.cwd();
  */
 const CLIENT_SURFACES = [
   "app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts",
+  // The hook's `derived` computation, extracted (single-source plan 3.0): the scorer must not return here.
+  "app/(embedded)/app/disputes/[id]/hooks/deriveWorkspace.ts",
   "app/(embedded)/app/disputes/[id]/WorkspaceShell.tsx",
   "app/(embedded)/app/disputes/[id]/record/RecordWorkspace.tsx",
   "app/(embedded)/app/disputes/[id]/record/recordInputs.ts",

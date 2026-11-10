@@ -1,0 +1,4802 @@
+{
+ "meta": {
+  "case": "23750-stamped-saved-save-failed",
+  "disputeId": "e38c8d87-f45f-41b1-9b3b-309b9682342f",
+  "note": "\"#23750 pack stamped saved, every save failed\"",
+  "capturedAt": "2026-11-10T11:02:24.331Z",
+  "source": "prod, read-only"
+ },
+ "payload": {
+  "dispute": {
+   "id": "e38c8d87-f45f-41b1-9b3b-309b9682342f",
+   "reason": "PRODUCT_NOT_RECEIVED",
+   "shopifyReason": "PRODUCT_NOT_RECEIVED",
+   "phase": "inquiry",
+   "amount": 618,
+   "currency": "SEK",
+   "orderName": "#1001",
+   "orderGid": "gid://shopify/Scrubbed/1",
+   "customerName": "Customer 1",
+   "shopId": "00000000-0000-4000-8000-000000000001",
+   "shopDomain": "shop-1.example.test",
+   "merchantDomain": "shop-2.example.test",
+   "disputeGid": "gid://shopify/Scrubbed/1",
+   "disputeEvidenceGid": "gid://shopify/Scrubbed/1",
+   "dueAt": "2026-11-20T23:00:00+00:00",
+   "openedAt": "2026-11-02T19:42:56+00:00",
+   "normalizedStatus": "new",
+   "submissionState": "not_saved",
+   "needsReview": false,
+   "needsAttention": true,
+   "attentionReason": null,
+   "reviewState": null,
+   "reviewDueAt": null,
+   "submittedAt": null,
+   "finalOutcome": null,
+   "closedAt": null,
+   "outcomeAmountRecovered": null,
+   "outcomeAmountLost": null,
+   "cardNetwork": null,
+   "paymentFamily": "klarna",
+   "paymentLabel": "Klarna — Pay Later",
+   "cardLast4": null,
+   "transactionDate": "2026-10-05T20:38:44Z",
+   "paymentGateway": "Shopify Payments",
+   "financialStatus": "PARTIALLY_REFUNDED",
+   "fulfillmentStatus": "FULFILLED",
+   "cancelledAt": null,
+   "refundedAmount": "699.0",
+   "orderSituation": {
+    "returns": "none",
+    "refund": "some",
+    "returnOpenedAt": null,
+    "asOf": "2026-11-10T02:36:46.694+00:00"
+   },
+   "refundStatement": {
+    "kind": "some",
+    "amount": "699.0",
+    "currency": "SEK",
+    "refundedAt": "2026-10-12T13:10:03Z",
+    "asOf": "2026-11-10T02:36:46.694+00:00"
+   },
+   "cardholderName": "Customer 1",
+   "timelineEvents": [
+    {
+     "at": "2026-10-05T20:38:44Z",
+     "text": "Customer 1 placed this order on Online Store (checkout #68528938877253)."
+    },
+    {
+     "at": "2026-10-05T20:38:44Z",
+     "text": "Confirmation #8N0CN0T59 was generated for this order."
+    },
+    {
+     "at": "2026-10-05T20:38:44Z",
+     "text": "A kr1,317.00 SEK payment was processed on Klarna."
+    },
+    {
+     "at": "2026-10-05T20:38:44Z",
+     "text": "kr1,273.62 SEK will be added to your Oct 8, 2026 payout."
+    },
+    {
+     "at": "2026-10-05T20:38:45Z",
+     "text": "Unknown event Order#tax_finalization_capture_started..."
+    },
+    {
+     "at": "2026-10-05T20:38:46Z",
+     "text": "Shopify assessed this order for fraudulent chargeback risk and detected a low risk level"
+    },
+    {
+     "at": "2026-10-05T20:38:46Z",
+     "text": "Order confirmation email was sent to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-10-05T20:38:46Z",
+     "text": "Received new order #1001 by Customer 1."
+    },
+    {
+     "at": "2026-10-06T00:46:56Z",
+     "text": "kr1,273.62 SEK was added to your Oct 8, 2026 payout."
+    },
+    {
+     "at": "2026-10-06T13:26:16Z",
+     "text": "DHL eCom Sweden marked 2 items as fulfilled from Hem & Trend Gävle."
+    },
+    {
+     "at": "2026-10-06T13:26:17Z",
+     "text": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-10-06T13:26:17Z",
+     "text": "This order was archived."
+    },
+    {
+     "at": "2026-10-12T13:09:54Z",
+     "text": "Alice Sjökvist (\"Hem & Trend\" <customer@example.test>) sent a follow-up email to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-10-12T13:10:03Z",
+     "text": "A kr699.00 SEK refund is pending."
+    },
+    {
+     "at": "2026-10-12T13:10:03Z",
+     "text": "Alice Sjökvist refunded 1 item."
+    },
+    {
+     "at": "2026-10-12T13:10:04Z",
+     "text": "Alice Sjökvist sent a refund notification email to Customer 1 (customer@example.test)."
+    },
+    {
+     "at": "2026-10-13T13:27:29Z",
+     "text": "kr699.00 SEK refund will be deducted from your Oct 16, 2026 payout."
+    },
+    {
+     "at": "2026-10-13T13:27:31Z",
+     "text": "kr699.00 SEK was refunded to Klarna."
+    },
+    {
+     "at": "2026-10-15T00:10:14Z",
+     "text": "kr699.00 SEK refund was deducted from your Oct 19, 2026 payout."
+    },
+    {
+     "at": "2026-11-02T19:42:58Z",
+     "text": "The customer opened an inquiry totaling kr618.00."
+    }
+   ],
+   "responseCycle": 1,
+   "reopenedAt": null,
+   "reopenedAfterCloseAt": null,
+   "escalatedFromInquiryAt": null,
+   "shopifyStatus": "needs_response"
+  },
+  "bankClaim": {
+   "trigger": null,
+   "answer": null
+  },
+  "returnRequest": {
+   "applies": false,
+   "answer": null
+  },
+  "returnSignals": {
+   "customerAskedInSupport": false
+  },
+  "pack": {
+   "id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+   "status": "saved_to_shopify",
+   "completenessScore": 100,
+   "submissionReadiness": "ready",
+   "checklistV2": [
+    {
+     "blocking": false,
+     "field": "shipping_tracking",
+     "label": "Tracking status",
+     "priority": "critical",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "delivery_proof",
+     "label": "Proof of delivery",
+     "priority": "critical",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "customer_communication",
+     "label": "Shipping notification",
+     "priority": "recommended",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "order_confirmation",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "refund_record",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "activity_log",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "customer_account_info",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "shipping_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "refund_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "cancellation_policy",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "avs_cvv_match",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    },
+    {
+     "blocking": false,
+     "field": "ip_location_check",
+     "label": "",
+     "priority": "optional",
+     "source": "auto_shopify",
+     "status": "available"
+    }
+   ],
+   "waivedItems": [],
+   "evidenceItems": [
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.112581+00:00",
+     "id": "8de6ba86-eda2-480d-b593-13c6706b9c74",
+     "label": "Order #1001",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "billingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "billingAddressFull": {
+       "address1": "Address 3",
+       "address2": "Address 5",
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 6"
+      },
+      "cancelledAt": null,
+      "channel": "web",
+      "createdAt": "2026-10-05T20:38:44Z",
+      "customerTenure": {
+       "customerSince": "2025-05-27T18:30:50Z",
+       "totalOrders": "11"
+      },
+      "email": "customer@example.test",
+      "fieldsProvided": [
+       "order_confirmation"
+      ],
+      "financialStatus": "PARTIALLY_REFUNDED",
+      "fulfillmentStatus": "FULFILLED",
+      "lineItems": [
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "549.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "MdcUma - svart",
+        "total": "549.0",
+        "variant": "S/M"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "699.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "MdcSecret Shirt - black",
+        "total": "699.0",
+        "variant": "S/M"
+       }
+      ],
+      "orderId": "gid://shopify/Scrubbed/1",
+      "orderName": "#1001",
+      "returnStatus": "NO_RETURN",
+      "shippingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "shippingAddressFull": {
+       "address1": "Address 3",
+       "address2": "Address 5",
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 6"
+      },
+      "totals": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "presentment": {
+        "currency": "SEK",
+        "discounts": "0.0",
+        "shipping": "69.0",
+        "subtotal": "1248.0",
+        "tax": "263.4",
+        "total": "1317.0"
+       },
+       "refunded": "699.0",
+       "shipping": "69.0",
+       "subtotal": "1248.0",
+       "tax": "263.4",
+       "total": "1317.0"
+      }
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.358264+00:00",
+     "id": "49f39d02-c094-4f3d-8b50-1fda9a94baf2",
+     "label": "Refund history",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "amount": "699.0",
+      "creditCoversDisputedAmount": true,
+      "creditResidual": null,
+      "currency": "SEK",
+      "fieldsProvided": [
+       "refund_record"
+      ],
+      "precededDispute": true,
+      "refundStatus": "processed",
+      "refundedAt": "2026-10-12T13:10:03Z",
+      "refunds": [
+       {
+        "amount": "699.0",
+        "createdAt": "2026-10-12T13:10:03Z",
+        "currency": "SEK",
+        "id": "gid://shopify/Scrubbed/1",
+        "note": ""
+       }
+      ]
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.736487+00:00",
+     "id": "fe2305bd-352c-4963-a9ba-ca205cd0dfe5",
+     "label": "Customer account details",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "customerNote": null,
+      "customerSince": "2025-05-27T18:30:50Z",
+      "disputeFreeHistory": true,
+      "fieldsProvided": [
+       "customer_account_info"
+      ],
+      "isRepeatCustomer": true,
+      "priorUndisputedOrders": 10,
+      "totalOrders": 11
+     },
+     "source": "shopify_order",
+     "type": "other"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.978758+00:00",
+     "id": "5bcd232f-8dd4-44ba-a644-c73285013eb1",
+     "label": "Fulfillments (1)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "deliveredAt": "2026-10-16T12:57:58",
+      "deliveryCoverage": "complete",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "finalDeliveryVerified": true,
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-11-10T02:36:41.533Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-10-16T12:57:58",
+         "message": "Picked up by receiver"
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": "2026-10-16T12:57:58",
+         "deliveryStatus": "CollectedAtPickup",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-10-06T13:26:16Z",
+        "deliveredAt": "2026-10-16T12:57:58",
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "MdcUma - svart"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "MdcSecret Shirt - black"
+         }
+        ],
+        "shipmentProofType": "delivered_confirmed",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight (Sweden) AB",
+          "number": "TRK000001",
+          "url": "https://hamta.dhl.com/TRK000001"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "delivered_confirmed",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:43.2023+00:00",
+     "id": "16d578bc-f43e-4246-adfe-d34aa9d4cc97",
+     "label": "Store policies (5)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "fieldsProvided": [
+       "shipping_policy",
+       "refund_policy",
+       "cancellation_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-11-03T17:42:42.546+00:00",
+        "contentHash": "393acaed251aaf2e260c5afe5795b8bed9bf5dd8fea49fb80026daae20482881",
+        "policySnapshotId": "9be6c380-b396-4d55-b079-27edfb8e9dce",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2556,
+        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+       },
+       {
+        "capturedAt": "2026-10-31T14:02:41.671+00:00",
+        "contentHash": "0dfa1fe8917ede80764001e5188dc9a57c14d866c941d48009a4dcb335d42c35",
+        "policySnapshotId": "b46c3aae-570a-420d-9c72-60bae46fee67",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 16176,
+        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+       },
+       {
+        "capturedAt": "2026-10-26T18:42:42.42+00:00",
+        "contentHash": "744bb64e06f52fe0d74a545adb7baa51146ef91c591baf4ab4475b630231b268",
+        "policySnapshotId": "b1eb4641-512f-4e61-99fe-092a47cd8173",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2907,
+        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:43.790192+00:00",
+     "id": "21441565-a27c-451f-b7c5-18dd14bb7244",
+     "label": "Customer communication",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "buyerAttributes": [],
+      "customerNote": null,
+      "fieldsProvided": [
+       "customer_communication"
+      ],
+      "orderNote": null,
+      "summary": {
+       "buyerAttributeCount": 0,
+       "confirmationEventCount": 2,
+       "customerNotePresent": false,
+       "merchantCommentCount": 3,
+       "staffNotePresent": false,
+       "timelineEventCount": 20
+      },
+      "timelineEvents": [
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Customer 1 placed this order on Online Store (checkout #68528938877253).",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Confirmation #8N0CN0T59 was generated for this order.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "A kr1,317.00 SEK payment was processed on Klarna.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,273.62 SEK will be added to your Oct 8, 2026 payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:45Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Unknown event Order#tax_finalization_capture_started...",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Shopify assessed this order for fraudulent chargeback risk and detected a low risk level",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13531367145797\">#1001</a> by Customer 1.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-06T00:46:56Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,273.62 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/166965150021\">Oct 8, 2026</a> payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-06T13:26:16Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Hem &amp; Trend Gävle.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-06T13:26:17Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-10-06T13:26:17Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "This order was archived.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-12T13:09:54Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist (\"Hem &amp; Trend\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test).",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-10-12T13:10:03Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "A kr699.00 SEK refund is pending.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-12T13:10:03Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist refunded 1 item.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-10-12T13:10:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist sent a refund notification email to Customer 1 (customer@example.test).",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-10-13T13:27:29Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr699.00 SEK refund will be deducted from your Oct 16, 2026 payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-13T13:27:31Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr699.00 SEK was refunded to Klarna.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-15T00:10:14Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr699.00 SEK refund was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-11-02T19:42:58Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "The customer opened an inquiry totaling kr618.00.",
+        "source": "system"
+       }
+      ]
+     },
+     "source": "shopify_timeline",
+     "type": "comms"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:44.027704+00:00",
+     "id": "c09c473e-3c8a-48d0-833d-eaf2ea17bf8d",
+     "label": "Payment verification",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "avsCvvStatus": "not_applicable",
+      "avsResultCode": null,
+      "cvvResultCode": null,
+      "fieldsProvided": [
+       "avs_cvv_match"
+      ],
+      "gateway": "shopify_payments"
+     },
+     "source": "shopify_transactions",
+     "type": "other"
+    },
+    {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:44.270683+00:00",
+     "id": "a80c1401-662f-4547-ac44-46df1e0a109f",
+     "label": "IP & location check",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "bankEligible": true,
+      "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+      "distanceKm": null,
+      "fieldsProvided": [
+       "ip_location_check"
+      ],
+      "ip": "203.0.113.1",
+      "ipConsistencyLevel": "first_seen",
+      "ipReuseCount": 0,
+      "ipinfo": {
+       "city": "Address 7",
+       "country": "SE",
+       "ip": "203.0.113.1",
+       "loc": "55.6059,13.0007",
+       "org": "AS8434 Telenor Sverige AB",
+       "privacy": {
+        "hosting": false,
+        "proxy": false,
+        "vpn": false
+       },
+       "region": "Skåne"
+      },
+      "locationMatch": "same_country",
+      "merchantGuidance": null,
+      "riskLevel": "low",
+      "score": "Moderate",
+      "shippingAddress": {
+       "city": "Address 1",
+       "country": "SE",
+       "region": null
+      },
+      "source": "order_client_ip",
+      "summary": "Location matches shipping country."
+     },
+     "source": "ipinfo_io",
+     "type": "other"
+    }
+   ],
+   "evidenceItemsByField": {
+    "order_confirmation": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.112581+00:00",
+     "id": "8de6ba86-eda2-480d-b593-13c6706b9c74",
+     "label": "Order #1001",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "billingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "billingAddressFull": {
+       "address1": "Address 3",
+       "address2": "Address 5",
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 6"
+      },
+      "cancelledAt": null,
+      "channel": "web",
+      "createdAt": "2026-10-05T20:38:44Z",
+      "customerTenure": {
+       "customerSince": "2025-05-27T18:30:50Z",
+       "totalOrders": "11"
+      },
+      "email": "customer@example.test",
+      "fieldsProvided": [
+       "order_confirmation"
+      ],
+      "financialStatus": "PARTIALLY_REFUNDED",
+      "fulfillmentStatus": "FULFILLED",
+      "lineItems": [
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "549.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "MdcUma - svart",
+        "total": "549.0",
+        "variant": "S/M"
+       },
+       {
+        "currency": "SEK",
+        "lineItemId": "gid://shopify/Scrubbed/1",
+        "presentmentCurrency": "SEK",
+        "presentmentTotal": "699.0",
+        "quantity": 1,
+        "sku": null,
+        "title": "MdcSecret Shirt - black",
+        "total": "699.0",
+        "variant": "S/M"
+       }
+      ],
+      "orderId": "gid://shopify/Scrubbed/1",
+      "orderName": "#1001",
+      "returnStatus": "NO_RETURN",
+      "shippingAddress": {
+       "city": "Address 1",
+       "countryCode": "SE",
+       "provinceCode": null,
+       "zipPrefix": "Address 2"
+      },
+      "shippingAddressFull": {
+       "address1": "Address 3",
+       "address2": "Address 5",
+       "city": "Address 1",
+       "country": "Sweden",
+       "countryCode": "SE",
+       "province": null,
+       "provinceCode": null,
+       "zip": "Address 6"
+      },
+      "totals": {
+       "currency": "SEK",
+       "discounts": "0.0",
+       "presentment": {
+        "currency": "SEK",
+        "discounts": "0.0",
+        "shipping": "69.0",
+        "subtotal": "1248.0",
+        "tax": "263.4",
+        "total": "1317.0"
+       },
+       "refunded": "699.0",
+       "shipping": "69.0",
+       "subtotal": "1248.0",
+       "tax": "263.4",
+       "total": "1317.0"
+      }
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    "refund_record": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.358264+00:00",
+     "id": "49f39d02-c094-4f3d-8b50-1fda9a94baf2",
+     "label": "Refund history",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "amount": "699.0",
+      "creditCoversDisputedAmount": true,
+      "creditResidual": null,
+      "currency": "SEK",
+      "fieldsProvided": [
+       "refund_record"
+      ],
+      "precededDispute": true,
+      "refundStatus": "processed",
+      "refundedAt": "2026-10-12T13:10:03Z",
+      "refunds": [
+       {
+        "amount": "699.0",
+        "createdAt": "2026-10-12T13:10:03Z",
+        "currency": "SEK",
+        "id": "gid://shopify/Scrubbed/1",
+        "note": ""
+       }
+      ]
+     },
+     "source": "shopify_order",
+     "type": "order"
+    },
+    "customer_account_info": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.736487+00:00",
+     "id": "fe2305bd-352c-4963-a9ba-ca205cd0dfe5",
+     "label": "Customer account details",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "customerNote": null,
+      "customerSince": "2025-05-27T18:30:50Z",
+      "disputeFreeHistory": true,
+      "fieldsProvided": [
+       "customer_account_info"
+      ],
+      "isRepeatCustomer": true,
+      "priorUndisputedOrders": 10,
+      "totalOrders": 11
+     },
+     "source": "shopify_order",
+     "type": "other"
+    },
+    "shipping_tracking": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.978758+00:00",
+     "id": "5bcd232f-8dd4-44ba-a644-c73285013eb1",
+     "label": "Fulfillments (1)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "deliveredAt": "2026-10-16T12:57:58",
+      "deliveryCoverage": "complete",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "finalDeliveryVerified": true,
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-11-10T02:36:41.533Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-10-16T12:57:58",
+         "message": "Picked up by receiver"
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": "2026-10-16T12:57:58",
+         "deliveryStatus": "CollectedAtPickup",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-10-06T13:26:16Z",
+        "deliveredAt": "2026-10-16T12:57:58",
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "MdcUma - svart"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "MdcSecret Shirt - black"
+         }
+        ],
+        "shipmentProofType": "delivered_confirmed",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight (Sweden) AB",
+          "number": "TRK000001",
+          "url": "https://hamta.dhl.com/TRK000001"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "delivered_confirmed",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    "delivery_proof": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:42.978758+00:00",
+     "id": "5bcd232f-8dd4-44ba-a644-c73285013eb1",
+     "label": "Fulfillments (1)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "deliveredAt": "2026-10-16T12:57:58",
+      "deliveryCoverage": "complete",
+      "fieldsProvided": [
+       "shipping_tracking",
+       "delivery_proof"
+      ],
+      "finalDeliveryVerified": true,
+      "fulfillmentCount": 1,
+      "fulfillments": [
+       {
+        "carrierStatusObservedAt": "2026-11-10T02:36:41.533Z",
+        "carrierTerminalEvent": {
+         "happenedAt": "2026-10-16T12:57:58",
+         "message": "Picked up by receiver"
+        },
+        "carrierTracking": {
+         "deliveredAtTracking": "2026-10-16T12:57:58",
+         "deliveryStatus": "CollectedAtPickup",
+         "returnReason": null,
+         "signedByName": null,
+         "trackingSource": "carrier_api_dhl"
+        },
+        "createdAt": "2026-10-06T13:26:16Z",
+        "deliveredAt": "2026-10-16T12:57:58",
+        "displayStatus": "FULFILLED",
+        "estimatedDeliveryAt": null,
+        "fulfillmentId": "gid://shopify/Scrubbed/1",
+        "items": [
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "MdcUma - svart"
+         },
+         {
+          "lineItemId": "gid://shopify/Scrubbed/1",
+          "quantity": 1,
+          "title": "MdcSecret Shirt - black"
+         }
+        ],
+        "shipmentProofType": "delivered_confirmed",
+        "sourceConflict": false,
+        "status": "SUCCESS",
+        "tracking": [
+         {
+          "carrier": "DHL Freight (Sweden) AB",
+          "number": "TRK000001",
+          "url": "https://hamta.dhl.com/TRK000001"
+         }
+        ]
+       }
+      ],
+      "overallStatus": "FULFILLED",
+      "proofType": "delivered_confirmed",
+      "signedByName": null,
+      "sourceConflict": false
+     },
+     "source": "shopify_fulfillments",
+     "type": "shipping"
+    },
+    "shipping_policy": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:43.2023+00:00",
+     "id": "16d578bc-f43e-4246-adfe-d34aa9d4cc97",
+     "label": "Store policies (5)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "fieldsProvided": [
+       "shipping_policy",
+       "refund_policy",
+       "cancellation_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-11-03T17:42:42.546+00:00",
+        "contentHash": "393acaed251aaf2e260c5afe5795b8bed9bf5dd8fea49fb80026daae20482881",
+        "policySnapshotId": "9be6c380-b396-4d55-b079-27edfb8e9dce",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2556,
+        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+       },
+       {
+        "capturedAt": "2026-10-31T14:02:41.671+00:00",
+        "contentHash": "0dfa1fe8917ede80764001e5188dc9a57c14d866c941d48009a4dcb335d42c35",
+        "policySnapshotId": "b46c3aae-570a-420d-9c72-60bae46fee67",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 16176,
+        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+       },
+       {
+        "capturedAt": "2026-10-26T18:42:42.42+00:00",
+        "contentHash": "744bb64e06f52fe0d74a545adb7baa51146ef91c591baf4ab4475b630231b268",
+        "policySnapshotId": "b1eb4641-512f-4e61-99fe-092a47cd8173",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2907,
+        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "refund_policy": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:43.2023+00:00",
+     "id": "16d578bc-f43e-4246-adfe-d34aa9d4cc97",
+     "label": "Store policies (5)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "fieldsProvided": [
+       "shipping_policy",
+       "refund_policy",
+       "cancellation_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-11-03T17:42:42.546+00:00",
+        "contentHash": "393acaed251aaf2e260c5afe5795b8bed9bf5dd8fea49fb80026daae20482881",
+        "policySnapshotId": "9be6c380-b396-4d55-b079-27edfb8e9dce",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2556,
+        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+       },
+       {
+        "capturedAt": "2026-10-31T14:02:41.671+00:00",
+        "contentHash": "0dfa1fe8917ede80764001e5188dc9a57c14d866c941d48009a4dcb335d42c35",
+        "policySnapshotId": "b46c3aae-570a-420d-9c72-60bae46fee67",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 16176,
+        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+       },
+       {
+        "capturedAt": "2026-10-26T18:42:42.42+00:00",
+        "contentHash": "744bb64e06f52fe0d74a545adb7baa51146ef91c591baf4ab4475b630231b268",
+        "policySnapshotId": "b1eb4641-512f-4e61-99fe-092a47cd8173",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2907,
+        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "cancellation_policy": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:43.2023+00:00",
+     "id": "16d578bc-f43e-4246-adfe-d34aa9d4cc97",
+     "label": "Store policies (5)",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "fieldsProvided": [
+       "shipping_policy",
+       "refund_policy",
+       "cancellation_policy"
+      ],
+      "policies": [
+       {
+        "capturedAt": "2026-11-03T17:42:42.546+00:00",
+        "contentHash": "393acaed251aaf2e260c5afe5795b8bed9bf5dd8fea49fb80026daae20482881",
+        "policySnapshotId": "9be6c380-b396-4d55-b079-27edfb8e9dce",
+        "policyType": "shipping",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2556,
+        "textPreview": "Leveransvillkor\n\nVår normala leveranstid är 2–14 arbetsdagar från det att din order har bekräftats. Under kampanjer, helger och högsäsong kan leveranstiden bli något längre. För beställningsvaror kan leveranstiden variera mellan 5–30 arbetsdagar beroende på leverantör.\n\nOm du har frågor kring leveranstid för en specifik produkt eller din order rekommenderar vi att du kontaktar oss innan du genomför ditt köp.\n\nVi skickar beställningar med DHL. Vi tar inte ekonomiskt ansvar för eventuella försenin"
+       },
+       {
+        "capturedAt": "2026-10-31T14:02:41.671+00:00",
+        "contentHash": "0dfa1fe8917ede80764001e5188dc9a57c14d866c941d48009a4dcb335d42c35",
+        "policySnapshotId": "b46c3aae-570a-420d-9c72-60bae46fee67",
+        "policyType": "privacy",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/45865435461.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 16176,
+        "textPreview": "Senast uppdaterad: 31 oktober 2026\n\n Hem & Trend driver den här butiken och webbplatsen, inklusive all relaterad information, innehåll, funktioner, verktyg, produkter och tjänster (”tjänsterna”), för att ge dig som kund en utvald shoppingupplevelse. Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla tjänsterna till dig. Denna integritetspolicy beskriver hur vi samlar in, använder och lämnar ut dina personuppgifter när du besöker, använder, gör ett köp eller utför en "
+       },
+       {
+        "capturedAt": "2026-10-26T18:42:42.42+00:00",
+        "contentHash": "744bb64e06f52fe0d74a545adb7baa51146ef91c591baf4ab4475b630231b268",
+        "policySnapshotId": "b1eb4641-512f-4e61-99fe-092a47cd8173",
+        "policyType": "refunds",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46353154373.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 2907,
+        "textPreview": "Öppet köp & Retur\n\nDu har alltid rätt att retunera beställda felfria varor. Vi har öppetköp i 14 dagar, från att du motagit ditt paket i enighet med distansavtalslagen (2005-59). Varan ska vara oanvänd och helt felfri. Varan ska ligga i orginalföpackningen eller likvärdig förpackning. Kvitto/faktura kan uppvisas.\n\nHur du gör en retur\n\nVi vill att du ska vara helt nöjd med ditt köp. Om du vill returnera en vara, vänligen kontakta oss via e-post på customer@example.test för att begära en retursedel."
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:04.34+00:00",
+        "contentHash": "8e9944aebf69a80aed820c2fbf263704392c22509a38a6da5b47b137459e1428",
+        "policySnapshotId": "0c7605a6-276e-4353-9de9-8b36345f3294",
+        "policyType": "terms",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/53779366213.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 23004,
+        "textPreview": "ÖVERSIKT\nVälkommen till Hem & Trend! Termerna ”vi”, ”oss” och ”vår” avser Hem & Trend. Hem & Trend driver denna butik och webbplats, inklusive all relaterad information, allt innehåll, alla funktioner, verktyg, produkter och tjänster för att ge dig som kund en anpassad shoppingupplevelse (”Tjänsterna”). Hem & Trend drivs av Shopify, vilket gör det möjligt för oss att tillhandahålla Tjänsterna till dig.\n\nNedanstående regler och villkor, tillsammans med alla policyer som hänvisas till häri (dessa "
+       },
+       {
+        "capturedAt": "2026-10-09T09:29:03.418+00:00",
+        "contentHash": "600e042681ed786ebe41492d871e41f0fe61b400a4932ddfe33016a1ccd5f8a7",
+        "policySnapshotId": "66c7a647-5520-4bd8-954c-274d53146d83",
+        "policyType": "contact",
+        "publishedUrl": "https://checkout.shopify.com/93585637701/policies/51869221189.html?locale=en",
+        "source": "shopify_published",
+        "storagePath": null,
+        "textLength": 131,
+        "textPreview": "Hej! Har du frågor kring din leverans eller några av våra produkter kan du maila oss på våran kundtjänst mail:\n\ncustomer@example.test"
+       }
+      ]
+     },
+     "source": "policy_snapshots",
+     "type": "policy"
+    },
+    "customer_communication": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:43.790192+00:00",
+     "id": "21441565-a27c-451f-b7c5-18dd14bb7244",
+     "label": "Customer communication",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "buyerAttributes": [],
+      "customerNote": null,
+      "fieldsProvided": [
+       "customer_communication"
+      ],
+      "orderNote": null,
+      "summary": {
+       "buyerAttributeCount": 0,
+       "confirmationEventCount": 2,
+       "customerNotePresent": false,
+       "merchantCommentCount": 3,
+       "staffNotePresent": false,
+       "timelineEventCount": 20
+      },
+      "timelineEvents": [
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Customer 1 placed this order on Online Store (checkout #68528938877253).",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Confirmation #8N0CN0T59 was generated for this order.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "A kr1,317.00 SEK payment was processed on Klarna.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,273.62 SEK will be added to your Oct 8, 2026 payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:45Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Unknown event Order#tax_finalization_capture_started...",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Shopify assessed this order for fraudulent chargeback risk and detected a low risk level",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13531367145797\">#1001</a> by Customer 1.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-06T00:46:56Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr1,273.62 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/166965150021\">Oct 8, 2026</a> payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-06T13:26:16Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Hem &amp; Trend Gävle.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-06T13:26:17Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test).",
+        "source": "customer_confirmation_email"
+       },
+       {
+        "createdAt": "2026-10-06T13:26:17Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "This order was archived.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-12T13:09:54Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist (\"Hem &amp; Trend\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test).",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-10-12T13:10:03Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "A kr699.00 SEK refund is pending.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-12T13:10:03Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist refunded 1 item.",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-10-12T13:10:04Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "Alice Sjökvist sent a refund notification email to Customer 1 (customer@example.test).",
+        "source": "merchant_comment"
+       },
+       {
+        "createdAt": "2026-10-13T13:27:29Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr699.00 SEK refund will be deducted from your Oct 16, 2026 payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-13T13:27:31Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr699.00 SEK was refunded to Klarna.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-10-15T00:10:14Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "kr699.00 SEK refund was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout.",
+        "source": "system"
+       },
+       {
+        "createdAt": "2026-11-02T19:42:58Z",
+        "id": "gid://shopify/Scrubbed/1",
+        "message": "The customer opened an inquiry totaling kr618.00.",
+        "source": "system"
+       }
+      ]
+     },
+     "source": "shopify_timeline",
+     "type": "comms"
+    },
+    "avs_cvv_match": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:44.027704+00:00",
+     "id": "c09c473e-3c8a-48d0-833d-eaf2ea17bf8d",
+     "label": "Payment verification",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "avsCvvStatus": "not_applicable",
+      "avsResultCode": null,
+      "cvvResultCode": null,
+      "fieldsProvided": [
+       "avs_cvv_match"
+      ],
+      "gateway": "shopify_payments"
+     },
+     "source": "shopify_transactions",
+     "type": "other"
+    },
+    "ip_location_check": {
+     "confidence": null,
+     "created_at": "2026-11-10T02:36:44.270683+00:00",
+     "id": "a80c1401-662f-4547-ac44-46df1e0a109f",
+     "label": "IP & location check",
+     "pack_id": "f75f3b26-f69c-4de8-a90a-f597b638434e",
+     "payload": {
+      "bankEligible": true,
+      "bankParagraph": "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
+      "distanceKm": null,
+      "fieldsProvided": [
+       "ip_location_check"
+      ],
+      "ip": "203.0.113.1",
+      "ipConsistencyLevel": "first_seen",
+      "ipReuseCount": 0,
+      "ipinfo": {
+       "city": "Address 7",
+       "country": "SE",
+       "ip": "203.0.113.1",
+       "loc": "55.6059,13.0007",
+       "org": "AS8434 Telenor Sverige AB",
+       "privacy": {
+        "hosting": false,
+        "proxy": false,
+        "vpn": false
+       },
+       "region": "Skåne"
+      },
+      "locationMatch": "same_country",
+      "merchantGuidance": null,
+      "riskLevel": "low",
+      "score": "Moderate",
+      "shippingAddress": {
+       "city": "Address 1",
+       "country": "SE",
+       "region": null
+      },
+      "source": "order_client_ip",
+      "summary": "Location matches shipping country."
+     },
+     "source": "ipinfo_io",
+     "type": "other"
+    },
+    "activity_log": {
+     "id": "pack-section:activity_log",
+     "type": "access_log",
+     "label": "Customer activity log",
+     "source": "shopify_order",
+     "payload": {
+      "customerTenure": {
+       "customerNote": null,
+       "customerSince": "2025-05-27T18:30:50Z",
+       "totalOrders": "11"
+      },
+      "timelineEventCount": 20,
+      "timelineEvents": [
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "message": "Customer 1 placed this order on Online Store (checkout #68528938877253)."
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "message": "Confirmation #8N0CN0T59 was generated for this order."
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "message": "A kr1,317.00 SEK payment was processed on Klarna."
+       },
+       {
+        "createdAt": "2026-10-05T20:38:44Z",
+        "message": "kr1,273.62 SEK will be added to your Oct 8, 2026 payout."
+       },
+       {
+        "createdAt": "2026-10-05T20:38:45Z",
+        "message": "Unknown event Order#tax_finalization_capture_started..."
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "message": "Shopify assessed this order for fraudulent chargeback risk and detected a low risk level"
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "message": "Order confirmation email was sent to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-10-05T20:38:46Z",
+        "message": "Received new order <a href=\"https://shop-1.example.test/admin/orders/13531367145797\">#1001</a> by Customer 1."
+       },
+       {
+        "createdAt": "2026-10-06T00:46:56Z",
+        "message": "kr1,273.62 SEK was added to your <a href=\"https://shop-1.example.test/admin/payments/payouts/166965150021\">Oct 8, 2026</a> payout."
+       },
+       {
+        "createdAt": "2026-10-06T13:26:16Z",
+        "message": "DHL eCom Sweden marked 2 items as fulfilled from Hem &amp; Trend Gävle."
+       },
+       {
+        "createdAt": "2026-10-06T13:26:17Z",
+        "message": "DHL eCom Sweden sent a shipping confirmation email to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-10-06T13:26:17Z",
+        "message": "This order was archived."
+       },
+       {
+        "createdAt": "2026-10-12T13:09:54Z",
+        "message": "Alice Sjökvist (\"Hem &amp; Trend\" &lt;customer@example.test&gt;) sent a follow-up email to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-10-12T13:10:03Z",
+        "message": "A kr699.00 SEK refund is pending."
+       },
+       {
+        "createdAt": "2026-10-12T13:10:03Z",
+        "message": "Alice Sjökvist refunded 1 item."
+       },
+       {
+        "createdAt": "2026-10-12T13:10:04Z",
+        "message": "Alice Sjökvist sent a refund notification email to Customer 1 (customer@example.test)."
+       },
+       {
+        "createdAt": "2026-10-13T13:27:29Z",
+        "message": "kr699.00 SEK refund will be deducted from your Oct 16, 2026 payout."
+       },
+       {
+        "createdAt": "2026-10-13T13:27:31Z",
+        "message": "kr699.00 SEK was refunded to Klarna."
+       },
+       {
+        "createdAt": "2026-10-15T00:10:14Z",
+        "message": "kr699.00 SEK refund was deducted from your <a href=\"https://shop-1.example.test/admin/payments/payouts/167674904901\">Oct 19, 2026</a> payout."
+       },
+       {
+        "createdAt": "2026-11-02T19:42:58Z",
+        "message": "The customer opened an inquiry totaling kr618.00."
+       }
+      ],
+      "fieldsProvided": [
+       "activity_log"
+      ]
+     }
+    }
+   },
+   "auditEvents": [
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:43:05.825066+00:00",
+     "event_payload": {
+      "trigger": "automation_pipeline"
+     },
+     "event_type": "auto_build_enqueued",
+     "id": "1714ec81-7760-4854-ae2d-0f6bb0bd0dea"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:38.540508+00:00",
+     "event_payload": {
+      "jobId": "95c7b777-2123-4e40-8387-90fb9086464b",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "d2778810-0530-428f-882e-9d1e61a50ffe"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:44.28879+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "38d75181-6a68-4b13-9e79-98a789f2b7cb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:44.571557+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "93d3debd-857e-4dc8-8efb-f09360846773"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:44.96308+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "ae359f0d-1fd3-4f9e-bb7b-3abb2d7d1b10"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:45.618809+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "64abb33f-7a63-46c8-89fb-dd39329e3dc9"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:46.052034+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "8137cd2d-86e9-4759-8226-47738b73d147"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:46.646208+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "822fa0ee-bc69-4048-ae8a-c89e600ec7d7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:47.068853+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "8c74451b-ff61-4170-b27b-5b9c4b143c16"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:47.539185+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "836d54e0-3d06-4368-8c41-d681632b7738"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:48.765338+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "95c7b777-2123-4e40-8387-90fb9086464b",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "5d9ecbd5-c128-4f6f-9840-a278d4619372"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:50.00352+00:00",
+     "event_payload": {
+      "consumed": 1,
+      "jobId": "95c7b777-2123-4e40-8387-90fb9086464b",
+      "remaining": 197
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "037ae8e7-1f9f-4a2c-af71-f2dd8b422103"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:44:51.730184+00:00",
+     "event_payload": {
+      "decisionAction": "auto_file",
+      "decisionReasonCodes": [
+       "eligible"
+      ],
+      "packageId": null,
+      "selectionOutcome": "none",
+      "selectionReason": "no_package",
+      "trigger": "auto_save",
+      "version": null
+     },
+     "event_type": "defence_package_failed",
+     "id": "3b6e07ff-1ae7-407e-b90a-f99bf182ccd3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:47:00.928395+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "7f6e01b8-b8b0-4304-bf1e-9986039c8a2b",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 1
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "d70ec79d-e013-40bc-b386-44394b76e46b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:47:01.084202+00:00",
+     "event_payload": {
+      "durationMs": 16168,
+      "model": "claude-sonnet-4-6",
+      "packageId": "7f6e01b8-b8b0-4304-bf1e-9986039c8a2b",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 1996,
+       "completion": 833,
+       "prompt": 4087
+      },
+      "version": 1
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "d8643496-9ce2-4e11-8072-c212d7018983"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:48:44.670982+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "8ed1244e-055c-40ad-b810-3c428e24e08b",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "ace9f354-85e9-4e36-b3b8-1e2e88d6308f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:50:43.965998+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "8ed1244e-055c-40ad-b810-3c428e24e08b",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "2b995c0d-7836-40b2-865c-b6bc9f32aec1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-02T19:52:43.35988+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "8ed1244e-055c-40ad-b810-3c428e24e08b",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "be635ad5-eab4-4c0c-9138-ac104e10797c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:32:25.995386+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "0ed6cdcf-2aa3-49ef-aa0d-91adbeb37f37"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:39.325356+00:00",
+     "event_payload": {
+      "jobId": "ee9d7fda-671e-4f2e-bcc0-c9d7f41f520a",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "185c0002-b7d6-41e5-8c32-f9c98c7bab5c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:43.682992+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "dfbd0373-ede7-44fc-9444-7cbba086882f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:43.961072+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "9f9ce096-94f6-424a-9790-e0437efad014"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:44.366273+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "3cab791b-ebc6-48b0-8312-02d780769b28"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:44.588345+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "7883591f-77ee-4fa1-a4ac-d7669c858812"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:44.861729+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "0b1e9960-0641-44f1-b69e-e08c074fc1fb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:45.517816+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "9a8c26b9-ce98-4074-be6c-911d3fa322cc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:45.795128+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "eeb7578d-2bb5-4146-9c70-752809558ccc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:46.033533+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "d024ca0b-eb80-4ec5-b100-3f68e238a140"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:46.683355+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "ee9d7fda-671e-4f2e-bcc0-c9d7f41f520a",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "3f7807ed-4edb-425f-9f66-677586b65f5d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:47.319471+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "ee9d7fda-671e-4f2e-bcc0-c9d7f41f520a",
+      "remaining": 197
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "0ebf09dd-d585-45ea-9d4a-a3741ad45c87"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:40:49.070066+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "a889ce40-081d-435a-8617-834bf456c2de"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:50:40.116096+00:00",
+     "event_payload": {
+      "packageId": "ea1f4682-c912-4277-9c11-9c2d1733ca4b",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 2
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "295cc3c4-92db-40bf-8455-0b97f7e66938"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:53:15.630055+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "ea1f4682-c912-4277-9c11-9c2d1733ca4b",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 2
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "8b13a75d-4681-4821-897b-3a2b4fba362c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:53:15.745938+00:00",
+     "event_payload": {
+      "durationMs": 32253,
+      "model": "claude-sonnet-4-6",
+      "packageId": "ea1f4682-c912-4277-9c11-9c2d1733ca4b",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 3992,
+       "completion": 1700,
+       "prompt": 7159
+      },
+      "version": 2
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "e73b5a2e-5319-4925-8e80-0fd9dbb21828"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:54:44.122177+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "32d0b04b-f4b2-4b11-ac5f-32ae0dff71f9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "40a8fed2-f842-466e-9964-bb891aa9a259"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:56:43.227542+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "32d0b04b-f4b2-4b11-ac5f-32ae0dff71f9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "5d8892ff-e369-4b9e-aa24-4ce0625bfa9f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-03T02:58:43.366134+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "32d0b04b-f4b2-4b11-ac5f-32ae0dff71f9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "8b3ffce3-9459-448f-a6db-a9c5df5d9f37"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:31:59.196806+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "87085f32-f22f-4d0a-af30-33f20be6b37f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:38.735954+00:00",
+     "event_payload": {
+      "jobId": "79c24109-f8c1-4d4a-94ee-a10432f5b9ed",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "7e57d346-5441-4d1b-80c9-9540d7cff83b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:41.785192+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "69916172-b003-4528-af1b-7144feea1b30"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:42.03312+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "e16f2549-c1a1-4eab-809a-023ff628d9fa"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:42.563441+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "852cbacf-966d-4656-ab62-40dc45c4724e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:42.775043+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "6fcf78b2-d77b-452d-b36d-f0a1600646fb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:43.033986+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "194c76d7-33fb-408c-98ec-13e0af650fcc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:43.563297+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "40308f59-4efd-4a97-a28d-22118bc9ff9c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:44.009476+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "f7793a4f-1baa-4d79-9915-911a0c30fb82"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:44.236564+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "c44c5ed6-3a0e-4f2d-ac8c-9b64b96595fb"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:44.871339+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "79c24109-f8c1-4d4a-94ee-a10432f5b9ed",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "8cf6ca80-59b8-48e1-a7d6-efd095b18152"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:45.315102+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "79c24109-f8c1-4d4a-94ee-a10432f5b9ed",
+      "remaining": 195
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "318df107-958c-47e7-8589-15a23f8614aa"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:36:46.854987+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "b7b5a804-0370-4057-a58c-3ae108284b93"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:46:39.718665+00:00",
+     "event_payload": {
+      "packageId": "ddcff7ea-8f97-433e-a647-34bf8c542eb8",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 3
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "a4dff445-92f0-4806-9bb6-ddb5142e710e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:49:07.993698+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "ddcff7ea-8f97-433e-a647-34bf8c542eb8",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 3
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "8b4c0beb-b25d-4ced-8942-87d8c3306151"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:49:08.099139+00:00",
+     "event_payload": {
+      "durationMs": 24459,
+      "model": "claude-sonnet-4-6",
+      "packageId": "ddcff7ea-8f97-433e-a647-34bf8c542eb8",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 5988,
+       "completion": 1260,
+       "prompt": 5782
+      },
+      "version": 3
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "1a421518-c488-4bcc-ba5e-141ccc4bc794"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:54:44.742039+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "7f50b7c4-71cd-4c7b-9890-20b7fb4a5e45",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "73b89cc3-5778-410c-afee-e0dc360357d6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:56:42.748495+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "7f50b7c4-71cd-4c7b-9890-20b7fb4a5e45",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "f2f3e2e7-ef65-4789-b618-60b467d91365"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-04T02:58:43.381027+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "7f50b7c4-71cd-4c7b-9890-20b7fb4a5e45",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "e5777c24-d62b-415e-915b-859047b33faf"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:32:06.315566+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "bbb3d851-e9bb-4e2c-98d5-8648e72541a5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:38.99068+00:00",
+     "event_payload": {
+      "jobId": "2944d20f-d628-4e19-83ff-c6bdb883da64",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "00048393-2342-4f71-a836-8cb82f6bd93f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:42.58441+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "5080eb7e-172f-4fed-a46c-f2a3db7f2076"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:42.831877+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "b46028d4-bd73-4c6e-a7ca-0207096cd4ec"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:43.194858+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "58983afa-7b2e-404d-907c-ce7d478da978"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:43.447838+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "645a207d-d557-449e-ba24-d4b27c89ce18"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:43.663788+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "7bc97e74-d85f-4bf2-b272-00da0f15da09"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:44.324317+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "5709159e-d625-4c8a-a559-5a92efaa1508"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:44.551314+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "f3f52835-f452-48c4-b3e7-9d42fdb4cc71"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:44.791857+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "c10f5bde-8ab6-49e2-88c1-abed9c98f864"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:45.43538+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "2944d20f-d628-4e19-83ff-c6bdb883da64",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "757f40db-a0d2-4783-964f-868109b5c9fd"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:45.962002+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "2944d20f-d628-4e19-83ff-c6bdb883da64",
+      "remaining": 193
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "1ff612a5-c6a7-4ee8-94b9-3ec8c7737ace"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:36:47.586542+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "18829835-ddaf-4bd9-a2d3-85f08069f76f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:46:39.288482+00:00",
+     "event_payload": {
+      "packageId": "d34a2610-61de-49e3-b1e9-dac760bba988",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 4
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "a69e1c15-8f2f-457c-8a20-dc542512ec03"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:48:58.52948+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "d34a2610-61de-49e3-b1e9-dac760bba988",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 4
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "ea9d0c2a-e65f-4087-bd5a-aa9e3711275e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:48:58.740871+00:00",
+     "event_payload": {
+      "durationMs": 15245,
+      "model": "claude-sonnet-4-6",
+      "packageId": "d34a2610-61de-49e3-b1e9-dac760bba988",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 3992,
+       "completion": 775,
+       "prompt": 4040
+      },
+      "version": 4
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "5134384a-97df-484e-bb45-567722f46d92"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:54:43.405094+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "a9ef3f93-e460-4761-a047-fbd3163479b1",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "ce208586-7c1f-4eb6-9156-d8380981d465"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:56:44.235268+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "a9ef3f93-e460-4761-a047-fbd3163479b1",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "5d2f222a-c2c9-418e-93fa-5033cb662271"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-05T02:58:43.629317+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "a9ef3f93-e460-4761-a047-fbd3163479b1",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "a5282cea-4b24-4fa5-888a-b06f9ba5d081"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:31:54.871732+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "d20e69a7-c5d8-4758-ab3a-acde04acd5b0"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:38.569582+00:00",
+     "event_payload": {
+      "jobId": "943501f6-ffe7-426e-94b2-458cc2dddc3e",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "cc091b83-0a3c-4fd3-8c9a-394bd07ca8ed"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:42.609997+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "cbf3e18a-f6c7-4658-a708-235b4080b287"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:42.871567+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "638b6797-843f-421e-b4c1-6e4a8f1097fc"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:43.423837+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "78476d93-f256-4461-a28d-1709b846b51a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:43.668199+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "f220af90-cfe9-406c-82de-c77b548812e1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:44.110849+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "937e4725-d053-4e1a-9eb5-23fd8c3c165f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:44.731839+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "07716d0d-6e02-4250-ae2e-f104f629ea0f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:44.970007+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "cfad5ba8-16e2-4b60-85d4-992c7cd88a90"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:45.211462+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "8b34f3d6-2ff5-44a9-9532-df0fdd1cd5d7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:46.056392+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "943501f6-ffe7-426e-94b2-458cc2dddc3e",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "73d2d2d8-c09b-4630-b79f-154eb2684204"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:46.640747+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "943501f6-ffe7-426e-94b2-458cc2dddc3e",
+      "remaining": 192
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "1cce493e-8fa2-4c7c-87a4-60bc4a2af78b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:36:48.593045+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "876dbfa5-d528-42c8-8e84-87ccec5d5e48"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:48:39.387257+00:00",
+     "event_payload": {
+      "packageId": "cc07f193-3724-4a9f-9c6f-b592ad104af6",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 5
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "d9a5cc51-aa2a-470e-81eb-3bf6ae43f0b1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:51:00.015926+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "cc07f193-3724-4a9f-9c6f-b592ad104af6",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 5
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "809a1270-b104-4025-b2d4-7659c60a7aea"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:51:00.15686+00:00",
+     "event_payload": {
+      "durationMs": 16144,
+      "model": "claude-sonnet-4-6",
+      "packageId": "cc07f193-3724-4a9f-9c6f-b592ad104af6",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 3992,
+       "completion": 841,
+       "prompt": 4103
+      },
+      "version": 5
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "0ccbecb9-35ee-443f-9889-98ab333629f5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T02:58:44.687184+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "e3538e38-95b3-4dcd-aa99-53eb11e0acf9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "734f7cf9-0343-45f6-84e2-1cd6fc46271f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T03:00:44.351722+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "e3538e38-95b3-4dcd-aa99-53eb11e0acf9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "a07039fe-fa05-4b0d-9e79-72262c04967c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-06T03:02:57.287439+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "e3538e38-95b3-4dcd-aa99-53eb11e0acf9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "4fb3e27e-afb6-443e-abf0-febc78eaff07"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:32:02.817047+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "08fd6d12-258e-4d4a-b93f-5fbd3a594f51"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:39.462819+00:00",
+     "event_payload": {
+      "jobId": "b1e8651b-c9a9-4c5c-9f53-032303ba659b",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "a4f6a667-9c84-4240-8f0c-01bf53dad729"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:43.943423+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "7690c5bd-7052-4456-b413-6e2819abfe41"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:44.528847+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "0729630c-995e-4f39-9fec-7d6b69262a86"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:44.886918+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "1e06a01e-26c5-43aa-a840-1f9b729fcb12"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:45.123926+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "c6a9feeb-71a1-4b94-bcca-ecfe7babef7a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:45.518908+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "856128bd-03cb-4914-be37-2dbc625f240c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:46.12291+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "b6a3d363-e93c-48ee-8381-e653c94d0b10"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:46.351721+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "d79f35b0-f453-4a11-bf11-b208b571df7e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:46.58863+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "00641602-fd83-4772-aa21-519e9d8aaf20"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:47.500927+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "b1e8651b-c9a9-4c5c-9f53-032303ba659b",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "aa662d86-f5f6-4e54-adf1-7e91d986a507"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:48.166497+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "b1e8651b-c9a9-4c5c-9f53-032303ba659b",
+      "remaining": 192
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "651c2333-51d4-4f5f-9632-259638371056"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:36:49.890617+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "196b0802-4e0d-4c61-89c8-ded5b640d38d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:48:38.937473+00:00",
+     "event_payload": {
+      "packageId": "defaa27e-1032-4fe6-b8cb-d0a904d7da6b",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 6
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "7794c825-8d4e-489d-b655-1c2f3205ad02"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:50:52.686705+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "defaa27e-1032-4fe6-b8cb-d0a904d7da6b",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 6
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "e1e9ef6c-d579-4f31-978a-c5ced10cb254"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:50:52.798886+00:00",
+     "event_payload": {
+      "durationMs": 9218,
+      "model": "claude-sonnet-4-6",
+      "packageId": "defaa27e-1032-4fe6-b8cb-d0a904d7da6b",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 1996,
+       "completion": 416,
+       "prompt": 2444
+      },
+      "version": 6
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "29ecb17f-2ece-450d-9fac-9ee2c70a86a7"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T02:58:43.465769+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "a64c71c8-4703-4a27-927d-396086b8cadc",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "a0bde31a-7c45-466c-9729-7a9f15c672a2"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T03:00:45.326058+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "a64c71c8-4703-4a27-927d-396086b8cadc",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "48bd565c-fa41-4745-b9ef-a382dd1504da"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-07T03:03:26.167008+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "a64c71c8-4703-4a27-927d-396086b8cadc",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "cb055d8b-ea6d-44e1-b780-afcc93312971"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:31:46.01126+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "8fddc9bf-1ded-4e7d-8727-3ef11fbd331e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:38.892976+00:00",
+     "event_payload": {
+      "jobId": "43623334-091a-42f4-86a0-3d8768599b5b",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "65d010cf-6c48-4e3c-99ec-cf28957acf64"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:42.714748+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "c8185186-3072-4d39-9900-064c82a1aa1d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:42.917335+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "83a31c97-db8a-4067-bc54-ac3653047d77"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:43.441005+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "abee0592-3bef-4ae8-80cc-da88e4f6d85d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:43.813269+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "0adc7b09-c8d6-408e-b49b-4f688bc63f1e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:44.02667+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "e357b4f9-9c38-48db-87da-40ee5d8fa78d"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:44.986799+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "f2ea13d4-c53f-4cd3-8f15-5e556155e568"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:45.183598+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "f50ff5c0-c90d-4696-84dc-652460f54818"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:45.390717+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "244fd9a3-e838-429f-87a4-2de5856e898b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:46.138868+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "43623334-091a-42f4-86a0-3d8768599b5b",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "8c46f28a-604f-452d-ae20-cee181227d13"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:46.597667+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "43623334-091a-42f4-86a0-3d8768599b5b",
+      "remaining": 192
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "39e54a11-fccd-4eec-8d93-87bc018c19fe"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:36:48.284306+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "babdd963-661f-4fb8-b33e-16e006b7a862"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:48:38.925402+00:00",
+     "event_payload": {
+      "packageId": "5cc04cf3-a321-4842-a4e9-a946e7463dee",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 7
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "d8b85a48-2d29-4713-a89a-ce3ce7676330"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:50:57.312912+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "5cc04cf3-a321-4842-a4e9-a946e7463dee",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 7
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "ce286927-e4c9-42a4-ba47-ca0165830274"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:50:57.603207+00:00",
+     "event_payload": {
+      "durationMs": 14905,
+      "model": "claude-sonnet-4-6",
+      "packageId": "5cc04cf3-a321-4842-a4e9-a946e7463dee",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 3992,
+       "completion": 799,
+       "prompt": 4064
+      },
+      "version": 7
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "33d23e9d-a01e-488b-a135-b58b36e02f0f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T02:58:43.2741+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "5ca11d62-e887-484a-b8a0-3ba5b9ce20a4",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "6560c61e-4680-4b7c-a774-f92ec0748f3f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T03:00:45.051927+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "5ca11d62-e887-484a-b8a0-3ba5b9ce20a4",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "f815e5f5-df9f-4356-b51f-975729a5ad03"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-08T03:02:58.710493+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "5ca11d62-e887-484a-b8a0-3ba5b9ce20a4",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "5d3ed59a-3ce8-4e25-a5c2-9ee60d0f6467"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:31:46.69508+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "69bd61b4-c745-44d0-867a-f81ce9bfaeca"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:38.889133+00:00",
+     "event_payload": {
+      "jobId": "b487bd18-fcb2-44e7-b38b-9ca45e27fc46",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "1390827e-7ee5-49be-80c1-141a615b5f55"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:42.342105+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "c705e5de-b8ad-472c-8fff-16897b0ba338"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:42.555618+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "40d7880c-5bc0-4196-bdec-09dba1f26334"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:43.109102+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "b01d4fe1-06d9-465c-b9e3-3b2e64f12c2a"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:43.487568+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "3bcc500c-2e4e-4d62-916a-47ba7f95b6f5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:43.691916+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "6c4d12a6-99c7-462f-b7b5-c6797d37f3ef"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:44.389364+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "0b1e5ac6-e006-4510-a6fc-ea2c255be452"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:44.629315+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "95292f18-8af1-42c7-a1a2-193655c36bf1"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:44.866901+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "9f04d2b5-fc2c-4cb6-b112-c6e94bfea3f4"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:45.603965+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "b487bd18-fcb2-44e7-b38b-9ca45e27fc46",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "1622bcc6-6950-4b86-8ad4-f4e80eff6b4b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:46.203439+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "b487bd18-fcb2-44e7-b38b-9ca45e27fc46",
+      "remaining": 192
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "3f5b9cb6-711b-4725-a858-9b29974cd58c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:36:48.076687+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "5e18ef05-dc25-42c0-8269-ab33e7e203b5"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:48:39.687779+00:00",
+     "event_payload": {
+      "packageId": "5fa38b4c-2b14-46ae-b549-14938dd7a991",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 8
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "3d940686-a332-45e6-8b48-fd5abce00a24"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:50:59.751166+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "5fa38b4c-2b14-46ae-b549-14938dd7a991",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 8
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "7f274287-8e45-4ea3-9c8b-c933dc6218ff"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:50:59.867452+00:00",
+     "event_payload": {
+      "durationMs": 16366,
+      "model": "claude-sonnet-4-6",
+      "packageId": "5fa38b4c-2b14-46ae-b549-14938dd7a991",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 3992,
+       "completion": 821,
+       "prompt": 4086
+      },
+      "version": 8
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "9b4d7891-e2ea-4b1e-9e48-33dc9ef2323b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T02:58:44.083051+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "95ad7930-25cc-4613-842e-02cc7d53b1a9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "532ca02e-8014-4062-ab41-0ce4206f8035"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T03:00:43.393218+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "95ad7930-25cc-4613-842e-02cc7d53b1a9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "60d3a7f3-407e-498b-b9d1-e424a4e84b59"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-09T03:02:54.293293+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "95ad7930-25cc-4613-842e-02cc7d53b1a9",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "6dbbdf87-4702-4a57-98ea-89d704f1f801"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:31:42.161829+00:00",
+     "event_payload": {
+      "after": null,
+      "before": "CollectedAtPickup",
+      "trigger": "refresh_open_disputes_delivery_changed"
+     },
+     "event_type": "job_queued",
+     "id": "29f71801-5eea-44bb-904c-bf7d4bda0e99"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:38.814116+00:00",
+     "event_payload": {
+      "jobId": "ff7c968c-219c-4204-a92d-63f44b7bb614",
+      "jobType": "build_pack"
+     },
+     "event_type": "job_started",
+     "id": "c74fd209-32fd-41b4-9b21-bca96c131eda"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:42.233121+00:00",
+     "event_payload": {
+      "label": "Order #1001",
+      "labelToken": {
+       "key": "packs.section.order",
+       "params": {
+        "orderName": "#1001"
+       }
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "de1b6d2b-a470-498f-af95-81f207a6fb8f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:42.495414+00:00",
+     "event_payload": {
+      "label": "Refund history",
+      "labelToken": {
+       "key": "packs.section.refundHistory"
+      },
+      "source": "shopify_order",
+      "type": "order"
+     },
+     "event_type": "item_added",
+     "id": "fc76e2c1-c802-4bdb-81d1-0d97bf9fc096"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:42.852228+00:00",
+     "event_payload": {
+      "label": "Customer account details",
+      "labelToken": {
+       "key": "packs.section.customerAccountDetails"
+      },
+      "source": "shopify_order",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "2e9d3ddf-0aff-4d2f-a2d4-9aa045265f1f"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:43.096302+00:00",
+     "event_payload": {
+      "label": "Fulfillments (1)",
+      "labelToken": {
+       "key": "packs.section.fulfillments",
+       "params": {
+        "count": 1
+       }
+      },
+      "source": "shopify_fulfillments",
+      "type": "shipping"
+     },
+     "event_type": "item_added",
+     "id": "32992943-24f3-4acb-a9d2-c23932fc7448"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:43.345109+00:00",
+     "event_payload": {
+      "label": "Store policies (5)",
+      "labelToken": {
+       "key": "packs.section.storePolicies",
+       "params": {
+        "count": 5
+       }
+      },
+      "source": "policy_snapshots",
+      "type": "policy"
+     },
+     "event_type": "item_added",
+     "id": "4d3127b7-4ebd-493c-8906-7fe40cf26e23"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:43.909447+00:00",
+     "event_payload": {
+      "label": "Customer communication",
+      "labelToken": {
+       "key": "packs.section.customerCommunication"
+      },
+      "source": "shopify_timeline",
+      "type": "comms"
+     },
+     "event_type": "item_added",
+     "id": "8770f5f7-a67c-4f3d-aad1-915c7b7aba4c"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:44.143139+00:00",
+     "event_payload": {
+      "label": "Payment verification",
+      "labelToken": {
+       "key": "packs.section.paymentVerification"
+      },
+      "source": "shopify_transactions",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "5e83f7fb-a61f-4bfc-be89-3807a0991568"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:44.404477+00:00",
+     "event_payload": {
+      "label": "IP & location check",
+      "labelToken": {
+       "key": "packs.section.ipLocationCheck"
+      },
+      "source": "ipinfo_io",
+      "type": "other"
+     },
+     "event_type": "item_added",
+     "id": "2a2d673e-537e-4ff5-bb86-e05bd4ae3ac3"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:45.00651+00:00",
+     "event_payload": {
+      "blockers": [],
+      "completenessScore": 100,
+      "itemsCreated": 8,
+      "jobId": "ff7c968c-219c-4204-a92d-63f44b7bb614",
+      "sectionsCollected": 12
+     },
+     "event_type": "pack_created",
+     "id": "cca72b1e-1fd0-4b1f-ba58-57ea09a48e12"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:45.50205+00:00",
+     "event_payload": {
+      "consumed": 0,
+      "jobId": "ff7c968c-219c-4204-a92d-63f44b7bb614",
+      "remaining": 190
+     },
+     "event_type": "pack_credit_consumed",
+     "id": "b6ba5c0b-fb9b-41dc-87c7-b9810dda774b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:36:47.003965+00:00",
+     "event_payload": {
+      "completeness_score": 100,
+      "decision_action": "auto_file",
+      "decision_input_hash": "f9059295e9e5829714aa2a154d393624233e5f37824000b3f5c52877b3fe883b",
+      "decision_reason_codes": [
+       "eligible"
+      ]
+     },
+     "event_type": "auto_save_enqueued",
+     "id": "20657479-8ad3-431b-9b49-3c7822b7f264"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:52:39.2157+00:00",
+     "event_payload": {
+      "packageId": "2f79e9b9-3c46-44c3-a9d9-775bfd69fe76",
+      "selectionReason": "stale",
+      "trigger": "save_to_shopify",
+      "version": 9
+     },
+     "event_type": "defence_package_blocked_unsafe_claim",
+     "id": "ba749773-58d1-4f38-b855-4d20729611f6"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:54:59.584875+00:00",
+     "event_payload": {
+      "evidenceHash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+      "generatedBy": "system",
+      "model": "claude-sonnet-4-6",
+      "packageId": "2f79e9b9-3c46-44c3-a9d9-775bfd69fe76",
+      "packageMode": "full",
+      "promptVersion": 3,
+      "resolvedMode": "auto",
+      "validationStatus": "ok",
+      "version": 9
+     },
+     "event_type": "defence_package_draft_generated",
+     "id": "88a2c182-62ea-4935-ae4c-1e4ae4832265"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T02:54:59.719865+00:00",
+     "event_payload": {
+      "durationMs": 16399,
+      "model": "claude-sonnet-4-6",
+      "packageId": "2f79e9b9-3c46-44c3-a9d9-775bfd69fe76",
+      "promptVersion": 3,
+      "tokens": {
+       "cached": 3992,
+       "completion": 845,
+       "prompt": 4107
+      },
+      "version": 9
+     },
+     "event_type": "llm_narrative_generated",
+     "id": "e74c222e-4176-41e2-b5a1-e954df57c2a8"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T03:06:44.099194+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "acf566d5-6b04-4d13-9c04-aad3db323e3e",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "300c8be1-a625-49e2-b715-71485d26023e"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T03:08:43.380923+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "acf566d5-6b04-4d13-9c04-aad3db323e3e",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "8bde8349-1614-4afa-a365-9149e35ec66b"
+    },
+    {
+     "actor_type": "system",
+     "created_at": "2026-11-10T03:10:43.928843+00:00",
+     "event_payload": {
+      "error": "Shopify HTTP 422 on dispute_file_uploads.json: {\"errors\":{\"dispute_file_upload\":[\"There’s a problem with the uploaded file. Please check your PDF document or try again with a different format.\"]}}",
+      "jobId": "acf566d5-6b04-4d13-9c04-aad3db323e3e",
+      "jobType": "save_to_shopify",
+      "reason": "defence_pdf_upload_failed"
+     },
+     "event_type": "job_failed",
+     "id": "f0912fd2-85f1-4fc5-858c-7f58024c4cb4"
+    }
+   ],
+   "pdfPath": null,
+   "savedToShopifyAt": "2026-11-10T02:36:46.694+00:00",
+   "creditAlreadyIssued": {
+    "triggered": true,
+    "coversDisputedAmount": true
+   },
+   "updatedAt": "2026-11-10T02:36:46.694+00:00",
+   "rebuildPending": false,
+   "lastRebuildOutcome": null,
+   "lastRebuildAt": null,
+   "lastRebuildReason": null,
+   "activeBuildJob": null,
+   "failureCode": null,
+   "failureReason": null,
+   "coverage": {
+    "isCovered": false,
+    "shopifyProtectStatus": null,
+    "state": "not_covered"
+   },
+   "gorgiasEvidenceStale": false
+  },
+  "gorgiasComms": null,
+  "argumentMap": null,
+  "rebuttalDraft": null,
+  "rebuttalOutdated": false,
+  "presentationStatus": "DRAFT",
+  "presentation": {
+   "lifecycle": "monitoring",
+   "attention": "none",
+   "blockingReason": null,
+   "strength": "strong",
+   "transmissionConfirmed": false,
+   "editable": true,
+   "terminal": false,
+   "outcome": "pending",
+   "internalIssue": false,
+   "needsMerchantAction": false,
+   "isActive": true,
+   "automationMode": "auto"
+  },
+  "workspaceAssessment": {
+   "caseStrength": {
+    "coverage": {
+     "shopifyProtectStatus": null,
+     "state": "not_covered"
+    },
+    "coveragePercent": 100,
+    "deliveryInTransit": false,
+    "fatalLoss": {
+     "messageToken": null,
+     "reason": null,
+     "triggered": false
+    },
+    "heroVariant": "likely_to_win",
+    "improvementHintI18n": null,
+    "moderateCount": 0,
+    "nameMismatch": {
+     "capApplied": false,
+     "cardholderName": null,
+     "customerName": "Customer 1",
+     "triggered": false
+    },
+    "overall": "strong",
+    "overallBeforeRev5": "strong",
+    "returnedToSender": {
+     "messageToken": null,
+     "reason": null,
+     "returnedAt": null,
+     "triggered": false
+    },
+    "riskWeakness": {
+     "diagnostics": {
+      "fulfillmentCount": 1,
+      "recommendation": "ACCEPT",
+      "riskLevel": "LOW"
+     },
+     "message": null,
+     "reason": null,
+     "triggered": false
+    },
+    "score": 3,
+    "strengthReasonI18n": {
+     "key": "disputes.strengthReason.creditAlreadyIssued"
+    },
+    "strongCount": 1,
+    "supportedClaims": 0,
+    "supportingCount": 3,
+    "totalClaims": 0
+   },
+   "assessment": {
+    "caseId": "e38c8d87-f45f-41b1-9b3b-309b9682342f",
+    "needsRecalculation": false,
+    "strengthBand": "strong",
+    "completenessScore": 78,
+    "readiness": "submitted",
+    "reviewItems": [],
+    "recalculationReason": null
+   },
+   "filing": {
+    "titleToken": {
+     "key": "disputes.deadlineOnly.normal.title"
+    },
+    "bodyToken": {
+     "key": "disputes.deadlineOnly.normal.body"
+    },
+    "actionToken": null,
+    "filingOutcome": "adding_now",
+    "state": {
+     "kind": "normal"
+    }
+   },
+   "readiness": "submitted",
+   "blockerCount": 0,
+   "warningCount": 0,
+   "submitOverrideGaps": [],
+   "contributions": {
+    "strong": [],
+    "moderate": [
+     {
+      "signalId": "delivery",
+      "category": "moderate",
+      "labelToken": {
+       "key": "disputes.signalLabel.delivery"
+      },
+      "evidenceFieldKey": "shipping_tracking"
+     }
+    ]
+   },
+   "improvement": null
+  },
+  "held": {
+   "held": false,
+   "reason": null,
+   "offer": null,
+   "offerFlipsToStrong": false
+  },
+  "decidedResponse": null,
+  "decidedView": null,
+  "recordStorePatterns": {
+   "baseRate": {
+    "won": 20,
+    "decided": 20
+   },
+   "patterns": {}
+  },
+  "evidenceLineItems": [
+   {
+    "id": "line:shipping_tracking",
+    "field": "shipping_tracking",
+    "label": "Tracking status",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "moderate",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": true,
+    "usedAsPositiveBankEvidence": true,
+    "submittedToShopify": true,
+    "submissionMethod": "bank_argument",
+    "isNegativeOrAmbiguous": false,
+    "reason": "The carrier confirmed delivery with a timestamp — strong support that the order arrived.",
+    "reasonToken": {
+     "key": "disputes.deliveryProof.whyCarrierConfirmed"
+    },
+    "canBeForceIncluded": false,
+    "displayLabelToken": {
+     "key": "disputes.deliveryProof.titleCollectedOn",
+     "params": {
+      "date": "Oct 16"
+     }
+    },
+    "factsTokens": [
+     {
+      "key": "disputes.deliveryProof.factsShippedVia",
+      "params": {
+       "date": "Oct 6",
+       "carrier": "DHL Freight (Sweden) AB"
+      }
+     },
+     {
+      "key": "disputes.deliveryProof.factsCollected",
+      "params": {
+       "date": "Oct 16"
+      }
+     }
+    ],
+    "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=TRK000001&tracking-id=TRK000001",
+    "trackingNumber": "TRK000001",
+    "parcels": []
+   },
+   {
+    "id": "line:customer_communication",
+    "field": "customer_communication",
+    "label": "Shipping notification",
+    "source": "merchant_upload",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Included in the defence package as context, not as decisive proof.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.method.context_only"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:order_confirmation",
+    "field": "order_confirmation",
+    "label": "order_confirmation",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Confirms order details, but does not prove the customer authorized the transaction.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.orderConfirmation.contextOnly"
+    },
+    "canBeForceIncluded": false,
+    "internalSignals": [
+     {
+      "id": "internal:billing_shipping_agree",
+      "label": "Billing and shipping addresses on the order agree",
+      "reason": "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence: it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row.",
+      "severity": "info"
+     }
+    ]
+   },
+   {
+    "id": "line:refund_record",
+    "field": "refund_record",
+    "label": "refund_record",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "strong",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Held on file. It does not support this type of claim, so the letter does not rely on it.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.notArgumentRelevant"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:activity_log",
+    "field": "activity_log",
+    "label": "activity_log",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Held on file. It does not support this type of claim, so the letter does not rely on it.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.notArgumentRelevant"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:customer_account_info",
+    "field": "customer_account_info",
+    "label": "customer_account_info",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "strong",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Held on file. It does not support this type of claim, so the letter does not rely on it.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.notArgumentRelevant"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:shipping_policy",
+    "field": "shipping_policy",
+    "label": "shipping_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Documents shipping commitments; supporting context only.",
+    "reasonToken": {
+     "key": "disputes.reviewTab.inclusion.reasons.shippingPolicy.contextOnly"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:refund_policy",
+    "field": "refund_policy",
+    "label": "refund_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Held on file. It does not support this type of claim, so the letter does not rely on it.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.notArgumentRelevant"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:cancellation_policy",
+    "field": "cancellation_policy",
+    "label": "cancellation_policy",
+    "source": "shopify",
+    "hasEvidence": true,
+    "strengthContribution": "supporting",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Held on file. It does not support this type of claim, so the letter does not rely on it.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.notArgumentRelevant"
+    },
+    "canBeForceIncluded": false
+   },
+   {
+    "id": "line:avs_cvv_match",
+    "field": "avs_cvv_match",
+    "label": "avs_cvv_match",
+    "source": "derived",
+    "hasEvidence": true,
+    "strengthContribution": "none",
+    "bankEligible": false,
+    "merchantVisible": true,
+    "includedInDefencePackage": false,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": false,
+    "submissionMethod": "not_included",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Not verified, so it is not used in the defence.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.unverified"
+    },
+    "canBeForceIncluded": true
+   },
+   {
+    "id": "line:ip_location_check",
+    "field": "ip_location_check",
+    "label": "ip_location_check",
+    "source": "derived",
+    "hasEvidence": true,
+    "strengthContribution": "moderate",
+    "bankEligible": true,
+    "merchantVisible": true,
+    "includedInDefencePackage": true,
+    "includedInBankArgument": false,
+    "usedAsPositiveBankEvidence": false,
+    "submittedToShopify": true,
+    "submissionMethod": "context_only",
+    "isNegativeOrAmbiguous": false,
+    "reason": "Held on file. It does not support this type of claim, so the letter does not rely on it.",
+    "reasonToken": {
+     "key": "packs.argumentPlan.exclusion.notArgumentRelevant"
+    },
+    "canBeForceIncluded": false
+   }
+  ],
+  "submissionSummary": {
+   "pdfFileName": null,
+   "shopifyStructuredFields": [
+    {
+     "field": "customer_first_name",
+     "value": "Name2"
+    },
+    {
+     "field": "customer_last_name",
+     "value": "Name3"
+    },
+    {
+     "field": "customer_email",
+     "value": "customer@example.test"
+    }
+   ],
+   "factsInPdf": [
+    {
+     "field": "order_confirmation",
+     "label": "Order record",
+     "categoryLabel": "order_record"
+    },
+    {
+     "field": "shipping_tracking",
+     "label": "Shipping tracking",
+     "categoryLabel": "shipping_tracking"
+    },
+    {
+     "field": "delivery_proof",
+     "label": "Delivery confirmation",
+     "categoryLabel": "delivery_proof"
+    },
+    {
+     "field": "shipping_policy",
+     "label": "Shipping policy",
+     "categoryLabel": "policy_shipping"
+    }
+   ],
+   "counts": {
+    "usedAsPositiveBankArgument": 1,
+    "contextOnly": 9,
+    "internalOnly": 0,
+    "excluded": 0,
+    "notSupported": 0,
+    "failedUpload": 0,
+    "waived": 0
+   }
+  },
+  "attachments": [],
+  "appliedRule": {
+   "mode": "auto"
+  },
+  "caseTypeInfo": {
+   "disputeType": "Item not received",
+   "toWin": [
+    "Item was shipped with tracking",
+    "Delivery was confirmed by carrier",
+    "Shipping terms were disclosed"
+   ],
+   "strongestEvidence": [
+    "Tracking confirmation",
+    "Delivery proof",
+    "Shipping policy"
+   ],
+   "issuerClaim": "Customer claims the item was not received"
+  },
+  "defencePackage": {
+   "latest": {
+    "document_provenance_json": {
+     "argumentFactIds": [
+      "delivery_proof#gid://shopify/Scrubbed/1",
+      "order_confirmation#0",
+      "shipping_tracking#gid://shopify/Scrubbed/1"
+     ],
+     "complete": true,
+     "evidenceBasisRule": 2,
+     "provenanceVersion": 1,
+     "records": {
+      "delivery_proof#gid://shopify/Scrubbed/1": {
+       "attribution": "direct",
+       "surfaces": [
+        "evidence_basis",
+        "narrative",
+        "thesis"
+       ]
+      },
+      "order_confirmation#0": {
+       "attribution": "direct",
+       "surfaces": [
+        "evidence_basis",
+        "narrative",
+        "thesis"
+       ]
+      },
+      "shipping_policy#0": {
+       "attribution": "direct",
+       "surfaces": [
+        "narrative",
+        "thesis"
+       ]
+      },
+      "shipping_tracking#gid://shopify/Scrubbed/1": {
+       "attribution": "direct",
+       "surfaces": [
+        "narrative",
+        "thesis"
+       ]
+      }
+     },
+     "unattributedSurfaces": []
+    },
+    "document_validation_passed": true,
+    "evidence_hash": "13102d61994fddbdf35d9bb693ba0761a76abc678bdfd9da428dec32e7910a4c",
+    "facts_json": [
+     {
+      "bankEligible": true,
+      "category": "order_record",
+      "confidence": null,
+      "id": "order_confirmation#0",
+      "includeInBankNarrative": true,
+      "internalOnly": false,
+      "label": "Order record",
+      "merchantVisible": true,
+      "source": "shopify_order",
+      "sourceRef": "a80c1401-662f-4547-ac44-46df1e0a109f",
+      "strength": "supporting",
+      "submissionRisk": false,
+      "value": {
+       "channel": "web",
+       "confirmationSent": false,
+       "fieldKey": "order_confirmation",
+       "fulfillmentStatus": "FULFILLED"
+      }
+     },
+     {
+      "bankEligible": true,
+      "category": "shipping_tracking",
+      "confidence": null,
+      "id": "shipping_tracking#gid://shopify/Scrubbed/1",
+      "includeInBankNarrative": true,
+      "internalOnly": false,
+      "label": "Shipping tracking",
+      "merchantVisible": true,
+      "source": "shopify_fulfillments",
+      "sourceRef": "8de6ba86-eda2-480d-b593-13c6706b9c74",
+      "strength": "moderate",
+      "submissionRisk": false,
+      "value": {
+       "carrier": "DHL Freight (Sweden) AB",
+       "deliveredAt": "2026-10-16T12:57:58",
+       "deliveryStatuses": [
+        "CollectedAtPickup"
+       ],
+       "fieldKey": "shipping_tracking",
+       "proofType": "delivered_confirmed",
+       "returnedAt": null,
+       "shipmentIndex": [
+        {
+         "carrier": "DHL Freight (Sweden) AB",
+         "instanceKey": "gid://shopify/Scrubbed/1",
+         "proofType": "delivered_confirmed",
+         "trackingNumber": "TRK000001"
+        }
+       ],
+       "signedByName": null,
+       "trackingNumber": "TRK000001",
+       "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=TRK000001&tracking-id=TRK000001"
+      }
+     },
+     {
+      "bankEligible": true,
+      "category": "delivery_proof",
+      "confidence": null,
+      "id": "delivery_proof#gid://shopify/Scrubbed/1",
+      "includeInBankNarrative": true,
+      "internalOnly": false,
+      "label": "Delivery confirmation",
+      "merchantVisible": true,
+      "source": "shopify_fulfillments",
+      "sourceRef": "8de6ba86-eda2-480d-b593-13c6706b9c74",
+      "strength": "moderate",
+      "submissionRisk": false,
+      "value": {
+       "carrier": "DHL Freight (Sweden) AB",
+       "deliveredAt": "2026-10-16T12:57:58",
+       "deliveryStatuses": [
+        "CollectedAtPickup"
+       ],
+       "fieldKey": "delivery_proof",
+       "proofType": "delivered_confirmed",
+       "returnedAt": null,
+       "shipmentIndex": [
+        {
+         "carrier": "DHL Freight (Sweden) AB",
+         "instanceKey": "gid://shopify/Scrubbed/1",
+         "proofType": "delivered_confirmed",
+         "trackingNumber": "TRK000001"
+        }
+       ],
+       "signedByName": null,
+       "trackingNumber": "TRK000001",
+       "trackingUrl": "https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=TRK000001&tracking-id=TRK000001"
+      }
+     },
+     {
+      "bankEligible": true,
+      "category": "policy_shipping",
+      "confidence": null,
+      "id": "shipping_policy#0",
+      "includeInBankNarrative": true,
+      "internalOnly": false,
+      "label": "Shipping policy",
+      "merchantVisible": true,
+      "source": "policy_snapshots",
+      "sourceRef": "5bcd232f-8dd4-44ba-a644-c73285013eb1",
+      "strength": "supporting",
+      "submissionRisk": false,
+      "value": {
+       "fieldKey": "shipping_policy",
+       "publishedOnStore": true,
+       "publishedUrl": "https://checkout.shopify.com/93585637701/policies/46352892229.html?locale=en"
+      }
+     }
+    ],
+    "failure_code": null,
+    "failure_reason": null,
+    "generated_at": "2026-11-10T02:36:47.731066+00:00",
+    "generated_by": "system",
+    "id": "2f79e9b9-3c46-44c3-a9d9-775bfd69fe76",
+    "llm_model": "claude-sonnet-4-6",
+    "narrative_json": {
+     "addressExhibit": {
+      "avs": null,
+      "billing": [
+       "Address 3",
+       "Address 5",
+       "Address 1, Address 6",
+       "Sweden"
+      ],
+      "shipping": [
+       "Address 3",
+       "Address 5",
+       "Address 1, Address 6",
+       "Sweden"
+      ]
+     },
+     "chronologyArgument": {
+      "text": "",
+      "usedFactIds": []
+     },
+     "communicationArgument": {
+      "text": "",
+      "usedFactIds": []
+     },
+     "conclusion": {
+      "source": "record",
+      "text": "The carrier's own record shows delivery of a shipment containing every item ordered, and the dispute was opened seventeen days after that delivery. The non-receipt claim is not supported by the record.",
+      "usedFactIds": [
+       "order_confirmation#0",
+       "shipping_tracking#gid://shopify/Scrubbed/1",
+       "delivery_proof#gid://shopify/Scrubbed/1",
+       "shipping_policy#0"
+      ]
+     },
+     "counsel": {
+      "inputHash": "a900e6067bff2dc696fb7a9b7fa245adb7e7f24956ab2683ecb23f93c975ebb7",
+      "summary": [
+       "The customer says the order was not received. The carrier recorded delivery on 16 October 2026, and the dispute was opened seventeen days after that delivery. Both purchased items, each in the quantity ordered, travelled in a single tracked shipment. The carrier's own record, not a merchant document, confirms delivery. The merchant requests that Klarna close this dispute in the merchant's favour."
+      ]
+     },
+     "executiveSummary": {
+      "source": "record",
+      "text": "The customer says the order was not received. The carrier recorded delivery on 16 October 2026, and the dispute was opened seventeen days after that delivery. Both purchased items, each in the quantity ordered, travelled in a single tracked shipment. The carrier's own record, not a merchant document, confirms delivery. The merchant requests that Klarna close this dispute in the merchant's favour.",
+      "usedFactIds": [
+       "order_confirmation#0",
+       "shipping_tracking#gid://shopify/Scrubbed/1",
+       "delivery_proof#gid://shopify/Scrubbed/1",
+       "shipping_policy#0"
+      ]
+     },
+     "fulfillmentArgument": {
+      "source": "record",
+      "text": "The carrier's own tracking record, linked below, shows the shipment as delivered on 16 October 2026; this is not a merchant document. Both items, each in the quantity ordered, were in that one shipment, and no second shipment exists, so every part of the order falls within that delivery record.\n\nCarrier tracking record: https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=TRK000001&tracking-id=TRK000001",
+      "usedFactIds": [
+       "order_confirmation#0",
+       "shipping_tracking#gid://shopify/Scrubbed/1",
+       "delivery_proof#gid://shopify/Scrubbed/1",
+       "shipping_policy#0"
+      ]
+     },
+     "headline": "",
+     "manualEvidenceArgument": {
+      "text": "",
+      "usedFactIds": []
+     },
+     "omittedSections": [
+      {
+       "reason": "Not part of this letter's argument.",
+       "sectionKey": "transactionOverviewArgument"
+      },
+      {
+       "reason": "Not part of this letter's argument.",
+       "sectionKey": "chronologyArgument"
+      },
+      {
+       "reason": "Not part of this letter's argument.",
+       "sectionKey": "paymentAuthenticationArgument"
+      },
+      {
+       "reason": "Not part of this letter's argument.",
+       "sectionKey": "communicationArgument"
+      },
+      {
+       "reason": "Not part of this letter's argument.",
+       "sectionKey": "policyArgument"
+      },
+      {
+       "reason": "Not part of this letter's argument.",
+       "sectionKey": "manualEvidenceArgument"
+      }
+     ],
+     "paymentAuthenticationArgument": {
+      "text": "",
+      "usedFactIds": []
+     },
+     "policyArgument": {
+      "source": "record",
+      "text": "",
+      "usedFactIds": []
+     },
+     "transactionOverviewArgument": {
+      "text": "",
+      "usedFactIds": []
+     },
+     "warnings": []
+    },
+    "package_mode": "full",
+    "pdf_path": "00000000-0000-4000-8000-000000000001/f75f3b26-f69c-4de8-a90a-f597b638434e/defence/v9/2026-11-10T02-54-58-774Z.pdf",
+    "plan_deadline_only": false,
+    "plan_input_hash": "a19b8ad4a40cd170830f45ddd92eec01878e1023ac9239c8d8ef9108e46983d7",
+    "plan_json": {
+     "caseId": "e38c8d87-f45f-41b1-9b3b-309b9682342f",
+     "deadlineOnly": false,
+     "excluded": [
+      {
+       "factCategory": "refund_record",
+       "fieldKey": "refund_record",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+       "reason": "not_argument_relevant",
+       "recordId": "refund_record#0"
+      },
+      {
+       "factCategory": "prior_customer_history",
+       "fieldKey": "activity_log",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+       "reason": "not_argument_relevant",
+       "recordId": "activity_log#0"
+      },
+      {
+       "factCategory": "prior_customer_history",
+       "fieldKey": "customer_account_info",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+       "reason": "not_argument_relevant",
+       "recordId": "customer_account_info#0"
+      },
+      {
+       "factCategory": "policy_refund",
+       "fieldKey": "refund_policy",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+       "reason": "not_argument_relevant",
+       "recordId": "refund_policy#0"
+      },
+      {
+       "factCategory": "policy_cancellation",
+       "fieldKey": "cancellation_policy",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+       "reason": "not_argument_relevant",
+       "recordId": "cancellation_policy#0"
+      },
+      {
+       "factCategory": "payment_authentication",
+       "fieldKey": "avs_cvv_match",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.unverified",
+       "reason": "unverified",
+       "recordId": "avs_cvv_match#0"
+      },
+      {
+       "factCategory": "ip_location",
+       "fieldKey": "ip_location_check",
+       "merchantReasonToken": "packs.argumentPlan.exclusion.notArgumentRelevant",
+       "reason": "not_argument_relevant",
+       "recordId": "ip_location_check#0"
+      }
+     ],
+     "freshness": {
+      "computedAt": "2026-11-10T02:54:39.982Z",
+      "inputHash": "a19b8ad4a40cd170830f45ddd92eec01878e1023ac9239c8d8ef9108e46983d7",
+      "policyVersion": 1
+     },
+     "included": [
+      {
+       "factCategory": "order_record",
+       "fieldKey": "order_confirmation",
+       "recordId": "order_confirmation#0"
+      },
+      {
+       "factCategory": "shipping_tracking",
+       "fieldKey": "shipping_tracking",
+       "recordId": "shipping_tracking#gid://shopify/Scrubbed/1"
+      },
+      {
+       "factCategory": "delivery_proof",
+       "fieldKey": "delivery_proof",
+       "recordId": "delivery_proof#gid://shopify/Scrubbed/1"
+      },
+      {
+       "factCategory": "policy_shipping",
+       "fieldKey": "shipping_policy",
+       "recordId": "shipping_policy#0"
+      },
+      {
+       "factCategory": "customer_communication",
+       "fieldKey": "customer_communication",
+       "recordId": "customer_communication#0"
+      }
+     ],
+     "noSafeArgument": null,
+     "planVersion": 1,
+     "reasonModuleId": "inr_product_not_received"
+    },
+    "plan_no_safe_argument": null,
+    "prompt_family": "counsel_v2",
+    "prompt_version": 3,
+    "reason_code_module": "inr_product_not_received",
+    "status": "final",
+    "submitted_at": null,
+    "validation_errors": [],
+    "validation_status": "ok",
+    "version": 9,
+    "preview_url": "/api/defence-packages/2f79e9b9-3c46-44c3-a9d9-775bfd69fe76/preview?shop_id=00000000-0000-4000-8000-000000000001&t=1794312144.a8b37ade47e798ee2df0693b15a8a4b35df8db63c169458a075e9b1379ac8a69"
+   },
+   "bankFacing": null,
+   "currentPromptVersion": 42,
+   "building": false,
+   "safety": {
+    "blocked": false,
+    "reasons": [],
+    "message": ""
+   }
+  }
+ },
+ "sourceRows": {
+  "evidenceSavedToShopifyAt": null,
+  "automationMode": "auto",
+  "assessmentReadOk": true,
+  "outcomeInputs": null
+ }
+}
