@@ -631,6 +631,9 @@ export async function handleBuildDefencePackage(
           shopId: pkg.shop_id,
           moduleKey: reasonCodeModule.key,
           facts: planFacts,
+          carrierRecordPool: bankIncludedFacts(classification.approved).filter(
+            (f) => f.category === "delivery_proof" || f.category === "shipping_tracking",
+          ),
           packSections: sectionsRaw.map((s) => ({ type: s.type, source: s.source, data: s.data ?? {} })),
           orderName: orderCtx.orderName ?? null,
           orderGid: (dispute as { order_gid?: string | null } | null)?.order_gid ?? null,
@@ -791,6 +794,12 @@ export async function handleBuildDefencePackage(
     error: null as string | null,
   };
   usedCounsel = !!counselRes;
+  // The carrier record the letter argues is shown in the document, whatever the
+  // module's plan kept (lib/defence/counsel/carrierExhibit.ts). Added to the
+  // ONE list the validator, the chronology, the card and the Evidence Basis read.
+  if (counselRes.exhibitFacts?.length) {
+    planFacts = [...planFacts, ...(counselRes.exhibitFacts ?? [])] as typeof planFacts;
+  }
 
   if (narrativeRes.capReached) {
     return await markFailed(sb, pkg, narrativeRes.error ?? "daily cap reached", "daily_cap_reached", true);
