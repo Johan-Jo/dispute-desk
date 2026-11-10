@@ -399,7 +399,7 @@ describe("pickPaymentMethod", () => {
     ).toBe("klarna");
   });
 
-  it("falls back to the first transaction when no SUCCESS sale/auth exists", () => {
+  it("returns null (unknown) when no SUCCESS sale/capture/auth exists — never a failed attempt", () => {
     expect(
       pickPaymentMethod([
         {
@@ -410,7 +410,7 @@ describe("pickPaymentMethod", () => {
           paymentDetails: { __typename: "CardPaymentDetails", wallet: "APPLE_PAY" },
         },
       ]),
-    ).toBe("apple_pay");
+    ).toBeNull();
   });
 });
 
