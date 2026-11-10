@@ -2491,6 +2491,128 @@
       }
     },
     "record": {
+      "status": {
+        "label": {
+          "happened": "Ce qui s'est passé",
+          "need": "Ce dont nous avons besoin de vous",
+          "can": "Ce que vous pouvez faire",
+          "optional": "Pour le renforcer (facultatif)",
+          "next": "Et ensuite",
+          "done": "Déjà fait"
+        },
+        "phase": {
+          "inquiry": "Demande de renseignements",
+          "chargeback": "Rétrofacturation"
+        },
+        "subline": {
+          "open": "{phase} · {amount} · La date limite de Shopify est le {date}",
+          "decided": "{phase} · {amount} · Tranché le {date}",
+          "plain": "{phase} · {amount}"
+        },
+        "fact": {
+          "returnedToSender": "Le transporteur vous a renvoyé ce colis, il ne peut donc exister aucune preuve de livraison."
+        },
+        "headline": {
+          "askParcel": "Votre réponse est nécessaire : pourquoi ce colis vous est-il revenu ?",
+          "askParcelToday": "Votre réponse est nécessaire aujourd'hui : pourquoi ce colis vous est-il revenu ?",
+          "askReturn": "Votre réponse est nécessaire : ce client a-t-il demandé un retour ou un remboursement ?",
+          "askReturnToday": "Votre réponse est nécessaire aujourd'hui : ce client a-t-il demandé un retour ou un remboursement ?",
+          "askBank": "Votre aide est nécessaire : ajoutez la réclamation de la banque depuis Shopify",
+          "askBankToday": "Votre aide est nécessaire aujourd'hui : ajoutez la réclamation de la banque depuis Shopify",
+          "approval": "Votre approbation est nécessaire : la réponse est prête",
+          "scheduled": "Rien à faire. La réponse est programmée pour le {date}",
+          "scheduledNoDate": "Rien à faire. La réponse est programmée pour la date limite",
+          "filing": "Rien à faire. La réponse est en cours de dépôt",
+          "filed": "Rien à faire. La réponse a été déposée",
+          "sentByShopify": "Rien à faire. Une réponse a été envoyée via Shopify",
+          "saveFailed": "DisputeDesk n'a pas pu déposer cette réponse",
+          "unconfirmed": "Rien à faire. Shopify n'a pas encore confirmé cette réponse",
+          "buildFailed": "DisputeDesk n'a pas encore réussi à rédiger cette réponse",
+          "buildPaused": "DisputeDesk a mis en pause la rédaction de cette réponse",
+          "nothingToArgue": "DisputeDesk ne dépose pas de réponse : le dossier n'en justifie aucune",
+          "covered": "Rien à faire. Shopify Protect couvre cette commande",
+          "conceded": "Rien à faire. Vous avez choisi de ne pas ajouter de réponse",
+          "planLimit": "Changement de forfait nécessaire : la limite de ce mois est atteinte",
+          "preparing": "Rien à faire. DisputeDesk prépare la réponse",
+          "won": "Gagné : {amount} restent chez vous",
+          "wonNoAmount": "Gagné",
+          "lost": "Perdu : {amount} sont retournés au client",
+          "lostNoAmount": "Perdu"
+        },
+        "happened": {
+          "filedWe": "DisputeDesk a déposé une réponse le {date}.",
+          "relied": "Elle s'appuyait sur {list}.",
+          "filed": "DisputeDesk a déposé la réponse via Shopify le {date}.",
+          "filedNoDate": "DisputeDesk a déposé la réponse via Shopify.",
+          "relies": "Elle s'appuie sur {list}.",
+          "sentByShopify": "DisputeDesk n'a rien déposé pour ce litige. Une réponse a été envoyée via Shopify.",
+          "saveFailed": "La réponse est prête, mais Shopify n'a pas accepté le fichier lors de l'envoi (dernière tentative le {date}). Rien de DisputeDesk n'est parvenu à la banque.",
+          "saveFailedNoDate": "La réponse est prête, mais Shopify n'a pas accepté le fichier lors de l'envoi. Rien de DisputeDesk n'est parvenu à la banque.",
+          "unconfirmed": "DisputeDesk a mis la réponse en file d'attente pour Shopify le {date}, mais Shopify n'a pas confirmé l'avoir acceptée.",
+          "unconfirmedNoDate": "DisputeDesk a mis la réponse en file d'attente pour Shopify, mais Shopify n'a pas confirmé l'avoir acceptée.",
+          "buildFailed": "Les preuves sont réunies, mais la réponse n'a pas passé nos contrôles (dernière tentative le {date}). Rien n'a été déposé.",
+          "buildFailedNoDate": "Les preuves sont réunies, mais la réponse n'a pas passé nos contrôles. Rien n'a été déposé.",
+          "buildPaused": "Les preuves sont réunies, mais la rédaction de la réponse est suspendue par une limite quotidienne. Rien n'a été déposé.",
+          "refundCovers": "Le remboursement enregistré couvre le montant contesté.",
+          "notFulfilled": "La commande n'a jamais été exécutée.",
+          "noFacts": "Rien dans le dossier ne peut être présenté à la banque à l'appui de ce litige.",
+          "planLimit": "DisputeDesk n'a pas préparé de réponse pour ce litige parce que la limite mensuelle de votre forfait est atteinte."
+        },
+        "need": {
+          "parcel": "Vous seul savez pourquoi il est revenu. Si le client a refusé le colis ou ne l'a jamais retiré, ce n'est pas un retour valable, et c'est le seul argument qui reste dans ce litige. Sans votre réponse, notre réponse à la banque est faible.",
+          "return": "Shopify n'enregistre que les retours faits via Shopify : vous seul pouvez dire si ce client a demandé un retour ou un remboursement avant d'ouvrir le litige.",
+          "bank": "Le motif de la banque n'est visible que dans Shopify. Collez-le ici pour que la réponse traite exactement ce qui a été demandé.",
+          "review": "Lisez la réponse et choisissez.",
+          "nothing": "Nous n'avons besoin de rien de votre part pour le moment.",
+          "plan": "Choisissez un forfait adapté à votre volume."
+        },
+        "can": {
+          "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves."
+        },
+        "optional": {
+          "ack": "La reconnaissance du titulaire de la carte renforcerait le dossier."
+        },
+        "action": {
+          "answer": "Répondre à la question",
+          "approve": "Approuver",
+          "concede": "Ne pas ajouter de réponse",
+          "evidence": "Ajouter des preuves",
+          "ack": "Ajouter la reconnaissance",
+          "plans": "Voir les forfaits"
+        },
+        "next": {
+          "parcelAnswer": "Si vous répondez, votre réponse est ajoutée à la réponse envoyée à la banque, et vous décidez de la déposer ou non.",
+          "parcelNone": "Sinon, DisputeDesk ne dépose rien de lui-même. Shopify envoie quand même une réponse à partir des données de la commande.",
+          "returnAnswer": "Si vous répondez, DisputeDesk rédige de nouveau la réponse en tenant compte de votre réponse.",
+          "bankAnswer": "Une fois que vous l'aurez ajoutée, DisputeDesk rédige de nouveau la réponse.",
+          "bankNone": "D'ici là, DisputeDesk ne dépose rien pour ce litige. Shopify envoie quand même une réponse à partir des données de la commande.",
+          "reviewApprove": "Si vous approuvez, le dépôt via Shopify est programmé à la date limite, le {date}, après une nouvelle vérification.",
+          "reviewNone": "Si vous ne faites rien, DisputeDesk ne dépose rien. Shopify envoie quand même une réponse à partir des données de la commande.",
+          "covered": "Shopify gère ce litige lui-même. DisputeDesk ne dépose rien pour celui-ci.",
+          "passed": "Shopify l'a transmise à la banque.",
+          "passes": "Shopify la transmet à la banque.",
+          "inquiry": "Si la banque est satisfaite, la demande de renseignements est close. Sinon, elle peut devenir une rétrofacturation, et DisputeDesk prépare une nouvelle réponse.",
+          "chargeback": "La banque tranche.",
+          "email": "Vous recevez un e-mail quand le résultat est publié, si les e-mails de résultat sont activés dans les Paramètres.",
+          "filing": "DisputeDesk envoie la réponse à Shopify en ce moment.",
+          "saveRetry": "Une nouvelle tentative est programmée à la date limite, le {date}, après une nouvelle vérification de la réponse.",
+          "unconfirmed": "Une nouvelle vérification est programmée à la date limite, le {date}.",
+          "rebuild": "DisputeDesk doit rédiger de nouveau la réponse à la date limite, le {date}.",
+          "buildNoFile": "Si aucune réponse ne passe les contrôles, DisputeDesk ne dépose rien, vous recevez un e-mail, et Shopify envoie quand même une réponse à partir des données de la commande.",
+          "buildNoFileQuiet": "Si aucune réponse ne passe les contrôles, DisputeDesk ne dépose rien. Shopify envoie quand même une réponse à partir des données de la commande.",
+          "buildPaused": "DisputeDesk réessaie chaque jour jusqu'à la date limite.",
+          "shopifySends": "DisputeDesk ne dépose rien pour ce litige. Shopify envoie quand même une réponse à partir des données de la commande.",
+          "expectLoss": "DisputeDesk s'attend à perdre ce litige.",
+          "scheduled": "Le dépôt via Shopify est programmé à la date limite, le {date}. DisputeDesk continue de guetter de nouvelles preuves et revérifie la réponse avant tout envoi.",
+          "scheduledNoDate": "Le dépôt via Shopify est programmé à la date limite. DisputeDesk continue de guetter de nouvelles preuves et revérifie la réponse avant tout envoi.",
+          "planLimit": "Dès que le forfait est changé, DisputeDesk prépare la réponse. La date limite de Shopify est le {date}.",
+          "planLimitNoDate": "Dès que le forfait est changé, DisputeDesk prépare la réponse."
+        },
+        "done": {
+          "drafted": "Les preuves sont réunies et une réponse est rédigée. Rien n'a été déposé.",
+          "evidence": "Les preuves sont réunies. Rien n'a été déposé."
+        }
+      },
       "claim": {
         "FRAUDULENT": "Le titulaire de la carte a déclaré à sa banque ne pas avoir effectué cet achat.",
         "UNRECOGNIZED": "Le titulaire de la carte a déclaré à sa banque ne pas reconnaître le débit.",
@@ -4359,7 +4481,7 @@
         },
         "disputeDetailPage": {
           "title": "Détail du litige dans cette application",
-          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers.\n\n**Des chiffres tirés de votre propre boutique.** Sur un litige gagné ou perdu, **Ce qui fait gagner ce type de litige** peut indiquer à quelle fréquence les litiges du même type ont été gagnés sur votre boutique, et une étape de **La prochaine fois** peut indiquer combien de vos litiges perdus de ce type présentaient le même problème. Ils n'apparaissent que lorsque votre boutique compte assez de litiges tranchés de ce type. Ils décrivent l'historique de votre boutique, pas le raisonnement de la banque sur ce dossier.\n\n**Un seul récit du litige.** La page s'ouvre sur un court récit du litige, et chaque onglet lit les mêmes faits : un nombre, une date ou une phrase ne diffère jamais entre **Aperçu**, **Preuves** et **Vérifier et transmettre**. **Le dossier** énumère les faits sur lesquels repose le récit, **Ce qui fait gagner ce type de litige** montre combien d'éléments que les banques recherchent sont au dossier, et **Ce qui s'est passé** est la chronologie. Chaque preuve a exactement un rôle : **cité à la banque**, **contexte dans le dossier**, **gardé en interne** (utilisé uniquement pour notre évaluation, jamais envoyé à Shopify ni à la banque) ou **non disponible**. Les éléments **cités à la banque** sont ceux sur lesquels la lettre s'appuie : sa base probatoire les liste, et une livraison est exposée dans sa section d'expédition. La fiche de commande ou une politique de la boutique ne sont citées que si l'argumentation de la lettre s'appuie dessus ; sinon ils restent du contexte. Une lettre préparée plus tôt conserve la base probatoire avec laquelle elle a été rédigée, et cette page décrit cette lettre. Un retour ou un remboursement enregistré par Shopify sur la commande est indiqué une seule fois, dans le dossier, avec les mêmes mots partout. La page est pour vous seul et ne fait partie de rien de ce qui est envoyé à la banque ; la lettre de **Vérifier et transmettre** est le document que la banque reçoit.\n\n**Les questions auxquelles vous seul pouvez répondre.** Quand le litige attend une réponse de votre part (la réclamation de la banque, pourquoi un colis renvoyé est revenu, si le client a demandé un retour ou votre décision sur un dossier en attente d'approbation), elle apparaît dans **Aperçu** sous forme de carte sous le résumé, et le résumé la nomme en premier. Ce qui ne fait qu'aider, comme l'ajout de la confirmation du titulaire de la carte ou les preuves manquantes, reste dans **Preuves**."
+          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers.\n\n**Des chiffres tirés de votre propre boutique.** Sur un litige gagné ou perdu, **Ce qui fait gagner ce type de litige** peut indiquer à quelle fréquence les litiges du même type ont été gagnés sur votre boutique, et une étape de **La prochaine fois** peut indiquer combien de vos litiges perdus de ce type présentaient le même problème. Ils n'apparaissent que lorsque votre boutique compte assez de litiges tranchés de ce type. Ils décrivent l'historique de votre boutique, pas le raisonnement de la banque sur ce dossier.\n\n**Un seul récit du litige.** La page s'ouvre sur un court récit du litige, et chaque onglet lit les mêmes faits : un nombre, une date ou une phrase ne diffère jamais entre **Aperçu**, **Preuves** et **Vérifier et transmettre**. **Le dossier** énumère les faits sur lesquels repose le récit, **Ce qui fait gagner ce type de litige** montre combien d'éléments que les banques recherchent sont au dossier, et **Ce qui s'est passé** est la chronologie. Chaque preuve a exactement un rôle : **cité à la banque**, **contexte dans le dossier**, **gardé en interne** (utilisé uniquement pour notre évaluation, jamais envoyé à Shopify ni à la banque) ou **non disponible**. Les éléments **cités à la banque** sont ceux sur lesquels la lettre s'appuie : sa base probatoire les liste, et une livraison est exposée dans sa section d'expédition. La fiche de commande ou une politique de la boutique ne sont citées que si l'argumentation de la lettre s'appuie dessus ; sinon ils restent du contexte. Une lettre préparée plus tôt conserve la base probatoire avec laquelle elle a été rédigée, et cette page décrit cette lettre. Un retour ou un remboursement enregistré par Shopify sur la commande est indiqué une seule fois, dans le dossier, avec les mêmes mots partout. La page est pour vous seul et ne fait partie de rien de ce qui est envoyé à la banque ; la lettre de **Vérifier et transmettre** est le document que la banque reçoit.\n\n**Les questions auxquelles vous seul pouvez répondre.** Quand le litige attend une réponse de votre part (la réclamation de la banque, pourquoi un colis renvoyé est revenu, si le client a demandé un retour ou votre décision sur un dossier en attente d'approbation), elle apparaît dans **Aperçu** sous forme de carte sous le résumé, et le bloc d'état en haut de la page la nomme en premier, avec un bouton qui y mène. Ce qui ne fait qu'aider, comme l'ajout de la confirmation du titulaire de la carte ou les preuves manquantes, reste dans **Preuves**.\n\n**Le bloc d'état en haut de page.** Le titre est la seule chose à faire, ou commence par « Rien à faire. » quand rien n'est nécessaire. En dessous, **Ce qui s'est passé**, **Ce dont nous avons besoin de vous** (avec le bouton de la question, directement sur la page), **Et ensuite** et **Déjà fait** sont courts et n'apparaissent que lorsqu'il y a quelque chose de vrai à dire. Les numéros de version internes et les décomptes de preuves n'en font pas partie. « Programmé » signifie que DisputeDesk revérifie la réponse à la date limite avant tout envoi. Si DisputeDesk ne dépose rien, le processus propre à Shopify à la date limite s'exécute quand même avec les informations de commande dont Shopify dispose déjà."
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",

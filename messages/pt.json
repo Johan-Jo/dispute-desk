@@ -2491,6 +2491,128 @@
       }
     },
     "record": {
+      "status": {
+        "label": {
+          "happened": "O que aconteceu",
+          "need": "O que precisamos de si",
+          "can": "O que pode fazer",
+          "optional": "Para reforçar o caso (opcional)",
+          "next": "O que acontece a seguir",
+          "done": "Já feito"
+        },
+        "phase": {
+          "inquiry": "Pedido de informação",
+          "chargeback": "Chargeback"
+        },
+        "subline": {
+          "open": "{phase} · {amount} · O prazo da Shopify é {date}",
+          "decided": "{phase} · {amount} · Decidido a {date}",
+          "plain": "{phase} · {amount}"
+        },
+        "fact": {
+          "returnedToSender": "A transportadora devolveu esta encomenda a si, por isso não pode existir comprovativo de entrega."
+        },
+        "headline": {
+          "askParcel": "É preciso a sua resposta: porque voltou esta encomenda até si?",
+          "askParcelToday": "É preciso a sua resposta hoje: porque voltou esta encomenda até si?",
+          "askReturn": "É preciso a sua resposta: este cliente pediu uma devolução ou um reembolso?",
+          "askReturnToday": "É preciso a sua resposta hoje: este cliente pediu uma devolução ou um reembolso?",
+          "askBank": "É preciso a sua ajuda: adicione a reclamação do banco a partir da Shopify",
+          "askBankToday": "É preciso a sua ajuda hoje: adicione a reclamação do banco a partir da Shopify",
+          "approval": "É preciso a sua aprovação: a resposta está pronta",
+          "scheduled": "Nada a fazer. A resposta está agendada para {date}",
+          "scheduledNoDate": "Nada a fazer. A resposta está agendada para o prazo",
+          "filing": "Nada a fazer. A resposta está a ser apresentada",
+          "filed": "Nada a fazer. A resposta foi apresentada",
+          "sentByShopify": "Nada a fazer. Foi enviada uma resposta através da Shopify",
+          "saveFailed": "O DisputeDesk não conseguiu apresentar esta resposta",
+          "unconfirmed": "Nada a fazer. A Shopify ainda não confirmou esta resposta",
+          "buildFailed": "O DisputeDesk ainda não conseguiu redigir esta resposta",
+          "buildPaused": "O DisputeDesk pausou a redação desta resposta",
+          "nothingToArgue": "O DisputeDesk não apresenta uma resposta: o registo não a sustenta",
+          "covered": "Nada a fazer. A Shopify Protect cobre este pedido",
+          "conceded": "Nada a fazer. Escolheu não adicionar uma resposta",
+          "planLimit": "É preciso mudar de plano: o limite deste mês está esgotado",
+          "preparing": "Nada a fazer. O DisputeDesk está a preparar a resposta",
+          "won": "Ganha: {amount} ficam consigo",
+          "wonNoAmount": "Ganha",
+          "lost": "Perdida: {amount} voltaram para o cliente",
+          "lostNoAmount": "Perdida"
+        },
+        "happened": {
+          "filedWe": "O DisputeDesk apresentou uma resposta a {date}.",
+          "relied": "Apoiou-se em {list}.",
+          "filed": "O DisputeDesk apresentou a resposta através da Shopify a {date}.",
+          "filedNoDate": "O DisputeDesk apresentou a resposta através da Shopify.",
+          "relies": "Apoia-se em {list}.",
+          "sentByShopify": "O DisputeDesk não apresentou nada para esta contestação. Foi enviada uma resposta através da Shopify.",
+          "saveFailed": "A resposta está pronta, mas a Shopify não aceitou o ficheiro quando o enviámos (última tentativa a {date}). Nada do DisputeDesk chegou ao banco.",
+          "saveFailedNoDate": "A resposta está pronta, mas a Shopify não aceitou o ficheiro quando o enviámos. Nada do DisputeDesk chegou ao banco.",
+          "unconfirmed": "O DisputeDesk colocou a resposta em fila para a Shopify a {date}, mas a Shopify não confirmou que a aceitou.",
+          "unconfirmedNoDate": "O DisputeDesk colocou a resposta em fila para a Shopify, mas a Shopify não confirmou que a aceitou.",
+          "buildFailed": "As provas estão reunidas, mas a resposta não passou nas nossas verificações (última tentativa a {date}). Nada foi apresentado.",
+          "buildFailedNoDate": "As provas estão reunidas, mas a resposta não passou nas nossas verificações. Nada foi apresentado.",
+          "buildPaused": "As provas estão reunidas, mas a redação da resposta está em pausa por um limite diário. Nada foi apresentado.",
+          "refundCovers": "O reembolso registado cobre o valor contestado.",
+          "notFulfilled": "O pedido nunca foi cumprido.",
+          "noFacts": "Nada do que está registado pode ser mostrado ao banco em apoio deste caso.",
+          "planLimit": "O DisputeDesk não preparou uma resposta para esta contestação porque o limite mensal do seu plano está esgotado."
+        },
+        "need": {
+          "parcel": "Só você sabe porque voltou. Se o cliente recusou a encomenda ou nunca a levantou, isso não é uma devolução válida, e é o único argumento que resta neste caso. Sem a sua resposta, a resposta ao banco fica fraca.",
+          "return": "A Shopify só regista as devoluções feitas através da Shopify, por isso só você pode dizer se este cliente pediu uma devolução ou um reembolso antes de abrir a contestação.",
+          "bank": "O motivo do banco só é visível na Shopify. Cole-o aqui para que a resposta responda exatamente ao que foi perguntado.",
+          "review": "Leia a resposta e escolha.",
+          "nothing": "Neste momento não precisamos de nada de si.",
+          "plan": "Escolha um plano que cubra o seu volume."
+        },
+        "can": {
+          "evidence": "Se tem provas que não conseguimos ver, como uma confirmação de entrega da transportadora, adicione-as no separador Evidências."
+        },
+        "optional": {
+          "ack": "O reconhecimento do titular do cartão reforçaria o caso."
+        },
+        "action": {
+          "answer": "Responder à pergunta",
+          "approve": "Aprovar",
+          "concede": "Não adicionar uma resposta",
+          "evidence": "Adicionar provas",
+          "ack": "Adicionar reconhecimento",
+          "plans": "Ver planos"
+        },
+        "next": {
+          "parcelAnswer": "Se responder, a sua resposta é adicionada à resposta ao banco e você decide se a apresenta.",
+          "parcelNone": "Se não responder, o DisputeDesk não apresenta nada por si próprio. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
+          "returnAnswer": "Se responder, o DisputeDesk volta a redigir a resposta com a sua resposta.",
+          "bankAnswer": "Depois de a adicionar, o DisputeDesk volta a redigir a resposta.",
+          "bankNone": "Até lá, o DisputeDesk não apresenta nada para esta contestação. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
+          "reviewApprove": "Se aprovar, fica agendada a apresentação através da Shopify no prazo, a {date}, com uma nova verificação antes.",
+          "reviewNone": "Se não fizer nada, o DisputeDesk não apresenta nada. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
+          "covered": "A Shopify trata desta contestação por si. O DisputeDesk não apresenta nada para ela.",
+          "passed": "A Shopify já a passou ao banco.",
+          "passes": "A Shopify passa-a ao banco.",
+          "inquiry": "Se o banco ficar satisfeito, o pedido de informação é encerrado. Se não, pode tornar-se um chargeback, e o DisputeDesk prepara uma nova resposta.",
+          "chargeback": "O banco decide.",
+          "email": "Recebe um e-mail quando o resultado for publicado, se os e-mails de resultado estiverem ativados nas Configurações.",
+          "filing": "O DisputeDesk está a enviar a resposta para a Shopify neste momento.",
+          "saveRetry": "Está agendada uma nova tentativa para o prazo, a {date}, depois de a resposta ser verificada de novo.",
+          "unconfirmed": "Está agendada uma nova verificação para o prazo, a {date}.",
+          "rebuild": "O DisputeDesk tem agendado voltar a redigir a resposta no prazo, a {date}.",
+          "buildNoFile": "Se nenhuma resposta passar nas verificações, o DisputeDesk não apresenta nada, recebe um e-mail e a Shopify envia na mesma uma resposta com os dados do próprio pedido.",
+          "buildNoFileQuiet": "Se nenhuma resposta passar nas verificações, o DisputeDesk não apresenta nada. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
+          "buildPaused": "O DisputeDesk volta a tentar todos os dias até ao prazo.",
+          "shopifySends": "O DisputeDesk não apresenta nada para esta contestação. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
+          "expectLoss": "O DisputeDesk espera perder esta contestação.",
+          "scheduled": "Está agendada a apresentação através da Shopify no prazo, a {date}. O DisputeDesk continua atento a novas provas e verifica de novo a resposta antes de enviar o que quer que seja.",
+          "scheduledNoDate": "Está agendada a apresentação através da Shopify no prazo. O DisputeDesk continua atento a novas provas e verifica de novo a resposta antes de enviar o que quer que seja.",
+          "planLimit": "Assim que o plano for alterado, o DisputeDesk prepara a resposta. O prazo da Shopify é {date}.",
+          "planLimitNoDate": "Assim que o plano for alterado, o DisputeDesk prepara a resposta."
+        },
+        "done": {
+          "drafted": "As provas estão reunidas e há uma resposta redigida. Nada foi apresentado.",
+          "evidence": "As provas estão reunidas. Nada foi apresentado."
+        }
+      },
       "claim": {
         "FRAUDULENT": "O titular do cartão disse ao banco que não fez esta compra.",
         "UNRECOGNIZED": "O titular do cartão disse ao banco que não reconhece a cobrança.",
@@ -4359,7 +4481,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
-          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso.\n\n**Um único relato da contestação.** A página abre com um breve relato da contestação, e todos os separadores leem os mesmos factos, por isso um número, uma data ou uma frase nunca difere entre **Visão geral**, **Evidências** e **Revisar e encaminhar**. **O registo** lista os factos em que o relato se baseia, **O que ganha este tipo de contestação** mostra quantos dos elementos que os bancos procuram estão registados, e **O que aconteceu** é o histórico. Cada prova tem exatamente uma função: **citado ao banco**, **contexto no pacote**, **mantido internamente** (usado apenas na nossa avaliação, nunca enviado à Shopify nem ao banco) ou **indisponível**. Os elementos **citados ao banco** são aqueles em que a carta se apoia: a base probatória lista-os e uma entrega é apresentada na secção de envio. O registo do pedido ou uma política da loja só são citados quando a argumentação da carta se apoia neles; caso contrário ficam como contexto. Uma carta preparada antes mantém a base probatória com que foi redigida, e esta página descreve essa carta. Uma devolução ou um reembolso que a Shopify regista no pedido é indicado uma só vez, no registo, com as mesmas palavras em todo o lado. A página é só para si e não faz parte de nada do que é enviado ao banco; a carta em **Revisar e encaminhar** é o documento que o banco recebe.\n\n**Perguntas a que só você pode responder.** Quando a disputa precisa de uma resposta sua (a reclamação do banco, porque é que uma encomenda devolvida voltou, se o cliente pediu uma devolução ou a sua decisão sobre um pacote à espera de aprovação), ela aparece em **Visão geral** como um cartão por baixo do resumo, e o resumo nomeia-a primeiro. O que só ajuda, como adicionar a confirmação do titular do cartão ou as evidências em falta, fica em **Evidências**."
+          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso.\n\n**Um único relato da contestação.** A página abre com um breve relato da contestação, e todos os separadores leem os mesmos factos, por isso um número, uma data ou uma frase nunca difere entre **Visão geral**, **Evidências** e **Revisar e encaminhar**. **O registo** lista os factos em que o relato se baseia, **O que ganha este tipo de contestação** mostra quantos dos elementos que os bancos procuram estão registados, e **O que aconteceu** é o histórico. Cada prova tem exatamente uma função: **citado ao banco**, **contexto no pacote**, **mantido internamente** (usado apenas na nossa avaliação, nunca enviado à Shopify nem ao banco) ou **indisponível**. Os elementos **citados ao banco** são aqueles em que a carta se apoia: a base probatória lista-os e uma entrega é apresentada na secção de envio. O registo do pedido ou uma política da loja só são citados quando a argumentação da carta se apoia neles; caso contrário ficam como contexto. Uma carta preparada antes mantém a base probatória com que foi redigida, e esta página descreve essa carta. Uma devolução ou um reembolso que a Shopify regista no pedido é indicado uma só vez, no registo, com as mesmas palavras em todo o lado. A página é só para si e não faz parte de nada do que é enviado ao banco; a carta em **Revisar e encaminhar** é o documento que o banco recebe.\n\n**Perguntas a que só você pode responder.** Quando a disputa precisa de uma resposta sua (a reclamação do banco, porque é que uma encomenda devolvida voltou, se o cliente pediu uma devolução ou a sua decisão sobre um pacote à espera de aprovação), ela aparece em **Visão geral** como um cartão por baixo do resumo, e o bloco de estado no topo da página nomeia-a primeiro, com um botão que o leva até ela. O que só ajuda, como adicionar a confirmação do titular do cartão ou as evidências em falta, fica em **Evidências**.\n\n**O bloco de estado no topo.** O título é a única coisa a fazer, ou começa por «Nada a fazer.» quando nada é preciso. Por baixo, **O que aconteceu**, **O que precisamos de si** (com o botão da pergunta, na própria página), **O que acontece a seguir** e **Já feito** são curtos e só aparecem quando há algo verdadeiro a dizer. Os números de versão internos e as contagens de provas não fazem parte dele. «Agendada» significa que o DisputeDesk volta a verificar a resposta no prazo antes de enviar o que quer que seja. Se o DisputeDesk não apresentar nada, o processo próprio da Shopify no prazo corre na mesma com os dados do pedido que já tem."
         },
         "reviewQueue": {
           "title": "A fila de revisão",

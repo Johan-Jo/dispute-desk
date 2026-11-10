@@ -48,6 +48,22 @@ function recordOf(f: WorkspaceFixture) {
   const data = workspaceDataOf(f) as unknown as WorkspaceWithPatterns;
   return buildDisputeRecord(recordInputsFromWorkspace(data, f.meta.capturedAt), createRecordFormat("en"));
 }
+/** The hero card's text: from its headline to the "for you only" note that closes it. */
+function heroText(f: WorkspaceFixture, tab: HarnessTab = "overview"): string {
+  const text = page(f, tab);
+  const start = text.indexOf(say(recordOf(f).statusCopy.headline));
+  const end = text.indexOf(en("disputes.record.ui.forYouOnly"), start);
+  expect(start, "hero headline not on the page").toBeGreaterThanOrEqual(0);
+  expect(end, "hero end not found").toBeGreaterThan(start);
+  return text.slice(start, end);
+}
+function expectNoVersionRoleCountsOrChips(hero: string) {
+  expect(hero).not.toMatch(/version \d+/i);
+  expect(hero).not.toMatch(/ are context in the package| is cited to the bank| are cited to the bank/);
+  for (const role of ["cited", "context", "internal", "unavailable"]) {
+    expect(hero).not.toMatch(new RegExp(`${en(`disputes.record.role.${role}`)} · \\d`));
+  }
+}
 const ACTION_ACK = en("disputes.record.action.ack");
 const ACTION_NONE = en("disputes.record.action.none");
 /** `action.none` is a prefix of `action.ack`; "the page says none" means the bare sentence. */
@@ -82,6 +98,46 @@ describe("#17066 returned-to-sender, unanswered (7aa8536c)", () => {
   it("does not offer the cardholder acknowledgement as the primary action", () => {
     expect(saysActionAck(page(f(), "overview"))).toBe(false);
   });
+  // Action-first hero (docs/plans/dispute-status-copy.plan.md section 10 A).
+  for (const tab of ["overview", "evidence"] as const) {
+    it(`the hero on the ${tab} tab says what to do, with the parcel question and its button`, () => {
+      const hero = heroText(f(), tab);
+      expect(hero).toContain("Your answer is needed today: why did this parcel come back to you?");
+      expect(hero).toContain("Inquiry · SEK 3,021.65 · Shopify's deadline is 10 Nov 2026");
+      expect(hero).toContain(en("disputes.record.status.label.need"));
+      expect(hero).toContain(en("disputes.record.status.need.parcel"));
+      expect(hero).toContain(en("disputes.evidenceTab.parcelOutcome.ctaButton"));
+    });
+    it(`the hero on the ${tab} tab has no version number, role-count sentence or count chips`, () => {
+      expectNoVersionRoleCountsOrChips(heroText(f(), tab));
+    });
+  }
+});
+
+describe("the hero of every captured case", () => {
+  const cases = [
+    "17066-returned-to-sender",
+    "21037-return-in-progress",
+    "23750-stamped-saved-save-failed",
+    "24285-latest-build-failed",
+    "24612-return-received-cnp-won",
+    "review-awaiting",
+    "won-filed",
+  ];
+  for (const name of cases) {
+    it(`${name}: headline, sub-line and no empty labelled part; no version, role sentence or chips`, () => {
+      const f = at(fixtureByCase(name));
+      const copy = recordOf(f).statusCopy;
+      const hero = heroText(f);
+      expect(hero).toContain(say(copy.subline));
+      expect(copy.parts.length).toBeGreaterThan(0);
+      for (const p of copy.parts) {
+        expect(p.lines.length + p.actions.length).toBeGreaterThan(0);
+        expect(hero).toContain(say(p.label));
+      }
+      expectNoVersionRoleCountsOrChips(hero);
+    });
+  }
 });
 
 describe("#23750 pack stamped saved, every save failed (e38c8d87)", () => {
@@ -90,9 +146,10 @@ describe("#23750 pack stamped saved, every save failed (e38c8d87)", () => {
   it.fails("the stage is not 'saved'", () => {
     expect(recordOf(f()).stage).not.toBe("saved");
   });
-  // KNOWN GAP -> PR 2. done when: passes without .fails
-  it.fails("does not show headline.saved", () => {
+  // Fixed by the action-first hero: a stamp Shopify never confirmed reads "has not confirmed", not "saved".
+  it("does not show headline.saved", () => {
     expect(page(f(), "overview")).not.toContain(en("disputes.record.headline.saved"));
+    expect(page(f(), "overview")).toContain(en("disputes.record.status.headline.unconfirmed"));
   });
   // KNOWN GAP -> PR 2. done when: passes without .fails
   it.fails("does not show a package version number as saved", () => {
