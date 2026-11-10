@@ -99,6 +99,8 @@ interface Calls {
  *  the stored (order -> hashes) map for the risk-assessment gate. */
 function buildSb(opts: {
   existingOrderIds?: string[];
+  /** Extra stored columns per existing order (carrier-derived delivery). */
+  existingExtra?: Record<string, Record<string, unknown>>;
   existingHashes?: Array<{ shopify_order_id: string; risk_payload_hash: string }>;
 }) {
   const calls: Calls = {
@@ -123,6 +125,7 @@ function buildSb(opts: {
                 Promise.resolve({
                   data: (opts.existingOrderIds ?? []).map((id) => ({
                     shopify_order_id: id,
+                    ...(opts.existingExtra?.[id] ?? {}),
                   })),
                   error: null,
                 }),
@@ -336,5 +339,32 @@ describe("persistOrders — no-op", () => {
       assessmentsInserted: 0,
       assessmentsSkippedUnchanged: 0,
     });
+  });
+});
+
+describe("persistOrders — carrier-derived delivery is not wiped", () => {
+  const ID = "gid://o/carrier";
+  const stored = {
+    delivery_status: "Delivered",
+    delivered_at_tracking: "2026-06-05T10:00:00Z",
+    signed_by_name: "J. Doe",
+    tracking_source: "carrier",
+  };
+
+  it("keeps a stored delivery when Shopify sends null", async () => {
+    const { sb, calls } = buildSb({ existingOrderIds: [ID], existingExtra: { [ID]: stored } });
+    mockGetClient.mockReturnValue(sb as never);
+    await persistOrders(SHOP, [makeOrder(ID)], []);
+    expect(calls.upsertPayloads[0][0]).toMatchObject(stored);
+  });
+
+  it("takes Shopify's value when it is non-null (a real change)", async () => {
+    const { sb, calls } = buildSb({
+      existingOrderIds: [ID],
+      existingExtra: { [ID]: { ...stored, delivery_status: "In transit", delivered_at_tracking: null } },
+    });
+    mockGetClient.mockReturnValue(sb as never);
+    await persistOrders(SHOP, [makeOrder(ID, { delivery_status: "Delivered" })], []);
+    expect(calls.upsertPayloads[0][0]).toMatchObject({ delivery_status: "Delivered" });
   });
 });
