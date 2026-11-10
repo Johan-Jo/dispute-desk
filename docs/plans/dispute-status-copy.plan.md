@@ -196,4 +196,86 @@ The hero paragraph, its fact order and the role-count sentence come from Claude 
 - **Consequences:** blocked on the sibling plan's object; ~60 keys × 6 locales; design file or deviation record must change.
 - **Follow-ups:** reuse `composeStatusCopy` for the dispute-list status column and merchant emails (separate plans).
 
-**Done when:** after PR 3 of `dispute-page-single-source.plan.md`, the copy changes it lists are made against a page whose `disputePage.renderedRealCases.test.tsx` has no `.fails`; the wording is verified in the rendered output of that suite.
+---
+
+## 10. Action-first style (maintainer direction, 2026-11-10) — supersedes the §4 samples
+
+The maintainer rejected the §4 samples as still too low-level: the Overview is the first thing a merchant sees, and it must say what the status is and what to do, in plain words. §4's one-paragraph form is replaced by a fixed five-part block.
+
+**Rules**
+1. The headline is the one thing the merchant must do, or starts with "Nothing to do" when that is true.
+2. "What happened": two plain sentences, including the fact that changes the case (parcel came back, refund on record, Shopify rejected the file).
+3. "What we need from you": the ask, why it matters, and the button, on the Overview itself. Absent when there is nothing to do.
+4. "What happens next": both branches where the merchant has a choice, each with a date when one exists.
+5. "Done so far": one line. No counts, versions, percentages or internal labels anywhere.
+6. Only claims the system can back. Lines marked (verify) must be checked against the code path before shipping.
+
+Sub-line under every headline: `{Inquiry|Chargeback} · {amount} · Shopify's deadline is {date}` (decided: the decision date).
+
+### A. A required answer is open (example: #17066, parcel returned to sender)
+**Your answer is needed today: why did this parcel come back to you?**
+- What happened: The customer told the bank that a refund for order #17066 was never paid. The carrier's record shows the parcel was sent back to you, so it was never delivered.
+- What we need from you: Only you know why it came back. If the customer refused the parcel or never collected it, that is not a valid return, and it is the one argument left in this case. Without your answer the response is weak. **[Answer two questions]** · takes under a minute
+- What happens next: If you answer, your answer goes into the response and you choose whether DisputeDesk files it through Shopify (verify). If you don't, nothing from DisputeDesk is filed; a response still reaches the bank through Shopify from the order's own data, without this argument.
+- Done so far: Order, payment and carrier records are collected and a response is drafted. Nothing has been filed.
+
+### B. Your approval is needed (review mode)
+**Your approval is needed: the response is ready**
+- What happened: The customer told the bank the order never arrived. DisputeDesk wrote a response that relies on the carrier's delivery record and the payment check.
+- What we need from you: Read the response and choose. **[Approve]** **[Don't add a response]**
+- What happens next: If you approve, it is scheduled to be filed through Shopify on the deadline day, {date}. If you do nothing, DisputeDesk files nothing; a response still reaches the bank through Shopify from the order's own data.
+- Done so far: Evidence collected, response written. Nothing has been filed.
+
+### C. Scheduled for the deadline (auto mode, held)
+**Nothing to do. The response is scheduled for {date}**
+- What happened: The customer told the bank the order never arrived. The response is ready.
+- What happens next: DisputeDesk waits until the deadline day in case more evidence arrives, checks the response again, and then files it through Shopify.
+- You can make it stronger (optional): {the top optional ask, with its button}.
+- Done so far: Evidence collected, response written. Nothing has been filed yet.
+
+### D. Being filed
+**Nothing to do. The response is being filed**
+- What happens next: DisputeDesk is sending the response to Shopify now. This page updates when Shopify has accepted it.
+
+### E. Filed
+**Nothing to do. The response has been filed**
+- What happened: DisputeDesk filed the response through Shopify on {date}. It relies on {named evidence}.
+- What happens next (inquiry): Shopify passes it to the bank. If the bank is satisfied, the inquiry closes. If not, it can become a chargeback, and DisputeDesk prepares a new response. You get an email when the bank decides (verify).
+- What happens next (chargeback): Shopify passes it to the bank, and the bank decides. You get an email when it does (verify).
+
+### F. Could not be filed (our fault)
+**DisputeDesk could not file this response. We are working on it**
+- What happened: The response is ready, but Shopify did not accept the file when we sent it (last attempt {date}). Nothing from DisputeDesk has reached the bank.
+- What we need from you: Nothing. This is a fault on our side, not something in your store.
+- What happens next: DisputeDesk tries again on the deadline day, {date} (verify). If it still cannot be filed, you get an email (verify).
+- Done so far: Evidence collected, response written.
+
+### G. The response could not be written (our fault)
+**DisputeDesk has not been able to write this response yet**
+- What happened: The evidence is collected, but the response did not pass our checks (last attempt {date}). Nothing has been filed.
+- What we need from you: Nothing right now.
+- What happens next: DisputeDesk builds it again on the deadline day, {date}. If no response passes, DisputeDesk files nothing, you get an email, and a response still reaches the bank through Shopify from the order's own data.
+
+### H. Nothing to argue (natural loss)
+**DisputeDesk is not filing a response: the record does not support one**
+- What happened: The customer told the bank the order never arrived. {The order was never shipped | The order has already been refunded in full | There is no delivery record for this order}.
+- What you can do: If you have proof we cannot see, such as a delivery confirmation from the carrier, add it and DisputeDesk writes a response. **[Add evidence]**
+- What happens next: Without it, a response still reaches the bank through Shopify from the order's own data. Expect this one to be lost.
+
+### I. Covered by Shopify Protect
+**Nothing to do. Shopify Protect covers this order**
+- What happens next: Shopify handles this dispute itself. DisputeDesk files nothing for it.
+
+### J. Plan limit reached
+**Upgrade needed: this month's plan limit is used up**
+- What happened: DisputeDesk has not prepared a response for this dispute. Your plan covers {limit} disputes a month and {used} are used.
+- What we need from you: Choose a plan that covers your volume. **[See plans]**
+- What happens next: Once the plan is changed, DisputeDesk prepares the response. Shopify's deadline is {date}.
+
+### K. Decided
+**Won: {amount} stays with you** / **Lost: {amount} went back to the customer**
+- What happened: The bank decided on {date}. {DisputeDesk filed a response on {date} that relied on {named evidence} | DisputeDesk filed nothing for this dispute; a response went through Shopify}.
+- Why (when known): {outcome explanation}.
+- Next time (lost only): {the one prevention tip that applies}.
+
+**Dropped from every state:** package version numbers, the four role counts, "No action is required" beside an open required ask, and the cardholder-acknowledgement suggestion where it does not fit the case (a parcel that never arrived).
