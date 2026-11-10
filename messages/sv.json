@@ -2483,7 +2483,7 @@
           "happened": "Vad som har hänt",
           "need": "Vad vi behöver av dig",
           "can": "Vad du kan göra",
-          "optional": "För att stärka ärendet (valfritt)",
+          "optional": "Stärk ärendet · Valfritt",
           "next": "Vad som händer sedan",
           "done": "Klart hittills"
         },
@@ -2967,8 +2967,8 @@
         "factAmount": "Bestridet belopp",
         "factCustomer": "Kund",
         "factOpened": "Öppnad",
-        "factReason": "Tvistorsak",
-        "forYouOnly": "Den här anteckningen är bara till dig. Den ingår inte i något som skickas till banken.",
+        "factReason": "Orsak",
+        "forYouOnly": "Intern anteckning – skickas inte till banken.",
         "recordTitle": "Underlaget",
         "recordSub": "Fakta som den här redogörelsen bygger på. Det är inte bankens resonemang.",
         "from": "Källa: {source}",
@@ -2994,7 +2994,11 @@
         "decideTitle": "Ditt beslut",
         "decideSave": "Spara det i Shopify på fristens dag",
         "decideNone": "Lägg inte till något försvarspaket",
-        "noLetter": "Det finns inget brev än. Det visas här när försvarspaketet är byggt."
+        "noLetter": "Det finns inget brev än. Det visas här när försvarspaketet är byggt.",
+        "dueToday": "Förfaller idag",
+        "decidedTop": "Avgjord",
+        "deadlineSub": "Frist {date}",
+        "orderLabel": "Order {order}"
       },
       "role": {
         "cited": "Angivet för banken",

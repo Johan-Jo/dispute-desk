@@ -13,6 +13,9 @@ export const DD_TOKENS = {
   "--dd-surface": "#FFFFFF",
   "--dd-text": "#0B1220",
   "--dd-text-subtle": "#667085",
+  "--dd-text-muted": "#64748B",
+  "--dd-bg": "#F6F8FB",
+  "--dd-warning": "#F59E0B",
   "--dd-border": "#E5E7EB",
   "--dd-primary": "#1D4ED8",
   "--dd-success": "#22C55E",
@@ -32,14 +35,28 @@ export const PILL_STYLE: Record<StrengthPill, [string, string]> = {
   Supporting: ["#E5E7EB", "#374151"],
 };
 
+/**
+ * The hero panel's three tones, transcribed from the design (`Dispute Detail.dc.html`, `TONES`):
+ * blue while open, green when won, gray when lost or closed. `chipBg/chipFg/chipBorder` are the design
+ * system Badge variants: primary (open), success (won), danger (lost), default (closed).
+ */
 export const THEME: Record<
   RecordStatus,
-  { bg: string; border: string; tileBg: string; tileFg: string; amount: string; chipBg: string; chipFg: string; glyph: string }
+  { bg: string; border: string; icon: string; amount: string; chipBg: string; chipFg: string; chipBorder: string }
 > = {
-  open: { bg: "#F4F7FF", border: "#C9D7F5", tileBg: "#E3EBFD", tileFg: "#1D4ED8", amount: "var(--dd-text)", chipBg: "#DBEAFE", chipFg: "#1E40AF", glyph: "◷" },
-  lost: { bg: "#F9FAFB", border: "var(--dd-border)", tileBg: "#E4E7EC", tileFg: "#475467", amount: "var(--dd-text)", chipBg: "#FEE2E2", chipFg: "#991B1B", glyph: "⚑" },
-  closed: { bg: "#F9FAFB", border: "var(--dd-border)", tileBg: "#E4E7EC", tileFg: "#475467", amount: "var(--dd-text)", chipBg: "#F1F2F4", chipFg: "#475467", glyph: "⚑" },
-  won: { bg: "#F0FDF4", border: "#BBF7D0", tileBg: "#D1FADF", tileFg: "#067647", amount: "#067647", chipBg: "#DCFCE7", chipFg: "#166534", glyph: "✓" },
+  open: { bg: "#EEF3FF", border: "#D6E0FB", icon: "var(--dd-primary)", amount: "var(--dd-text)", chipBg: "#DBEAFE", chipFg: "#1E3A8A", chipBorder: "#BFDBFE" },
+  lost: { bg: "#F8FAFC", border: "var(--dd-border)", icon: "#475467", amount: "var(--dd-text)", chipBg: "#FEE2E2", chipFg: "#991B1B", chipBorder: "#FECACA" },
+  closed: { bg: "#F8FAFC", border: "var(--dd-border)", icon: "#475467", amount: "var(--dd-text)", chipBg: "#F1F5F9", chipFg: "#64748B", chipBorder: "#E5E7EB" },
+  won: { bg: "#ECFDF3", border: "#B7EBCB", icon: "#15803D", amount: "#15803D", chipBg: "#DCFCE7", chipFg: "#166534", chipBorder: "#BBF7D0" },
+};
+
+/** Design system Badge variants (`DisputeDeskUI.Badge`): every badge has a 1px border, 4px 8px padding, 12px/500, radius 6. */
+export const BADGE: Record<"warning" | "primary" | "default" | "success" | "danger", { bg: string; fg: string; border: string }> = {
+  warning: { bg: "#FEF3C7", fg: "#92400E", border: "#FDE68A" },
+  primary: { bg: "#DBEAFE", fg: "#1E3A8A", border: "#BFDBFE" },
+  default: { bg: "#F1F5F9", fg: "#64748B", border: "#E5E7EB" },
+  success: { bg: "#DCFCE7", fg: "#166534", border: "#BBF7D0" },
+  danger: { bg: "#FEE2E2", fg: "#991B1B", border: "#FECACA" },
 };
 
 /** [ring, ringBorder, dot, titleColour] */
@@ -60,6 +77,6 @@ export const CHECK_STYLE: Record<"had" | "missing" | "none", [string, string, st
 };
 
 /* No negative margin: it made the tab bar scroll vertically (a scrollbar on Windows). The bar draws its 1px line as a background at the bottom of the padding box instead; the active tab's 2px border covers it, so the look is unchanged. */
-const TAB: CSSProperties = { padding: "12px 14px 10px", marginBottom: 0 };
-export const TAB_ON: CSSProperties = { ...TAB, borderBottom: "2px solid var(--dd-primary)", color: "var(--dd-primary)", fontWeight: 500 };
-export const TAB_OFF: CSSProperties = { ...TAB, borderBottom: "2px solid transparent", color: "var(--dd-text-subtle)" };
+const TAB: CSSProperties = { padding: "16px 12px 14px", marginBottom: 0, fontSize: 14 };
+export const TAB_ON: CSSProperties = { ...TAB, borderBottom: "2px solid var(--dd-primary)", color: "var(--dd-primary)", fontWeight: 600 };
+export const TAB_OFF: CSSProperties = { ...TAB, borderBottom: "2px solid transparent", color: "var(--dd-text-subtle)", fontWeight: 500 };

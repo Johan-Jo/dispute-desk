@@ -2483,7 +2483,7 @@
           "happened": "Qué ha pasado",
           "need": "Qué necesitamos de ti",
           "can": "Qué puedes hacer",
-          "optional": "Para reforzarlo (opcional)",
+          "optional": "Refuérzalo · Opcional",
           "next": "Qué pasa después",
           "done": "Hecho hasta ahora"
         },
@@ -2967,8 +2967,8 @@
         "factAmount": "Importe en disputa",
         "factCustomer": "Cliente",
         "factOpened": "Abierta",
-        "factReason": "Motivo de la disputa",
-        "forYouOnly": "Esta nota es solo para ti. No forma parte de nada que se envíe al banco.",
+        "factReason": "Motivo",
+        "forYouOnly": "Nota interna: no se envía al banco.",
         "recordTitle": "El registro",
         "recordSub": "Los hechos en los que se basa este resumen. No es el razonamiento del banco.",
         "from": "Origen: {source}",
@@ -2994,7 +2994,11 @@
         "decideTitle": "Tu decisión",
         "decideSave": "Guardarlo en Shopify en la fecha límite",
         "decideNone": "No añadir un paquete de defensa",
-        "noLetter": "Todavía no hay carta. Aparecerá aquí cuando se cree el paquete de defensa."
+        "noLetter": "Todavía no hay carta. Aparecerá aquí cuando se cree el paquete de defensa.",
+        "dueToday": "Vence hoy",
+        "decidedTop": "Resuelta",
+        "deadlineSub": "Fecha límite {date}",
+        "orderLabel": "Pedido {order}"
       },
       "role": {
         "cited": "Citado al banco",
