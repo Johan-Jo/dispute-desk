@@ -2483,7 +2483,7 @@
           "happened": "What happened",
           "need": "What we need from you",
           "can": "What you can do",
-          "optional": "To make it stronger (optional)",
+          "optional": "Make it stronger · Optional",
           "next": "What happens next",
           "done": "Done so far"
         },
@@ -2878,8 +2878,8 @@
         "factAmount": "Disputed amount",
         "factCustomer": "Customer",
         "factOpened": "Opened",
-        "factReason": "Dispute reason",
-        "forYouOnly": "This note is for you only. It is not part of anything sent to the bank.",
+        "factReason": "Reason",
+        "forYouOnly": "Internal note — not sent to the bank.",
         "recordTitle": "The record",
         "recordSub": "The facts this account is built from. This is not the bank's reasoning.",
         "from": "From {source}",
@@ -2898,7 +2898,11 @@
           "strong": "Strong",
           "moderate": "Moderate",
           "supporting": "Supporting"
-        }
+        },
+        "dueToday": "Due today",
+        "decidedTop": "Decided",
+        "deadlineSub": "Deadline {date}",
+        "orderLabel": "Order {order}"
       },
       "roles": {
         "open": "{cited, plural, one {# item is} other {# items are}} cited to the bank, {context} {context, plural, one {is} other {are}} context in the package, {internal} {internal, plural, one {is} other {are}} kept internal and {unavailable} {unavailable, plural, one {is} other {are}} not available.",
