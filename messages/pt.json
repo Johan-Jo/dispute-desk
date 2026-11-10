@@ -2552,7 +2552,8 @@
           "plan": "Escolha um plano que cubra o seu volume."
         },
         "can": {
-          "evidence": "Se tem provas que não conseguimos ver, como uma confirmação de entrega da transportadora, adicione-as no separador Evidências."
+          "evidence": "Se tem provas que não conseguimos ver, como uma confirmação de entrega da transportadora, adicione-as no separador Evidências.",
+          "refundInquiry": "Reembolse a encomenda na totalidade no Shopify Admin. Isto ainda é um pedido de informação, por isso não foi retirado dinheiro e um reembolso total encerra-o. Se passar a estorno, o Shopify bloqueia reembolsos e o valor perde-se."
         },
         "optional": {
           "ack": "O reconhecimento do titular do cartão reforçaria o caso."
