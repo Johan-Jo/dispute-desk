@@ -2492,6 +2492,27 @@
     },
     "record": {
       "status": {
+        "chip": {
+          "ask": "Réponse nécessaire",
+          "approval": "Approbation nécessaire",
+          "scheduled": "Programmée",
+          "conceded": "Aucune réponse",
+          "filing": "Dépôt en cours",
+          "filed": "Déposée",
+          "sent_by_shopify": "Envoyée via Shopify",
+          "unconfirmed": "Non confirmée",
+          "save_failed": "Dépôt impossible",
+          "build_failed": "Pas encore rédigée",
+          "build_paused": "En pause",
+          "nothing_to_argue": "Aucune réponse",
+          "covered": "Couvert",
+          "plan_limit": "Limite du forfait",
+          "preparing": "En préparation",
+          "attention": "Nécessite votre attention",
+          "won": "Gagné",
+          "lost": "Perdu",
+          "closed": "Clos"
+        },
         "label": {
           "happened": "Ce qui s'est passé",
           "need": "Ce dont nous avons besoin de vous",
@@ -2506,6 +2527,7 @@
         },
         "subline": {
           "open": "{phase} · {amount} · La date limite de Shopify est le {date}",
+          "openToday": "{phase} · {amount} · La date limite de Shopify est aujourd'hui, le {date}",
           "decided": "{phase} · {amount} · Tranché le {date}",
           "plain": "{phase} · {amount}"
         },

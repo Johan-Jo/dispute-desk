@@ -88,6 +88,8 @@ export interface StatusPart {
 export interface StatusCopy {
   state: StatusState;
   headline: I18nToken;
+  /** The header chip: one short label per state, from the same state as the headline. */
+  chip: I18nToken;
   subline: I18nToken;
   parts: StatusPart[];
 }
@@ -174,7 +176,9 @@ function part(kind: StatusPartKind, lines: Array<I18nToken | null>, actions: Sta
 function subline(i: StatusCopyInput): I18nToken {
   const phase = nest(i.phase === "inquiry" ? "phase.inquiry" : "phase.chargeback");
   if (i.status !== "open" && i.decidedDay) return s("subline.decided", { phase, amount: i.amount, date: i.decidedDay });
-  if (i.status === "open" && i.dueDay) return s("subline.open", { phase, amount: i.amount, date: i.dueDay });
+  if (i.status === "open" && i.dueDay) {
+    return s(i.deadlineToday ? "subline.openToday" : "subline.open", { phase, amount: i.amount, date: i.dueDay });
+  }
   return s("subline.plain", { phase, amount: i.amount });
 }
 
@@ -213,6 +217,7 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
   const make = (state: StatusState, headline: I18nToken, parts: Array<StatusPart | null>): StatusCopy => ({
     state,
     headline,
+    chip: s(`chip.${state}`),
     subline: sub,
     parts: parts.filter((p): p is StatusPart => p !== null),
   });

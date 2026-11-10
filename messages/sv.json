@@ -2492,6 +2492,27 @@
     },
     "record": {
       "status": {
+        "chip": {
+          "ask": "Svar behövs",
+          "approval": "Godkännande behövs",
+          "scheduled": "Schemalagt",
+          "conceded": "Inget svar",
+          "filing": "Lämnas in",
+          "filed": "Inlämnat",
+          "sent_by_shopify": "Skickat via Shopify",
+          "unconfirmed": "Ej bekräftat",
+          "save_failed": "Kunde inte lämnas in",
+          "build_failed": "Inte skrivet än",
+          "build_paused": "Pausat",
+          "nothing_to_argue": "Inget svar",
+          "covered": "Täckt",
+          "plan_limit": "Plangräns",
+          "preparing": "Förbereds",
+          "attention": "Behöver uppmärksamhet",
+          "won": "Vunnet",
+          "lost": "Förlorat",
+          "closed": "Avslutat"
+        },
         "label": {
           "happened": "Vad som har hänt",
           "need": "Vad vi behöver av dig",
@@ -2506,6 +2527,7 @@
         },
         "subline": {
           "open": "{phase} · {amount} · Shopifys frist är den {date}",
+          "openToday": "{phase} · {amount} · Shopifys frist är i dag, den {date}",
           "decided": "{phase} · {amount} · Avgjord {date}",
           "plain": "{phase} · {amount}"
         },
