@@ -13,7 +13,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PATTERNS, scanSource, scanTree, type ScanPattern } from "./rawReadScan";
+import { OWNER_BYPASS_PATTERNS, PATTERNS, scanSource, scanTree, type ScanPattern } from "./rawReadScan";
 import { BASELINE } from "./rawReadScan.baseline";
 
 const REPO = path.resolve(__dirname, "../..");
@@ -31,6 +31,13 @@ describe("raw-read scan: real tree vs baseline", () => {
 
   it("baseline has no duplicate keys", () => {
     expect(baselineKeys.size).toBe(BASELINE.length);
+  });
+
+  it("plan 3.4 patterns: every entry is `open` (names the removing PR) or `allowed`", () => {
+    for (const b of BASELINE.filter((x) => OWNER_BYPASS_PATTERNS.includes(x.pattern))) {
+      expect(["open", "allowed"], `${b.file} ${b.pattern}`).toContain(b.category);
+      if (b.category === "open") expect(b.removedBy, `${b.file} ${b.pattern}`).toMatch(/^PR \d/);
+    }
   });
 
   it("no unbaselined raw read (route it through the single source or baseline it with a reason)", () => {
@@ -55,6 +62,12 @@ describe("raw-read scan: meta-test (the scanner is real)", () => {
     returnStatus: `const s = order.returnStatus === "NO_RETURN";`,
     "select:checklist_v2": `sb.from("evidence_packs").select("id, checklist_v2");`,
     "totals.refunded": `const r = order.totals?.refunded;`,
+    savedToShopifyAt: `const s = !!pack?.savedToShopifyAt;`,
+    "appliedRule.mode": `const m = data.appliedRule?.mode;`,
+    "orderSituation.refund": `const r = d.orderSituation?.refund;`,
+    "bankIncludedFacts(": `const f = bankIncludedFacts(rows);`,
+    FACT_CATEGORY_FIELD: `const x = FACT_CATEGORY_FIELD[c];`,
+    DELIVERY_CONFIRMED: `const y = DELIVERY_CONFIRMED.has(p);`,
   };
 
   for (const p of Object.keys(PATTERNS) as ScanPattern[]) {
@@ -65,6 +78,40 @@ describe("raw-read scan: meta-test (the scanner is real)", () => {
 
   it("reports string-literal returnStatus too", () => {
     expect(scanSource(`pick("returnStatus")`).returnStatus).toBe(1);
+  });
+
+  describe("per-pattern scope and owner allow-list (plan 3.4)", () => {
+    const planted = `const s = !!pack?.savedToShopifyAt; const m = data.appliedRule?.mode;`;
+    it("reports a plan 3.4 pattern inside the dispute page scope", () => {
+      expect(scanSource(planted, "app/(embedded)/app/disputes/[id]/record/new.ts")).toEqual({
+        savedToShopifyAt: 1,
+        "appliedRule.mode": 1,
+      });
+      expect(scanSource(planted, "lib/disputes/disputeRecord.ts")).toEqual({ savedToShopifyAt: 1, "appliedRule.mode": 1 });
+    });
+    it("does not report it outside its scope", () => {
+      expect(scanSource(planted, "components/ui/other.tsx")).toEqual({});
+      expect(scanSource(planted, "app/(embedded)/app/settings/page.tsx")).toEqual({});
+    });
+    it("does not report it in an owner (allow-listed) file", () => {
+      expect(scanSource(planted, "app/api/disputes/[id]/workspace/route.ts")).toEqual({});
+      expect(scanSource(planted, "lib/disputes/presentation/resolveLifecycle.ts")).toEqual({});
+      expect(scanSource(planted, "lib/disputes/workspacePayload/enrich.ts")).toEqual({});
+    });
+    it("legacy patterns keep their whole-root scope", () => {
+      expect(scanSource(`const k = "noReturn";`, "components/ui/other.tsx")).toEqual({ "literal:noReturn": 1 });
+    });
+    it("a planted bypass inside record/** is found by the tree scan function", () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rawread-scope-"));
+      try {
+        const rel = "app/(embedded)/app/disputes/[id]/record/bypass.ts";
+        fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
+        fs.writeFileSync(path.join(dir, rel), "export const x = (p) => p.savedToShopifyAt;");
+        expect(scanTree(dir)[`${rel}::savedToShopifyAt`]).toBe(1);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
   });
 
   it("reports zero for a clean string", () => {

@@ -2977,7 +2977,7 @@ When a **rebuild raises** the case strength (e.g. weak → moderate once deliver
 2. Emits a `CASE_STRENGTHENED` dispute event onto the timeline.
 3. Emails the merchant via `sendCaseStrengthenedAlert`, gated by the `disputeUpdates` notification preference and deduped on `disputes.strength_alert_level` (a high-water mark, so weak→moderate fires once, a later moderate→strong fires again, and a moderate→weak→moderate re-roll does not re-fire). Never fires on first build (`strengthImproved` requires a prior strength), so a bulk historical import can't flood.
 
-**Getting late delivery TO an open dispute:** nothing re-fetched an existing dispute's order once its pack was built, so a carrier delivery that lands weeks after the dispute opened never reached the case. The nightly cron [app/api/cron/refresh-open-disputes/route.ts](../app/api/cron/refresh-open-disputes/route.ts) (02:30 UTC) re-ingests each open dispute's order via `normalizeOrderIngest` and enqueues a `build_pack` when the order's `delivery_status` changed (esp. → `Delivered`). The rebuild then flows through the strength rule + improvement notification above automatically. Bounded (`MAX_PER_RUN`, oldest-refreshed first) and gated by `cronEnvGate`.
+**Getting late delivery TO an open dispute:** nothing re-fetched an existing dispute's order once its pack was built, so a carrier delivery that lands weeks after the dispute opened never reached the case. The nightly cron [app/api/cron/refresh-open-disputes/route.ts](../app/api/cron/refresh-open-disputes/route.ts) (02:30 UTC) re-ingests each open dispute's order via `normalizeOrderIngest` and enqueues a `build_pack` when the order's `delivery_status` changed to a NON-NULL value (esp. → `Delivered`); a null reading after the re-ingest is never a change (2026-11-10: it rebuilt 28 disputes nightly). `persistOrders` keeps the stored carrier-derived delivery columns (`delivery_status`, `delivered_at_tracking`, `signed_by_name`, `tracking_source`, written by `rollupOrderDelivery`) when Shopify sends a null `delivery_status`, so the re-ingest no longer wipes them. The rebuild then flows through the strength rule + improvement notification above automatically. Bounded (`MAX_PER_RUN`, oldest-refreshed first) and gated by `cronEnvGate`.
 
 **Copy rule: each fact once (2026-09-25).** The maintainer: stop repeating the order number, and write no timestamps in the text. Each fact now appears in one place only:
 
@@ -3659,7 +3659,7 @@ code-built claim ledger.
   when the second use is in the section that owns it; numbers inside the ordered item's description exempt;
   summary ≤ 80 words (≤ 90 when three or more sections argue); no page positions. A summary at most
   `SUMMARY_SLACK_WORDS` (10) over its limit is a soft issue (`length:` prefix). When length is the only blocking
-  issue left after the corrections, one summary-only call (`SHORTEN_SYSTEM`, ≤ 70 words) rewrites it and is used
+  issue left after the corrections, one summary-only call (`shortenSystem`: told the current count and the enforced limit, target `limit - SHORTEN_MARGIN_WORDS`, derived from `summaryLimitFor` in `checks.ts`, never a second hard-coded number; no retry loop) rewrites it and is used
   only if fully clean (#921); if it misses, a soft-over draft that passed the fact-check keeps its letter (#922).
   Soft-over drafts are always fact-checked. #100705 (92/90) and #99296 (95/90) lost their only letters to a length
   miss on 2026-09-29. More than 10 over still blocks. `counselEnabled` is true for
@@ -3673,8 +3673,8 @@ code-built claim ledger.
   `verifiedPolicyTerms` lets the stated window through the `policy_terms_beyond_record` guard. Timeline rows for
   order placed and dispute opened are added from the order and dispute records when Shopify's events lack them.
   Reuse of stored summaries is off until reuse stores every part.
-  When the corrections leave only the summary's length wrong, one more call (`SHORTEN_SYSTEM`, summary only,
-  ≤ 70 words, first and last sentence kept) rewrites it; the result is re-checked and reviewed, and kept only
+  When the corrections leave only the summary's length wrong, one more call (`shortenSystem`, summary only,
+  target `limit - 10` (70 of 80, 80 of 90), first and last sentence kept) rewrites it; the result is re-checked and reviewed, and kept only
   if it passes (#100705, 2026-09-29: 92 of 90 words after two corrections left the dispute without a letter).
   A brief section may name a `requiresClaimId`: it is written only when that claim is in the ledger
   (`sectionApplies`). Not-as-described's Return Route requires `return_route_open`; when the return window has
@@ -3922,6 +3922,21 @@ input); `lib/defence/counsel/issueRules.ts` reads a stable rule id off each one 
 `copy.specific_repeated`, `review.fact_check`, `lint.<name>`, `truth.validator`, ...). `message` is the rule's fixed
 description, never the issue text: an issue quotes the rejected draft and `validation_errors` is returned to the
 browser. A new `issues.push` in `checks.ts` needs a rule there; `issueRules.test.ts` pins the producer count.
+
+**Later order after the dispute opened (2026-11-10, d65b7220 v18).** The `later_order` claim carried only delivery-relative
+intervals, so a true sentence ("placed a further order the day after the inquiry was opened") was derived by the writer and
+rejected by the fact-check as unsupported. When the later order is placed on/after the dispute's opened date, `addLaterOrder`
+(`claimLedger.ts`) now adds `laterOrderAfterDispute`, `daysAfterDisputeOpened` (+ `Word`) and `disputeOpenedOn`, states the
+interval in the claim, lists it in the reviewer's events block (`prompts.ts`), and adds a `mustNot`: every relative time
+phrase names its anchor ("after the delivery" / "after the inquiry was opened"), never a bare "the following day". A later
+order before the dispute is unchanged. A derived date relation, not a new source of facts.
+
+**What was rejected, kept internally (2026-11-10).** The rule id alone could not say WHICH sentence a reviewer flagged.
+`issueEvidence` (`issueRules.ts`) adds `{ text, reason }` per blocking finding (for `review.fact_check`: the flagged
+sentence and the reviewer's note; for a code check: its quoted span and the check's own message), each truncated to
+`DETAIL_MAX_CHARS` (400). It is stored in `outcome_detail.counsel.rejected` and in the `defence_package_no_counsel_letter`
+audit event (`outcome_detail`), never in `validation_errors` (that column reaches the browser). Internal only: never
+rendered to a merchant or a bank.
 
 **Signature** (`failureSignature`): `code · module · brief · payment family · detail · sorted rule ids`, absent parts
 dropped. In the signature every style rule counts as one `lint` (`signatureRules`), so the same cause does not split
@@ -10392,6 +10407,45 @@ failure, prefer routing the new read through `assembleEffectiveChecklist`, `noRe
 `refundStatementFromPackSections`; add a baseline entry only for a legitimate reader, and delete entries whose hit is
 gone. A meta-test plants each pattern and asserts the scanner reports it (and reports nothing for clean code). No
 `ci.yml` change: the baseline diff is reviewed in the PR.
+
+**Per-pattern scopes and owner bypass patterns** (`docs/plans/dispute-page-single-source.plan.md` 3.4). Each pattern now
+carries a `scope` (path prefixes it applies to) and an owner `allow` list (`PATTERN_SPECS` in `rawReadScan.ts`; `scanSource(src, relPath)`
+applies both). The legacy patterns keep the whole-root scope. Six owner-bypass patterns are scoped to
+`app/(embedded)/app/disputes/` and `lib/disputes/disputeRecord.ts`, and exempt the owners (the workspace route,
+`lib/disputes/presentation/`, `lib/disputes/workspacePayload/`): `savedToShopifyAt`, `appliedRule?.mode`,
+`orderSituation?.refund`, `bankIncludedFacts(`, `FACT_CATEGORY_FIELD`, `DELIVERY_CONFIRMED`. Their baseline entries are
+`open` (with `removedBy: "PR n"`) or `allowed` (with the reason). `orderSituation?.refund` matches only that exact spelling:
+an alias such as `const sit = d.orderSituation; sit?.refund` is not caught (the owner-coverage test is the net for that).
+
+### Dispute page enforcement (rendered real cases, owner coverage, surface enumeration)
+
+Plan: `docs/plans/dispute-page-single-source.plan.md` (PR 1). The tests exist so that the next redesign of the dispute page
+fails CI instead of drifting from the data it is drawn from.
+
+- **`deriveWorkspace(data, clientState, translators)`** (`app/(embedded)/app/disputes/[id]/hooks/deriveWorkspace.ts`) is the
+  hook's former inline `derived` computation as a pure function; `useDisputeWorkspace` calls it. `tests/unit/deriveWorkspaceParity.test.ts`
+  pins it against a frozen copy of the old code (`deriveWorkspaceLegacy.ts`) on every fixture.
+- **Fixtures** (`tests/fixtures/workspace/*.json`): scrubbed real workspace payloads of seven prod disputes plus an
+  `EnrichSourceRows` sidecar, captured by `node scripts/fixtures/capture-workspace-fixture.mjs` (READ-ONLY: runs the real route;
+  every database read goes through `npm run db:query:prod -- --read-only` behind `guard-db-target.mjs prod`, a replacement `fetch`
+  turns supabase-js GETs into SELECTs and refuses any other verb; the one named exception is `ensure_shop_settings`, answered with a
+  plain SELECT). Names, emails, addresses, phones, IPs, order numbers, tracking numbers, shop domains, GIDs and shop ids are replaced
+  with stable placeholders and a leak scan fails the capture. The "won, filed" and "review-awaiting" cases are picked by query; their
+  ids are in each fixture's `meta`.
+- **`enrichWorkspacePayload(payload, sourceRows)`** (`lib/disputes/workspacePayload/enrich.ts`) is the one place payload fields derived
+  from `EnrichSourceRows` (`loadEnrichSourceRows`, `sourceRows.ts`) are added; the route and the tests both call it, so frozen fixtures
+  gain a field when it is added there. `ENRICHED_PATHS` lists what it adds (the capture strips those). PR 1 adds none.
+- **Render harness** (`tests/harness/renderDisputePage.tsx`): `renderToStaticMarkup(<WorkspaceShell/>)` with real `en` messages and a
+  Polaris `AppProvider`; the test file mocks `next/navigation` and `useDisputeWorkspace` with `tests/harness/workspaceHookMock.ts`
+  (real `deriveWorkspace`, no-op actions). Overview or Evidence selectable.
+- **`tests/unit/disputePage.renderedRealCases.test.tsx`**: what each real case must (not) show. One `it.fails` per assertion the page does
+  not yet meet, each naming the PR that flips it; vitest reports a passing `it.fails` as a failure, so a fix forces the marker off.
+- **`tests/unit/ownerCoverage.test.tsx`**: each owner key (`tests/harness/ownerKeys.ts`) must be READ at a leaf by a live builder
+  (pure builders + the harness over all fixtures and tabs) through `tests/harness/trackReads.ts`; spread, enumeration, `JSON.stringify` and
+  passing an object along do not count (planted meta-tests). Unread owners are baselined with a reason or are an `it.fails`.
+- **`tests/unit/surfaceEnumeration.test.tsx`**: every `.ts`/`.tsx` under `app/**` and `components/**` importing the payload type, the
+  hook or `lib/disputes/presentation` and exporting a function must have an exported function EXECUTED during the harness run (V8
+  precise function coverage via `node:inspector`, not the import graph) or be a baselined exemption.
 
 
 ## Dispute page: one record, one layout (Claude Design `NewDispute`)

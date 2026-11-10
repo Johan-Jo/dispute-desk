@@ -19,10 +19,36 @@
 
 import { LINT } from "./checks";
 
+/** What was rejected and why, for the maintainers (truncated). INTERNAL ONLY:
+ *  it quotes the rejected draft, so it goes to `outcome_detail` and the audit
+ *  event, never into `validation_errors` (which the merchant's browser
+ *  receives). Never rendered, never in a bank document. */
+export interface CounselIssueDetail {
+  text?: string;
+  reason?: string;
+}
+
 export interface CounselIssueRecord {
   rule: string;
   section: string;
   message: string;
+}
+
+export interface CounselIssueEvidence extends CounselIssueRecord {
+  detail: CounselIssueDetail;
+}
+
+export const DETAIL_MAX_CHARS = 400;
+const clip = (s: string) => s.trim().slice(0, DETAIL_MAX_CHARS);
+
+/** The offending span and the stated reason of one issue string. A reviewer
+ *  finding is `<kind>: "<sentence>" — <note>`; a code check quotes its span
+ *  (when it has one) and is its own reason. */
+function detailOf(issue: string): CounselIssueDetail {
+  const rev = issue.match(/(?:fact-check|unclear): "([\s\S]*?)" — ([\s\S]*)$/);
+  if (rev) return { text: clip(rev[1]), reason: clip(rev[2]) };
+  const quoted = issue.match(/"([^"]+)"/)?.[1];
+  return { ...(quoted ? { text: clip(quoted) } : {}), reason: clip(issue) };
 }
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 48);
@@ -109,6 +135,21 @@ export function issueRecords(issues: readonly string[]): CounselIssueRecord[] {
     if (seen.has(k)) continue;
     seen.add(k);
     out.push(r);
+  }
+  return out;
+}
+
+/** `issueRecords` plus the rejected span and stated reason, for the internal
+ *  record (`defence_packages.outcome_detail`, the audit event). */
+export function issueEvidence(issues: readonly string[]): CounselIssueEvidence[] {
+  const seen = new Set<string>();
+  const out: CounselIssueEvidence[] = [];
+  for (const i of issues) {
+    const r = classifyIssue(i);
+    const k = `${r.rule}|${r.section}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ ...r, detail: detailOf(i) });
   }
   return out;
 }
