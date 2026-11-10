@@ -2589,7 +2589,8 @@
           "scheduled": "It is scheduled to be filed through Shopify at the deadline, {date}. DisputeDesk keeps watching for more evidence and checks the response again before anything is sent.",
           "scheduledNoDate": "It is scheduled to be filed through Shopify at the deadline. DisputeDesk keeps watching for more evidence and checks the response again before anything is sent.",
           "planLimit": "Once the plan is changed, DisputeDesk prepares the response. Shopify's deadline is {date}.",
-          "planLimitNoDate": "Once the plan is changed, DisputeDesk prepares the response."
+          "planLimitNoDate": "Once the plan is changed, DisputeDesk prepares the response.",
+          "recheck": "DisputeDesk checks the record once more on the deadline day, {date}. If nothing has changed, it files nothing, and Shopify still sends a response from the order's own data."
         },
         "done": {
           "drafted": "The evidence is collected and a response is written. Nothing has been filed.",
@@ -2657,7 +2658,8 @@
       "state": {
         "noPack": "DisputeDesk has not prepared a defence package yet. Nothing has been saved to Shopify.",
         "building": "DisputeDesk is building the defence package. Nothing has been saved to Shopify yet.",
-        "failed": "DisputeDesk could not build the defence package. Nothing has been saved to Shopify."
+        "failed": "DisputeDesk could not build the defence package. Nothing has been saved to Shopify.",
+        "noResponse": "DisputeDesk checked the record on {date} and wrote no response."
       },
       "reviewMode": {
         "waiting": "In review mode, DisputeDesk saves it to Shopify only when you approve it.",
@@ -2843,7 +2845,8 @@
           "prepared": "Defence package prepared",
           "deadline": "Deadline",
           "filed": "Saved to Shopify",
-          "decided": "Decided"
+          "decided": "Decided",
+          "checked": "Record checked"
         },
         "titleOpen": "What has happened and what comes next",
         "titleDecided": "What happened",

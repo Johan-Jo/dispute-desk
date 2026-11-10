@@ -6,6 +6,7 @@
  * Read-only: nothing here writes, rebuilds or re-scores anything.
  */
 
+import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
 import { recordStatusOf, stageOf } from "@/lib/disputes/workspacePayload/recordStage";
 import {
   FACT_CATEGORY_FIELD,
@@ -108,6 +109,11 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
       firstPackAt: null,
       events: [],
       storePatterns: data.recordStorePatterns ?? null,
+      // A parcel the carrier returned makes "no return was received" impossible (lib/packs/noReturnApplicability).
+      // The loader computes this for decided disputes; here the same fact is the server's returned-to-sender gate.
+      ...(data.workspaceAssessment?.caseStrength?.returnedToSender?.triggered === true
+        ? { inapplicable: [RETURN_EVIDENCE_FIELD] }
+        : {}),
     };
   }
 

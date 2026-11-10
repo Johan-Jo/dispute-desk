@@ -266,7 +266,7 @@ A required ask exists only if a named module consumes its answer (`consumedBy` i
 
 **Returned to sender (example: #17066, 2026-11-10).** Same state, no ask: the parcel's return is a fact, not a question.
 - What happened: The customer told their bank a refund was never processed. The carrier returned this parcel to you, so no proof of delivery can exist for it.
-- What happens next: DisputeDesk is scheduled to build the response again at the deadline, {date}. DisputeDesk files nothing for this dispute. Shopify still sends a response from the order's own data.
+- What happens next: DisputeDesk checks the record once more on the deadline day, {date}. If nothing has changed, it files nothing, and Shopify still sends a response from the order's own data.
 - No "What you can do" part (a returned parcel can never have a delivery confirmation), no "expect to lose" (only the fatal-loss rule says that), no suggestion to refund or concede. When a response DOES exist for a returned parcel, the normal state shows, with the same sentence in What happened.
 
 ### I. Covered by Shopify Protect

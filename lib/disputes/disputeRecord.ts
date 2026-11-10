@@ -840,6 +840,16 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     if (stage === "no_pack") f.state = tk("state.noPack");
     if (stage === "building") f.state = tk("state.building");
     if (stage === "failed") f.state = tk("state.failed");
+    // The latest build wrote NO response (skipped / declined, or failed with none written): say so, never "prepared ... version N".
+    const noResponse =
+      i.build !== null &&
+      i.build !== undefined &&
+      !i.build.packageWritten &&
+      ["declined", "not_required", "failed", "capped"].includes(i.build.state);
+    if (noResponse && f.prepared && preparedAt) {
+      delete f.prepared;
+      f.state = tk("state.noResponse", { date: fmt.date(preparedAt) });
+    }
 
     if (stage === "prepared" && i.automationMode === "auto" && dueDay) f.autopilot = tk("autopilot", { date: dueDay });
     if ((stage === "prepared" || stage === "prepared_review" || stage === "held") && i.decision === "conceded") {
@@ -1060,7 +1070,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       if (at) {
         timeline.push({
           at,
-          title: tk(f.prepared ? "timeline.t.prepared" : "timeline.t.package"),
+          title: tk(f.prepared ? "timeline.t.prepared" : f.state?.key.endsWith("state.noResponse") ? "timeline.t.checked" : "timeline.t.package"),
           text: preparedText,
           kind: "current",
         });

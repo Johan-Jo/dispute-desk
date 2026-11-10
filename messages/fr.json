@@ -2589,7 +2589,8 @@
           "scheduled": "Le dépôt via Shopify est programmé à la date limite, le {date}. DisputeDesk continue de guetter de nouvelles preuves et revérifie la réponse avant tout envoi.",
           "scheduledNoDate": "Le dépôt via Shopify est programmé à la date limite. DisputeDesk continue de guetter de nouvelles preuves et revérifie la réponse avant tout envoi.",
           "planLimit": "Dès que le forfait est changé, DisputeDesk prépare la réponse. La date limite de Shopify est le {date}.",
-          "planLimitNoDate": "Dès que le forfait est changé, DisputeDesk prépare la réponse."
+          "planLimitNoDate": "Dès que le forfait est changé, DisputeDesk prépare la réponse.",
+          "recheck": "DisputeDesk vérifie le dossier une dernière fois le jour de la date limite, le {date}. Si rien n’a changé, il ne dépose rien, et Shopify envoie quand même une réponse à partir des données de la commande."
         },
         "done": {
           "drafted": "Les preuves sont réunies et une réponse est rédigée. Rien n'a été déposé.",
@@ -2657,7 +2658,8 @@
       "state": {
         "noPack": "DisputeDesk n'a pas encore préparé de dossier de défense. Rien n'a été enregistré dans Shopify.",
         "building": "DisputeDesk crée le dossier de défense. Rien n'a encore été enregistré dans Shopify.",
-        "failed": "DisputeDesk n'a pas pu créer le dossier de défense. Rien n'a été enregistré dans Shopify."
+        "failed": "DisputeDesk n'a pas pu créer le dossier de défense. Rien n'a été enregistré dans Shopify.",
+        "noResponse": "DisputeDesk a vérifié le dossier le {date} et n’a rédigé aucune réponse."
       },
       "reviewMode": {
         "waiting": "En mode vérification, DisputeDesk ne l'enregistre dans Shopify que si vous l'approuvez.",
@@ -2941,7 +2943,8 @@
           "package": "Dossier de défense",
           "reopened": "Rouvert",
           "escalated": "Devenu rétrofacturation",
-          "response": "Réponse envoyée"
+          "response": "Réponse envoyée",
+          "checked": "Dossier vérifié"
         },
         "placed": {
           "card": "{amount} encaissés avec une carte {network} se terminant par {last4}.",

@@ -109,7 +109,7 @@ describe("#17066 returned-to-sender, nothing to argue (7aa8536c)", () => {
       expect(hero).toContain("Inquiry · SEK 3,021.65 · Shopify's deadline is today, 10 Nov 2026");
       expect(hero).toContain(en("disputes.record.status.label.happened"));
       expect(hero).toContain(en("disputes.record.status.fact.returnedToSender"));
-      expect(hero).toContain(en("disputes.record.status.next.shopifySends"));
+      expect(hero).toContain("If nothing has changed, it files nothing, and Shopify still sends a response from the order's own data.");
       expect(hero).not.toContain(en("disputes.record.status.label.need"));
       expect(hero).not.toContain(en("disputes.record.status.next.expectLoss"));
     });
@@ -126,6 +126,30 @@ describe("#17066 returned-to-sender, nothing to argue (7aa8536c)", () => {
     const text = page(f(), "overview");
     expect(text).toContain(`${en("disputes.record.item.delivery.label")} ${en("disputes.deliveryProof.returnedToSender")}`);
     expect(text).not.toContain("has not confirmed delivery");
+  });
+  it("What happens next is one coherent sentence: a re-check on the deadline day, nothing filed if unchanged, Shopify still responds", () => {
+    const hero = heroText(f(), "overview");
+    expect(hero).toContain(
+      "DisputeDesk checks the record once more on the deadline day, 10 Nov 2026. If nothing has changed, it files nothing, and Shopify still sends a response from the order's own data.",
+    );
+    expect(hero).not.toContain("build the response again");
+    expect(hero).not.toContain(en("disputes.record.status.next.shopifySends"));
+  });
+  it("there is no 'Your decision' row (nothing could be filed), and no 'No return was received' row", () => {
+    for (const tab of ["overview", "evidence"] as const) {
+      const text = page(f(), tab);
+      expect(text).not.toContain(en("disputes.record.ui.decideTitle"));
+      expect(text).not.toContain(en("disputes.record.ui.decideSave"));
+      expect(text).not.toContain(en("disputes.record.ui.decideNone"));
+    }
+    expect(page(f(), "overview")).not.toContain("No return was received");
+  });
+  it("the timeline says the record was checked and no response written, with no package version", () => {
+    const text = page(f(), "overview");
+    expect(text).toContain("Record checked 10 Nov 2026 · DisputeDesk checked the record on 10 Nov 2026 and wrote no response.");
+    expect(text).not.toMatch(/version \d+/);
+    expect(text).not.toContain("Defence package prepared");
+    expect(text).not.toContain("prepared defence package");
   });
   it("the registry offers no ask for it", () => {
     expect((workspaceDataOf(f()).asks ?? []).filter((a) => a.offered && a.priority === "required" && a.pending)).toEqual([]);
@@ -217,8 +241,8 @@ describe("#24285 latest build failed (d65b7220)", () => {
     const text = page(f(), "overview");
     expect(text.includes(en("disputes.record.state.failed")) || text.includes(en("disputes.record.headline.failed"))).toBe(true);
   });
-  // KNOWN GAP -> PR 2. done when: passes without .fails
-  it.fails("does not show prepared.version", () => {
+  // Fixed 2026-11-10: a latest build that wrote no response prints "checked the record ... wrote no response", never a version.
+  it("does not show prepared.version", () => {
     expect(page(f(), "overview")).not.toMatch(/prepared (the )?defence package version \d+/);
   });
 });
@@ -266,7 +290,7 @@ describe("the header chip and the hero agree (one state)", () => {
     expect(text).not.toContain(ACTION_ACK);
   });
   it("whenever the 'Your decision' row is hidden, the hero carries Approve and Don't add a response", () => {
-    for (const name of ["review-awaiting", "17066-returned-to-sender", "24285-latest-build-failed"]) {
+    for (const name of ["review-awaiting", "24285-latest-build-failed"]) {
       const f = at(fixtureByCase(name));
       const r = recordOf(f);
       const text = page(f, "overview");
