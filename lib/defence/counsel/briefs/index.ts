@@ -177,7 +177,7 @@ export const NOT_AS_DESCRIBED_BRIEF: Brief = {
     {
       key: "lineItems",
       title: "What Was Ordered and Shipped",
-      exhibit: "the line-items table (the item as described on the order) and, below it, the store's current listing with photographs and an English translation",
+      exhibit: "the line-items table (the item as described on the order) and the store's current listing with photographs and an English translation",
       question: "What exactly did the customer order, and what did the merchant ship?",
       claimIds: ["order_specified", "shipped_as_ordered"],
     },
