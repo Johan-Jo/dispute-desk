@@ -31,6 +31,8 @@ export const LIFECYCLE_CHIP: Record<OperationalLifecycle, ChipTokens> = {
   building_evidence: { bg: "#E0F2FE", fg: "#075985", dot: "#0284C7" },
   monitoring: { bg: "#E0F2FE", fg: "#075985", dot: "#0284C7" },
   pack_prepared: { bg: "#E0E7FF", fg: "#3730A3", dot: "#4F46E5" },
+  save_queued: { bg: "#E0E7FF", fg: "#3730A3", dot: "#4F46E5" },
+  save_failed: { bg: "#FEF3C7", fg: "#92400E", dot: "#D97706" },
   saved_to_shopify: { bg: "#E0E7FF", fg: "#3730A3", dot: "#4F46E5" },
   under_review: { bg: "#F1F2F3", fg: "#4B5563", dot: "#6B7280" },
   won: { bg: "#D1FAE5", fg: "#065F46", dot: "#059669" },

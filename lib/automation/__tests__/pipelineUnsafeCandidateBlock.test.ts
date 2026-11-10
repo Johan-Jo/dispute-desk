@@ -2,7 +2,7 @@
  * PR-C1 — `evaluateAndMaybeAutoSave` must not claim a Shopify save for a
  * candidate the worker is going to refuse.
  *
- * The auto-save branch stamps `status = saved_to_shopify` + `saved_to_shopify_at`
+ * The auto-save branch stamps `status = saving` (was `saved_to_shopify` + `saved_to_shopify_at` before Track S)
  * and enqueues in the same breath, so every UI, email and metric reads that as
  * "the evidence was saved". A blocked attempt has to be refused BEFORE the
  * stamp; blocking only in the worker leaves a dispute that looks filed and is
@@ -160,7 +160,7 @@ describe("evaluateAndMaybeAutoSave — PR-C1 unsafe-candidate block", () => {
 
     // No optimistic success state of any kind.
     for (const patch of packUpdates) {
-      expect(patch.status).not.toBe("saved_to_shopify");
+      expect(["saving", "saved_to_shopify"]).not.toContain(patch.status);
       expect(patch.saved_to_shopify_at).toBeUndefined();
     }
     expect(inserts.some((i) => i.table === "jobs")).toBe(false);
@@ -187,7 +187,7 @@ describe("evaluateAndMaybeAutoSave — PR-C1 unsafe-candidate block", () => {
     });
     const result = await evaluateAndMaybeAutoSave(PACK_ID);
     expect(result.action).toBe("park_for_review");
-    for (const patch of packUpdates) expect(patch.status).not.toBe("saved_to_shopify");
+    for (const patch of packUpdates) expect(["saving", "saved_to_shopify"]).not.toContain(patch.status);
     expect(inserts.some((i) => i.table === "jobs")).toBe(false);
   });
 
@@ -195,7 +195,9 @@ describe("evaluateAndMaybeAutoSave — PR-C1 unsafe-candidate block", () => {
     const { packUpdates, inserts } = mockSb(SAFE_PKG);
     const result = await evaluateAndMaybeAutoSave(PACK_ID);
     expect(result.action).toBe("auto_save");
-    expect(packUpdates.some((p) => p.status === "saved_to_shopify")).toBe(true);
+    // Track S: enqueue stamps `saving` and NO saved timestamp — Shopify has accepted nothing yet.
+    expect(packUpdates.some((p) => p.status === "saving")).toBe(true);
+    expect(packUpdates.some((p) => p.status === "saved_to_shopify" || "saved_to_shopify_at" in p)).toBe(false);
     expect(inserts.some((i) => i.table === "jobs")).toBe(true);
     expect(mockMark).not.toHaveBeenCalled();
   });
@@ -211,7 +213,7 @@ describe("evaluateAndMaybeAutoSave — PR-C1 unsafe-candidate block", () => {
     expect(result.action).toBe("defer_no_package");
     expect(result.details).toBe("no_defence_package_yet");
     for (const patch of packUpdates) {
-      expect(patch.status).not.toBe("saved_to_shopify");
+      expect(["saving", "saved_to_shopify"]).not.toContain(patch.status);
       expect(patch.saved_to_shopify_at).toBeUndefined();
     }
     expect(inserts.some((i) => i.table === "jobs")).toBe(false);
@@ -224,7 +226,7 @@ describe("evaluateAndMaybeAutoSave — PR-C1 unsafe-candidate block", () => {
     const result = await evaluateAndMaybeAutoSave(PACK_ID);
     expect(result.action).toBe("defer_no_package");
     expect(result.details).toBe("preflight_error");
-    for (const patch of packUpdates) expect(patch.status).not.toBe("saved_to_shopify");
+    for (const patch of packUpdates) expect(["saving", "saved_to_shopify"]).not.toContain(patch.status);
     expect(inserts.some((i) => i.table === "jobs")).toBe(false);
     expect(mockMark).not.toHaveBeenCalled();
   });
