@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle, Circle } from "lucide-react";
+import { RETIRED_ASK_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 
 export interface ChecklistItemFromApi {
   field: string;
@@ -27,7 +28,9 @@ export function SuggestedEvidenceChecklist({
   suggestedLabels,
 }: SuggestedEvidenceChecklistProps) {
   const items = checklist?.length
-    ? checklist.map((c) => ({ label: c.label, present: c.present }))
+    ? checklist
+        .filter((c) => c.present || !RETIRED_ASK_FIELDS.has(c.field))
+        .map((c) => ({ label: c.label, present: c.present }))
     : suggestedLabels.map((label) => ({ label, present: false }));
 
   return (

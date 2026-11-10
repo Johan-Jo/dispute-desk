@@ -1,17 +1,22 @@
 /**
  * The merchant asks registry (single-source plan section 5).
  *
- * Pins four properties:
+ * Pins five properties:
  *  1. ids, priorities and order are exactly the plan's table;
  *  2. each ask's `offered` equals the gate the card used before the registry
  *     (frozen copies of the old inline gates below) on every real fixture and
  *     every synthetic record variant - no card changed visibility;
- *  3. the Overview adds only the required, pending parcel/return cards, and
- *     the Evidence tab is untouched;
+ *  3. the Overview adds only the required, pending return-request card, and
+ *     the Evidence tab shows no returned-parcel question (removed 2026-11-10);
  *  4. the hero action can never be "none" or the acknowledgement while a
  *     required ask is offered and pending, and removing an ask from the
- *     registry removes what the #17066 assertions need (planted mutation).
+ *     registry removes what its assertions need (planted mutation);
+ *  5. a REQUIRED ask names the module that consumes its answer (`consumedBy`),
+ *     and that module exists: we do not ask the merchant for something that
+ *     cannot change the outcome.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 
 vi.mock("next/navigation", async () => (await import("../harness/workspaceHookMock")).navigationMock);
@@ -20,8 +25,6 @@ vi.mock("@/app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace", async (o
   useDisputeWorkspace: (await import("../harness/workspaceHookMock")).useDisputeWorkspaceMock,
 }));
 
-import { buildDisputeRecord } from "@/lib/disputes/disputeRecord";
-import { createRecordFormat } from "@/lib/disputes/recordFormat";
 import {
   ASK_IDS,
   askActionKey,
@@ -33,18 +36,14 @@ import {
 } from "@/lib/disputes/merchantAsks";
 import {
   canOfferCardholderAcknowledgement,
-  canOfferParcelOutcome,
-  merchantAnsweredParcelOutcomeFromItems,
   merchantSuppliedAcknowledgementFromItems,
 } from "@/lib/disputes/heldState";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 import { canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
-import { recordInputsFromWorkspace, type WorkspaceWithPatterns } from "@/app/(embedded)/app/disputes/[id]/record/recordInputs";
 import { stageOf, recordStatusOf } from "@/lib/disputes/workspacePayload/recordStage";
 import type { WorkspaceData } from "@/app/(embedded)/app/disputes/[id]/workspace-components/types";
 import {
   en,
-  fixtureByCase,
   loadFixtures,
   renderDisputePage,
   visibleText,
@@ -78,13 +77,6 @@ const legacy = {
     if (!run && visibleTickets.length === 0) return false;
     return true;
   },
-  parcel: (d: WorkspaceData) =>
-    canOfferParcelOutcome({
-      returnedToSender: d.workspaceAssessment?.caseStrength?.returnedToSender?.triggered === true,
-      merchantAnsweredParcelOutcome: merchantAnsweredParcelOutcomeFromItems(d.pack?.evidenceItems),
-      submissionState: d.dispute?.submissionState ?? null,
-      finalOutcome: d.dispute?.finalOutcome ?? null,
-    }),
   ack: (d: WorkspaceData) =>
     canOfferCardholderAcknowledgement({
       merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(d.pack?.evidenceItems),
@@ -110,12 +102,11 @@ const subjects: Array<{ name: string; data: WorkspaceData; at: string }> = [
 ];
 
 describe("the registry's shape", () => {
-  it("lists exactly the plan's seven asks, in order, with the plan's priorities", () => {
+  it("lists exactly the plan's six asks, in order, with the plan's priorities", () => {
     for (const s of subjects) {
       expect((s.data.asks ?? []).map((a) => [a.id, a.priority]), s.name).toEqual([
         ["review_decision", "required"],
         ["bank_claim", "required"],
-        ["parcel_outcome", "required"],
         ["return_request", "required"],
         ["missing_evidence", "optional"],
         ["gorgias_review", "optional"],
@@ -133,7 +124,6 @@ describe("parity: every ask is offered exactly when its card's old gate said so"
   const cases: Array<[(typeof ASK_IDS)[number], (d: WorkspaceData) => boolean]> = [
     ["review_decision", legacy.canDecide],
     ["bank_claim", legacy.bankClaim],
-    ["parcel_outcome", legacy.parcel],
     ["return_request", legacy.returnRequest],
     ["missing_evidence", legacy.missing],
     ["gorgias_review", legacy.gorgias],
@@ -148,11 +138,12 @@ describe("parity: every ask is offered exactly when its card's old gate said so"
 
 describe("parity: rendered cards", () => {
   const titles = {
-    parcel: en("disputes.evidenceTab.parcelOutcome.title"),
     returnRequest: en("disputes.evidenceTab.returnRequest.title"),
     missing: en("disputes.evidenceTab.sections.missing.title"),
   };
   const fixtures = loadFixtures();
+  /** The title of the returned-parcel question, removed 2026-11-10 (its answer reached no letter claim). */
+  const REMOVED_PARCEL_QUESTION = "Tell us why this parcel came back";
 
   function at(f: WorkspaceFixture) {
     vi.setSystemTime(new Date(f.meta.capturedAt));
@@ -164,22 +155,21 @@ describe("parity: rendered cards", () => {
       const d = workspaceDataOf(at(f));
       const text = visibleText(renderDisputePage(d, "evidence"));
       // The cards also hide while a build runs (client-side render condition); those fixtures are not building.
-      expect(text.includes(titles.parcel), `${f.meta.case} parcel`).toBe(legacy.parcel(d));
+      expect(text.includes(REMOVED_PARCEL_QUESTION), `${f.meta.case} parcel question was removed`).toBe(false);
       expect(text.includes(titles.returnRequest), `${f.meta.case} return`).toBe(legacy.returnRequest(d));
       expect(text.includes(titles.missing), `${f.meta.case} missing`).toBe(legacy.missing(d));
     }
   });
 
-  it("the Overview adds exactly the required, pending parcel / return cards and nothing else", () => {
+  it("the Overview adds exactly the required, pending return card and nothing else", () => {
     for (const f of fixtures) {
       const d = workspaceDataOf(at(f));
       const text = visibleText(renderDisputePage(d, "overview"));
       const live = (id: (typeof ASK_IDS)[number]) => (d.asks ?? []).some((a) => a.id === id && a.priority === "required" && a.offered && a.pending);
-      // The parcel title is also the hero action sentence for that ask, so presence on the Overview is the card OR the sentence.
+      // The return title is also the hero action sentence for that ask, so presence on the Overview is the card OR the sentence.
       expect(text.includes(titles.missing), `${f.meta.case} Overview must not gain the missing-evidence section`).toBe(false);
-      if (!live("parcel_outcome")) expect(text.includes(titles.parcel), `${f.meta.case} parcel`).toBe(false);
+      expect(text.includes(REMOVED_PARCEL_QUESTION), `${f.meta.case} parcel question was removed`).toBe(false);
       if (!live("return_request")) expect(text.includes(titles.returnRequest), `${f.meta.case} return`).toBe(false);
-      if (live("parcel_outcome")) expect(text.includes(titles.parcel), `${f.meta.case} parcel`).toBe(true);
       if (live("return_request")) expect(text.includes(titles.returnRequest), `${f.meta.case} return`).toBe(true);
     }
   });
@@ -202,9 +192,16 @@ describe("the hero action", () => {
   };
 
   it("names a required ask before an optional one", () => {
+    const asks = resolveMerchantAsks({ ...base, returnRequestApplies: true, evidenceItems: [] });
+    expect(primaryAsk(asks)?.id).toBe("return_request");
+    expect(askActionKey("return_request")).toBe("disputes.evidenceTab.returnRequest.title");
+  });
+
+  it("a returned parcel offers no ask of its own (the question was removed 2026-11-10)", () => {
     const asks = resolveMerchantAsks({ ...base, returnedToSender: true });
-    expect(primaryAsk(asks)?.id).toBe("parcel_outcome");
-    expect(askActionKey("parcel_outcome")).toBe("disputes.evidenceTab.parcelOutcome.title");
+    expect(asks.filter((a) => a.offered && a.priority === "required")).toEqual([]);
+    expect(primaryAsk(asks)?.priority).not.toBe("required");
+    expect(ASK_IDS as readonly string[]).not.toContain("parcel_outcome");
   });
 
   it("is never none or the acknowledgement while a required ask is offered and pending (every input combination)", () => {
@@ -241,25 +238,73 @@ describe("the hero action", () => {
   });
 });
 
-describe("planted mutation: remove parcel_outcome from the registry and the #17066 assertions fail", () => {
+describe("planted mutation: remove the return_request ask from the registry and its assertions fail", () => {
+  // The first real case whose required, pending ask is the return question.
+  const subject = fixturesWithReturnAsk()[0];
+  function fixturesWithReturnAsk() {
+    return loadFixtures().filter((fx) =>
+      (workspaceDataOf(fx).asks ?? []).some((a) => a.id === "return_request" && a.priority === "required" && a.offered && a.pending),
+    );
+  }
   const f = () => {
-    const fx = fixtureByCase("17066-returned-to-sender");
-    vi.setSystemTime(new Date(fx.meta.capturedAt));
-    return fx;
+    vi.setSystemTime(new Date(subject.meta.capturedAt));
+    return subject;
   };
-  const withoutParcel = (d: WorkspaceData): WorkspaceData => ({ ...d, asks: (d.asks ?? []).filter((a: Ask) => a.id !== "parcel_outcome") });
-  const actionKey = (d: WorkspaceData) =>
-    buildDisputeRecord(recordInputsFromWorkspace(d as unknown as WorkspaceWithPatterns, f().meta.capturedAt), createRecordFormat("en")).facts.action?.key;
+  const withoutReturn = (d: WorkspaceData): WorkspaceData => ({ ...d, asks: (d.asks ?? []).filter((a: Ask) => a.id !== "return_request") });
 
-  it("with the ask: the parcel card is on the Overview and is the action", () => {
+  it("a captured case with a required, pending return question exists", () => {
+    expect(subject, "no fixture has a pending return_request ask").toBeDefined();
+  });
+
+  it("with the ask: the return card is on the Overview and the ask is on the page's call to action", () => {
     const d = workspaceDataOf(f());
-    expect(visibleText(renderDisputePage(d, "overview"))).toContain(en("disputes.evidenceTab.parcelOutcome.title"));
-    expect(actionKey(d)).toBe("disputes.evidenceTab.parcelOutcome.title");
+    expect(visibleText(renderDisputePage(d, "overview"))).toContain(en("disputes.evidenceTab.returnRequest.title"));
+    expect((d.asks ?? []).some((x) => x.id === "return_request" && x.offered && x.pending)).toBe(true);
   });
 
-  it("without the ask: neither holds", () => {
-    const d = withoutParcel(workspaceDataOf(f()));
-    expect(visibleText(renderDisputePage(d, "overview"))).not.toContain(en("disputes.evidenceTab.parcelOutcome.title"));
-    expect(actionKey(d)).not.toBe("disputes.evidenceTab.parcelOutcome.title");
+  it("without the ask: the card is not required on the Overview and the ask is gone", () => {
+    const d = withoutReturn(workspaceDataOf(f()));
+    expect((d.asks ?? []).some((x) => x.id === "return_request")).toBe(false);
+    expect(primaryAsk(d.asks ?? [])?.id).not.toBe("return_request");
   });
+});
+
+describe("a required ask must name the module that consumes its answer", () => {
+  // Every input switched on, so every ask is in the list.
+  const all = resolveMerchantAsks({
+    canDecide: true,
+    reviewPending: true,
+    bankClaimTrigger: "general_reason",
+    bankClaimAnswered: false,
+    returnedToSender: true,
+    evidenceItems: [],
+    submissionState: null,
+    finalOutcome: null,
+    returnRequestApplies: true,
+    returnRequestAnswered: false,
+    checklist: [{ field: "x", status: "missing", collectionType: "manual" }],
+    gorgiasComms: { latestRun: {}, tickets: [] },
+  });
+  /** What the consumer file must mention, so a rename or deletion of the consumer fails here. */
+  const MARKER: Record<string, string> = {
+    review_decision: "review_state",
+    bank_claim: "bank_claim",
+    return_request: "merchantConfirmedNoRequest",
+  };
+
+  it("the registry lists the asks the test knows about", () => {
+    expect(all.map((a) => a.id)).toEqual([...ASK_IDS]);
+  });
+
+  for (const id of ASK_IDS) {
+    it(`${id}: if required, consumedBy is an existing module that reads the answer`, () => {
+      const ask = all.find((a) => a.id === id)!;
+      if (ask.priority !== "required") return;
+      expect(ask.consumedBy, `${id} is required but names no consumer`).toBeTruthy();
+      const path = join(process.cwd(), ask.consumedBy!);
+      expect(existsSync(path), `${ask.consumedBy} does not exist`).toBe(true);
+      expect(MARKER[id], `no marker registered for ${id}`).toBeTruthy();
+      expect(readFileSync(path, "utf8")).toContain(MARKER[id]);
+    });
+  }
 });

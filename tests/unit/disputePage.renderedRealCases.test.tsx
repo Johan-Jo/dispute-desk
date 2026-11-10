@@ -82,36 +82,54 @@ function at(f: WorkspaceFixture) {
   return f;
 }
 
-describe("#17066 returned-to-sender, unanswered (7aa8536c)", () => {
+describe("#17066 returned-to-sender, nothing to argue (7aa8536c)", () => {
   const f = () => at(fixtureByCase("17066-returned-to-sender"));
-  it("shows the parcel ask on the Overview", () => {
-    expect(page(f(), "overview")).toContain(en("disputes.evidenceTab.parcelOutcome.title"));
-  });
-  it("the record's action token is the parcel ask, not a generic one", () => {
-    const key = recordOf(f()).facts.action?.key;
-    expect(["disputes.record.action.none", "disputes.record.action.ack", "disputes.record.action.evidence"]).not.toContain(key);
-    expect(key).toBe("disputes.evidenceTab.parcelOutcome.title");
-  });
-  it("does not say action.none", () => {
-    expect(saysActionNone(page(f(), "overview"))).toBe(false);
-  });
-  it("does not offer the cardholder acknowledgement as the primary action", () => {
-    expect(saysActionAck(page(f(), "overview"))).toBe(false);
-  });
-  // Action-first hero (docs/plans/dispute-status-copy.plan.md section 10 A).
+  // The returned-parcel question was removed 2026-11-10: its answer reached no letter claim,
+  // so the page states the true situation instead of asking (docs/plans/dispute-status-copy.plan.md section 10 H).
+  const REMOVED = [
+    "Tell us why this parcel came back",
+    "why did this parcel come back to you",
+    "Answer two questions",
+    "Takes under a minute",
+    "your answer is added to the response",
+    "Needed to respond",
+    "Returned Parcel Outcome",
+  ];
   for (const tab of ["overview", "evidence"] as const) {
-    it(`the hero on the ${tab} tab says what to do, with the parcel question and its button`, () => {
+    it(`the ${tab} tab does not ask the parcel question, show its button, or name it as a missing item`, () => {
+      const text = page(f(), tab);
+      for (const phrase of REMOVED) expect(text, phrase).not.toContain(phrase);
+      expect(text).not.toContain(en("disputes.record.status.action.ack"));
+      expect(text).not.toContain(en("disputes.record.status.optional.ack"));
+      expect(text).not.toContain(ACTION_ACK);
+    });
+    it(`the hero on the ${tab} tab says what is true: the parcel came back, DisputeDesk is not filing, Shopify still responds`, () => {
       const hero = heroText(f(), tab);
-      expect(hero).toContain("Your answer is needed today: why did this parcel come back to you?");
+      expect(hero).toContain(en("disputes.record.status.headline.nothingToArgue"));
       expect(hero).toContain("Inquiry · SEK 3,021.65 · Shopify's deadline is today, 10 Nov 2026");
-      expect(hero).toContain(en("disputes.record.status.label.need"));
-      expect(hero).toContain(en("disputes.record.status.need.parcel"));
-      expect(hero).toContain(en("disputes.evidenceTab.parcelOutcome.ctaButton"));
+      expect(hero).toContain(en("disputes.record.status.label.happened"));
+      expect(hero).toContain(en("disputes.record.status.fact.returnedToSender"));
+      expect(hero).toContain(en("disputes.record.status.next.shopifySends"));
+      expect(hero).not.toContain(en("disputes.record.status.label.need"));
+      expect(hero).not.toContain(en("disputes.record.status.next.expectLoss"));
     });
     it(`the hero on the ${tab} tab has no version number, role-count sentence or count chips`, () => {
       expectNoVersionRoleCountsOrChips(heroText(f(), tab));
     });
   }
+  it("the record's action is not the parcel question, and the page does not say action.none or offer the acknowledgement", () => {
+    expect(recordOf(f()).facts.action?.key ?? null).not.toBe("disputes.evidenceTab.parcelOutcome.title");
+    expect(saysActionNone(page(f(), "overview"))).toBe(false);
+    expect(saysActionAck(page(f(), "overview"))).toBe(false);
+  });
+  it("the delivery row says Returned to sender, not that delivery is unconfirmed", () => {
+    const text = page(f(), "overview");
+    expect(text).toContain(`${en("disputes.record.item.delivery.label")} ${en("disputes.deliveryProof.returnedToSender")}`);
+    expect(text).not.toContain("has not confirmed delivery");
+  });
+  it("the registry offers no ask for it", () => {
+    expect((workspaceDataOf(f()).asks ?? []).filter((a) => a.offered && a.priority === "required" && a.pending)).toEqual([]);
+  });
 });
 
 describe("the hero of every captured case", () => {
@@ -241,7 +259,7 @@ describe("the header chip and the hero agree (one state)", () => {
     const f = at(fixtureByCase("17066-returned-to-sender"));
     const text = page(f, "overview");
     expect(text).toContain("Shopify's deadline is today, 10 Nov 2026");
-    expect(text).toContain(en("disputes.record.status.chip.ask"));
+    expect(text).toContain(en("disputes.record.status.chip.nothing_to_argue"));
     expect(text).not.toContain(en("disputes.record.help.ack.title"));
     expect(text).not.toContain(en("disputes.record.status.action.ack"));
     expect(text).not.toContain(en("disputes.record.status.optional.ack"));

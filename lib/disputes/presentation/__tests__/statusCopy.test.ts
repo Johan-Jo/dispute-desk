@@ -26,6 +26,7 @@ const ask = (id: Ask["id"], priority: Ask["priority"] = "required", pending = tr
   priority,
   offered: true,
   pending,
+  consumedBy: null,
 });
 const claim: I18nToken = { key: "disputes.record.claim.PRODUCT_NOT_RECEIVED" };
 const list = { type: "i18n-key" as const, key: "disputes.record.list.and.n2", params: {
@@ -53,6 +54,7 @@ function base(phase: "inquiry" | "chargeback", patch: Partial<StatusCopyInput> =
     fatalReason: null,
     asks: [],
     ackFits: true,
+    returnedToSender: false,
     recordSituation: null,
     claim,
     caseFact: { key: "disputes.record.item.delivery.dateOnly", params: { date: "22 Oct 2026" } },
@@ -68,8 +70,8 @@ function base(phase: "inquiry" | "chargeback", patch: Partial<StatusCopyInput> =
 }
 
 const CASES: Array<{ name: string; expect: StatusState; patch: Partial<StatusCopyInput> }> = [
-  { name: "A parcel outcome", expect: "ask", patch: { stage: "needs_attention", asks: [ask("parcel_outcome")] } },
-  { name: "A parcel outcome, deadline today", expect: "ask", patch: { stage: "needs_attention", deadlineToday: true, asks: [ask("parcel_outcome")], build: { state: "declined", cause: "no_bank_eligible_facts", packageWritten: false } } },
+  { name: "A return request, deadline today", expect: "ask", patch: { stage: "needs_attention", deadlineToday: true, asks: [ask("return_request")], build: { state: "declined", cause: "no_bank_eligible_facts", packageWritten: false } } },
+  { name: "A returned parcel, nothing to argue", expect: "nothing_to_argue", patch: { stage: "needs_attention", returnedToSender: true, build: { state: "declined", cause: "no_bank_eligible_facts", packageWritten: false } } },
   { name: "A return request", expect: "ask", patch: { asks: [ask("return_request")] } },
   { name: "A bank claim", expect: "ask", patch: { asks: [ask("bank_claim")] } },
   { name: "B review awaiting approval", expect: "approval", patch: { stage: "prepared_review", automationMode: "review", asks: [ask("review_decision")] } },
@@ -139,24 +141,52 @@ describe("composeStatusCopy: every state x phase", () => {
 
   it("'today' is in the ask headline only when the deadline is today", () => {
     const h = (today: boolean) =>
-      composeStatusCopy(base("inquiry", { asks: [ask("parcel_outcome")], deadlineToday: today })).headline.key;
-    expect(h(true)).toBe("disputes.record.status.headline.askParcelToday");
-    expect(h(false)).toBe("disputes.record.status.headline.askParcel");
+      composeStatusCopy(base("inquiry", { asks: [ask("return_request")], deadlineToday: today })).headline.key;
+    expect(h(true)).toBe("disputes.record.status.headline.askReturnToday");
+    expect(h(false)).toBe("disputes.record.status.headline.askReturn");
   });
 
   it("the sub-line says 'today' under the same condition as the headline", () => {
     const sub = (today: boolean) =>
-      composeStatusCopy(base("inquiry", { asks: [ask("parcel_outcome")], deadlineToday: today })).subline.key;
+      composeStatusCopy(base("inquiry", { asks: [ask("return_request")], deadlineToday: today })).subline.key;
     expect(sub(true)).toBe("disputes.record.status.subline.openToday");
     expect(sub(false)).toBe("disputes.record.status.subline.open");
   });
 
   it("a required ask never reads 'Nothing to do'", () => {
-    for (const id of ["parcel_outcome", "return_request", "bank_claim"] as const) {
+    for (const id of ["return_request", "bank_claim"] as const) {
       const out = composeStatusCopy(base("chargeback", { asks: [ask(id)] }));
       expect(out.state).toBe("ask");
       expect(out.headline.key).toMatch(/headline\.ask/);
     }
+  });
+
+  it("a returned parcel with no response to file names the parcel, asks for nothing and does not suggest evidence", () => {
+    const out = composeStatusCopy(
+      base("inquiry", {
+        stage: "needs_attention",
+        returnedToSender: true,
+        caseFact: { key: "disputes.record.status.fact.returnedToSender" },
+        build: { state: "declined", cause: "no_bank_eligible_facts", packageWritten: false },
+      }),
+    );
+    expect(out.state).toBe("nothing_to_argue");
+    expect(out.headline.key).toBe("disputes.record.status.headline.nothingToArgue");
+    const keys = out.parts.flatMap((p) => p.lines.map((l) => l.key));
+    expect(keys).toContain("disputes.record.status.fact.returnedToSender");
+    expect(keys).toContain("disputes.record.status.next.shopifySends");
+    expect(keys).not.toContain("disputes.record.status.next.expectLoss");
+    expect(out.parts.map((p) => p.kind)).not.toContain("need");
+    expect(out.parts.map((p) => p.kind)).not.toContain("can");
+  });
+
+  it("a returned parcel WITH a response shows that state, and the returned-parcel fact in What happened", () => {
+    const out = composeStatusCopy(
+      base("inquiry", { stage: "held", returnedToSender: true, caseFact: { key: "disputes.record.status.fact.returnedToSender" } }),
+    );
+    expect(out.state).toBe("scheduled");
+    const happened = out.parts.find((p) => p.kind === "happened");
+    expect(happened?.lines.map((l) => l.key)).toContain("disputes.record.status.fact.returnedToSender");
   });
 
   it("the cardholder acknowledgement is not offered where it does not fit", () => {
