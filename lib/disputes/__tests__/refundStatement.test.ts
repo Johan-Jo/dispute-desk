@@ -254,7 +254,6 @@ describe("copy and wiring invariants", () => {
     "disputes.strengthReason.refund.insufficient": "evidence-availability sentence ('no refund evidence'), not a statement about the order",
     "disputes.decidedView.checklist.item.refundRecord": "checklist label naming a document ('why no refund was due'), not a claim",
     "disputes.whyText.no_return_initiated": "explains what the evidence field is for ('no refund was owed' argument), not a claim",
-    "disputes.evidenceTab.parcelOutcome.disposition.restocked_not_refunded": "merchant's own chosen parcel outcome, not Shopify's record",
     "disputes.signalLabelValue.noRefundOwed": "names the argument the evidence supports ('no refund was owed'), not a record of the order",
   };
 

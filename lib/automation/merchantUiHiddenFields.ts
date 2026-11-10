@@ -28,9 +28,18 @@
  */
 import { effectivePriorOrders } from "@/lib/argument/canonicalEvidence";
 
+/**
+ * Rows for asks that were retired because their answer reached no letter claim
+ * (the returned-parcel question, removed 2026-11-10). An UNANSWERED row must not
+ * be presented as something to supply. Scoring still counts it
+ * (`requirementMode` is unchanged), and an answer already given stays on file.
+ */
+export const RETIRED_ASK_FIELDS: ReadonlySet<string> = new Set(["returned_parcel_outcome"]);
+
 export const MERCHANT_UI_HIDDEN_FIELDS: ReadonlySet<string> = new Set([
   "customer_communication",
   "supporting_documents",
+  ...RETIRED_ASK_FIELDS,
 ]);
 
 /**

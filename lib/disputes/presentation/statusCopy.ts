@@ -60,7 +60,6 @@ export type StatusState =
 
 /** What a button in the block does. The component maps each id to behaviour; this module only names it. */
 export type StatusActionId =
-  | "ask:parcel_outcome"
   | "ask:return_request"
   | "ask:bank_claim"
   | "decide:approved"
@@ -138,6 +137,8 @@ export interface StatusCopyInput {
   asks: ReadonlyArray<Ask>;
   /** The cardholder acknowledgement fits this case (not a returned / never-delivered parcel). */
   ackFits: boolean;
+  /** A carrier returned the parcel to the merchant (the returned-to-sender gate fired). */
+  returnedToSender: boolean;
   /** An order refund / return is on the record (names the true reason nothing is argued). */
   recordSituation: "return" | "refund" | null;
   claim: I18nToken;
@@ -183,16 +184,6 @@ function subline(i: StatusCopyInput): I18nToken {
 }
 
 const ASK_STATES: Partial<Record<AskId, { headline: string; need: string; action: StatusAction; next: string[] }>> = {
-  parcel_outcome: {
-    headline: "askParcel",
-    need: "need.parcel",
-    action: {
-      id: "ask:parcel_outcome",
-      label: { key: "disputes.evidenceTab.parcelOutcome.ctaButton" },
-      meta: { key: "disputes.evidenceTab.parcelOutcome.ctaMeta" },
-    },
-    next: ["next.parcelAnswer", "next.parcelNone"],
-  },
   return_request: {
     headline: "askReturn",
     need: "need.return",
@@ -382,15 +373,20 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
         ? s("happened.refundCovers")
         : fatal
           ? s("happened.notFulfilled")
-          : i.recordSituation === "return"
-            ? { key: "disputes.record.item.return.returned" }
-            : i.recordSituation === "refund"
-              ? { key: "disputes.record.item.return.refundSome" }
-              : s("happened.noFacts");
+          : i.returnedToSender
+            ? s("fact.returnedToSender")
+            : i.recordSituation === "return"
+              ? { key: "disputes.record.item.return.returned" }
+              : i.recordSituation === "refund"
+                ? { key: "disputes.record.item.return.refundSome" }
+                : s("happened.noFacts");
     const refundOnly = fatal && i.fatalReason === "refund_issued";
     return make("nothing_to_argue", s("headline.nothingToArgue"), [
       happened(why),
-      refundOnly ? null : part("can", [s("can.evidence")], [{ id: "tab:evidence", label: s("action.evidence") }]),
+      // A returned parcel can never have a delivery confirmation: "proof we cannot see" would point at nothing.
+      refundOnly || i.returnedToSender
+        ? null
+        : part("can", [s("can.evidence")], [{ id: "tab:evidence", label: s("action.evidence") }]),
       part("next", [
         refundOnly ? null : deadlineTail("next.rebuild"),
         s("next.shopifySends"),

@@ -433,6 +433,7 @@ function deliveryParts(facts: Record<string, Record<string, unknown>>) {
   const proof = str(d.proofType);
   return {
     confirmed: proof !== null && DELIVERY_CONFIRMED.has(proof),
+    returnedToSender: proof === "returned_to_sender",
     deliveredAt: str(d.deliveredAt) ?? str(f?.deliveredAt),
     shippedAt: str(f?.createdAt),
     carrier: str(tracking?.carrier),
@@ -555,7 +556,12 @@ function buildItems(c: ItemCtx): RecordItem[] {
       role: lr === "unavailable" ? "context" : lr,
       strength: strengthPill(c.line("shipping_tracking")?.strength),
       label: tk("item.delivery.label"),
-      detail: tk(`item.delivery.${variant}`, p),
+      // A parcel the carrier returned was not delivered: say so with the one
+      // existing label (`deliveryPresentation`), not "has not confirmed delivery".
+      detail:
+        i.returnedToSender === true || dl.returnedToSender
+          ? { key: "disputes.deliveryProof.returnedToSender" }
+          : tk(`item.delivery.${variant}`, p),
       source: src("carrier"),
       adverse: false,
       phrase: nest("phrase.cited.delivery"),
@@ -1140,6 +1146,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     fatalReason: i.fatalReason,
     asks: i.asks,
     ackFits,
+    returnedToSender: i.returnedToSender === true,
     recordSituation: returnOnRecord ? "return" : i.refund === "some" ? "refund" : null,
     claim: f.claim as I18nToken,
     caseFact,

@@ -858,7 +858,7 @@
       },
       "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående.",
       "returnedToSender": {
-        "returned_unrefunded": "Transportören returnerade paketet till dig. Den registrerade återbetalningen är lägre än det omtvistade beloppet. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Berätta varför paketet kom tillbaka — om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är värt att argumentera för. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
+        "returned_unrefunded": "Transportören returnerade paketet till dig. Den registrerade återbetalningen är lägre än det omtvistade beloppet. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
       }
     },
     "outcomeExplanation": {
@@ -1690,38 +1690,6 @@
         "answered": "Ditt svar: {answer}",
         "errorWindowClosed": "Shopify har redan skickat svaret, så uppgiften kan inte längre läggas till.",
         "errorGeneric": "Svaret kunde inte sparas ({code})."
-      },
-      "parcelOutcome": {
-        "ctaEyebrow": "Behövs för svaret · bara du kan svara på detta",
-        "title": "Berätta varför paketet kom tillbaka",
-        "subtitle": "Transportören returnerade den här ordern till dig, så det kan aldrig finnas någon leveransbekräftelse för den. Om kunden vägrade ta emot paketet eller aldrig hämtade ut det är det ingen giltig retur — och det är det enda argument som återstår i tvisten. Vi kan inte se vilket som hände; det kan du.",
-        "ctaButton": "Svara på två frågor",
-        "ctaMeta": "Tar under en minut",
-        "choosePlaceholder": "Välj ett alternativ …",
-        "reasonLabel": "Varför kom paketet tillbaka?",
-        "reasonHint": "Det här tas med i ditt svar. En vägrad eller oupphämtad leverans är ingen giltig retur, vilket är värt att påpeka.",
-        "reason": {
-          "refused_delivery": "Kunden vägrade ta emot leveransen",
-          "not_collected": "Kunden hämtade aldrig ut det på utlämningsstället",
-          "undeliverable_address": "Adressen gick inte att leverera till"
-        },
-        "dispositionLabel": "Vad hände med varorna när de kom tillbaka?",
-        "dispositionHint": "Endast för din och vår dokumentation — det här svaret tas aldrig med i svaret som skickas för din räkning.",
-        "disposition": {
-          "restocked_not_refunded": "Tillbaka i lager, och ingen återbetalning gjord",
-          "still_held": "Ligger kvar, varken inlagt i lager eller återbetalat",
-          "reshipped": "Skickat till kunden igen",
-          "refunded": "Återbetalat till kunden"
-        },
-        "noteLabel": "Något annat som är bra att veta (valfritt)",
-        "notePlaceholder": "Till exempel: kunden kontaktades den 12 juli och bad oss hålla kvar paketet.",
-        "noteHint": "Sparas tillsammans med tvisten.",
-        "submit": "Spara svaren",
-        "submitting": "Sparar …",
-        "cancel": "Avbryt",
-        "errorWindowClosed": "Shopify har redan vidarebefordrat den här tvisten till banken, så svaret kan inte längre läggas till.",
-        "errorGeneric": "Det gick inte att spara svaren ({code}). Försök igen.",
-        "reasonHintFromCarrier": "{carrier}s uppgifter tyder på: {reason}. Bekräfta det eller välj vad som faktiskt hände — det är ditt svar som tas med i responsen, inte deras."
       }
     },
     "reviewTab": {
@@ -1796,8 +1764,6 @@
         "reviewRequiredBody": "DisputeDesk kan inte skicka in det här försvarspaketet som det är byggt. Generera om det för att skapa en version som kan skickas in. Förhandsgranska och Generera om är fortfarande tillgängliga; Slutför och Skicka in är otillgängliga tills en omgenererad version klarar granskningen.",
         "generatingTitle": "Ditt försvarspaket håller på att skapas",
         "generatingBody": "DisputeDesk skriver försvarsbrevet och PDF-filen utifrån de bevis som samlats in för den här tvisten. Det tar vanligtvis några minuter, och längre när flera tvister förbereds samtidigt. Du behöver inte göra något.",
-        "notEnoughEvidenceReturnedTitle": "Det finns inget att argumentera för förrän du berättar varför paketet kom tillbaka",
-        "notEnoughEvidenceReturnedBody": "Transportören returnerade paketet till dig, så det finns ingen leverans att argumentera kring och det kan aldrig finnas någon leveransbekräftelse för den här ordern. Att vänta ändrar inte det — inget mer kommer att samlas in. Det enda som fortfarande kan hjälpa finns på fliken Bevis: berätta om kunden vägrade ta emot leveransen eller aldrig hämtade ut den. Inget av det räknas som en giltig retur, och det tar vi med i ditt svar.",
         "notEnoughEvidenceClaimTitle": "Inget i underlaget besvarar bankens anspråk ännu",
         "notEnoughEvidenceClaimBody": "Du har lagt till bankens anspråk, så brevet besvarar just det anspråket och inget annat. Inget av det underlag som samlats in hittills tar upp det, så inget brev skrevs – ett tomt brev skulle förlora ärendet. Lägg till det som checklistan på fliken Bevis efterfrågar, så byggs brevet om automatiskt."
       },
@@ -2188,7 +2154,7 @@
       "returnedToSender": "Returnerad till avsändaren",
       "titleReturnedToSender": "Returnerad till avsändaren — kunden tog aldrig emot paketet",
       "titleReturnedToSenderOn": "Returnerad till avsändaren {date} — kunden tog aldrig emot paketet",
-      "whyReturnedToSender": "Transportören lämnade tillbaka paketet till dig. Eftersom kunden aldrig tog emot det kan det aldrig finnas någon leveransbekräftelse för den här ordern — därför går ärendet inte att driva på leveransen. Det som betyder något nu är varför paketet kom tillbaka och vad du gjorde med varorna.",
+      "whyReturnedToSender": "Transportören lämnade tillbaka paketet till dig. Eftersom kunden aldrig tog emot det kan det aldrig finnas någon leveransbekräftelse för den här ordern — därför går ärendet inte att driva på leveransen.",
       "factsReturnedToSender": "Returnerad till avsändaren",
       "factsReturnedToSenderOn": "Returnerad till avsändaren {date}"
     },
@@ -2535,8 +2501,6 @@
           "returnedToSender": "Transportören skickade tillbaka paketet till dig, så något leveransbevis kan inte finnas."
         },
         "headline": {
-          "askParcel": "Vi behöver ditt svar: varför kom paketet tillbaka till dig?",
-          "askParcelToday": "Vi behöver ditt svar i dag: varför kom paketet tillbaka till dig?",
           "askReturn": "Vi behöver ditt svar: bad kunden om en retur eller återbetalning?",
           "askReturnToday": "Vi behöver ditt svar i dag: bad kunden om en retur eller återbetalning?",
           "askBank": "Vi behöver din hjälp: lägg till bankens anspråk från Shopify",
@@ -2581,7 +2545,6 @@
           "planLimit": "DisputeDesk har inte förberett något svar för den här tvisten eftersom månadsgränsen i din plan är nådd."
         },
         "need": {
-          "parcel": "Bara du vet varför paketet kom tillbaka. Om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är det enda argument som finns kvar i ärendet. Utan ditt svar blir vårt svar till banken svagt.",
           "return": "Shopify registrerar bara returer som görs via Shopify, så bara du kan säga om kunden bad om en retur eller återbetalning innan tvisten öppnades.",
           "bank": "Bankens skäl syns bara i Shopify. Klistra in det här så att svaret tar upp precis det som frågades.",
           "review": "Läs svaret och välj.",
@@ -2603,8 +2566,6 @@
           "plans": "Se planer"
         },
         "next": {
-          "parcelAnswer": "Om du svarar läggs ditt svar till i svaret till banken, och du bestämmer om det ska lämnas in.",
-          "parcelNone": "Om du inte gör det lämnar DisputeDesk inte in något på egen hand. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
           "returnAnswer": "Om du svarar skriver DisputeDesk om svaret med ditt svar.",
           "bankAnswer": "När du har lagt till det skriver DisputeDesk om svaret.",
           "bankNone": "Tills dess lämnar DisputeDesk inte in något för den här tvisten. Shopify skickar ändå ett svar utifrån orderns egna uppgifter.",
@@ -4463,7 +4424,7 @@
       },
       "returnedToSenderParcels": {
         "title": "När ett paket returneras till avsändaren",
-        "body": "Ibland kan en transportör inte slutföra en leverans och lämnar tillbaka paketet till dig. Kunden fick aldrig sin order — och om de senare bestrider betalningen förändrar det vad ärendet kan och inte kan handla om.\n\n**Vad DisputeDesk gör automatiskt**\n\nNär vi läser av en returhändelse från transportören gör vi följande:\n\n1. Visar leveransraden som \"Returnerad till avsändaren\" med transportörens eget datum, i stället för att behandla den som en oskannad etikett.\n2. Tar bort alla argument som bygger på att kunden aldrig skickat tillbaka varorna. Shopify kan fortfarande visa returstatusen som \"ingen retur\", eftersom ingen returbegäran öppnades — men varorna finns hos dig, och ett argument byggt på motsatsen vore osant.\n3. Markerar ärendet som svagt och stoppar automatisk inlämning, även på deadline. Ett returnerat paket kan aldrig ha någon leveransbekräftelse, och utan en sådan avgör banken normalt till kundens fördel.\n\n**Vad vi behöver från dig**\n\nEn enda sak, och det är det vi inte kan se: **varför paketet kom tillbaka.** Frågan hittar du på fliken Bevis.\n\n- **Kunden vägrade ta emot leveransen** eller **hämtade aldrig ut den på utlämningsstället** — det är värt att argumentera för. Enligt EU:s konsumentregler är det ingen giltig retur och ingen giltig ångerrätt att bara låta bli att ta emot ett paket. Vi tar med det i svaret åt dig.\n- **Adressen gick inte att leverera till** — vi noterar det, men tar inte med det i svaret. Det hjälper inte ärendet, och att lyfta det bjuder in till en fråga ingen ställt.\n\nVi frågar också vad som hände med varorna när de kom tillbaka. Det svaret är för din och vår dokumentation; det tas aldrig med i svaret som skickas för din räkning.\n\n**Om du behållit både varorna och betalningen**\n\nDet ärliga svaret är oftast att återbetala. Kunden har betalat, aldrig fått sin order, och varorna är tillbaka hos dig. Att driva ärendet lyckas sällan och kan dessutom kosta dig tvisteavgiften. Om du ska återbetala är ditt beslut — DisputeDesk gör det inte åt dig — men bedömningen du ser speglar de verkliga oddsen, inte en optimistisk gissning.\n\n**En notering om tid**\n\nOm du svarar att du går med på att justera betalningen förväntar sig vissa betalleverantörer att återbetalningen sker inom kort tid (Klarna drar till exempel tillbaka betalningen automatiskt om återbetalningen inte kommer i tid). Gör återbetalningen snarast efter att du åtagit dig den."
+        "body": "Ibland kan en transportör inte slutföra en leverans och lämnar tillbaka paketet till dig. Kunden fick aldrig sin order — och om de senare bestrider betalningen förändrar det vad ärendet kan och inte kan handla om.\n\n**Vad DisputeDesk gör automatiskt**\n\nNär vi läser av en returhändelse från transportören gör vi följande:\n\n1. Visar leveransraden som \"Returnerad till avsändaren\" med transportörens eget datum, i stället för att behandla den som en oskannad etikett.\n2. Tar bort alla argument som bygger på att kunden aldrig skickat tillbaka varorna. Shopify kan fortfarande visa returstatusen som \"ingen retur\", eftersom ingen returbegäran öppnades — men varorna finns hos dig, och ett argument byggt på motsatsen vore osant.\n3. Markerar ärendet som svagt och stoppar automatisk inlämning, även på deadline. Ett returnerat paket kan aldrig ha någon leveransbekräftelse, och utan en sådan avgör banken normalt till kundens fördel.\n\n**Vad vi behöver från dig**\n\nInget. DisputeDesk frågade tidigare varför paketet kom tillbaka, men svaret kunde inte ändra något av det som skickas till banken, så frågan har tagits bort. Om du svarade tidigare finns ditt svar kvar i ärendets underlag.\n\n**Vad ärendesidan visar**\n\nSidan anger att transportören lämnade tillbaka paketet till dig, så det levererades inte. När det inte finns något i underlaget att argumentera för anger den att DisputeDesk inte lämnar in något svar och att Shopify ändå skickar ett svar utifrån orderns egna uppgifter.\n\n**Om du behållit både varorna och betalningen**\n\nDet ärliga svaret är oftast att återbetala. Kunden har betalat, aldrig fått sin order, och varorna är tillbaka hos dig. Att driva ärendet lyckas sällan och kan dessutom kosta dig tvisteavgiften. Om du ska återbetala är ditt beslut — DisputeDesk gör det inte åt dig — men bedömningen du ser speglar de verkliga oddsen, inte en optimistisk gissning.\n\n**En notering om tid**\n\nOm du svarar att du går med på att justera betalningen förväntar sig vissa betalleverantörer att återbetalningen sker inom kort tid (Klarna drar till exempel tillbaka betalningen automatiskt om återbetalningen inte kommer i tid). Gör återbetalningen snarast efter att du åtagit dig den."
       },
       "bankClaim": {
         "title": "Varför DisputeDesk ber om bankens anspråk",
@@ -4503,7 +4464,7 @@
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
-          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**En enda redogörelse för tvisten.** Sidan öppnas med en kort redogörelse för tvisten, och alla flikar läser samma fakta, så ett tal, ett datum eller en mening skiljer sig aldrig mellan **Översikt**, **Bevis** och **Granska och vidarebefordra**. **Underlaget** listar de fakta som redogörelsen bygger på, **Det som vinner den här typen av tvist** visar hur många av de underlag bankerna tittar efter som finns registrerade, och **Vad som hände** är tidslinjen. Varje bevis har exakt en roll: **angivet för banken**, **sammanhang i paketet**, **hålls internt** (används bara för vår bedömning, skickas aldrig till Shopify eller banken) eller **inte tillgängligt**. De delar som är **angivna för banken** är de som brevet stödjer sig på: bevisunderlaget listar dem, och en leverans redovisas i fraktavsnittet. Orderuppgifterna eller en butikspolicy anges bara när brevets argumentation stödjer sig på dem; annars förblir de sammanhang. Ett brev som förberetts tidigare behåller det bevisunderlag det skrevs med, och den här sidan beskriver det brevet. En retur eller återbetalning som Shopify registrerar på ordern anges en gång, i underlaget, med samma ord överallt. Sidan är bara till dig och ingår inte i något som skickas till banken; brevet under **Granska och vidarebefordra** är dokumentet som banken får.\n\n**Frågor som bara du kan svara på.** När tvisten behöver ett svar från dig (bankens påstående, varför ett returnerat paket kom tillbaka, om kunden bad om en retur eller ditt beslut om ett paket som väntar på godkännande) visas den under **Översikt** som ett kort under sammanfattningen, och statusblocket överst på sidan nämner den först, med en knapp som tar dig dit. Det som bara hjälper, som att lägga till kortinnehavarens bekräftelse eller saknade bevis, finns kvar under **Bevis**.\n\n**Statusblocket överst.** Rubriken är det enda som behöver göras, eller börjar med ”Inget att göra.” när inget behövs. Under den finns **Vad som har hänt**, **Vad vi behöver av dig** (med knappen för frågan, direkt på sidan), **Vad som händer sedan** och **Klart hittills**. De är korta och visas bara när det finns något sant att säga. Interna versionsnummer och bevisantal ingår inte. ”Schemalagt” betyder att DisputeDesk kontrollerar svaret igen vid fristen innan något skickas. Om DisputeDesk inte lämnar in något körs Shopifys egen fristprocess ändå, med de orderuppgifter Shopify redan har."
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag.\n\n**Siffror från din egen butik.** På en vunnen eller förlorad tvist kan **Det som vinner den här typen av tvist** visa hur ofta tvister av samma typ har vunnits i din butik, och ett steg under **Nästa gång** kan visa hur många av dina förlorade tvister av den typen som hade samma problem. De visas först när din butik har tillräckligt många avgjorda tvister av den typen. De beskriver din butiks historik, inte bankens resonemang i det här ärendet.\n\n**En enda redogörelse för tvisten.** Sidan öppnas med en kort redogörelse för tvisten, och alla flikar läser samma fakta, så ett tal, ett datum eller en mening skiljer sig aldrig mellan **Översikt**, **Bevis** och **Granska och vidarebefordra**. **Underlaget** listar de fakta som redogörelsen bygger på, **Det som vinner den här typen av tvist** visar hur många av de underlag bankerna tittar efter som finns registrerade, och **Vad som hände** är tidslinjen. Varje bevis har exakt en roll: **angivet för banken**, **sammanhang i paketet**, **hålls internt** (används bara för vår bedömning, skickas aldrig till Shopify eller banken) eller **inte tillgängligt**. De delar som är **angivna för banken** är de som brevet stödjer sig på: bevisunderlaget listar dem, och en leverans redovisas i fraktavsnittet. Orderuppgifterna eller en butikspolicy anges bara när brevets argumentation stödjer sig på dem; annars förblir de sammanhang. Ett brev som förberetts tidigare behåller det bevisunderlag det skrevs med, och den här sidan beskriver det brevet. En retur eller återbetalning som Shopify registrerar på ordern anges en gång, i underlaget, med samma ord överallt. Sidan är bara till dig och ingår inte i något som skickas till banken; brevet under **Granska och vidarebefordra** är dokumentet som banken får.\n\n**Frågor som bara du kan svara på.** När tvisten behöver ett svar från dig (bankens påstående, om kunden bad om en retur eller ditt beslut om ett paket som väntar på godkännande) visas den under **Översikt** som ett kort under sammanfattningen, och statusblocket överst på sidan nämner den först, med en knapp som tar dig dit. Det som bara hjälper, som att lägga till kortinnehavarens bekräftelse eller saknade bevis, finns kvar under **Bevis**.\n\n**Statusblocket överst.** Rubriken är det enda som behöver göras, eller börjar med ”Inget att göra.” när inget behövs. Under den finns **Vad som har hänt**, **Vad vi behöver av dig** (med knappen för frågan, direkt på sidan), **Vad som händer sedan** och **Klart hittills**. De är korta och visas bara när det finns något sant att säga. Interna versionsnummer och bevisantal ingår inte. ”Schemalagt” betyder att DisputeDesk kontrollerar svaret igen vid fristen innan något skickas. Om DisputeDesk inte lämnar in något körs Shopifys egen fristprocess ändå, med de orderuppgifter Shopify redan har."
         },
         "reviewQueue": {
           "title": "Granskningskön",
