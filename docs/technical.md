@@ -4126,6 +4126,34 @@ SIL OFL, registered by the worker before rendering), with one burgundy accent.
     and the footer are fixed Views anchored from the **top**, with a View render prop.
   - Automatic hyphenation is off.
 
+### Defence PDF — coordinate range & the running header (2026-11-10)
+
+**Shopify limit.** `dispute_file_uploads.json` answers HTTP 422 "There's a problem with the
+uploaded file" for any PDF whose content stream holds a numeric operand outside the signed 32-bit
+range. Coordinates must stay small (a Letter page is 612 x 792).
+
+**What broke.** From roughly mid-October 2026 every defence PDF of 4+ pages was rejected (3-page
+PDFs were accepted). The running header on pages 2+ was one bordered flex row inside a
+`fixed` + `render` View; its computed height was garbage, 145 x 100^page (page 2 = 1,450,008,
+page 3 = 145,000,016, page 4 = 14,499,999,744), and its 0.75pt bottom border was stroked at that Y.
+Page 4 exceeded 2^31. Proven by uploading the same 4-page PDF with only page 4's numbers replaced
+(accepted) and page 4 alone (rejected). Giving the row, the text or the slot an explicit height made
+the numbers sane but made react-pdf drop the header text, so the height cannot simply be pinned.
+
+**Fix.** The header is now three independently positioned `fixed` elements in `RunningHeader`
+(`lib/defence/pdf/DefencePackageDocument.tsx`): a title `Text` and a case-reference `Text` (both
+absolute at top 28, `render` returning `""` on page 1) and a rule (absolute at top 45, an
+explicit 0.75pt-high hairline-coloured View that renders nothing on page 1). Nothing depends on a
+measured height. Visually identical: no header or rule on page 1, header text + hairline on pages
+2+, footer unchanged (the footer was never affected).
+
+**Regression test.** `lib/defence/pdf/__tests__/runningHeaderRule.test.ts` renders a 7-page
+document through `renderDefencePdf`, decodes every page's content stream with `pdf-lib`, and
+asserts (1) "emits no coordinate above 10000 on any page of a 6+ page document" and (2) "still
+draws the header rule on pages 2+ and not on page 1" (two header texts and one rule on pages 2+,
+none on page 1, so deleting the header cannot pass). Any new `fixed` + `render` element that draws
+a border from a measured height should be covered by the same assertion.
+
 ### Defence PDF layout (2026-09-23, prompt 27)
 
 Reviewed on blume-box #360980's filed PDF: four pages for one page of argument, a mostly empty
