@@ -31,6 +31,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { bankClaimOffered } from "@/lib/disputes/merchantAsks";
 import { getShopifyDisputeUrl, getShopifyOrderUrl } from "@/lib/shopify/shopifyAdminUrl";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 
@@ -71,7 +72,7 @@ export function BankClaimCard({ workspace }: { workspace: Workspace }) {
   const trigger = data?.bankClaim?.trigger ?? null;
   const answer = data?.bankClaim?.answer ?? null;
   const hasAnswer = saved || answer !== null;
-  const visible = trigger !== null || saved;
+  const visible = bankClaimOffered(trigger) || saved;
 
   useEffect(() => {
     if (visible && searchParams?.get("section") === "bank-claim") {
