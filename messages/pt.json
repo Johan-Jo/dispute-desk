@@ -933,38 +933,6 @@
         "answered": "A sua resposta: {answer}",
         "errorWindowClosed": "A Shopify já enviou esta resposta, por isso já não é possível adicioná-la.",
         "errorGeneric": "Não foi possível guardar a resposta ({code})."
-      },
-      "parcelOutcome": {
-        "ctaEyebrow": "Necessário para responder · só você pode responder",
-        "title": "Diga-nos por que esta encomenda voltou",
-        "subtitle": "A transportadora devolveu-lhe este pedido, por isso nunca poderá existir uma confirmação de entrega. Se o cliente recusou a encomenda ou nunca a levantou, isso não é uma devolução válida — e é o único argumento ainda em aberto nesta disputa. Não conseguimos ver o que aconteceu; você consegue.",
-        "ctaButton": "Responder a duas perguntas",
-        "ctaMeta": "Menos de um minuto",
-        "choosePlaceholder": "Escolha uma opção…",
-        "reasonLabel": "Por que motivo a encomenda voltou?",
-        "reasonHint": "Isto entra na sua resposta. Uma entrega recusada ou não levantada não é uma devolução válida, e vale a pena dizê-lo.",
-        "reason": {
-          "refused_delivery": "O cliente recusou a entrega",
-          "not_collected": "O cliente nunca a levantou no ponto de recolha",
-          "undeliverable_address": "Não foi possível entregar na morada"
-        },
-        "dispositionLabel": "O que aconteceu à mercadoria depois de voltar?",
-        "dispositionHint": "Apenas para o seu registo e o nosso — esta resposta nunca aparece na resposta enviada em seu nome.",
-        "disposition": {
-          "restocked_not_refunded": "De volta ao stock, sem reembolso emitido",
-          "still_held": "Ainda retida, nem reposta em stock nem reembolsada",
-          "reshipped": "Reenviada ao cliente",
-          "refunded": "Reembolsada ao cliente"
-        },
-        "noteLabel": "Mais alguma coisa relevante (opcional)",
-        "notePlaceholder": "Por exemplo: o cliente foi contactado a 12 de julho e pediu-nos para reter a encomenda.",
-        "noteHint": "Guardado com o registo da disputa.",
-        "submit": "Guardar respostas",
-        "submitting": "A guardar…",
-        "cancel": "Cancelar",
-        "errorWindowClosed": "A Shopify já encaminhou esta disputa para o banco, pelo que esta resposta já não pode ser adicionada.",
-        "errorGeneric": "Não foi possível guardar as suas respostas ({code}). Tente novamente.",
-        "reasonHintFromCarrier": "O registo da {carrier} sugere: {reason}. Confirme ou escolha o que aconteceu de facto — é a sua resposta que segue na resposta enviada, não a deles."
       }
     },
     "reviewTab": {
@@ -1039,8 +1007,6 @@
         "reviewRequiredBody": "O DisputeDesk não pode apresentar este pacote de defesa tal como foi criado. Gere-o novamente para obter uma versão que possa ser submetida. A pré-visualização e Gerar novamente continuam disponíveis; Finalizar e Submeter ficam indisponíveis até que uma versão regenerada passe na revisão.",
         "generatingTitle": "Seu pacote de defesa está sendo gerado",
         "generatingBody": "O DisputeDesk está redigindo a carta de defesa e o PDF a partir das evidências coletadas para esta disputa. Normalmente leva alguns minutos, e mais quando várias disputas estão sendo preparadas ao mesmo tempo. Você não precisa fazer nada.",
-        "notEnoughEvidenceReturnedTitle": "Não há nada a argumentar enquanto não nos disser por que a encomenda voltou",
-        "notEnoughEvidenceReturnedBody": "A transportadora devolveu-lhe esta encomenda, pelo que não há entrega a defender e nunca poderá existir uma confirmação de entrega para este pedido. Esperar não altera isso — não será recolhido mais nada. A única coisa que ainda pode ajudar está no separador Provas: diga-nos se o cliente recusou a entrega ou nunca a levantou. Nenhuma das situações conta como devolução válida, e é isso que incluiremos na sua resposta.",
         "notEnoughEvidenceClaimTitle": "Ainda não há nada que responda à reclamação do banco",
         "notEnoughEvidenceClaimBody": "Você adicionou a reclamação do banco, então a carta responde a essa reclamação e a nada mais. Nenhuma das provas reunidas até agora trata dela, por isso nenhuma carta foi escrita — enviar uma vazia faria perder o caso. Adicione o que a lista da aba Provas pede e a carta será refeita automaticamente."
       },
@@ -1518,7 +1484,7 @@
       },
       "creditAlreadyIssued": "Esta transação já foi reembolsada antes de a disputa ser aberta. A resposta mais forte é o próprio reembolso — o titular do cartão já foi reembolsado, portanto nada mais é devido.",
       "returnedToSender": {
-        "returned_unrefunded": "A transportadora devolveu esta encomenda a si. O reembolso registrado é inferior ao valor contestado. Não pode existir confirmação de entrega para este pedido e, sem ela, o banco decide normalmente a favor do cliente. Diga-nos por que motivo a encomenda voltou: se o cliente recusou a entrega ou nunca a levantou, não é uma devolução válida e vale a pena argumentá-lo. Se ficou com a mercadoria e com o dinheiro, a resposta justa é reembolsar."
+        "returned_unrefunded": "A transportadora devolveu esta encomenda a si. O reembolso registrado é inferior ao valor contestado. Não pode existir confirmação de entrega para este pedido e, sem ela, o banco decide normalmente a favor do cliente. Se ficou com a mercadoria e com o dinheiro, a resposta justa é reembolsar."
       }
     },
     "outcomeExplanation": {
@@ -2188,7 +2154,7 @@
       "returnedToSender": "Devolvido ao remetente",
       "titleReturnedToSender": "Devolvido ao remetente — o cliente nunca recebeu a encomenda",
       "titleReturnedToSenderOn": "Devolvido ao remetente em {date} — o cliente nunca recebeu a encomenda",
-      "whyReturnedToSender": "A transportadora devolveu esta encomenda a si. Como o cliente nunca a recebeu, nunca poderá existir uma confirmação de entrega para este pedido — por isso o caso não pode ser defendido pela entrega. O que importa agora é por que motivo voltou e o que fez com a mercadoria.",
+      "whyReturnedToSender": "A transportadora devolveu esta encomenda a si. Como o cliente nunca a recebeu, nunca poderá existir uma confirmação de entrega para este pedido — por isso o caso não pode ser defendido pela entrega.",
       "factsReturnedToSender": "Devolvido ao remetente",
       "factsReturnedToSenderOn": "Devolvido ao remetente em {date}"
     },
@@ -2535,8 +2501,6 @@
           "returnedToSender": "A transportadora devolveu esta encomenda a si, por isso não pode existir comprovativo de entrega."
         },
         "headline": {
-          "askParcel": "É preciso a sua resposta: porque voltou esta encomenda até si?",
-          "askParcelToday": "É preciso a sua resposta hoje: porque voltou esta encomenda até si?",
           "askReturn": "É preciso a sua resposta: este cliente pediu uma devolução ou um reembolso?",
           "askReturnToday": "É preciso a sua resposta hoje: este cliente pediu uma devolução ou um reembolso?",
           "askBank": "É preciso a sua ajuda: adicione a reclamação do banco a partir da Shopify",
@@ -2581,7 +2545,6 @@
           "planLimit": "O DisputeDesk não preparou uma resposta para esta contestação porque o limite mensal do seu plano está esgotado."
         },
         "need": {
-          "parcel": "Só você sabe porque voltou. Se o cliente recusou a encomenda ou nunca a levantou, isso não é uma devolução válida, e é o único argumento que resta neste caso. Sem a sua resposta, a resposta ao banco fica fraca.",
           "return": "A Shopify só regista as devoluções feitas através da Shopify, por isso só você pode dizer se este cliente pediu uma devolução ou um reembolso antes de abrir a contestação.",
           "bank": "O motivo do banco só é visível na Shopify. Cole-o aqui para que a resposta responda exatamente ao que foi perguntado.",
           "review": "Leia a resposta e escolha.",
@@ -2603,8 +2566,6 @@
           "plans": "Ver planos"
         },
         "next": {
-          "parcelAnswer": "Se responder, a sua resposta é adicionada à resposta ao banco e você decide se a apresenta.",
-          "parcelNone": "Se não responder, o DisputeDesk não apresenta nada por si próprio. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
           "returnAnswer": "Se responder, o DisputeDesk volta a redigir a resposta com a sua resposta.",
           "bankAnswer": "Depois de a adicionar, o DisputeDesk volta a redigir a resposta.",
           "bankNone": "Até lá, o DisputeDesk não apresenta nada para esta contestação. A Shopify envia na mesma uma resposta com os dados do próprio pedido.",
@@ -2628,7 +2589,8 @@
           "scheduled": "Está agendada a apresentação através da Shopify no prazo, a {date}. O DisputeDesk continua atento a novas provas e verifica de novo a resposta antes de enviar o que quer que seja.",
           "scheduledNoDate": "Está agendada a apresentação através da Shopify no prazo. O DisputeDesk continua atento a novas provas e verifica de novo a resposta antes de enviar o que quer que seja.",
           "planLimit": "Assim que o plano for alterado, o DisputeDesk prepara a resposta. O prazo da Shopify é {date}.",
-          "planLimitNoDate": "Assim que o plano for alterado, o DisputeDesk prepara a resposta."
+          "planLimitNoDate": "Assim que o plano for alterado, o DisputeDesk prepara a resposta.",
+          "recheck": "A DisputeDesk verifica o registo mais uma vez no dia da data-limite, {date}. Se nada tiver mudado, não apresenta nada e o Shopify continua a enviar uma resposta com os dados do próprio pedido."
         },
         "done": {
           "drafted": "As provas estão reunidas e há uma resposta redigida. Nada foi apresentado.",
@@ -2696,7 +2658,8 @@
       "state": {
         "noPack": "O DisputeDesk ainda não preparou um pacote de defesa. Nada foi guardado na Shopify.",
         "building": "O DisputeDesk está a criar o pacote de defesa. Ainda nada foi guardado na Shopify.",
-        "failed": "O DisputeDesk não conseguiu criar o pacote de defesa. Nada foi guardado na Shopify."
+        "failed": "O DisputeDesk não conseguiu criar o pacote de defesa. Nada foi guardado na Shopify.",
+        "noResponse": "A DisputeDesk verificou o registo em {date} e não redigiu nenhuma resposta."
       },
       "reviewMode": {
         "waiting": "No modo de revisão, o DisputeDesk só o guarda na Shopify quando o aprovar.",
@@ -2980,7 +2943,8 @@
           "package": "Pacote de defesa",
           "reopened": "Reaberta",
           "escalated": "Passou a chargeback",
-          "response": "Resposta enviada"
+          "response": "Resposta enviada",
+          "checked": "Registo verificado"
         },
         "placed": {
           "card": "{amount} cobrados com um cartão {network} terminado em {last4}.",
@@ -4463,7 +4427,7 @@
       },
       "returnedToSenderParcels": {
         "title": "Quando uma encomenda é devolvida ao remetente",
-        "body": "Por vezes a transportadora não consegue concluir uma entrega e devolve-lhe a encomenda. O cliente nunca recebeu o pedido — e, se mais tarde contestar a cobrança, isso altera o que o caso pode e não pode defender.\n\n**O que a DisputeDesk faz automaticamente**\n\nQuando detetamos uma devolução ao remetente nos dados da transportadora:\n\n1. Mostramos a linha de entrega como \"Devolvido ao remetente\", com a data da própria transportadora, em vez de a tratar como uma etiqueta nunca lida.\n2. Retiramos qualquer argumento que dependa de o cliente nunca ter devolvido a mercadoria. O Shopify pode continuar a indicar \"sem devolução\", porque nunca foi aberto um pedido de devolução — mas a mercadoria está consigo, e um argumento que diga o contrário seria falso.\n3. Classificamos o caso como de baixa probabilidade e impedimos qualquer envio automático, inclusive na data-limite. Uma encomenda devolvida nunca pode ter confirmação de entrega e, sem ela, o banco decide normalmente a favor do cliente.\n\n**O que precisamos de si**\n\nApenas uma coisa, e é justamente a que não conseguimos ver: **por que motivo a encomenda voltou.** A pergunta está no separador Provas.\n\n- **O cliente recusou a entrega** ou **nunca a levantou no ponto de recolha**: vale a pena argumentá-lo. Segundo as regras de consumo da UE, não aceitar uma encomenda não é uma devolução válida nem um exercício válido do direito de livre resolução. Incluímos isso na resposta por si.\n- **Não foi possível entregar na morada**: registamos, mas não incluímos na resposta. Não ajuda o caso e levanta uma questão que ninguém colocou.\n\nTambém perguntamos o que aconteceu à mercadoria depois de voltar. Essa resposta é para o seu registo e o nosso; nunca aparece na resposta enviada em seu nome.\n\n**Se ficou com a mercadoria e com o pagamento**\n\nA resposta honesta é normalmente reembolsar. O cliente pagou, nunca recebeu o pedido e a mercadoria está de volta consigo. Contestar raramente resulta e pode ainda custar-lhe a taxa da disputa. Reembolsar ou não é decisão sua — a DisputeDesk não o faz por si — mas a avaliação que vê reflete as probabilidades reais, não umas otimistas.\n\n**Uma nota sobre prazos**\n\nSe responder aceitando ajustar a cobrança, alguns prestadores de pagamento esperam o reembolso num prazo curto (a Klarna, por exemplo, reverte o pagamento automaticamente se o reembolso não chegar a tempo). Emita o reembolso logo depois de se comprometer."
+        "body": "Por vezes a transportadora não consegue concluir uma entrega e devolve-lhe a encomenda. O cliente nunca recebeu o pedido — e, se mais tarde contestar a cobrança, isso altera o que o caso pode e não pode defender.\n\n**O que a DisputeDesk faz automaticamente**\n\nQuando detetamos uma devolução ao remetente nos dados da transportadora:\n\n1. Mostramos a linha de entrega como \"Devolvido ao remetente\", com a data da própria transportadora, em vez de a tratar como uma etiqueta nunca lida.\n2. Retiramos qualquer argumento que dependa de o cliente nunca ter devolvido a mercadoria. O Shopify pode continuar a indicar \"sem devolução\", porque nunca foi aberto um pedido de devolução — mas a mercadoria está consigo, e um argumento que diga o contrário seria falso.\n3. Classificamos o caso como de baixa probabilidade e impedimos qualquer envio automático, inclusive na data-limite. Uma encomenda devolvida nunca pode ter confirmação de entrega e, sem ela, o banco decide normalmente a favor do cliente.\n\n**O que precisamos de si**\n\nNada. A DisputeDesk perguntava antes por que motivo a encomenda voltou, mas a resposta não podia alterar o que é enviado ao banco, por isso a pergunta foi removida. Se já respondeu antes, a sua resposta fica guardada no registo da disputa.\n\n**O que a página da disputa mostra**\n\nA página indica que a transportadora lhe devolveu a encomenda, que por isso não foi entregue. Quando não há nada no registo que se possa argumentar, indica que a DisputeDesk não apresenta uma resposta e que o Shopify continua a enviar uma resposta com os dados do próprio pedido.\n\n**Se ficou com a mercadoria e com o pagamento**\n\nA resposta honesta é normalmente reembolsar. O cliente pagou, nunca recebeu o pedido e a mercadoria está de volta consigo. Contestar raramente resulta e pode ainda custar-lhe a taxa da disputa. Reembolsar ou não é decisão sua — a DisputeDesk não o faz por si — mas a avaliação que vê reflete as probabilidades reais, não umas otimistas.\n\n**Uma nota sobre prazos**\n\nSe responder aceitando ajustar a cobrança, alguns prestadores de pagamento esperam o reembolso num prazo curto (a Klarna, por exemplo, reverte o pagamento automaticamente se o reembolso não chegar a tempo). Emita o reembolso logo depois de se comprometer."
       },
       "bankClaim": {
         "title": "Por que o DisputeDesk pede a reclamação do banco",
@@ -4503,7 +4467,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
-          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso.\n\n**Um único relato da contestação.** A página abre com um breve relato da contestação, e todos os separadores leem os mesmos factos, por isso um número, uma data ou uma frase nunca difere entre **Visão geral**, **Evidências** e **Revisar e encaminhar**. **O registo** lista os factos em que o relato se baseia, **O que ganha este tipo de contestação** mostra quantos dos elementos que os bancos procuram estão registados, e **O que aconteceu** é o histórico. Cada prova tem exatamente uma função: **citado ao banco**, **contexto no pacote**, **mantido internamente** (usado apenas na nossa avaliação, nunca enviado à Shopify nem ao banco) ou **indisponível**. Os elementos **citados ao banco** são aqueles em que a carta se apoia: a base probatória lista-os e uma entrega é apresentada na secção de envio. O registo do pedido ou uma política da loja só são citados quando a argumentação da carta se apoia neles; caso contrário ficam como contexto. Uma carta preparada antes mantém a base probatória com que foi redigida, e esta página descreve essa carta. Uma devolução ou um reembolso que a Shopify regista no pedido é indicado uma só vez, no registo, com as mesmas palavras em todo o lado. A página é só para si e não faz parte de nada do que é enviado ao banco; a carta em **Revisar e encaminhar** é o documento que o banco recebe.\n\n**Perguntas a que só você pode responder.** Quando a disputa precisa de uma resposta sua (a reclamação do banco, porque é que uma encomenda devolvida voltou, se o cliente pediu uma devolução ou a sua decisão sobre um pacote à espera de aprovação), ela aparece em **Visão geral** como um cartão por baixo do resumo, e o bloco de estado no topo da página nomeia-a primeiro, com um botão que o leva até ela. O que só ajuda, como adicionar a confirmação do titular do cartão ou as evidências em falta, fica em **Evidências**.\n\n**O bloco de estado no topo.** O título é a única coisa a fazer, ou começa por «Nada a fazer.» quando nada é preciso. Por baixo, **O que aconteceu**, **O que precisamos de si** (com o botão da pergunta, na própria página), **O que acontece a seguir** e **Já feito** são curtos e só aparecem quando há algo verdadeiro a dizer. Os números de versão internos e as contagens de provas não fazem parte dele. «Agendada» significa que o DisputeDesk volta a verificar a resposta no prazo antes de enviar o que quer que seja. Se o DisputeDesk não apresentar nada, o processo próprio da Shopify no prazo corre na mesma com os dados do pedido que já tem."
+          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros.\n\n**Números da sua própria loja.** Numa contestação ganha ou perdida, **O que ganha este tipo de contestação** pode mostrar com que frequência as contestações do mesmo tipo foram ganhas na sua loja, e um passo de **Da próxima vez** pode mostrar quantas das suas contestações perdidas desse tipo tiveram o mesmo problema. Só aparecem quando a sua loja tem contestações decididas suficientes desse tipo. Descrevem o histórico da sua loja, não o raciocínio do banco neste caso.\n\n**Um único relato da contestação.** A página abre com um breve relato da contestação, e todos os separadores leem os mesmos factos, por isso um número, uma data ou uma frase nunca difere entre **Visão geral**, **Evidências** e **Revisar e encaminhar**. **O registo** lista os factos em que o relato se baseia, **O que ganha este tipo de contestação** mostra quantos dos elementos que os bancos procuram estão registados, e **O que aconteceu** é o histórico. Cada prova tem exatamente uma função: **citado ao banco**, **contexto no pacote**, **mantido internamente** (usado apenas na nossa avaliação, nunca enviado à Shopify nem ao banco) ou **indisponível**. Os elementos **citados ao banco** são aqueles em que a carta se apoia: a base probatória lista-os e uma entrega é apresentada na secção de envio. O registo do pedido ou uma política da loja só são citados quando a argumentação da carta se apoia neles; caso contrário ficam como contexto. Uma carta preparada antes mantém a base probatória com que foi redigida, e esta página descreve essa carta. Uma devolução ou um reembolso que a Shopify regista no pedido é indicado uma só vez, no registo, com as mesmas palavras em todo o lado. A página é só para si e não faz parte de nada do que é enviado ao banco; a carta em **Revisar e encaminhar** é o documento que o banco recebe.\n\n**Perguntas a que só você pode responder.** Quando a disputa precisa de uma resposta sua (a reclamação do banco, se o cliente pediu uma devolução ou a sua decisão sobre um pacote à espera de aprovação), ela aparece em **Visão geral** como um cartão por baixo do resumo, e o bloco de estado no topo da página nomeia-a primeiro, com um botão que o leva até ela. O que só ajuda, como adicionar a confirmação do titular do cartão ou as evidências em falta, fica em **Evidências**.\n\n**O bloco de estado no topo.** O título é a única coisa a fazer, ou começa por «Nada a fazer.» quando nada é preciso. Por baixo, **O que aconteceu**, **O que precisamos de si** (com o botão da pergunta, na própria página), **O que acontece a seguir** e **Já feito** são curtos e só aparecem quando há algo verdadeiro a dizer. Os números de versão internos e as contagens de provas não fazem parte dele. «Agendada» significa que o DisputeDesk volta a verificar a resposta no prazo antes de enviar o que quer que seja. Se o DisputeDesk não apresentar nada, o processo próprio da Shopify no prazo corre na mesma com os dados do pedido que já tem."
         },
         "reviewQueue": {
           "title": "A fila de revisão",

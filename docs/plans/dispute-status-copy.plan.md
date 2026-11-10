@@ -133,7 +133,7 @@ Swedish gets 2–3 headline alternatives at PR time (memory: Swedish quality). D
 - sv: **Väntar på ditt godkännande** · … Försvaret är klart (8 nov). Banken skulle få betalningskontrollen, Shopifys bedrägerikontroll och IP-platsen. DisputeDesk lämnar inte in något förrän du godkänner. Godkänn försvaret, eller välj att inte lägga till något. Shopifys frist är den 20 nov.
 - en: **Waiting for your approval** · … The defence is ready (8 Nov). The bank would get the payment check, Shopify's fraud screening and the IP location. DisputeDesk files nothing until you approve. Approve the defence, or choose not to add one. Shopify's deadline is 20 Nov.
 
-**S5 returned-parcel question open (required ask)**
+**S5 returned-parcel question open (required ask) — REMOVED 2026-11-10: the answer reached no letter claim, so the question is no longer asked (see §10 A and H)**
 - sv: **Behöver ditt svar** · … Försvaret är klart (9 nov). Kom paketet tillbaka till dig? Svara på fliken Bevis så tar DisputeDesk med svaret. Shopifys frist är den 18 nov.
 - en: **Needs your answer** · … The defence is ready (9 Nov). Did the parcel come back to you? Answer on the Evidence tab and DisputeDesk includes it. Shopify's deadline is 18 Nov.
 
@@ -212,11 +212,13 @@ The maintainer rejected the §4 samples as still too low-level: the Overview is 
 
 Sub-line under every headline: `{Inquiry|Chargeback} · {amount} · Shopify's deadline is {date}` (decided: the decision date).
 
-### A. A required answer is open (example: #17066, parcel returned to sender)
-**Your answer is needed today: why did this parcel come back to you?**
-- What happened: The customer told the bank that a refund for order #17066 was never paid. The carrier's record shows the parcel was sent back to you, so it was never delivered.
-- What we need from you: Only you know why it came back. If the customer refused the parcel or never collected it, that is not a valid return, and it is the one argument left in this case. Without your answer the response is weak. **[Answer two questions]** · takes under a minute
-- What happens next: If you answer, your answer goes into the response and you choose whether DisputeDesk files it through Shopify (verify). If you don't, nothing from DisputeDesk is filed; a response still reaches the bank through Shopify from the order's own data, without this argument.
+### A. A required answer is open (example: the return confirmation)
+A required ask exists only if a named module consumes its answer (`consumedBy` in `lib/disputes/merchantAsks.ts`). The worked example was the returned-parcel question (#17066); it was removed 2026-11-10 because its answer changed nothing in the letter, and its place here is taken by the return confirmation, whose answer (`merchantConfirmedNoRequest`) the credit-not-processed ledger reads.
+
+**Your answer is needed today: did this customer ask for a return or refund?**
+- What happened: The customer told the bank a refund was never processed. {the one fact that decides the case, when there is one}
+- What we need from you: Shopify only records returns made through Shopify, so only you can say whether this customer asked for a return or refund before opening the dispute. **[Answer the question]**
+- What happens next: If you answer, DisputeDesk rebuilds the response with your answer.
 - Done so far: Order, payment and carrier records are collected and a response is drafted. Nothing has been filed.
 
 ### B. Your approval is needed (review mode)
@@ -261,6 +263,11 @@ Sub-line under every headline: `{Inquiry|Chargeback} · {amount} · Shopify's de
 - What happened: The customer told the bank the order never arrived. {The order was never shipped | The order has already been refunded in full | There is no delivery record for this order}.
 - What you can do: If you have proof we cannot see, such as a delivery confirmation from the carrier, add it and DisputeDesk writes a response. **[Add evidence]**
 - What happens next: Without it, a response still reaches the bank through Shopify from the order's own data. Expect this one to be lost.
+
+**Returned to sender (example: #17066, 2026-11-10).** Same state, no ask: the parcel's return is a fact, not a question.
+- What happened: The customer told their bank a refund was never processed. The carrier returned this parcel to you, so no proof of delivery can exist for it.
+- What happens next: DisputeDesk checks the record once more on the deadline day, {date}. If nothing has changed, it files nothing, and Shopify still sends a response from the order's own data.
+- No "What you can do" part (a returned parcel can never have a delivery confirmation), no "expect to lose" (only the fatal-loss rule says that), no suggestion to refund or concede. When a response DOES exist for a returned parcel, the normal state shows, with the same sentence in What happened.
 
 ### I. Covered by Shopify Protect
 **Nothing to do. Shopify Protect covers this order**

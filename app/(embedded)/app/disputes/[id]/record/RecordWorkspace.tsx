@@ -33,7 +33,6 @@ import { TAB_INDEX } from "../workspace-components/types";
 import { CardholderAcknowledgementCard } from "../tabs/sections/CardholderAcknowledgementCard";
 import { DefencePackageHtmlView } from "../tabs/sections/DefencePackageHtmlView";
 import { BankClaimCard } from "../tabs/sections/BankClaimCard";
-import { ParcelOutcomeCard } from "../tabs/sections/ParcelOutcomeCard";
 import { ReturnRequestCard } from "../tabs/sections/ReturnRequestCard";
 import { GorgiasCommsReviewSection } from "../tabs/sections/GorgiasCommsReviewSection";
 import { MissingOrWeakSection } from "../tabs/sections/MissingOrWeakSection";
@@ -392,7 +391,8 @@ export default function RecordWorkspace({
 
             <PackBanners workspace={workspace} t={t} />
             {/* While the hero itself asks for the approval (its Approve / Don't add buttons) this row would repeat them. */}
-            {record.canDecide && record.statusCopy.state !== "approval" ? (
+            {/* Not while nothing could be filed: with no response (skipped / nothing to argue) "save it on the deadline" and "add no package" decide nothing. */}
+            {record.canDecide && record.statusCopy.state !== "approval" && record.statusCopy.state !== "nothing_to_argue" ? (
               <DecisionRow workspace={workspace} record={record} t={t} />
             ) : null}
 
@@ -505,11 +505,6 @@ function OverviewBody({
         <BankClaimCard workspace={workspace} />
       </div>
       {/* The other required asks, from the registry (lib/disputes/merchantAsks): the same cards the Evidence tab renders, so the first screen shows what the hero asks for. */}
-      {requiredAskIds.has("parcel_outcome") ? (
-        <div id="dd-ask-parcel_outcome">
-          <ParcelOutcomeCard workspace={workspace} />
-        </div>
-      ) : null}
       {requiredAskIds.has("return_request") ? (
         <div id="dd-ask-return_request">
           <ReturnRequestCard workspace={workspace} />
@@ -1240,14 +1235,13 @@ function DecisionRow({ workspace, record, t }: { workspace: Workspace; record: D
   );
 }
 
-/** Evidence tab controls: parcel outcome, return confirmation, Gorgias review, upload / waive. */
+/** Evidence tab controls: return confirmation, Gorgias review, upload / waive. */
 function EvidenceActions({ workspace }: { workspace: Workspace }) {
   const { data, clientState, actions } = workspace;
   const sections = useEvidenceSections(workspace);
   const isWindowClosed = data?.dispute?.submissionState === "submitted_confirmed";
   return (
     <>
-      <ParcelOutcomeCard workspace={workspace} />
       <ReturnRequestCard workspace={workspace} />
       {data?.dispute?.id ? <GorgiasCommsReviewSection workspace={workspace} disputeId={data.dispute.id} /> : null}
       <MissingOrWeakSection

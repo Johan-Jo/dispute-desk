@@ -433,6 +433,7 @@ function deliveryParts(facts: Record<string, Record<string, unknown>>) {
   const proof = str(d.proofType);
   return {
     confirmed: proof !== null && DELIVERY_CONFIRMED.has(proof),
+    returnedToSender: proof === "returned_to_sender",
     deliveredAt: str(d.deliveredAt) ?? str(f?.deliveredAt),
     shippedAt: str(f?.createdAt),
     carrier: str(tracking?.carrier),
@@ -555,7 +556,12 @@ function buildItems(c: ItemCtx): RecordItem[] {
       role: lr === "unavailable" ? "context" : lr,
       strength: strengthPill(c.line("shipping_tracking")?.strength),
       label: tk("item.delivery.label"),
-      detail: tk(`item.delivery.${variant}`, p),
+      // A parcel the carrier returned was not delivered: say so with the one
+      // existing label (`deliveryPresentation`), not "has not confirmed delivery".
+      detail:
+        i.returnedToSender === true || dl.returnedToSender
+          ? { key: "disputes.deliveryProof.returnedToSender" }
+          : tk(`item.delivery.${variant}`, p),
       source: src("carrier"),
       adverse: false,
       phrase: nest("phrase.cited.delivery"),
@@ -834,6 +840,16 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     if (stage === "no_pack") f.state = tk("state.noPack");
     if (stage === "building") f.state = tk("state.building");
     if (stage === "failed") f.state = tk("state.failed");
+    // The latest build wrote NO response (skipped / declined, or failed with none written): say so, never "prepared ... version N".
+    const noResponse =
+      i.build !== null &&
+      i.build !== undefined &&
+      !i.build.packageWritten &&
+      ["declined", "not_required", "failed", "capped"].includes(i.build.state);
+    if (noResponse && f.prepared && preparedAt) {
+      delete f.prepared;
+      f.state = tk("state.noResponse", { date: fmt.date(preparedAt) });
+    }
 
     if (stage === "prepared" && i.automationMode === "auto" && dueDay) f.autopilot = tk("autopilot", { date: dueDay });
     if ((stage === "prepared" || stage === "prepared_review" || stage === "held") && i.decision === "conceded") {
@@ -1054,7 +1070,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       if (at) {
         timeline.push({
           at,
-          title: tk(f.prepared ? "timeline.t.prepared" : "timeline.t.package"),
+          title: tk(f.prepared ? "timeline.t.prepared" : f.state?.key.endsWith("state.noResponse") ? "timeline.t.checked" : "timeline.t.package"),
           text: preparedText,
           kind: "current",
         });
@@ -1140,6 +1156,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     fatalReason: i.fatalReason,
     asks: i.asks,
     ackFits,
+    returnedToSender: i.returnedToSender === true,
     recordSituation: returnOnRecord ? "return" : i.refund === "some" ? "refund" : null,
     claim: f.claim as I18nToken,
     caseFact,
