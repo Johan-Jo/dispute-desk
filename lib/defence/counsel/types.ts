@@ -24,6 +24,9 @@ export interface LedgerClaim {
   sources: string[];
   /** Private limits. Never printed; the writer must stay inside them. */
   mustNot: string[];
+  /** The claim is a sentence for the summary (and at most once more the
+   *  conclusion), never an evidence section (checks.ts). */
+  notInEvidenceSections?: boolean;
   /** A row this claim adds to the Chronology exhibit (e.g. the customer's
    *  later order), so the evidence is shown, not only described. */
   timelineEvent?: { at: string; text: string };
