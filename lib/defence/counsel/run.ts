@@ -19,6 +19,7 @@
 import { createHash } from "node:crypto";
 import { callClaudeMessages } from "../anthropicClient";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
 import type { DefenceNarrativeOutput, EvidenceFact } from "../types";
 import { buildItemNotReceivedLedger, longDate } from "./claimLedger";
 import { buildNotAsDescribedLedger, type NotAsDescribedExtras } from "./notAsDescribedLedger";
@@ -220,9 +221,7 @@ export async function fetchCustomerOrders(shopId: string, orderGid: string): Pro
       maxRetries: 1,
     });
     return (res.data?.order?.customer?.orders?.edges ?? []).map(({ node: n }) => {
-      const pay = (n.transactions ?? []).find(
-        (t) => (t.kind === "SALE" || t.kind === "AUTHORIZATION" || t.kind === "CAPTURE") && t.status === "SUCCESS",
-      )?.paymentDetails;
+      const pay = pickPrimaryTransaction(n.transactions)?.paymentDetails;
       const f = (n.fulfillments ?? []).find((x) => x.deliveredAt) ?? null;
       const money = n.totalPriceSet?.presentmentMoney;
       return {

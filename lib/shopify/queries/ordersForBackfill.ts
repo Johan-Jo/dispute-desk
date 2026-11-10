@@ -38,6 +38,7 @@
  */
 
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
 import {
   parseReceiptJson,
   readThreeDsAuthenticated,
@@ -572,11 +573,7 @@ export function pickThreeDsAuthenticated(
   transactions: RawBackfillTransaction[] | null | undefined,
 ): boolean | null {
   if (!transactions?.length) return null;
-  const tx = transactions.find(
-    (t) =>
-      (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-      t.status === "SUCCESS",
-  );
+  const tx = pickPrimaryTransaction(transactions);
   if (!tx) return null;
   if (tx.gateway !== "shopify_payments") return null;
   const receipt = parseReceiptJson(tx.receiptJson);
@@ -687,12 +684,7 @@ export function pickPaymentMethod(
   transactions: RawBackfillTransaction[] | null | undefined,
 ): string | null {
   if (!transactions?.length) return null;
-  const tx =
-    transactions.find(
-      (t) =>
-        (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-        t.status === "SUCCESS",
-    ) ?? transactions[0];
+  const tx = pickPrimaryTransaction(transactions);
   if (!tx) return null;
 
   const pd = tx.paymentDetails;
