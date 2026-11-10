@@ -22,6 +22,7 @@ import {
   type OrderContextHint,
 } from "./networkReasonCode";
 import type { CardNetwork } from "./reasonCodeCatalog";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
 import { derivePaymentContext, isNonCardPaymentFamily } from "./paymentContext";
 
 const CARD_COMPANY_TO_NETWORK: Record<string, CardNetwork> = {
@@ -33,26 +34,9 @@ const CARD_COMPANY_TO_NETWORK: Record<string, CardNetwork> = {
   discover: "discover",
 };
 
-/**
- * Pick the transaction whose paymentDetails most reliably reflects the
- * actual card used. Prefer `sale` / `capture` over `authorization` so
- * we don't misread a pre-auth-only card vs the captured one.
- */
-export function pickPrimaryCardTransaction(
-  transactions: OrderTransaction[] | undefined | null,
-): OrderTransaction | null {
-  if (!transactions || transactions.length === 0) return null;
-  const settled =
-    transactions.find(
-      (t) =>
-        (t.kind === "sale" || t.kind === "capture") && t.status !== "failure",
-    ) ?? null;
-  return settled ?? transactions[0] ?? null;
-}
-
 export function deriveCardNetwork(order: OrderDetailNode | null): CardNetwork | null {
   if (!order) return null;
-  const tx = pickPrimaryCardTransaction(order.transactions);
+  const tx = pickPrimaryTransaction(order.transactions);
   if (!tx?.paymentDetails) return null;
   const pd = tx.paymentDetails as {
     __typename?: string;
@@ -99,7 +83,7 @@ export async function enrichDisputeWithNetworkReasonCode(
   input: EnrichInput,
 ): Promise<EnrichResult> {
   const network = deriveCardNetwork(input.order);
-  const primaryTx = pickPrimaryCardTransaction(input.order?.transactions);
+  const primaryTx = pickPrimaryTransaction(input.order?.transactions);
   // Only Shopify Payments' receiptJson is read by the resolver — other
   // gateways have provider-specific shapes we don't trust.
   const receiptJson =
