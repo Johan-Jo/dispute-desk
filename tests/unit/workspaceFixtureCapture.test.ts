@@ -108,12 +108,14 @@ describe("PostgREST -> SQL translation for the read-only capture", () => {
 });
 
 describe("enrichWorkspacePayload (the one enrichment path)", () => {
-  it("adds only the paths it declares (none in PR 1)", () => {
-    expect(ENRICHED_PATHS).toEqual([]);
+  it("adds only the paths it declares", () => {
+    expect(ENRICHED_PATHS).toEqual(["asks"]);
     for (const f of loadFixtures()) {
       const before = JSON.stringify(f.payload);
-      const out = enrichWorkspacePayload(JSON.parse(before), f.sourceRows);
-      expect(JSON.stringify(out), f.meta.case).toBe(before);
+      const out = enrichWorkspacePayload(JSON.parse(before), f.sourceRows) as Record<string, unknown>;
+      const { asks, ...rest } = out;
+      expect(Array.isArray(asks), f.meta.case).toBe(true);
+      expect(JSON.stringify(rest), f.meta.case).toBe(before);
     }
   });
 

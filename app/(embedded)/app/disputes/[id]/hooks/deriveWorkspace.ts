@@ -33,8 +33,8 @@ import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import {
   FIELD_ACTIONS,
   DEFAULT_FIELD_ACTION as DEFAULT_ACTION,
-  canMerchantUpload,
 } from "@/lib/disputes/presentation/concreteContribution";
+import { isMissingMerchantAction } from "@/lib/disputes/merchantAsks";
 import type { DerivedState, WorkspaceClientState } from "./useDisputeWorkspace";
 
 export interface DeriveTranslators {
@@ -122,15 +122,13 @@ function deriveMissingItems(
   },
 ): MissingItemWithContext[] {
   return checklist
-    .filter((c) => c.status === "missing")
-    // Only merchant-actionable items appear as tasks. Delegate to the
-    // single-sourced canMerchantUpload predicate so the Missing-or-weak
-    // section, Overview "Add this evidence" CTA, and any future surface
-    // share the same field gate. Catches system-derived fields like
+    // Missing AND merchant-actionable (single-sourced canMerchantUpload, so the
+    // Missing-or-weak section, the Overview "Add this evidence" CTA and the asks
+    // registry share one field gate). Catches system-derived fields like
     // fraud_risk_screening and billing_address_match even when their
     // DB-backed template row leaves collectionType null — those rows
     // cannot be uploaded and must not surface upload buttons.
-    .filter((c) => canMerchantUpload(c))
+    .filter(isMissingMerchantAction)
     .map((c) => {
       const action = FIELD_ACTIONS[c.field] ?? DEFAULT_ACTION;
       return {
