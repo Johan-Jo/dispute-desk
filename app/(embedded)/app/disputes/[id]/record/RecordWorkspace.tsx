@@ -23,7 +23,6 @@ import { useSearchParams } from "next/navigation";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { I18nToken } from "@/lib/i18n/token";
 import { phaseLabel } from "@/lib/disputes/phaseUtils";
-import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import type { StatusActionId, StatusCopy } from "@/lib/disputes/presentation/statusCopy";
 import { withShopParams } from "@/lib/withShopParams";
 import { ROLE_ORDER, type DisputeRecord, type HelpItem, type RecordItem, type RecordRole } from "@/lib/disputes/disputeRecord";
@@ -46,6 +45,7 @@ import {
 } from "../tabs/sections/defencePackageActionState";
 import type { DefencePackageRow } from "../tabs/sections/defencePackageRow";
 import {
+  BADGE,
   CHECK_STYLE,
   DD_TOKENS,
   PILL_STYLE,
@@ -76,6 +76,83 @@ const SECTION_BOX: CSSProperties = {
   display: "flex",
   flexDirection: "column",
 };
+
+/** States where something needs the merchant's attention: the hero shows the alert glyph (design: "Input needed"). Every other open state shows the clock. */
+const ALERT_STATES: ReadonlySet<string> = new Set([
+  "ask", "approval", "plan_limit", "attention", "save_failed", "build_failed", "build_paused",
+]);
+
+/** The design system Button, size md (40px), as inline style: `DisputeDeskUI.Button`. */
+const BUTTON_BASE: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: 40,
+  padding: "0 16px",
+  borderRadius: 8,
+  fontSize: 16,
+  fontWeight: 500,
+  whiteSpace: "nowrap",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+const BUTTON_SECONDARY: CSSProperties = { background: "#F1F5F9", color: "var(--dd-text)", border: "1px solid var(--dd-border)" };
+const BUTTON_PRIMARY: CSSProperties = { background: "var(--dd-primary)", color: "#FFFFFF", border: 0 };
+
+function Badge({ v, testId, children }: { v: { bg: string; fg: string; border: string }; testId?: string; children: ReactNode }) {
+  return (
+    <span
+      data-testid={testId}
+      style={{
+        display: "inline-flex",
+        flex: "none",
+        whiteSpace: "nowrap",
+        borderRadius: 6,
+        padding: "4px 8px",
+        fontSize: 12,
+        fontWeight: 500,
+        lineHeight: "16px",
+        background: v.bg,
+        color: v.fg,
+        border: `1px solid ${v.border}`,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** The four hero glyphs, as drawn in the design. */
+function HeroIcon({ kind }: { kind: "clock" | "alert" | "check" | "flag" }) {
+  const common = { fill: "none", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  if (kind === "clock")
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" strokeWidth="2" {...common} aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+    );
+  if (kind === "alert")
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" strokeWidth="2" {...common} aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+      </svg>
+    );
+  if (kind === "check")
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" strokeWidth="2.2" {...common} aria-hidden="true">
+        <path d="M5 12.5l4.5 4.5L19 7.5" />
+      </svg>
+    );
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" strokeWidth="2" {...common} aria-hidden="true">
+      <path d="M5 21V4" />
+      <path d="M5 4h11l-2 4 2 4H5" />
+    </svg>
+  );
+}
 
 export default function RecordWorkspace({
   workspace,
@@ -112,14 +189,25 @@ export default function RecordWorkspace({
     if (tab !== TAB_INDEX.overview) actions.setActiveTab(TAB_INDEX.overview);
     setTimeout(() => document.getElementById(`dd-ask-${id.slice(4)}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   };
-  const metaValue = decided
-    ? record.header.decided ?? ""
-    : [
-        record.header.deadline,
-        record.header.daysLeft !== null ? t("disputes.record.ui.daysLeft", { count: record.header.daysLeft }) : null,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+  /* The header's date block (design: `dateTop` / `dateSub`): "Due today" / "5 days left" over "Deadline 10 Nov 2026"; decided: "Decided" over the date. */
+  const dueToday = !decided && record.header.daysLeft === 0;
+  const dateTop = decided
+    ? t("disputes.record.ui.decidedTop")
+    : dueToday
+      ? t("disputes.record.ui.dueToday")
+      : record.header.daysLeft !== null
+        ? t("disputes.record.ui.daysLeft", { count: record.header.daysLeft })
+        : null;
+  const dateSub = decided
+    ? record.header.decided
+    : record.header.deadline
+      ? t("disputes.record.ui.deadlineSub", { date: record.header.deadline })
+      : null;
+  const heroIcon: "clock" | "alert" | "check" | "flag" =
+    record.status === "won" ? "check" : decided ? "flag" : ALERT_STATES.has(record.statusCopy.state) ? "alert" : "clock";
+  const strengthBadge = record.hero.strengthBand
+    ? BADGE[record.hero.strengthBand === "strong" ? "success" : record.hero.strengthBand === "moderate" ? "warning" : "default"]
+    : null;
 
   const helpItems = record.help?.items ?? [];
   const firstHelp = helpItems[0] ?? null;
@@ -141,121 +229,96 @@ export default function RecordWorkspace({
           color: "var(--dd-text)",
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          gap: 20,
           width: "100%",
           fontSize: 13,
         }}
       >
-        {/* Header */}
+        {/* Header (design: Dispute Detail.dc.html, the first card) */}
         <div
           data-help-guide="detail-header"
-          style={{
-            background: "var(--dd-surface)",
-            border: "1px solid var(--dd-border)",
-            borderRadius: 8,
-            padding: "20px 18px 16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
+          style={{ background: "var(--dd-surface)", border: "1px solid var(--dd-border)", borderRadius: 12, overflow: "hidden" }}
         >
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.01em", textWrap: "pretty" } as CSSProperties}>
-                {orderUrl ? (
-                  <a href={orderUrl} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                    {headerTitle}
-                  </a>
-                ) : (
-                  headerTitle
-                )}
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <span
-                  data-testid="dispute-phase-pill"
-                  style={{ borderRadius: 6, padding: "4px 8px", fontSize: 12, fontWeight: 500, background: "#FEF3C7", color: "#92400E" }}
-                >
-                  {phaseLabel(record.phase, t)}
-                </span>
-                <span
-                  style={{ borderRadius: 6, padding: "4px 8px", fontSize: 12, fontWeight: 500, background: th.chipBg, color: th.chipFg }}
-                >
-                  {r(record.hero.statusChip)}
-                </span>
-                {record.hero.strengthBand ? (
-                  <span
-                    data-testid="dispute-strength-pill"
-                    style={{
-                      borderRadius: 6,
-                      padding: "4px 8px",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      background: STRENGTH_CHIP[record.hero.strengthBand].bg,
-                      color: STRENGTH_CHIP[record.hero.strengthBand].fg,
-                    }}
-                  >
-                    {t(`presentation.strength.detail.${record.hero.strengthBand}`)}
-                  </span>
+          <div
+            style={{ padding: "24px 28px", display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "space-between", alignItems: "flex-start" }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {record.header.orderName ? (
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--dd-text-subtle)" }}>
+                    {orderUrl ? (
+                      <a href={orderUrl} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                        {t("disputes.record.ui.orderLabel", { order: record.header.orderName })}
+                      </a>
+                    ) : (
+                      t("disputes.record.ui.orderLabel", { order: record.header.orderName })
+                    )}
+                  </div>
                 ) : null}
-                <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>
-                  <strong style={{ color: "var(--dd-text)", fontWeight: 600 }}>
-                    {t(decided ? "disputes.record.ui.decided" : "disputes.record.ui.deadline")}
-                  </strong>{" "}
-                  {metaValue}
-                </span>
+                <h1
+                  title={headerTitle}
+                  style={{ margin: 0, fontSize: 24, lineHeight: 1.25, fontWeight: 600, letterSpacing: "-0.01em", textWrap: "pretty" } as CSSProperties}
+                >
+                  {reasonLabel}
+                </h1>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                <Badge testId="dispute-phase-pill" v={BADGE.warning}>
+                  {phaseLabel(record.phase, t)}
+                </Badge>
+                <Badge v={{ bg: th.chipBg, fg: th.chipFg, border: th.chipBorder }}>{r(record.hero.statusChip)}</Badge>
+                {record.hero.strengthBand && strengthBadge ? (
+                  <Badge testId="dispute-strength-pill" v={strengthBadge}>
+                    {t(`presentation.strength.detail.${record.hero.strengthBand}`)}
+                  </Badge>
+                ) : null}
               </div>
             </div>
-            {shopifyAdminUrl ? (
-              <a
-                href={shopifyAdminUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  height: 32,
-                  padding: "0 12px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  borderRadius: 8,
-                  background: "#F1F5F9",
-                  border: "1px solid var(--dd-border)",
-                  whiteSpace: "nowrap",
-                  color: "inherit",
-                  textDecoration: "none",
-                }}
-              >
-                {t("disputes.overviewExtra.viewInShopify")}
-              </a>
-            ) : (
-              <span
-                title={t("disputes.overviewExtra.viewInShopifyUnavailable")}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  height: 32,
-                  padding: "0 12px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  borderRadius: 8,
-                  background: "#F1F5F9",
-                  border: "1px solid var(--dd-border)",
-                  whiteSpace: "nowrap",
-                  opacity: 0.5,
-                  cursor: "not-allowed",
-                }}
-              >
-                {t("disputes.overviewExtra.viewInShopify")}
-              </span>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flex: "none", whiteSpace: "nowrap" }}>
+              {dateTop ? (
+                <div
+                  style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, paddingRight: 16, borderRight: "1px solid var(--dd-border)" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: dueToday ? "#B45309" : "var(--dd-text)" }}>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: dueToday ? "var(--dd-warning)" : decided ? "var(--dd-text-muted)" : "var(--dd-primary)",
+                      }}
+                    />
+                    {dateTop}
+                  </div>
+                  {dateSub ? <div style={{ fontSize: 13, color: "var(--dd-text-subtle)" }}>{dateSub}</div> : null}
+                </div>
+              ) : null}
+              {shopifyAdminUrl ? (
+                <a
+                  href={shopifyAdminUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...BUTTON_BASE, ...BUTTON_SECONDARY, textDecoration: "none" }}
+                >
+                  {t("disputes.overviewExtra.viewInShopify")} ↗
+                </a>
+              ) : (
+                <span
+                  title={t("disputes.overviewExtra.viewInShopifyUnavailable")}
+                  style={{ ...BUTTON_BASE, ...BUTTON_SECONDARY, opacity: 0.5, cursor: "not-allowed" }}
+                >
+                  {t("disputes.overviewExtra.viewInShopify")} ↗
+                </span>
+              )}
+            </div>
           </div>
           <div
             style={{
-              borderTop: "1px solid var(--dd-border)",
-              paddingTop: 14,
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-              gap: "12px 20px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              borderTop: "1px solid var(--dd-border)",
+              background: "#FBFCFE",
+              marginRight: -1,
             }}
           >
             {[
@@ -264,16 +327,21 @@ export default function RecordWorkspace({
               [t("disputes.record.ui.factOpened"), record.header.opened ?? "—"],
               [t("disputes.record.ui.factReason"), reasonLabel],
             ].map(([label, value]) => (
-              <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{label}</span>
-                <span style={{ fontWeight: 600 }}>{value}</span>
+              <div
+                key={label}
+                style={{ padding: "16px 28px", display: "flex", flexDirection: "column", gap: 4, boxShadow: "inset -1px 0 0 var(--dd-border)" }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--dd-text-muted)" }}>
+                  {label}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--dd-text)" }}>{value}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Tab card */}
-        <div style={{ background: "var(--dd-surface)", border: "1px solid var(--dd-border)", borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ background: "var(--dd-surface)", border: "1px solid var(--dd-border)", borderRadius: 12, overflow: "hidden" }}>
           <div
             role="tablist"
             aria-label={t("disputes.workspaceShell.disputeSectionsAria")}
@@ -285,7 +353,7 @@ export default function RecordWorkspace({
               backgroundRepeat: "no-repeat",
               backgroundSize: "100% 1px",
               backgroundPosition: "left bottom",
-              padding: "0 8px",
+              padding: "0 20px",
               overflowX: "auto",
               overflowY: "hidden",
               whiteSpace: "nowrap",
@@ -312,7 +380,6 @@ export default function RecordWorkspace({
                     borderRight: 0,
                     cursor: "pointer",
                     fontFamily: "inherit",
-                    fontSize: "inherit",
                     lineHeight: "inherit",
                     ...(on ? TAB_ON : TAB_OFF),
                   }}
@@ -326,66 +393,65 @@ export default function RecordWorkspace({
             role="tabpanel"
             id={tabs[tab]?.panelId}
             aria-labelledby={`${tabs[tab]?.id}-tab`}
-            style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}
+            style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}
           >
             {/* Hero: the account */}
-            <div
-              style={{
-                background: th.bg,
-                border: `1px solid ${th.border}`,
-                borderRadius: 8,
-                padding: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 8,
-                    background: th.tileBg,
-                    color: th.tileFg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flex: "none",
-                    fontWeight: 700,
-                  }}
-                >
-                  {th.glyph}
-                </div>
-                <div style={{ flex: "1 1 260px", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.015em", lineHeight: 1.2 }}>
-                    {r(record.statusCopy.headline)}
+            <div style={{ borderRadius: 12, background: th.bg, border: `1px solid ${th.border}`, overflow: "hidden" }}>
+              <div
+                style={{ display: "flex", flexWrap: "wrap", gap: 24, justifyContent: "space-between", alignItems: "flex-start", padding: "24px 28px" }}
+              >
+                <div style={{ display: "flex", gap: 16, minWidth: 0, flex: "1 1 480px" }}>
+                  <div
+                    style={{
+                      flex: "none",
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      background: "var(--dd-surface)",
+                      border: `1px solid ${th.border}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: th.icon,
+                    }}
+                  >
+                    <HeroIcon kind={heroIcon} />
                   </div>
-                  <div style={{ color: "var(--dd-text-subtle)" }}>{r(record.statusCopy.subline)}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                    <h2
+                      style={{ margin: 0, fontSize: 21, lineHeight: 1.3, fontWeight: 600, letterSpacing: "-0.01em", textWrap: "pretty" } as CSSProperties}
+                    >
+                      {r(record.statusCopy.headline)}
+                    </h2>
+                    <div style={{ fontSize: 13, color: "#475467" }}>{r(record.statusCopy.subline)}</div>
+                  </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end", marginLeft: "auto" }}>
-                  <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{r(record.hero.amountLabel)}</span>
-                  <span style={{ fontSize: 22, fontWeight: 700, color: th.amount, fontVariantNumeric: "tabular-nums" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "#475467" }}>{r(record.hero.amountLabel)}</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", color: th.amount, whiteSpace: "nowrap" }}>
                     {record.header.amount}
-                  </span>
+                  </div>
                 </div>
               </div>
-              <div
-                style={{
-                  marginLeft: "clamp(0px, calc((100% - 420px) * 999), 56px)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                }}
-              >
+              <div style={{ height: 1, background: th.border, margin: "0 28px" }} />
+              <div style={{ display: "flex", flexDirection: "column", padding: "8px 28px" }}>
                 <StatusParts
                   copy={record.statusCopy}
                   r={r}
                   onAction={onStatusAction}
                   plansUrl={withShopParams("/app/billing", searchParams)}
                   busy={actions.reviewSaving === true}
+                  rule={th.border}
                 />
-                <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{t("disputes.record.ui.forYouOnly")}</span>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#475467", padding: "14px 28px", borderTop: `1px solid ${th.border}` }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                {t("disputes.record.ui.forYouOnly")}
               </div>
             </div>
 
@@ -450,7 +516,19 @@ function OverviewBody({
   );
   return (
     <>
-      {help ? (
+      {help && record.status !== "open" ? (
+        /* The design's "Next time" card (decided disputes): a titled box of plain tips. */
+        <div style={{ border: "1px solid var(--dd-border)", borderRadius: 12, padding: "20px 28px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{help.title}</div>
+          {help.items.map((n, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", gap: 2, padding: "14px 16px", borderRadius: 8, background: "var(--dd-bg)" }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{r(n.title)}</div>
+              <div style={{ fontSize: 14, color: "#475467" }}>{r(n.detail)}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {help && record.status === "open" ? (
         <div style={{ ...SECTION_BOX, gap: 12 }}>
           <strong>{help.title}</strong>
           {help.items.map((n, i) => (
@@ -706,89 +784,101 @@ function OverviewBody({
 
 function PrimaryAction({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        background: "#1D4ED8",
-        color: "#FFFFFF",
-        borderRadius: 8,
-        padding: "6px 12px",
-        fontWeight: 600,
-        whiteSpace: "nowrap",
-        border: 0,
-        cursor: "pointer",
-        fontFamily: "inherit",
-        fontSize: "inherit",
-      }}
-    >
+    <button type="button" onClick={onClick} style={{ ...BUTTON_BASE, ...BUTTON_PRIMARY }}>
       {label}
     </button>
   );
 }
 
-/** The labelled parts of the status block (`record.statusCopy`). Renders tokens only; every sentence was composed in lib/. */
+/** The labelled parts of the status block (`record.statusCopy`). Renders tokens only; every sentence was composed in lib/.
+ *  Layout is the design's section rows: an uppercase label beside the lines, a rule between rows, and the
+ *  merchant's own ask raised in a white box with its button. */
 function StatusParts({
   copy,
   r,
   onAction,
   plansUrl,
   busy,
+  rule,
 }: {
   copy: StatusCopy;
   r: R;
   onAction: (id: StatusActionId) => void;
   plansUrl: string;
   busy: boolean;
+  rule: string;
 }) {
   return (
-    <div data-testid="dispute-record-account" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {copy.parts.map((p) => (
-        <div key={p.kind} data-part={p.kind} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--dd-text-subtle)" }}>{r(p.label)}</span>
-          {p.lines.map((line, idx) => (
-            <p key={idx} style={{ margin: 0, fontSize: 14, lineHeight: 1.65, color: "#344054", textWrap: "pretty" } as CSSProperties}>
-              {r(line)}
-            </p>
-          ))}
-          {p.actions.length > 0 ? (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
-              {p.actions.map((a) =>
-                a.id === "plans" ? (
-                  <Button key={a.id} variant="primary" url={plansUrl}>
-                    {r(a.label)}
-                  </Button>
-                ) : a.id === "decide:conceded" ? (
-                  <button
-                    key={a.id}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => onAction(a.id)}
-                    style={{
-                      background: "#FFFFFF",
-                      color: "inherit",
-                      borderRadius: 8,
-                      padding: "6px 12px",
-                      fontWeight: 600,
-                      border: "1px solid var(--dd-border)",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      fontSize: "inherit",
-                    }}
-                  >
-                    {r(a.label)}
-                  </button>
-                ) : (
-                  <span key={a.id} style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                    <PrimaryAction label={r(a.label)} onClick={() => onAction(a.id)} />
-                    {a.meta ? <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{r(a.meta)}</span> : null}
-                  </span>
-                ),
-              )}
+    <div data-testid="dispute-record-account" style={{ display: "flex", flexDirection: "column" }}>
+      {copy.parts.map((p, i) => {
+        const emphasis = p.kind === "need" && p.actions.length > 0;
+        return (
+          <div
+            key={p.kind}
+            data-part={p.kind}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(140px, 190px) minmax(0, 1fr)",
+              columnGap: 24,
+              rowGap: 6,
+              padding: "16px 0",
+              borderTop: i ? `1px solid ${rule}` : "none",
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#475467", paddingTop: 2 }}>
+              {r(p.label)}
             </div>
-          ) : null}
-        </div>
-      ))}
+            <div
+              style={
+                emphasis
+                  ? {
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      padding: "16px 18px",
+                      margin: "-4px 0",
+                      background: "var(--dd-surface)",
+                      border: "1px solid #C7D5F8",
+                      borderRadius: 10,
+                    }
+                  : { display: "flex", flexDirection: "column", gap: 6 }
+              }
+            >
+              {p.lines.map((line, idx) => (
+                <p key={idx} style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: "var(--dd-text)", textWrap: "pretty" } as CSSProperties}>
+                  {r(line)}
+                </p>
+              ))}
+              {p.actions.length > 0 ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", paddingTop: 6 }}>
+                  {p.actions.map((a) =>
+                    a.id === "plans" ? (
+                      <Button key={a.id} variant="primary" url={plansUrl}>
+                        {r(a.label)}
+                      </Button>
+                    ) : a.id === "decide:conceded" ? (
+                      <button
+                        key={a.id}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onAction(a.id)}
+                        style={{ ...BUTTON_BASE, ...BUTTON_SECONDARY }}
+                      >
+                        {r(a.label)}
+                      </button>
+                    ) : (
+                      <span key={a.id} style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                        <PrimaryAction label={r(a.label)} onClick={() => onAction(a.id)} />
+                        {a.meta ? <span style={{ fontSize: 12, color: "var(--dd-text-subtle)" }}>{r(a.meta)}</span> : null}
+                      </span>
+                    ),
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -2483,7 +2483,7 @@
           "happened": "Was passiert ist",
           "need": "Was wir von Ihnen brauchen",
           "can": "Was Sie tun können",
-          "optional": "Um den Fall zu stärken (optional)",
+          "optional": "Fall stärken · Optional",
           "next": "Wie es weitergeht",
           "done": "Bisher erledigt"
         },
@@ -2552,7 +2552,8 @@
           "plan": "Wählen Sie einen Tarif, der zu Ihrem Volumen passt."
         },
         "can": {
-          "evidence": "Wenn Sie Belege haben, die wir nicht sehen können, etwa eine Zustellbestätigung des Paketdienstes, fügen Sie sie auf dem Tab „Beweise“ hinzu."
+          "evidence": "Wenn Sie Belege haben, die wir nicht sehen können, etwa eine Zustellbestätigung des Paketdienstes, fügen Sie sie auf dem Tab „Beweise“ hinzu.",
+          "refundInquiry": "Erstatten Sie die Bestellung im Shopify-Admin vollständig. Dies ist noch eine Anfrage, es wurde also noch kein Geld abgebucht, und eine vollständige Rückerstattung schließt sie ab. Wird daraus eine Rückbuchung, sperrt Shopify Rückerstattungen und der Betrag ist verloren."
         },
         "optional": {
           "ack": "Die Bestätigung des Karteninhabers würde den Fall stärken."
@@ -2966,8 +2967,8 @@
         "factAmount": "Angefochtener Betrag",
         "factCustomer": "Kunde",
         "factOpened": "Eröffnet",
-        "factReason": "Streitfall-Grund",
-        "forYouOnly": "Diese Notiz ist nur für Sie. Sie ist nicht Teil dessen, was an die Bank geht.",
+        "factReason": "Grund",
+        "forYouOnly": "Interne Notiz – wird nicht an die Bank gesendet.",
         "recordTitle": "Die Unterlagen",
         "recordSub": "Die Fakten, auf denen diese Darstellung beruht. Das ist nicht die Begründung der Bank.",
         "from": "Quelle: {source}",
@@ -2993,7 +2994,11 @@
         "decideTitle": "Ihre Entscheidung",
         "decideSave": "Zur Frist in Shopify speichern",
         "decideNone": "Kein Verteidigungspaket hinzufügen",
-        "noLetter": "Es gibt noch kein Schreiben. Es erscheint hier, sobald das Verteidigungspaket erstellt ist."
+        "noLetter": "Es gibt noch kein Schreiben. Es erscheint hier, sobald das Verteidigungspaket erstellt ist.",
+        "dueToday": "Heute fällig",
+        "decidedTop": "Entschieden",
+        "deadlineSub": "Frist {date}",
+        "orderLabel": "Bestellung {order}"
       },
       "role": {
         "cited": "Der Bank genannt",

@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { createTranslator } from "use-intl/core";
-import { composeStatusCopy, type StatusCopyInput, type StatusState } from "../statusCopy";
+import { composeStatusCopy, type StatusCopy, type StatusCopyInput, type StatusState } from "../statusCopy";
 import type { Ask } from "@/lib/disputes/merchantAsks";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { I18nToken } from "@/lib/i18n/token";
@@ -178,7 +178,38 @@ describe("composeStatusCopy: every state x phase", () => {
     expect(keys).not.toContain("disputes.record.status.next.shopifySends");
     expect(keys).not.toContain("disputes.record.status.next.expectLoss");
     expect(out.parts.map((p) => p.kind)).not.toContain("need");
-    expect(out.parts.map((p) => p.kind)).not.toContain("can");
+    expect(keys).not.toContain("disputes.record.status.can.evidence");
+    // The only thing offered is the refund, and only because this is an inquiry.
+    expect(keys).toContain("disputes.record.status.can.refundInquiry");
+  });
+
+  describe("refund advice (inquiries only)", () => {
+    const returned = { returnedToSender: true, caseFact: { key: "disputes.record.status.fact.returnedToSender" } };
+    const refundKey = "disputes.record.status.can.refundInquiry";
+    const keysOf = (c: StatusCopy) => c.parts.flatMap((p) => p.lines.map((l) => l.key));
+    const open = [
+      { stage: "held" as const },
+      { stage: "needs_attention" as const, build: { state: "declined" as const, cause: "no_bank_eligible_facts", packageWritten: false } },
+    ];
+
+    it("is shown on an open inquiry whose parcel came back, in every state that is still open", () => {
+      for (const patch of open) expect(keysOf(composeStatusCopy(base("inquiry", { ...returned, ...patch })))).toContain(refundKey);
+    });
+
+    it("is never shown on a chargeback: the money is already gone and Shopify blocks the refund", () => {
+      for (const patch of open) expect(keysOf(composeStatusCopy(base("chargeback", { ...returned, ...patch })))).not.toContain(refundKey);
+    });
+
+    it("is not shown when the parcel did not come back, when a refund already covers it, or once decided", () => {
+      expect(keysOf(composeStatusCopy(base("inquiry", { stage: "held" })))).not.toContain(refundKey);
+      expect(keysOf(composeStatusCopy(base("inquiry", { ...returned, stage: "fatal", fatalReason: "refund_issued" })))).not.toContain(refundKey);
+      expect(keysOf(composeStatusCopy(base("inquiry", { ...returned, status: "won", stage: "decided" })))).not.toContain(refundKey);
+    });
+
+    it("is not shown once the response is filed", () => {
+      const filed = composeStatusCopy(base("inquiry", { ...returned, stage: "saved", submissionState: "saved_to_shopify", lifecycle: "saved_to_shopify" }));
+      expect(keysOf(filed)).not.toContain(refundKey);
+    });
   });
 
   it("a returned parcel WITH a response shows that state, and the returned-parcel fact in What happened", () => {

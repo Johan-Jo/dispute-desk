@@ -2483,7 +2483,7 @@
           "happened": "Ce qui s'est passé",
           "need": "Ce dont nous avons besoin de vous",
           "can": "Ce que vous pouvez faire",
-          "optional": "Pour le renforcer (facultatif)",
+          "optional": "Renforcez-le · Facultatif",
           "next": "Et ensuite",
           "done": "Déjà fait"
         },
@@ -2552,7 +2552,8 @@
           "plan": "Choisissez un forfait adapté à votre volume."
         },
         "can": {
-          "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves."
+          "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves.",
+          "refundInquiry": "Remboursez la commande intégralement depuis Shopify Admin. Il s'agit encore d'une demande d'information : aucun argent n'a été prélevé et un remboursement intégral la clôt. Si elle devient une rétrofacturation, Shopify bloque les remboursements et le montant est perdu."
         },
         "optional": {
           "ack": "La reconnaissance du titulaire de la carte renforcerait le dossier."
@@ -2966,8 +2967,8 @@
         "factAmount": "Montant contesté",
         "factCustomer": "Client",
         "factOpened": "Ouvert",
-        "factReason": "Motif du litige",
-        "forYouOnly": "Cette note est pour vous seul. Elle ne fait partie de rien de ce qui est envoyé à la banque.",
+        "factReason": "Motif",
+        "forYouOnly": "Note interne : non transmise à la banque.",
         "recordTitle": "Le dossier",
         "recordSub": "Les faits sur lesquels repose ce récit. Ce n'est pas le raisonnement de la banque.",
         "from": "Source : {source}",
@@ -2993,7 +2994,11 @@
         "decideTitle": "Votre décision",
         "decideSave": "L'enregistrer dans Shopify à la date limite",
         "decideNone": "Ne pas ajouter de dossier de défense",
-        "noLetter": "Il n'y a pas encore de lettre. Elle apparaîtra ici une fois le dossier de défense créé."
+        "noLetter": "Il n'y a pas encore de lettre. Elle apparaîtra ici une fois le dossier de défense créé.",
+        "dueToday": "Échéance aujourd'hui",
+        "decidedTop": "Tranché",
+        "deadlineSub": "Date limite {date}",
+        "orderLabel": "Commande {order}"
       },
       "role": {
         "cited": "Cité à la banque",
