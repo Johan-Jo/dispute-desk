@@ -2491,6 +2491,150 @@
       }
     },
     "record": {
+      "status": {
+        "chip": {
+          "ask": "Antwort nötig",
+          "approval": "Freigabe nötig",
+          "scheduled": "Eingeplant",
+          "conceded": "Keine Antwort",
+          "filing": "Wird eingereicht",
+          "filed": "Eingereicht",
+          "sent_by_shopify": "Über Shopify gesendet",
+          "unconfirmed": "Nicht bestätigt",
+          "save_failed": "Nicht eingereicht",
+          "build_failed": "Noch nicht erstellt",
+          "build_paused": "Pausiert",
+          "nothing_to_argue": "Keine Antwort",
+          "covered": "Abgedeckt",
+          "plan_limit": "Tariflimit",
+          "preparing": "Wird erstellt",
+          "attention": "Braucht Aufmerksamkeit",
+          "won": "Gewonnen",
+          "lost": "Verloren",
+          "closed": "Geschlossen"
+        },
+        "label": {
+          "happened": "Was passiert ist",
+          "need": "Was wir von Ihnen brauchen",
+          "can": "Was Sie tun können",
+          "optional": "Um den Fall zu stärken (optional)",
+          "next": "Wie es weitergeht",
+          "done": "Bisher erledigt"
+        },
+        "phase": {
+          "inquiry": "Anfrage",
+          "chargeback": "Rückbuchung"
+        },
+        "subline": {
+          "open": "{phase} · {amount} · Die Frist von Shopify ist der {date}",
+          "openToday": "{phase} · {amount} · Die Frist von Shopify ist heute, der {date}",
+          "decided": "{phase} · {amount} · Entschieden am {date}",
+          "plain": "{phase} · {amount}"
+        },
+        "fact": {
+          "returnedToSender": "Der Paketdienst hat dieses Paket an Sie zurückgeschickt, daher kann es dafür keinen Zustellnachweis geben."
+        },
+        "headline": {
+          "askParcel": "Ihre Antwort wird gebraucht: Warum ist dieses Paket zu Ihnen zurückgekommen?",
+          "askParcelToday": "Ihre Antwort wird heute gebraucht: Warum ist dieses Paket zu Ihnen zurückgekommen?",
+          "askReturn": "Ihre Antwort wird gebraucht: Hat dieser Kunde eine Rücksendung oder Erstattung verlangt?",
+          "askReturnToday": "Ihre Antwort wird heute gebraucht: Hat dieser Kunde eine Rücksendung oder Erstattung verlangt?",
+          "askBank": "Ihre Mithilfe wird gebraucht: Begründung der Bank aus Shopify hinzufügen",
+          "askBankToday": "Ihre Mithilfe wird heute gebraucht: Begründung der Bank aus Shopify hinzufügen",
+          "approval": "Ihre Freigabe wird gebraucht: Die Antwort ist fertig",
+          "scheduled": "Nichts zu tun. Die Antwort ist für den {date} eingeplant",
+          "scheduledNoDate": "Nichts zu tun. Die Antwort ist für die Frist eingeplant",
+          "filing": "Nichts zu tun. Die Antwort wird gerade eingereicht",
+          "filed": "Nichts zu tun. Die Antwort wurde eingereicht",
+          "sentByShopify": "Nichts zu tun. Über Shopify wurde eine Antwort gesendet",
+          "saveFailed": "DisputeDesk konnte diese Antwort nicht einreichen",
+          "unconfirmed": "Nichts zu tun. Shopify hat diese Antwort noch nicht bestätigt",
+          "buildFailed": "DisputeDesk konnte diese Antwort noch nicht erstellen",
+          "buildPaused": "DisputeDesk hat das Erstellen dieser Antwort pausiert",
+          "nothingToArgue": "DisputeDesk reicht keine Antwort ein: Die Unterlagen stützen keine",
+          "covered": "Nichts zu tun. Shopify Protect deckt diese Bestellung ab",
+          "conceded": "Nichts zu tun. Sie haben sich gegen eine Antwort entschieden",
+          "planLimit": "Upgrade nötig: Das Limit Ihres Tarifs für diesen Monat ist aufgebraucht",
+          "preparing": "Nichts zu tun. DisputeDesk bereitet die Antwort vor",
+          "won": "Gewonnen: {amount} bleiben bei Ihnen",
+          "wonNoAmount": "Gewonnen",
+          "lost": "Verloren: {amount} gingen an den Kunden zurück",
+          "lostNoAmount": "Verloren"
+        },
+        "happened": {
+          "filedWe": "DisputeDesk hat am {date} eine Antwort eingereicht.",
+          "relied": "Sie stützte sich auf {list}.",
+          "filed": "DisputeDesk hat die Antwort am {date} über Shopify eingereicht.",
+          "filedNoDate": "DisputeDesk hat die Antwort über Shopify eingereicht.",
+          "relies": "Sie stützt sich auf {list}.",
+          "sentByShopify": "DisputeDesk hat für diesen Fall nichts eingereicht. Über Shopify wurde eine Antwort gesendet.",
+          "saveFailed": "Die Antwort ist fertig, aber Shopify hat die Datei beim Senden nicht angenommen (letzter Versuch am {date}). Von DisputeDesk ist nichts bei der Bank angekommen.",
+          "saveFailedNoDate": "Die Antwort ist fertig, aber Shopify hat die Datei beim Senden nicht angenommen. Von DisputeDesk ist nichts bei der Bank angekommen.",
+          "unconfirmed": "DisputeDesk hat die Antwort am {date} für Shopify in die Warteschlange gestellt, aber Shopify hat die Annahme nicht bestätigt.",
+          "unconfirmedNoDate": "DisputeDesk hat die Antwort für Shopify in die Warteschlange gestellt, aber Shopify hat die Annahme nicht bestätigt.",
+          "buildFailed": "Die Beweise sind gesammelt, aber die Antwort hat unsere Prüfungen nicht bestanden (letzter Versuch am {date}). Es wurde nichts eingereicht.",
+          "buildFailedNoDate": "Die Beweise sind gesammelt, aber die Antwort hat unsere Prüfungen nicht bestanden. Es wurde nichts eingereicht.",
+          "buildPaused": "Die Beweise sind gesammelt, aber das Erstellen der Antwort ist durch ein Tageslimit pausiert. Es wurde nichts eingereicht.",
+          "refundCovers": "Die erfasste Erstattung deckt den strittigen Betrag ab.",
+          "notFulfilled": "Die Bestellung wurde nie erfüllt.",
+          "noFacts": "Es liegt nichts vor, was der Bank zur Stützung dieses Falls gezeigt werden könnte.",
+          "planLimit": "DisputeDesk hat für diesen Fall keine Antwort vorbereitet, weil das monatliche Limit Ihres Tarifs aufgebraucht ist."
+        },
+        "need": {
+          "parcel": "Nur Sie wissen, warum es zurückkam. Hat der Kunde das Paket verweigert oder nie abgeholt, ist das keine gültige Rücksendung – und es ist das einzige Argument, das in diesem Fall noch bleibt. Ohne Ihre Auskunft bleibt unsere Antwort an die Bank schwach.",
+          "return": "Shopify erfasst nur Rücksendungen, die über Shopify laufen. Nur Sie können sagen, ob dieser Kunde vor der Eröffnung des Falls eine Rücksendung oder Erstattung verlangt hat.",
+          "bank": "Die Begründung der Bank ist nur in Shopify sichtbar. Fügen Sie sie hier ein, damit die Antwort genau das beantwortet, was gefragt wurde.",
+          "review": "Lesen Sie die Antwort und entscheiden Sie.",
+          "nothing": "Im Moment brauchen wir nichts von Ihnen.",
+          "plan": "Wählen Sie einen Tarif, der zu Ihrem Volumen passt."
+        },
+        "can": {
+          "evidence": "Wenn Sie Belege haben, die wir nicht sehen können, etwa eine Zustellbestätigung des Paketdienstes, fügen Sie sie auf dem Tab „Beweise“ hinzu."
+        },
+        "optional": {
+          "ack": "Die Bestätigung des Karteninhabers würde den Fall stärken."
+        },
+        "action": {
+          "answer": "Frage beantworten",
+          "approve": "Freigeben",
+          "concede": "Keine Antwort hinzufügen",
+          "evidence": "Beweise hinzufügen",
+          "ack": "Bestätigung hinzufügen",
+          "plans": "Tarife ansehen"
+        },
+        "next": {
+          "parcelAnswer": "Wenn Sie antworten, wird Ihre Auskunft in die Antwort aufgenommen, und Sie entscheiden, ob sie eingereicht wird.",
+          "parcelNone": "Wenn nicht, reicht DisputeDesk von sich aus nichts ein. Shopify sendet trotzdem eine Antwort aus den Bestelldaten.",
+          "returnAnswer": "Wenn Sie antworten, erstellt DisputeDesk die Antwort mit Ihrer Auskunft neu.",
+          "bankAnswer": "Sobald Sie sie hinzufügen, erstellt DisputeDesk die Antwort neu.",
+          "bankNone": "Bis dahin reicht DisputeDesk für diesen Fall nichts ein. Shopify sendet trotzdem eine Antwort aus den Bestelldaten.",
+          "reviewApprove": "Wenn Sie freigeben, ist die Einreichung über Shopify zur Frist am {date} eingeplant und wird vorher noch einmal geprüft.",
+          "reviewNone": "Wenn Sie nichts tun, reicht DisputeDesk nichts ein. Shopify sendet trotzdem eine Antwort aus den Bestelldaten.",
+          "covered": "Shopify bearbeitet diesen Fall selbst. DisputeDesk reicht dafür nichts ein.",
+          "passed": "Shopify hat sie an die Bank weitergegeben.",
+          "passes": "Shopify gibt sie an die Bank weiter.",
+          "inquiry": "Ist die Bank zufrieden, wird die Anfrage geschlossen. Falls nicht, kann daraus eine Rückbuchung werden, und DisputeDesk bereitet eine neue Antwort vor.",
+          "chargeback": "Die Bank entscheidet.",
+          "email": "Sie erhalten eine E-Mail, sobald das Ergebnis feststeht, sofern E-Mails zu Ergebnissen in den Einstellungen aktiviert sind.",
+          "filing": "DisputeDesk sendet die Antwort gerade an Shopify.",
+          "saveRetry": "Zur Frist am {date} ist ein neuer Versuch eingeplant, nachdem die Antwort noch einmal geprüft wurde.",
+          "unconfirmed": "Zur Frist am {date} ist eine erneute Prüfung eingeplant.",
+          "rebuild": "Zur Frist am {date} ist eingeplant, dass DisputeDesk die Antwort erneut erstellt.",
+          "buildNoFile": "Besteht keine Antwort die Prüfung, reicht DisputeDesk nichts ein, Sie erhalten eine E-Mail, und Shopify sendet trotzdem eine Antwort aus den Bestelldaten.",
+          "buildNoFileQuiet": "Besteht keine Antwort die Prüfung, reicht DisputeDesk nichts ein. Shopify sendet trotzdem eine Antwort aus den Bestelldaten.",
+          "buildPaused": "DisputeDesk versucht es bis zur Frist jeden Tag erneut.",
+          "shopifySends": "DisputeDesk reicht für diesen Fall nichts ein. Shopify sendet trotzdem eine Antwort aus den Bestelldaten.",
+          "expectLoss": "DisputeDesk rechnet damit, diesen Fall zu verlieren.",
+          "scheduled": "Die Einreichung über Shopify ist zur Frist am {date} eingeplant. DisputeDesk achtet bis dahin auf weitere Beweise und prüft die Antwort noch einmal, bevor etwas gesendet wird.",
+          "scheduledNoDate": "Die Einreichung über Shopify ist zur Frist eingeplant. DisputeDesk achtet bis dahin auf weitere Beweise und prüft die Antwort noch einmal, bevor etwas gesendet wird.",
+          "planLimit": "Sobald der Tarif geändert ist, bereitet DisputeDesk die Antwort vor. Die Frist von Shopify ist der {date}.",
+          "planLimitNoDate": "Sobald der Tarif geändert ist, bereitet DisputeDesk die Antwort vor."
+        },
+        "done": {
+          "drafted": "Die Beweise sind gesammelt und eine Antwort ist erstellt. Es wurde nichts eingereicht.",
+          "evidence": "Die Beweise sind gesammelt. Es wurde nichts eingereicht."
+        }
+      },
       "claim": {
         "FRAUDULENT": "Der Karteninhaber hat seiner Bank mitgeteilt, dass er diesen Kauf nicht getätigt hat.",
         "UNRECOGNIZED": "Der Karteninhaber hat seiner Bank mitgeteilt, dass er die Abbuchung nicht erkennt.",
@@ -4359,7 +4503,7 @@
         },
         "disputeDetailPage": {
           "title": "Streitfall-Detail in dieser App",
-          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Beweispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Beweispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Eine Darstellung des Falls.** Die Seite beginnt mit einer kurzen Darstellung des Falls, und jeder Tab liest dieselben Fakten, sodass eine Zahl, ein Datum oder ein Satz in **Übersicht**, **Beweise** und **Prüfen und weiterleiten** nie voneinander abweicht. **Die Unterlagen** listen die Fakten, auf denen die Darstellung beruht, **Was bei dieser Art von Fall gewinnt** zeigt, wie viele der Punkte, auf die Banken achten, vorliegen, und **Was geschah** ist die Zeitleiste. Jeder Nachweis hat genau eine Rolle: **der Bank genannt**, **Kontext im Paket**, **intern gehalten** (nur für unsere Einschätzung verwendet, nie an Shopify oder die Bank gesendet) oder **nicht verfügbar**. Die **der Bank genannten** Punkte sind die, auf die sich das Schreiben stützt: Die Beweisgrundlage führt sie auf, und eine Zustellung wird im Versandabschnitt dargestellt. Ihre Bestelldaten oder eine Shop-Richtlinie gelten nur dann als genannt, wenn sich die Argumentation des Schreibens darauf stützt; sonst bleiben sie Kontext. Ein früher erstelltes Schreiben behält die Beweisgrundlage, mit der es verfasst wurde, und diese Seite beschreibt genau dieses Schreiben. Eine Rücksendung oder Erstattung, die Shopify zur Bestellung erfasst, wird einmal in den Unterlagen genannt, überall mit denselben Worten. Die Seite ist nur für Sie und nicht Teil dessen, was an die Bank geht; das Schreiben unter **Prüfen und weiterleiten** ist das Dokument, das die Bank erhält.\n\n**Fragen, die nur Sie beantworten können.** Braucht der Fall eine Antwort von Ihnen (die Angabe der Bank, warum ein zurückgesendetes Paket zurückkam, ob der Kunde eine Rücksendung verlangt hat oder Ihre Entscheidung zu einem Paket, das auf Freigabe wartet), erscheint sie unter **Übersicht** als Karte unter der Zusammenfassung, und die Zusammenfassung nennt sie zuerst. Was nur hilft, etwa die Bestätigung des Karteninhabers oder fehlende Beweise, bleibt unter **Beweise**."
+          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Beweispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Beweispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen.\n\n**Zahlen aus Ihrem eigenen Shop.** Bei einem gewonnenen oder verlorenen Streitfall kann **Was bei dieser Art von Fall gewinnt** zeigen, wie oft Streitfälle derselben Art in Ihrem Shop gewonnen wurden, und ein Schritt unter **Beim nächsten Mal** kann zeigen, wie viele Ihrer verlorenen Streitfälle dieser Art dasselbe Problem hatten. Sie erscheinen erst, wenn Ihr Shop genügend entschiedene Streitfälle dieser Art hat. Sie beschreiben die Geschichte Ihres Shops, nicht die Begründung der Bank in diesem Fall.\n\n**Eine Darstellung des Falls.** Die Seite beginnt mit einer kurzen Darstellung des Falls, und jeder Tab liest dieselben Fakten, sodass eine Zahl, ein Datum oder ein Satz in **Übersicht**, **Beweise** und **Prüfen und weiterleiten** nie voneinander abweicht. **Die Unterlagen** listen die Fakten, auf denen die Darstellung beruht, **Was bei dieser Art von Fall gewinnt** zeigt, wie viele der Punkte, auf die Banken achten, vorliegen, und **Was geschah** ist die Zeitleiste. Jeder Nachweis hat genau eine Rolle: **der Bank genannt**, **Kontext im Paket**, **intern gehalten** (nur für unsere Einschätzung verwendet, nie an Shopify oder die Bank gesendet) oder **nicht verfügbar**. Die **der Bank genannten** Punkte sind die, auf die sich das Schreiben stützt: Die Beweisgrundlage führt sie auf, und eine Zustellung wird im Versandabschnitt dargestellt. Ihre Bestelldaten oder eine Shop-Richtlinie gelten nur dann als genannt, wenn sich die Argumentation des Schreibens darauf stützt; sonst bleiben sie Kontext. Ein früher erstelltes Schreiben behält die Beweisgrundlage, mit der es verfasst wurde, und diese Seite beschreibt genau dieses Schreiben. Eine Rücksendung oder Erstattung, die Shopify zur Bestellung erfasst, wird einmal in den Unterlagen genannt, überall mit denselben Worten. Die Seite ist nur für Sie und nicht Teil dessen, was an die Bank geht; das Schreiben unter **Prüfen und weiterleiten** ist das Dokument, das die Bank erhält.\n\n**Fragen, die nur Sie beantworten können.** Braucht der Fall eine Antwort von Ihnen (die Angabe der Bank, warum ein zurückgesendetes Paket zurückkam, ob der Kunde eine Rücksendung verlangt hat oder Ihre Entscheidung zu einem Paket, das auf Freigabe wartet), erscheint sie unter **Übersicht** als Karte unter der Zusammenfassung, und der Statusblock oben auf der Seite nennt sie zuerst, mit einer Schaltfläche, die dorthin führt. Was nur hilft, etwa die Bestätigung des Karteninhabers oder fehlende Beweise, bleibt unter **Beweise**.\n\n**Der Statusblock oben.** Die Überschrift ist das Eine, was zu tun ist, oder beginnt mit „Nichts zu tun.“, wenn nichts nötig ist. Darunter stehen **Was passiert ist**, **Was wir von Ihnen brauchen** (mit der Schaltfläche zur Frage, direkt auf der Seite), **Wie es weitergeht** und **Bisher erledigt**, kurz und nur dann, wenn es etwas Zutreffendes zu sagen gibt. Interne Versionsnummern und Beweiszählungen gehören nicht dazu. „Eingeplant“ heißt: DisputeDesk prüft die Antwort zur Frist noch einmal, bevor etwas gesendet wird. Reicht DisputeDesk nichts ein, läuft Shopifys eigener Fristprozess trotzdem mit den Bestelldaten, die Shopify bereits hat."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",

@@ -20,6 +20,7 @@ import type { EvidenceFact } from "@/lib/defence/types";
 import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 import type { StorePatterns } from "@/lib/disputes/storePatterns";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
+import { resolveBuildAttempt, type ObservedAttemptRow } from "@/lib/disputes/presentation/resolveBuildAttempt";
 import type { WorkspaceData } from "../workspace-components/types";
 
 function rec(v: unknown): Record<string, unknown> | null {
@@ -30,7 +31,9 @@ function str(v: unknown): string | null {
 }
 
 interface PackageRow {
+  id?: string | null;
   version?: number | null;
+  failure_code?: string | null;
   status?: string | null;
   generated_at?: string | null;
   validation_status?: string | null;
@@ -157,6 +160,32 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
       stage === "fatal" ||
       savedStage;
 
+  // The latest defence-package attempt, read through the build-attempt owner (failed / capped / skipped).
+  const attemptRow: ObservedAttemptRow | null = latest
+    ? {
+        id: latest.id ?? "",
+        version: typeof latest.version === "number" ? latest.version : 0,
+        status: (latest.status ?? "draft") as ObservedAttemptRow["status"],
+        validationStatus: (latest.validation_status ?? null) as ObservedAttemptRow["validationStatus"],
+        failureCode: latest.failure_code ?? null,
+        hasValidatedArtifact: Boolean(latest.pdf_path) && latest.validation_status === "ok",
+      }
+    : null;
+  const attempt = resolveBuildAttempt({
+    readOk: true,
+    jobReadOk: false,
+    rows: attemptRow ? [attemptRow] : [],
+    activeJob: null,
+  });
+  const build = latest
+    ? {
+        state: attempt.state,
+        cause: attempt.cause,
+        packageWritten: latest.status !== "failed" && latest.status !== "skipped",
+        at: latest.generated_at ?? null,
+      }
+    : null;
+
   const attentionKey = p && p.attention !== "none" ? attentionLabelKey(p) : null;
   const decision = d.reviewState ?? null;
 
@@ -199,5 +228,12 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
       (p?.editable ?? false) &&
       (stage === "prepared_review" || stage === "held" || stage === "needs_attention"),
     decision: decision === "approved" || decision === "conceded" || decision === "in_review" ? decision : null,
+    lifecycle: p?.lifecycle ?? null,
+    blockingReason: p?.blockingReason ?? null,
+    submissionState: d.submissionState ?? null,
+    packStatus: data.pack?.status ?? null,
+    packUpdatedAt: data.pack?.updatedAt ?? null,
+    build,
+    returnedToSender: data.workspaceAssessment?.caseStrength?.returnedToSender?.triggered === true,
   };
 }

@@ -2491,6 +2491,150 @@
       }
     },
     "record": {
+      "status": {
+        "chip": {
+          "ask": "Your answer needed",
+          "approval": "Approval needed",
+          "scheduled": "Scheduled",
+          "conceded": "No response",
+          "filing": "Being filed",
+          "filed": "Filed",
+          "sent_by_shopify": "Sent via Shopify",
+          "unconfirmed": "Not confirmed",
+          "save_failed": "Could not be filed",
+          "build_failed": "Not written yet",
+          "build_paused": "Paused",
+          "nothing_to_argue": "No response",
+          "covered": "Covered",
+          "plan_limit": "Plan limit",
+          "preparing": "Building",
+          "attention": "Needs attention",
+          "won": "Won",
+          "lost": "Lost",
+          "closed": "Closed"
+        },
+        "label": {
+          "happened": "What happened",
+          "need": "What we need from you",
+          "can": "What you can do",
+          "optional": "To make it stronger (optional)",
+          "next": "What happens next",
+          "done": "Done so far"
+        },
+        "phase": {
+          "inquiry": "Inquiry",
+          "chargeback": "Chargeback"
+        },
+        "subline": {
+          "open": "{phase} · {amount} · Shopify's deadline is {date}",
+          "openToday": "{phase} · {amount} · Shopify's deadline is today, {date}",
+          "decided": "{phase} · {amount} · Decided {date}",
+          "plain": "{phase} · {amount}"
+        },
+        "fact": {
+          "returnedToSender": "The carrier returned this parcel to you, so no proof of delivery can exist for it."
+        },
+        "headline": {
+          "askParcel": "Your answer is needed: why did this parcel come back to you?",
+          "askParcelToday": "Your answer is needed today: why did this parcel come back to you?",
+          "askReturn": "Your answer is needed: did this customer ask for a return or refund?",
+          "askReturnToday": "Your answer is needed today: did this customer ask for a return or refund?",
+          "askBank": "Your input is needed: add the bank's claim from Shopify",
+          "askBankToday": "Your input is needed today: add the bank's claim from Shopify",
+          "approval": "Your approval is needed: the response is ready",
+          "scheduled": "Nothing to do. The response is scheduled for {date}",
+          "scheduledNoDate": "Nothing to do. The response is scheduled for the deadline",
+          "filing": "Nothing to do. The response is being filed",
+          "filed": "Nothing to do. The response has been filed",
+          "sentByShopify": "Nothing to do. A response was sent through Shopify",
+          "saveFailed": "DisputeDesk could not file this response",
+          "unconfirmed": "Nothing to do. Shopify has not confirmed this response yet",
+          "buildFailed": "DisputeDesk has not been able to write this response yet",
+          "buildPaused": "DisputeDesk has paused writing this response",
+          "nothingToArgue": "DisputeDesk is not filing a response: the record does not support one",
+          "covered": "Nothing to do. Shopify Protect covers this order",
+          "conceded": "Nothing to do. You chose not to add a response",
+          "planLimit": "Upgrade needed: this month's plan limit is used up",
+          "preparing": "Nothing to do. DisputeDesk is preparing the response",
+          "won": "Won: {amount} stays with you",
+          "wonNoAmount": "Won",
+          "lost": "Lost: {amount} went back to the customer",
+          "lostNoAmount": "Lost"
+        },
+        "happened": {
+          "filedWe": "DisputeDesk filed a response on {date}.",
+          "relied": "It relied on {list}.",
+          "filed": "DisputeDesk filed the response through Shopify on {date}.",
+          "filedNoDate": "DisputeDesk filed the response through Shopify.",
+          "relies": "It relies on {list}.",
+          "sentByShopify": "DisputeDesk filed nothing for this dispute. A response was sent through Shopify.",
+          "saveFailed": "The response is ready, but Shopify did not accept the file when we sent it (last attempt {date}). Nothing from DisputeDesk has reached the bank.",
+          "saveFailedNoDate": "The response is ready, but Shopify did not accept the file when we sent it. Nothing from DisputeDesk has reached the bank.",
+          "unconfirmed": "DisputeDesk queued the response for Shopify on {date}, but Shopify has not confirmed that it accepted it.",
+          "unconfirmedNoDate": "DisputeDesk queued the response for Shopify, but Shopify has not confirmed that it accepted it.",
+          "buildFailed": "The evidence is collected, but the response did not pass our checks (last attempt {date}). Nothing has been filed.",
+          "buildFailedNoDate": "The evidence is collected, but the response did not pass our checks. Nothing has been filed.",
+          "buildPaused": "The evidence is collected, but writing the response is paused by a daily limit. Nothing has been filed.",
+          "refundCovers": "The refund on record covers the disputed amount.",
+          "notFulfilled": "The order was never fulfilled.",
+          "noFacts": "Nothing on record can be shown to the bank in support of this case.",
+          "planLimit": "DisputeDesk has not prepared a response for this dispute because your plan's monthly limit is used up."
+        },
+        "need": {
+          "parcel": "Only you know why it came back. If the customer refused the parcel or never collected it, that is not a valid return, and it is the one argument left in this case. Without your answer the response is weak.",
+          "return": "Shopify only records returns made through Shopify, so only you can say whether this customer asked for a return or refund before opening the dispute.",
+          "bank": "The bank's reason is only visible in Shopify. Paste it here so the response answers exactly what was asked.",
+          "review": "Read the response and choose.",
+          "nothing": "Nothing is needed from you right now.",
+          "plan": "Choose a plan that covers your volume."
+        },
+        "can": {
+          "evidence": "If you have proof we cannot see, such as a delivery confirmation from the carrier, add it on the Evidence tab."
+        },
+        "optional": {
+          "ack": "The cardholder's acknowledgement would strengthen the case."
+        },
+        "action": {
+          "answer": "Answer the question",
+          "approve": "Approve",
+          "concede": "Don't add a response",
+          "evidence": "Add evidence",
+          "ack": "Add acknowledgement",
+          "plans": "See plans"
+        },
+        "next": {
+          "parcelAnswer": "If you answer, your answer is added to the response, and you decide whether to file it.",
+          "parcelNone": "If you don't, DisputeDesk files nothing on its own. Shopify still sends a response from the order's own data.",
+          "returnAnswer": "If you answer, DisputeDesk rebuilds the response with your answer.",
+          "bankAnswer": "Once you add it, DisputeDesk rebuilds the response.",
+          "bankNone": "Until you do, DisputeDesk files nothing for this dispute. Shopify still sends a response from the order's own data.",
+          "reviewApprove": "If you approve, it is scheduled to be filed through Shopify at the deadline, {date}, and checked again first.",
+          "reviewNone": "If you do nothing, DisputeDesk files nothing. Shopify still sends a response from the order's own data.",
+          "covered": "Shopify handles this dispute itself. DisputeDesk files nothing for it.",
+          "passed": "Shopify has passed it to the bank.",
+          "passes": "Shopify passes it to the bank.",
+          "inquiry": "If the bank is satisfied, the inquiry closes. If not, it can become a chargeback, and DisputeDesk prepares a new response.",
+          "chargeback": "The bank decides.",
+          "email": "You get an email when the result is posted, if outcome emails are on in Settings.",
+          "filing": "DisputeDesk is sending the response to Shopify now.",
+          "saveRetry": "A new attempt is scheduled for the deadline, {date}, after the response is checked again.",
+          "unconfirmed": "A new check is scheduled for the deadline, {date}.",
+          "rebuild": "DisputeDesk is scheduled to build the response again at the deadline, {date}.",
+          "buildNoFile": "If no response passes, DisputeDesk files nothing, you get an email, and Shopify still sends a response from the order's own data.",
+          "buildNoFileQuiet": "If no response passes, DisputeDesk files nothing. Shopify still sends a response from the order's own data.",
+          "buildPaused": "DisputeDesk tries again each day until the deadline.",
+          "shopifySends": "DisputeDesk files nothing for this dispute. Shopify still sends a response from the order's own data.",
+          "expectLoss": "DisputeDesk expects to lose this dispute.",
+          "scheduled": "It is scheduled to be filed through Shopify at the deadline, {date}. DisputeDesk keeps watching for more evidence and checks the response again before anything is sent.",
+          "scheduledNoDate": "It is scheduled to be filed through Shopify at the deadline. DisputeDesk keeps watching for more evidence and checks the response again before anything is sent.",
+          "planLimit": "Once the plan is changed, DisputeDesk prepares the response. Shopify's deadline is {date}.",
+          "planLimitNoDate": "Once the plan is changed, DisputeDesk prepares the response."
+        },
+        "done": {
+          "drafted": "The evidence is collected and a response is written. Nothing has been filed.",
+          "evidence": "The evidence is collected. Nothing has been filed."
+        }
+      },
       "claim": {
         "FRAUDULENT": "The cardholder told their bank they did not make this purchase.",
         "UNRECOGNIZED": "The cardholder told their bank they did not recognise the charge.",
@@ -4358,7 +4502,7 @@
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
-          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case.\n\n**One account of the dispute.** The page opens with a short account of the dispute, and every tab reads the same facts, so a count, a date or a sentence never differs between **Overview**, **Evidence** and **Review and Forward**. **The record** lists the facts the account is built from, **What wins this type of dispute** shows how many of the items banks look for are on record, and **What has happened** is the timeline. Each piece of evidence has exactly one role: **cited to the bank**, **context in the package**, **kept internal** (used only for our assessment, so it is not part of what is sent to Shopify or the bank) or **not available**. The items **cited to the bank** are the ones the letter relies on: its Evidence Basis lists them, and a delivery is set out in its shipping section. Your order record or a store policy is cited only when the letter's argument relies on it, and is context otherwise. A letter prepared earlier keeps the Evidence Basis it was written with, and this page describes that letter. A return or refund Shopify records on the order is stated once, in the record, with the same words everywhere. The page is for you only and is not part of anything sent to the bank; the letter on **Review and Forward** is the document the bank receives.\n\n**Questions only you can answer.** When the dispute needs an answer from you (the bank's claim, why a returned parcel came back, whether the customer asked for a return, or your decision on a package waiting for approval), it appears on **Overview** as a card under the summary, and the summary names it first. Things that only help, such as adding the cardholder's acknowledgement or missing evidence, stay on **Evidence**."
+          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records.\n\n**Numbers from your own store.** On a won or lost dispute, **What wins this type of dispute** can show how often disputes of the same type were won on your store, and a **Next time** step can show how many of your lost disputes of that type had the same problem. They appear only once your store has enough decided disputes of that type. They describe your store's history, not the bank's reasoning on this case.\n\n**One account of the dispute.** The page opens with a short account of the dispute, and every tab reads the same facts, so a count, a date or a sentence never differs between **Overview**, **Evidence** and **Review and Forward**. **The record** lists the facts the account is built from, **What wins this type of dispute** shows how many of the items banks look for are on record, and **What has happened** is the timeline. Each piece of evidence has exactly one role: **cited to the bank**, **context in the package**, **kept internal** (used only for our assessment, so it is not part of what is sent to Shopify or the bank) or **not available**. The items **cited to the bank** are the ones the letter relies on: its Evidence Basis lists them, and a delivery is set out in its shipping section. Your order record or a store policy is cited only when the letter's argument relies on it, and is context otherwise. A letter prepared earlier keeps the Evidence Basis it was written with, and this page describes that letter. A return or refund Shopify records on the order is stated once, in the record, with the same words everywhere. The page is for you only and is not part of anything sent to the bank; the letter on **Review and Forward** is the document the bank receives.\n\n**Questions only you can answer.** When the dispute needs an answer from you (the bank's claim, why a returned parcel came back, whether the customer asked for a return, or your decision on a package waiting for approval), it appears on **Overview** as a card under the summary, and the status block at the top of the page names it first, with a button that takes you to it. Things that only help, such as adding the cardholder's acknowledgement or missing evidence, stay on **Evidence**.\n\n**The status block at the top.** The headline is the one thing to do, or starts with “Nothing to do.” when nothing is needed. Under it, **What happened**, **What we need from you** (with the button for the question, on the page itself), **What happens next** and **Done so far** are short and appear only when there is something true to say. Internal version numbers and evidence counts are not part of it. “Scheduled” means DisputeDesk checks the response again at the deadline before anything is sent. If DisputeDesk files nothing, Shopify's own deadline process still runs with the order details it already holds."
         },
         "reviewQueue": {
           "title": "The review queue",
