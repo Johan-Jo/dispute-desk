@@ -4192,6 +4192,47 @@ draws the header rule on pages 2+ and not on page 1" (two header texts and one r
 none on page 1, so deleting the header cannot pass). Any new `fixed` + `render` element that draws
 a border from a measured height should be covered by the same assertion.
 
+### Defence PDF — the carrier exhibit follows the ledger (2026-11-10)
+
+**Defect.** whj8db-1q #24285 (credit not processed, inquiry, package v19): the letter said "The
+carrier recorded delivery on 22 October 2026" while the PDF held no shipment card, no tracking
+number or link, no "carrier delivered" Chronology row. Two owners disagreed: the counsel ledger
+(claims `shipped`, `carrier_delivered`, read from the pack's shipping section) let the writer argue
+delivery, while the document draws the card, Chronology and Evidence Basis from the plan's facts, and
+the `credit_not_processed`, `duplicate_processing` and `canceled_recurring` modules do not list
+`delivery_proof` / `shipping_tracking` in `allowedFactCategories`.
+
+**Rule (one owner).** The ledger decides. If a letter's ledger holds any claim in
+`CARRIER_RECORD_CLAIM_IDS` (`lib/defence/counsel/briefs/index.ts`: `carrier_delivered`,
+`all_parcels_delivered`, `some_parcel_delivered`, `shipped`, `shipment_in_transit`), the document
+shows the carrier record that claim rests on: the same shipment card other families print (carrier,
+tracking number linked to the carrier's page, shipped, carrier delivery), the matching Chronology row,
+and the delivery stated once (the card carries it; the Evidence Basis does not repeat it, as for every
+single-parcel letter). If the ledger holds none, no carrier fact is added and no card prints. A module's
+fact categories no longer decide this.
+
+**How.** `runCounsel` takes `carrierRecordPool` (the case's bank-eligible delivery/tracking facts from the
+classifier, whether or not the plan kept them), offers them to the ledger, and returns
+`exhibitFacts = carrierExhibitFacts(ledger, planFacts, pool)` (`lib/defence/counsel/carrierExhibit.ts`).
+`buildDefencePackageJob` appends them to `planFacts`, the one list the validator, chronology, card and
+Evidence Basis read. `buildChronologyEvents` adds "Carrier recorded the shipment as delivered." at the
+carrier's `deliveredAt` when a single-parcel delivery fact exists and the order timeline has no carrier
+delivery row. Prose restraint is unchanged: the ledger's `mustNot`s still forbid saying where or to whom the
+parcel was delivered or that the customer received it; the card shows the carrier's record, the prose only
+dates the sequence. `familyOmitsArrival` is empty (since 2026-09-28) and was not the cause.
+
+**Bank-facing effect.** Credit-not-processed, duplicate-processing, cancelled-recurring and any other
+GENERAL-brief module now print the carrier card and delivery row whenever their letter cites the delivery.
+Item-not-received and not-as-described already did.
+
+**Guard.** `lib/defence/counsel/__tests__/carrierExhibit.test.ts` runs every reason-code module
+(`ALL_REASON_CODE_MODULES`) through its brief's ledger and asserts the document holds the carrier card and
+Chronology row exactly when `carrierRecordArgued`, and that any claim citing the shipping record comes with a
+carrier claim; a new family or claim that cites delivery without the exhibit fails. Document level:
+`lib/defence/pdf/__tests__/carrierExhibitDocument.test.ts` (carrier, tracking number, link and delivery date
+in the rendered tree; no card without a delivery claim; 4+ page PDF with a long tracking URL stays inside the
+coordinate range, alongside `runningHeaderRule.test.ts`).
+
 ### Defence PDF layout (2026-09-23, prompt 27)
 
 Reviewed on blume-box #360980's filed PDF: four pages for one page of argument, a mostly empty

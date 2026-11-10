@@ -27,6 +27,7 @@ import { extractReturnWindow } from "./policyTerms";
 import { translateListing } from "../listingTranslation";
 import { getServiceClient } from "@/lib/supabase/server";
 import { argumentFactIdsBySlot, checkDraft, toNarrative, type CheckContext } from "./checks";
+import { carrierExhibitFacts, offeredCarrierRecords } from "./carrierExhibit";
 import { composeDraft, writeLetter, type CounselStage, type ModelCall } from "./generate";
 import { NOT_AS_DESCRIBED, playbookForModule } from "./playbooks";
 import { briefForModule, deliveryOnRecord, GENERAL_BRIEF, sectionApplies, type Brief } from "./briefs";
@@ -270,6 +271,9 @@ export interface CounselRunResult {
   /** The refund policy the letter argues from, printed in full (original +
    *  English), when the ledger holds `return_route_open` (plan §2.2.1). */
   policyExhibit?: PolicyExhibit | null;
+  /** Carrier-record facts the letter argues that the module's plan had left out;
+   *  the job adds them to the document's facts. */
+  exhibitFacts?: EvidenceFact[];
 }
 
 /** The refund policy as the letter shows it (maintainer, 2026-09-28): its key
@@ -430,6 +434,8 @@ export async function runCounsel(args: {
   shopId: string;
   moduleKey: string;
   facts: readonly EvidenceFact[];
+  /** Bank-eligible carrier-record facts of the case, whether or not the module's plan kept them. */
+  carrierRecordPool?: readonly EvidenceFact[];
   packSections: LedgerInput["packSections"];
   orderName: string | null;
   orderGid: string | null;
@@ -470,7 +476,9 @@ export async function runCounsel(args: {
   const customerOrders = args.orderGid ? await fetchCustomerOrders(args.shopId, args.orderGid) : [];
   const ledgerInput: LedgerInput = {
     moduleKey: args.moduleKey,
-    facts: args.facts,
+    // The case's carrier records are offered to the ledger even when the module
+    // keeps them out of the plan; the ledger decides whether they are argued.
+    facts: [...args.facts, ...offeredCarrierRecords(args.facts, args.carrierRecordPool ?? [])],
     packSections: args.packSections,
     orderName: args.orderName,
     disputeOpenedAt: args.disputeOpenedAt,
@@ -500,13 +508,16 @@ export async function runCounsel(args: {
     return null;
   }
   const { brief, ledger } = chosen;
+  // The carrier record the letter argues, shown in the document (see carrierExhibit.ts).
+  const exhibitFacts = carrierExhibitFacts(ledger, args.facts, args.carrierRecordPool ?? []);
+  const facts: readonly EvidenceFact[] = [...args.facts, ...exhibitFacts];
   const notAsDescribed = brief.type === "product_not_as_described";
   // The legacy playbook shape the shared checks still read for section keys.
   const playbook = playbookForModule(args.moduleKey) ?? NOT_AS_DESCRIBED;
   addDisputeOpenedRow(ledger, args.packSections, args.disputeOpenedAt, frame);
   addOrderPlacedRow(ledger, args.packSections);
 
-  const delivery = args.facts.find(
+  const delivery = facts.find(
     (f) => (f.category === "delivery_proof" || f.category === "shipping_tracking") && str(obj(f.value)?.trackingNumber),
   );
   const dv = obj(delivery?.value) ?? {};
@@ -518,7 +529,7 @@ export async function runCounsel(args: {
 
   // Multi-parcel: one card per parcel carries its carrier, reference and link.
   const parcels = ledger.some((c) => c.parcel)
-    ? ((args.facts
+    ? ((facts
         .map((f) => obj(f.value)?.shipments)
         .find((x) => Array.isArray(x) && x.length > 1) as unknown[] | undefined) ?? []).map((x) => obj(x) ?? {})
     : [];
@@ -562,7 +573,7 @@ export async function runCounsel(args: {
     frame,
     // English only, never the product's store name, for every type.
     forbiddenTitles: [...lineItemTitles, ...listingTitles],
-    facts: args.facts,
+    facts,
     disputeOpenedAt: args.disputeOpenedAt,
     merchantName: args.merchantName,
     carrierName,
@@ -583,7 +594,7 @@ export async function runCounsel(args: {
   const inputHash = counselInputHash({ ledger, pageContext: `${pageContext}\n${frameRule(frame)}`, merchantName: args.merchantName, check, writeModel: model, reviewModel });
   // Multi-parcel: each card prints its own link.
   const trackingLine = trackingUrl && !multi ? `Carrier tracking record: ${trackingUrl}` : null;
-  const factIds = args.facts.map((f) => f.id);
+  const factIds = facts.map((f) => f.id);
   const finish = (draft: CounselDraft): DefenceNarrativeOutput => ({
     ...toNarrative(draft, factIds, trackingLine, ledger),
     counsel: { inputHash, summary: draft.summary.paragraphs },
@@ -601,8 +612,9 @@ export async function runCounsel(args: {
   }
   const result = (draft: CounselDraft, reused: boolean): CounselRunResult => ({
     policyExhibit,
+    exhibitFacts,
     narrative: finish(draft),
-    argumentFactIdsBySlot: argumentFactIdsBySlot(draft, ledger, args.facts),
+    argumentFactIdsBySlot: argumentFactIdsBySlot(draft, ledger, facts),
     ledger,
     modelUsed: model,
     promptVersion: COUNSEL_PROMPT_VERSION,
@@ -664,7 +676,7 @@ export async function runCounsel(args: {
       pageContext,
       merchantName: args.merchantName,
       ledger,
-      facts: args.facts,
+      facts,
       disputeOpenedAt: args.disputeOpenedAt,
       check: {
         carrierName: check.carrierName,
