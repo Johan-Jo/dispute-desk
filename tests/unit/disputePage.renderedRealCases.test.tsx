@@ -68,20 +68,18 @@ function at(f: WorkspaceFixture) {
 
 describe("#17066 returned-to-sender, unanswered (7aa8536c)", () => {
   const f = () => at(fixtureByCase("17066-returned-to-sender"));
-  // KNOWN GAP -> PR 3 (asks registry puts the parcel ask on Overview). done when: passes without .fails
-  it.fails("shows the parcel ask on the Overview", () => {
+  it("shows the parcel ask on the Overview", () => {
     expect(page(f(), "overview")).toContain(en("disputes.evidenceTab.parcelOutcome.title"));
   });
-  // KNOWN GAP -> PR 3. done when: passes without .fails
-  it.fails("the record's action token is the parcel ask, not a generic one", () => {
+  it("the record's action token is the parcel ask, not a generic one", () => {
     const key = recordOf(f()).facts.action?.key;
     expect(["disputes.record.action.none", "disputes.record.action.ack", "disputes.record.action.evidence"]).not.toContain(key);
+    expect(key).toBe("disputes.evidenceTab.parcelOutcome.title");
   });
   it("does not say action.none", () => {
     expect(saysActionNone(page(f(), "overview"))).toBe(false);
   });
-  // KNOWN GAP -> PR 3. done when: passes without .fails
-  it.fails("does not offer the cardholder acknowledgement as the primary action", () => {
+  it("does not offer the cardholder acknowledgement as the primary action", () => {
     expect(saysActionAck(page(f(), "overview"))).toBe(false);
   });
 });
@@ -174,8 +172,7 @@ describe("won and filed (d00d141b)", () => {
 
 describe("review-awaiting (fc1971af)", () => {
   const f = () => at(fixtureByCase("review-awaiting"));
-  // KNOWN GAP -> PR 3 (review_decision ask). done when: passes without .fails
-  it.fails("the review ask is the action", () => {
+  it("the review ask is the action", () => {
     expect(recordOf(f()).facts.action?.key).toBe("disputes.record.action.review");
   });
   it("does not say action.none", () => {
