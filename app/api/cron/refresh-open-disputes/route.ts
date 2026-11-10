@@ -108,7 +108,10 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       const after = (afterRow?.delivery_status as string | null) ?? null;
 
-      if (after !== before) {
+      // A null `after` is "no status read", never a change: counting it
+      // rebuilt 28 disputes nightly (2026-11-10). Only a status that appears
+      // or moves warrants a rebuild.
+      if (after != null && after !== before) {
         summary.deliveryChanged++;
         await enqueueJob({
           shopId,

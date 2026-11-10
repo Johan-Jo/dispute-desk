@@ -12,7 +12,7 @@
  * (Anthropic client) and the offline eval harness.
  */
 
-import { checkDraft, isSoftLengthIssue, type CheckContext } from "./checks";
+import { checkDraft, isSoftLengthIssue, summaryLimitFor, type CheckContext } from "./checks";
 import {
   correctionUserPrompt,
   REVIEW_SYSTEM,
@@ -218,8 +218,16 @@ export const isBlockingIssue = (issue: string): boolean => !issue.startsWith("un
 // Soft (a few words over, `length:` prefix) or hard: both go to the shortener.
 const LENGTH_ISSUE = /^(length: )?summary: \d+ words, the limit is \d+/;
 
-export const SHORTEN_SYSTEM = `You shorten the executive summary of a response to a payment dispute. Return ONLY the rewritten paragraph, no quotes, no comment.
-- At most 70 words.
+/** Words under the enforced limit the shortener aims for, so a model that
+ *  lands a few words long still passes. */
+export const SHORTEN_MARGIN_WORDS = 10;
+
+/** The shortener's prompt. Its target comes from the limit `checkDraft`
+ *  enforces (never a second hard-coded number) and it is told the count it
+ *  must come down from. */
+export const shortenSystem = (limit: number, currentWords: number): string =>
+  `You shorten the executive summary of a response to a payment dispute. Return ONLY the rewritten paragraph, no quotes, no comment.
+- The paragraph is ${currentWords} words; the hard limit is ${limit}. At most ${limit - SHORTEN_MARGIN_WORDS} words.
 - Keep the first sentence (the customer's claim) and the last sentence (the request) word for word.
 - Keep every fact the paragraph relies on; remove only restated clauses, a second mention of the same fact, and supporting detail.
 - Add nothing: no new fact, date, number or word of emphasis.`;
@@ -296,10 +304,11 @@ export async function writeLetter(args: {
   // prod, 92 of 90, 2026-09-29); a paragraph-only rewrite does not.
   const blocking = issues.filter((i) => !i.startsWith("unclear:"));
   if (blocking.length > 0 && blocking.every((i) => LENGTH_ISSUE.test(i))) {
+    const summaryWords = draft.summary.paragraphs.join(" ").split(/\s+/).filter(Boolean).length;
     const text = (
       await args.call({
         stage: "correction",
-        system: SHORTEN_SYSTEM,
+        system: shortenSystem(summaryLimitFor(draft, args.check), summaryWords),
         user: draft.summary.paragraphs.join("\n\n"),
         temperature: 0,
         maxTokens: 600,

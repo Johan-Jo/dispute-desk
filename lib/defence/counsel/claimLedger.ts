@@ -350,6 +350,16 @@ export function addLaterOrder(
       const b = calendarDays(later.createdAt, opened);
       specifics.daysBeforeDispute = String(b);
       specifics.daysBeforeDisputeWord = numberWord(b);
+    } else if (opened) {
+      // Placed on or after the day the dispute opened: the interval to THAT
+      // anchor is computed too, so the letter and the reviewer never have to
+      // derive "the day after the inquiry opened" themselves (d65b7220, v18:
+      // a true sentence the reviewer rejected as unsupported).
+      const a = calendarDays(opened, later.createdAt);
+      specifics.laterOrderAfterDispute = "yes";
+      specifics.daysAfterDisputeOpened = String(a);
+      specifics.daysAfterDisputeOpenedWord = numberWord(a);
+      specifics.disputeOpenedOn = longDate(opened)!;
     }
     // Shopify gives brand, last four digits and wallet, not a card identity:
     // say exactly that ("the same card" would overstate it).
@@ -389,6 +399,7 @@ export function addLaterOrder(
       statement:
         `After the carrier recorded delivery of the disputed order, the same customer account placed a further order (${later.name}) on ${specifics.laterOrderOn}` +
         `${specifics.daysBeforeDispute ? `, ${specifics.daysBeforeDisputeWord} days before opening this dispute` : ""}` +
+        `${specifics.laterOrderAfterDispute ? `, ${specifics.daysAfterDisputeOpenedWord} day${specifics.daysAfterDisputeOpened === "1" ? "" : "s"} after this dispute was opened (on ${specifics.disputeOpenedOn})` : ""}` +
         `${sameCard ? `, paid with ${specifics.paidWith}` : ""}` +
         `${laterDelivered ? `; ${specifics.laterOrderCarrier ?? "the carrier"} recorded that order as delivered on ${specifics.laterOrderDeliveredOn}` : ""}.`,
       specifics,
@@ -400,6 +411,7 @@ export function addLaterOrder(
         "Never say the later order was not disputed.",
         "Never print card digits.",
         "Never say \"the same card\": say a card ending in the same four digits.",
+        "Name the anchor of every relative time phrase: \"after the delivery\" or \"after the inquiry was opened\", never a bare \"the following day\" or \"the next day\" (ambiguous between the two).",
       ],
     });
   }
