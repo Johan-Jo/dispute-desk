@@ -2492,6 +2492,27 @@
     },
     "record": {
       "status": {
+        "chip": {
+          "ask": "Antwort nötig",
+          "approval": "Freigabe nötig",
+          "scheduled": "Eingeplant",
+          "conceded": "Keine Antwort",
+          "filing": "Wird eingereicht",
+          "filed": "Eingereicht",
+          "sent_by_shopify": "Über Shopify gesendet",
+          "unconfirmed": "Nicht bestätigt",
+          "save_failed": "Nicht eingereicht",
+          "build_failed": "Noch nicht erstellt",
+          "build_paused": "Pausiert",
+          "nothing_to_argue": "Keine Antwort",
+          "covered": "Abgedeckt",
+          "plan_limit": "Tariflimit",
+          "preparing": "Wird erstellt",
+          "attention": "Braucht Aufmerksamkeit",
+          "won": "Gewonnen",
+          "lost": "Verloren",
+          "closed": "Geschlossen"
+        },
         "label": {
           "happened": "Was passiert ist",
           "need": "Was wir von Ihnen brauchen",
@@ -2506,6 +2527,7 @@
         },
         "subline": {
           "open": "{phase} · {amount} · Die Frist von Shopify ist der {date}",
+          "openToday": "{phase} · {amount} · Die Frist von Shopify ist heute, der {date}",
           "decided": "{phase} · {amount} · Entschieden am {date}",
           "plain": "{phase} · {amount}"
         },

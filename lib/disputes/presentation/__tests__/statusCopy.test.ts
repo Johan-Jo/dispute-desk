@@ -114,6 +114,8 @@ describe("composeStatusCopy: every state x phase", () => {
       it(`${c.name} (${phase}) -> ${c.expect}, headline + sub-line + no empty labelled part`, () => {
         const out = composeStatusCopy(base(phase, c.patch));
         expect(out.state).toBe(c.expect);
+        expect(out.chip.key, "chip and headline come from the same state").toBe(`disputes.record.status.chip.${out.state}`);
+        if (out.state === "approval") expect(out.parts.flatMap((p) => p.actions.map((a) => a.id))).toEqual(["decide:approved", "decide:conceded"]);
         expect(out.headline.key).toMatch(/^disputes\.record\./);
         expect(out.subline.key).toMatch(/^disputes\.record\.status\.subline\./);
         expect(out.parts.length).toBeGreaterThan(0);
@@ -140,6 +142,13 @@ describe("composeStatusCopy: every state x phase", () => {
       composeStatusCopy(base("inquiry", { asks: [ask("parcel_outcome")], deadlineToday: today })).headline.key;
     expect(h(true)).toBe("disputes.record.status.headline.askParcelToday");
     expect(h(false)).toBe("disputes.record.status.headline.askParcel");
+  });
+
+  it("the sub-line says 'today' under the same condition as the headline", () => {
+    const sub = (today: boolean) =>
+      composeStatusCopy(base("inquiry", { asks: [ask("parcel_outcome")], deadlineToday: today })).subline.key;
+    expect(sub(true)).toBe("disputes.record.status.subline.openToday");
+    expect(sub(false)).toBe("disputes.record.status.subline.open");
   });
 
   it("a required ask never reads 'Nothing to do'", () => {
@@ -192,7 +201,7 @@ describe("composeStatusCopy: all six locales", () => {
     for (const c of CASES) {
       for (const phase of PHASES) {
         const out = composeStatusCopy(base(phase, c.patch));
-        const toks: I18nToken[] = [out.headline, out.subline, ...out.parts.flatMap((p) => [p.label, ...p.lines, ...p.actions.flatMap((a) => (a.meta ? [a.label, a.meta] : [a.label]))])];
+        const toks: I18nToken[] = [out.headline, out.chip, out.subline, ...out.parts.flatMap((p) => [p.label, ...p.lines, ...p.actions.flatMap((a) => (a.meta ? [a.label, a.meta] : [a.label]))])];
         for (const tok of toks) texts.push(resolveToken(t, tok) as string);
       }
     }

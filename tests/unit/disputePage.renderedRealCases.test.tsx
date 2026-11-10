@@ -103,7 +103,7 @@ describe("#17066 returned-to-sender, unanswered (7aa8536c)", () => {
     it(`the hero on the ${tab} tab says what to do, with the parcel question and its button`, () => {
       const hero = heroText(f(), tab);
       expect(hero).toContain("Your answer is needed today: why did this parcel come back to you?");
-      expect(hero).toContain("Inquiry · SEK 3,021.65 · Shopify's deadline is 10 Nov 2026");
+      expect(hero).toContain("Inquiry · SEK 3,021.65 · Shopify's deadline is today, 10 Nov 2026");
       expect(hero).toContain(en("disputes.record.status.label.need"));
       expect(hero).toContain(en("disputes.record.status.need.parcel"));
       expect(hero).toContain(en("disputes.evidenceTab.parcelOutcome.ctaButton"));
@@ -224,6 +224,45 @@ describe("won and filed (d00d141b)", () => {
   });
   it("does not say filed.none", () => {
     expect(page(f(), "overview")).not.toContain(en("disputes.record.filed.none"));
+  });
+});
+
+describe("the header chip and the hero agree (one state)", () => {
+  it("#24285: no 'Held until the deadline' chip beside 'has not been able to write this response yet'", () => {
+    const f = at(fixtureByCase("24285-latest-build-failed"));
+    for (const tab of ["overview", "evidence"] as const) {
+      const text = page(f, tab);
+      expect(text).not.toContain(en("disputes.record.chip.held"));
+      expect(text).toContain(en("disputes.record.status.headline.buildFailed"));
+      expect(text).toContain(en("disputes.record.status.chip.build_failed"));
+    }
+  });
+  it("#17066: the sub-line says 'deadline is today' and the acknowledgement is not suggested", () => {
+    const f = at(fixtureByCase("17066-returned-to-sender"));
+    const text = page(f, "overview");
+    expect(text).toContain("Shopify's deadline is today, 10 Nov 2026");
+    expect(text).toContain(en("disputes.record.status.chip.ask"));
+    expect(text).not.toContain(en("disputes.record.help.ack.title"));
+    expect(text).not.toContain(en("disputes.record.status.action.ack"));
+    expect(text).not.toContain(en("disputes.record.status.optional.ack"));
+    expect(text).not.toContain(ACTION_ACK);
+  });
+  it("whenever the 'Your decision' row is hidden, the hero carries Approve and Don't add a response", () => {
+    for (const name of ["review-awaiting", "17066-returned-to-sender", "24285-latest-build-failed"]) {
+      const f = at(fixtureByCase(name));
+      const r = recordOf(f);
+      const text = page(f, "overview");
+      const rowShown = text.includes(en("disputes.record.ui.decideTitle"));
+      if (r.canDecide && !rowShown) {
+        const hero = heroText(f);
+        expect(hero, name).toContain(en("disputes.record.status.action.approve"));
+        expect(hero, name).toContain(en("disputes.record.status.action.concede"));
+      }
+    }
+    const f = at(fixtureByCase("review-awaiting"));
+    expect(recordOf(f).canDecide).toBe(true);
+    expect(page(f, "overview")).not.toContain(en("disputes.record.ui.decideTitle"));
+    expect(heroText(f)).toContain(en("disputes.record.status.action.approve"));
   });
 });
 

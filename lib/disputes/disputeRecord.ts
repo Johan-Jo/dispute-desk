@@ -1176,7 +1176,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       headline: tk(`headline.${headlineKey}`),
       claimShort: tk(`claimShort.${claimKey(v.reason)}`),
       amountLabel: tk(`amountLabel.${status}`),
-      statusChip: stage === "building" && i.packPrepared ? ({ key: "presentation.lifecycle.pack_prepared" } as I18nToken) : tk(`chip.${headlineKey}`),
+      statusChip: stage === "building" && i.packPrepared ? ({ key: "presentation.lifecycle.pack_prepared" } as I18nToken) : statusCopy.chip,
       strengthBand:
         (i.strength === "strong" || i.strength === "moderate" || i.strength === "weak") &&
         PREPARED_STAGES.includes(stage) &&

@@ -2492,6 +2492,27 @@
     },
     "record": {
       "status": {
+        "chip": {
+          "ask": "Your answer needed",
+          "approval": "Approval needed",
+          "scheduled": "Scheduled",
+          "conceded": "No response",
+          "filing": "Being filed",
+          "filed": "Filed",
+          "sent_by_shopify": "Sent via Shopify",
+          "unconfirmed": "Not confirmed",
+          "save_failed": "Could not be filed",
+          "build_failed": "Not written yet",
+          "build_paused": "Paused",
+          "nothing_to_argue": "No response",
+          "covered": "Covered",
+          "plan_limit": "Plan limit",
+          "preparing": "Building",
+          "attention": "Needs attention",
+          "won": "Won",
+          "lost": "Lost",
+          "closed": "Closed"
+        },
         "label": {
           "happened": "What happened",
           "need": "What we need from you",
@@ -2506,6 +2527,7 @@
         },
         "subline": {
           "open": "{phase} · {amount} · Shopify's deadline is {date}",
+          "openToday": "{phase} · {amount} · Shopify's deadline is today, {date}",
           "decided": "{phase} · {amount} · Decided {date}",
           "plain": "{phase} · {amount}"
         },
