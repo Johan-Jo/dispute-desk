@@ -21,6 +21,7 @@
 import { useState } from "react";
 import { Banner, BlockStack, Button, Card, InlineStack, Select, Text, TextField } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { returnRequestOffered } from "@/lib/disputes/merchantAsks";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -39,9 +40,17 @@ export function ReturnRequestCard({ workspace }: { workspace: Workspace }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rr = data?.returnRequest;
-  if (!rr?.applies) return null;
-  if (data?.dispute?.finalOutcome) return null;
-  if (data?.dispute?.submissionState === "submitted_confirmed") return null;
+  // The shared gate (lib/disputes/merchantAsks), the same one the asks registry reads.
+  if (
+    !rr ||
+    !returnRequestOffered({
+      applies: rr.applies,
+      finalOutcome: data?.dispute?.finalOutcome,
+      submissionState: data?.dispute?.submissionState,
+    })
+  ) {
+    return null;
+  }
   if (derived.isBuilding || derived.isRegenerating) return null;
 
   const saved = rr.answer;

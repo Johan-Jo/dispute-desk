@@ -6,7 +6,7 @@
  * Read-only: nothing here writes, rebuilds or re-scores anything.
  */
 
-import { canOfferCardholderAcknowledgement, merchantSuppliedAcknowledgementFromItems } from "@/lib/disputes/heldState";
+import { recordStatusOf, stageOf } from "@/lib/disputes/workspacePayload/recordStage";
 import {
   FACT_CATEGORY_FIELD,
   type RecordInputs,
@@ -58,41 +58,11 @@ function packFacts(data: WorkspaceData): Record<string, Record<string, unknown>>
   return out;
 }
 
-function stageOf(data: WorkspaceData, status: RecordStatus): RecordStage {
-  if (status !== "open") return "decided";
-  const p = data.presentation;
-  const dp = data.defencePackage;
-  const pack = data.pack;
-  const latest = pkgRow(dp?.latest);
-  if (pack?.coverage && (pack.coverage as { isCovered?: boolean }).isCovered) return "covered";
-  if (p?.lifecycle === "under_review") return "under_review";
-  if (p?.lifecycle === "saved_to_shopify" || pack?.savedToShopifyAt) return "saved";
-  if (!pack) return "no_pack";
-  const fatal = data.workspaceAssessment?.caseStrength?.fatalLoss;
-  if (fatal?.triggered) return "fatal";
-  if (pack.status === "failed" || pack.failureCode) return "failed";
-  const building =
-    ["queued", "building", "pending"].includes(pack.status) || pack.rebuildPending || !!pack.activeBuildJob || !!dp?.building;
-  if (building || !latest || typeof latest.version !== "number") return "building";
-  if (data.held?.held) return "held";
-  if (p && (p.attention === "blocking" || p.attention === "requested" || p.attention === "technical_error")) return "needs_attention";
-  if (p?.automationMode === "review" || data.appliedRule?.mode === "review") return "prepared_review";
-  return "prepared";
-}
-
 export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: string): RecordInputs {
   const d = data.dispute;
   const dv = data.decidedView ?? null;
   const p = data.presentation ?? null;
-  const status: RecordStatus = dv
-    ? dv.outcome
-    : p?.outcome === "won" || d.finalOutcome === "won"
-      ? "won"
-      : p?.outcome === "lost" || d.finalOutcome === "lost"
-        ? "lost"
-        : p?.outcome === "closed" || p?.terminal
-          ? "closed"
-          : "open";
+  const status: RecordStatus = recordStatusOf(data);
   const stage = stageOf(data, status);
   const decided = status !== "open";
   const facts = decided && dv ? dv.facts : packFacts(data);
@@ -187,14 +157,6 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
       stage === "fatal" ||
       savedStage;
 
-  const offerAck =
-    !decided &&
-    canOfferCardholderAcknowledgement({
-      merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(data.pack?.evidenceItems),
-      submissionState: d.submissionState ?? null,
-      finalOutcome: d.finalOutcome ?? null,
-    });
-
   const attentionKey = p && p.attention !== "none" ? attentionLabelKey(p) : null;
   const decision = d.reviewState ?? null;
 
@@ -218,7 +180,7 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
     refund: sit?.refund === "none" || sit?.refund === "some" ? sit.refund : "unknown",
     timelineEvents: (d.timelineEvents ?? []).map((e) => ({ at: e.at, text: e.text })),
     gorgiasFoundNone: data.gorgiasComms?.integrationStatus === "connected" && run?.status === "no_matches",
-    offerAck,
+    asks: data.asks ?? [],
     automationMode: decided ? null : p?.automationMode === "review" || data.appliedRule?.mode === "review" ? "review" : "auto",
     stage,
     packPrepared: p?.lifecycle === "pack_prepared",
