@@ -152,8 +152,11 @@ export function packStatusTone(
     case "blocked":
     case "failed":
       return "critical";
+    case "save_failed":
+      return "warning";
     case "building":
     case "queued":
+    case "saving":
       return "info";
     default:
       return undefined;

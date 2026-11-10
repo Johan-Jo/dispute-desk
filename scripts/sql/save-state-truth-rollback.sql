@@ -1,5 +1,12 @@
 -- Reverse of scripts/sql/save-state-truth-backfill.sql.
 --
+-- VALID ONLY IMMEDIATELY AFTER THE BACKFILL. Once any of the relabelled packs
+-- has been saved again, retried, rebuilt or re-approved, its status reflects a
+-- newer fact and restoring the old stamp would put the lie back. The guard
+-- below only protects packs still at 'save_failed'; it cannot tell a pack the
+-- backfill left alone from one a human has since acted on. Run it within the
+-- same working session as the backfill or not at all.
+--
 -- Restores each backfilled pack to the status recorded in
 -- save_state_backfill_rollback, but ONLY while the pack is still 'save_failed'
 -- and the ledger row is unrestored: if a save job has run since, its own write

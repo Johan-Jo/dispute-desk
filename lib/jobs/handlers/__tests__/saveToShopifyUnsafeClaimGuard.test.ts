@@ -206,9 +206,10 @@ describe("saveToShopifyJob — PR-C1 unsafe-candidate gate", () => {
     expect(mockGraphQL).not.toHaveBeenCalled(); // no disputeEvidenceUpdate
     expect(mockUpload).not.toHaveBeenCalled(); // no file replaced
     // Track S: Shopify is untouched, but the LOCAL pack must stop claiming a
-    // save is pending — the enqueue stamped it `saving`, and a refused job
-    // leaves it `save_failed` (re-savable) rather than stuck "queued".
-    expect(packUpdates.map((p) => p.status)).toEqual(["save_failed"]);
+    // save is pending — the enqueue stamped it `saving`, and a deliberate
+    // refusal puts it back to `ready` (prepared, filing held), not stuck
+    // "queued" and not a failure.
+    expect(packUpdates.map((p) => p.status)).toEqual(["ready"]);
     (DISPUTE as Record<string, unknown>).submission_state = "not_saved";
   });
 
