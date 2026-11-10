@@ -58,6 +58,7 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
+import { gorgiasReviewOffered } from "@/lib/disputes/merchantAsks";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 import type {
   GorgiasCommsMessageSummary,
@@ -376,12 +377,12 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   );
 
   // Self-hide: no integration row, or nothing to show at all.
-  if (!comms) return null;
+  // The shared gate (lib/disputes/merchantAsks), the same one the asks registry reads.
+  if (!comms || !gorgiasReviewOffered(comms)) return null;
   const visibleTickets = comms.tickets.filter(
     (tk) => tk.matchStatus !== "rejected_match",
   );
   const run = comms.latestRun;
-  if (!run && visibleTickets.length === 0) return null;
 
   const confirmed = visibleTickets.filter(
     (tk) => tk.matchStatus === "confirmed_match",

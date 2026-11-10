@@ -362,6 +362,6 @@ describe("the build job passes ONE relied-on set to both the PDF and the provena
     expect(job).toMatch(/argumentFactIds: reliedOnFactIds/);
     expect(job.indexOf("const reliedOnFactIds")).toBeLessThan(job.indexOf("evidenceBasisArgued: reliedOnFactIds"));
     const run = fs.readFileSync("lib/defence/counsel/run.ts", "utf8");
-    expect(run).toMatch(/argumentFactIdsBySlot: argumentFactIdsBySlot\(draft, ledger, args\.facts\)/);
+    expect(run).toMatch(/argumentFactIdsBySlot: argumentFactIdsBySlot\(draft, ledger, facts\)/);
   });
 });

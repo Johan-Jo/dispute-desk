@@ -29,6 +29,7 @@ import { evidenceFieldOfFact, letterCitations } from "@/lib/disputes/letterCitat
 import { buildDisputeRecord, type ItemKey } from "@/lib/disputes/disputeRecord";
 import { createRecordFormat } from "@/lib/disputes/recordFormat";
 import type { DefenceNarrativeOutput } from "@/lib/defence/types";
+import { enrichWorkspacePayload } from "@/lib/disputes/workspacePayload/enrich";
 import { recordInputsFromWorkspace } from "../../app/(embedded)/app/disputes/[id]/record/recordInputs";
 import { openWorkspace } from "../fixtures/disputeRecordFixture";
 import { narrativeJson } from "../fixtures/defencePackageShapes";
@@ -236,7 +237,7 @@ function recordFor(s: Shape, stamp: { evidenceBasisRule: number } | null, narrat
     narrative_json: narrative,
     document_provenance_json: stamp,
   };
-  return buildDisputeRecord(recordInputsFromWorkspace(w as unknown as Parameters<typeof recordInputsFromWorkspace>[0], "2026-11-06T12:00:00Z"), createRecordFormat("en"));
+  return buildDisputeRecord(recordInputsFromWorkspace(enrichWorkspacePayload(w, { evidenceSavedToShopifyAt: null, automationMode: null, assessmentReadOk: true, outcomeInputs: null }) as unknown as Parameters<typeof recordInputsFromWorkspace>[0], "2026-11-06T12:00:00Z"), createRecordFormat("en"));
 }
 
 function citedItemFields(rec: ReturnType<typeof recordFor>): string[] {

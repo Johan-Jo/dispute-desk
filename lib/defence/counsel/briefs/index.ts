@@ -40,6 +40,21 @@ export interface BriefSection {
 /** The ledger claims that put a carrier delivery on record. */
 export const DELIVERY_CLAIM_IDS = ["carrier_delivered", "all_parcels_delivered", "some_parcel_delivered"] as const;
 
+/**
+ * The ledger claims that rest on the carrier's record. THE ONE OWNER of "does
+ * this package show the carrier record": a letter that argues any of these
+ * prints the shipment card, the chronology rows and the tracking link; one that
+ * argues none prints none. Before 2026-11-10 the document decided this from the
+ * reason-code module's fact categories and the letter from its ledger, and
+ * they disagreed (credit-not-processed #24285 cited a delivery the PDF never
+ * showed). `carrierExhibitFacts` (counsel/carrierExhibit.ts) applies it.
+ */
+export const CARRIER_RECORD_CLAIM_IDS = [...DELIVERY_CLAIM_IDS, "shipped", "shipment_in_transit"] as const;
+
+export function carrierRecordArgued(inLedger: ReadonlySet<string>): boolean {
+  return CARRIER_RECORD_CLAIM_IDS.some((id) => inLedger.has(id));
+}
+
 export function deliveryOnRecord(inLedger: ReadonlySet<string>): boolean {
   return DELIVERY_CLAIM_IDS.some((id) => inLedger.has(id));
 }

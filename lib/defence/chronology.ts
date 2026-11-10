@@ -433,13 +433,34 @@ function withoutOpeningBeforeDelivery(events: ChronologyEvent[], facts: Evidence
  *
  * No-op when no delivery fact carries `shipments`.
  */
+/**
+ * Single-parcel letters: the carrier's delivery as a timeline row when the
+ * order's own events carry none (whj8db-1q #24285, 2026-11-10: the letter cited
+ * the delivery and the chronology had no row for it). The same record the
+ * shipment card prints (`singleShipmentOf`), so the card, the row and the
+ * prose cannot disagree. Wording is the allow-listed fixed line; it says the
+ * carrier recorded delivery, nothing about where or to whom.
+ */
+function withSingleDeliveryEvent(events: ChronologyEvent[], facts: EvidenceFact[]): ChronologyEvent[] {
+  if (events.some((e) => classifyChronologyEvent(e.text) === "carrier_delivery")) return events;
+  for (const f of facts) {
+    if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") continue;
+    const v = f.value as Record<string, unknown> | null | undefined;
+    if (v?.proofType !== "delivered_confirmed" && v?.proofType !== "signature_confirmed") continue;
+    const at = typeof v.deliveredAt === "string" ? v.deliveredAt : null;
+    if (!at || Number.isNaN(Date.parse(at))) continue;
+    return [...events, { at, text: "Carrier recorded the shipment as delivered." }].sort((a, b) => a.at.localeCompare(b.at));
+  }
+  return events;
+}
+
 function withShipmentEvents(events: ChronologyEvent[], facts: EvidenceFact[]): ChronologyEvent[] {
   const fact = facts.find((f) => {
     if (f.category !== "delivery_proof" && f.category !== "shipping_tracking") return false;
     const s = (f.value as Record<string, unknown> | null)?.shipments;
     return Array.isArray(s) && s.length > 1;
   });
-  if (!fact) return events;
+  if (!fact) return withSingleDeliveryEvent(events, facts);
   const shipments = (fact.value as Record<string, unknown>).shipments as Array<Record<string, unknown>>;
   const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
   const itemsOf = (s: Record<string, unknown>): string | null => {

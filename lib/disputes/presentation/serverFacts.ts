@@ -92,6 +92,34 @@ export async function gatherPresentations(
     });
   }
 
+  // ── Active save_to_shopify jobs for those packs (Track S) ───────────
+  // The deadline cron's RPC enqueues a save without touching pack status, so
+  // the job row is the only evidence that a filing is queued. A failed read
+  // leaves `saveJobsRead` false, which is passed on as "not read" (null),
+  // never as "no job".
+  const activeSaveJobByPack = new Map<string, string>();
+  let saveJobsRead = false;
+  if (latestByDispute.size > 0) {
+    const latestPackIds = Array.from(latestByDispute.values()).map((p) => p.id);
+    const { data: jobRows, error: jobErr } = await sb
+      .from("jobs")
+      .select("entity_id, status")
+      .eq("job_type", "save_to_shopify")
+      .in("status", ["queued", "running", "pending"])
+      .in("entity_id", latestPackIds);
+    if (!jobErr) {
+      saveJobsRead = true;
+      for (const j of jobRows ?? []) {
+        const id = j.entity_id as string | null;
+        if (!id) continue;
+        // `running` outranks `queued` when both exist.
+        if (activeSaveJobByPack.get(id) !== "running") {
+          activeSaveJobByPack.set(id, j.status as string);
+        }
+      }
+    }
+  }
+
   // ── Latest defence package per dispute: skipped for lack of evidence
   // means there is no letter to approve (resolveAttention). ────────────
   const letterSkippedNoEvidence = new Set<string>();
@@ -184,6 +212,8 @@ export async function gatherPresentations(
       submissionState: row.submission_state,
       normalizedStatus: row.normalized_status,
       packStatus: pack?.status ?? null,
+      saveJobStatus:
+        saveJobsRead && pack ? (activeSaveJobByPack.get(pack.id) ?? null) : null,
       strengthOverall: opts.strengthOverallByDispute?.get(row.id) ?? null,
       attentionReason: row.attention_reason,
       needsAttention: row.needs_attention === true,

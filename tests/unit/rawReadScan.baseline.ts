@@ -18,7 +18,8 @@ export type BaselineCategory =
   | "write-path" // reads the stored row to patch it, never to interpret for display
   | "fact-side" // fact/strength/analysis layer, left alone by the plan
   | "taxonomy" // field-key registry / label map, not a verdict
-  | "open"; // known independent second reader of merchant copy
+  | "open" // known independent second reader of merchant copy
+  | "allowed"; // plan 3.4 patterns: a legitimate raw read, with the reason it is not a bypass
 
 export interface BaselineEntry {
   file: string;
@@ -26,6 +27,8 @@ export interface BaselineEntry {
   count: number;
   category: BaselineCategory;
   reason: string;
+  /** Required on `open` entries of the plan 3.4 patterns: the PR that removes the read. */
+  removedBy?: string;
 }
 
 const patchReason =
@@ -59,4 +62,16 @@ export const BASELINE: BaselineEntry[] = [
   { file: "lib/argument/refundPresentation.ts", pattern: "returnStatus", count: 1, category: "open", reason: "OPEN: presentation reads the no_return_initiated payload's returnStatus === NO_RETURN itself instead of the single resolver; tracked for PR 5 (gated by the fact being emitted)." },
   { file: "app/api/disputes/[id]/workspace/route.ts", pattern: "totals.refunded", count: 1, category: "open", reason: "OPEN: workspace payload exposes refundedAmount read raw from totals.refunded beside refundStatement, a second reader plan 3.3 says should not exist; tracked for PR 5." },
   { file: "components/packs/detail/EvidenceContentViewer.tsx", pattern: "totals.refunded", count: 3, category: "open", reason: "OPEN: evidence viewer renders the order section's Refunded row straight from payload.totals.refunded, not routed through refundStatement; tracked for PR 5." },
+
+  // --- plan 3.4 owner-bypass patterns (dispute page + record builder), classified in PR 1 ---
+  { file: "app/(embedded)/app/disputes/[id]/hooks/deriveWorkspace.ts", pattern: "savedToShopifyAt", count: 5, category: "open", reason: "OPEN: decides 'saved' from pack.savedToShopifyAt, the same class as recordInputs stageOf(); moves to dispute.evidenceSavedToShopifyAt. (Relocated here from useDisputeWorkspace.ts by the PR 1 deriveWorkspace extraction.)", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/record/recordInputs.ts", pattern: "savedToShopifyAt", count: 1, category: "open", reason: "OPEN: savedAt reads pack.savedToShopifyAt instead of dispute.evidenceSavedToShopifyAt. (stageOf() moved, unchanged, to lib/disputes/workspacePayload/recordStage.ts by the merchant-asks step; PR 2 deletes it there in favour of presentation.lifecycle.)", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/record/recordInputs.ts", pattern: "appliedRule.mode", count: 1, category: "open", reason: "OPEN: the record re-derives automationMode from appliedRule.mode instead of presentation.automationMode. (stageOf() moved, unchanged, to lib/disputes/workspacePayload/recordStage.ts by the merchant-asks step; PR 2 deletes it there.)", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/record/recordInputs.ts", pattern: "bankIncludedFacts(", count: 1, category: "open", reason: "OPEN: decided cited fields are recomputed here from the submitted package; moves to citedFacts/isCitedFact + letterCitations.evidenceFieldOfFact.", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/record/recordInputs.ts", pattern: "FACT_CATEGORY_FIELD", count: 2, category: "open", reason: "OPEN: import and use of the second category-to-field map; deleted when decided cited fields come from letterCitations.", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/record/RecordWorkspace.tsx", pattern: "appliedRule.mode", count: 1, category: "open", reason: "OPEN: the page passes appliedRule.mode raw (:1191) instead of presentation.automationMode.", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts", pattern: "appliedRule.mode", count: 1, category: "open", reason: "OPEN: deriveAutomationMode reads appliedRule.mode (:262) instead of presentation.automationMode.", removedBy: "PR 2" },
+  { file: "app/(embedded)/app/disputes/[id]/workspace-components/types.ts", pattern: "savedToShopifyAt", count: 1, category: "allowed", reason: "Type declaration of the payload field (pack.savedToShopifyAt); declares the shape, reads no value." },
+  { file: "lib/disputes/disputeRecord.ts", pattern: "FACT_CATEGORY_FIELD", count: 1, category: "open", reason: "OPEN: the second category-to-field map (:318) the record keeps beside the evidence-fact categorizer; deleted in PR 2.", removedBy: "PR 2" },
+  { file: "lib/disputes/disputeRecord.ts", pattern: "DELIVERY_CONFIRMED", count: 2, category: "open", reason: "OPEN: local delivery classification (:315 definition, :415 use) instead of the evidence line item / deliveryPresentation; deleted in PR 2.", removedBy: "PR 2" },
 ];

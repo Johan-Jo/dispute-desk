@@ -42,6 +42,7 @@ import {
 } from "@/lib/disputes/decidedView";
 import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
 import { utcDaysUntil, type RecordFormat } from "@/lib/disputes/recordFormat";
+import { askActionKey, isAskOffered, primaryAsk, type Ask } from "@/lib/disputes/merchantAsks";
 
 const NS = "disputes.record";
 const tk = (key: string, params?: I18nToken["params"]): I18nToken => ({
@@ -267,8 +268,8 @@ export interface RecordInputs {
   timelineEvents: Array<{ at?: string; text?: string }>;
   /** Gorgias is connected and found no conversations for this customer. */
   gorgiasFoundNone: boolean;
-  /** The cardholder-acknowledgement flow is offered on this dispute. */
-  offerAck: boolean;
+  /** The merchant asks registry (lib/disputes/merchantAsks): what the merchant can be asked for here, in rank order. */
+  asks: Ask[];
   /** Open only: automation mode the package is filed under. */
   automationMode: "auto" | "review" | null;
   stage: RecordStage;
@@ -738,6 +739,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
   const facts = v.facts;
   const status = i.status;
   const stage = i.stage;
+  const offerAck = isAskOffered(i.asks, "cardholder_ack");
   const decided = status !== "open";
   const family = resolveReasonFamily(v.reason);
   const fraud = family === "fraud";
@@ -841,10 +843,11 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
 
     /* the one thing to do, if there is one */
     if (PREPARED_STAGES.includes(stage) && stage !== "fatal") {
-      if (stage === "prepared_review" && i.decision === null) f.action = tk("action.review");
-      else if (i.offerAck) f.action = tk("action.ack");
-      else if (stage === "needs_attention") f.action = tk("action.evidence");
-      else f.action = tk("action.none");
+      // The first offered required ask, else the first offered optional one, else none. A required
+      // ask that is offered can never leave this saying "no action is required".
+      const ask = primaryAsk(i.asks);
+      const key = ask ? askActionKey(ask.id) : null;
+      f.action = key ? { key } : tk("action.none");
     }
   } else {
     /* filed */
@@ -947,7 +950,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
   /* Help */
   let help: DisputeRecord["help"] = null;
   if (!decided) {
-    if (i.offerAck && stage !== "covered" && stage !== "saved" && stage !== "under_review") {
+    if (offerAck && stage !== "covered" && stage !== "saved" && stage !== "under_review") {
       help = {
         title: tk("help.openTitle"),
         items: [

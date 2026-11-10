@@ -450,6 +450,9 @@ function OverviewBody({
 }) {
   const items = new Map(record.items.map((x) => [x.key, x]));
   const cl = record.checklist;
+  const requiredAskIds = new Set(
+    (workspace.data?.asks ?? []).filter((a) => a.priority === "required" && a.offered && a.pending).map((a) => a.id),
+  );
   return (
     <>
       {help ? (
@@ -504,6 +507,9 @@ function OverviewBody({
       {ack}
 
       <BankClaimCard workspace={workspace} />
+      {/* The other required asks, from the registry (lib/disputes/merchantAsks): the same cards the Evidence tab renders, so the first screen shows what the hero asks for. */}
+      {requiredAskIds.has("parcel_outcome") ? <ParcelOutcomeCard workspace={workspace} /> : null}
+      {requiredAskIds.has("return_request") ? <ReturnRequestCard workspace={workspace} /> : null}
       <LiabilityShiftPanel disputeId={workspace.data?.dispute?.id ?? ""} />
 
       {record.recordRows.length > 0 ? (

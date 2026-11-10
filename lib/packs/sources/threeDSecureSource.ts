@@ -31,6 +31,7 @@ import type {
   OrderTransaction,
 } from "@/lib/shopify/queries/orders";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
 import {
   parseReceiptJson,
   readThreeDsAuthenticated,
@@ -147,23 +148,6 @@ export async function collectThreeDSecureEvidence(
       data,
     },
   ];
-}
-
-/**
- * Pick the transaction whose receipt is most likely to carry 3DS data:
- * the first successful SALE / AUTHORIZATION on the order.
- */
-function pickPrimaryTransaction(
-  transactions: OrderTransaction[] | undefined,
-): OrderTransaction | null {
-  if (!transactions?.length) return null;
-  return (
-    transactions.find(
-      (t) =>
-        (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-        t.status === "SUCCESS",
-    ) ?? null
-  );
 }
 
 /** Top-level keys of the receipt — useful for diagnostics when shape drifts. */

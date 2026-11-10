@@ -57,10 +57,15 @@ export async function persistOrders(
   // ── Partition orders into inserts vs updates ─────────────────────
   const ids = orders.map((o) => o.shopify_order_id);
   let existingSet = new Set<string>();
+  // Stored carrier-derived delivery columns (written by `rollupOrderDelivery`,
+  // never by Shopify) — see the update payload below.
+  const storedDelivery = new Map<string, Record<string, unknown>>();
   if (ids.length > 0) {
     const { data: existing, error } = await sb
       .from("shopify_orders")
-      .select("shopify_order_id")
+      .select(
+        "shopify_order_id, delivery_status, delivered_at_tracking, signed_by_name, tracking_source",
+      )
       .eq("shop_id", shopId)
       .in("shopify_order_id", ids);
     if (error) {
@@ -69,6 +74,7 @@ export async function persistOrders(
       );
     }
     existingSet = new Set((existing ?? []).map((r) => r.shopify_order_id));
+    for (const r of existing ?? []) storedDelivery.set(r.shopify_order_id, r);
   }
 
   const inserts = orders.filter((o) => !existingSet.has(o.shopify_order_id));
@@ -115,7 +121,16 @@ export async function persistOrders(
   const nowIso = new Date().toISOString();
   if (updates.length > 0) {
     const { error } = await sb.from("shopify_orders").upsert(
-      updates.map((o) => ({
+      updates.map((o) => {
+        // Shopify's native delivery is null for orders whose status came
+        // from our own carrier lookup. Re-sending that null wiped "Delivered"
+        // every re-ingest, which the nightly refresh read as a change and
+        // rebuilt the defence package for (2026-11-10). Keep the stored
+        // carrier-derived values (the four travel together) unless Shopify
+        // has a value of its own.
+        const kept = storedDelivery.get(o.shopify_order_id);
+        const keep = o.delivery_status == null && kept?.delivery_status != null;
+        return {
         shop_id: shopId,
         shopify_order_id: o.shopify_order_id,
         created_at_shopify: o.created_at_shopify,
@@ -133,12 +148,13 @@ export async function persistOrders(
         cancel_reason: o.cancel_reason,
         fraud_protection_level: o.fraud_protection_level,
         three_ds_authenticated: o.three_ds_authenticated,
-        delivery_status: o.delivery_status,
-        delivered_at_tracking: o.delivered_at_tracking,
-        signed_by_name: o.signed_by_name,
-        tracking_source: o.tracking_source,
+        delivery_status: keep ? kept!.delivery_status : o.delivery_status,
+        delivered_at_tracking: keep ? kept!.delivered_at_tracking : o.delivered_at_tracking,
+        signed_by_name: keep ? kept!.signed_by_name : o.signed_by_name,
+        tracking_source: keep ? kept!.tracking_source : o.tracking_source,
         updated_at: nowIso,
-      })),
+        };
+      }),
       { onConflict: "shop_id,shopify_order_id" },
     );
     if (error) {

@@ -28,6 +28,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
 import { parseRiskFacts, PARSER_VERSION, type RawFact } from "./factParser";
 import type {
   RawBackfillOrder,
@@ -84,7 +85,7 @@ export function buildSignalRow(input: SignalRowInput): {
   // CardPaymentDetails. Other payment methods (Shop Pay, Apple Pay,
   // gift card, manual) leave paymentDetails as the base interface
   // shape — null on all card-specific fields.
-  const primaryCardTx = pickPrimaryCardTransaction(input.raw);
+  const primaryCardTx = pickPrimaryTransaction(input.raw.transactions);
   const pd = primaryCardTx?.paymentDetails ?? null;
 
   // Combine all assessments' facts for the parse — Shopify can return
@@ -271,19 +272,6 @@ export async function upsertSignalRows(
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-function pickPrimaryCardTransaction(
-  raw: RawBackfillOrder,
-): RawBackfillTransaction | null {
-  if (!raw.transactions || raw.transactions.length === 0) return null;
-  return (
-    raw.transactions.find(
-      (t) =>
-        (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-        t.status === "SUCCESS",
-    ) ?? null
-  );
-}
 
 function nullableTrim(v: string | null): string | null {
   if (v == null) return null;

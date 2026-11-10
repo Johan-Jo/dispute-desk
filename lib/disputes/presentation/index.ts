@@ -72,6 +72,13 @@ export {
 } from "./resolveBuildAttempt";
 
 export {
+  isSaveInFlight,
+  resolveSaveAttempt,
+  type ResolveSaveAttemptInput,
+  type SaveAttemptState,
+} from "./resolveSaveAttempt";
+
+export {
   mayPromiseAutomaticWork,
   mayRenderIntegrationGuidance,
   mayRenderLiveIntegrationCard,

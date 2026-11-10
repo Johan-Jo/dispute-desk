@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopSettings } from "@/lib/automation/settings";
+import { loadEnrichSourceRows } from "@/lib/disputes/workspacePayload/sourceRows";
+import { enrichWorkspacePayload } from "@/lib/disputes/workspacePayload/enrich";
 import { refundStatementFromPackSections } from "@/lib/disputes/refundStatement";
 import { assembleEffectiveChecklist } from "@/lib/packs/effectiveChecklist";
 import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
@@ -195,6 +197,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         primary_domain: (shop as { primary_domain?: string | null } | null)?.primary_domain ?? null,
       })
     : null;
+
+  // Single-source plan 3.1: the payload leaves through the one enrichment path the tests also use.
+  // PR 1 adds no fields; the rows load in parallel with the rest of the route and a failed read
+  // cannot break the page.
+  const sourceRowsPromise = loadEnrichSourceRows(sb, disputeId).catch(() => ({
+    evidenceSavedToShopifyAt: null,
+    automationMode: null,
+    assessmentReadOk: false,
+    outcomeInputs: null,
+  }));
 
   // ── 2. Load latest evidence pack ──────────────────────────────────
   const { data: packRow } = await sb
@@ -1324,7 +1336,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     console.warn("[workspace] return-request read failed", err instanceof Error ? err.message : err);
   }
 
-  return NextResponse.json({
+  const sourceRows = await sourceRowsPromise;
+  return NextResponse.json(enrichWorkspacePayload({
     dispute,
     bankClaim,
     returnRequest,
@@ -1408,5 +1421,5 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           })()
         : { blocked: false, reasons: [], message: "" },
     },
-  });
+  }, sourceRows));
 }

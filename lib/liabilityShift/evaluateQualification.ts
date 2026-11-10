@@ -19,7 +19,8 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
-import { deriveCardNetwork, pickPrimaryCardTransaction } from "@/lib/disputes/enrichNetworkReasonCode";
+import { deriveCardNetwork } from "@/lib/disputes/enrichNetworkReasonCode";
+import { pickPrimaryTransaction } from "@/lib/shopify/transactions/primaryTransaction";
 import type { OrderDetailNode, OrderTransaction } from "@/lib/shopify/queries/orders";
 import { fetchPriorsForCE30 } from "./fetchPriors";
 import { pickInitialSubscriptionBilling } from "./priors";
@@ -213,7 +214,7 @@ function mapOrderDetailToQualificationOrder(
   threeDSecure: EvaluateQualificationInput["threeDSecure"],
 ): QualificationOrder {
   const network = deriveCardNetwork(order);
-  const primaryTx = pickPrimaryCardTransaction(order.transactions);
+  const primaryTx = pickPrimaryTransaction(order.transactions);
   const totalAmount = parseFloat(order.totalPriceSet.shopMoney.amount);
   const totalRefunded = parseFloat(order.totalRefundedSet.shopMoney.amount);
   const isValidationCharge =
@@ -294,7 +295,7 @@ function shiftIso(iso: string, days: number): string {
 function readThreeDSecureFromOrder(
   order: OrderDetailNode,
 ): EvaluateQualificationInput["threeDSecure"] {
-  const tx = pickPrimaryTransactionFor3DS(order.transactions);
+  const tx = pickPrimaryTransaction(order.transactions);
   if (!tx) return null;
   if (tx.gateway !== "shopify_payments") return null;
   const receipt = parseReceiptDefensively(tx.receiptJson);
@@ -328,21 +329,6 @@ function readThreeDSecureFromOrder(
     dataOnly,
     merchantConfirmed: false,
   };
-}
-
-function pickPrimaryTransactionFor3DS(
-  transactions: OrderTransaction[] | undefined,
-): OrderTransaction | null {
-  if (!transactions?.length) return null;
-  return (
-    transactions.find(
-      (t) =>
-        (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
-        t.status === "SUCCESS",
-    ) ??
-    transactions[0] ??
-    null
-  );
 }
 
 function parseReceiptDefensively(raw: unknown): Record<string, unknown> | null {

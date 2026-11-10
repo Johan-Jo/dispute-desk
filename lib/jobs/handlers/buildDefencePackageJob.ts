@@ -41,7 +41,7 @@ import { nonCardDisputeCategoryDisplay, cardReasonCodeDisplay } from "@/lib/defe
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { CURRENT_PROMPT_VERSION, checkDailyCap, writeRun, COUNSEL_REUSED_STRATEGY_KEY } from "@/lib/defence/narrativeWriter";
 import { COUNSEL_DAILY_RUN_CAP, COUNSEL_PROMPT_FAMILY, counselEnabled, runCounsel, type CounselTrace } from "@/lib/defence/counsel/run";
-import { issueRecords, signatureRules } from "@/lib/defence/counsel/issueRules";
+import { issueEvidence, issueRecords, signatureRules } from "@/lib/defence/counsel/issueRules";
 import { isBlockingIssue } from "@/lib/defence/counsel/generate";
 import { SKIP_REASON, factCountsByCategory, failureSignature, llmErrorClass, type SkipExit } from "@/lib/defence/outcomes";
 import { COUNSEL_PROMPT_VERSION } from "@/lib/defence/counsel/prompts";
@@ -631,6 +631,9 @@ export async function handleBuildDefencePackage(
           shopId: pkg.shop_id,
           moduleKey: reasonCodeModule.key,
           facts: planFacts,
+          carrierRecordPool: bankIncludedFacts(classification.approved).filter(
+            (f) => f.category === "delivery_proof" || f.category === "shipping_tracking",
+          ),
           packSections: sectionsRaw.map((s) => ({ type: s.type, source: s.source, data: s.data ?? {} })),
           orderName: orderCtx.orderName ?? null,
           orderGid: (dispute as { order_gid?: string | null } | null)?.order_gid ?? null,
@@ -756,6 +759,8 @@ export async function handleBuildDefencePackage(
         kind,
         brief: trace?.replay.brief ?? null,
         rules: issues.map((i) => `${i.section}:${i.rule}`),
+        // Internal evidence of what was rejected and why (truncated).
+        outcome_detail: trace ? rejectedEvidence(trace) : [],
       },
     });
     const reason =
@@ -789,6 +794,12 @@ export async function handleBuildDefencePackage(
     error: null as string | null,
   };
   usedCounsel = !!counselRes;
+  // The carrier record the letter argues is shown in the document, whatever the
+  // module's plan kept (lib/defence/counsel/carrierExhibit.ts). Added to the
+  // ONE list the validator, the chronology, the card and the Evidence Basis read.
+  if (counselRes.exhibitFacts?.length) {
+    planFacts = [...planFacts, ...(counselRes.exhibitFacts ?? [])] as typeof planFacts;
+  }
 
   if (narrativeRes.capReached) {
     return await markFailed(sb, pkg, narrativeRes.error ?? "daily cap reached", "daily_cap_reached", true);
@@ -1842,6 +1853,18 @@ async function markSkipped(
   return { ok: true };
 }
 
+/** The blocking findings with the offending text and stated reason. Internal
+ *  only: `outcome_detail` and the audit event are never selected for a
+ *  merchant or rendered into a bank document. */
+function rejectedEvidence(trace: CounselTrace) {
+  return issueEvidence(trace.issues.filter(isBlockingIssue)).map((e) => ({
+    rule: e.rule,
+    section: e.section,
+    text: e.detail.text ?? null,
+    reason: e.detail.reason ?? null,
+  }));
+}
+
 /** What the writer argued from: the brief it started with and ended on, the
  *  theory, the sections it was asked to argue, the ledger's claims, and the
  *  approved facts by category. Counted across disputes this ranks which
@@ -1856,6 +1879,7 @@ function counselCoverage(trace: CounselTrace, facts: ReadonlyArray<{ category: s
       argued: trace.replay.argued,
       ledgerClaims: trace.replay.ledger.map((c) => c.id),
       corrected: trace.corrected,
+      ...(trace.outcome === "checks_failed" ? { rejected: rejectedEvidence(trace) } : {}),
     },
     facts: factCountsByCategory(facts),
   };

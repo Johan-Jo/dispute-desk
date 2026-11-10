@@ -253,7 +253,7 @@ export function timelineBlock(ledger: readonly LedgerClaim[]): string {
   }
   const later = by.get("later_order");
   if (later) {
-    rows.push(`- Later order placed: ${later.laterOrderOn} — ${later.daysAfterDeliveryWord} days after the delivery.`);
+    rows.push(`- Later order placed: ${later.laterOrderOn} — ${later.daysAfterDeliveryWord} days after the delivery${later.laterOrderAfterDispute ? `; placed ${later.daysAfterDisputeOpenedWord} day(s) after the dispute was opened (${later.disputeOpenedOn})` : ""}.`);
   }
   const after = by.get("dispute_after_delivery");
   const before = by.get("delivered_after_dispute_opened");

@@ -403,6 +403,13 @@ describe("buildDefencePackageJob — a withheld letter says why", () => {
     expect(stored?.values.outcome_detail).toMatchObject({
       counsel: { outcome: "checks_failed", brief: "general", theory: "sale_on_record", argued: [], ledgerClaims: ["claim_stated", "order_placed"] },
     });
+    // Internal evidence: the rule AND the offending text (outcome_detail is
+    // never selected for a merchant), blocking findings only.
+    const rejected = (stored?.values.outcome_detail as { counsel: { rejected: Array<{ rule: string; text: string | null }> } }).counsel.rejected;
+    expect(rejected.map((r) => [r.rule, r.text])).toEqual([
+      ["grounding.unsupported_specific", "fifty"],
+      ["copy.specific_repeated", "3 july"],
+    ]);
     const { logAuditEvent } = await import("@/lib/audit/logEvent");
     expect(vi.mocked(logAuditEvent)).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -31,6 +31,8 @@ const DECISION_PENDING_LIFECYCLES: ReadonlySet<OperationalLifecycle> = new Set([
   "building_evidence",
   "monitoring",
   "pack_prepared",
+  "save_queued",
+  "save_failed",
 ]);
 
 /**

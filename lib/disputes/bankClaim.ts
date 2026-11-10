@@ -138,7 +138,12 @@ export async function markBankClaimNeeded(
       updated_at: new Date().toISOString(),
     })
     .eq("id", disputeId)
-    .or(`attention_reason.is.null,attention_reason.eq.${BANK_CLAIM_NEEDED}`)
+    // `submission_failed` is OUR internal banner (Track S); a merchant task
+    // outranks it, or a leftover failure flag would hide the one thing the
+    // merchant can act on.
+    .or(
+      `attention_reason.is.null,attention_reason.eq.${BANK_CLAIM_NEEDED},attention_reason.eq.submission_failed`,
+    )
     .select("id");
   return (data ?? []).length > 0;
 }
