@@ -154,6 +154,17 @@ export function deriveNormalizedStatus(
         true,
       );
     }
+    // The filing itself failed (Track S). Not "no pack yet": the pack is built
+    // and can be saved again.
+    if (packStatus === "save_failed") {
+      return result(
+        "action_needed",
+        "Saving evidence to Shopify failed",
+        "save_evidence",
+        "Save the evidence to Shopify again",
+        true,
+      );
+    }
     if (needsReview) {
       return result(
         "needs_review",

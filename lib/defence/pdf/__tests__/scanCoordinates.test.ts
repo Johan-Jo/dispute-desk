@@ -47,6 +47,32 @@ describe("findOutOfRangeOperand", () => {
     expect(await findOutOfRangeOperand(await doc.save())).toBeNull();
   });
 
+  it("does not read inline-image bytes as operands (no false positive)", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage();
+    // BI … ID <arbitrary bytes that decode to digit runs> EI, then a normal op.
+    const raw = "q 10 0 0 10 50 50 cm BI /W 1 /H 1 /CS /G /BPC 8 ID 99999999999999 -88888888888 EI Q 1 0 0 1 5 5 cm";
+    page.node.addContentStream(doc.context.register(doc.context.stream(raw)));
+    expect(await findOutOfRangeOperand(await doc.save({ useObjectStreams: false }))).toBeNull();
+  });
+
+  it("still finds a bad operand that follows an inline image", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage();
+    const raw = "q BI /W 1 /H 1 ID 7777777777777 EI Q 1 0 0 1 0 14500000000 cm";
+    page.node.addContentStream(doc.context.register(doc.context.stream(raw)));
+    const found = await findOutOfRangeOperand(await doc.save({ useObjectStreams: false }));
+    expect(found?.value).toBe(14500000000);
+  });
+
+  it("skips a stream it cannot decode instead of throwing", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage();
+    const s = doc.context.stream("99999999999999 w", { Filter: "DCTDecode" });
+    page.node.addContentStream(doc.context.register(s));
+    expect(await findOutOfRangeOperand(await doc.save({ useObjectStreams: false }))).toBeNull();
+  });
+
   it("throws on bytes that are not a PDF (the caller decides what that means)", async () => {
     await expect(findOutOfRangeOperand(new Uint8Array([1, 2, 3]))).rejects.toThrow();
   });

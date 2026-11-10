@@ -9,6 +9,12 @@
  * STORED file, so a fixed renderer does not help a PDF that already exists.
  *
  * Same decoding as `lib/defence/pdf/__tests__/runningHeaderRule.test.ts`.
+ *
+ * The scan must never read garbage as an operand: a false positive defers a
+ * good file. So only the TEXT of the content stream is scanned — inline image
+ * data (`BI … ID <binary> EI`), names, hex strings and literal strings are cut
+ * out first, a number must be a whole token, and a stream that cannot be
+ * decoded (an exotic filter) is skipped rather than guessed at.
  */
 
 import { PDFDocument, PDFArray, PDFRef, decodePDFRawStream } from "pdf-lib";
@@ -24,14 +30,17 @@ export interface OutOfRangeOperand {
   value: number;
 }
 
-/** Numeric operands only: hex and literal strings carry glyph ids and text,
- *  and names (`/Helvetica-7098480789`) carry digits too — none are coordinates. */
+/** Numeric operands only. Inline images are removed first: their payload is
+ *  arbitrary bytes, and decoding those as latin1 yields digit runs. */
 function numericOperands(stream: string): number[] {
   const stripped = stream
+    .replace(/\bBI\b[\s\S]*?\bID\b[\s\S]*?\bEI\b/g, " ")
     .replace(/<[0-9a-fA-F\s]*>/g, " ")
     .replace(/\/[^\s/<>[\]()%]+/g, " ")
     .replace(/\((?:\\.|[^\\()])*\)/g, " ");
-  return (stripped.match(/-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g) ?? []).map(Number);
+  // Whole tokens only: not glued to letters/digits/dots on either side.
+  const tokens = stripped.match(/(?<![\w.])-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?(?![\w.])/g) ?? [];
+  return tokens.map(Number);
 }
 
 /**
@@ -55,9 +64,14 @@ export async function findOutOfRangeOperand(
       streams.push(contents);
     }
     for (const s of streams) {
-      const text = Buffer.from(decodePDFRawStream(s as PDFRawStream).decode()).toString("latin1");
+      let text: string;
+      try {
+        text = Buffer.from(decodePDFRawStream(s as PDFRawStream).decode()).toString("latin1");
+      } catch {
+        continue; // undecodable stream: not evidence of anything
+      }
       for (const n of numericOperands(text)) {
-        if (!Number.isFinite(n) || Math.abs(n) > MAX_PDF_OPERAND) {
+        if (Number.isFinite(n) && Math.abs(n) > MAX_PDF_OPERAND) {
           return { page: i + 1, value: n };
         }
       }

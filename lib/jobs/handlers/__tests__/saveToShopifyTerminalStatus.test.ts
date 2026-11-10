@@ -108,7 +108,8 @@ interface Fixture {
   dispute: Record<string, unknown> | null;
   dpkg: Record<string, unknown> | null;
   buildJobs: unknown[];
-  recentAlerts: unknown[];
+  /** audit_events rows visible to the handler's own dedupe queries. */
+  audit: Array<Record<string, unknown>>;
 }
 
 let fx: Fixture;
@@ -133,16 +134,21 @@ function freshFixture(): Fixture {
     },
     dpkg: { id: "pkg-1", version: 3, status: "final", pdf_path: "s/d/v3.pdf", facts_json: {}, narrative_json: {} },
     buildJobs: [],
-    recentAlerts: [],
+    audit: [],
   };
 }
 
 function installSupabase() {
   const from = (table: string) => {
     const b: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "neq", "in", "order", "limit", "gte", "or", "is", "not"]) {
+    const filters: Array<[string, unknown]> = [];
+    for (const m of ["select", "neq", "in", "order", "limit", "gte", "or", "is", "not"]) {
       b[m] = () => b;
     }
+    b.eq = (col: string, val: unknown) => {
+      filters.push([col, val]);
+      return b;
+    };
     const row = () => {
       if (table === "evidence_packs") return fx.pack;
       if (table === "disputes") return fx.dispute;
@@ -161,8 +167,20 @@ function installSupabase() {
       return b;
     };
     b.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => {
+      const matches = (r: Record<string, unknown>) =>
+        filters.every(([col, val]) => {
+          if (col.includes("->>")) {
+            const key = col.split("->>")[1];
+            return String((r.event_payload as Record<string, unknown> | undefined)?.[key]) === String(val);
+          }
+          return r[col] === val;
+        });
       const list =
-        table === "jobs" ? fx.buildJobs : table === "audit_events" ? fx.recentAlerts : [];
+        table === "jobs"
+          ? fx.buildJobs
+          : table === "audit_events"
+            ? fx.audit.filter(matches)
+            : [];
       return Promise.resolve({ data: list, error: null }).then(res, rej);
     };
     return b;
@@ -180,6 +198,16 @@ const auditPayload = (type: string) =>
   vi.mocked(logAuditEvent).mock.calls.find((c) => c[0].eventType === type)?.[0].eventPayload as
     | Record<string, unknown>
     | undefined;
+
+/** A deliberate refusal: pack back to `ready`, an audit row, and NOTHING that
+ *  reads as a failure (no submission_failed banner, no admin email). */
+function expectRefusal(errorClass: string) {
+  expect(lastPackStatus()).toBe("ready");
+  expect(auditPayload("save_refused")?.error_class).toBe(errorClass);
+  expect(auditTypes()).not.toContain("job_failed");
+  expect(attentionWrite()).toBeUndefined();
+  expect(sendSaveFailedAdminAlert).not.toHaveBeenCalled();
+}
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -226,20 +254,19 @@ describe("status guard", () => {
 /* ── one test per failing return site ───────────────────────────────────── */
 
 describe("every failing return after start leaves a terminal pack status", () => {
-  it("stale response cycle → save_failed", async () => {
+  it("stale response cycle → REFUSED: pack ready, no submission_failed, no email", async () => {
     fx.pack.response_cycle = 1;
     fx.dispute!.response_cycle = 2;
     const r = await handleSaveToShopify(job());
     expect(r).toMatchObject({ ok: false, retriable: false });
-    expect(lastPackStatus()).toBe("save_failed");
-    expect(auditPayload("job_failed")?.error_class).toBe("stale_response_cycle");
+    expectRefusal("stale_response_cycle");
   });
 
-  it("bank claim missing → save_failed", async () => {
+  it("bank claim missing → REFUSED", async () => {
     vi.mocked(bankClaimBlocksFiling).mockResolvedValue(true);
     const r = await handleSaveToShopify(job());
     expect(r).toMatchObject({ ok: false, retriable: false });
-    expect(lastPackStatus()).toBe("save_failed");
+    expectRefusal("bank_claim_missing");
   });
 
   it("no evidence GID → save_failed", async () => {
@@ -254,22 +281,24 @@ describe("every failing return after start leaves a terminal pack status", () =>
     expect(lastPackStatus()).toBe("save_failed");
   });
 
-  it("canonical selector refuses → save_failed", async () => {
+  it("canonical selector refuses → REFUSED", async () => {
     vi.mocked(canonicalPipelineEnabled).mockReturnValue(true);
     vi.mocked(selectForSaveWorker).mockResolvedValue({
       selection: { outcome: "none", reason: "stale" }, unsafeContent: false, judged: null,
     } as never);
     expect(await handleSaveToShopify(job())).toMatchObject({ ok: false, retriable: false });
-    expect(lastPackStatus()).toBe("save_failed");
+    expectRefusal("defence_package_not_fileable");
   });
 
-  it("canonical selector returns an unpromoted draft → save_failed", async () => {
+  it("canonical selector returns an unpromoted draft → retriable wait, pack saving, no alert", async () => {
     vi.mocked(canonicalPipelineEnabled).mockReturnValue(true);
     vi.mocked(selectForSaveWorker).mockResolvedValue({
       selection: { outcome: "selected", package: { requiresFinalize: true } }, unsafeContent: false, judged: null,
     } as never);
-    expect(await handleSaveToShopify(job())).toMatchObject({ ok: false, retriable: false });
-    expect(lastPackStatus()).toBe("save_failed");
+    expect(await handleSaveToShopify(job({ attempts: 1 }))).toMatchObject({ ok: false, retriable: true });
+    expect(lastPackStatus()).toBe("saving");
+    expect(attentionWrite()).toBeUndefined();
+    expect(sendSaveFailedAdminAlert).not.toHaveBeenCalled();
   });
 
   it("no defence package → save_failed", async () => {
@@ -298,12 +327,12 @@ describe("every failing return after start leaves a terminal pack status", () =>
     expect(lastPackStatus()).toBe("save_failed");
   });
 
-  it("unsafe candidate → save_failed", async () => {
+  it("unsafe candidate → REFUSED", async () => {
     vi.mocked(assessPackageCandidateSafety).mockReturnValue({
       safe: false, reasons: ["retired_delivery_fact"], retiredKeys: [],
     } as never);
     expect(await handleSaveToShopify(job())).toMatchObject({ ok: false, retriable: false });
-    expect(lastPackStatus()).toBe("save_failed");
+    expectRefusal("defence_package_unsafe_claim");
   });
 
   it("PDF download fails, attempts remain → retriable, pack saving (not saved)", async () => {
@@ -473,7 +502,7 @@ describe("every failing return after start leaves a terminal pack status", () =>
 describe("submission_failed and the ops alert", () => {
   it("does not email twice for the same dispute within a day", async () => {
     fx.dpkg = null;
-    fx.recentAlerts = [{ id: "a1" }]; // an alert row already exists in the last 24h
+    fx.audit = [{ event_type: "save_failed_admin_alerted", dispute_id: DISPUTE_ID, shop_id: SHOP_ID, event_payload: { error_class: "no_defence_package", suppressed: false } }];
     await handleSaveToShopify(job());
     expect(lastPackStatus()).toBe("save_failed");
     expect(sendSaveFailedAdminAlert).not.toHaveBeenCalled();
@@ -497,5 +526,152 @@ describe("submission_failed and the ops alert", () => {
       attention_reason: "submission_failed",
       attention_payload: expect.objectContaining({ pack_id: PACK_ID, job_id: "job-1", error_class: "no_defence_package" }),
     });
+  });
+});
+
+/* ── canonical pipeline ON (production) ─────────────────────────────────── */
+
+describe("canonical pipeline on", () => {
+  beforeEach(() => {
+    vi.mocked(canonicalPipelineEnabled).mockReturnValue(true);
+  });
+  const selected = (requiresFinalize = false) =>
+    vi.mocked(selectForSaveWorker).mockResolvedValue({
+      selection: { outcome: "selected", package: { requiresFinalize } }, unsafeContent: false, judged: null,
+    } as never);
+
+  it("stale PDF: ONE rebuild, the retry waits on the unbuilt draft, then ONE successful save", async () => {
+    // 1. the stored v3 PDF is out of range -> deferred, one rebuild queued
+    selected();
+    vi.mocked(findOutOfRangeOperand).mockResolvedValue({ page: 4, value: 1.45e10 });
+    expect(await handleSaveToShopify(job({ attempts: 1 }))).toMatchObject({ ok: false, retriable: true });
+    expect(maybeEnqueueDefencePackage).toHaveBeenCalledTimes(1);
+    expect(lastPackStatus()).toBe("saving");
+
+    // 2. retry while the new draft (pkg-2) builds: the canonical selector would
+    //    judge the unbuilt draft and refuse it; the in-flight check runs first.
+    fx.dpkg = { id: "pkg-2", version: 4, status: "draft", pdf_path: null };
+    fx.buildJobs = [{ id: "bj-1" }];
+    vi.mocked(selectForSaveWorker).mockClear();
+    const r2 = await handleSaveToShopify(job({ attempts: 2 }));
+    expect(r2).toMatchObject({ ok: false, retriable: true });
+    expect(selectForSaveWorker).not.toHaveBeenCalled();
+    expect(lastPackStatus()).toBe("saving");
+    expect(attentionWrite()).toBeUndefined();
+    expect(sendSaveFailedAdminAlert).not.toHaveBeenCalled();
+
+    // 3. the rebuilt package is final with a clean PDF: one successful save
+    fx.dpkg = { id: "pkg-2", version: 4, status: "final", pdf_path: "s/d/v4.pdf", facts_json: {}, narrative_json: {} };
+    fx.buildJobs = [];
+    vi.mocked(findOutOfRangeOperand).mockResolvedValue(null);
+    vi.mocked(uploadDisputeFile).mockResolvedValue({
+      fileId: "9", fileGid: "gid://shopify/ShopifyPaymentsDisputeFileUpload/9",
+      mutationField: "uncategorizedFile", disputeEvidenceGid: null, requestId: null,
+    });
+    vi.mocked(requestShopifyGraphQL).mockResolvedValue({
+      data: { disputeEvidenceUpdate: { userErrors: [], disputeEvidence: { id: "e1" } } },
+    } as never);
+    vi.mocked(verifyEvidenceReadback).mockResolvedValue({ diff: { verified: true }, evidenceNode: {} } as never);
+    expect(await handleSaveToShopify(job({ attempts: 3 }))).toEqual({ ok: true });
+    expect(uploadDisputeFile).toHaveBeenCalledTimes(1);
+    expect(maybeEnqueueDefencePackage).toHaveBeenCalledTimes(1);
+    expect(lastPackStatus()).toBe("saved_to_shopify_verified");
+  }, 15000);
+
+  it("review-mode approved at the deadline: a validated draft awaiting finalize waits instead of failing", async () => {
+    fx.dpkg = { id: "pkg-2", version: 4, status: "draft", pdf_path: "s/d/v4.pdf", facts_json: {}, narrative_json: {} };
+    selected(true); // validated draft; the cron's finalize RPC is about to promote it
+    expect(await handleSaveToShopify(job({ attempts: 1 }))).toMatchObject({ ok: false, retriable: true });
+    expect(lastPackStatus()).toBe("saving");
+    expect(attentionWrite()).toBeUndefined();
+    expect(sendSaveFailedAdminAlert).not.toHaveBeenCalled();
+    expect(uploadDisputeFile).not.toHaveBeenCalled();
+  });
+
+  it("an awaited draft that never finalizes ends save_failed on the LAST attempt only", async () => {
+    selected(true);
+    await handleSaveToShopify(job({ attempts: 3, maxAttempts: 3 }));
+    expect(lastPackStatus()).toBe("save_failed");
+    expect(sendSaveFailedAdminAlert).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* ── bounded stale-PDF rebuild ──────────────────────────────────────────── */
+
+describe("stale PDF rebuild is bounded to one per package version", () => {
+  it("a version already deferred once is uploaded as-is (Shopify decides)", async () => {
+    vi.mocked(findOutOfRangeOperand).mockResolvedValue({ page: 4, value: 1.45e10 });
+    fx.audit = [{ event_type: "save_deferred_stale_pdf", pack_id: PACK_ID, event_payload: { packageId: "pkg-1" } }];
+    vi.mocked(uploadDisputeFile).mockRejectedValue(
+      new DisputeFileUploadError("shopify_rejection", "Shopify HTTP 422", 422),
+    );
+    const r = await handleSaveToShopify(job({ attempts: 2 }));
+    expect(maybeEnqueueDefencePackage).not.toHaveBeenCalled();
+    expect(uploadDisputeFile).toHaveBeenCalledTimes(1);
+    expect(r).toMatchObject({ ok: false, retriable: false });
+    expect(lastPackStatus()).toBe("save_failed");
+  });
+
+  it("a different, earlier-deferred version does not count", async () => {
+    vi.mocked(findOutOfRangeOperand).mockResolvedValue({ page: 4, value: 1.45e10 });
+    fx.audit = [{ event_type: "save_deferred_stale_pdf", pack_id: PACK_ID, event_payload: { packageId: "pkg-OLD" } }];
+    await handleSaveToShopify(job({ attempts: 1 }));
+    expect(maybeEnqueueDefencePackage).toHaveBeenCalledTimes(1);
+    expect(uploadDisputeFile).not.toHaveBeenCalled();
+  });
+});
+
+/* ── regenerate requested mid-save is not lost ──────────────────────────── */
+
+describe("rebuild_pending is consumed by the terminal settle", () => {
+  const buildPackInserted = () =>
+    writes.some((w) => w.table === "jobs" && w.op === "insert" && w.patch.job_type === "build_pack");
+
+  it("a final failure enqueues the pending regenerate", async () => {
+    fx.pack.rebuild_pending = true;
+    fx.dpkg = null; // no_defence_package -> final failure
+    await handleSaveToShopify(job());
+    expect(lastPackStatus()).toBe("save_failed");
+    expect(buildPackInserted()).toBe(true);
+  });
+
+  it("a deliberate refusal enqueues the pending regenerate too", async () => {
+    fx.pack.rebuild_pending = true;
+    vi.mocked(bankClaimBlocksFiling).mockResolvedValue(true);
+    await handleSaveToShopify(job());
+    expect(buildPackInserted()).toBe(true);
+  });
+
+  it("a non-final (retrying) failure leaves it pending for the settle that follows", async () => {
+    fx.pack.rebuild_pending = true;
+    vi.mocked(downloadDefencePdf).mockRejectedValue(new Error("503"));
+    await handleSaveToShopify(job({ attempts: 1 }));
+    expect(buildPackInserted()).toBe(false);
+  });
+});
+
+/* ── admin alert is capped per shop and error class ─────────────────────── */
+
+describe("admin alert cap", () => {
+  it("a second dispute of the same shop failing the same way is recorded but not emailed", async () => {
+    fx.dpkg = null;
+    fx.audit = [
+      { event_type: "save_failed_admin_alerted", dispute_id: "dispute-OTHER", shop_id: SHOP_ID,
+        event_payload: { error_class: "no_defence_package", suppressed: false } },
+    ];
+    await handleSaveToShopify(job());
+    expect(sendSaveFailedAdminAlert).not.toHaveBeenCalled();
+    expect(auditPayload("save_failed_admin_alerted")).toMatchObject({ suppressed: true });
+    expect(attentionWrite()).toBeDefined(); // the dispute is still marked
+  });
+
+  it("a different error class for the same shop is still emailed", async () => {
+    fx.dpkg = null;
+    fx.audit = [
+      { event_type: "save_failed_admin_alerted", dispute_id: "dispute-OTHER", shop_id: SHOP_ID,
+        event_payload: { error_class: "shopify_auth_invalid", suppressed: false } },
+    ];
+    await handleSaveToShopify(job());
+    expect(sendSaveFailedAdminAlert).toHaveBeenCalledTimes(1);
   });
 });

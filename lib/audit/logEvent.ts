@@ -15,6 +15,7 @@ export type EventType =
   // Track S: the save job ended `save_failed` and the admin was emailed (once per
   // dispute per 24h), and the stored PDF was found unfileable and a rebuild queued.
   | "save_failed_admin_alerted"
+  | "save_refused"
   | "save_deferred_stale_pdf"
   | "rule_deleted"
   | "admin_override"

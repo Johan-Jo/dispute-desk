@@ -24,6 +24,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { DISPUTE_ATTENTION_REASONS } from "@/lib/disputes/attentionReasons";
 import { sendSaveFailedAdminAlert } from "@/lib/email/sendSaveFailedAdminAlert";
 import type { ClaimedJob, JobResult } from "../claimJobs";
+import { runCoalesceTail } from "./coalesceTail";
 
 export interface SaveFailureArgs {
   sb: SupabaseClient;
@@ -85,8 +86,63 @@ export async function settleSaveFailure(args: SaveFailureArgs): Promise<JobResul
       console.error("[saveToShopify] failed to record submission_failed", err);
     }
   }
+  if (final) await consumeRebuildPending(args);
 
   return { ok: false, retriable: final ? false : retriable, reason };
+}
+
+/**
+ * A DELIBERATE refusal: the handler looked and chose not to file (stale
+ * response cycle, bank claim missing, package not fileable, unsafe claim).
+ * Nothing failed — a precondition is not met — so this is not our fault and
+ * must not read as one:
+ *
+ *  - pack goes back to `ready` (prepared, filing held), never `save_failed`;
+ *  - NO `submission_failed` and NO admin email (the deadline cron raises its own
+ *    "filed nothing" alert for the case that matters);
+ *  - audit `save_refused` carries the class for anyone reading the trail.
+ *
+ * Terminal for this job (non-retriable): only a rebuild, a claim answer or a
+ * new cycle changes the outcome, and each of those enqueues its own save.
+ */
+export async function settleSaveRefusal(args: SaveFailureArgs): Promise<JobResult> {
+  const { sb, job, packId, shopId, disputeId, errorClass, reason } = args;
+  await sb
+    .from("evidence_packs")
+    .update({ status: "ready", updated_at: new Date().toISOString() })
+    .eq("id", packId);
+
+  await logAuditEvent({
+    shopId,
+    disputeId,
+    packId,
+    actorType: "system",
+    eventType: "save_refused",
+    eventPayload: {
+      jobId: job.id,
+      jobType: "save_to_shopify",
+      reason: errorClass,
+      error_class: errorClass,
+      detail: reason.slice(0, 500),
+      ...args.extra,
+    },
+  });
+  await consumeRebuildPending(args);
+  return { ok: false, retriable: false, reason };
+}
+
+/** A regenerate requested mid-save is consumed by whoever settles the save. */
+async function consumeRebuildPending(args: SaveFailureArgs): Promise<void> {
+  try {
+    await runCoalesceTail({
+      sb: args.sb,
+      job: args.job,
+      packId: args.packId,
+      pack: { shop_id: args.shopId, dispute_id: args.disputeId },
+    });
+  } catch (err) {
+    console.error("[saveToShopify] coalesce tail failed after settle", err);
+  }
 }
 
 async function markSubmissionFailed(
@@ -134,6 +190,7 @@ async function alertAdminOncePerDay(
   },
 ): Promise<void> {
   const since = new Date(Date.now() - ALERT_WINDOW_MS).toISOString();
+  // Per dispute: one row of either kind (sent or suppressed) per day.
   const { data: recent } = await sb
     .from("audit_events")
     .select("id")
@@ -143,6 +200,20 @@ async function alertAdminOncePerDay(
     .limit(1);
   if ((recent ?? []).length > 0) return;
 
+  // Per shop AND error class: one SENT email per day. A single expired token
+  // fails every dispute of the shop the same way and must not send one email
+  // each; the suppressed ones are still recorded so the trail is complete.
+  const { data: sentForShop } = await sb
+    .from("audit_events")
+    .select("id")
+    .eq("shop_id", a.shopId)
+    .eq("event_type", "save_failed_admin_alerted")
+    .eq("event_payload->>error_class", a.errorClass)
+    .eq("event_payload->>suppressed", "false")
+    .gte("created_at", since)
+    .limit(1);
+  const suppressed = (sentForShop ?? []).length > 0;
+
   // Record first: a duplicate email is worse than a missed one, and the
   // deadline cron and a manual retry can both end here within the same hour.
   await logAuditEvent({
@@ -151,8 +222,9 @@ async function alertAdminOncePerDay(
     packId: a.packId,
     actorType: "system",
     eventType: "save_failed_admin_alerted",
-    eventPayload: { jobId: a.job.id, error_class: a.errorClass },
+    eventPayload: { jobId: a.job.id, error_class: a.errorClass, suppressed },
   });
+  if (suppressed) return;
 
   const { data: dispute } = await sb
     .from("disputes")

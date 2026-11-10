@@ -45,7 +45,9 @@ import {
 import { downloadDefencePdf } from "@/lib/defence/storage";
 import { findOutOfRangeOperand } from "@/lib/defence/pdf/scanCoordinates";
 import { maybeEnqueueDefencePackage } from "@/lib/defence/enqueue";
+import { runCoalesceTail } from "./coalesceTail";
 import {
+  settleSaveRefusal,
   settleSaveFailure,
   clearSubmissionFailed,
   isFinalFailure,
@@ -243,6 +245,26 @@ async function runSaveToShopify(
       extra,
     });
 
+  /* A DELIBERATE refusal (stale cycle, bank claim missing, package not
+   * fileable, unsafe claim): nothing failed, a precondition is unmet. Pack
+   * back to `ready`, an audit row, NO `submission_failed`, NO admin email. */
+  const refuse = (
+    errorClass: string,
+    reason: string,
+    extra?: Record<string, unknown>,
+  ): Promise<JobResult> =>
+    settleSaveRefusal({
+      sb,
+      job,
+      packId,
+      shopId: pack.shop_id as string,
+      disputeId: (pack.dispute_id as string | null) ?? null,
+      errorClass,
+      reason,
+      retriable: false,
+      extra,
+    });
+
   /* ── 2. Load dispute (need evidence GID + customer info + window state) ── */
 
   const { data: dispute } = await sb
@@ -272,10 +294,9 @@ async function runSaveToShopify(
         disputeCycle: dispute.response_cycle ?? null,
       },
     });
-    return fail(
+    return refuse(
       "stale_response_cycle",
       `stale_response_cycle: pack is cycle ${pack.response_cycle ?? 1}, dispute is cycle ${dispute.response_cycle ?? 1}`,
-      false,
     );
   }
 
@@ -300,10 +321,9 @@ async function runSaveToShopify(
           cycle: dispute.response_cycle ?? 1,
         },
       });
-      return fail(
+      return refuse(
         "bank_claim_missing",
         "bank_claim_missing: add the bank's claim from Shopify Admin before filing",
-        false,
       );
     }
   }
@@ -375,6 +395,35 @@ async function runSaveToShopify(
    * cron. Applying the normal veto would make it refuse, at the deadline, a
    * save the deadline path legitimately authorised. That trigger relaxes
    * exactly one rung — `deadline_only_not_yet_due` — and nothing else. */
+  /* A build still running for the latest candidate is a WAIT, not a verdict.
+   * Checked BEFORE the canonical selector: the stale-PDF deferral inserts a
+   * new draft, and the selector would judge that unbuilt draft
+   * (`validation_failed`) and refuse it — turning the deferral's own retry
+   * into a false failure. Production runs the canonical route. */
+  {
+    const { row: latestRow } = await fetchLatestCandidate<{ id: string; version: number; status: string }>(
+      sb,
+      pack.dispute_id as string,
+      "id, version, status",
+    );
+    if (latestRow && latestRow.status !== "final") {
+      const { data: activeBuilds } = await sb
+        .from("jobs")
+        .select("id")
+        .eq("job_type", "build_defence_package")
+        .eq("entity_id", latestRow.id)
+        .in("status", ["queued", "running", "pending"])
+        .limit(1);
+      if ((activeBuilds ?? []).length > 0) {
+        return fail(
+          "defence_package_build_in_flight",
+          `Defence package is in status "${latestRow.status}" and a build is still running; retrying when it lands.`,
+          true,
+        );
+      }
+    }
+  }
+
   if (canonicalPipelineEnabled()) {
     const settings = await getShopSettings(pack.shop_id as string);
     const outcome = await selectForSaveWorker({
@@ -417,10 +466,9 @@ async function runSaveToShopify(
       // Non-retriable for the same reason the C-11 gate was: retrying cannot
       // make a persisted narrative safe, a superseded row current, or an
       // ambiguous pair unambiguous. Only a rebuild can.
-      return fail(
+      return refuse(
         "defence_package_not_fileable",
         `defence_package_not_fileable: ${reason}`,
-        false,
       );
     }
 
@@ -438,11 +486,15 @@ async function runSaveToShopify(
      * the latest draft" for a case the selector had just authorised, which
      * reads as a contradiction rather than as a missing step. */
     if (outcome.selection.package.requiresFinalize) {
+      // Retriable: finalize (the cron's RPC, or finalizeAndEnqueueSave after a
+      // build) enqueues its OWN save once it promotes the draft. Treating this
+      // as a hard failure paged the admin for a case about to resolve itself.
+      // Bounded by the job's attempts.
       return fail(
-        "defence_package_requires_finalize",
-        "defence_package_requires_finalize: the selected package is a draft. " +
-          "Promote it through finalize_defence_package before enqueueing a save.",
-        false,
+        "defence_package_awaiting_finalize",
+        "defence_package_awaiting_finalize: the selected package is a draft. " +
+          "It is promoted through finalize_defence_package, which enqueues its own save.",
+        true,
       );
     }
   }
@@ -525,11 +577,10 @@ async function runSaveToShopify(
         trigger: "save_to_shopify",
       },
     });
-    return fail(
+    return refuse(
       "defence_package_unsafe_claim",
       `defence_package_unsafe_claim: ${safety.reasons.join(", ")}. ` +
         packageBlockSummary(safety),
-      false,
     );
   }
 
@@ -571,6 +622,23 @@ async function runSaveToShopify(
       "[saveToShopify] PDF operand scan failed; uploading anyway:",
       scanErr instanceof Error ? scanErr.message : String(scanErr),
     );
+  }
+  if (badOperand) {
+    /* AT MOST ONE REBUILD PER PACKAGE VERSION. If this version was already
+     * deferred once (audit row keyed on its package id), the rebuild has
+     * either not happened or produced the same file; looping would defer
+     * forever. Upload it and let Shopify decide — a 422 then lands as a
+     * normal non-retriable `shopify_upload_rejected`. */
+    const { data: priorDeferrals } = await sb
+      .from("audit_events")
+      .select("id")
+      .eq("pack_id", packId)
+      .eq("event_type", "save_deferred_stale_pdf")
+      .eq("event_payload->>packageId", activeDefencePackageId)
+      .limit(1);
+    if ((priorDeferrals ?? []).length > 0) {
+      badOperand = null;
+    }
   }
   if (badOperand) {
     let rebuild: Awaited<ReturnType<typeof maybeEnqueueDefencePackage>> | null = null;
@@ -1004,85 +1072,7 @@ async function runSaveToShopify(
    * only at `buildPackJob` start (§5a). That keeps the UI's
    * "Regenerating" banner continuous from request to worker pickup.
    */
-  const { data: tailRow } = await sb
-    .from("evidence_packs")
-    .select("rebuild_pending")
-    .eq("id", packId)
-    .single();
-
-  if (tailRow?.rebuild_pending) {
-    const { data: tailDispute } = await sb
-      .from("disputes")
-      .select("submission_state")
-      .eq("id", pack.dispute_id)
-      .single();
-
-    if (tailDispute?.submission_state === "submitted_confirmed") {
-      await sb
-        .from("evidence_packs")
-        .update({
-          rebuild_pending: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", packId);
-      await logAuditEvent({
-        shopId: pack.shop_id,
-        disputeId: pack.dispute_id,
-        packId,
-        actorType: "system",
-        eventType: "pack_regenerate_coalesced_skipped_window_closed",
-        eventPayload: {
-          jobId: job.id,
-          packId,
-          disputeId: pack.dispute_id,
-          trigger: "rebuild_pending_tail",
-        },
-      });
-    } else {
-      const { data: activeBuilds } = await sb
-        .from("jobs")
-        .select("id, status")
-        .eq("entity_id", packId)
-        .eq("job_type", "build_pack")
-        .in("status", ["queued", "running"]);
-
-      if (activeBuilds && activeBuilds.length > 0) {
-        await logAuditEvent({
-          shopId: pack.shop_id,
-          disputeId: pack.dispute_id,
-          packId,
-          actorType: "system",
-          eventType: "pack_regenerate_coalesced_job_already_exists",
-          eventPayload: {
-            jobId: job.id,
-            packId,
-            disputeId: pack.dispute_id,
-            trigger: "rebuild_pending_tail",
-            existingJobIds: activeBuilds.map((j) => j.id as string),
-          },
-        });
-      } else {
-        await sb.from("jobs").insert({
-          shop_id: pack.shop_id,
-          job_type: "build_pack",
-          entity_id: packId,
-        });
-        await logAuditEvent({
-          shopId: pack.shop_id,
-          disputeId: pack.dispute_id,
-          packId,
-          actorType: "system",
-          eventType: "pack_regenerate_coalesced",
-          eventPayload: {
-            jobId: job.id,
-            packId,
-            disputeId: pack.dispute_id,
-            trigger: "rebuild_pending_tail",
-          },
-        });
-      }
-    }
-  }
+  await runCoalesceTail({ sb, job, packId, pack });
 
   return { ok: true };
 }
