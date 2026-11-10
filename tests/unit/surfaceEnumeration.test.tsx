@@ -21,7 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import { loadFixtures } from "../harness/fixtures";
 import { runLiveBuilders } from "../harness/runLive";
-import { enumerateSurfaces, reachedSurfaces, startFunctionCoverage } from "../harness/surfaces";
+import { enumerateSurfaces, reachedSurfaces, scriptUrlToRepoRelative, startFunctionCoverage } from "../harness/surfaces";
 
 const ROOT = path.resolve(__dirname, "../..");
 
@@ -67,6 +67,20 @@ describe("surface enumeration (reached by the harness, or baselined)", () => {
     const files = surfaces.map((s) => s.file);
     expect(files).toContain("app/(embedded)/app/disputes/[id]/WorkspaceShell.tsx");
     expect(files).toContain("app/(embedded)/app/disputes/[id]/record/recordInputs.ts");
+  });
+
+  it("the reached set is not vacuous", () => {
+    expect(reached.size).toBeGreaterThan(0);
+    expect(reached.has("app/(embedded)/app/disputes/[id]/record/RecordWorkspace.tsx")).toBe(true);
+  });
+
+  it("script urls normalise the same on Windows and POSIX", () => {
+    const rel = "app/(embedded)/app/disputes/[id]/WorkspaceShell.tsx";
+    expect(scriptUrlToRepoRelative("file:///home/runner/work/r/r/app/(embedded)/app/disputes/%5Bid%5D/WorkspaceShell.tsx", "/home/runner/work/r/r")).toBe(rel);
+    expect(scriptUrlToRepoRelative("/home/runner/work/r/r/" + rel + "?v=123", "/home/runner/work/r/r")).toBe(rel);
+    expect(scriptUrlToRepoRelative("file:///C:/Users/x/repo/" + rel, "C:\\Users\\X\\repo")).toBe(rel);
+    expect(scriptUrlToRepoRelative("C:\\Users\\x\\repo\\app\\(embedded)\\app\\disputes\\[id]\\WorkspaceShell.tsx", "C:/Users/x/repo")).toBe(rel);
+    expect(scriptUrlToRepoRelative("node:internal/x", "/home/runner/work/r/r")).toBeNull();
   });
 
   it("every surface is reached or exempt (a new page/helper must be wired into the harness)", () => {
