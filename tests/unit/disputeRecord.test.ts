@@ -193,9 +193,8 @@ describe("every state renders through the same record", () => {
     expect(stage("lost")).toBe("decided");
   });
 
-  // Single-source plan 3.5 / 3.1 (#23750): KNOWN GAP, flipped by PR 2 (stageOf() reads presentation.lifecycle).
-  // done when: this passes without `.fails`.
-  it.fails("a pack stamped saved while submission_state=not_saved is not stage 'saved'", () => {
+  // Single-source plan 3.5 / 3.1 (#23750): the stage is read from the owner, not from the raw stamp.
+  it("a pack stamped saved while submission_state=not_saved is not stage 'saved'", () => {
     expect(record("stamped_not_saved").stage).not.toBe("saved");
   });
 

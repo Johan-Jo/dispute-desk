@@ -184,8 +184,7 @@ describe("the hero of every captured case", () => {
 
 describe("#23750 pack stamped saved, every save failed (e38c8d87)", () => {
   const f = () => at(fixtureByCase("23750-stamped-saved-save-failed"));
-  // KNOWN GAP -> PR 2 (stage reads presentation.lifecycle). done when: passes without .fails
-  it.fails("the stage is not 'saved'", () => {
+  it("the stage is not 'saved'", () => {
     expect(recordOf(f()).stage).not.toBe("saved");
   });
   // Fixed by the action-first hero: a stamp Shopify never confirmed reads "has not confirmed", not "saved".
@@ -193,8 +192,7 @@ describe("#23750 pack stamped saved, every save failed (e38c8d87)", () => {
     expect(page(f(), "overview")).not.toContain(en("disputes.record.headline.saved"));
     expect(page(f(), "overview")).toContain(en("disputes.record.status.headline.unconfirmed"));
   });
-  // KNOWN GAP -> PR 2. done when: passes without .fails
-  it.fails("does not show a package version number as saved", () => {
+  it("does not show a package version number as saved", () => {
     expect(page(f(), "overview")).not.toMatch(/defence package version \d+ to Shopify/);
   });
   // The `save_failed` assertion is added only when #23750 is re-captured after Track S is on prod (plan 3.1).
@@ -236,10 +234,9 @@ describe("#21037 return in progress (defa8294)", () => {
 
 describe("#24285 latest build failed (d65b7220)", () => {
   const f = () => at(fixtureByCase("24285-latest-build-failed"));
-  // KNOWN GAP -> PR 2 (stage from resolveBuildAttempt). done when: passes without .fails
-  it.fails("shows the build-failed state", () => {
-    const text = page(f(), "overview");
-    expect(text.includes(en("disputes.record.state.failed")) || text.includes(en("disputes.record.headline.failed"))).toBe(true);
+  // Fixed by the action-first hero: the build-failed state reads from resolveBuildAttempt, not the old stage text.
+  it("shows the build-failed state", () => {
+    expect(page(f(), "overview")).toContain(en("disputes.record.status.headline.buildFailed"));
   });
   // Fixed 2026-11-10: a latest build that wrote no response prints "checked the record ... wrote no response", never a version.
   it("does not show prepared.version", () => {

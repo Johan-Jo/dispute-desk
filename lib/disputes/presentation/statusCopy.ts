@@ -155,6 +155,8 @@ export interface StatusCopyInput {
   stateToken: I18nToken | null;
   attentionToken: I18nToken | null;
   hasPackage: boolean;
+  /** The pack carries a "saved to Shopify" stamp while `submission_state` says "not_saved": Shopify never confirmed it. */
+  unconfirmedStamp: boolean;
 }
 
 /* ── Building blocks ── */
@@ -354,7 +356,8 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
   }
 
   /* Stamped saved, never confirmed by Shopify (the pre-Track-S enqueue-time stamp) */
-  if ((i.stage === "saved" || i.stage === "under_review") && !ours) {
+  // The stamp alone no longer makes the stage "saved" (recordStage): a stamp with submission_state "not_saved" is read here.
+  if (((i.stage === "saved" || i.stage === "under_review") && !ours) || i.unconfirmedStamp) {
     return make("unconfirmed", s("headline.unconfirmed"), [
       happened(i.dates.queued ? s("happened.unconfirmed", { date: i.dates.queued }) : s("happened.unconfirmedNoDate")),
       part("need", [s("need.nothing")]),
