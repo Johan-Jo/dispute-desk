@@ -7,9 +7,9 @@
  * stage, so the stage predicate has to live where both the route and the page can
  * call it. No logic changed.
  *
- * KNOWN OPEN (single-source plan PR 2, section 4): this still reads
- * `pack.savedToShopifyAt` and `appliedRule.mode` instead of the owners
- * (`presentation.lifecycle`, `presentation.automationMode`). PR 2 deletes
+ * PARTLY DONE (single-source plan PR 2, section 4): "saved" now comes from `presentation.lifecycle`; the raw
+ * `pack.savedToShopifyAt` stamp is read only when the payload predates `presentation`. Still reads
+ * `appliedRule.mode` instead of the owner (`presentation.automationMode`). PR 2 deletes
  * `stageOf` in favour of the owners; the rawReadScan baseline entries for it
  * moved with it (this directory is on the scan's owner allow-list).
  */
@@ -58,7 +58,8 @@ export function stageOf(data: WorkspaceData, status: RecordStatus): RecordStage 
   const latest = pkgRow(dp?.latest);
   if (pack?.coverage && (pack.coverage as { isCovered?: boolean }).isCovered) return "covered";
   if (p?.lifecycle === "under_review") return "under_review";
-  if (p?.lifecycle === "saved_to_shopify" || pack?.savedToShopifyAt) return "saved";
+  // The owner decides. The raw stamp is only read when the payload predates `presentation`: a stamp alone is not proof Shopify accepted a save (#23750).
+  if (p?.lifecycle === "saved_to_shopify" || (!p && pack?.savedToShopifyAt)) return "saved";
   if (!pack) return "no_pack";
   const fatal = data.workspaceAssessment?.caseStrength?.fatalLoss;
   if (fatal?.triggered) return "fatal";
