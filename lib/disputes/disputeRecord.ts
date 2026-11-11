@@ -1172,6 +1172,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     stateToken: f.state ?? null,
     attentionToken: f.attention ?? null,
     hasPackage: i.hasPackage,
+    unconfirmedStamp: i.submissionState === "not_saved" && i.savedAt !== null,
   });
 
   return {
