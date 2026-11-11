@@ -349,10 +349,11 @@ function displayPolicyUrl(url: string): string {
 }
 
 export function breakableUrls(text: string): string {
-  // Only after "/" in the path: the fewest break points that still let the
-  // longest policy URL wrap, so copy-paste gains the fewest stray gaps.
+  // Only after "/" in the path and "&" in the query: the fewest break points that still let the longest URL
+  // wrap, so copy-paste gains the fewest stray gaps. A carrier link has no slash in its last 70 characters
+  // ("...tracking.html?submit=1&trackingid=...&tracking-id=...") and ran past the right margin (#24285).
   return text.replace(/(https?:\/\/[^/\s]+)(\/\S{30,})/g, (_m, host: string, path: string) =>
-    host + path.replace(/\/(?=\S)/g, "/​"),
+    host + path.replace(/[/&](?=\S)/g, (c) => `${c}\u200b`),
   );
 }
 

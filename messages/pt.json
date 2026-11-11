@@ -1484,7 +1484,7 @@
       },
       "creditAlreadyIssued": "Esta transação já foi reembolsada antes de a disputa ser aberta. A resposta mais forte é o próprio reembolso — o titular do cartão já foi reembolsado, portanto nada mais é devido.",
       "returnedToSender": {
-        "returned_unrefunded": "A transportadora devolveu esta encomenda a si. O reembolso registrado é inferior ao valor contestado. Não pode existir confirmação de entrega para este pedido e, sem ela, o banco decide normalmente a favor do cliente. Se ficou com a mercadoria e com o dinheiro, a resposta justa é reembolsar."
+        "returned_unrefunded": "A transportadora devolveu esta encomenda a si. O reembolso registrado é inferior ao valor contestado. Não pode existir confirmação de entrega para este pedido e, sem ela, o banco decide normalmente a favor do cliente."
       }
     },
     "outcomeExplanation": {

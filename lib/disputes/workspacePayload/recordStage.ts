@@ -47,7 +47,8 @@ export function recordStatusOf(data: WorkspaceData): RecordStatus {
 
 /** The package is filed under "Require my approval" (review mode). */
 export function isReviewMode(data: WorkspaceData): boolean {
-  return data.presentation?.automationMode === "review" || data.appliedRule?.mode === "review";
+  const owner = data.presentation?.automationMode;
+  return owner != null ? owner === "review" : data.appliedRule?.mode === "review";
 }
 
 export function stageOf(data: WorkspaceData, status: RecordStatus): RecordStage {

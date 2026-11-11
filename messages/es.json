@@ -1484,7 +1484,7 @@
       },
       "creditAlreadyIssued": "Esta transacción ya fue reembolsada antes de que se presentara la disputa. La respuesta más sólida es el propio reembolso: al titular de la tarjeta ya se le devolvió el dinero, así que no queda nada pendiente.",
       "returnedToSender": {
-        "returned_unrefunded": "El transportista te devolvió este paquete. El reembolso registrado es inferior al importe en disputa. Para este pedido no puede existir una confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente. Si te has quedado con la mercancía y el dinero, lo justo es reembolsar."
+        "returned_unrefunded": "El transportista te devolvió este paquete. El reembolso registrado es inferior al importe en disputa. Para este pedido no puede existir una confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente."
       }
     },
     "outcomeExplanation": {

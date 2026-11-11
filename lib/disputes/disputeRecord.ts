@@ -30,6 +30,8 @@
  * context, as `lib/argument/paymentVerification.ts` decides.
  */
 
+import { refundStatementTokens, type RefundStatement } from "@/lib/disputes/refundStatement";
+import { outcomeExplanationToken, type OutcomeExplanation } from "@/lib/disputes/outcomeExplanation";
 import type { I18nKeyParam, I18nToken } from "@/lib/i18n/token";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { readPaymentVerification, type VerificationOutcome } from "@/lib/argument/paymentVerification";
@@ -269,6 +271,10 @@ export interface RecordInputs {
    * (no stored letter yet) keeps the live evidence line's own reading.
    */
   letter?: { rule: 1 | 2; citedFields: string[] } | null;
+  /** What Shopify records about refunds on the order (`lib/disputes/refundStatement.ts`, the one reader). */
+  refundStatement?: RefundStatement | null;
+  /** The decided-dispute explanation (`outcomeExplanation`), set by `enrichWorkspacePayload`. */
+  outcomeExplanation?: OutcomeExplanation | null;
   /** Shopify's refund situation for the order. */
   refund: "none" | "some" | "unknown";
   timelineEvents: Array<{ at?: string; text?: string }>;
@@ -1172,6 +1178,14 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     stateToken: f.state ?? null,
     attentionToken: f.attention ?? null,
     hasPackage: i.hasPackage,
+    refundLine:
+      i.refundStatement && i.refundStatement.kind !== "unknown"
+        ? refundStatementTokens(i.refundStatement).detail
+        : null,
+    explanationLine:
+      i.responder === "we" && i.outcomeExplanation && (status === "won" || status === "lost")
+        ? outcomeExplanationToken(i.outcomeExplanation, status, i.outcomeExplanation.kind === "not_filed_by_us" ? null : date(i.outcomeExplanation.filedAt))
+        : null,
     unconfirmedStamp: i.submissionState === "not_saved" && i.savedAt !== null,
   });
 

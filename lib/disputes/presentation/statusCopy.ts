@@ -157,6 +157,10 @@ export interface StatusCopyInput {
   hasPackage: boolean;
   /** The pack carries a "saved to Shopify" stamp while `submission_state` says "not_saved": Shopify never confirmed it. */
   unconfirmedStamp: boolean;
+  /** What Shopify records about a refund on the order (the refund statement), when one exists. */
+  refundLine: I18nToken | null;
+  /** The decided-dispute explanation sentence for a case DisputeDesk filed. */
+  explanationLine: I18nToken | null;
 }
 
 /* ── Building blocks ── */
@@ -232,7 +236,7 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
     }
     return { state, headline, chip: s(`chip.${state}`), subline: sub, parts: kept };
   };
-  const happened = (...extra: Array<I18nToken | null>) => part("happened", [i.claim, ...extra]);
+  const happened = (...extra: Array<I18nToken | null>) => part("happened", [i.claim, ...extra, i.refundLine]);
   const happenedWithFact = () => happened(i.caseFact);
   const doneLine = () =>
     part("done", [i.build?.packageWritten || (i.build === null && i.hasPackage) ? s(DONE_NOT_FILED_BUILT) : s(DONE_NOT_FILED_EVIDENCE)]);
@@ -247,7 +251,7 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
           : null
         : i.decided.filedElsewhere;
     const reliedLine = i.responder === "we" ? relies("happened.relied") : null;
-    const happenedPart = part("happened", [i.claim, i.decided.outcome, filedLine, reliedLine]);
+    const happenedPart = part("happened", [i.claim, i.decided.outcome, filedLine, reliedLine, i.explanationLine, i.refundLine]);
     if (i.status === "closed") {
       return make("closed", { key: "disputes.record.headline.closed" }, [happenedPart]);
     }

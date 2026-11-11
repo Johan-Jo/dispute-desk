@@ -11,6 +11,8 @@
  */
 
 import { merchantAsksFromPayload } from "@/lib/disputes/merchantAsks";
+import { resolveOutcomeExplanation } from "@/lib/disputes/outcomeExplanation";
+import { recordStatusOf } from "@/lib/disputes/workspacePayload/recordStage";
 import type { WorkspaceData } from "@/app/(embedded)/app/disputes/[id]/workspace-components/types";
 import type { EnrichSourceRows } from "./sourceRows";
 
@@ -20,9 +22,20 @@ import type { EnrichSourceRows } from "./sourceRows";
  * payload; `tests/unit/enrichWorkspacePayload.test.ts` fails if enrichment adds
  * anything not listed.
  */
-export const ENRICHED_PATHS: readonly string[] = ["asks"];
+export const ENRICHED_PATHS: readonly string[] = ["asks", "outcomeExplanation"];
 
 export function enrichWorkspacePayload<P extends object>(payload: P, sourceRows: EnrichSourceRows): P {
-  void sourceRows;
-  return { ...payload, asks: merchantAsksFromPayload(payload as unknown as WorkspaceData) };
+  const data = payload as unknown as WorkspaceData;
+  const status = recordStatusOf(data);
+  // Only a decided dispute has an explanation; a live case never does (outcomeExplanation.ts, rule 1).
+  const outcomeExplanation =
+    status === "won" || status === "lost"
+      ? resolveOutcomeExplanation({
+          outcome: status,
+          reason: data.dispute?.reason ?? null,
+          pack: sourceRows.outcomeInputs,
+          customerName: data.dispute?.customerName ?? null,
+        })
+      : null;
+  return { ...payload, asks: merchantAsksFromPayload(data), outcomeExplanation };
 }

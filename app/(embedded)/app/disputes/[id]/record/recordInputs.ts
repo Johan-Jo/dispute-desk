@@ -7,7 +7,7 @@
  */
 
 import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
-import { recordStatusOf, stageOf } from "@/lib/disputes/workspacePayload/recordStage";
+import { isReviewMode, recordStatusOf, stageOf } from "@/lib/disputes/workspacePayload/recordStage";
 import {
   FACT_CATEGORY_FIELD,
   type RecordInputs,
@@ -212,11 +212,13 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
     lines,
     bankCitedFields,
     letter,
+    refundStatement: d.refundStatement ?? null,
+    outcomeExplanation: data.outcomeExplanation ?? null,
     refund: sit?.refund === "none" || sit?.refund === "some" ? sit.refund : "unknown",
     timelineEvents: (d.timelineEvents ?? []).map((e) => ({ at: e.at, text: e.text })),
     gorgiasFoundNone: data.gorgiasComms?.integrationStatus === "connected" && run?.status === "no_matches",
     asks: data.asks ?? [],
-    automationMode: decided ? null : p?.automationMode === "review" || data.appliedRule?.mode === "review" ? "review" : "auto",
+    automationMode: decided ? null : isReviewMode(data) ? "review" : "auto",
     stage,
     packPrepared: p?.lifecycle === "pack_prepared",
     hasPackage,
