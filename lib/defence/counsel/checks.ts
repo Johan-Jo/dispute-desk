@@ -330,6 +330,14 @@ export function checkDraft(d: CounselDraft, ctx: CheckContext): string[] {
     const n = P.filter((p) => p.where !== "conclusion").map((p) => p.text).join("\n").toLowerCase().split(phrase).length - 1;
     if (n > 2) issues.push(`copy: "${phrase}" is used ${n} times; at most twice`);
   }
+  // A card comparison needs a card on BOTH orders (the later_order claim carries `paidWith` only then). On a Klarna or
+  // PayPal order there is no card, and "a card ending in the same four digits" has no referent (d65b7220, v22).
+  if (!byId.get("later_order")?.specifics?.paidWith) {
+    const everything = P.map((p) => p.text).join(" ").toLowerCase();
+    if (everything.includes("same four digits")) {
+      issues.push('copy: a card claim has no basis — the records show no card on both orders; remove "a card ending in the same four digits"');
+    }
+  }
   // Each date and number ONCE in the letter (maintainer: "each fact stated
   // once"). Elsewhere refer to the event: "the delivery", "that order".
   const uses = new Map<string, Where[]>();
