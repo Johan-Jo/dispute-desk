@@ -35,6 +35,7 @@ const SAMPLES: Array<[issue: string, rule: string, section: string]> = [
   ["summary: returns are written by code in the Delivery and return section; remove every mention of returns from the summary", "copy.returns_in_summary", "summary"],
   ['summary: "the complete order" — the records do not show the whole order in one shipment; say "the order"', "truth.whole_order", "summary"],
   ['copy: "same four digits" is used 3 times; at most twice', "copy.phrase_repeated", "letter"],
+  ['copy: a card claim has no basis — the records show no card on both orders; remove "a card ending in the same four digits"', "truth.card_claim_unsupported", "letter"],
   ['copy: "3 july" is used 2 times (summary, conclusion); once only — elsewhere refer to the event ("the delivery", "that order")', "copy.specific_repeated", "letter"],
   ['chronology: "timeline above" — the timeline and the table print BELOW the text; say "the timeline below" or just "the timeline"', "copy.exhibit_position", "chronology"],
   ["conclusion: the recorded absence shares a sentence with a timing clause — \"A further order was placed before any return was recorded.\" (it carries a date, duration or ordering word; write only: 'No return has been recorded in Shopify for this order.')", "truth.absence_with_timing", "conclusion"],
@@ -95,7 +96,7 @@ describe("counsel issue rules", () => {
    * until SAMPLES (and RULES) cover it. */
   it("pins the number of issue producers in checks.ts", () => {
     const src = readFileSync(join(__dirname, "..", "checks.ts"), "utf8");
-    expect(src.match(/issues\.push\(/g)?.length).toBe(28);
+    expect(src.match(/issues\.push\(/g)?.length).toBe(29);
     expect(SAMPLES.every(([issue]) => classifyIssue(issue).rule !== "unclassified")).toBe(true);
   });
 });
