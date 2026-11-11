@@ -7,6 +7,7 @@
  */
 
 import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
+import { refundRecordApplicability } from "@/lib/packs/refundRecordApplicability";
 import { isReviewMode, recordStatusOf, stageOf } from "@/lib/disputes/workspacePayload/recordStage";
 import {
   FACT_CATEGORY_FIELD,
@@ -78,6 +79,12 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
     strength: String(l.strengthContribution ?? ""),
   }));
 
+  const inapplicableFields: string[] = [];
+  if (data.workspaceAssessment?.caseStrength?.returnedToSender?.triggered === true) inapplicableFields.push(RETURN_EVIDENCE_FIELD);
+  if (!refundRecordApplicability({ disputeReason: d.reason ?? null, totalRefunded: d.refundedAmount ?? null }).applicable) {
+    inapplicableFields.push("refund_record");
+  }
+
   let view: DecidedViewInputs;
   if (dv) {
     view = dv;
@@ -111,9 +118,9 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
       storePatterns: data.recordStorePatterns ?? null,
       // A parcel the carrier returned makes "no return was received" impossible (lib/packs/noReturnApplicability).
       // The loader computes this for decided disputes; here the same fact is the server's returned-to-sender gate.
-      ...(data.workspaceAssessment?.caseStrength?.returnedToSender?.triggered === true
-        ? { inapplicable: [RETURN_EVIDENCE_FIELD] }
-        : {}),
+      // With no refund on record the "refund record" row can never exist (lib/packs/refundRecordApplicability, read-time only:
+      // the stored checklist, the completeness score and the auto-save gate are untouched).
+      ...(inapplicableFields.length > 0 ? { inapplicable: inapplicableFields } : {}),
     };
   }
 
