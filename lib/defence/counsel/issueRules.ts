@@ -96,6 +96,7 @@ const RULES: ReadonlyArray<[RegExp, string, string]> = [
   [/^returns are written by code/, "copy.returns_in_summary", "Returns mentioned in the summary."],
   [/the records do not show the whole order in one shipment/, "truth.whole_order", "The whole order claimed without the record for it."],
   [/^copy: ".*" is used \d+ times; at most twice/, "copy.phrase_repeated", "A distinctive phrase used more than twice."],
+  [/^copy: a card claim has no basis/, "truth.card_claim_unsupported", "A card comparison the records do not support (no card on both orders)."],
   [/^copy: ".*" is used \d+ times \(.*\); once only/, "copy.specific_repeated", "A date or number stated more than once."],
   [/the timeline and the table print BELOW the text/, "copy.exhibit_position", "An exhibit placed above the text."],
 ];
