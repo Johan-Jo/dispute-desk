@@ -410,7 +410,9 @@ export function addLaterOrder(
         "Never comment on the cardholder's honesty or motive.",
         "Never say the later order was not disputed.",
         "Never print card digits.",
-        "Never say \"the same card\": say a card ending in the same four digits.",
+        sameCard
+          ? "Never say \"the same card\": say a card ending in the same four digits."
+          : "Say nothing about how the later order was paid, and never that it used a card: the records show no card on the disputed order, so no card comparison exists.",
         "Name the anchor of every relative time phrase: \"after the delivery\" or \"after the inquiry was opened\", never a bare \"the following day\" or \"the next day\" (ambiguous between the two).",
       ],
     });
