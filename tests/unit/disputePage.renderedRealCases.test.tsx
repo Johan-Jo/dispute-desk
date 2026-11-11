@@ -231,6 +231,14 @@ describe("#21037 return in progress (defa8294)", () => {
   });
 });
 
+describe("no refund on record: the refund-record row is not shown as Missing", () => {
+  for (const name of ["17066-returned-to-sender", "24285-latest-build-failed"]) {
+    it(`${name}: the row that can never exist is omitted`, () => {
+      expect(page(at(fixtureByCase(name)), "overview")).not.toContain(en("disputes.decidedView.checklist.item.refundRecord"));
+    });
+  }
+});
+
 describe("#24285 latest build failed (d65b7220)", () => {
   const f = () => at(fixtureByCase("24285-latest-build-failed"));
   // Fixed by the action-first hero: the build-failed state reads from resolveBuildAttempt, not the old stage text.
