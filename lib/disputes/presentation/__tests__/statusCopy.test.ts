@@ -65,6 +65,7 @@ function base(phase: "inquiry" | "chargeback", patch: Partial<StatusCopyInput> =
     stateToken: { key: "disputes.record.state.building" },
     attentionToken: { key: "disputes.record.attention.plain" },
     hasPackage: true,
+    unconfirmedStamp: false,
     ...patch,
   };
 }
