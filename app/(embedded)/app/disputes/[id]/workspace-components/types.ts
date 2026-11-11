@@ -11,6 +11,7 @@ import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 import type { HeldState } from "@/lib/disputes/heldState";
 import type { Ask } from "@/lib/disputes/merchantAsks";
+import type { OutcomeExplanation } from "@/lib/disputes/outcomeExplanation";
 import type { DecidedResponse } from "@/lib/disputes/decidedResponse";
 import type { DecidedViewInputs } from "@/lib/disputes/decidedView";
 import type { WorkspaceAssessmentPayload } from "@/lib/disputes/workspaceAssessmentTypes";
@@ -360,6 +361,8 @@ export interface WorkspaceData {
   returnRequest?: WorkspaceReturnRequest;
   /** The merchant asks registry (lib/disputes/merchantAsks), added by `enrichWorkspacePayload`. */
   asks?: Ask[];
+  /** The decided-dispute explanation (lib/disputes/outcomeExplanation), added by `enrichWorkspacePayload`. Data, not copy: the date is formatted at render. */
+  outcomeExplanation?: OutcomeExplanation | null;
   /** Read-time return signals (merchant pages only; never stored, never in the letter). */
   returnSignals?: { customerAskedInSupport: boolean };
   pack: WorkspacePack | null;

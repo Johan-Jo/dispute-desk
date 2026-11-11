@@ -858,7 +858,7 @@
       },
       "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående.",
       "returnedToSender": {
-        "returned_unrefunded": "Transportören returnerade paketet till dig. Den registrerade återbetalningen är lägre än det omtvistade beloppet. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
+        "returned_unrefunded": "Transportören returnerade paketet till dig. Den registrerade återbetalningen är lägre än det omtvistade beloppet. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel."
       }
     },
     "outcomeExplanation": {

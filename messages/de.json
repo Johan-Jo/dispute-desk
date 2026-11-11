@@ -1484,7 +1484,7 @@
       },
       "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen.",
       "returnedToSender": {
-        "returned_unrefunded": "Der Zusteller hat dieses Paket an Sie zurückgesendet. Die erfasste Rückerstattung liegt unter dem strittigen Betrag. Für diese Bestellung kann es keine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden. Behalten Sie Ware und Geld, ist die faire Antwort eine Rückerstattung."
+        "returned_unrefunded": "Der Zusteller hat dieses Paket an Sie zurückgesendet. Die erfasste Rückerstattung liegt unter dem strittigen Betrag. Für diese Bestellung kann es keine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden."
       }
     },
     "outcomeExplanation": {

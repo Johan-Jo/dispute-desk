@@ -852,7 +852,7 @@
       },
       "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed.",
       "returnedToSender": {
-        "returned_unrefunded": "The carrier returned this parcel to you. The refund on record is less than the disputed amount. No proof of delivery can exist for this order, and without one the bank will normally decide for the customer. If you kept the goods and the money, the fair answer is to refund."
+        "returned_unrefunded": "The carrier returned this parcel to you. The refund on record is less than the disputed amount. No proof of delivery can exist for this order, and without one the bank will normally decide for the customer."
       }
     },
     "outcomeExplanation": {

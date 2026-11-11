@@ -66,6 +66,8 @@ function base(phase: "inquiry" | "chargeback", patch: Partial<StatusCopyInput> =
     attentionToken: { key: "disputes.record.attention.plain" },
     hasPackage: true,
     unconfirmedStamp: false,
+    refundLine: null,
+    explanationLine: null,
     ...patch,
   };
 }

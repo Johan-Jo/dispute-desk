@@ -203,8 +203,7 @@ describe("#24612 return received, credit not processed, won (2903f245)", () => {
   it("shows that the return was received", () => {
     expect(page(f(), "overview")).toContain(en("disputes.record.item.return.returned"));
   });
-  // KNOWN GAP -> PR 2 (refund line is refundStatement). done when: passes without .fails
-  it.fails("shows the refund line from refundStatement", () => {
+  it("shows the refund line from refundStatement", () => {
     const stmt = workspaceDataOf(f()).dispute.refundStatement as RefundStatement;
     const { title, detail } = refundStatementTokens(stmt);
     const text = page(f(), "overview");
@@ -250,8 +249,7 @@ describe("won and filed (d00d141b)", () => {
     const text = page(f(), "overview");
     expect(text).toContain("The bank decided in your favour on 31 Oct 2026");
   });
-  // KNOWN GAP -> PR 2 (outcomeExplanation added beside the outcome line). done when: passes without .fails
-  it.fails("shows the outcome explanation when there is one", () => {
+  it("shows the outcome explanation when there is one", () => {
     const fx = f();
     const rows = fx.sourceRows.outcomeInputs;
     expect(rows, "fixture must carry the submitted package").not.toBeNull();

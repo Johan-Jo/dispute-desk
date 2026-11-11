@@ -52,11 +52,7 @@ describe("every owner key is read by a live builder", () => {
     covered = coverage();
   });
 
-  const KNOWN_GAPS: Partial<Record<OwnerKey, string>> = {
-    // KNOWN GAP -> PR 2: the record shows the refund from `orderSituation.refund` and `buildChecklistRows`,
-    // never from `refundStatement` (built at route.ts:516, zero readers). done when: passes without .fails.
-    "dispute.refundStatement": "PR 2",
-  };
+  const KNOWN_GAPS: Partial<Record<OwnerKey, string>> = {};
 
   for (const k of OWNER_KEYS) {
     if (k in KNOWN_GAPS) {

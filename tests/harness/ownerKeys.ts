@@ -42,6 +42,4 @@ export const OWNER_EXEMPTIONS: Partial<Record<OwnerKey, string>> = {
     "Not in the payload yet: PR 2 adds it in enrichWorkspacePayload for the case where presentation is null.",
   assessmentGate:
     "Not in the payload yet: PR 2 adds it in enrichWorkspacePayload; the record's strength band reads it.",
-  outcomeExplanation:
-    "Not in the payload yet: PR 2 adds it in enrichWorkspacePayload; the decided outcome line renders it beside the date/amount line.",
 };

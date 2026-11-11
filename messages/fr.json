@@ -1484,7 +1484,7 @@
       },
       "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir.",
       "returnedToSender": {
-        "returned_unrefunded": "Le transporteur vous a retourné ce colis. Le remboursement enregistré est inférieur au montant contesté. Aucune confirmation de livraison ne peut exister pour cette commande et, sans elle, la banque tranche généralement en faveur du client. Si vous gardez la marchandise et l’argent, la réponse équitable est de rembourser."
+        "returned_unrefunded": "Le transporteur vous a retourné ce colis. Le remboursement enregistré est inférieur au montant contesté. Aucune confirmation de livraison ne peut exister pour cette commande et, sans elle, la banque tranche généralement en faveur du client."
       }
     },
     "outcomeExplanation": {
