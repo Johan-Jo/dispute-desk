@@ -50,15 +50,22 @@ const SEVERITY_CONFIG = {
 export default function TemplateHealthPage() {
   const [data, setData] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/template-health")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Loading template health failed (${r.status})`);
+        return r.json();
+      })
       .then((d) => {
         setData(d);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e: Error) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
@@ -86,6 +93,12 @@ export default function TemplateHealthPage() {
         icon={Activity}
         iconGradient="from-[#F59E0B] to-[#EF4444]"
       />
+
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
 
       <AdminStatsRow
         cards={[

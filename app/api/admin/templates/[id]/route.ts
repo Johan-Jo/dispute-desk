@@ -3,6 +3,7 @@ import { hasAdminSession, getAdminSessionUser } from "@/lib/admin/auth";
 import { getTemplatePreview, updateTemplateStatus } from "@/lib/db/templates";
 import { getServiceClient } from "@/lib/supabase/server";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
+import { logAdminAction } from "@/lib/admin/auditAction";
 
 export const runtime = "nodejs";
 
@@ -52,28 +53,27 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await req.json();
-  const { status } = body;
+  const body = await req.json().catch(() => null);
+  const status = body && typeof body === "object" ? (body as { status?: unknown }).status : undefined;
 
-  if (!status || !["active", "draft", "archived"].includes(status)) {
+  if (typeof status !== "string" || !["active", "draft", "archived"].includes(status)) {
     return NextResponse.json(
       { error: "Invalid status. Must be: active, draft, or archived" },
       { status: 400 }
     );
   }
 
-  const { before, after } = await updateTemplateStatus(id, status);
+  const { before, after } = await updateTemplateStatus(id, status as "active" | "draft" | "archived");
   if (!after) {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 
-  // Audit log
-  const sb = getServiceClient();
-  await sb.from("audit_events").insert({
-    event_type: "template.status_changed",
-    actor_type: "admin",
-    event_payload: {
-      actor_email: user.email,
+  // Audit log. Goes to admin_audit_events: this action has no shop, and the
+  // old insert into audit_events (shop_id NOT NULL) failed silently every time.
+  await logAdminAction({
+    actor: { id: user.id, email: user.email },
+    eventType: "template.status_changed",
+    payload: {
       template_id: id,
       before_status: before?.status,
       after_status: after.status,
