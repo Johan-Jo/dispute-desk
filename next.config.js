@@ -82,6 +82,10 @@ const nextConfig = {
     "/api/cron/defence-package-deadline-submit": ["./scripts/pdf-worker/**"],
     "/api/defence-packages/[id]/regenerate": ["./scripts/pdf-worker/**"],
     "/api/defence-packages/[id]/preview": ["./scripts/pdf-worker/**"],
+    // /admin/defence-package/pipeline reads this fixture with fs at request
+    // time. File tracing only ships what it can follow statically, so without
+    // this the panel always showed "Could not load fixture" on Vercel.
+    "/admin/defence-package/pipeline": ["./tests/fixtures/defence-package-sample.json"],
   },
   experimental: {
     serverActions: {
