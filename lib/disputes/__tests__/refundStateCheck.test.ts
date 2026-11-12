@@ -17,6 +17,7 @@ const state = (kind: RefundState["kind"], patch: Partial<RefundState> = {}): Ref
   firstRefundAt: null,
   settledAt: null,
   stalledPending: false,
+  settlements: [],
   returnStatus: "IN_PROGRESS",
   paymentGateways: ["shopify_payments"],
   financialStatus: "PAID",

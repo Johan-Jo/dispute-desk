@@ -11,7 +11,9 @@
       "bodyFailed": "Se inició un reembolso del pedido {order} en Shopify, pero falló: no se ha devuelto nada y la consulta por {amount} sigue abierta. El pedido muestra una devolución.\n\n**Vuelve a reembolsar el importe en disputa ({amount}) desde Shopify Admin** y comprueba el estado del reembolso en el historial del pedido. Reembolsar es decisión tuya; DisputeDesk no lo hará por ti.\n\nConviene hacerlo antes de la fecha límite ({dueDate}). Una consulta que sigue abierta puede convertirse en un contracargo. Entonces se cargan el importe en disputa y una tarifa de contracargo, Shopify bloquea los reembolsos y cuenta para tu tasa de contracargos. Las consultas no cuentan para esa tasa.",
       "cta": "Abrir la disputa",
       "footer": "DisputeDesk · recordatorio de reembolso",
-      "eyebrow": "Recordatorio de reembolso"
+      "eyebrow": "Recordatorio de reembolso",
+      "storeResultsRefunded": "En tu tienda, {won} de {decided} consultas con reembolso se cerraron a tu favor.",
+      "storeResultsUnrefunded": "De {total} consultas que terminaron sin reembolso, {escalated} se convirtieron en contracargos."
     },
     "billing": {
       "trialStarted": {

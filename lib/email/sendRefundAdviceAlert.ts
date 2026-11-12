@@ -33,6 +33,14 @@ export interface RefundAdviceEmailContext {
   amount: number;
   currencyCode: string;
   dueAt: string | null;
+  /**
+   * This store's own measured results (lib/disputes/refundOutcomeStats.ts `quotableRefundStats`); each figure is
+   * present only when the store has enough cases. Never another store's numbers.
+   */
+  storeResults?: {
+    refunded: { won: number; decided: number } | null;
+    unrefunded: { escalated: number; total: number } | null;
+  } | null;
 }
 
 type T = (key: string, values?: Record<string, string | number>) => string;
@@ -85,7 +93,16 @@ export function renderRefundAdviceEmail(
 
   const subject = t(failed ? "subjectFailed" : "subject", values);
   const title = t(failed ? "titleFailed" : "title", values);
-  const body = t(failed ? "bodyFailed" : "body", values);
+  const results = [
+    ctx.storeResults?.refunded
+      ? t("storeResultsRefunded", { won: ctx.storeResults.refunded.won, decided: ctx.storeResults.refunded.decided })
+      : null,
+    ctx.storeResults?.unrefunded
+      ? t("storeResultsUnrefunded", { escalated: ctx.storeResults.unrefunded.escalated, total: ctx.storeResults.unrefunded.total })
+      : null,
+  ].filter((l): l is string => l !== null);
+  const paragraphs = [t(failed ? "bodyFailed" : "body", values), ...(results.length ? [results.join(" ")] : [])];
+  const body = paragraphs.join("\n\n");
   const preheader = t(failed ? "preheaderFailed" : "preheader", values);
   const cta = t("cta");
   const url = getEmbeddedAppUrl(ctx.shopDomain, `disputes/${ctx.disputeId}`);

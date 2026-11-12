@@ -11,7 +11,9 @@
       "bodyFailed": "Un remboursement de la commande {order} a été lancé dans Shopify mais a échoué : rien n’a été remboursé et la demande de {amount} est toujours ouverte. La commande comporte un retour.\n\n**Remboursez à nouveau le montant contesté ({amount}) dans Shopify Admin** et vérifiez l’état du remboursement dans la chronologie de la commande. Rembourser reste votre décision ; DisputeDesk ne le fera pas à votre place.\n\nIl vaut mieux le faire avant l’échéance ({dueDate}). Une demande qui reste ouverte peut devenir une rétrofacturation. Le montant contesté et des frais de rétrofacturation sont alors prélevés, Shopify bloque les remboursements, et elle compte dans votre taux de rétrofacturations. Les demandes ne comptent pas dans ce taux.",
       "cta": "Ouvrir le litige",
       "footer": "DisputeDesk · rappel de remboursement",
-      "eyebrow": "Rappel de remboursement"
+      "eyebrow": "Rappel de remboursement",
+      "storeResultsRefunded": "Dans votre boutique, {won} demandes sur {decided} ayant donné lieu à un remboursement se sont clôturées en votre faveur.",
+      "storeResultsUnrefunded": "Sur {total} demandes terminées sans remboursement, {escalated} sont devenues des rétrofacturations."
     },
     "billing": {
       "trialStarted": {

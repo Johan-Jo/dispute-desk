@@ -60,6 +60,8 @@ export interface RefundState {
   /** Latest `Refund.updatedAt` among refunds with a SUCCESS transaction. */
   settledAt: string | null;
   stalledPending: boolean;
+  /** One entry per SUCCESS refund transaction: when it settled (`Refund.updatedAt`) and how much. */
+  settlements: Array<{ settledAt: string; amount: number }>;
   /** `Order.returnStatus` as read (NO_RETURN | IN_PROGRESS | RETURNED | ...), null when absent. */
   returnStatus: string | null;
   paymentGateways: string[];
@@ -77,6 +79,7 @@ const EMPTY: Omit<RefundState, "kind" | "reason"> = {
   firstRefundAt: null,
   settledAt: null,
   stalledPending: false,
+  settlements: [],
   returnStatus: null,
   paymentGateways: [],
   financialStatus: null,
@@ -137,6 +140,7 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
   let firstRefundAt: string | null = null;
   let settledAt: string | null = null;
   let stalled = false;
+  const settlements: Array<{ settledAt: string; amount: number }> = [];
   const nowMs = typeof now === "string" ? Date.parse(now) : now.getTime();
 
   for (const r of refunds) {
@@ -145,6 +149,7 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
 
     let refundHasPending = false;
     let refundHasSuccess = false;
+    let refundSettledAmount = 0;
     for (const t of money) {
       const status = refundTransactionStatus(t);
       const amount = amountOf(t.amountSet);
@@ -155,6 +160,7 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
         refundHasPending = true;
       } else if (status === "settled") {
         settled += amount;
+        refundSettledAmount += amount;
         refundHasSuccess = true;
       } else if (status === "failed") {
         failed += amount;
@@ -164,6 +170,9 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
     }
 
     if (r.createdAt && (firstRefundAt === null || ms(r.createdAt) < ms(firstRefundAt))) firstRefundAt = r.createdAt;
+    if (refundHasSuccess && r.updatedAt && Number.isFinite(ms(r.updatedAt))) {
+      settlements.push({ settledAt: r.updatedAt, amount: refundSettledAmount });
+    }
     if (refundHasSuccess && r.updatedAt && (settledAt === null || ms(r.updatedAt) > ms(settledAt))) settledAt = r.updatedAt;
     if (refundHasPending && Number.isFinite(nowMs) && Number.isFinite(ms(r.createdAt))) {
       if (nowMs - ms(r.createdAt) > STALLED_PENDING_HOURS * 3_600_000) stalled = true;
@@ -192,6 +201,7 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
     firstRefundAt,
     settledAt,
     stalledPending: stalled,
+    settlements,
   };
 }
 
