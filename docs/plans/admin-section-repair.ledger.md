@@ -52,6 +52,21 @@ Sources so far: static audit + read-only prod measurement (`db:query:prod --read
 | 28 | Webhooks | 24h totals/p50/p95 truncated at 1000 rows | un-ranged aggregate select | fixed (`fetchAllRows`) |
 | 29 | Webhooks | Failed aggregate showed zeros ("no webhooks") ; failed list blanked loading | no `res.ok` handling | fixed |
 
+## Batch 5 — Fraud Intel, Outcome Analysis (this PR)
+
+| # | Page / route | Symptom | Evidence | Root cause | Status |
+|---|---|---|---|---|---|
+| 30 | Fraud Intel | Page analysed ~3% of orders | prod: 34,284 orders in the 90d window, page read <= 1000 | PostgREST row cap overrides `.limit(50_000)` | fixed (SQL aggregation RPC) |
+| 31 | Fraud Intel | Every dispute rate read 0% | prod: `has_chargeback` set on 0 orders all time; 1,893 disputes, all joinable by `order_gid`; real window figure 299 disputed orders (0.87%) | disputes counted from a never-written flag | fixed (disputes joined via `order_gid`) |
+| 32 | Fraud Intel | Signals lookup passed up to 1000 ids in a URL | — | `.in()` on a large id list | removed with the row pull |
+| 33 | Fraud Intel | Parser-miss total capped at 1000 rows | un-ranged select of `occurrences` | row cap | fixed (`fetchAllRows`) |
+| 34 | Fraud Intel | RPC/DB failure rendered empty tables | — | no error handling | fixed (banner) |
+| 35 | Outcome Analysis | Merchant shown as raw alias | — | — | fixed (`AdminMerchant`) |
+
+Finding for the owner (not a bug): in prod, 19,232 of 34,284 window orders have no AVS signal ("unknown") and distance/attempt count are unknown on essentially all orders, so those cuts say little until signal capture improves. 291 of the 299 disputed orders are in the AVS-unknown bucket.
+
+**Promotion note:** migration `20261112120000_admin_fraud_intel_buckets.sql` is applied on dev only. Apply to prod (`aokhplydttxtebvbeuzc`) with the `master` promotion, before the page code deploys there.
+
 ## Open — merchant display (R2) still on raw `shop_domain`
 `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 

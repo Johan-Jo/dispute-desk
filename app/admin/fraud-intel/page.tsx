@@ -21,6 +21,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,25 +35,9 @@ interface BucketRow {
   disputes: number;
 }
 
-interface OrderRow {
-  shop_id: string;
-  shopify_order_id: string;
-  has_chargeback: boolean | null;
-  is_cross_border: boolean | null;
-  created_at_shopify: string;
-  risk_level_initial: string | null;
-}
-
-interface SignalRow {
-  shop_id: string;
-  shopify_order_id: string;
-  avs_address_result: string | null;
-  payment_attempt_count: number | null;
-  proxy_detected: boolean | null;
-  ip_ship_distance_km: number | null;
-}
-
 interface PageData {
+  /** Set when the aggregation failed — the page says so instead of rendering zeros. */
+  loadError: string | null;
   windowDays: number;
   ordersInWindow: number;
   disputesInWindow: number;
@@ -70,99 +55,33 @@ async function loadPageData(): Promise<PageData> {
     Date.now() - WINDOW_DAYS * 24 * 3600 * 1000,
   ).toISOString();
 
-  // Pull the joined order+signal+dispute snapshot. v0 is unbounded by
-  // shop — admin view aggregates across all shops. PR-E plan caps the
-  // 90-day window so the unindexed join stays inside a few hundred ms.
-  const { data: orderRows } = await sb
-    .from("shopify_orders")
-    .select(
-      "shop_id, shopify_order_id, has_chargeback, is_cross_border, created_at_shopify, risk_level_initial",
-    )
-    .gte("created_at_shopify", sinceIso)
-    .limit(50_000);
-
-  const orders = (orderRows ?? []) as OrderRow[];
-  const ordersInWindow = orders.length;
-  const orderKey = (r: { shop_id: string; shopify_order_id: string }) =>
-    `${r.shop_id}|${r.shopify_order_id}`;
-
-  // Signals lookup, keyed for in-memory join.
-  const { data: signalRows } = await sb
-    .from("shopify_order_risk_signals")
-    .select(
-      "shop_id, shopify_order_id, avs_address_result, payment_attempt_count, proxy_detected, ip_ship_distance_km",
-    )
-    .in(
-      "shopify_order_id",
-      orders.map((r) => r.shopify_order_id),
-    )
-    .limit(50_000);
-  const signals = (signalRows ?? []) as SignalRow[];
-  const signalByKey = new Map<string, SignalRow>();
-  for (const s of signals) signalByKey.set(orderKey(s), s);
-
-  // Dispute count — restrict to orders in the same window. Use the
-  // has_chargeback flag from shopify_orders as primary signal (already
-  // reconciled by the daily fraud-metrics snapshot job).
-  let disputesInWindow = 0;
-  for (const r of orders) {
-    if (r.has_chargeback) disputesInWindow++;
-  }
-
-  // Helper to bucket orders + compute disputes.
-  function tally<K extends string>(
-    bucketFn: (order: OrderRow, signal: SignalRow | undefined) => K | null,
-  ): BucketRow[] {
-    const tallies = new Map<K, { orders: number; disputes: number }>();
-    for (const o of orders) {
-      const s = signalByKey.get(orderKey(o));
-      const bucket = bucketFn(o, s);
-      if (bucket === null) continue;
-      const entry = tallies.get(bucket) ?? { orders: 0, disputes: 0 };
-      entry.orders++;
-      if (o.has_chargeback) entry.disputes++;
-      tallies.set(bucket, entry);
-    }
-    return Array.from(tallies.entries())
-      .map(([bucket, v]) => ({ bucket, orders: v.orders, disputes: v.disputes }))
+  // Bucketing happens in SQL over EVERY order in the window
+  // (dd_admin_fraud_intel_buckets). It used to pull rows into the app, where
+  // PostgREST's 1000-row cap meant the page analysed ~3% of the orders, and it
+  // counted disputes from shopify_orders.has_chargeback, which is never set —
+  // so every bucket read 0%. A dispute here = a disputes row exists for the order.
+  const { data: bucketRows, error: bucketErr } = await sb.rpc(
+    "dd_admin_fraud_intel_buckets",
+    { p_since: sinceIso },
+  );
+  const rows = (bucketRows ?? []) as Array<{
+    dimension: string;
+    bucket: string;
+    orders: number | string;
+    disputes: number | string;
+  }>;
+  const byDimension = (dimension: string): BucketRow[] =>
+    rows
+      .filter((r) => r.dimension === dimension)
+      .map((r) => ({ bucket: r.bucket, orders: Number(r.orders), disputes: Number(r.disputes) }))
       .sort((a, b) => b.orders - a.orders);
-  }
-
-  const avsBuckets = tally((_o, s) => {
-    if (!s) return "unknown";
-    const code = (s.avs_address_result ?? "").trim();
-    return code === "" ? "unknown" : code;
-  });
-
-  const attemptBuckets = tally((_o, s) => {
-    const n = s?.payment_attempt_count;
-    if (n == null) return "unknown";
-    if (n <= 1) return "1";
-    if (n === 2) return "2";
-    if (n <= 4) return "3-4";
-    return "5+";
-  });
-
-  const distanceBuckets = tally((_o, s) => {
-    const km = s?.ip_ship_distance_km;
-    if (km == null) return "missing";
-    if (km <= 50) return "0-50";
-    if (km <= 200) return "50-200";
-    if (km <= 1000) return "200-1000";
-    return "1000+";
-  });
-
-  const proxyCrossBuckets = tally((o, s) => {
-    const proxy =
-      s?.proxy_detected === null || s?.proxy_detected === undefined
-        ? "not_reported"
-        : s.proxy_detected
-          ? "proxy"
-          : "no_proxy";
-    const cross =
-      o.is_cross_border === null ? "cross_unknown" : o.is_cross_border ? "cross" : "same";
-    return `${proxy}×${cross}`;
-  });
+  const total = byDimension("total")[0];
+  const ordersInWindow = total?.orders ?? 0;
+  const disputesInWindow = total?.disputes ?? 0;
+  const avsBuckets = byDimension("avs");
+  const attemptBuckets = byDimension("attempts");
+  const distanceBuckets = byDimension("distance");
+  const proxyCrossBuckets = byDimension("proxy_cross");
 
   // Classification drift — top unmatched fact patterns for orders
   // Shopify rated LOW that became chargebacks. Joined to disputes
@@ -189,16 +108,22 @@ async function loadPageData(): Promise<PageData> {
   // Total sightings in the window — the sum of the counts, not a row count.
   // A row count would now report distinct phrasings and silently change what
   // this number means.
-  const { data: missTotals } = await sb
-    .from("fraud_intel_parse_misses")
-    .select("occurrences")
-    .gte("last_seen_at", sinceIso);
-  const parseMissCount = (missTotals ?? []).reduce(
+  const missTotals = await fetchAllRows<{ id: string; occurrences: number | null }>(
+    (from, to) =>
+      sb
+        .from("fraud_intel_parse_misses")
+        .select("id, occurrences")
+        .gte("last_seen_at", sinceIso)
+        .order("id")
+        .range(from, to),
+  ).catch(() => [] as Array<{ id: string; occurrences: number | null }>);
+  const parseMissCount = missTotals.reduce(
     (sum, r) => sum + (r.occurrences ?? 0),
     0,
   );
 
   return {
+    loadError: bucketErr ? bucketErr.message : null,
     windowDays: WINDOW_DAYS,
     ordersInWindow,
     disputesInWindow,
@@ -228,11 +153,18 @@ export default async function AdminFraudIntelPage() {
         <h1 className="text-2xl font-bold text-[#0F172A]">Fraud Intelligence v0</h1>
         <p className="text-sm text-[#64748B] mt-1">
           Cross-shop signal correlations over the trailing {data.windowDays}{" "}
-          days. Buckets with fewer than {MIN_BUCKET_N} orders are flagged
+          days, across every order in the window. A dispute is an order that has a dispute record. Buckets with fewer than {MIN_BUCKET_N} orders are flagged
           as insufficient sample. Each cut is a hypothesis — validate before
           surfacing in merchant-facing UI.
         </p>
       </div>
+
+      {data.loadError && (
+        <div role="alert" className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          The signal aggregation failed ({data.loadError}). The figures below are
+          not valid — do not read the empty tables as &quot;no orders&quot;.
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         <KpiCard label="Orders in window" value={data.ordersInWindow.toLocaleString()} />
