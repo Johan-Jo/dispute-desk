@@ -1,5 +1,20 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Encomenda {order}: reembolse agora para o pedido de informação não se tornar um estorno",
+      "preheader": "O cliente diz que um crédito nunca foi processado e não foi feito qualquer reembolso.",
+      "title": "Reembolse a encomenda {order} para resolver este pedido de informação",
+      "body": "O titular do cartão da encomenda {order} disse ao seu banco que um crédito de {amount} nunca foi processado. A encomenda mostra uma devolução e não foi feito qualquer reembolso. Verificámos o Shopify há instantes.\n\nPara o resolver, **reembolse o valor contestado ({amount}) no Shopify Admin**. Reembolsar é uma decisão sua; a DisputeDesk não o fará por si.\n\nO reembolso pode demorar cerca de um dia a ser concluído junto do prestador de pagamentos. Depois de concluído, o pedido costuma ser encerrado pouco depois.\n\nVale a pena fazê-lo antes do prazo ({dueDate}). Um pedido que fica em aberto pode tornar-se um estorno. Nesse caso, o valor contestado e uma taxa de estorno são debitados, o Shopify bloqueia os reembolsos e conta para a sua taxa de estornos. Os pedidos de informação não contam para essa taxa.",
+      "subjectFailed": "Encomenda {order}: o seu reembolso não foi concluído",
+      "preheaderFailed": "O pedido continua em aberto e nada foi devolvido.",
+      "titleFailed": "O reembolso da encomenda {order} não foi concluído",
+      "bodyFailed": "Foi iniciado um reembolso da encomenda {order} no Shopify, mas falhou: nada foi devolvido e o pedido de {amount} continua em aberto. A encomenda mostra uma devolução.\n\n**Reembolse novamente o valor contestado ({amount}) no Shopify Admin** e verifique o estado do reembolso na cronologia da encomenda. Reembolsar é uma decisão sua; a DisputeDesk não o fará por si.\n\nVale a pena fazê-lo antes do prazo ({dueDate}). Um pedido que fica em aberto pode tornar-se um estorno. Nesse caso, o valor contestado e uma taxa de estorno são debitados, o Shopify bloqueia os reembolsos e conta para a sua taxa de estornos. Os pedidos de informação não contam para essa taxa.",
+      "cta": "Abrir a disputa",
+      "footer": "DisputeDesk · lembrete de reembolso",
+      "eyebrow": "Lembrete de reembolso",
+      "storeResultsRefunded": "Na sua loja, {won} de {decided} pedidos com reembolso foram encerrados a seu favor.",
+      "storeResultsUnrefunded": "De {total} pedidos que terminaram sem reembolso, {escalated} tornaram-se estornos."
+    },
     "billing": {
       "trialStarted": {
         "subject": "Teste do DisputeDesk {planName} ativado",
@@ -58,6 +73,53 @@
         "body": "Os rascunhos continuam ilimitados — mas enviar evidências ao banco exige um crédito, e você usou todos os seus envios gratuitos.\n\nUm chargeback recuperado costuma valer muito mais que um plano de US$ 29/mês, então uma única disputa ganha se paga por meses. Faça upgrade agora para continuar respondendo antes do seu prazo.",
         "cta": "Fazer upgrade do plano"
       }
+    },
+    "fatalLoss": {
+      "subjectInrInquiry": "Ação necessária: o pedido de informação da encomenda {order} não pode ser defendido sem rastreio",
+      "subjectInrChargeback": "Ação necessária: o estorno da encomenda {order} não pode ser defendido sem rastreio",
+      "subjectRefundedInquiry": "Nenhuma ação necessária: o pedido de informação da encomenda {order} já foi reembolsado",
+      "subjectRefundedChargeback": "Nenhuma ação necessária: o estorno da encomenda {order} já foi reembolsado",
+      "greeting": "Olá,",
+      "lead": "{phase, select, inquiry {O pedido de informação} other {O estorno}} da encomenda **{order}**{amountSuffix} não pode ser ganho como está. {situation}",
+      "situationInr": "O cliente diz que o artigo nunca chegou, e esta encomenda não tem qualquer envio registado.",
+      "situationRefunded": "Já foi feito um reembolso que cobre esta cobrança.",
+      "whatToDo": "O que fazer",
+      "actionShipped": "**Se foi enviada:** adicione o número de rastreio à encomenda no Shopify. A DisputeDesk reconstrói a defesa automaticamente quando o envio aparecer, e o caso passa a ser defensável.",
+      "actionNeverShippedInquiry": "**Se nunca foi enviada:** verifique no Shopify Admin se a encomenda já foi reembolsada. Se não, reembolsar o valor contestado pode resolver este pedido de informação antes de se tornar um estorno com taxa.",
+      "actionNeverShippedChargeback": "**Se nunca foi enviada:** não há nada a fazer nem nada a reembolsar. O valor contestado e a taxa de estorno já foram debitados, e o Shopify bloqueia reembolsos enquanto houver um estorno aberto. Deixe-o encerrar.",
+      "actionWithdraw": "**Só se o cliente reconhecer que se enganou:** peça-lhe que contacte o banco e retire a disputa, e envie-nos a carta de retirada do banco. É a única via que reverte um estorno.",
+      "actionNoAction": "**Nenhuma ação necessária:** deixe este caso encerrar. Contestá-lo diria ao banco que o dinheiro é devido.",
+      "actionRefundedBefore": "**Se reembolsou ANTES de o cliente abrir a disputa**, diga-nos. Um crédito anterior à disputa é um dos argumentos mais fortes, e reconstruiremos a defesa em torno dele.",
+      "notSentInr": "A DisputeDesk **não** enviou uma defesa para esta disputa: ainda não há nada factual com que argumentar. Quando o prazo terminar, o Shopify enviará os dados básicos da encomenda que tem. Isso raramente ganha e, numa encomenda sem envio registado, argumenta contra si.",
+      "notSentRefunded": "A DisputeDesk **não** enviou uma defesa para esta disputa. Quando o prazo terminar, o Shopify enviará os dados básicos da encomenda que tem. Isso raramente ganha.",
+      "openDispute": "Abrir esta disputa na DisputeDesk",
+      "reasonLabel": "Motivo da disputa",
+      "deadlineLabel": "Prazo",
+      "shopLabel": "Loja",
+      "signoff": "— DisputeDesk"
+    },
+    "evidenceNeeded": {
+      "subjectReview": "{hasOrder, select, yes {Pacote de provas pronto para revisão: encomenda {order} — disputa «{reason}»{amountPart}} other {Pacote de provas pronto para revisão — disputa «{reason}»{amountPart}}}",
+      "subjectAsk": "{hasOrder, select, yes {Ação necessária: carregue provas, encomenda {order} — disputa «{reason}»{amountPart}} other {Ação necessária: carregue provas — disputa «{reason}»{amountPart}}}",
+      "headingReview": "O seu pacote de provas está pronto para revisão",
+      "headingAsk": "São necessárias provas manuais",
+      "introReview": "Foi processada uma disputa de **{reason}**{amountPart}{hasOrder, select, yes { da encomenda {order}} other {}} de {shop}. A DisputeDesk reuniu todas as provas que consegue obter do Shopify{withTools, select, yes { e das suas ferramentas ligadas} other {}} — não é preciso carregar nada. Reveja o pacote quando tiver um momento.",
+      "introAsk": "Foi processada uma disputa de **{reason}**{amountPart}{hasOrder, select, yes { da encomenda {order}} other {}} de {shop}. A DisputeDesk reuniu os dados disponíveis do Shopify, mas este tipo de disputa beneficia de provas adicionais que têm de ser carregadas manualmente.",
+      "attachedTitle": "Já anexámos:",
+      "attachedDelivery": "Confirmação de entrega e rastreio",
+      "attachedComms": "Conversas com o apoio ao cliente",
+      "askTitleUpload": "Carregue o seguinte:",
+      "askTitleReview": "À espera da sua revisão:",
+      "typeCarrierLabel": "Prova de entrega da transportadora",
+      "typeCarrierHint": "Confirmação de entrega assinada, documento de prova de entrega da transportadora ou fotografia da entrega",
+      "typeReviewLabel": "Rever conversas de apoio associadas",
+      "typeReviewHintCount": "{count, plural, one {# conversa de apoio associada aguarda} other {# conversas de apoio associadas aguardam}} a sua revisão — aprove as que sustentam a sua defesa.",
+      "typeReviewHintNone": "Há conversas de apoio associadas à espera da sua revisão — aprove as que sustentam a sua defesa.",
+      "ctaReview": "Rever a disputa →",
+      "ctaReviewConversations": "Rever as conversas associadas →",
+      "ctaUpload": "Ver a disputa e carregar provas →",
+      "footer": "Este e-mail foi enviado porque ativou os alertas de provas na configuração da DisputeDesk. Pode alterar as preferências de notificação nas Definições.",
+      "shopFallback": "a sua loja"
     }
   },
   "nav": {
@@ -2553,7 +2615,7 @@
         },
         "can": {
           "evidence": "Se tem provas que não conseguimos ver, como uma confirmação de entrega da transportadora, adicione-as no separador Evidências.",
-          "refundInquiry": "Reembolse a encomenda na totalidade no Shopify Admin. Isto ainda é um pedido de informação, por isso não foi retirado dinheiro e um reembolso total encerra-o. Se passar a estorno, o Shopify bloqueia reembolsos e o valor perde-se."
+          "refundInquiry": "O Shopify não mostra qualquer reembolso nesta encomenda. Reembolsar o valor contestado ({amount}) no Shopify Admin pode resolver este pedido de informação antes de se tornar um estorno. Se passar a estorno, o Shopify bloqueia reembolsos e o valor perde-se."
         },
         "optional": {
           "ack": "O reconhecimento do titular do cartão reforçaria o caso."
@@ -2596,6 +2658,11 @@
         "done": {
           "drafted": "As provas estão reunidas e há uma resposta redigida. Nada foi apresentado.",
           "evidence": "As provas estão reunidas. Nada foi apresentado."
+        },
+        "refund": {
+          "pending": "Foi iniciado um reembolso de {amount} em {date} e ainda está a ser processado. Não é preciso fazer mais nada; o pedido costuma ser encerrado depois de concluído.",
+          "failed": "Foi iniciado um reembolso de {amount} em {date}, mas falhou, por isso nada foi devolvido. Reembolse novamente o valor contestado no Shopify Admin.",
+          "settledOpen": "Um reembolso de {amount} foi concluído em {date}. O pedido continua em aberto."
         }
       },
       "claim": {
@@ -2936,6 +3003,7 @@
           "placedPaid": "Pedido feito e pago",
           "shipped": "Pedido enviado",
           "delivered": "Entregue",
+          "returnOpened": "Devolução aberta",
           "opened": "Contestação aberta",
           "prepared": "Pacote de defesa preparado",
           "deadline": "Prazo",
@@ -3805,6 +3873,8 @@
     "notifNewDisputeDesc": "Seja notificado quando uma nova disputa precisar de atenção. Se suas regras enviarem para revisão, o e-mail é enviado após a coleta automática de evidências.",
     "notifOutcome": "Resultado publicado",
     "notifOutcomeDesc": "Receba um e-mail no momento em que a rede de cartões emitir uma decisão final — vencida, perdida ou encerrada sem contestação.",
+    "notifRefundAdvice": "Lembretes de reembolso",
+    "notifRefundAdviceDesc": "Receba um e-mail quando um pedido de informação puder ser resolvido reembolsando uma encomenda devolvida pelo cliente, antes de se tornar um estorno.",
     "notifBeforeDue": "Antes do prazo",
     "notifBeforeDueDesc": "Lembrete 24 horas antes do prazo da disputa",
     "notifEvidenceReady": "Evidência pronta",

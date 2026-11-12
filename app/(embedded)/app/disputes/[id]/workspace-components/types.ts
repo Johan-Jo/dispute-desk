@@ -4,6 +4,7 @@
  */
 
 import type { OrderSituation } from "@/lib/disputes/orderSituation";
+import type { PageRefundState } from "@/lib/disputes/refundStateStore";
 import type { RefundStatement } from "@/lib/disputes/refundStatement";
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
@@ -153,6 +154,8 @@ export interface WorkspaceDispute {
   /** What Shopify records about refunds on the order (lib/disputes/refundStatement.ts),
    *  read off the pack sections with `asOf` = the pack's last build. Merchant-only. */
   refundStatement?: RefundStatement | null;
+  /** The live refund state read from Shopify by the refund-state cron (`dispute_refund_state`); null = never read. */
+  refundState?: PageRefundState | null;
   cardholderName?: string | null;
   /** Full event timeline from the pack's access_log section — the SAME
    *  array the PDF builder threads through `meta.timelineEvents`. The

@@ -44,7 +44,13 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-import { sendFatalLossAlert } from "../sendFatalLossAlert";
+import { renderFatalLossEmail, sendFatalLossAlert } from "../sendFatalLossAlert";
+import en from "@/messages/en.json";
+import de from "@/messages/de.json";
+import es from "@/messages/es.json";
+import fr from "@/messages/fr.json";
+import pt from "@/messages/pt.json";
+import sv from "@/messages/sv.json";
 
 const BASE = {
   shopId: "shop-1",
@@ -101,12 +107,15 @@ describe("inr_no_fulfillment — the two-cause ask", () => {
     expect(sentBody().html).toMatch(/withdraw the dispute/i);
   });
 
-  it("DOES tell an inquiry merchant to refund — no money has moved yet", async () => {
-    // An inquiry is refundable, and refunding settles it before it escalates
-    // into a chargeback with a fee. Same trigger, opposite instruction.
+  it("on an inquiry, refunding can settle it, but the merchant is told to CHECK the refund state first", async () => {
+    // An inquiry is refundable, and refunding can settle it before it escalates into a chargeback with a fee.
+    // This alert is sent without a live read of the order: a refund may already be pending (0.0 for about a
+    // day), so it must never say "refund now". Same trigger, opposite instruction to a chargeback.
     await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment", phase: "inquiry" });
     const { html } = sentBody();
-    expect(html).toMatch(/refund the order now/i);
+    expect(html).toMatch(/check in Shopify Admin whether the order has already been refunded/i);
+    expect(html).toMatch(/refunding the disputed amount can settle this inquiry/i);
+    expect(html).not.toMatch(/refund the order now/i);
     expect(html).not.toMatch(/blocks refunds/i);
   });
 
@@ -218,5 +227,48 @@ describe("guards", () => {
     const r = await sendFatalLossAlert({ ...BASE, reason: "inr_no_fulfillment" });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("rate limited");
+  });
+});
+
+describe("renderFatalLossEmail: copy comes from messages/*.json in the merchant's language", () => {
+  const CATALOGS = { en, de, es, fr, pt, sv } as const;
+  const asMessages = (m: unknown) => m as Record<string, unknown>;
+  const OPTS = { locale: "en", shopDomain: "blume-box.myshopify.com" };
+
+  for (const [locale, messages] of Object.entries(CATALOGS)) {
+    for (const reason of ["inr_no_fulfillment", "refund_issued"] as const) {
+      for (const phase of ["inquiry", "chargeback"] as const) {
+        it(`${locale}/${reason}/${phase}: no unresolved placeholder or raw key, names the order and the amount`, () => {
+          const r = renderFatalLossEmail({ ...BASE, reason, phase }, { ...OPTS, locale }, asMessages(messages));
+          const all = `${r.subject}
+${r.html}
+${r.text}`;
+          expect(all).not.toMatch(/\{[a-zA-Z]+\}/);
+          expect(all).not.toMatch(/email\.fatalLoss/);
+          expect(all).not.toMatch(/\*\*/);
+          expect(r.subject).toContain("#360499");
+          expect(r.html).toContain("USD 85.41");
+          expect(r.locale).toBe(locale);
+        });
+      }
+    }
+  }
+
+  it("a Swedish merchant gets Swedish, and the deadline is formatted in their locale", () => {
+    const r = renderFatalLossEmail({ ...BASE, reason: "inr_no_fulfillment", phase: "inquiry" }, { ...OPTS, locale: "sv" }, asMessages(sv));
+    expect(r.subject).toMatch(/^Åtgärd krävs: förfrågan för order #360499/);
+    expect(r.text).toMatch(/11 september 2026/);
+  });
+
+  it("an unknown locale falls back to English", () => {
+    const r = renderFatalLossEmail({ ...BASE, reason: "inr_no_fulfillment" }, { ...OPTS, locale: "xx" }, asMessages(en));
+    expect(r.locale).toBe("en");
+  });
+
+  it("no locale tells an inquiry merchant to refund 'now', or a chargeback merchant to refund at all", () => {
+    for (const [locale, messages] of Object.entries(CATALOGS)) {
+      const inquiry = renderFatalLossEmail({ ...BASE, reason: "inr_no_fulfillment", phase: "inquiry" }, { ...OPTS, locale }, asMessages(messages));
+      expect(inquiry.text, locale).not.toMatch(/refund the order now|jetzt erstatten|reembolsa(lo)? ahora|remboursez.*maintenant|reembolse.*agora|återbetala.*nu/i);
+    }
   });
 });

@@ -1,5 +1,20 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Pedido {order}: reembólsalo ahora para que la consulta no se convierta en un contracargo",
+      "preheader": "El cliente dice que nunca se procesó un abono y no se ha emitido ningún reembolso.",
+      "title": "Reembolsa el pedido {order} para resolver esta consulta",
+      "body": "El titular de la tarjeta del pedido {order} le dijo a su banco que nunca se procesó un abono de {amount}. El pedido muestra una devolución y no se ha emitido ningún reembolso. Acabamos de comprobarlo en Shopify.\n\nPara resolverla, **reembolsa el importe en disputa ({amount}) desde Shopify Admin**. Reembolsar es decisión tuya; DisputeDesk no lo hará por ti.\n\nEl reembolso puede tardar aproximadamente un día en completarse con el proveedor de pagos. Cuando se complete, la consulta suele cerrarse poco después.\n\nConviene hacerlo antes de la fecha límite ({dueDate}). Una consulta que sigue abierta puede convertirse en un contracargo. Entonces se cargan el importe en disputa y una tarifa de contracargo, Shopify bloquea los reembolsos y cuenta para tu tasa de contracargos. Las consultas no cuentan para esa tasa.",
+      "subjectFailed": "Pedido {order}: tu reembolso no se completó",
+      "preheaderFailed": "La consulta sigue abierta y no se ha devuelto nada.",
+      "titleFailed": "El reembolso del pedido {order} no se completó",
+      "bodyFailed": "Se inició un reembolso del pedido {order} en Shopify, pero falló: no se ha devuelto nada y la consulta por {amount} sigue abierta. El pedido muestra una devolución.\n\n**Vuelve a reembolsar el importe en disputa ({amount}) desde Shopify Admin** y comprueba el estado del reembolso en el historial del pedido. Reembolsar es decisión tuya; DisputeDesk no lo hará por ti.\n\nConviene hacerlo antes de la fecha límite ({dueDate}). Una consulta que sigue abierta puede convertirse en un contracargo. Entonces se cargan el importe en disputa y una tarifa de contracargo, Shopify bloquea los reembolsos y cuenta para tu tasa de contracargos. Las consultas no cuentan para esa tasa.",
+      "cta": "Abrir la disputa",
+      "footer": "DisputeDesk · recordatorio de reembolso",
+      "eyebrow": "Recordatorio de reembolso",
+      "storeResultsRefunded": "En tu tienda, {won} de {decided} consultas con reembolso se cerraron a tu favor.",
+      "storeResultsUnrefunded": "De {total} consultas que terminaron sin reembolso, {escalated} se convirtieron en contracargos."
+    },
     "billing": {
       "trialStarted": {
         "subject": "Prueba de DisputeDesk {planName} activada",
@@ -58,6 +73,53 @@
         "body": "Los borradores siguen siendo ilimitados, pero enviar evidencia al banco requiere un crédito, y ya usaste todos tus envíos gratis.\n\nUn contracargo recuperado suele valer mucho más que un plan de $29/mes, así que una sola disputa ganada se paga durante meses. Haz upgrade ahora para seguir respondiendo antes de tu fecha límite.",
         "cta": "Actualizar plan"
       }
+    },
+    "fatalLoss": {
+      "subjectInrInquiry": "Acción necesaria: la consulta del pedido {order} no se puede defender sin seguimiento",
+      "subjectInrChargeback": "Acción necesaria: el contracargo del pedido {order} no se puede defender sin seguimiento",
+      "subjectRefundedInquiry": "No hace falta actuar: la consulta del pedido {order} ya fue reembolsada",
+      "subjectRefundedChargeback": "No hace falta actuar: el contracargo del pedido {order} ya fue reembolsado",
+      "greeting": "Hola,",
+      "lead": "{phase, select, inquiry {La consulta} other {El contracargo}} del pedido **{order}**{amountSuffix} no se puede ganar tal como está. {situation}",
+      "situationInr": "El cliente dice que el artículo nunca llegó, y este pedido no tiene ningún envío registrado.",
+      "situationRefunded": "Ya se emitió un reembolso que cubre este cargo.",
+      "whatToDo": "Qué hacer",
+      "actionShipped": "**Si se envió:** añade el número de seguimiento al pedido en Shopify. DisputeDesk reconstruye la defensa automáticamente cuando aparece el envío, y el caso pasa a ser defendible.",
+      "actionNeverShippedInquiry": "**Si nunca se envió:** comprueba en Shopify Admin si el pedido ya se reembolsó. Si no, reembolsar el importe en disputa puede resolver esta consulta antes de que se convierta en un contracargo con comisión.",
+      "actionNeverShippedChargeback": "**Si nunca se envió:** no hay nada que hacer ni nada que reembolsar. El importe en disputa y la comisión del contracargo ya se han cargado, y Shopify bloquea los reembolsos mientras haya un contracargo abierto. Deja que se cierre.",
+      "actionWithdraw": "**Solo si el cliente reconoce que se equivocó:** pídele que contacte con su banco y retire la disputa, y envíanos la carta de retirada del banco. Es la única vía que revierte un contracargo.",
+      "actionNoAction": "**No hace falta actuar:** deja que este caso se cierre. Defenderlo le diría al banco que el dinero se debe.",
+      "actionRefundedBefore": "**Si reembolsaste ANTES de que el cliente abriera la disputa**, avísanos. Un abono previo a la disputa es uno de los argumentos más sólidos, y reconstruiremos la defensa a su alrededor.",
+      "notSentInr": "DisputeDesk **no** ha enviado una defensa para esta disputa: todavía no hay nada factual con lo que argumentar. Cuando pase el plazo, Shopify enviará los datos básicos del pedido que tiene. Eso rara vez gana, y en un pedido sin envío registrado argumenta en tu contra.",
+      "notSentRefunded": "DisputeDesk **no** ha enviado una defensa para esta disputa. Cuando pase el plazo, Shopify enviará los datos básicos del pedido que tiene. Eso rara vez gana.",
+      "openDispute": "Abrir esta disputa en DisputeDesk",
+      "reasonLabel": "Motivo de la disputa",
+      "deadlineLabel": "Fecha límite",
+      "shopLabel": "Tienda",
+      "signoff": "— DisputeDesk"
+    },
+    "evidenceNeeded": {
+      "subjectReview": "{hasOrder, select, yes {Paquete de pruebas listo para revisar: pedido {order} — disputa «{reason}»{amountPart}} other {Paquete de pruebas listo para revisar — disputa «{reason}»{amountPart}}}",
+      "subjectAsk": "{hasOrder, select, yes {Acción necesaria: sube pruebas, pedido {order} — disputa «{reason}»{amountPart}} other {Acción necesaria: sube pruebas — disputa «{reason}»{amountPart}}}",
+      "headingReview": "Tu paquete de pruebas está listo para revisar",
+      "headingAsk": "Se necesitan pruebas manuales",
+      "introReview": "Se ha procesado una disputa de **{reason}**{amountPart}{hasOrder, select, yes { del pedido {order}} other {}} de {shop}. DisputeDesk ha recopilado todas las pruebas que puede obtener de Shopify{withTools, select, yes { y de tus herramientas conectadas} other {}}; no hace falta subir nada. Revisa el paquete cuando tengas un momento.",
+      "introAsk": "Se ha procesado una disputa de **{reason}**{amountPart}{hasOrder, select, yes { del pedido {order}} other {}} de {shop}. DisputeDesk ha recopilado los datos disponibles de Shopify, pero este tipo de disputa se beneficia de pruebas adicionales que hay que subir manualmente.",
+      "attachedTitle": "Ya hemos adjuntado:",
+      "attachedDelivery": "Confirmación de entrega y seguimiento",
+      "attachedComms": "Conversaciones con atención al cliente",
+      "askTitleUpload": "Sube lo siguiente:",
+      "askTitleReview": "A la espera de tu revisión:",
+      "typeCarrierLabel": "Prueba de entrega del transportista",
+      "typeCarrierHint": "Confirmación de entrega firmada, documento de prueba de entrega del transportista o foto de la entrega",
+      "typeReviewLabel": "Revisar conversaciones de atención al cliente asociadas",
+      "typeReviewHintCount": "{count, plural, one {# conversación de atención al cliente asociada espera} other {# conversaciones de atención al cliente asociadas esperan}} tu revisión: aprueba las que respalden tu defensa.",
+      "typeReviewHintNone": "Hay conversaciones de atención al cliente asociadas esperando tu revisión: aprueba las que respalden tu defensa.",
+      "ctaReview": "Revisar la disputa →",
+      "ctaReviewConversations": "Revisar las conversaciones asociadas →",
+      "ctaUpload": "Ver la disputa y subir pruebas →",
+      "footer": "Te enviamos este correo porque activaste las alertas de pruebas en la configuración de DisputeDesk. Puedes cambiar las preferencias de notificación en Ajustes.",
+      "shopFallback": "tu tienda"
     }
   },
   "nav": {
@@ -2553,7 +2615,7 @@
         },
         "can": {
           "evidence": "Si tienes pruebas que no podemos ver, como una confirmación de entrega del transportista, añádelas en la pestaña Evidencia.",
-          "refundInquiry": "Reembolsa el pedido completo desde Shopify Admin. Esto sigue siendo una consulta, así que no se ha retirado dinero y un reembolso completo la cierra. Si se convierte en un contracargo, Shopify bloquea los reembolsos y el importe se pierde."
+          "refundInquiry": "Shopify no muestra ningún reembolso en este pedido. Reembolsar el importe en disputa ({amount}) desde Shopify Admin puede resolver esta consulta antes de que se convierta en un contracargo. Si se convierte en uno, Shopify bloquea los reembolsos y el importe se pierde."
         },
         "optional": {
           "ack": "El reconocimiento del titular de la tarjeta reforzaría el caso."
@@ -2596,6 +2658,11 @@
         "done": {
           "drafted": "Las pruebas están reunidas y hay una respuesta redactada. No se ha presentado nada.",
           "evidence": "Las pruebas están reunidas. No se ha presentado nada."
+        },
+        "refund": {
+          "pending": "Se inició un reembolso de {amount} el {date} y todavía se está procesando. No hace falta nada más; la consulta suele cerrarse cuando se completa.",
+          "failed": "Se inició un reembolso de {amount} el {date}, pero falló, así que no se ha devuelto nada. Vuelve a reembolsar el importe en disputa desde Shopify Admin.",
+          "settledOpen": "Un reembolso de {amount} se completó el {date}. La consulta sigue abierta."
         }
       },
       "claim": {
@@ -2936,6 +3003,7 @@
           "placedPaid": "Pedido realizado y pagado",
           "shipped": "Pedido enviado",
           "delivered": "Entregado",
+          "returnOpened": "Devolución iniciada",
           "opened": "Disputa abierta",
           "prepared": "Paquete de defensa preparado",
           "deadline": "Fecha límite",
@@ -3805,6 +3873,8 @@
     "notifNewDisputeDesc": "Recibe un aviso cuando una disputa nueva requiera tu atención. Si tus reglas la envían a revisión, el correo se envía tras recopilar la evidencia automáticamente.",
     "notifOutcome": "Resultado publicado",
     "notifOutcomeDesc": "Recibe un correo en el momento en que la red de tarjetas emita una decisión final — ganada, perdida o cerrada sin disputa.",
+    "notifRefundAdvice": "Recordatorios de reembolso",
+    "notifRefundAdviceDesc": "Recibe un correo cuando una consulta pueda resolverse reembolsando un pedido devuelto por el cliente, antes de que se convierta en un contracargo.",
     "notifBeforeDue": "Antes del vencimiento",
     "notifBeforeDueDesc": "Recordatorio 24 horas antes del plazo de la disputa",
     "notifEvidenceReady": "Evidencia lista",

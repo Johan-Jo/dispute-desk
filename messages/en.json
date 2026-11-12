@@ -1,5 +1,20 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Order {order}: refund it now to stop this inquiry becoming a chargeback",
+      "preheader": "The customer says a credit was never processed, and no refund has been issued.",
+      "title": "Refund order {order} to resolve this inquiry",
+      "body": "The cardholder on order {order} told their bank that a credit of {amount} was never processed. The order shows a return, and no refund has been issued. We checked Shopify a moment ago.\n\nTo resolve it, **refund the disputed amount ({amount}) in Shopify Admin**. Whether to refund is your decision; DisputeDesk will not do it for you.\n\nThe refund can take about a day to settle with the payment provider. Once it has settled, the inquiry usually closes shortly afterwards.\n\nIt is worth doing before the due date ({dueDate}). An inquiry that stays open can become a chargeback. Then the disputed amount and a chargeback fee are debited, Shopify blocks refunds on it, and it counts toward your chargeback rate. Inquiries do not count toward that rate.",
+      "subjectFailed": "Order {order}: your refund did not go through",
+      "preheaderFailed": "The inquiry is still open and nothing has been paid back.",
+      "titleFailed": "The refund on order {order} did not go through",
+      "bodyFailed": "A refund on order {order} was started in Shopify but failed, so nothing has been paid back and the inquiry about {amount} is still open. The order shows a return.\n\n**Refund the disputed amount ({amount}) again in Shopify Admin**, and check the refund’s status in the order’s timeline. Whether to refund is your decision; DisputeDesk will not do it for you.\n\nIt is worth doing before the due date ({dueDate}). An inquiry that stays open can become a chargeback. Then the disputed amount and a chargeback fee are debited, Shopify blocks refunds on it, and it counts toward your chargeback rate. Inquiries do not count toward that rate.",
+      "cta": "Open the dispute",
+      "footer": "DisputeDesk · refund reminder",
+      "eyebrow": "Refund reminder",
+      "storeResultsRefunded": "In your store, {won} of {decided} inquiries where a refund was issued closed in your favour.",
+      "storeResultsUnrefunded": "Of {total} inquiries that ended without a refund, {escalated} became chargebacks."
+    },
     "billing": {
       "trialStarted": {
         "subject": "DisputeDesk {planName} trial activated",
@@ -58,6 +73,53 @@
         "body": "Drafts are still unlimited — but submitting evidence to the bank needs a credit, and you've used all your free submissions.\n\nA recovered chargeback is usually worth far more than a $29/mo plan, so a single won dispute pays for months of submissions. Upgrade now to keep responding before your deadline.",
         "cta": "Upgrade plan"
       }
+    },
+    "fatalLoss": {
+      "subjectInrInquiry": "Action needed: the inquiry for {order} can't be defended without tracking",
+      "subjectInrChargeback": "Action needed: the chargeback for {order} can't be defended without tracking",
+      "subjectRefundedInquiry": "No action needed: the inquiry for {order} was already refunded",
+      "subjectRefundedChargeback": "No action needed: the chargeback for {order} was already refunded",
+      "greeting": "Hello,",
+      "lead": "{phase, select, inquiry {The inquiry} other {The chargeback}} on **{order}**{amountSuffix} cannot be won as it stands. {situation}",
+      "situationInr": "The customer says the item never arrived, and this order has no shipment on record.",
+      "situationRefunded": "A refund covering this charge was already issued.",
+      "whatToDo": "What to do",
+      "actionShipped": "**If it did ship:** add the tracking number to the order in Shopify. DisputeDesk rebuilds the defence automatically once the shipment appears, and the case becomes defensible.",
+      "actionNeverShippedInquiry": "**If it never shipped:** check in Shopify Admin whether the order has already been refunded. If it has not, refunding the disputed amount can settle this inquiry before it becomes a chargeback with a fee attached.",
+      "actionNeverShippedChargeback": "**If it never shipped:** there is nothing to do, and nothing to refund. The disputed amount and the chargeback fee have already been debited, and Shopify blocks refunds while a chargeback is open. Let it close.",
+      "actionWithdraw": "**Only if the customer agrees they were mistaken:** ask them to contact their bank and withdraw the dispute, then send us the bank’s withdrawal letter. That is the one route that reverses a chargeback.",
+      "actionNoAction": "**No action needed:** let this one close. Arguing it would tell the bank the money is owed.",
+      "actionRefundedBefore": "**If you refunded BEFORE the customer disputed**, tell us. A pre-dispute credit is one of the strongest arguments available, and we will rebuild the defence around it.",
+      "notSentInr": "DisputeDesk has **not** sent a defence for this dispute: there is nothing factual to argue with yet. When the deadline passes, Shopify will pass on the basic order details it holds. That rarely wins, and on an order with no shipment on record it argues against you.",
+      "notSentRefunded": "DisputeDesk has **not** sent a defence for this dispute. When the deadline passes, Shopify will pass on the basic order details it holds. That rarely wins.",
+      "openDispute": "Open this dispute in DisputeDesk",
+      "reasonLabel": "Dispute reason",
+      "deadlineLabel": "Deadline",
+      "shopLabel": "Shop",
+      "signoff": "— DisputeDesk"
+    },
+    "evidenceNeeded": {
+      "subjectReview": "{hasOrder, select, yes {Evidence pack ready to review: order {order} — {reason} dispute{amountPart}} other {Evidence pack ready to review — {reason} dispute{amountPart}}}",
+      "subjectAsk": "{hasOrder, select, yes {Action needed: upload evidence, order {order} — {reason} dispute{amountPart}} other {Action needed: upload evidence — {reason} dispute{amountPart}}}",
+      "headingReview": "Your evidence pack is ready to review",
+      "headingAsk": "Manual evidence needed",
+      "introReview": "A **{reason}** dispute{amountPart}{hasOrder, select, yes { for order {order}} other {}} for {shop} has been processed. DisputeDesk has collected all the evidence it can from Shopify{withTools, select, yes { and your connected tools} other {}} — no upload is needed. Review the pack when you have a moment.",
+      "introAsk": "A **{reason}** dispute{amountPart}{hasOrder, select, yes { for order {order}} other {}} for {shop} has been processed. DisputeDesk has collected available Shopify data, but this dispute type benefits from additional evidence that must be uploaded manually.",
+      "attachedTitle": "We’ve already attached:",
+      "attachedDelivery": "Delivery confirmation & tracking",
+      "attachedComms": "Customer support conversations",
+      "askTitleUpload": "Please upload the following:",
+      "askTitleReview": "Waiting for your review:",
+      "typeCarrierLabel": "Carrier delivery proof",
+      "typeCarrierHint": "Signed delivery confirmation, carrier proof-of-delivery document, or delivery photo",
+      "typeReviewLabel": "Review matched support conversations",
+      "typeReviewHintCount": "{count, plural, one {# matched support conversation is} other {# matched support conversations are}} waiting for your review — approve the ones that support your defence.",
+      "typeReviewHintNone": "Matched support conversations are waiting for your review — approve the ones that support your defence.",
+      "ctaReview": "Review dispute →",
+      "ctaReviewConversations": "Review matched conversations →",
+      "ctaUpload": "View dispute & upload evidence →",
+      "footer": "This email was sent because you enabled evidence alerts in DisputeDesk setup. You can change notification preferences in Settings.",
+      "shopFallback": "your store"
     }
   },
   "nav": {
@@ -2553,7 +2615,7 @@
         },
         "can": {
           "evidence": "If you have proof we cannot see, such as a delivery confirmation from the carrier, add it on the Evidence tab.",
-          "refundInquiry": "Refund the order in full from Shopify Admin. This is still an inquiry, so no money has been taken and a full refund closes it. If it turns into a chargeback, Shopify blocks refunds and the amount is lost."
+          "refundInquiry": "Shopify shows no refund on this order. Refunding the disputed amount ({amount}) in Shopify Admin can resolve this inquiry before it becomes a chargeback. If it does become one, Shopify blocks refunds and the amount is lost."
         },
         "optional": {
           "ack": "The cardholder's acknowledgement would strengthen the case."
@@ -2596,6 +2658,11 @@
         "done": {
           "drafted": "The evidence is collected and a response is written. Nothing has been filed.",
           "evidence": "The evidence is collected. Nothing has been filed."
+        },
+        "refund": {
+          "pending": "A refund of {amount} was started on {date} and is still being processed. Nothing more is needed; the inquiry usually closes after it settles.",
+          "failed": "A refund of {amount} was started on {date} but failed, so nothing has been paid back. Refund the disputed amount again in Shopify Admin.",
+          "settledOpen": "A refund of {amount} settled on {date}. The inquiry is still open."
         }
       },
       "claim": {
@@ -2842,6 +2909,7 @@
           "placedPaid": "Order placed and paid",
           "shipped": "Order shipped",
           "delivered": "Delivered",
+          "returnOpened": "Return opened",
           "opened": "Dispute opened",
           "prepared": "Defence package prepared",
           "deadline": "Deadline",
@@ -3753,6 +3821,8 @@
     "notifNewDisputeDesc": "Get notified when a new dispute needs your attention. If your rules send a dispute to review, the email is sent after automated evidence is collected.",
     "notifOutcome": "Outcome posted",
     "notifOutcomeDesc": "Get an email the moment the card network posts a final decision — won, lost, or closed without contest.",
+    "notifRefundAdvice": "Refund reminders",
+    "notifRefundAdviceDesc": "Get an email when an inquiry could be resolved by refunding an order the customer has returned, before it can become a chargeback.",
     "notifBeforeDue": "Before due date",
     "notifBeforeDueDesc": "Reminder 24 hours before dispute deadline",
     "notifEvidenceReady": "Evidence ready",

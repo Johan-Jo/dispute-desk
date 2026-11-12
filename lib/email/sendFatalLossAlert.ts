@@ -2,6 +2,10 @@
  * Send "this dispute cannot be won as it stands — here is what to do about it"
  * to the merchant, at the moment the fatal-loss gate fires.
  *
+ * ALL copy lives in messages/*.json under `email.fatalLoss` (CLAUDE.md rule 5); this file holds no sentence.
+ * `renderFatalLossEmail` is pure (messages passed in) so every locale is testable without I/O. Until 2026-11-13
+ * this email was hard-coded English and every merchant got it in English whatever their store language.
+ *
  * ── WHY THIS EXISTS ───────────────────────────────────────────────────
  *
  * The fatal-loss gate (`lib/automation/fatalLoss.ts`) detects structurally
@@ -32,30 +36,41 @@
  *   - NEVER say "nothing has been filed" flat out either — Shopify still files
  *     its scrape. The accurate claim is scoped to us: *we* sent nothing, and
  *     Shopify will send the bare order data.
- *   - Lead with the ACTION, not the verdict. Each reason has exactly one
- *     realistic next step, and for `inr_no_fulfillment` there are two,
- *     because the same order state has two very different causes (see below).
+ *   - Lead with the ACTION, not the verdict.
  *
  * ── THE TWO-CAUSE PROBLEM (inr_no_fulfillment) ────────────────────────
  *
  * "No fulfillment on record" collapses two situations the gate cannot tell
  * apart:
- *   1. It genuinely never shipped → the customer is right; refunding closes it
- *      and avoids paying the chargeback fee on top of the amount.
+ *   1. It genuinely never shipped → the customer is right; on an INQUIRY a refund can close it before it
+ *      becomes a chargeback with a fee.
  *   2. It shipped but was never marked fulfilled in Shopify (3PL gap, manual
  *      process) → the case is WINNABLE and we would otherwise concede it.
  *
- * The email therefore ASKS rather than concludes: add the tracking number and
- * we rebuild the defence automatically. That is the one thing the merchant can
- * do that we cannot, which is the bar for asking them anything at all.
+ * The email therefore ASKS rather than concludes: add the tracking number and we rebuild the defence
+ * automatically. That is the one thing the merchant can do that we cannot.
+ *
+ * ── PHASE DECIDES THE "NEVER SHIPPED" BRANCH ─────────────────────────
+ *
+ * Shopify: "You can't issue a refund after a cardholder initiates a chargeback". Telling a chargeback merchant
+ * to refund is advice they cannot follow, so the chargeback branch says there is nothing to refund. On an
+ * INQUIRY the email no longer says "refund the order now": this alert is sent with no live read of the order's
+ * refund state, and a refund may already be pending (it reads 0.0 for about a day), so it tells the merchant
+ * to CHECK Shopify Admin first and only then that refunding the disputed amount can settle the inquiry.
+ * Unknown phase is a chargeback (guessing "inquiry" would emit impossible advice).
  *
  * Fire-and-forget — never throws; callers log failures without blocking.
  */
 
 import { Resend } from "resend";
+import { createTranslator } from "next-intl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { DEFAULT_FROM_EMAIL, DEFAULT_REPLY_TO } from "@/lib/email/addresses";
+import { bodyToText, escapeHtml, inlineToHtml } from "@/lib/email/messageBody";
+import { getMessages } from "@/lib/i18n/getMessages";
+import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n/locales";
+import { toBcp47 } from "@/lib/i18n/bcp47";
 import type { FatalLossReason } from "@/lib/automation/fatalLoss";
 
 // Read lazily so a test can stub `process.env.RESEND_API_KEY` in beforeEach and
@@ -79,9 +94,7 @@ export interface FatalLossAlertContext {
   orderName: string | null;
   /**
    * `disputes.phase` — `inquiry` or `chargeback`. Decides whether "refund it"
-   * is even a legal instruction: Shopify BLOCKS refunds once a chargeback is
-   * open, so telling a merchant to refund one is advice they cannot follow.
-   * See `actionsFor`.
+   * is even a legal instruction: Shopify BLOCKS refunds once a chargeback is open.
    */
   phase: string | null;
 }
@@ -91,86 +104,106 @@ export interface SendResult {
   error?: string;
 }
 
-/**
- * The dispute's own noun. An INQUIRY is not a chargeback — no money has moved
- * and calling it one both misstates the facts and contradicts the body, which
- * tells an inquiry merchant that "no money has been taken yet".
- */
-function disputeNoun(phase: string | null): string {
-  return (phase ?? "").toLowerCase() === "inquiry" ? "inquiry" : "chargeback";
+type T = (key: string, values?: Record<string, string | number>) => string;
+
+function translator(locale: Locale, messages: Record<string, unknown>): T {
+  const create = createTranslator as unknown as (opts: {
+    locale: string;
+    messages: Record<string, unknown>;
+    namespace: string;
+  }) => T;
+  return create({ locale, messages, namespace: "email.fatalLoss" });
 }
 
-/** Subject line — names the order and the fact that action is needed. */
-function subjectFor(
-  reason: FatalLossReason,
-  orderName: string | null,
-  phase: string | null,
-): string {
-  const order = orderName ? ` for ${orderName}` : "";
-  const noun = disputeNoun(phase);
-  return reason === "inr_no_fulfillment"
-    ? `Action needed: ${noun}${order} can't be defended without tracking`
-    : `No action needed: ${noun}${order} was already refunded`;
+export interface RenderedFatalLossEmail {
+  subject: string;
+  html: string;
+  text: string;
+  locale: Locale;
 }
 
-/** One-line summary of the situation, in plain terms. */
-function situationFor(reason: FatalLossReason): string {
-  return reason === "inr_no_fulfillment"
-    ? "The customer says the item never arrived, and this order has no shipment on record."
-    : "A refund covering this charge was already issued.";
-}
+/** Pure: the subject, HTML and text for one locale. */
+export function renderFatalLossEmail(
+  ctx: FatalLossAlertContext,
+  opts: { locale: string | null | undefined; shopDomain: string | null },
+  messages: Record<string, unknown>,
+): RenderedFatalLossEmail {
+  const locale: Locale = normalizeLocale(opts.locale ?? null) ?? DEFAULT_LOCALE;
+  const t = translator(locale, messages);
+  const bcp47 = toBcp47(locale);
+  const isInquiry = (ctx.phase ?? "").toLowerCase() === "inquiry";
+  const isInr = ctx.reason === "inr_no_fulfillment";
+  const phase = isInquiry ? "inquiry" : "chargeback";
+  const order = ctx.orderName ?? ctx.disputeId.slice(0, 8);
+  const amountStr = ctx.amount != null && ctx.currencyCode ? `${ctx.currencyCode} ${ctx.amount}` : null;
+  const dueStr = ctx.dueAt
+    ? (() => {
+        const d = new Date(ctx.dueAt);
+        return Number.isFinite(d.getTime())
+          ? new Intl.DateTimeFormat(bcp47, { dateStyle: "long", timeZone: "UTC" }).format(d)
+          : ctx.dueAt;
+      })()
+    : "—";
+  const disputeUrl = opts.shopDomain ? getEmbeddedAppUrl(opts.shopDomain, `/app/disputes/${ctx.disputeId}`) : null;
 
-/**
- * The action block — the point of the email. Returns HTML list items,
- * most-likely-useful first.
- *
- * ── WHY PHASE DECIDES THE SECOND BRANCH ───────────────────────────────
- *
- * The first version of this email told a merchant whose order never shipped
- * to "refund the order". **That is advice they cannot follow, and it was
- * wrong.** Shopify: *"You can't issue a refund after a cardholder initiates a
- * chargeback"* — the refund control is blocked once the dispute is open, the
- * disputed amount and fee are already debited, and a refund forced through by
- * other means pays the customer twice.
- *
- * The correct instruction depends on `phase`, which the dispute row already
- * carries:
- *
- *   - `chargeback` — the money is ALREADY gone. There is nothing to refund and
- *     no action that returns it. Either let it close (the bank keeps the funds
- *     with the customer), or, if the customer agrees they were wrong, have
- *     them ask their bank to WITHDRAW the dispute and send the withdrawal
- *     letter — the one route Shopify documents for making it go away.
- *   - `inquiry` — no money has moved yet and refunding is still possible. Here
- *     a refund genuinely IS the cheap resolution: it settles the case before
- *     it escalates into a chargeback and its fee.
- *
- * Never collapse these two. Telling a chargeback merchant to refund is an
- * instruction Shopify's own UI refuses, and it reads as though we do not know
- * how the product works.
- */
-function actionsFor(reason: FatalLossReason, phase: string | null): string[] {
-  const isInquiry = (phase ?? "").toLowerCase() === "inquiry";
+  const subject = t(
+    isInr
+      ? isInquiry ? "subjectInrInquiry" : "subjectInrChargeback"
+      : isInquiry ? "subjectRefundedInquiry" : "subjectRefundedChargeback",
+    { order },
+  );
 
-  if (reason === "inr_no_fulfillment") {
-    const shipped =
-      "<strong>If it did ship:</strong> add the tracking number to the order in Shopify. DisputeDesk rebuilds the defence automatically once the shipment appears, and the case becomes defensible.";
-    return isInquiry
-      ? [
-          shipped,
-          "<strong>If it never shipped:</strong> refund the order now. This is still an inquiry, so no money has been taken yet and refunding settles it before it becomes a chargeback with a fee attached.",
-        ]
-      : [
-          shipped,
-          "<strong>If it never shipped:</strong> there is nothing to do — and nothing to refund. The disputed amount and the chargeback fee have already been debited, and Shopify blocks refunds while a chargeback is open. Let it close.",
-          "<strong>Only if the customer agrees they were mistaken:</strong> ask them to contact their bank and withdraw the dispute, then send us the bank's withdrawal letter. That is the one route that reverses a chargeback.",
-        ];
-  }
+  const lead = t("lead", {
+    phase,
+    order,
+    amountSuffix: amountStr ? ` (${amountStr})` : "",
+    situation: t(isInr ? "situationInr" : "situationRefunded"),
+  });
 
-  return [
-    "<strong>No action needed</strong> — let this one close. Arguing it would tell the bank the money is owed.",
-    "<strong>If you refunded BEFORE the customer disputed</strong>, tell us. A pre-dispute credit is one of the strongest arguments available, and we will rebuild the defence around it.",
-  ];
+  const actions: string[] = isInr
+    ? [
+        t("actionShipped"),
+        ...(isInquiry ? [t("actionNeverShippedInquiry")] : [t("actionNeverShippedChargeback"), t("actionWithdraw")]),
+      ]
+    : [t("actionNoAction"), t("actionRefundedBefore")];
+  const notSent = t(isInr ? "notSentInr" : "notSentRefunded");
+
+  /* The Shopify-scrape sentence is the load-bearing one: it is the difference
+   * between "this case is unattended" and "this case is being argued badly on
+   * your behalf, right now, unless you act". Never drop it, and never replace
+   * it with "nothing has been filed" — that was the 2026-07-30 defect. */
+  const html = `<!doctype html>
+<html><body style="font-family:Helvetica,Arial,sans-serif;color:#0F172A;line-height:1.55;">
+<p>${escapeHtml(t("greeting"))}</p>
+<p>${inlineToHtml(lead)}</p>
+<p><strong>${escapeHtml(t("whatToDo"))}</strong></p>
+<ul style="padding-left:20px;margin-top:4px;">
+${actions.map((a) => `<li style="margin-bottom:8px;">${inlineToHtml(a)}</li>`).join("\n")}
+</ul>
+<p>${inlineToHtml(notSent)}</p>
+${disputeUrl ? `<p><a href="${escapeHtml(disputeUrl)}" style="color:#1F1F1F;">${escapeHtml(t("openDispute"))}</a></p>` : ""}
+<table style="border-collapse:collapse;margin-top:12px;font-size:13px;">
+  <tr><td style="color:#64748B;padding:4px 12px 4px 0;">${escapeHtml(t("reasonLabel"))}</td><td>${escapeHtml(ctx.disputeReason ?? "—")}</td></tr>
+  <tr><td style="color:#64748B;padding:4px 12px 4px 0;">${escapeHtml(t("deadlineLabel"))}</td><td>${escapeHtml(dueStr)}</td></tr>
+  ${opts.shopDomain ? `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">${escapeHtml(t("shopLabel"))}</td><td>${escapeHtml(opts.shopDomain)}</td></tr>` : ""}
+</table>
+<p style="color:#94A3B8;font-size:12px;margin-top:24px;">${escapeHtml(t("signoff"))}</p>
+</body></html>`;
+
+  const text = [
+    bodyToText(lead),
+    "",
+    `${t("whatToDo")}:`,
+    ...actions.map((a) => `- ${bodyToText(a)}`),
+    "",
+    bodyToText(notSent),
+    disputeUrl ? `\n${t("openDispute")}: ${disputeUrl}` : "",
+    "",
+    `${t("reasonLabel")}: ${ctx.disputeReason ?? "—"}`,
+    `${t("deadlineLabel")}: ${dueStr}`,
+  ].join("\n");
+
+  return { subject, html, text, locale };
 }
 
 export async function sendFatalLossAlert(
@@ -197,66 +230,18 @@ export async function sendFatalLossAlert(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("shop_domain")
+    .select("shop_domain, locale")
     .eq("id", ctx.shopId)
     .single();
   const shopDomain = shop?.shop_domain ?? null;
-
-  const amountStr =
-    ctx.amount != null && ctx.currencyCode
-      ? `${ctx.currencyCode} ${ctx.amount}`
-      : null;
-  // `getEmbeddedAppUrl` builds the admin.shopify.com redirect form itself —
-  // hand it the in-app path, never concatenate onto its return value.
-  const disputeUrl = shopDomain
-    ? getEmbeddedAppUrl(shopDomain, `/app/disputes/${ctx.disputeId}`)
-    : null;
-
-  const subject = subjectFor(ctx.reason, ctx.orderName, ctx.phase);
-  const actions = actionsFor(ctx.reason, ctx.phase);
-  const isInr = ctx.reason === "inr_no_fulfillment";
-
-  const actionHtml = actions
-    .map((a) => `<li style="margin-bottom:8px;">${a}</li>`)
-    .join("\n");
-
-  /* The Shopify-scrape sentence is the load-bearing one: it is the difference
-   * between "this case is unattended" and "this case is being argued badly on
-   * your behalf, right now, unless you act". Never drop it, and never replace
-   * it with "nothing has been filed" — that was the 2026-07-30 defect. */
-  const html = `<!doctype html>
-<html><body style="font-family:Helvetica,Arial,sans-serif;color:#0F172A;line-height:1.55;">
-<p>Hello,</p>
-<p>The ${escapeHtml(disputeNoun(ctx.phase))} on <strong>${escapeHtml(ctx.orderName ?? ctx.disputeId.slice(0, 8))}</strong>${amountStr ? ` (${escapeHtml(amountStr)})` : ""} cannot be won as it stands. ${escapeHtml(situationFor(ctx.reason))}</p>
-<p><strong>What to do</strong></p>
-<ul style="padding-left:20px;margin-top:4px;">
-${actionHtml}
-</ul>
-<p>DisputeDesk has <strong>not</strong> sent a defence for this dispute${isInr ? " — there is nothing factual to argue with yet" : ""}. When the deadline passes, Shopify will pass on the basic order details it holds. That rarely wins${isInr ? ", and on an order with no shipment on record it argues against you" : ""}.</p>
-${disputeUrl ? `<p><a href="${escapeHtml(disputeUrl)}" style="color:#1F1F1F;">Open this dispute in DisputeDesk</a></p>` : ""}
-<table style="border-collapse:collapse;margin-top:12px;font-size:13px;">
-  <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Dispute reason</td><td>${escapeHtml(ctx.disputeReason ?? "—")}</td></tr>
-  <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Deadline</td><td>${escapeHtml(ctx.dueAt ?? "—")}</td></tr>
-  ${shopDomain ? `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">Shop</td><td>${escapeHtml(shopDomain)}</td></tr>` : ""}
-</table>
-<p style="color:#94A3B8;font-size:12px;margin-top:24px;">— DisputeDesk</p>
-</body></html>`;
-
-  const text = [
-    `The ${disputeNoun(ctx.phase)} on ${ctx.orderName ?? ctx.disputeId.slice(0, 8)}${amountStr ? ` (${amountStr})` : ""} cannot be won as it stands.`,
-    situationFor(ctx.reason),
-    "",
-    "What to do:",
-    ...actions.map((a) => `- ${a.replace(/<[^>]+>/g, "")}`),
-    "",
-    `DisputeDesk has NOT sent a defence for this dispute. When the deadline passes, Shopify will pass on the basic order details it holds. That rarely wins${isInr ? ", and on an order with no shipment on record it argues against you" : ""}.`,
-    disputeUrl ? `\nOpen this dispute: ${disputeUrl}` : "",
-    "",
-    `Dispute reason: ${ctx.disputeReason ?? "—"}`,
-    `Deadline: ${ctx.dueAt ?? "—"}`,
-  ].join("\n");
+  const storeLocale = steps.store_profile?.payload?.storeLocale;
+  const locale =
+    (typeof storeLocale === "string" ? storeLocale : null) ??
+    ((shop as { locale?: string | null } | null)?.locale ?? null);
 
   try {
+    const messages = await getMessages(normalizeLocale(locale ?? null) ?? DEFAULT_LOCALE);
+    const { subject, html, text } = renderFatalLossEmail(ctx, { locale, shopDomain }, messages);
     const resend = new Resend(getResendApiKey());
     const { error } = await resend.emails.send({
       from: getFromEmail(),
@@ -276,13 +261,4 @@ ${disputeUrl ? `<p><a href="${escapeHtml(disputeUrl)}" style="color:#1F1F1F;">Op
       error: err instanceof Error ? err.message : "unknown send error",
     };
   }
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
