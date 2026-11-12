@@ -132,7 +132,7 @@ Audited, no defect found: Resources hub (client code checks `res.ok`; tables are
 
 Regression I introduced: batch 1 replaced an ignored-error read with one that throws, which turned this latent bug into a visible 500 on dev. Verified before this fix that every other column my batches select exists on dev and prod (only `disputes.primary_domain` was absent, and that was a mistake in the check list: the API derives it from the `shops` join).
 
-Definition to confirm: the save rate counts packs parked in `ready` (awaiting approval) as not-yet-saved, so it reads ~24% on prod. That is the pre-existing formula; say if you want parked packs excluded.
+Resolved 2026-11-12: the save rate now counts true sends only (sent / (sent + failed sends)); packs merely `ready` are excluded. Prod: 119 sent, 3 failed = 98% (was 24%, because 260 of the 352 `ready` packs sit on already-closed disputes).
 
 ## Follow-up — browser pass on dev (2026-11-12, owner's session)
 

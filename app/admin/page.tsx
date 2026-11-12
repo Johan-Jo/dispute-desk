@@ -67,6 +67,8 @@ interface Metrics {
   disputeMetrics: DisputeMetrics;
   automationSuccessRate: number;
   saveSuccessRate: number;
+  saveSent: number;
+  saveFailed: number;
   manualInterventionRate: number;
   submissionUncertainCount: number;
   uncertainRate: number;
@@ -217,7 +219,7 @@ export default function AdminDashboard() {
         />
         <KpiCard icon={FileText} label="Disputes Processed" value={String(metrics.disputes)} />
         <KpiCard icon={Zap} label="Automation Success" value={`${metrics.automationSuccessRate}%`} tone={metrics.automationSuccessRate >= 80 ? "good" : "warn"} />
-        <KpiCard icon={RefreshCw} label="Save-to-Shopify Rate" value={`${metrics.saveSuccessRate}%`} tone={metrics.saveSuccessRate >= 80 ? "good" : "warn"} />
+        <KpiCard icon={RefreshCw} label="Save-to-Shopify Rate" hint={`${metrics.saveSent} sent · ${metrics.saveFailed} failed`} title="Of the evidence packs we actually tried to send to Shopify, the share that went through. Packs that are built but not sent yet are not counted." value={`${metrics.saveSuccessRate}%`} tone={metrics.saveSuccessRate >= 80 ? "good" : "warn"} />
         <KpiCard
           icon={TrendingUp}
           label="Win Rate (all disputes)"

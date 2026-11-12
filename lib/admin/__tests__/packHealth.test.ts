@@ -29,12 +29,22 @@ describe("packHealth", () => {
     const { automationSuccessRate, saveSuccessRate } = packHealth(packs);
     // built = 352+124+18+3+1+1 = 499; ok = 478  -> 96%. draft/archived excluded.
     expect(automationSuccessRate).toBe(96);
-    // savable = 499; saved = 2+114+1+1+1 = 119 -> 24%.
-    expect(saveSuccessRate).toBe(24);
+    // True sends only: sent = 2+114+1+1+1 = 119, failed sends = 3 -> 119/122 = 98%.
+    // The 352 packs merely sitting in `ready` (260 on already-closed disputes)
+    // are neither sent nor failed; counting them gave a misleading 24%.
+    expect(saveSuccessRate).toBe(98);
+    const h = packHealth(packs);
+    expect(h.saveSent).toBe(119);
+    expect(h.saveFailed).toBe(3);
+  });
+
+  it("ignores packs that were never sent", () => {
+    const h = packHealth([...rows("ready", 50), ...rows("draft", 5), ...rows("saved_to_shopify_verified", 3, 3)]);
+    expect(h).toMatchObject({ saveSent: 3, saveFailed: 0, saveSuccessRate: 100 });
   });
 
   it("is 0 (not NaN) when there are no packs", () => {
-    expect(packHealth([])).toEqual({ automationSuccessRate: 0, saveSuccessRate: 0 });
+    expect(packHealth([])).toEqual({ automationSuccessRate: 0, saveSuccessRate: 0, saveSent: 0, saveFailed: 0 });
   });
 });
 
