@@ -1132,6 +1132,10 @@ The Shops list shows a billing pill under the plan (`paid | trialing | grace | u
 
 `/api/admin/jobs` and `/api/admin/webhooks` rows carry `shop: { shop_domain, primary_domain } | null` (via `loadShopLabels`, `lib/admin/shopLabels.ts`, chunked `.in()`), and both pages render it with `AdminMerchant` in a Shop column. `PATCH /api/admin/jobs/:id` (retry / cancel) is status-guarded and now returns **409** when no row matched (the job already moved on) instead of `ok: true`; the page shows the failure. The webhooks 24h aggregate pages through `fetchAllRows` so totals and p50/p95 are not truncated at 1000 rows. Both pages show load failures; the jobs page no longer blanks when the API returns an error body, and the webhooks stats no longer show zeros when the aggregate request fails.
 
+### Admin Fraud Intel: SQL aggregation (`dd_admin_fraud_intel_buckets`)
+
+`/admin/fraud-intel` renders `public.dd_admin_fraud_intel_buckets(p_since)` (migration `20261112120000`, `service_role` only; revoked from `anon`/`authenticated`) which buckets **every** order in the 90-day window — AVS, payment-attempt count, IP↔ship distance, proxy × cross-border — and returns `(dimension, bucket, orders, disputes)`; `dimension='total'` carries the window totals. A "dispute" is an order that has a `disputes` row (`disputes.order_gid = shopify_orders.shopify_order_id`, same shop). The page previously pulled order rows into the app: PostgREST caps a select at 1000 rows regardless of `.limit()`, so it analysed ~3% of prod's ~34k window orders, and it counted disputes from `shopify_orders.has_chargeback`, which is **never set** (0 rows all time vs ~1.9k disputes) — every bucket read 0%. If the RPC fails the page shows an error banner instead of empty tables; the parse-miss total pages through all rows. Outcome Analysis rows render the merchant via `AdminMerchant`. **Rollout:** the migration must exist on the target DB before the page code is deployed (dev: applied 2026-11-12; prod: apply with the promotion to `master`).
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

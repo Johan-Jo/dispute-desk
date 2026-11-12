@@ -52,6 +52,7 @@ export interface OutcomeAnalysisRow {
   disputeId: string;
   shopId: string;
   shopDomain: string | null;
+  primaryDomain: string | null;
   orderName: string | null;
   outcome: "won" | "lost";
   finalizedAt: string | null;
@@ -131,7 +132,7 @@ interface RawAnalysisRow {
   actionable: boolean;
   analyzer_version: number;
   disputes?: { order_name: string | null; amount: string | null; currency_code: string | null; phase: string | null } | null;
-  shops?: { shop_domain: string | null } | null;
+  shops?: { shop_domain: string | null; primary_domain: string | null } | null;
 }
 
 const SELECT = `
@@ -142,7 +143,7 @@ const SELECT = `
   reason_specific_status, data_integrity_limitation, primary_category,
   primary_confidence, actionable, analyzer_version,
   disputes!inner ( order_name, amount, currency_code, phase ),
-  shops ( shop_domain )
+  shops ( shop_domain, primary_domain )
 `;
 
 /**
@@ -242,6 +243,7 @@ export async function listOutcomeAnalyses(
         disputeId: r.dispute_id,
         shopId: r.shop_id,
         shopDomain: r.shops?.shop_domain ?? null,
+        primaryDomain: r.shops?.primary_domain ?? null,
         orderName: r.disputes?.order_name ?? null,
         outcome: r.final_outcome_snapshot,
         finalizedAt: r.finalized_at_snapshot,
