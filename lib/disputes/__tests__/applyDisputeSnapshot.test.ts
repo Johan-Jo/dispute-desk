@@ -51,6 +51,7 @@ interface MockExistingRow {
   new_dispute_alert_sent_at: string | null;
   shopify_updated_at: string | null;
   dispute_evidence_gid: string | null;
+  closed_at?: string | null;
 }
 
 interface MockSetup {
@@ -306,6 +307,35 @@ describe("applyDisputeSnapshot", () => {
     ]);
     expect(updateCalls.find((u) => "closed_at" in u)).toMatchObject({
       closed_at: "2026-05-22T08:00:00Z",
+    });
+  });
+
+  it("5b. already-terminal row with no closed_at is healed from finalizedOn (list sort reads it as open)", async () => {
+    const { client, updateCalls } = setupClient({
+      existing: {
+        id: "dispute-1",
+        status: "won",
+        due_at: null,
+        submitted_at: null,
+        final_outcome: "won",
+        submission_state: "not_saved",
+        new_dispute_alert_sent_at: null,
+        shopify_updated_at: null,
+        dispute_evidence_gid: null,
+        closed_at: null,
+      },
+      upsertedId: "dispute-1",
+    });
+
+    await applyDisputeSnapshot({
+      shopId: "shop-1",
+      source: "cron",
+      snapshot: { ...BASE_SNAPSHOT, status: "won", finalizedOn: "2025-11-16T17:38:54Z", evidenceDueBy: null },
+      client,
+    });
+
+    expect(updateCalls.find((u) => "closed_at" in u)).toMatchObject({
+      closed_at: "2025-11-16T17:38:54Z",
     });
   });
 
