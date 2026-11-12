@@ -4123,6 +4123,15 @@ by the MERCHANT pages, at read time.
 - Not changed (a separate, approved step would be needed): the bank letter, the build-time fact, counsel ledgers,
   `plan_input_hash`, `completeness_score`, the stored checklist and `recommended_actions`. The build never sets the signal.
 
+### Live refund state (PR A of docs/plans/pending-refund-advice.plan.md, 2026-11-13)
+
+The evidence pack cannot say whether an order has been refunded. From the moment a merchant clicks refund until the payment provider settles it (about 24 h on the SEK shops, Klarna and card alike) Shopify reports `Order.totalRefundedSet` = 0.0 and `Refund.totalRefundedSet` = 0.0, and the order stays PAID; the money is only on `Refund.transactions` (kind REFUND, status PENDING). A `Refund` with no transactions is a record with no money. Settlement flips everything at once and the inquiry closes 10-24 s later.
+
+- **Read:** `ORDER_REFUND_STATE_QUERY` (`lib/shopify/queries/orderRefundState.ts`, registered in `registry.ts`), via `makeAuthedRequest`. No new scope (`read_orders`); `Order.returns` is NOT read (needs `read_returns`).
+- **Interpret:** `resolveRefundState` (`lib/disputes/refundState.ts`), pure: `none | pending | settled | failed | mixed | unknown`, derived per Refund. `unknown` is fail-closed and is never `none`: no order, a list that reached its cap, a REFUND transaction no Refund owns (gift-card reversal), an unseen status, an unparseable amount, a total with no transaction, a settled transaction while the total still reads 0. `settledAt` is `Refund.updatedAt`. `stalledPending` flags a refund pending more than 72 h.
+- **Store:** `dispute_refund_state` (one row per dispute; `lib/disputes/refundStateStore.ts`). Amounts, statuses and timestamps only.
+- Nothing reads these yet (the cron, email and page follow in PRs B-D). Until they do, "no refund has been issued" must not be derived from the pack.
+
 ### Order situation: returns and refunds, merchant-side (2026-10-09)
 
 `lib/disputes/orderSituation.ts` is the one statement of the order's return/refund situation as Shopify records it.
