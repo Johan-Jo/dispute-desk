@@ -6,6 +6,8 @@
  */
 
 import "server-only";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
+import { loadShopLabels } from "@/lib/admin/shopLabels";
 import { getServiceClient } from "@/lib/supabase/server";
 import { ALL_REASON_CODE_MODULES } from "./reasonCodes/registry";
 import type { ReasonCodeGuidance, ReasonCodeModuleKey } from "./types";
@@ -89,6 +91,8 @@ export interface AdminRunRow {
   id: string;
   packageId: string | null;
   shopId: string | null;
+  /** Merchant labels for AdminMerchant (storefront domain + myshopify alias). */
+  shop: { shop_domain: string; primary_domain: string | null } | null;
   promptVersion: number | null;
   model: string | null;
   packageMode: "full" | "narrow" | null;
@@ -108,10 +112,12 @@ export async function listRecentRuns(limit = 50): Promise<AdminRunRow[]> {
     )
     .order("created_at", { ascending: false })
     .limit(limit);
+  const labels = await loadShopLabels(sb, (data ?? []).map((r) => r.shop_id as string | null));
   return (data ?? []).map((r) => ({
     id: r.id as string,
     packageId: (r.package_id as string | null) ?? null,
     shopId: (r.shop_id as string | null) ?? null,
+    shop: labels.get(r.shop_id as string) ?? null,
     promptVersion: r.prompt_version as number | null,
     model: r.model as string | null,
     packageMode: r.package_mode as "full" | "narrow" | null,
@@ -240,16 +246,24 @@ export interface DashboardStats {
 export async function getDashboardStats(): Promise<DashboardStats> {
   const sb = getServiceClient();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { data } = await sb
-    .from("defence_package_runs")
-    .select("validation_status, prompt_tokens, completion_tokens, duration_ms")
-    .gte("created_at", since);
-  const rows = (data ?? []) as Array<{
+  // Paged: a bare select caps at 1000 rows, which would silently understate
+  // the 7-day totals and skew every average once volume grows. A failed read
+  // throws rather than rendering as "0 runs, 0% OK".
+  type RunStatRow = {
+    id: string;
     validation_status: string | null;
     prompt_tokens: number | null;
     completion_tokens: number | null;
     duration_ms: number | null;
-  }>;
+  };
+  const rows = await fetchAllRows<RunStatRow>((from, to) =>
+    sb
+      .from("defence_package_runs")
+      .select("id, validation_status, prompt_tokens, completion_tokens, duration_ms")
+      .gte("created_at", since)
+      .order("id")
+      .range(from, to),
+  );
   const total = rows.length;
   const ok = rows.filter((r) => r.validation_status === "ok").length;
   const failed = rows.filter((r) => r.validation_status === "failed").length;
