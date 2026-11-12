@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Shield,
   Menu,
-  Bell,
   Search,
   ChevronDown,
   LayoutDashboard,
@@ -38,6 +37,7 @@ import {
   Microscope,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
+import { AdminNotifications } from "@/components/admin/AdminNotifications";
 
 /* ── Resources Hub sub-navigation ───────────────────────────────────── */
 
@@ -306,10 +306,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex items-center gap-4">
-              <button className="relative p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full" />
-              </button>
+              <AdminNotifications />
 
               <div className="w-px h-6 bg-[#E2E8F0]" />
 
