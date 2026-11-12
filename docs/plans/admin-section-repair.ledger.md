@@ -67,6 +67,20 @@ Finding for the owner (not a bug): in prod, 19,232 of 34,284 window orders have 
 
 **Promotion note:** migration `20261112120000_admin_fraud_intel_buckets.sql` is applied on dev only. Apply to prod (`aokhplydttxtebvbeuzc`) with the `master` promotion, before the page code deploys there.
 
+## Batch 6 — Templates, Reason Mapping, Template Health (this PR)
+
+| # | Page / route | Symptom | Evidence | Root cause | Status |
+|---|---|---|---|---|---|
+| 36 | Reason mapping PATCH, Templates PATCH | No audit trail for mapping/template changes, ever | prod: `audit_events.shop_id` NOT NULL; 0 rows for `reason_mapping.updated`; routes inserted without a shop and ignored the error | wrong table, unchecked insert | fixed (`admin_audit_events` + `logAdminAction`) |
+| 37 | Reason mapping page | A rejected assignment (e.g. draft template) looked successful | route returns 400 + message; page discarded the response | no `res.ok` | fixed (message shown) |
+| 38 | Templates list | Failed load read as an empty library | `Array.isArray(data) ? data : []` | error coerced to [] | fixed |
+| 39 | Template detail | Unknown id or error body crashed the page | error object set as the template | no `res.ok` | fixed |
+| 40 | Template detail | Status change failure silent | response ignored | — | fixed |
+| 41 | Template health | Failure rendered as a clean "0 issues" page | `data?.issues ?? []` on an error body | no `res.ok` | fixed |
+| 42 | Both PATCH routes | Malformed JSON body = 500 | `await req.json()` unguarded | — | fixed (400) |
+
+**Promotion note:** migration `20261112130000_admin_audit_events.sql` is applied on dev only; apply to prod with the `master` promotion.
+
 ## Open — merchant display (R2) still on raw `shop_domain`
 `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 

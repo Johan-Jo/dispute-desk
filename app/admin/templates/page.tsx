@@ -27,6 +27,7 @@ export default function TemplatesAdminPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -34,12 +35,20 @@ export default function TemplatesAdminPage() {
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
     fetch(`/api/admin/templates?${params}`)
-      .then((r) => r.json())
+      .then((r) => {
+        // An error body coerced to [] read as "the library is empty".
+        if (!r.ok) throw new Error(`Loading templates failed (${r.status})`);
+        return r.json();
+      })
       .then((data) => {
         setTemplates(Array.isArray(data) ? data : []);
+        setError(null);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e: Error) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, [search, statusFilter]);
 
   const stats = {
@@ -56,6 +65,12 @@ export default function TemplatesAdminPage() {
         subtitle="Manage global evidence templates and playbooks"
         icon={FileText}
       />
+
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
 
       <AdminStatsRow
         cards={[

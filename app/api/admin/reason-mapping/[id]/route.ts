@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSessionUser } from "@/lib/admin/auth";
 import { updateReasonMapping } from "@/lib/db/reasonMappings";
 import { getServiceClient } from "@/lib/supabase/server";
+import { logAdminAction } from "@/lib/admin/auditAction";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,10 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
   // Validate: if template_id is provided, check it's active
   if (body.template_id) {
@@ -49,13 +53,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 
-  // Audit log
-  const sb = getServiceClient();
-  await sb.from("audit_events").insert({
-    event_type: "reason_mapping.updated",
-    actor_type: "admin",
-    event_payload: {
-      actor_email: user.email,
+  // Audit log (admin_audit_events — see templates/[id]/route.ts for why not audit_events).
+  await logAdminAction({
+    actor: { id: user.id, email: user.email },
+    eventType: "reason_mapping.updated",
+    payload: {
       mapping_id: id,
       reason_code: before?.reason_code,
       dispute_phase: before?.dispute_phase,
