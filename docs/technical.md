@@ -1137,6 +1137,10 @@ Template status changes (`template.status_changed`) and reason-mapping edits (`r
 
 Admin pages print a merchant as the **storefront domain on line 1 and the myshopify alias on line 2** via `components/admin/AdminMerchant.tsx` (`displayShopDomain()` underneath; the alias line is omitted only when there is no distinct storefront domain). List routes hand pages the labels with `loadShopLabels` (`lib/admin/shopLabels.ts`) or a `shops(shop_domain, primary_domain)` join. Plain-text spots (e.g. `<option>`) use `domain (alias)`. `tests/unit/adminMerchantDisplayGuard.test.ts` enforces it: a bare `{…shop_domain}` JSX child outside the allowlist fails the build.
 
+### Admin team and passkeys: audited access changes
+
+Granting, deactivating, reactivating and revoking an admin (`team.granted` / `team.deactivated` / `team.reactivated` / `team.revoked`) and revoking a passkey (`passkey.revoked`) are written to `admin_audit_events` via `logAdminAction` (visible in the Audit Log with the operator's email). `logAdminAction` never throws, including when the service client cannot be constructed. `PATCH /api/admin/team/:id` returns 404 for an unknown user (it was a 500: `.single()` errored before the 404 branch could run); `DELETE` returns 404 when nothing was removed; malformed bodies are 400. The Team page shows load failures and failed activate/deactivate instead of an empty list or a silent no-op. The self-lockout rules (cannot deactivate/revoke yourself; cannot delete your last passkey) are unchanged.
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

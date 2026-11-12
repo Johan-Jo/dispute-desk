@@ -18,15 +18,24 @@ export async function logAdminAction(input: {
   eventType: string;
   payload?: Record<string, unknown>;
 }): Promise<boolean> {
-  const { error } = await getServiceClient().from("admin_audit_events").insert({
-    actor_user_id: input.actor.id ?? null,
-    actor_email: input.actor.email,
-    event_type: input.eventType,
-    event_payload: input.payload ?? {},
-  });
-  if (error) {
-    console.error("[admin-audit] write failed", { eventType: input.eventType, message: error.message });
+  try {
+    const { error } = await getServiceClient().from("admin_audit_events").insert({
+      actor_user_id: input.actor.id ?? null,
+      actor_email: input.actor.email,
+      event_type: input.eventType,
+      event_payload: input.payload ?? {},
+    });
+    if (error) {
+      console.error("[admin-audit] write failed", { eventType: input.eventType, message: error.message });
+      return false;
+    }
+    return true;
+  } catch (e) {
+    // Client construction / network failure: same contract — never throw.
+    console.error("[admin-audit] write threw", {
+      eventType: input.eventType,
+      message: e instanceof Error ? e.message : String(e),
+    });
     return false;
   }
-  return true;
 }

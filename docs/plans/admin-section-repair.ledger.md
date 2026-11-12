@@ -109,6 +109,20 @@ Known, not changed: both lead lists load at most 1000 rows (`limit(1000)`), so t
 
 Note: `GET /api/admin/audit` response shape changed from an array to `{ events, limit, truncated }`; the audit page was its only caller.
 
+## Batches 9-11 — Resources, Signal Radar, Team, Passkeys (this PR)
+
+| # | Page / route | Symptom | Evidence | Root cause | Status |
+|---|---|---|---|---|---|
+| 54 | Team API | Admin grants / deactivations / revocations not audited | no audit calls | — | fixed (`team.*` events) |
+| 55 | Team PATCH | Unknown user answered 500 | `.single()` errors before the 404 branch | — | fixed (`maybeSingle`) |
+| 56 | Team DELETE | Reported success for a user that did not exist | no row check | — | fixed (404) |
+| 57 | Team page | Failed load showed an empty admin list; failed (de)activate ignored | no `res.ok` | — | fixed |
+| 58 | Passkey revoke | Not audited | — | — | fixed (`passkey.revoked`) |
+| 59 | Signal Radar `/all` | "Recurring phrases" read 1000 rows while asking for 2500 | `.limit(2500)` capped by PostgREST | row cap | fixed (`fetchAllRows`, capped at 2500) |
+| 60 | Resources generation stats | Failed read = zero generated / 0% acceptance | error ignored | — | fixed (throws) |
+
+Audited, no defect found: Resources hub (client code checks `res.ok`; tables are small — 72 content items, 219 queue rows, 251 archive items on prod — so the 1000-row cap does not bite; covered by existing route tests and an e2e spec), Signal Radar client components (their empty `catch {}` blocks only wrap `sessionStorage`, the correct pattern), Passkeys page and routes (checked responses; last-passkey lock-out guard; existing tests), Help.
+
 ## Merchant display (R2) — closed
 
 Every admin page now prints a merchant as storefront domain with the myshopify alias beneath (`AdminMerchant`): Overview/Operations (leaderboard + recent events), Disputes, Shops (reference), Shop detail, Jobs, Webhooks, Billing, Audit, Outcome Analysis, Defence Package runs, Gorgias (3 tables), Intelligence (picker label `domain (alias)`). `tests/unit/adminMerchantDisplayGuard.test.ts` fails if a page renders a bare `shop_domain` as JSX text outside a documented allowlist (the renderer, the delete dialog, the Shops list, the shop-detail header).
