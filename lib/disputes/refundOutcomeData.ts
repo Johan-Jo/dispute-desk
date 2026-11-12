@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RefundOutcomeRow } from "@/lib/disputes/refundOutcomeStats";
+import { REFUND_ADVICE_REASON } from "@/lib/disputes/refundAdviceDecision";
 
 const CHUNK = 100;
 const WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
@@ -48,9 +49,14 @@ async function endedInquiries(sb: SupabaseClient, filter: (q: any) => any, now: 
   return out;
 }
 
-/** One shop's rows for `computeRefundOutcomeStats`. Disputes never read from Shopify carry `settlements: null`. */
+/**
+ * One shop's rows for `computeRefundOutcomeStats`, CREDIT_NOT_PROCESSED only: the email quotes these figures to a
+ * merchant with a credit-not-processed inquiry, and for other reasons a refund concedes the claim (measured
+ * 2026-11-12: 6a8848-dd closed 0 of 146 refunded product-not-received / not-as-described inquiries in its favour).
+ * Disputes never read from Shopify carry `settlements: null`.
+ */
 export async function loadRefundOutcomeRows(sb: SupabaseClient, shopId: string, now = Date.now()): Promise<RefundOutcomeRow[]> {
-  const disputes = await endedInquiries(sb, (q) => q.eq("shop_id", shopId), now);
+  const disputes = await endedInquiries(sb, (q) => q.eq("shop_id", shopId).eq("reason", REFUND_ADVICE_REASON), now);
   const states = new Map<string, Array<{ settledAt: string; amount: number }>>();
   for (let i = 0; i < disputes.length; i += CHUNK) {
     const { data, error } = await sb
