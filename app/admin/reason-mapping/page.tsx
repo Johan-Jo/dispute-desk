@@ -48,14 +48,22 @@ export default function ReasonMappingPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchMappings = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/admin/reason-mapping?phase=${phase}&stats=true`);
-    const data = await res.json();
-    setMappings(data.mappings ?? []);
-    setStats(data.stats ?? { total: 0, mapped: 0, unmapped: 0, warnings: 0 });
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/reason-mapping?phase=${phase}&stats=true`);
+      if (!res.ok) throw new Error(`Loading mappings failed (${res.status})`);
+      const data = await res.json();
+      setMappings(data.mappings ?? []);
+      setStats(data.stats ?? { total: 0, mapped: 0, unmapped: 0, warnings: 0 });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load mappings");
+    } finally {
+      setLoading(false);
+    }
   }, [phase]);
 
   useEffect(() => {
@@ -65,21 +73,40 @@ export default function ReasonMappingPage() {
   useEffect(() => {
     // Fetch active templates for picker
     fetch("/api/admin/templates?status=active")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Loading templates failed (${r.status})`);
+        return r.json();
+      })
       .then((data) => setTemplates(Array.isArray(data) ? data : []))
-      .catch(() => {});
+      .catch((e: Error) => setError(e.message));
   }, []);
 
   const handleAssignTemplate = async (mappingId: string, templateId: string | null) => {
     setSaving(true);
-    await fetch(`/api/admin/reason-mapping/${mappingId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ template_id: templateId }),
-    });
-    setEditingId(null);
-    setSaving(false);
-    fetchMappings();
+    try {
+      const res = await fetch(`/api/admin/reason-mapping/${mappingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template_id: templateId }),
+      });
+      if (!res.ok) {
+        // The route's validation message ("Cannot assign a draft template…")
+        // used to be thrown away, so a rejected assignment looked like it worked.
+        let detail = "";
+        try {
+          detail = (await res.json())?.error ?? "";
+        } catch {
+          /* non-JSON */
+        }
+        setError(`Assignment failed (${res.status})${detail ? `: ${detail}` : ""}`);
+        return;
+      }
+      setError(null);
+      setEditingId(null);
+      fetchMappings();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filtered = mappings.filter((m) => {
@@ -157,6 +184,12 @@ export default function ReasonMappingPage() {
       )}
 
       {/* Summary Stats */}
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
+
       <AdminStatsRow
         cards={[
           { label: "Total Reasons", value: stats.total },
