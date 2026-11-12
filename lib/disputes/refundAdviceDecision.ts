@@ -20,7 +20,6 @@ import type { RefundState } from "@/lib/disputes/refundState";
 import { hasOpenOrReceivedReturn } from "@/lib/disputes/refundState";
 
 export type RefundAdviceSkipReason =
-  | "disabled"
   | "not_inquiry"
   | "not_open"
   | "not_credit_not_processed"
@@ -39,8 +38,6 @@ export type RefundAdviceDecision =
   | { action: "skip"; reason: RefundAdviceSkipReason };
 
 export interface RefundAdviceInput {
-  /** `REFUND_ADVICE_EMAILS_ENABLED === "true"` */
-  emailsEnabled: boolean;
   phase: string | null;
   /** Shopify's dispute status; "needs_response" is the only open, unanswered status. */
   status: string | null;
@@ -62,7 +59,6 @@ export function isKlarnaMethod(method: string | null | undefined): boolean {
 
 export function decideRefundAdvice(i: RefundAdviceInput): RefundAdviceDecision {
   const skip = (reason: RefundAdviceSkipReason): RefundAdviceDecision => ({ action: "skip", reason });
-  if (!i.emailsEnabled) return skip("disabled");
   if (i.phase !== "inquiry") return skip("not_inquiry");
   if (i.status !== "needs_response") return skip("not_open");
   if (i.reason !== REFUND_ADVICE_REASON) return skip("not_credit_not_processed");

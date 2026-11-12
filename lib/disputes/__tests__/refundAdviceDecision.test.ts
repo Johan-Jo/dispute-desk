@@ -24,7 +24,6 @@ const state = (kind: RefundState["kind"], patch: Partial<RefundState> = {}): Ref
 });
 
 const base = (patch: Partial<RefundAdviceInput> = {}): RefundAdviceInput => ({
-  emailsEnabled: true,
   phase: "inquiry",
   status: "needs_response",
   reason: "CREDIT_NOT_PROCESSED",
@@ -77,8 +76,7 @@ describe("decideRefundAdvice", () => {
     expect(isKlarnaMethod("paypal")).toBe(false);
   });
 
-  it("respects the kill switch, the opt-out, a missing team email and an earlier send", () => {
-    expect(decideRefundAdvice(base({ emailsEnabled: false }))).toEqual({ action: "skip", reason: "disabled" });
+  it("respects the opt-out, a missing team email and an earlier send", () => {
     expect(decideRefundAdvice(base({ optedOut: true }))).toEqual({ action: "skip", reason: "opted_out" });
     expect(decideRefundAdvice(base({ hasTeamEmail: false }))).toEqual({ action: "skip", reason: "no_team_email" });
     expect(decideRefundAdvice(base({ alreadySent: true }))).toEqual({ action: "skip", reason: "already_sent" });

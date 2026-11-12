@@ -30,14 +30,13 @@ const FINAL_READS_MIN_REMAINING_MS = 30_000;
  * Reads, LIVE from Shopify, the refund state of every open inquiry, stores it for the
  * dispute page, and emails the merchant when a refund would resolve the inquiry and none has been issued.
  * Why live: a pending refund reads 0.0 everywhere the evidence pack looks, for about a day
- * (docs/plans/pending-refund-advice.plan.md). Sending is behind REFUND_ADVICE_EMAILS_ENABLED.
+ * (docs/plans/pending-refund-advice.plan.md). Sending is always on; the per-shop opt-out and the decision rules gate it.
  */
 export async function GET(req: NextRequest) {
   const gate = cronEnvGate(req);
   if (gate) return gate;
 
   const dryRun = req.nextUrl.searchParams.get("dryRun") === "1";
-  const emailsEnabled = process.env.REFUND_ADVICE_EMAILS_ENABLED === "true";
   const sb = getServiceClient();
 
   let candidates: RefundCheckCandidate[];
@@ -46,7 +45,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
-  if (candidates.length === 0) return NextResponse.json({ candidates: 0, dryRun, emailsEnabled });
+  if (candidates.length === 0) return NextResponse.json({ candidates: 0, dryRun });
 
   const startedAt = Date.now();
   const readLive = async (shopId: string, orderGid: string) =>
@@ -100,7 +99,7 @@ export async function GET(req: NextRequest) {
         if (insErr && insErr.code !== "23505") throw new Error(insErr.message);
       },
     },
-    { emailsEnabled, dryRun, budgetMs: BUDGET_MS, perShopCap: PER_SHOP_SEND_CAP, minRecheckMs: dryRun ? 0 : MIN_RECHECK_MS },
+    { dryRun, budgetMs: BUDGET_MS, perShopCap: PER_SHOP_SEND_CAP, minRecheckMs: dryRun ? 0 : MIN_RECHECK_MS },
   );
 
   // One-time final read of closed / escalated inquiries (feeds the per-store results). Skipped in a dry run.
@@ -125,5 +124,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ dryRun, emailsEnabled, ...summary, finalReads });
+  return NextResponse.json({ dryRun, ...summary, finalReads });
 }
