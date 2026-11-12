@@ -131,5 +131,14 @@ Every admin page now prints a merchant as storefront domain with the myshopify a
 - Prod entitlement row `active` + subscription GID + no `first_paid_cycle_started_at` (1 shop): genuinely never charged, or `sendFirstPaidCycleEmail` never fired? Currently shown as `unconfirmed`, not revenue. Needs owner's knowledge of that merchant.
 - Prod shop on Growth label with no `plan_entitlements` row (1 shop): onboarding gap (cf. memory: token-exchange installs skipped entitlement grant).
 
-## Pending batches
-2 Operations, Disputes · 3 Shops (+detail) · 4 Jobs, Webhooks · 5 Fraud Intel, Intelligence, Outcome Analysis · 6 Templates, Reason Mapping, Template Health · 7 Defence Package · 8 Audit · 9 Resources · 10 Signal Radar, Gorgias, Leads, Help · 11 Team, Passkeys (last).
+## Status
+
+Static audit + read-only prod measurement complete for every admin page: batches 1-11 shipped to `develop` (PRs #1135-#1144; #1144 = Team / Passkeys / Resources / Signal Radar). Class sweep: no unchecked `r.json()` chains remain in `app/admin` or `components/admin`; remaining empty `catch` blocks only wrap `sessionStorage` or a cosmetic header fetch.
+
+### Still open (needs the owner)
+- **Live sweep (Phase 3):** click-through of every page on dev with console + network capture. Needs a signed-in dev admin session (passkey gate). Nothing here has been verified in a browser.
+- **Prod migrations** (apply with the `master` promotion, before the code deploys there): `20261112120000_admin_fraud_intel_buckets.sql`, `20261112130000_admin_audit_events.sql`. Applied to dev only.
+- **Verify after deploy:** `/admin/defence-package/pipeline` shows a sample payload (tracing include added; not testable locally).
+- **Two shops labelled Growth with no payment record** (see "Open — to confirm"): owner to say whether they should be paying.
+- **Known, unchanged:** Playbook / Winnability lead lists load at most 1000 rows, so their CSV export is the loaded rows.
+- **Production release:** nothing has been merged to `master`; promotion needs an explicit go per change (CLAUDE.md #9).
