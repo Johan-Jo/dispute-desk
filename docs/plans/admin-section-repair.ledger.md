@@ -92,6 +92,19 @@ Finding for the owner (not a bug): in prod, 19,232 of 34,284 window orders have 
 
 Checked, no defect found: prompt-module editor (checks `res.ok`, surfaces errors), prompts list, settings page, run telemetry PDF route.
 
+## Batch 8 — Audit Log (this PR)
+
+| # | Page / route | Symptom | Root cause | Status |
+|---|---|---|---|---|
+| 47 | Audit page | Typing a shop id crashed the page | every keystroke queried Postgres; a partial UUID → 500; page called `.map` on the error object | fixed (debounce, 400 validation, ok check, error banner) |
+| 48 | Audit page/route | Merchant shown as a raw UUID; could only filter by UUID | — | fixed (domain filter, `AdminMerchant`) |
+| 49 | Audit page | Operator who acted was never shown | `actor_id` not selected/rendered | fixed |
+| 50 | Audit CSV | Columns shifted on any comma; spreadsheet formula injection from merchant-controlled payload text | values joined with raw `,` | fixed (`lib/admin/csv.ts`) |
+| 51 | Audit page | Claimed to be the "complete forensic trail of all admin operations" but showed no platform-wide actions | read `audit_events` only | fixed (merges `admin_audit_events`; subtitle corrected) |
+| 52 | Audit route | Silent 500-row cut-off | `.limit(500)` unannounced | fixed (`truncated` + notice) |
+
+Note: `GET /api/admin/audit` response shape changed from an array to `{ events, limit, truncated }`; the audit page was its only caller.
+
 ## Open — merchant display (R2) still on raw `shop_domain`
 `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 

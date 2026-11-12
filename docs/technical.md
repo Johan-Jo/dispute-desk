@@ -1146,6 +1146,10 @@ Template status changes (`template.status_changed`) and reason-mapping edits (`r
 - **Runs list and run detail** show the merchant (`AdminMerchant`). `listRecentRuns` attaches `shop` labels via `loadShopLabels`.
 - **Dashboard stats** (`getDashboardStats`) page through `defence_package_runs` with `fetchAllRows` (a bare select caps at 1000 rows) and throw on a failed read; the dashboard catches it and shows a banner rather than "0 runs · 0% OK".
 
+### Admin Audit Log
+
+`GET /api/admin/audit` returns `{ events, limit, truncated }` (it used to return a bare array) — shop-scoped `audit_events` merged with platform-wide `admin_audit_events` (`scope: "global"`, `actor_id` = operator email), newest first, capped at 500 (`truncated` says so). Filters: `shop` (a shop UUID **or** any part of the storefront / myshopify domain — non-UUIDs are resolved through `shops`, never passed to `.eq("shop_id")`; the legacy `shop_id` param still works), `event_type`, `from`, `to`. A malformed date is a 400. Each event carries `shop: { shop_domain, primary_domain }` and the page renders it with `AdminMerchant`, plus the actor's id. The page debounces its filters (a partial UUID per keystroke used to hit Postgres, 500, and crash the page on `.map` of the error body) and shows load errors. `format=csv` uses `lib/admin/csv.ts` (`toCsv`): every cell quoted, quotes doubled, cells starting `= + - @ tab CR` prefixed with `'` so spreadsheets do not execute merchant-controlled text as a formula.
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline
