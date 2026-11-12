@@ -1103,6 +1103,10 @@ Admin MRR, "Paying Subscribers", the Billing page and the Shops-list MRR column 
 
 **Row-cap rule for admin aggregates.** PostgREST truncates an un-ranged select at 1000 rows with no error. Admin routes that aggregate whole tables (shops, evidence_packs, open disputes, entitlements, per-shop dispute/pack counts) page through `fetchAllRows` (`lib/admin/fetchAllRows.ts`); job counts use per-status `count: exact, head: true` queries. `AdminMerchant` (`components/admin/AdminMerchant.tsx`) is the one way admin pages print a merchant: storefront domain on line 1, myshopify alias beneath.
 
+### Admin dispute detail: admin-gated timeline / notes / resync
+
+`/admin/disputes/[id]` talks to `GET /api/admin/disputes/:id/timeline`, `GET|POST …/notes` and `POST …/resync`, **not** the merchant routes `/api/disputes/:id/*`. Those require a `Bearer` token whose `app_metadata.role` is `admin|support`, which the admin UI never sends, so the page used to get 401/403, show an empty timeline and silently drop notes and resyncs. The admin routes sit under `/api/admin/*`, so the middleware enforces session + `internal_admin_grants` + passkey cookie before they run (do **not** loosen the merchant routes to accept a bare cookie session — that would skip the passkey factor). Both route sets are thin wrappers over `lib/disputes/internal/{timeline,notes,resync}.ts`, which take the caller as a parameter. The page now shows any failed load/action in an alert instead of swallowing it. `/admin/disputes?shop_id=<uuid>` (the Operations leaderboard link) filters to that shop, with a "Show all shops" chip.
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

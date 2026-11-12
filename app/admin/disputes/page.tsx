@@ -9,11 +9,13 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { resolveFiledBy, type FiledBy } from "@/lib/admin/filedBy";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 
 interface Dispute {
   id: string;
   shop_id: string;
   shop_domain: string | null;
+  primary_domain?: string | null;
   order_name: string | null;
   reason: string | null;
   phase: string | null;
@@ -82,24 +84,37 @@ export default function AdminDisputesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [filter, setFilter] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  // `?shop_id=` is how the Operations leaderboard links here; without reading it
+  // the link listed every merchant's disputes.
+  const [shopId, setShopId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setShopId(new URLSearchParams(window.location.search).get("shop_id"));
+  }, []);
 
   const fetchDisputes = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), per_page: "50" });
+      if (shopId) params.set("shop_id", shopId);
       if (filter === "needs_attention") params.set("needs_attention", "true");
       if (filter === "has_override") params.set("has_admin_override", "true");
       if (filter.startsWith("filed_by:")) {
         params.set("filed_by", filter.slice("filed_by:".length));
       }
       const res = await fetch(`/api/admin/disputes?${params}`);
+      if (!res.ok) throw new Error(`Loading disputes failed (${res.status})`);
       const data = await res.json();
       setDisputes(data.disputes ?? []);
       setTotalPages(data.pagination?.total_pages ?? 0);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load disputes");
     } finally {
       setLoading(false);
     }
-  }, [page, filter]);
+  }, [page, filter, shopId]);
 
   useEffect(() => {
     fetchDisputes();
@@ -113,6 +128,28 @@ export default function AdminDisputesPage() {
           <p className="text-sm text-[#64748B]">Cross-shop dispute management</p>
         </div>
       </div>
+
+      {shopId && (
+        <div className="mb-3 flex items-center gap-2 text-sm text-[#475569]">
+          <span>Showing one shop only.</span>
+          <button
+            onClick={() => {
+              setShopId(null);
+              setPage(1);
+              window.history.replaceState(null, "", "/admin/disputes");
+            }}
+            className="px-2 py-0.5 rounded-full bg-[#F1F5F9] font-medium hover:bg-[#E2E8F0]"
+          >
+            Show all shops ×
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
 
       {/* Filter pills */}
       <div className="flex gap-2 mb-4">
@@ -163,8 +200,12 @@ export default function AdminDisputesPage() {
               <tbody>
                 {disputes.map((d) => (
                   <tr key={d.id} className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC]">
-                    <td className="px-4 py-3 text-[#0F172A] font-medium truncate max-w-[160px]">
-                      {d.shop_domain ?? d.shop_id.slice(0, 8)}
+                    <td className="px-4 py-3 text-[#0F172A] font-medium max-w-[200px]">
+                      {d.shop_domain ? (
+                        <AdminMerchant shopDomain={d.shop_domain} primaryDomain={d.primary_domain} />
+                      ) : (
+                        d.shop_id.slice(0, 8)
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[#0F172A]">{d.order_name ?? "—"}</td>
                     <td className="px-4 py-3 text-[#64748B]">
