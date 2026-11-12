@@ -95,22 +95,46 @@ export default function AdminDisputeDetailPage() {
   const [overrideValue, setOverrideValue] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  /** Read a failed response into a message the operator can act on. */
+  const failureMessage = async (res: Response, what: string) => {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.error ? `: ${body.error}` : "";
+    } catch {
+      /* non-JSON body */
+    }
+    return `${what} failed (${res.status})${detail}`;
+  };
+
+  // Admin-gated routes (session + grant + passkey). The merchant routes under
+  // /api/disputes/* need a Bearer role token these pages never send, so they
+  // answered 401/403 and the page silently showed an empty timeline.
   const fetchAll = useCallback(async () => {
-    setLoading(true);
     try {
       const [timelineRes, notesRes] = await Promise.all([
-        fetch(`/api/disputes/${id}/timeline`),
-        fetch(`/api/disputes/${id}/notes`),
+        fetch(`/api/admin/disputes/${id}/timeline`),
+        fetch(`/api/admin/disputes/${id}/notes`),
       ]);
+      const problems: string[] = [];
       if (timelineRes.ok) {
         const data = await timelineRes.json();
         setEvents(data.events ?? []);
         setSummary(data.summary ?? null);
+      } else {
+        problems.push(await failureMessage(timelineRes, "Loading the timeline"));
       }
       if (notesRes.ok) {
         const data = await notesRes.json();
         setNotes(data.notes ?? []);
+      } else {
+        problems.push(await failureMessage(notesRes, "Loading notes"));
       }
+      setActionError(problems.length ? problems.join(" · ") : null);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Could not load this dispute");
     } finally {
       setLoading(false);
     }
@@ -123,7 +147,11 @@ export default function AdminDisputeDetailPage() {
   const handleResync = async () => {
     setResyncing(true);
     try {
-      await fetch(`/api/disputes/${id}/resync`, { method: "POST" });
+      const res = await fetch(`/api/admin/disputes/${id}/resync`, { method: "POST" });
+      if (!res.ok) {
+        setActionError(await failureMessage(res, "Resync"));
+        return;
+      }
       await fetchAll();
     } finally {
       setResyncing(false);
@@ -132,18 +160,22 @@ export default function AdminDisputeDetailPage() {
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
-    await fetch(`/api/disputes/${id}/notes`, {
+    const res = await fetch(`/api/admin/disputes/${id}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ noteBody: noteText.trim() }),
     });
+    if (!res.ok) {
+      setActionError(await failureMessage(res, "Saving the note"));
+      return; // keep the text so it is not lost
+    }
     setNoteText("");
     await fetchAll();
   };
 
   const handleOverride = async () => {
     if (!overrideValue || !overrideReason) return;
-    await fetch(`/api/admin/disputes/${id}/override`, {
+    const res = await fetch(`/api/admin/disputes/${id}/override`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -152,6 +184,10 @@ export default function AdminDisputeDetailPage() {
         reason: overrideReason,
       }),
     });
+    if (!res.ok) {
+      setActionError(await failureMessage(res, "Override"));
+      return;
+    }
     setOverrideValue("");
     setOverrideReason("");
     await fetchAll();
@@ -181,6 +217,12 @@ export default function AdminDisputeDetailPage() {
           Resync
         </button>
       </div>
+
+      {actionError && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {actionError}
+        </div>
+      )}
 
       {/* Post-outcome analysis for a decided dispute (plan §14.3). Additive:
           the merchant-facing Review and Forward surfaces are untouched. */}

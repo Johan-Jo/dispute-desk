@@ -91,13 +91,35 @@ function relativeTime(iso: string): string {
 
 export default function OperationsPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    setError(null);
     fetch("/api/admin/metrics")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Metrics request failed (${r.status})`);
+        return r.json();
+      })
       .then(setMetrics)
-      .catch(() => {});
-  }, []);
+      .catch((e: Error) => setError(e.message));
+  }, [attempt]);
+
+  if (error && !metrics) {
+    return (
+      <div className="p-8">
+        <div className="py-12 text-center">
+          <p className="text-[#991B1B] mb-4">{error}</p>
+          <button
+            onClick={() => setAttempt((n) => n + 1)}
+            className="px-4 py-2 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!metrics) {
     return (

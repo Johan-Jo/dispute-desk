@@ -17,8 +17,19 @@ Sources so far: static audit + read-only prod measurement (`db:query:prod --read
 | 8 | Overview | Health bar did not wrap on narrow widths | `flex gap-3` | — | fixed |
 | 9 | Operations leaderboard, Billing table | Merchant shown as raw myshopify alias | `shop.domain` printed directly | no shared renderer | fixed for these two (`AdminMerchant`); remaining pages tracked below |
 
+## Batch 2 — Operations, Disputes (this PR)
+
+| # | Page / route | Symptom | Root cause | Status |
+|---|---|---|---|---|
+| 10 | Dispute detail | Timeline empty; "Add note" and "Resync" did nothing, no message | Page called merchant routes needing a Bearer role token; got 401/403 and ignored them | fixed: admin-gated routes `/api/admin/disputes/[id]/{timeline,notes,resync}` over shared `lib/disputes/internal/*` |
+| 11 | Dispute detail | Page blanked to "Loading..." on every refetch; failed override/note/resync silent | `setLoading(true)` in refetch; no `res.ok` checks | fixed (alert banner; text kept on failed note) |
+| 12 | Disputes list | Operations leaderboard link `?shop_id=` listed ALL shops | page never read `shop_id` | fixed (+ "Show all shops" chip) |
+| 13 | Disputes list | Failed load showed empty table | no `res.ok` check | fixed (alert) |
+| 14 | Operations | Metrics failure = infinite "Loading operations..." | swallowed error | fixed (error + Retry) |
+| 15 | Disputes list | Merchant shown as raw alias | — | fixed (`AdminMerchant`, route returns `primary_domain`) |
+
 ## Open — merchant display (R2) still on raw `shop_domain`
-`app/admin/disputes/page.tsx`, `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
+`gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 
 ## Open — to confirm
 - Prod entitlement row `active` + subscription GID + no `first_paid_cycle_started_at` (1 shop): genuinely never charged, or `sendFirstPaidCycleEmail` never fired? Currently shown as `unconfirmed`, not revenue. Needs owner's knowledge of that merchant.
