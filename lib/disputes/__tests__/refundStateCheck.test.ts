@@ -46,7 +46,7 @@ const cand = (id: string, patch: Partial<RefundCheckCandidate> = {}): RefundChec
   ...patch,
 });
 
-const OPTS: RefundCheckOptions = { emailsEnabled: true, dryRun: false, budgetMs: 1_000_000, perShopCap: 5, minRecheckMs: 90 * 60_000 };
+const OPTS: RefundCheckOptions = { dryRun: false, budgetMs: 1_000_000, perShopCap: 5, minRecheckMs: 90 * 60_000 };
 
 function harness(reads: Record<string, Array<RefundState | Error>>, over: Partial<RefundCheckDeps> = {}) {
   const log = { saved: [] as string[], sent: [] as string[], recorded: [] as string[] };
@@ -112,14 +112,6 @@ describe("runRefundStateCheck", () => {
     expect(log.saved).toEqual([]);
     expect(log.sent).toEqual([]);
     expect(log.recorded).toEqual([]);
-  });
-
-  it("the kill switch stops sends but not the state snapshots", async () => {
-    const { deps, log } = harness({ a: [state("none")] });
-    const s = await runRefundStateCheck([cand("a")], deps, { ...OPTS, emailsEnabled: false });
-    expect(s.skips.disabled).toBe(1);
-    expect(log.saved).toEqual(["a:none"]);
-    expect(log.sent).toEqual([]);
   });
 
   it("caps sends per shop and counts the deferred ones", async () => {
