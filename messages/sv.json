@@ -11,7 +11,9 @@
       "bodyFailed": "En återbetalning för order {order} startades i Shopify men misslyckades, så inget har betalats tillbaka och förfrågan på {amount} är fortfarande öppen. Ordern har en retur.\n\n**Återbetala det omtvistade beloppet ({amount}) igen i Shopify Admin** och kontrollera återbetalningens status i orderns tidslinje. Det är ditt beslut om du återbetalar; DisputeDesk gör det inte åt dig.\n\nDet lönar sig att göra det före förfallodatumet ({dueDate}). En förfrågan som förblir öppen kan bli en chargeback. Då dras det omtvistade beloppet och en chargeback-avgift, Shopify blockerar återbetalningar på den, och den räknas in i din chargeback-frekvens. Förfrågningar räknas inte in i den frekvensen.",
       "cta": "Öppna tvisten",
       "footer": "DisputeDesk · påminnelse om återbetalning",
-      "eyebrow": "Påminnelse om återbetalning"
+      "eyebrow": "Påminnelse om återbetalning",
+      "storeResultsRefunded": "I din butik avslutades {won} av {decided} förfrågningar där en återbetalning gjordes till din fördel.",
+      "storeResultsUnrefunded": "Av {total} förfrågningar som avslutades utan återbetalning blev {escalated} chargebacks."
     },
     "billing": {
       "trialStarted": {

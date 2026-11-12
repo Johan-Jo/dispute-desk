@@ -11,7 +11,9 @@
       "bodyFailed": "Foi iniciado um reembolso da encomenda {order} no Shopify, mas falhou: nada foi devolvido e o pedido de {amount} continua em aberto. A encomenda mostra uma devolução.\n\n**Reembolse novamente o valor contestado ({amount}) no Shopify Admin** e verifique o estado do reembolso na cronologia da encomenda. Reembolsar é uma decisão sua; a DisputeDesk não o fará por si.\n\nVale a pena fazê-lo antes do prazo ({dueDate}). Um pedido que fica em aberto pode tornar-se um estorno. Nesse caso, o valor contestado e uma taxa de estorno são debitados, o Shopify bloqueia os reembolsos e conta para a sua taxa de estornos. Os pedidos de informação não contam para essa taxa.",
       "cta": "Abrir a disputa",
       "footer": "DisputeDesk · lembrete de reembolso",
-      "eyebrow": "Lembrete de reembolso"
+      "eyebrow": "Lembrete de reembolso",
+      "storeResultsRefunded": "Na sua loja, {won} de {decided} pedidos com reembolso foram encerrados a seu favor.",
+      "storeResultsUnrefunded": "De {total} pedidos que terminaram sem reembolso, {escalated} tornaram-se estornos."
     },
     "billing": {
       "trialStarted": {

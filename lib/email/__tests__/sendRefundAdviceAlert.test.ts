@@ -66,6 +66,30 @@ describe("renderRefundAdviceEmail", () => {
     expect(r.text).toMatch(/not do it for you/i);
   });
 
+  it("quotes this store's own results only when it has them, in every locale, with no unresolved placeholder", () => {
+    const withBoth = { ...ctx, storeResults: { refunded: { won: 11, decided: 12 }, unrefunded: { escalated: 4, total: 15 } } };
+    for (const [locale, messages] of Object.entries(CATALOGS)) {
+      const r = renderRefundAdviceEmail({ ...withBoth, locale }, asMessages(messages));
+      expect(r.text, locale).toMatch(/11/);
+      expect(r.text, locale).toMatch(/12/);
+      expect(r.text, locale).toMatch(/15/);
+      expect(`${r.html}${r.text}`, locale).not.toMatch(/\{[a-zA-Z]+\}/);
+    }
+    const en_ = renderRefundAdviceEmail(withBoth, asMessages(en));
+    expect(en_.text).toContain("In your store, 11 of 12 inquiries where a refund was issued closed in your favour.");
+    expect(en_.text).toContain("Of 15 inquiries that ended without a refund, 4 became chargebacks.");
+
+    const only = renderRefundAdviceEmail({ ...ctx, storeResults: { refunded: { won: 11, decided: 12 }, unrefunded: null } }, asMessages(en));
+    expect(only.text).toContain("11 of 12");
+    expect(only.text).not.toContain("ended without a refund");
+
+    for (const none of [undefined, null, { refunded: null, unrefunded: null }]) {
+      const r = renderRefundAdviceEmail({ ...ctx, storeResults: none }, asMessages(en));
+      expect(r.text).not.toContain("In your store");
+      expect(r.text).not.toContain("ended without a refund");
+    }
+  });
+
   it("the failed variant is its own copy", () => {
     const none = renderRefundAdviceEmail({ ...ctx, variant: "none" }, asMessages(en));
     const failed = renderRefundAdviceEmail({ ...ctx, variant: "failed" }, asMessages(en));

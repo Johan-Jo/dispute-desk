@@ -95,6 +95,18 @@ describe("resolveRefundState", () => {
     expect(s.firstRefundAt).toBe("2026-11-11T13:35:49Z");
   });
 
+  it("settlements: one entry per refund with a SUCCESS transaction, none for pending or failed", () => {
+    const a = refund("a", { total: "100.0", createdAt: "2026-11-01T10:00:00Z", updatedAt: "2026-11-02T10:00:10Z", txs: [tx("a", "REFUND", "SUCCESS", "100.0")] });
+    const b = refund("b", { total: "50.0", createdAt: "2026-11-08T10:00:00Z", updatedAt: "2026-11-09T10:00:20Z", txs: [tx("b", "REFUND", "SUCCESS", "50.0")] });
+    const c = refund("c", { total: "0.0", createdAt: "2026-11-11T10:00:00Z", txs: [tx("c", "REFUND", "PENDING", "20.0")] });
+    const s = resolveRefundState(withRefunds([a, b, c], "150.0"), NOW);
+    expect(s.settlements).toEqual([
+      { settledAt: "2026-11-02T10:00:10Z", amount: 100 },
+      { settledAt: "2026-11-09T10:00:20Z", amount: 50 },
+    ]);
+    expect(resolveRefundState(order(), NOW).settlements).toEqual([]);
+  });
+
   it("mixed: one refund settled, another still pending (#24393)", () => {
     const a = refund("a", { total: "499.0", updatedAt: "2026-11-05T10:00:00Z", createdAt: "2026-11-04T10:00:00Z", txs: [tx("a", "REFUND", "SUCCESS", "499.0")] });
     const b = refund("b", { total: "0.0", createdAt: "2026-11-12T09:00:00Z", txs: [tx("b", "REFUND", "PENDING", "1329.0")] });

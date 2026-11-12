@@ -11,7 +11,9 @@
       "bodyFailed": "A refund on order {order} was started in Shopify but failed, so nothing has been paid back and the inquiry about {amount} is still open. The order shows a return.\n\n**Refund the disputed amount ({amount}) again in Shopify Admin**, and check the refund’s status in the order’s timeline. Whether to refund is your decision; DisputeDesk will not do it for you.\n\nIt is worth doing before the due date ({dueDate}). An inquiry that stays open can become a chargeback. Then the disputed amount and a chargeback fee are debited, Shopify blocks refunds on it, and it counts toward your chargeback rate. Inquiries do not count toward that rate.",
       "cta": "Open the dispute",
       "footer": "DisputeDesk · refund reminder",
-      "eyebrow": "Refund reminder"
+      "eyebrow": "Refund reminder",
+      "storeResultsRefunded": "In your store, {won} of {decided} inquiries where a refund was issued closed in your favour.",
+      "storeResultsUnrefunded": "Of {total} inquiries that ended without a refund, {escalated} became chargebacks."
     },
     "billing": {
       "trialStarted": {

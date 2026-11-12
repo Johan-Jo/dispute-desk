@@ -23,8 +23,8 @@ export interface StoredRefundState {
   payment_gateways: string[];
   checked_at: string;
   last_changed_at: string;
-  state_at_close: RefundState["kind"] | null;
-  state_at_close_checked_at: string | null;
+  settlements: Array<{ settledAt: string; amount: number }>;
+  final_read_at: string | null;
 }
 
 /** The columns written from a read; pure so the mapping is testable. */
@@ -34,7 +34,7 @@ export function refundStateRow(
   orderGid: string,
   s: RefundState,
   now: string,
-): Omit<StoredRefundState, "last_changed_at" | "state_at_close" | "state_at_close_checked_at"> {
+): Omit<StoredRefundState, "last_changed_at" | "final_read_at"> {
   return {
     dispute_id: disputeId,
     shop_id: shopId,
@@ -48,6 +48,7 @@ export function refundStateRow(
     first_refund_at: s.firstRefundAt,
     settled_at: s.settledAt,
     stalled_pending: s.stalledPending,
+    settlements: s.settlements,
     return_status: s.returnStatus,
     payment_gateways: s.paymentGateways,
     checked_at: now,
@@ -65,6 +66,7 @@ export async function upsertRefundState(
   orderGid: string,
   s: RefundState,
   now: string = new Date().toISOString(),
+  opts: { finalRead?: boolean } = {},
 ): Promise<{ changed: boolean; previous: RefundState["kind"] | null }> {
   const { data: prev, error: readErr } = await sb
     .from("dispute_refund_state")
@@ -78,6 +80,8 @@ export async function upsertRefundState(
   const row = {
     ...refundStateRow(disputeId, shopId, orderGid, s, now),
     ...(changed ? { last_changed_at: now } : {}),
+    // A CLOSED or ESCALATED dispute read once for the per-store results (lib/disputes/refundOutcomeStats.ts).
+    ...(opts.finalRead ? { final_read_at: now } : {}),
   };
   const { error } = await sb.from("dispute_refund_state").upsert(row, { onConflict: "dispute_id" });
   if (error) throw new Error(`dispute_refund_state upsert failed: ${error.message}`);

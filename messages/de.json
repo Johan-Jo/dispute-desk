@@ -11,7 +11,9 @@
       "bodyFailed": "Eine Rückerstattung für Bestellung {order} wurde in Shopify gestartet, ist aber fehlgeschlagen. Es wurde nichts zurückgezahlt, und die Anfrage über {amount} ist weiterhin offen. Die Bestellung zeigt eine Retoure.\n\n**Erstatten Sie den strittigen Betrag ({amount}) im Shopify-Admin erneut** und prüfen Sie den Status der Rückerstattung im Verlauf der Bestellung. Ob Sie erstatten, entscheiden Sie selbst; DisputeDesk erstattet nicht für Sie.\n\nEs lohnt sich, das vor dem Fälligkeitsdatum ({dueDate}) zu tun. Eine offene Anfrage kann zu einer Rückbuchung werden. Dann werden der strittige Betrag und eine Rückbuchungsgebühr abgebucht, Shopify sperrt Rückerstattungen dafür, und sie zählt zu Ihrer Rückbuchungsquote. Anfragen zählen nicht zu dieser Quote.",
       "cta": "Streitfall öffnen",
       "footer": "DisputeDesk · Erinnerung zur Rückerstattung",
-      "eyebrow": "Erinnerung zur Rückerstattung"
+      "eyebrow": "Erinnerung zur Rückerstattung",
+      "storeResultsRefunded": "In Ihrem Shop wurden {won} von {decided} Anfragen, bei denen eine Rückerstattung erfolgte, zu Ihren Gunsten abgeschlossen.",
+      "storeResultsUnrefunded": "Von {total} Anfragen, die ohne Rückerstattung endeten, wurden {escalated} zu Rückbuchungen."
     },
     "billing": {
       "trialStarted": {
