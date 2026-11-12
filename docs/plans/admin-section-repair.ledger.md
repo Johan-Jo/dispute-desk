@@ -41,6 +41,17 @@ Sources so far: static audit + read-only prod measurement (`db:query:prod --read
 | 22 | Shop detail | Trial / paid status not shown | not in GET | fixed (`billing` in GET + header pill, trial end date) |
 | 23 | Shop activity panel | Failed load showed "No recorded activity" | `.catch(() => setRows([]))` | fixed (error message) |
 
+## Batch 4 — Jobs, Webhooks (this PR)
+
+| # | Page / route | Symptom | Root cause | Status |
+|---|---|---|---|---|
+| 24 | Jobs | Page blanked (`jobs.map is not a function`) when the API errored | error body object fed to `.map` | fixed (ok check + alert) |
+| 25 | Jobs | Retry/Cancel said OK when nothing changed; failures silent | status-guarded UPDATE matched 0 rows, route returned `ok:true`; page ignored response | fixed (409 + visible error) |
+| 26 | Jobs, Webhooks | No indication which merchant a job/delivery belongs to | no shop column | fixed (Shop column via `AdminMerchant`) |
+| 27 | Jobs | `cancelled` jobs had no filter | filter list lacked it | fixed |
+| 28 | Webhooks | 24h totals/p50/p95 truncated at 1000 rows | un-ranged aggregate select | fixed (`fetchAllRows`) |
+| 29 | Webhooks | Failed aggregate showed zeros ("no webhooks") ; failed list blanked loading | no `res.ok` handling | fixed |
+
 ## Open — merchant display (R2) still on raw `shop_domain`
 `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 

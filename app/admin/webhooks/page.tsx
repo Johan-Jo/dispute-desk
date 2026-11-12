@@ -7,10 +7,12 @@ import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 
 interface WebhookRow {
   id: string;
   shop_id: string | null;
+  shop?: { shop_domain: string; primary_domain: string | null } | null;
   event_id: string;
   topic: string;
   shopify_object_id: string | null;
@@ -46,9 +48,11 @@ export default function AdminWebhooksPage() {
   const [topicFilter, setTopicFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
+    try {
     const params = new URLSearchParams();
     if (outcomeFilter !== "all") params.set("outcome", outcomeFilter);
     if (topicFilter !== "all") params.set("topic", topicFilter);
@@ -59,10 +63,19 @@ export default function AdminWebhooksPage() {
       fetch(`/api/admin/webhooks?${params}`),
       fetch(`/api/admin/webhooks?aggregate=1`),
     ]);
+    if (!rowsRes.ok) throw new Error(`Loading deliveries failed (${rowsRes.status})`);
     const rowsJson = await rowsRes.json();
     setRows(rowsJson.rows ?? []);
-    setAgg(await aggRes.json());
-    setLoading(false);
+    // An error body has no totals; showing it as stats rendered zeros that
+    // read as "no webhooks arrived".
+    if (aggRes.ok) setAgg(await aggRes.json());
+    else setAgg(null);
+    setError(aggRes.ok ? null : `Loading delivery stats failed (${aggRes.status})`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load webhooks");
+    } finally {
+      setLoading(false);
+    }
   }, [outcomeFilter, topicFilter, search]);
 
   useEffect(() => {
@@ -142,9 +155,16 @@ export default function AdminWebhooksPage() {
         />
       </div>
 
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
+
       <AdminTable
         headers={[
           "Received",
+          "Shop",
           "Topic",
           "Shopify Object",
           "Outcome",
@@ -160,6 +180,13 @@ export default function AdminWebhooksPage() {
           <tr key={r.id} className="transition-colors hover:bg-[#F8FAFC]">
             <td className="px-6 py-4 text-sm text-[#64748B]" title={r.received_at}>
               {new Date(r.received_at).toLocaleString()}
+            </td>
+            <td className="px-6 py-4 text-sm font-medium text-[#0F172A] max-w-[220px]">
+              {r.shop ? (
+                <AdminMerchant shopDomain={r.shop.shop_domain} primaryDomain={r.shop.primary_domain} />
+              ) : (
+                <span className="text-[#94A3B8]">—</span>
+              )}
             </td>
             <td className="px-6 py-4 font-mono text-sm text-[#0F172A]">{r.topic}</td>
             <td className="px-6 py-4 font-mono text-xs text-[#475569]">
