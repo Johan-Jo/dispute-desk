@@ -63,6 +63,15 @@ describe("GET /api/admin/search", () => {
     expect(dispute).toMatchObject({ title: "#1084 · FRAUDULENT", href: "/admin/disputes/d1", badge: "submitted to bank" });
   });
 
+  it("labels a dispute that has no order name by its Shopify id, not a bare Order", async () => {
+    results.disputes = {
+      data: [{ id: "d9", order_name: null, dispute_gid: "gid://shopify/ShopifyPaymentsDispute/123456", reason: "FRAUDULENT", phase: "chargeback", normalized_status: "new", shop_id: null }],
+      error: null,
+    };
+    const body = await (await GET(req("123456"))).json();
+    expect(body.groups[0].items[0].title).toBe("Dispute 123456 · FRAUDULENT");
+  });
+
   it("matches an order number typed with or without the # sign", async () => {
     await GET(req("#1084"));
     const or = calls.find((c) => c.table === "disputes" && c.method === "or");
