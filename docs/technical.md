@@ -1123,6 +1123,12 @@ The Shops list shows a billing pill under the plan (`paid | trialing | grace | u
 
 Template status changes (`template.status_changed`) and reason-mapping edits (`reason_mapping.updated`) have no shop, so they cannot go into `audit_events` (`shop_id` NOT NULL). Both routes used to insert there anyway, never checked the result, and wrote **zero** rows ever. They now call `logAdminAction` (`lib/admin/auditAction.ts`) → `public.admin_audit_events` (migration `20261112130000`: `actor_user_id`, `actor_email`, `event_type`, `event_payload`; service-role only, RLS on, append-only trigger). `logAdminAction` never throws (the action already happened) but logs `[admin-audit] write failed` and returns `false`. Any new platform-wide admin write should use it. The Templates, Template detail, Reason Mapping and Template Health pages now surface load failures, and a rejected template assignment shows the route's message (e.g. "Only active templates are allowed") instead of looking like it saved. **Rollout:** migration applied to dev 2026-11-12; apply to prod with the `master` promotion, before the route code deploys there.
 
+### Admin Defence Package pages
+
+- **Pipeline page** (`/admin/defence-package/pipeline`) renders a sample LLM payload from `tests/fixtures/defence-package-sample.json`, read with `fs` at request time. File tracing does not follow a runtime path, so on Vercel the file was never bundled and the panel always showed "Could not load fixture". `next.config.js` `outputFileTracingIncludes` now ships it for `/admin/defence-package/pipeline`. (A static import is not an option: ESLint `no-restricted-imports` forbids production code importing test fixtures.) **Verify after deploy** that the panel shows a payload.
+- **Runs list and run detail** show the merchant (`AdminMerchant`). `listRecentRuns` attaches `shop` labels via `loadShopLabels`.
+- **Dashboard stats** (`getDashboardStats`) page through `defence_package_runs` with `fetchAllRows` (a bare select caps at 1000 rows) and throw on a failed read; the dashboard catches it and shows a banner rather than "0 runs · 0% OK".
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

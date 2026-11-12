@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 import Link from "next/link";
 import { Activity, ArrowLeft } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
@@ -24,6 +25,10 @@ export default async function RunDetailPage({
     .eq("id", id)
     .single();
   if (!run) notFound();
+
+  const { data: shopRow } = run.shop_id
+    ? await sb.from("shops").select("shop_domain, primary_domain").eq("id", run.shop_id).maybeSingle()
+    : { data: null };
 
   let pkg: Record<string, unknown> | null = null;
   // Stable proxy URL — bytes flow through the origin via the admin
@@ -61,6 +66,16 @@ export default async function RunDetailPage({
       </div>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div>
+          <div className="text-xs text-[#64748B]">Shop</div>
+          <div className="mt-0.5 text-sm text-[#0F172A]">
+            {shopRow ? (
+              <AdminMerchant shopDomain={shopRow.shop_domain} primaryDomain={shopRow.primary_domain} />
+            ) : (
+              "—"
+            )}
+          </div>
+        </div>
         <KV label="Model" value={run.model ?? "—"} />
         <KV label="Mode" value={run.package_mode ?? "—"} />
         <KV label="Prompt tokens" value={String(run.prompt_tokens ?? "—")} />

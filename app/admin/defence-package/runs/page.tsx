@@ -4,6 +4,7 @@ import { Activity, ArrowLeft } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { listRecentRuns } from "@/lib/defence/admin-queries";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function DefencePackageRunsPage() {
           <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
             <tr>
               <th className="text-left px-4 py-2 text-[#64748B] font-medium">When</th>
+              <th className="text-left px-4 py-2 text-[#64748B] font-medium">Shop</th>
               <th className="text-left px-4 py-2 text-[#64748B] font-medium">Model</th>
               <th className="text-left px-4 py-2 text-[#64748B] font-medium">Mode</th>
               <th className="text-right px-4 py-2 text-[#64748B] font-medium">Prompt</th>
@@ -43,7 +45,7 @@ export default async function DefencePackageRunsPage() {
           <tbody>
             {runs.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-[#64748B]">
+                <td colSpan={9} className="px-4 py-8 text-center text-[#64748B]">
                   No runs yet.
                 </td>
               </tr>
@@ -52,6 +54,13 @@ export default async function DefencePackageRunsPage() {
                 <tr key={r.id} className="border-b border-[#F1F5F9]">
                   <td className="px-4 py-2 text-[#475569]">
                     {new Date(r.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2 text-[#0F172A] max-w-[220px]">
+                    {r.shop ? (
+                      <AdminMerchant shopDomain={r.shop.shop_domain} primaryDomain={r.shop.primary_domain} />
+                    ) : (
+                      <span className="text-[#94A3B8]">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2 font-mono text-xs">{r.model ?? "—"}</td>
                   <td className="px-4 py-2">{r.packageMode ?? "—"}</td>

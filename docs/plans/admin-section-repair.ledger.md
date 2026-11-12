@@ -81,6 +81,17 @@ Finding for the owner (not a bug): in prod, 19,232 of 34,284 window orders have 
 
 **Promotion note:** migration `20261112130000_admin_audit_events.sql` is applied on dev only; apply to prod with the `master` promotion.
 
+## Batch 7 — Defence Package (this PR)
+
+| # | Page / route | Symptom | Evidence | Root cause | Status |
+|---|---|---|---|---|---|
+| 43 | Pipeline page | Sample-payload panel always "Could not load fixture" on Vercel | `fs.readFile(process.cwd()+"tests/fixtures/…")`; `outputFileTracingIncludes` has no entry for the route | file not in the serverless bundle | fixed (tracing include) — **verify on deploy** |
+| 44 | Runs list, run detail | No merchant shown | `shop_id` selected but never rendered | — | fixed (`AdminMerchant`) |
+| 45 | Dashboard | Failed telemetry read showed "0 runs · 0% OK" | `const { data }` with no error check | — | fixed (throw + banner) |
+| 46 | Dashboard | 7-day stats would cap at 1000 runs | bare select | row cap | hardened (prod today: 33 runs/7d, not yet wrong) |
+
+Checked, no defect found: prompt-module editor (checks `res.ok`, surfaces errors), prompts list, settings page, run telemetry PDF route.
+
 ## Open — merchant display (R2) still on raw `shop_domain`
 `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 
