@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
+import { summarizeBilling, classifyBillingState, type EntitlementEvidence } from "@/lib/admin/paidSubscriptions";
 
 export const runtime = "nodejs";
 
@@ -18,36 +20,56 @@ export async function GET(req: NextRequest) {
     ? new Date(Date.now() - periodMs).toISOString()
     : undefined;
 
-  const [shops, disputes, packs, jobs, templateRows, mappingRows] = await Promise.all([
-    sb.from("shops").select("id, shop_domain, plan, uninstalled_at"),
+  // Un-ranged selects truncate silently at 1000 rows (PostgREST) — page the
+  // large tables, and count jobs by status instead of fetching every row.
+  const jobCount = (status: string) =>
+    sb.from("jobs").select("id", { count: "exact", head: true }).eq("status", status);
+  const [shopList, disputes, packRows, jq, jr, js, jf, templateRows, mappingRows, entitlements] = await Promise.all([
+    fetchAllRows<{ id: string; shop_domain: string; primary_domain: string | null; plan: string | null; uninstalled_at: string | null }>(
+      (from, to) => sb.from("shops").select("id, shop_domain, primary_domain, plan, uninstalled_at").order("id").range(from, to),
+    ),
     sb.from("disputes").select("id", { count: "exact", head: true }),
-    sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_type, saved_to_shopify_at"),
-    sb.from("jobs").select("id, status"),
+    fetchAllRows<Record<string, unknown>>(
+      (from, to) => sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_type, saved_to_shopify_at").order("id").range(from, to),
+    ),
+    jobCount("queued"),
+    jobCount("running"),
+    jobCount("succeeded"),
+    jobCount("failed"),
     sb.from("pack_templates").select("id, name, status"),
     sb.from("reason_template_mappings").select("id, template_id, dispute_phase, reason_code"),
+    fetchAllRows<EntitlementEvidence>(
+      (from, to) => sb.from("plan_entitlements").select("shop_id, plan_key, subscription_state, first_paid_cycle_started_at").order("shop_id").range(from, to),
+    ),
   ]);
 
-  const shopList = shops.data ?? [];
   const active = shopList.filter((s) => !s.uninstalled_at).length;
   const uninstalled = shopList.filter((s) => s.uninstalled_at).length;
 
+  // Billing by payment evidence, not by the `shops.plan` label.
+  const billing = summarizeBilling(shopList, entitlements);
+  const entByShop = new Map(entitlements.map((e) => [e.shop_id, e]));
   const plans: Record<string, number> = {};
   for (const s of shopList) {
-    plans[s.plan ?? "free"] = (plans[s.plan ?? "free"] ?? 0) + 1;
+    if (s.uninstalled_at) continue;
+    const st = classifyBillingState(s, entByShop.get(s.id));
+    const label = st === "paid" ? (entByShop.get(s.id)?.plan_key ?? s.plan ?? "free") : st;
+    plans[label] = (plans[label] ?? 0) + 1;
   }
 
-  const packList = (packs.data ?? []) as Record<string, unknown>[];
+  const packList = packRows;
   const byStatus: Record<string, number> = {};
   for (const p of packList) {
     const st = (p.status as string) ?? "unknown";
     byStatus[st] = (byStatus[st] ?? 0) + 1;
   }
 
-  const jobList = jobs.data ?? [];
-  const jobCounts = { queued: 0, running: 0, succeeded: 0, failed: 0 };
-  for (const j of jobList) {
-    if (j.status in jobCounts) jobCounts[j.status as keyof typeof jobCounts]++;
-  }
+  const jobCounts = {
+    queued: jq.count ?? 0,
+    running: jr.count ?? 0,
+    succeeded: js.count ?? 0,
+    failed: jf.count ?? 0,
+  };
 
   // Template stats
   const tplList = templateRows.data ?? [];
@@ -141,18 +163,24 @@ export async function GET(req: NextRequest) {
 
   // Shop domain map
   const shopDomainMap: Record<string, string> = {};
+  const shopPrimaryMap: Record<string, string | null> = {};
   for (const s of shopList) {
     shopDomainMap[s.id] = s.shop_domain ?? s.id.slice(0, 8);
+    shopPrimaryMap[s.id] = s.primary_domain ?? null;
   }
 
   // Shops needing intervention
-  const { data: problemRows } = await sb
-    .from("disputes")
-    .select("shop_id, needs_attention, sync_health, has_admin_override, submission_state, last_event_at, closed_at")
-    .is("closed_at", null);
+  const problemRows = await fetchAllRows<Record<string, unknown>>(
+    (from, to) => sb
+      .from("disputes")
+      .select("id, shop_id, needs_attention, sync_health, has_admin_override, submission_state, last_event_at, closed_at")
+      .is("closed_at", null)
+      .order("id")
+      .range(from, to),
+  );
 
   const shopProblems: Record<string, { attention: number; syncFail: number; overridden: number; stale: number; uncertain: number }> = {};
-  for (const d of (problemRows ?? []) as Record<string, unknown>[]) {
+  for (const d of problemRows) {
     const sid = d.shop_id as string;
     if (!shopProblems[sid]) shopProblems[sid] = { attention: 0, syncFail: 0, overridden: 0, stale: 0, uncertain: 0 };
     if (d.needs_attention) shopProblems[sid].attention++;
@@ -166,6 +194,7 @@ export async function GET(req: NextRequest) {
     .map(([shopId, counts]) => ({
       shopId,
       domain: shopDomainMap[shopId] ?? shopId.slice(0, 8),
+      primaryDomain: shopPrimaryMap[shopId] ?? null,
       ...counts,
       total: counts.attention + counts.syncFail + counts.overridden + counts.stale + counts.uncertain,
     }))
@@ -223,6 +252,7 @@ export async function GET(req: NextRequest) {
     packs: { total: packList.length, byStatus },
     jobs: jobCounts,
     plans,
+    billing,
     templates: { total: tplList.length, ...tplByStatus },
     reasonMappings: mappingStats,
     disputeMetrics,
