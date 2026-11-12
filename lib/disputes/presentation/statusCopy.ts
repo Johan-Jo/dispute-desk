@@ -143,6 +143,20 @@ export interface StatusCopyInput {
   recordSituation: "return" | "refund" | null;
   /** Shopify's return state on the order (`orderSituation.returns`): the store's own return, not a carrier bounce. */
   returns: "none" | "requested" | "in_progress" | "returned" | "failed" | "unknown";
+  /**
+   * The LIVE refund state (`dispute_refund_state`, read from Shopify by the refund-state cron), pre-formatted.
+   * Null = never read, a failed read, or a snapshot too old to describe the present: every refund line is then
+   * dropped (fail closed: "unknown" is never "no refund"). The evidence pack cannot answer this: a pending
+   * refund reads 0.0 there for about a day.
+   */
+  refundLive: {
+    kind: "none" | "pending" | "settled" | "failed" | "mixed" | "unknown";
+    /** Pre-formatted amount: pending / settled / failed, whichever the kind describes. */
+    amount: string | null;
+    /** Pre-formatted day: when the refund was started (pending, failed) or settled (settled). */
+    day: string | null;
+    stalled: boolean;
+  } | null;
   claim: I18nToken;
   /** The ONE fact that decides the case, when there is one (record tokens). */
   caseFact: I18nToken | null;
@@ -206,6 +220,14 @@ const ASK_STATES: Partial<Record<AskId, { headline: string; need: string; action
   },
 };
 
+/** The merchant-facing sentence for each return state: "received" is said only when the store marked it received. */
+const RETURN_SENTENCE = {
+  requested: "disputes.record.item.return.requested",
+  in_progress: "disputes.record.item.return.inProgress",
+  returned: "disputes.record.item.return.returned",
+  failed: "disputes.record.item.return.failed",
+} as const;
+
 const DONE_NOT_FILED_BUILT = "done.drafted";
 const DONE_NOT_FILED_EVIDENCE = "done.evidence";
 
@@ -223,10 +245,31 @@ const REFUND_ADVICE_STATES: ReadonlySet<StatusState> = new Set<StatusState>([
 ]);
 
 export function shouldAdviseRefund(
-  i: Pick<StatusCopyInput, "status" | "phase" | "returnedToSender" | "returns" | "fatalReason">,
+  i: Pick<StatusCopyInput, "status" | "phase" | "returnedToSender" | "returns" | "fatalReason" | "refundLive">,
 ): boolean {
+  // Only on a LIVE read that says no refund exists: the pack alone cannot tell "none" from "pending".
+  if (i.refundLive?.kind !== "none") return false;
   const goodsComingBack = i.returnedToSender || i.returns === "in_progress" || i.returns === "returned";
   return i.status === "open" && i.phase === "inquiry" && goodsComingBack && i.fatalReason !== "refund_issued";
+}
+
+/** The refund a merchant already started, said from the live state; null when there is nothing true to say. */
+function refundNote(i: StatusCopyInput): { part: "next" | "happened" | "can"; line: I18nToken } | null {
+  const r = i.refundLive;
+  if (!r || i.status !== "open" || i.phase !== "inquiry" || !r.amount || !r.day) return null;
+  const params = { amount: r.amount, date: r.day };
+  switch (r.kind) {
+    case "pending":
+      // Pending for over 72 h is not "on its way": we cannot say that.
+      return r.stalled ? null : { part: "next", line: s("refund.pending", params) };
+    case "failed":
+      return { part: "can", line: s("refund.failed", params) };
+    case "settled":
+    case "mixed":
+      return { part: "happened", line: s("refund.settledOpen", params) };
+    default:
+      return null;
+  }
 }
 
 export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
@@ -234,10 +277,22 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
   const adviseRefund = shouldAdviseRefund(i);
   const make = (state: StatusState, headline: I18nToken, parts: Array<StatusPart | null>): StatusCopy => {
     const kept = parts.filter((p): p is StatusPart => p !== null);
-    if (adviseRefund && REFUND_ADVICE_STATES.has(state)) {
+    if (REFUND_ADVICE_STATES.has(state)) {
       const at = kept.findIndex((p) => p.kind !== "happened");
-      const advice = part("can", [s("can.refundInquiry")]);
-      if (advice) kept.splice(at < 0 ? kept.length : at, 0, advice);
+      if (adviseRefund) {
+        const advice = part("can", [s("can.refundInquiry", { amount: i.amount })]);
+        if (advice) kept.splice(at < 0 ? kept.length : at, 0, advice);
+      } else {
+        const note = refundNote(i);
+        if (note) {
+          const existing = kept.find((p) => p.kind === note.part);
+          if (existing) existing.lines.unshift(note.line);
+          else {
+            const created = part(note.part, [note.line]);
+            if (created) kept.splice(at < 0 ? kept.length : at, 0, created);
+          }
+        }
+      }
     }
     return { state, headline, chip: s(`chip.${state}`), subline: sub, parts: kept };
   };
@@ -406,7 +461,7 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
           : i.returnedToSender
             ? s("fact.returnedToSender")
             : i.recordSituation === "return"
-              ? { key: "disputes.record.item.return.returned" }
+              ? { key: RETURN_SENTENCE[i.returns as keyof typeof RETURN_SENTENCE] ?? "disputes.record.item.return.returned" }
               : i.recordSituation === "refund"
                 ? { key: "disputes.record.item.return.refundSome" }
                 : s("happened.noFacts");

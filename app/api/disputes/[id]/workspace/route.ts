@@ -7,6 +7,7 @@ import { assembleEffectiveChecklist } from "@/lib/packs/effectiveChecklist";
 import { loadReturnScopeForPack } from "@/lib/packs/loadReturnScope";
 import { loadReturnRequestConfirmation, packShowsReturnOrRefund, returnQuestionApplies } from "@/lib/disputes/returnRequestConfirmation";
 import { orderSituationFromPackSections } from "@/lib/disputes/orderSituation";
+import { loadRefundState, toPageRefundState } from "@/lib/disputes/refundStateStore";
 import path from "node:path";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
 import { previewPath, signPreviewToken } from "@/lib/security/previewLink";
@@ -521,6 +522,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         asOf: ((packRow?.updated_at ?? packRow?.created_at) as string | null | undefined) ?? null,
       };
     })(),
+    // The LIVE refund state the cron read from Shopify (lib/disputes/refundState.ts, table dispute_refund_state):
+    // the only thing that can say a refund is pending, settled or failed. The pack cannot (a pending refund reads
+    // 0.0 in it). Null when never read, or when the read failed: callers treat null as "unknown", never "none".
+    refundState: toPageRefundState(await loadRefundState(sb, disputeId).catch(() => null)),
     // The one refund statement (lib/disputes/refundStatement.ts): the ONLY
     // reader of totals.refunded and the refund entries for merchant copy, so
     // the note, the held banner, the evidence row and the no-return card

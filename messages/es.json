@@ -2566,7 +2566,7 @@
         },
         "can": {
           "evidence": "Si tienes pruebas que no podemos ver, como una confirmación de entrega del transportista, añádelas en la pestaña Evidencia.",
-          "refundInquiry": "Reembolsa el pedido completo desde Shopify Admin. Esto sigue siendo una consulta, así que no se ha retirado dinero y un reembolso completo la cierra. Si se convierte en un contracargo, Shopify bloquea los reembolsos y el importe se pierde."
+          "refundInquiry": "Shopify no muestra ningún reembolso en este pedido. Reembolsar el importe en disputa ({amount}) desde Shopify Admin puede resolver esta consulta antes de que se convierta en un contracargo. Si se convierte en uno, Shopify bloquea los reembolsos y el importe se pierde."
         },
         "optional": {
           "ack": "El reconocimiento del titular de la tarjeta reforzaría el caso."
@@ -2609,6 +2609,11 @@
         "done": {
           "drafted": "Las pruebas están reunidas y hay una respuesta redactada. No se ha presentado nada.",
           "evidence": "Las pruebas están reunidas. No se ha presentado nada."
+        },
+        "refund": {
+          "pending": "Se inició un reembolso de {amount} el {date} y todavía se está procesando. No hace falta nada más; la consulta suele cerrarse cuando se completa.",
+          "failed": "Se inició un reembolso de {amount} el {date}, pero falló, así que no se ha devuelto nada. Vuelve a reembolsar el importe en disputa desde Shopify Admin.",
+          "settledOpen": "Un reembolso de {amount} se completó el {date}. La consulta sigue abierta."
         }
       },
       "claim": {

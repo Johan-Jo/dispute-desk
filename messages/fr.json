@@ -2566,7 +2566,7 @@
         },
         "can": {
           "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves.",
-          "refundInquiry": "Remboursez la commande intégralement depuis Shopify Admin. Il s'agit encore d'une demande d'information : aucun argent n'a été prélevé et un remboursement intégral la clôt. Si elle devient une rétrofacturation, Shopify bloque les remboursements et le montant est perdu."
+          "refundInquiry": "Shopify n’affiche aucun remboursement sur cette commande. Rembourser le montant contesté ({amount}) dans Shopify Admin peut résoudre cette demande avant qu’elle ne devienne une rétrofacturation. Si elle en devient une, Shopify bloque les remboursements et le montant est perdu."
         },
         "optional": {
           "ack": "La reconnaissance du titulaire de la carte renforcerait le dossier."
@@ -2609,6 +2609,11 @@
         "done": {
           "drafted": "Les preuves sont réunies et une réponse est rédigée. Rien n'a été déposé.",
           "evidence": "Les preuves sont réunies. Rien n'a été déposé."
+        },
+        "refund": {
+          "pending": "Un remboursement de {amount} a été lancé le {date} et est encore en cours de traitement. Rien d’autre n’est nécessaire ; la demande se clôture généralement une fois le remboursement abouti.",
+          "failed": "Un remboursement de {amount} a été lancé le {date} mais a échoué, donc rien n’a été remboursé. Remboursez à nouveau le montant contesté dans Shopify Admin.",
+          "settledOpen": "Un remboursement de {amount} a abouti le {date}. La demande est toujours ouverte."
         }
       },
       "claim": {

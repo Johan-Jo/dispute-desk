@@ -2566,7 +2566,7 @@
         },
         "can": {
           "evidence": "Se tem provas que não conseguimos ver, como uma confirmação de entrega da transportadora, adicione-as no separador Evidências.",
-          "refundInquiry": "Reembolse a encomenda na totalidade no Shopify Admin. Isto ainda é um pedido de informação, por isso não foi retirado dinheiro e um reembolso total encerra-o. Se passar a estorno, o Shopify bloqueia reembolsos e o valor perde-se."
+          "refundInquiry": "O Shopify não mostra qualquer reembolso nesta encomenda. Reembolsar o valor contestado ({amount}) no Shopify Admin pode resolver este pedido de informação antes de se tornar um estorno. Se passar a estorno, o Shopify bloqueia reembolsos e o valor perde-se."
         },
         "optional": {
           "ack": "O reconhecimento do titular do cartão reforçaria o caso."
@@ -2609,6 +2609,11 @@
         "done": {
           "drafted": "As provas estão reunidas e há uma resposta redigida. Nada foi apresentado.",
           "evidence": "As provas estão reunidas. Nada foi apresentado."
+        },
+        "refund": {
+          "pending": "Foi iniciado um reembolso de {amount} em {date} e ainda está a ser processado. Não é preciso fazer mais nada; o pedido costuma ser encerrado depois de concluído.",
+          "failed": "Foi iniciado um reembolso de {amount} em {date}, mas falhou, por isso nada foi devolvido. Reembolse novamente o valor contestado no Shopify Admin.",
+          "settledOpen": "Um reembolso de {amount} foi concluído em {date}. O pedido continua em aberto."
         }
       },
       "claim": {

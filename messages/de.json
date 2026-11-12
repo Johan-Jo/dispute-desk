@@ -2566,7 +2566,7 @@
         },
         "can": {
           "evidence": "Wenn Sie Belege haben, die wir nicht sehen können, etwa eine Zustellbestätigung des Paketdienstes, fügen Sie sie auf dem Tab „Beweise“ hinzu.",
-          "refundInquiry": "Erstatten Sie die Bestellung im Shopify-Admin vollständig. Dies ist noch eine Anfrage, es wurde also noch kein Geld abgebucht, und eine vollständige Rückerstattung schließt sie ab. Wird daraus eine Rückbuchung, sperrt Shopify Rückerstattungen und der Betrag ist verloren."
+          "refundInquiry": "Shopify zeigt keine Rückerstattung für diese Bestellung. Die Rückerstattung des strittigen Betrags ({amount}) im Shopify-Admin kann diese Anfrage lösen, bevor daraus eine Rückbuchung wird. Wird sie zur Rückbuchung, sperrt Shopify Rückerstattungen und der Betrag ist verloren."
         },
         "optional": {
           "ack": "Die Bestätigung des Karteninhabers würde den Fall stärken."
@@ -2609,6 +2609,11 @@
         "done": {
           "drafted": "Die Beweise sind gesammelt und eine Antwort ist erstellt. Es wurde nichts eingereicht.",
           "evidence": "Die Beweise sind gesammelt. Es wurde nichts eingereicht."
+        },
+        "refund": {
+          "pending": "Eine Rückerstattung über {amount} wurde am {date} gestartet und wird noch verarbeitet. Es ist nichts weiter nötig; die Anfrage wird meist geschlossen, sobald sie abgeschlossen ist.",
+          "failed": "Eine Rückerstattung über {amount} wurde am {date} gestartet, ist aber fehlgeschlagen, es wurde also nichts zurückgezahlt. Erstatten Sie den strittigen Betrag im Shopify-Admin erneut.",
+          "settledOpen": "Eine Rückerstattung über {amount} wurde am {date} abgeschlossen. Die Anfrage ist weiterhin offen."
         }
       },
       "claim": {

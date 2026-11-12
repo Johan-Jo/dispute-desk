@@ -21,7 +21,7 @@ const MIN_RECHECK_MS = 90 * 60 * 1000;
 /**
  * GET /api/cron/refund-state-check   (every 3 h; `?dryRun=1` reads Shopify and decides, writes and sends nothing)
  *
- * Reads, LIVE from Shopify, the refund state of every open credit-not-processed inquiry, stores it for the
+ * Reads, LIVE from Shopify, the refund state of every open inquiry, stores it for the
  * dispute page, and emails the merchant when a refund would resolve the inquiry and none has been issued.
  * Why live: a pending refund reads 0.0 everywhere the evidence pack looks, for about a day
  * (docs/plans/pending-refund-advice.plan.md). Sending is behind REFUND_ADVICE_EMAILS_ENABLED.

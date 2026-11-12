@@ -106,3 +106,34 @@ export async function loadRefundStateRows(
   }
   return out;
 }
+
+/** What the dispute page needs of a stored state. Serialisable; merchant-only. */
+export interface PageRefundState {
+  kind: RefundState["kind"];
+  pendingAmount: number;
+  settledAmount: number;
+  failedAmount: number;
+  currency: string | null;
+  firstRefundAt: string | null;
+  settledAt: string | null;
+  stalledPending: boolean;
+  checkedAt: string;
+}
+
+export function toPageRefundState(row: StoredRefundState | null): PageRefundState | null {
+  if (!row) return null;
+  return {
+    kind: row.state,
+    pendingAmount: Number(row.pending_amount),
+    settledAmount: Number(row.settled_amount),
+    failedAmount: Number(row.failed_amount),
+    currency: row.currency,
+    firstRefundAt: row.first_refund_at,
+    settledAt: row.settled_at,
+    stalledPending: row.stalled_pending,
+    checkedAt: row.checked_at,
+  };
+}
+
+/** A snapshot older than this is not evidence of the present: the cron runs every 3 h. */
+export const REFUND_STATE_FRESH_MS = 12 * 60 * 60 * 1000;
