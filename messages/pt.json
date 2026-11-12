@@ -2936,6 +2936,7 @@
           "placedPaid": "Pedido feito e pago",
           "shipped": "Pedido enviado",
           "delivered": "Entregue",
+          "returnOpened": "Devolução aberta",
           "opened": "Contestação aberta",
           "prepared": "Pacote de defesa preparado",
           "deadline": "Prazo",

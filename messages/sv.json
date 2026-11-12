@@ -2936,6 +2936,7 @@
           "placedPaid": "Order lagd och betald",
           "shipped": "Order skickad",
           "delivered": "Levererad",
+          "returnOpened": "Retur påbörjad",
           "opened": "Tvist öppnad",
           "prepared": "Försvarspaket förberett",
           "deadline": "Frist",

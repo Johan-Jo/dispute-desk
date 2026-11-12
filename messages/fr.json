@@ -2936,6 +2936,7 @@
           "placedPaid": "Commande passée et payée",
           "shipped": "Commande expédiée",
           "delivered": "Livrée",
+          "returnOpened": "Retour ouvert",
           "opened": "Litige ouvert",
           "prepared": "Dossier de défense préparé",
           "deadline": "Date limite",

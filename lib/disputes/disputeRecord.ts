@@ -296,6 +296,8 @@ export interface RecordInputs {
   fatalReason: string | null;
   /** Shopify's return situation for the order. */
   returns: "none" | "requested" | "in_progress" | "returned" | "failed" | "unknown";
+  /** When the order's return was created (`orderSituation.returnOpenedAt`); null when the order's events do not say. */
+  returnOpenedAt?: string | null;
   /** A customer message in the support inbox asks to return this order (read-time, Gorgias). */
   customerAskedInSupport?: boolean;
   canDecide: boolean;
@@ -1060,6 +1062,15 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
   if (dl?.confirmed && dl.deliveredAt && deliveryItem) {
     timeline.push({ at: dl.deliveredAt, title: tk("timeline.t.delivered"), text: deliveryItem.detail, kind: "done" });
   }
+  // The return the store has in Shopify belongs on the same line as the order and the dispute. Dated only when the order's events say when.
+  if (i.returnOpenedAt && i.returns !== "none" && i.returns !== "unknown") {
+    timeline.push({
+      at: i.returnOpenedAt,
+      title: tk("timeline.t.returnOpened"),
+      text: tk(RETURN_DETAIL_KEY[i.returns]),
+      kind: "done",
+    });
+  }
   if (v.openedAt) timeline.push({ at: v.openedAt, title: tk("timeline.t.opened"), text: f.claim, kind: "done" });
   if (i.escalatedAt && f.escalated) timeline.push({ at: i.escalatedAt, title: tk("timeline.t.escalated"), text: f.escalated, kind: "done" });
   if (i.reopenedAt && f.reopened) timeline.push({ at: i.reopenedAt, title: tk("timeline.t.reopened"), text: f.reopened, kind: "done" });
@@ -1158,6 +1169,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     ackFits,
     returnedToSender: i.returnedToSender === true,
     recordSituation: returnOnRecord ? "return" : i.refund === "some" ? "refund" : null,
+    returns: i.returns,
     claim: f.claim as I18nToken,
     caseFact,
     citedList: citedListToken ? nestFrom(citedListToken) : null,
