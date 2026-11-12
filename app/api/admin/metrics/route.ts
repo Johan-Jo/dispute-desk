@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   // ── Platform health metrics ───────────────────────────────────────────
 
   // Pack-health rates (see lib/admin/packHealth.ts: status names have drifted).
-  const { automationSuccessRate, saveSuccessRate } = packHealth(
+  const { automationSuccessRate, saveSuccessRate, saveSent, saveFailed } = packHealth(
     packList as Array<{ status: string | null; saved_to_shopify_at: string | null }>,
   );
 
@@ -276,6 +276,8 @@ export async function GET(req: NextRequest) {
     // Platform health
     automationSuccessRate,
     saveSuccessRate,
+    saveSent,
+    saveFailed,
     manualInterventionRate,
     submissionUncertainCount: submissionUncertainCount ?? 0,
     uncertainRate,
