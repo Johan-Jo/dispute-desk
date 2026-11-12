@@ -145,6 +145,11 @@ Every admin page loaded without console errors on dev; interactive checks passed
 
 Two test notes ("Admin sweep test note - safe to delete", "second test note") were added to dev dispute `3c67cfb1-cf39-4db7-a455-9f6700ba7129` while testing; there is no delete path for notes.
 
+- **#65 Top bar bell:** clicking did nothing and the red dot was always on (hard-coded). A decorative placeholder from the design with no handler. Fixed: `AdminNotifications` + `/api/admin/notifications`.
+
+Known: the top-bar search box is also a read-only placeholder.
+- **#66 Fraud Intel on prod, first load after release:** "canceling statement due to statement timeout". The new RPC took ~2.9 s on prod data (dev has no orders, so it looked instant) and a cold call crossed the 8 s limit. Fixed with `20261112140000` (single `GROUPING SETS` pass, ~1.3 s, output verified identical); applied to dev and prod. Lesson: time admin aggregates on prod-sized data before release.
+
 ## Merchant display (R2) — closed
 
 Every admin page now prints a merchant as storefront domain with the myshopify alias beneath (`AdminMerchant`): Overview/Operations (leaderboard + recent events), Disputes, Shops (reference), Shop detail, Jobs, Webhooks, Billing, Audit, Outcome Analysis, Defence Package runs, Gorgias (3 tables), Intelligence (picker label `domain (alias)`). `tests/unit/adminMerchantDisplayGuard.test.ts` fails if a page renders a bare `shop_domain` as JSX text outside a documented allowlist (the renderer, the delete dialog, the Shops list, the shop-detail header).
