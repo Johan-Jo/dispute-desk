@@ -197,7 +197,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── 2. Platform KPIs ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <KpiCard icon={Store} label="Active Shops" value={String(metrics.shops.active)} />
         <KpiCard
           icon={DollarSign}

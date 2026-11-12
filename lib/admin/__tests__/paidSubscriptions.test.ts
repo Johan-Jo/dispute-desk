@@ -73,3 +73,21 @@ describe("fetchAllRows", () => {
     await expect(fetchAllRows(async () => ({ data: null, error: { message: "boom" } }))).rejects.toThrow("boom");
   });
 });
+
+import { invoicedDays } from "../paidSubscriptions";
+
+describe("invoicedDays", () => {
+  const now = new Date("2026-11-12T00:00:00Z");
+  it("is zero for anything not actually paid", () => {
+    for (const s of ["unconfirmed", "trialing", "grace", "free", "uninstalled"] as const) {
+      expect(invoicedDays(s, "2026-01-01T00:00:00Z", 90, now)).toBe(0);
+    }
+  });
+  it("is zero when paid but no first-paid timestamp", () => {
+    expect(invoicedDays("paid", null, 90, now)).toBe(0);
+  });
+  it("is capped at the time since the first paid cycle", () => {
+    expect(invoicedDays("paid", "2026-11-02T00:00:00Z", 90, now)).toBe(10);
+    expect(invoicedDays("paid", "2026-01-01T00:00:00Z", 90, now)).toBe(90);
+  });
+});

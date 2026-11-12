@@ -33,6 +33,7 @@ import {
 } from "./shopRiskClassify";
 import { isDisputeDeskFiled, resolveFiledBy } from "./filedBy";
 import { computeStoreRevenue } from "./storeRevenue";
+import { classifyBillingState, invoicedDays, type AdminBillingState } from "./paidSubscriptions";
 import {
   monthlyRevenueForPlan,
   totalInvoicedForPeriod,
@@ -212,6 +213,8 @@ export interface ShopRiskProfile {
   /** Approximate total invoiced over the window (monthly × months
    *  in period). Marked `isApproximate: true` — see shopBilling. */
   totalInvoiced: InvoicedAmount;
+  /** Payment evidence for this shop (lib/admin/paidSubscriptions). */
+  billingState: AdminBillingState;
 }
 
 const ACTIVE_NORMALIZED = new Set([
@@ -664,14 +667,32 @@ export async function getShopRiskProfile(
       : 0;
 
   // ── Billing ──
-  const { data: shopRow } = await sb
-    .from("shops")
-    .select("plan")
-    .eq("id", shopId)
-    .maybeSingle();
+  const [{ data: shopRow }, { data: entRow }] = await Promise.all([
+    sb.from("shops").select("plan, uninstalled_at").eq("id", shopId).maybeSingle(),
+    sb
+      .from("plan_entitlements")
+      .select("shop_id, plan_key, subscription_state, first_paid_cycle_started_at")
+      .eq("shop_id", shopId)
+      .maybeSingle(),
+  ]);
   const plan_ = (shopRow?.plan as string | null) ?? "free";
   const monthlyRevenue = monthlyRevenueForPlan(plan_);
-  const totalInvoiced = totalInvoicedForPeriod(plan_, effectiveWindowDays);
+  // "Total invoiced" used to be plan price x window, so a shop that never paid
+  // showed e.g. $387. It now counts only from the first recorded paid cycle,
+  // and is zero (shown as "No payment recorded") for anything not actually paid.
+  const billingState = classifyBillingState(
+    {
+      plan: plan_,
+      uninstalled_at: (shopRow?.uninstalled_at as string | null) ?? null,
+    },
+    entRow ?? null,
+  );
+  const invoiced = invoicedDays(
+    billingState,
+    entRow?.first_paid_cycle_started_at as string | null | undefined,
+    effectiveWindowDays,
+  );
+  const totalInvoiced = totalInvoicedForPeriod(plan_, invoiced);
 
   return {
     shopId,
@@ -718,5 +739,6 @@ export async function getShopRiskProfile(
     dataCompleteness,
     monthlyRevenue,
     totalInvoiced,
+    billingState,
   };
 }

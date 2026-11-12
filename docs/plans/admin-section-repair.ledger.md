@@ -134,6 +134,17 @@ Regression I introduced: batch 1 replaced an ignored-error read with one that th
 
 Definition to confirm: the save rate counts packs parked in `ready` (awaiting approval) as not-yet-saved, so it reads ~24% on prod. That is the pre-existing formula; say if you want parked packs excluded.
 
+## Follow-up — browser pass on dev (2026-11-12, owner's session)
+
+Every admin page loaded without console errors on dev; interactive checks passed (audit filters incl. partial id and domain, dispute detail timeline + add note, Shops filters, pipeline sample payload now renders — confirming the tracing fix). Found and fixed:
+
+| # | Page | Symptom | Root cause | Status |
+|---|---|---|---|---|
+| 63 | Shop detail | "Total invoiced $387" for a shop that never paid | plan price x window (label-based) | fixed (`invoicedDays`, "No payment recorded") |
+| 64 | Overview | 8 KPI cards wrapped 6 + 2 on the 6-column grid | I added 2 cards in batch 1 | fixed (4 columns) |
+
+Two test notes ("Admin sweep test note - safe to delete", "second test note") were added to dev dispute `3c67cfb1-cf39-4db7-a455-9f6700ba7129` while testing; there is no delete path for notes.
+
 ## Merchant display (R2) — closed
 
 Every admin page now prints a merchant as storefront domain with the myshopify alias beneath (`AdminMerchant`): Overview/Operations (leaderboard + recent events), Disputes, Shops (reference), Shop detail, Jobs, Webhooks, Billing, Audit, Outcome Analysis, Defence Package runs, Gorgias (3 tables), Intelligence (picker label `domain (alias)`). `tests/unit/adminMerchantDisplayGuard.test.ts` fails if a page renders a bare `shop_domain` as JSX text outside a documented allowlist (the renderer, the delete dialog, the Shops list, the shop-detail header).
