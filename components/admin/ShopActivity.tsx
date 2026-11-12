@@ -112,14 +112,22 @@ export function ShopActivity({ shopId }: { shopId: string }) {
   const [showAll, setShowAll] = useState(false);
   const [cutoff, setCutoff] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
     setRows(null);
+    setLoadError(null);
     fetch(`/api/admin/shops/${shopId}/activity${showAll ? "?actors=all" : ""}`)
-      .then((r) => r.json())
+      .then((r) => {
+        // A failed load used to render as "No recorded activity", which reads
+        // as a shop with no history rather than a request that errored.
+        if (!r.ok) throw new Error(`Loading activity failed (${r.status})`);
+        return r.json();
+      })
       .then((d) => {
         if (!live) return;
+        setLoadError(null);
         const actions: Entry[] = (d.events ?? []).map((r: AuditRow) => ({
           id: r.id,
           at: r.created_at,
@@ -147,7 +155,11 @@ export function ShopActivity({ shopId }: { shopId: string }) {
         );
         setCutoff(d.attributionTrustworthyFrom ?? null);
       })
-      .catch(() => live && setRows([]));
+      .catch((e: Error) => {
+        if (!live) return;
+        setLoadError(e.message);
+        setRows([]);
+      });
     return () => {
       live = false;
     };
@@ -222,6 +234,8 @@ export function ShopActivity({ shopId }: { shopId: string }) {
 
       {rows === null ? (
         <div className="text-sm text-[#64748B]">Loading…</div>
+      ) : loadError ? (
+        <div role="alert" className="text-sm text-[#991B1B]">{loadError}</div>
       ) : rows.length === 0 ? (
         <div className="text-sm text-[#64748B]">
           {showAll
