@@ -24,3 +24,8 @@ export function bodyToHtml(body: string): string {
 export function bodyToText(body: string): string {
   return body.replace(/\*\*([^*]+)\*\*/g, "$1").trim();
 }
+
+/** One line of message text -> inline HTML (escaped, `**bold**` to <strong>), no paragraph wrapper. */
+export function inlineToHtml(text: string): string {
+  return escapeHtml(text).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
