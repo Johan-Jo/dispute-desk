@@ -132,7 +132,7 @@ Audited, no defect found: Resources hub (client code checks `res.ok`; tables are
 
 Regression I introduced: batch 1 replaced an ignored-error read with one that throws, which turned this latent bug into a visible 500 on dev. Verified before this fix that every other column my batches select exists on dev and prod (only `disputes.primary_domain` was absent, and that was a mistake in the check list: the API derives it from the `shops` join).
 
-Definition to confirm: the save rate counts packs parked in `ready` (awaiting approval) as not-yet-saved, so it reads ~24% on prod. That is the pre-existing formula; say if you want parked packs excluded.
+Resolved 2026-11-12: the save rate now counts true sends only (sent / (sent + failed sends)); packs merely `ready` are excluded. Prod: 119 sent, 3 failed = 98% (was 24%, because 260 of the 352 `ready` packs sit on already-closed disputes).
 
 ## Follow-up — browser pass on dev (2026-11-12, owner's session)
 
@@ -147,7 +147,7 @@ Two test notes ("Admin sweep test note - safe to delete", "second test note") we
 
 - **#65 Top bar bell:** clicking did nothing and the red dot was always on (hard-coded). A decorative placeholder from the design with no handler. Fixed: `AdminNotifications` + `/api/admin/notifications`.
 
-Known: the top-bar search box is also a read-only placeholder.
+- **#67 Top bar search:** was a read-only placeholder. Now a multi-search over shops, disputes, templates and jobs (`AdminSearch` + `/api/admin/search`).
 - **#66 Fraud Intel on prod, first load after release:** "canceling statement due to statement timeout". The new RPC took ~2.9 s on prod data (dev has no orders, so it looked instant) and a cold call crossed the 8 s limit. Fixed with `20261112140000` (single `GROUPING SETS` pass, ~1.3 s, output verified identical); applied to dev and prod. Lesson: time admin aggregates on prod-sized data before release.
 
 ## Merchant display (R2) — closed

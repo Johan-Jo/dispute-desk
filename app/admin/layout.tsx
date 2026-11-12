@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Shield,
   Menu,
-  Search,
   ChevronDown,
   LayoutDashboard,
   Store,
@@ -38,6 +37,7 @@ import {
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 
 /* ── Resources Hub sub-navigation ───────────────────────────────────── */
 
@@ -293,16 +293,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Menu className="w-5 h-5 text-[#64748B]" />
               </button>
 
-              {/* Global search placeholder */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg w-80">
-                <Search className="w-4 h-4 text-[#94A3B8]" />
-                <input
-                  type="text"
-                  placeholder="Search shops, templates, jobs..."
-                  className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none"
-                  readOnly
-                />
-              </div>
+              <AdminSearch />
             </div>
 
             <div className="flex items-center gap-4">
