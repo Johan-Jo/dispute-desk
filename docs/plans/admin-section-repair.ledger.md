@@ -109,8 +109,9 @@ Known, not changed: both lead lists load at most 1000 rows (`limit(1000)`), so t
 
 Note: `GET /api/admin/audit` response shape changed from an array to `{ events, limit, truncated }`; the audit page was its only caller.
 
-## Open — merchant display (R2) still on raw `shop_domain`
-`gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
+## Merchant display (R2) — closed
+
+Every admin page now prints a merchant as storefront domain with the myshopify alias beneath (`AdminMerchant`): Overview/Operations (leaderboard + recent events), Disputes, Shops (reference), Shop detail, Jobs, Webhooks, Billing, Audit, Outcome Analysis, Defence Package runs, Gorgias (3 tables), Intelligence (picker label `domain (alias)`). `tests/unit/adminMerchantDisplayGuard.test.ts` fails if a page renders a bare `shop_domain` as JSX text outside a documented allowlist (the renderer, the delete dialog, the Shops list, the shop-detail header).
 
 ## Open — to confirm
 - Prod entitlement row `active` + subscription GID + no `first_paid_cycle_started_at` (1 shop): genuinely never charged, or `sendFirstPaidCycleEmail` never fired? Currently shown as `unconfirmed`, not revenue. Needs owner's knowledge of that merchant.
