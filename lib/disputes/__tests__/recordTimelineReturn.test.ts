@@ -4,7 +4,8 @@
  * return among the facts but not in "What happened and what comes next".
  */
 import { describe, expect, it } from "vitest";
-import { buildDisputeRecord, type RecordFormat, type RecordInputs } from "../disputeRecord";
+import { buildDisputeRecord, type RecordInputs } from "../disputeRecord";
+import type { RecordFormat } from "../recordFormat";
 
 const fmt = {
   money: (n: number, c?: string | null) => `${c ?? ""} ${n}`,

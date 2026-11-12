@@ -28,6 +28,7 @@ const ask = (id: Ask["id"], priority: Ask["priority"] = "required", pending = tr
   pending,
   consumedBy: null,
 });
+const NO_REFUND = { kind: "none" as const, amount: null, day: null, stalled: false };
 const claim: I18nToken = { key: "disputes.record.claim.PRODUCT_NOT_RECEIVED" };
 const list = { type: "i18n-key" as const, key: "disputes.record.list.and.n2", params: {
   a: { type: "i18n-key" as const, key: "disputes.record.phrase.cited.pay" },
@@ -57,6 +58,7 @@ function base(phase: "inquiry" | "chargeback", patch: Partial<StatusCopyInput> =
     returnedToSender: false,
     recordSituation: null,
     returns: "none",
+    refundLive: null,
     claim,
     caseFact: { key: "disputes.record.item.delivery.dateOnly", params: { date: "22 Oct 2026" } },
     citedList: list,
@@ -168,6 +170,7 @@ describe("composeStatusCopy: every state x phase", () => {
       base("inquiry", {
         stage: "needs_attention",
         returnedToSender: true,
+        refundLive: NO_REFUND,
         caseFact: { key: "disputes.record.status.fact.returnedToSender" },
         build: { state: "declined", cause: "no_bank_eligible_facts", packageWritten: false },
       }),
@@ -186,7 +189,7 @@ describe("composeStatusCopy: every state x phase", () => {
   });
 
   describe("refund advice (inquiries only)", () => {
-    const returned = { returnedToSender: true, caseFact: { key: "disputes.record.status.fact.returnedToSender" } };
+    const returned = { returnedToSender: true, refundLive: NO_REFUND, caseFact: { key: "disputes.record.status.fact.returnedToSender" } };
     const refundKey = "disputes.record.status.can.refundInquiry";
     const keysOf = (c: StatusCopy) => c.parts.flatMap((p) => p.lines.map((l) => l.key));
     const open = [
@@ -214,6 +217,7 @@ describe("composeStatusCopy: every state x phase", () => {
         stage: "needs_attention" as const,
         build: { state: "declined" as const, cause: "no_bank_eligible_facts", packageWritten: false },
         recordSituation: "return" as const,
+        refundLive: NO_REFUND,
       };
 
       it.each(["in_progress", "returned"] as const)("advises the refund and asks for no evidence when the return is %s", (returns) => {
@@ -239,6 +243,67 @@ describe("composeStatusCopy: every state x phase", () => {
       it("with no return on record the evidence ask is unchanged", () => {
         const out = composeStatusCopy(base("inquiry", { ...nothing, recordSituation: null, returns: "none" }));
         expect(keysOf(out)).toContain(evidenceKey);
+      });
+    });
+
+    describe("what the LIVE refund state says (the pack cannot: a pending refund reads 0.0 there)", () => {
+      const nothing = {
+        stage: "needs_attention" as const,
+        build: { state: "declined" as const, cause: "no_bank_eligible_facts", packageWritten: false },
+        recordSituation: "return" as const,
+        returns: "in_progress" as const,
+      };
+      const live = (kind: "none" | "pending" | "settled" | "failed" | "mixed" | "unknown", patch: Partial<NonNullable<StatusCopyInput["refundLive"]>> = {}) => ({
+        refundLive: { kind, amount: kind === "none" || kind === "unknown" ? null : "SEK 599", day: kind === "none" || kind === "unknown" ? null : "11 Nov 2026", stalled: false, ...patch },
+      });
+      const advice = "disputes.record.status.can.refundInquiry";
+      const keys = (patch: Partial<StatusCopyInput>) => keysOf(composeStatusCopy(base("inquiry", { ...nothing, ...patch })));
+
+      it("never advises a refund without a live read, nor when it is unknown", () => {
+        expect(keys({ refundLive: null })).not.toContain(advice);
+        expect(keys(live("unknown"))).not.toContain(advice);
+      });
+
+      it("advises it only when the live state says none, and passes the disputed amount", () => {
+        const out = composeStatusCopy(base("inquiry", { ...nothing, ...live("none") }));
+        const line = out.parts.flatMap((p) => p.lines).find((l) => l.key === advice);
+        expect(line?.params).toEqual({ amount: "EUR 64.95" });
+      });
+
+      it("a refund already pending is stated, never advised, and no evidence is asked for", () => {
+        const k = keys(live("pending"));
+        expect(k).toContain("disputes.record.status.refund.pending");
+        expect(k).not.toContain(advice);
+        expect(k).not.toContain("disputes.record.status.can.evidence");
+      });
+
+      it("a refund pending beyond 72 h is not described as on its way, and not advised either", () => {
+        const k = keys(live("pending", { stalled: true }));
+        expect(k).not.toContain("disputes.record.status.refund.pending");
+        expect(k).not.toContain(advice);
+      });
+
+      it("a failed refund says so; a settled one is stated and the inquiry is not told to refund again", () => {
+        expect(keys(live("failed"))).toContain("disputes.record.status.refund.failed");
+        const settled = keys(live("settled"));
+        expect(settled).toContain("disputes.record.status.refund.settledOpen");
+        expect(settled).not.toContain(advice);
+        expect(keys(live("mixed"))).toContain("disputes.record.status.refund.settledOpen");
+      });
+
+      it("none of it appears on a chargeback", () => {
+        for (const kind of ["none", "pending", "failed", "settled"] as const) {
+          const out = composeStatusCopy(base("chargeback", { ...nothing, ...live(kind) }));
+          const k = keysOf(out);
+          expect(k.some((x) => x.includes("status.refund.") || x === advice)).toBe(false);
+        }
+      });
+
+      it("the return sentence follows the actual return state ('received' only when the store marked it received)", () => {
+        const inProgress = keys({ ...live("unknown"), returns: "in_progress" });
+        expect(inProgress).toContain("disputes.record.item.return.inProgress");
+        expect(inProgress).not.toContain("disputes.record.item.return.returned");
+        expect(keys({ ...live("unknown"), returns: "returned" })).toContain("disputes.record.item.return.returned");
       });
     });
 

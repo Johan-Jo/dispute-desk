@@ -2566,7 +2566,7 @@
         },
         "can": {
           "evidence": "Har du bevis som vi inte kan se, till exempel en leveransbekräftelse från transportören, lägger du till dem på fliken Bevis.",
-          "refundInquiry": "Återbetala hela ordern i Shopify Admin. Det här är fortfarande en förfrågan, så inga pengar har dragits och en full återbetalning avslutar den. Om den blir en chargeback blockerar Shopify återbetalningar och beloppet är förlorat."
+          "refundInquiry": "Shopify visar ingen återbetalning på den här ordern. Att återbetala det omtvistade beloppet ({amount}) i Shopify Admin kan lösa förfrågan innan den blir en chargeback. Blir den en chargeback blockerar Shopify återbetalningar och beloppet är förlorat."
         },
         "optional": {
           "ack": "Kortinnehavarens bekräftelse skulle stärka ärendet."
@@ -2609,6 +2609,11 @@
         "done": {
           "drafted": "Underlaget är insamlat och ett svar är skrivet. Inget har lämnats in.",
           "evidence": "Underlaget är insamlat. Inget har lämnats in."
+        },
+        "refund": {
+          "pending": "En återbetalning på {amount} startades den {date} och behandlas fortfarande. Inget mer behövs; förfrågan stängs oftast när den har slutförts.",
+          "failed": "En återbetalning på {amount} startades den {date} men misslyckades, så inget har betalats tillbaka. Återbetala det omtvistade beloppet igen i Shopify Admin.",
+          "settledOpen": "En återbetalning på {amount} slutfördes den {date}. Förfrågan är fortfarande öppen."
         }
       },
       "claim": {

@@ -2566,7 +2566,7 @@
         },
         "can": {
           "evidence": "If you have proof we cannot see, such as a delivery confirmation from the carrier, add it on the Evidence tab.",
-          "refundInquiry": "Refund the order in full from Shopify Admin. This is still an inquiry, so no money has been taken and a full refund closes it. If it turns into a chargeback, Shopify blocks refunds and the amount is lost."
+          "refundInquiry": "Shopify shows no refund on this order. Refunding the disputed amount ({amount}) in Shopify Admin can resolve this inquiry before it becomes a chargeback. If it does become one, Shopify blocks refunds and the amount is lost."
         },
         "optional": {
           "ack": "The cardholder's acknowledgement would strengthen the case."
@@ -2609,6 +2609,11 @@
         "done": {
           "drafted": "The evidence is collected and a response is written. Nothing has been filed.",
           "evidence": "The evidence is collected. Nothing has been filed."
+        },
+        "refund": {
+          "pending": "A refund of {amount} was started on {date} and is still being processed. Nothing more is needed; the inquiry usually closes after it settles.",
+          "failed": "A refund of {amount} was started on {date} but failed, so nothing has been paid back. Refund the disputed amount again in Shopify Admin.",
+          "settledOpen": "A refund of {amount} settled on {date}. The inquiry is still open."
         }
       },
       "claim": {

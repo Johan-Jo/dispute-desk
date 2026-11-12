@@ -1,11 +1,11 @@
 /**
- * Load the candidates of the refund-state check: every open credit-not-processed inquiry with what the send
+ * Load the candidates of the refund-state check: every open inquiry (the page needs its refund state whatever the
+ * reason; the EMAIL is gated to credit-not-processed by `decideRefundAdvice`) with what the send
  * rule needs (payment method, opt-out, team email, locale, whether the email already went out, last read).
  * SELECTs only. Shared by the cron route and the read-only dry-run script.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { REFUND_ADVICE_REASON } from "@/lib/disputes/refundAdviceDecision";
 import { loadRefundStateRows } from "@/lib/disputes/refundStateStore";
 import type { RefundCheckCandidate } from "@/lib/disputes/refundStateCheck";
 import { normalizeLocale } from "@/lib/i18n/locales";
@@ -27,7 +27,6 @@ export async function loadRefundCheckCandidates(
     .select("id, shop_id, order_gid, order_name, phase, status, reason, amount, currency_code, due_at, response_cycle")
     .eq("phase", "inquiry")
     .eq("status", "needs_response")
-    .eq("reason", REFUND_ADVICE_REASON)
     .not("order_gid", "is", null)
     .order("due_at", { ascending: true })
     .limit(MAX_CANDIDATES);
