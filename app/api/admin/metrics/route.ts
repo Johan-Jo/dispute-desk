@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 import { fetchAllRows } from "@/lib/admin/fetchAllRows";
+import { packHealth, isFailingStatus } from "@/lib/admin/packHealth";
 import { summarizeBilling, classifyBillingState, type EntitlementEvidence } from "@/lib/admin/paidSubscriptions";
 
 export const runtime = "nodejs";
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     ),
     sb.from("disputes").select("id", { count: "exact", head: true }),
     fetchAllRows<Record<string, unknown>>(
-      (from, to) => sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_type, saved_to_shopify_at").order("id").range(from, to),
+      (from, to) => sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_id, saved_to_shopify_at").order("id").range(from, to),
     ),
     jobCount("queued"),
     jobCount("running"),
@@ -92,16 +93,10 @@ export async function GET(req: NextRequest) {
 
   // ── Platform health metrics ───────────────────────────────────────────
 
-  // Automation success rate: packs that reached ready/saved vs total built
-  const builtStatuses = ["ready", "saved_to_shopify", "blocked", "failed"];
-  const totalBuilt = packList.filter((p) => builtStatuses.includes(p.status as string)).length;
-  const successBuilt = packList.filter((p) => p.status === "ready" || p.status === "saved_to_shopify").length;
-  const automationSuccessRate = totalBuilt > 0 ? Math.round((successBuilt / totalBuilt) * 100) : 0;
-
-  // Save-to-Shopify success rate
-  const savedCount = packList.filter((p) => p.saved_to_shopify_at != null).length;
-  const saveAttempts = packList.filter((p) => ["saved_to_shopify", "ready", "failed"].includes(p.status as string)).length;
-  const saveSuccessRate = saveAttempts > 0 ? Math.round((savedCount / saveAttempts) * 100) : 0;
+  // Pack-health rates (see lib/admin/packHealth.ts: status names have drifted).
+  const { automationSuccessRate, saveSuccessRate } = packHealth(
+    packList as Array<{ status: string | null; saved_to_shopify_at: string | null }>,
+  );
 
   // Manual intervention rate
   const manualCount = disputeMetrics.needsAttentionCount + (disputeMetrics.overriddenCount ?? 0);
@@ -133,11 +128,32 @@ export async function GET(req: NextRequest) {
     .slice(0, 8)
     .map(([blocker, count]) => ({ blocker, count }));
 
-  // Top failing dispute types (packs with status=failed or blocked, grouped by dispute_type)
+  // Top failing dispute types: failing packs grouped by the dispute's reason.
+  // evidence_packs has no dispute_type column (selecting it returned an error that
+  // was ignored, so this and the pack rates above were silently empty); the
+  // reason lives on disputes, reached through dispute_id.
+  const failingDisputeIds = [
+    ...new Set(
+      packList
+        .filter((p) => isFailingStatus(p.status as string | null))
+        .map((p) => p.dispute_id as string | null)
+        .filter((x): x is string => !!x),
+    ),
+  ];
+  const reasonByDispute = new Map<string, string>();
+  for (let i = 0; i < failingDisputeIds.length; i += 100) {
+    const { data: rs } = await sb
+      .from("disputes")
+      .select("id, reason")
+      .in("id", failingDisputeIds.slice(i, i + 100));
+    for (const d of (rs ?? []) as Array<{ id: string; reason: string | null }>) {
+      reasonByDispute.set(d.id, d.reason ?? "unknown");
+    }
+  }
   const failingTypes: Record<string, number> = {};
   for (const p of packList) {
-    if (p.status === "failed" || p.status === "blocked") {
-      const dt = (p.dispute_type as string) ?? "unknown";
+    if (isFailingStatus(p.status as string | null)) {
+      const dt = reasonByDispute.get(p.dispute_id as string) ?? "unknown";
       failingTypes[dt] = (failingTypes[dt] ?? 0) + 1;
     }
   }
