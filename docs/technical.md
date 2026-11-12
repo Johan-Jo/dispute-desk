@@ -1111,6 +1111,10 @@ Admin MRR, "Paying Subscribers", the Billing page and the Shops-list MRR column 
 
 The Shops list shows a billing pill under the plan (`paid | trialing | grace | unconfirmed`) and has **Paying** / **On trial** filters (client-side on `billingState`). `GET /api/admin/shops/:id` returns `billing: { state, subscriptionState, trialEndsAt, firstPaidAt }` from `plan_entitlements`; the detail header shows the same pill and the trial end date. `PATCH /api/admin/shops/:id` validates `plan` against `PLANS` and `pack_limit_override` (non-negative integer or null), returns 400 on a malformed body, and audits as `actorType: "admin"` with the operator's email (it used to log `system`). A plan override changes the label only: if it diverges from `plan_entitlements`, the shop shows as `unconfirmed` and contributes no MRR. List/detail/activity loads and the Save button surface failures instead of rendering an empty list or a fake "Saved".
 
+### Admin jobs and webhooks pages
+
+`/api/admin/jobs` and `/api/admin/webhooks` rows carry `shop: { shop_domain, primary_domain } | null` (via `loadShopLabels`, `lib/admin/shopLabels.ts`, chunked `.in()`), and both pages render it with `AdminMerchant` in a Shop column. `PATCH /api/admin/jobs/:id` (retry / cancel) is status-guarded and now returns **409** when no row matched (the job already moved on) instead of `ok: true`; the page shows the failure. The webhooks 24h aggregate pages through `fetchAllRows` so totals and p50/p95 are not truncated at 1000 rows. Both pages show load failures; the jobs page no longer blanks when the API returns an error body, and the webhooks stats no longer show zeros when the aggregate request fails.
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

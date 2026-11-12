@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { loadShopLabels } from "@/lib/admin/shopLabels";
 
 export const runtime = "nodejs";
 
@@ -22,8 +23,10 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const now = Date.now();
+  const labels = await loadShopLabels(sb, (data ?? []).map((j: Record<string, unknown>) => j.shop_id as string | null));
   const enriched = (data ?? []).map((j: Record<string, unknown>) => ({
     ...j,
+    shop: labels.get(j.shop_id as string) ?? null,
     stale:
       j.status === "running" &&
       j.locked_at &&

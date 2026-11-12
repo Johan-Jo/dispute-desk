@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
+import { loadShopLabels } from "@/lib/admin/shopLabels";
 
 export const runtime = "nodejs";
 
@@ -46,8 +48,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const labels = await loadShopLabels(sb, (data ?? []).map((r: { shop_id: string | null }) => r.shop_id));
+  const rowsWithShop = (data ?? []).map((r: { shop_id: string | null }) => ({
+    ...r,
+    shop: r.shop_id ? labels.get(r.shop_id) ?? null : null,
+  }));
+
   return NextResponse.json({
-    rows: data ?? [],
+    rows: rowsWithShop,
     total: count ?? 0,
     limit,
     offset,
@@ -59,14 +67,20 @@ async function aggregateStats(
 ): Promise<NextResponse> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await sb
-    .from("webhook_events")
-    .select("topic, outcome, processing_ms, received_at, shopify_object_id, shop_id")
-    .gte("received_at", since)
-    .order("received_at", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // Paged: 24h of deliveries can exceed PostgREST's 1000-row cap, which
+  // silently truncated the totals and percentiles.
+  let data;
+  try {
+    data = await fetchAllRows((from, to) =>
+      sb
+        .from("webhook_events")
+        .select("topic, outcome, processing_ms, received_at, shopify_object_id, shop_id")
+        .gte("received_at", since)
+        .order("received_at", { ascending: false })
+        .range(from, to),
+    );
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "query failed" }, { status: 500 });
   }
 
   const rows = (data ?? []) as Array<{
