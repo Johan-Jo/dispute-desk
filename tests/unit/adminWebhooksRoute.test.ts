@@ -23,7 +23,7 @@ function lazyChain(resolved: unknown) {
   const chain: Record<string, unknown> = {
     then: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(resolved).then(onFulfilled),
   };
-  for (const method of ["eq", "ilike", "gte", "lt", "order", "range", "select"]) {
+  for (const method of ["eq", "ilike", "gte", "lt", "order", "range", "select", "in"]) {
     chain[method] = vi.fn().mockImplementation(() => chain);
   }
   return chain;
@@ -56,7 +56,11 @@ describe("GET /api/admin/webhooks (listing)", () => {
       },
     ];
     const chain = lazyChain({ data: rows, error: null, count: 1 });
-    const from = vi.fn().mockReturnValue(chain);
+    const shopsChain = lazyChain({
+      data: [{ id: "shop-1", shop_domain: "x1.myshopify.com", primary_domain: "store.example" }],
+      error: null,
+    });
+    const from = vi.fn().mockImplementation((t: string) => (t === "shops" ? shopsChain : chain));
     mockGetServiceClient.mockReturnValue({ from } as never);
 
     const res = await GET(buildRequest("?topic=disputes/update"));
@@ -65,6 +69,8 @@ describe("GET /api/admin/webhooks (listing)", () => {
     expect(body).toMatchObject({ total: 1, limit: 100, offset: 0 });
     expect(body.rows).toHaveLength(1);
     expect(body.rows[0]).toMatchObject({ outcome: "applied" });
+    // Each row carries the merchant labels AdminMerchant renders.
+    expect(body.rows[0].shop).toEqual({ shop_domain: "x1.myshopify.com", primary_domain: "store.example" });
   });
 });
 
