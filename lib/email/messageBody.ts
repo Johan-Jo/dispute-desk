@@ -7,9 +7,9 @@
  * (Same conversion as the private helpers in `billingLifecycle.ts`; new emails use this shared copy.)
  */
 
-export function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+import { escapeHtml } from "./escapeHtml";
+
+export { escapeHtml };
 
 export function bodyToHtml(body: string): string {
   return body

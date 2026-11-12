@@ -24,7 +24,7 @@ import { describe, expect, it } from "vitest";
 const EMAIL_DIR = join(__dirname, "..");
 
 /** Modules with no merchant copy at all: addresses, URL building, text conversion. */
-const HELPERS = new Set(["addresses.ts", "publicSiteUrl.ts", "messageBody.ts", "insightsDigestGate.ts"]);
+const HELPERS = new Set(["addresses.ts", "publicSiteUrl.ts", "messageBody.ts", "escapeHtml.ts", "insightsDigestGate.ts"]);
 
 const NOT_MIGRATED = "Not yet migrated: builds its copy in lib/ instead of messages/*.json.";
 const IN_FILE_TABLE = "Keeps an in-file six-locale table (STRINGS) instead of messages/*.json.";
