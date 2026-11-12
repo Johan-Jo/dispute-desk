@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
@@ -28,6 +29,7 @@ interface DisputeMetrics {
 interface ShopLeaderboardEntry {
   shopId: string;
   domain: string;
+  primaryDomain?: string | null;
   attention: number;
   syncFail: number;
   overridden: number;
@@ -266,7 +268,7 @@ function ShopLeaderboard({ entries }: { entries: ShopLeaderboardEntry[] }) {
           {entries.map((shop) => (
             <Link key={shop.shopId} href={`/admin/disputes?shop_id=${shop.shopId}`} className="px-6 py-3 flex items-center justify-between hover:bg-[#F8FAFC] transition-colors block">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#0F172A] truncate">{shop.domain}</p>
+                <p className="text-sm font-medium text-[#0F172A]"><AdminMerchant shopDomain={shop.domain} primaryDomain={shop.primaryDomain} /></p>
                 <div className="flex gap-3 mt-1">
                   {shop.attention > 0 && <Tag color="#EF4444" label={`${shop.attention} attn`} />}
                   {shop.syncFail > 0 && <Tag color="#D97706" label={`${shop.syncFail} sync`} />}
