@@ -23,18 +23,32 @@ export const isFailingStatus = (s: string | null): boolean =>
 
 const isBuilt = (s: string | null): boolean => s === "ready" || isSavedStatus(s) || isFailingStatus(s);
 
-export function packHealth(packs: PackRow[]): { automationSuccessRate: number; saveSuccessRate: number } {
+export interface PackHealth {
+  automationSuccessRate: number;
+  /** Of packs we actually tried to send to Shopify: percent that went through. */
+  saveSuccessRate: number;
+  /** Packs that reached Shopify. */
+  saveSent: number;
+  /** Packs whose send was attempted and failed. */
+  saveFailed: number;
+}
+
+export function packHealth(packs: PackRow[]): PackHealth {
   // Automation success: of packs whose build finished, how many ended ready/saved.
   const built = packs.filter((p) => isBuilt(p.status));
   const ok = built.filter((p) => p.status === "ready" || isSavedStatus(p.status));
   const automationSuccessRate = built.length > 0 ? Math.round((ok.length / built.length) * 100) : 0;
 
-  // Save rate: of packs that could be (or were) saved, how many reached Shopify.
-  const savable = packs.filter(
-    (p) => p.status === "ready" || p.status === "failed" || p.status === "save_failed" || isSavedStatus(p.status),
-  );
-  const saved = packs.filter((p) => p.saved_to_shopify_at != null).length;
-  const saveSuccessRate = savable.length > 0 ? Math.round((saved / savable.length) * 100) : 0;
+  // Save rate counts TRUE SENDS only: a pack that reached Shopify
+  // (`saved_to_shopify_at` set) or whose send was attempted and failed
+  // (`save_failed`). Packs merely sitting in `ready` were never sent, so they are
+  // neither a success nor a failure. (The old denominator counted every ready
+  // pack, 260 of 352 on prod belong to disputes already closed, which read as a
+  // 24% save rate when sends were succeeding ~98% of the time.)
+  const saveSent = packs.filter((p) => p.saved_to_shopify_at != null).length;
+  const saveFailed = packs.filter((p) => p.saved_to_shopify_at == null && p.status === "save_failed").length;
+  const attempts = saveSent + saveFailed;
+  const saveSuccessRate = attempts > 0 ? Math.round((saveSent / attempts) * 100) : 0;
 
-  return { automationSuccessRate, saveSuccessRate };
+  return { automationSuccessRate, saveSuccessRate, saveSent, saveFailed };
 }
