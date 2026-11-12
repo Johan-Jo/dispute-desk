@@ -53,10 +53,18 @@ export default function AdminTeamPage() {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/team");
-    const data = await res.json();
-    setUsers(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/team");
+      // An error body coerced to [] read as "there are no admins".
+      if (!res.ok) throw new Error(`Loading the team failed (${res.status})`);
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load the team");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -84,11 +92,22 @@ export default function AdminTeamPage() {
   };
 
   const toggleActive = async (user: AdminUser) => {
-    await fetch(`/api/admin/team/${user.id}`, {
+    const res = await fetch(`/api/admin/team/${user.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_active: !user.is_active }),
     });
+    if (!res.ok) {
+      let detail = "";
+      try {
+        detail = (await res.json())?.error ?? "";
+      } catch {
+        /* non-JSON */
+      }
+      setError(`Could not ${user.is_active ? "deactivate" : "reactivate"} ${user.email} (${res.status})${detail ? `: ${detail}` : ""}`);
+      return;
+    }
+    setError(null);
     fetchUsers();
   };
 

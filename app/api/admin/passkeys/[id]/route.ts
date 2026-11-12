@@ -6,6 +6,7 @@ import {
   revokePasskey,
 } from "@/lib/admin/passkeys";
 import { verifyPasskeyCookie } from "@/lib/admin/passkeyCookie";
+import { logAdminAction } from "@/lib/admin/auditAction";
 
 export const runtime = "nodejs";
 
@@ -71,5 +72,10 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
   const ok = await revokePasskey(gate.admin.id, id);
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await logAdminAction({
+    actor: { id: gate.admin.id, email: gate.admin.email },
+    eventType: "passkey.revoked",
+    payload: { passkey_id: id, remaining: total - 1 },
+  });
   return NextResponse.json({ ok: true });
 }

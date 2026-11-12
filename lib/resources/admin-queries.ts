@@ -427,10 +427,12 @@ export async function updateCmsSettings(settings: Record<string, unknown>) {
 /* ── Generation analytics ────────────────────────────────────────── */
 
 export async function getGenerationStats() {
-  const { data: items } = await sb()
+  const { data: items, error } = await sb()
     .from("content_items")
     .select("id, generated_at, generation_tokens, workflow_status, rejection_reason, time_to_publish")
     .not("generated_at", "is", null);
+  // A failed read used to come back as zero generated / 0% acceptance.
+  if (error) throw error;
 
   const generated = items ?? [];
   const totalGenerated = generated.length;
