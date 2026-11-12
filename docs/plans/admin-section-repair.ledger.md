@@ -103,6 +103,10 @@ Checked, no defect found: prompt-module editor (checks `res.ok`, surfaces errors
 | 51 | Audit page | Claimed to be the "complete forensic trail of all admin operations" but showed no platform-wide actions | read `audit_events` only | fixed (merges `admin_audit_events`; subtitle corrected) |
 | 52 | Audit route | Silent 500-row cut-off | `.limit(500)` unannounced | fixed (`truncated` + notice) |
 
+| 53 | Playbook / Winnability leads CSV | Cells starting `= + - @` executed as formulas when opened in a spreadsheet; `email`/`store` come from public forms | quoted but not neutralised | fixed (shared `csvCell`) |
+
+Known, not changed: both lead lists load at most 1000 rows (`limit(1000)`), so the export is the loaded rows, not necessarily all leads; the stats cards use exact counts.
+
 Note: `GET /api/admin/audit` response shape changed from an array to `{ events, limit, truncated }`; the audit page was its only caller.
 
 ## Open — merchant display (R2) still on raw `shop_domain`
