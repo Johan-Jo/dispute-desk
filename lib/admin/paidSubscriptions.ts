@@ -107,3 +107,20 @@ export function summarizeBilling(
   }
   return out;
 }
+
+/**
+ * Days of a reporting window that were actually paid for: zero unless the shop
+ * is `paid`, otherwise capped at the time since the first recorded paid cycle.
+ * (The old "total invoiced" multiplied the plan price by the whole window, so a
+ * shop that never paid showed a full quarter's fees.)
+ */
+export function invoicedDays(
+  state: AdminBillingState,
+  firstPaidAt: string | null | undefined,
+  windowDays: number,
+  now: Date = new Date(),
+): number {
+  if (state !== "paid" || !firstPaidAt) return 0;
+  const sincePaid = Math.max(0, Math.floor((now.getTime() - new Date(firstPaidAt).getTime()) / 86_400_000));
+  return Math.min(windowDays, sincePaid);
+}

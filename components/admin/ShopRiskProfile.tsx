@@ -125,6 +125,7 @@ interface ShopRiskProfileResponse {
   dataCompleteness: number;
   monthlyRevenue: { planName: string; planId: string; monthlyUsd: number };
   totalInvoiced: { totalUsd: number; windowDays: number; monthsInPeriod: number; isApproximate: true };
+  billingState?: string;
 }
 
 const PERIOD_LABEL: Record<RiskPeriod, string> = {
@@ -464,6 +465,14 @@ export function ShopRiskProfile({ shopId }: Props) {
               <>
                 <div className="text-xl font-bold text-[#0F172A] mb-1">Free plan</div>
                 <div className="text-xs text-[#94A3B8]">No subscription revenue</div>
+              </>
+            ) : data.billingState && data.billingState !== "paid" ? (
+              <>
+                <div className="text-xl font-bold text-[#0F172A] mb-1">—</div>
+                <div className="text-xs text-[#94A3B8]">
+                  No payment recorded
+                  {data.billingState === "trialing" ? " (on trial)" : data.billingState === "unconfirmed" ? " (plan label only)" : ""}
+                </div>
               </>
             ) : (
               <>
