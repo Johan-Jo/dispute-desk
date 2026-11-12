@@ -1115,6 +1115,10 @@ The Shops list shows a billing pill under the plan (`paid | trialing | grace | u
 
 `/api/admin/jobs` and `/api/admin/webhooks` rows carry `shop: { shop_domain, primary_domain } | null` (via `loadShopLabels`, `lib/admin/shopLabels.ts`, chunked `.in()`), and both pages render it with `AdminMerchant` in a Shop column. `PATCH /api/admin/jobs/:id` (retry / cancel) is status-guarded and now returns **409** when no row matched (the job already moved on) instead of `ok: true`; the page shows the failure. The webhooks 24h aggregate pages through `fetchAllRows` so totals and p50/p95 are not truncated at 1000 rows. Both pages show load failures; the jobs page no longer blanks when the API returns an error body, and the webhooks stats no longer show zeros when the aggregate request fails.
 
+### Admin top-bar bell (`AdminNotifications`)
+
+The bell was a decorative button with a hard-coded red dot (no click handler). It is now `components/admin/AdminNotifications.tsx`, backed by `GET /api/admin/notifications`: exact head-count queries for open disputes needing attention, with sync issues, with uncertain submissions, and failed jobs (the same signals as the Operations queue). The badge shows the total only when above zero; clicking opens a list linking to `/admin/operations` or `/admin/jobs`; it refreshes every 60 s and on open, closes on outside click / Esc, and shows an error instead of zero if the request fails. The top-bar search box is still a read-only placeholder.
+
 ### Shop detail "Total invoiced"
 
 The Risk Profile's **Total invoiced** card was plan price × window, so a shop that never paid showed a full quarter's fees (found on dev: $387). It now uses `invoicedDays()` (`lib/admin/paidSubscriptions.ts`): zero unless the shop is `paid`, otherwise capped at the days since `first_paid_cycle_started_at`. `computeShopRisk` returns `billingState`; the card shows "—" and "No payment recorded" (with "on trial" / "plan label only") for anything not paid. Still an approximation (plan rate × paid days, no invoice history).
