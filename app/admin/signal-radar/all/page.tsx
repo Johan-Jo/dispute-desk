@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
 import { redirect } from "next/navigation";
 import { ArrowLeft, ListFilter } from "lucide-react";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -87,14 +88,22 @@ export default async function SignalRadarAllPage({
     analysisQuery = analysisQuery.eq("category", initialCategory);
   }
 
-  const [{ data: analyses }, { data: phraseSources }] = await Promise.all([
+  // `.limit(2500)` was silently 1000: PostgREST caps a select regardless. Page
+  // through up to PHRASE_SAMPLE rows so the recurring-phrases widget reads the
+  // sample it claims to.
+  const PHRASE_SAMPLE = 2500;
+  const [{ data: analyses }, phraseSourcesAll] = await Promise.all([
     analysisQuery,
-    sb
-      .from("signal_sources")
-      .select("title,content")
-      .gt("posted_at", since7d)
-      .limit(2500),
+    fetchAllRows<{ id: string; title: string | null; content: string | null }>((from, to) =>
+      sb
+        .from("signal_sources")
+        .select("id,title,content")
+        .gt("posted_at", since7d)
+        .order("id")
+        .range(from, Math.min(to, PHRASE_SAMPLE - 1)),
+    ).then((rows) => rows.slice(0, PHRASE_SAMPLE)),
   ]);
+  const phraseSources = phraseSourcesAll;
 
   // Load only the source rows that match the analyses we just fetched, by
   // ID. This avoids the "top-200-most-recent-posts" cap dropping rows whose

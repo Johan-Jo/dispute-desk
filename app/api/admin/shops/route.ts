@@ -4,7 +4,12 @@ import {
   defaultWindowEndDate,
   windowStartDate,
 } from "@/lib/disputes/chargebackRate";
-import { monthlyRevenueForPlan } from "@/lib/admin/shopBilling";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
+import {
+  classifyBillingState,
+  paidMonthlyUsd,
+  type EntitlementEvidence,
+} from "@/lib/admin/paidSubscriptions";
 
 export const runtime = "nodejs";
 
@@ -19,8 +24,10 @@ interface ShopRowEnriched {
   disputeCount: number;
   /** Total evidence packs (all-time) for this shop. */
   packCount: number;
-  /** Monthly revenue in USD, derived from `shops.plan` via PLANS map. */
+  /** Monthly revenue in USD actually being paid (see lib/admin/paidSubscriptions). */
   monthlyRevenueUsd: number;
+  /** paid | trialing | grace | unconfirmed | free | uninstalled */
+  billingState: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -92,10 +99,25 @@ export async function GET(req: NextRequest) {
   // Two scalar queries instead of 2N. We pull `shop_id` from each
   // row and tally locally. Acceptable cost since the disputes /
   // evidence_packs tables stay small per shop.
-  const [{ data: dispRows }, { data: packRows }] = await Promise.all([
-    sb.from("disputes").select("shop_id").in("shop_id", shopIds),
-    sb.from("evidence_packs").select("shop_id").in("shop_id", shopIds),
+  // Both are paged: an un-ranged select silently truncates at 1000 rows, which
+  // made per-shop counts wrong once the tables grew past that.
+  const [dispRows, packRows, entitlements] = await Promise.all([
+    fetchAllRows<{ shop_id: string }>((from, to) =>
+      sb.from("disputes").select("id, shop_id").in("shop_id", shopIds).order("id").range(from, to),
+    ),
+    fetchAllRows<{ shop_id: string }>((from, to) =>
+      sb.from("evidence_packs").select("id, shop_id").in("shop_id", shopIds).order("id").range(from, to),
+    ),
+    fetchAllRows<EntitlementEvidence>((from, to) =>
+      sb
+        .from("plan_entitlements")
+        .select("shop_id, plan_key, subscription_state, first_paid_cycle_started_at")
+        .in("shop_id", shopIds)
+        .order("shop_id")
+        .range(from, to),
+    ),
   ]);
+  const entByShop = new Map(entitlements.map((e) => [e.shop_id, e]));
 
   const disputeCounts = new Map<string, number>();
   for (const r of dispRows ?? []) {
@@ -117,8 +139,11 @@ export async function GET(req: NextRequest) {
       available && denominator > 0
         ? Math.round((numerator / denominator) * 1000) / 10
         : null;
-    const planValue = (s.plan as string | null) ?? "free";
-    const mrr = monthlyRevenueForPlan(planValue);
+    const ent = entByShop.get(s.id);
+    const billingState = classifyBillingState(
+      { plan: (s.plan as string | null) ?? null, uninstalled_at: (s.uninstalled_at as string | null) ?? null },
+      ent,
+    );
     return {
       ...s,
       chargebackRate90d: rate,
@@ -127,7 +152,9 @@ export async function GET(req: NextRequest) {
       chargebackRate90dAvailable: available,
       disputeCount: disputeCounts.get(s.id) ?? 0,
       packCount: packCounts.get(s.id) ?? 0,
-      monthlyRevenueUsd: mrr.monthlyUsd,
+      // Revenue actually being paid — 0 for trials and unconfirmed labels.
+      monthlyRevenueUsd: paidMonthlyUsd(billingState, ent, (s.plan as string | null) ?? null),
+      billingState,
     };
   });
 

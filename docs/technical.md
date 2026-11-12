@@ -1091,6 +1091,64 @@ Job retention: terminal jobs (`succeeded` | `failed`) older than 30 days are pru
 
 `/api/admin/metrics` returns `jobs: { queued, running, succeeded, failed }` (totals across the table — no `LIMIT`). The `/admin/jobs` page reads `succeeded` from this endpoint for its stats row, while still rendering only the most recent 200 rows in the table for performance. The job status enum on disk is `queued | running | succeeded | failed` (per `007_jobs.sql`); the dashboard uses these names verbatim — never label them as "Completed" (a non-existent enum value).
 
+### Admin revenue = actually-paid subscriptions (`lib/admin/paidSubscriptions.ts`)
+
+Admin MRR, "Paying Subscribers", the Billing page and the Shops-list MRR column count **only shops with payment evidence**, never the `shops.plan` label (2026-11-12 prod measurement: label-based MRR showed 4 × Growth = $516 while only 2 shops had a recorded first paid cycle = $258). `classifyBillingState(shop, entitlement)` → `paid | trialing | grace | unconfirmed | free | uninstalled`:
+
+- `paid` = installed AND `plan_entitlements.subscription_state='active'` AND `first_paid_cycle_started_at` set (stamped by `sendFirstPaidCycleEmail` when the first real charge cycle starts) AND `plan_key ≠ free`.
+- `trialing` / `grace` mirror `subscription_state`; neither is revenue.
+- `unconfirmed` = paid-tier label with no payment evidence (no entitlement row, or `active` without a first paid cycle). Surfaced to the operator, never counted.
+
+`/api/admin/metrics` returns `billing: { paid, trialing, grace, unconfirmed, free, mrr, labelMrr }`; `/api/admin/billing` returns `mrr, labelMrr, paidShops, trialingShops, graceShops, unconfirmedShops` and a per-shop `billing_state`; `/api/admin/shops` rows carry `billingState` and `monthlyRevenueUsd` (0 unless `paid`).
+
+**Row-cap rule for admin aggregates.** PostgREST truncates an un-ranged select at 1000 rows with no error. Admin routes that aggregate whole tables (shops, evidence_packs, open disputes, entitlements, per-shop dispute/pack counts) page through `fetchAllRows` (`lib/admin/fetchAllRows.ts`); job counts use per-status `count: exact, head: true` queries. `AdminMerchant` (`components/admin/AdminMerchant.tsx`) is the one way admin pages print a merchant: storefront domain on line 1, myshopify alias beneath.
+
+### Admin dispute detail: admin-gated timeline / notes / resync
+
+`/admin/disputes/[id]` talks to `GET /api/admin/disputes/:id/timeline`, `GET|POST …/notes` and `POST …/resync`, **not** the merchant routes `/api/disputes/:id/*`. Those require a `Bearer` token whose `app_metadata.role` is `admin|support`, which the admin UI never sends, so the page used to get 401/403, show an empty timeline and silently drop notes and resyncs. The admin routes sit under `/api/admin/*`, so the middleware enforces session + `internal_admin_grants` + passkey cookie before they run (do **not** loosen the merchant routes to accept a bare cookie session — that would skip the passkey factor). Both route sets are thin wrappers over `lib/disputes/internal/{timeline,notes,resync}.ts`, which take the caller as a parameter. The page now shows any failed load/action in an alert instead of swallowing it. `/admin/disputes?shop_id=<uuid>` (the Operations leaderboard link) filters to that shop, with a "Show all shops" chip.
+
+### Admin shops: billing state, validated overrides
+
+The Shops list shows a billing pill under the plan (`paid | trialing | grace | unconfirmed`) and has **Paying** / **On trial** filters (client-side on `billingState`). `GET /api/admin/shops/:id` returns `billing: { state, subscriptionState, trialEndsAt, firstPaidAt }` from `plan_entitlements`; the detail header shows the same pill and the trial end date. `PATCH /api/admin/shops/:id` validates `plan` against `PLANS` and `pack_limit_override` (non-negative integer or null), returns 400 on a malformed body, and audits as `actorType: "admin"` with the operator's email (it used to log `system`). A plan override changes the label only: if it diverges from `plan_entitlements`, the shop shows as `unconfirmed` and contributes no MRR. List/detail/activity loads and the Save button surface failures instead of rendering an empty list or a fake "Saved".
+
+### Admin jobs and webhooks pages
+
+`/api/admin/jobs` and `/api/admin/webhooks` rows carry `shop: { shop_domain, primary_domain } | null` (via `loadShopLabels`, `lib/admin/shopLabels.ts`, chunked `.in()`), and both pages render it with `AdminMerchant` in a Shop column. `PATCH /api/admin/jobs/:id` (retry / cancel) is status-guarded and now returns **409** when no row matched (the job already moved on) instead of `ok: true`; the page shows the failure. The webhooks 24h aggregate pages through `fetchAllRows` so totals and p50/p95 are not truncated at 1000 rows. Both pages show load failures; the jobs page no longer blanks when the API returns an error body, and the webhooks stats no longer show zeros when the aggregate request fails.
+
+### Shop detail "Total invoiced"
+
+The Risk Profile's **Total invoiced** card was plan price × window, so a shop that never paid showed a full quarter's fees (found on dev: $387). It now uses `invoicedDays()` (`lib/admin/paidSubscriptions.ts`): zero unless the shop is `paid`, otherwise capped at the days since `first_paid_cycle_started_at`. `computeShopRisk` returns `billingState`; the card shows "—" and "No payment recorded" (with "on trial" / "plan label only") for anything not paid. Still an approximation (plan rate × paid days, no invoice history).
+
+### Admin Overview pack health (`lib/admin/packHealth.ts`)
+
+`/api/admin/metrics` computes automation success, save-to-Shopify rate, top blockers and failing dispute types from `evidence_packs`. The query selected `evidence_packs.dispute_type`, **a column that does not exist** (prod or dev); the error was ignored, so every pack-based figure on the Overview was silently 0 / empty. Fixed: the select drops it, failing dispute types come from `disputes.reason` via `dispute_id`, and `packHealth` treats any status starting `saved_to_shopify` as saved (prod also holds `saved_to_shopify_verified` / `_unverified` and `save_failed`, which the old exact-name lists missed). `draft` and `archived` are neither built nor failed. Definitions are unchanged: automation success = ready-or-saved over built; save rate = packs with `saved_to_shopify_at` over savable packs (so packs parked in `ready` awaiting approval count against it). **Lesson:** a Supabase query whose `error` is not checked turns a missing column into silent zeros; read paths in admin now throw (via `fetchAllRows`) instead.
+
+### Admin Fraud Intel: SQL aggregation (`dd_admin_fraud_intel_buckets`)
+
+`/admin/fraud-intel` renders `public.dd_admin_fraud_intel_buckets(p_since)` (migration `20261112120000`, `service_role` only; revoked from `anon`/`authenticated`) which buckets **every** order in the 90-day window — AVS, payment-attempt count, IP↔ship distance, proxy × cross-border — and returns `(dimension, bucket, orders, disputes)`; `dimension='total'` carries the window totals. A "dispute" is an order that has a `disputes` row (`disputes.order_gid = shopify_orders.shopify_order_id`, same shop). The page previously pulled order rows into the app: PostgREST caps a select at 1000 rows regardless of `.limit()`, so it analysed ~3% of prod's ~34k window orders, and it counted disputes from `shopify_orders.has_chargeback`, which is **never set** (0 rows all time vs ~1.9k disputes) — every bucket read 0%. If the RPC fails the page shows an error banner instead of empty tables; the parse-miss total pages through all rows. Outcome Analysis rows render the merchant via `AdminMerchant`. **Rollout:** the migration must exist on the target DB before the page code is deployed (dev: applied 2026-11-12; prod: apply with the promotion to `master`).
+
+### Admin audit for platform-wide actions (`admin_audit_events`)
+
+Template status changes (`template.status_changed`) and reason-mapping edits (`reason_mapping.updated`) have no shop, so they cannot go into `audit_events` (`shop_id` NOT NULL). Both routes used to insert there anyway, never checked the result, and wrote **zero** rows ever. They now call `logAdminAction` (`lib/admin/auditAction.ts`) → `public.admin_audit_events` (migration `20261112130000`: `actor_user_id`, `actor_email`, `event_type`, `event_payload`; service-role only, RLS on, append-only trigger). `logAdminAction` never throws (the action already happened) but logs `[admin-audit] write failed` and returns `false`. Any new platform-wide admin write should use it. The Templates, Template detail, Reason Mapping and Template Health pages now surface load failures, and a rejected template assignment shows the route's message (e.g. "Only active templates are allowed") instead of looking like it saved. **Rollout:** migration applied to dev 2026-11-12; apply to prod with the `master` promotion, before the route code deploys there.
+
+### Admin Defence Package pages
+
+- **Pipeline page** (`/admin/defence-package/pipeline`) renders a sample LLM payload from `tests/fixtures/defence-package-sample.json`, read with `fs` at request time. File tracing does not follow a runtime path, so on Vercel the file was never bundled and the panel always showed "Could not load fixture". `next.config.js` `outputFileTracingIncludes` now ships it for `/admin/defence-package/pipeline`. (A static import is not an option: ESLint `no-restricted-imports` forbids production code importing test fixtures.) **Verify after deploy** that the panel shows a payload.
+- **Runs list and run detail** show the merchant (`AdminMerchant`). `listRecentRuns` attaches `shop` labels via `loadShopLabels`.
+- **Dashboard stats** (`getDashboardStats`) page through `defence_package_runs` with `fetchAllRows` (a bare select caps at 1000 rows) and throw on a failed read; the dashboard catches it and shows a banner rather than "0 runs · 0% OK".
+
+### Admin Audit Log
+
+`GET /api/admin/audit` returns `{ events, limit, truncated }` (it used to return a bare array) — shop-scoped `audit_events` merged with platform-wide `admin_audit_events` (`scope: "global"`, `actor_id` = operator email), newest first, capped at 500 (`truncated` says so). Filters: `shop` (a shop UUID **or** any part of the storefront / myshopify domain — non-UUIDs are resolved through `shops`, never passed to `.eq("shop_id")`; the legacy `shop_id` param still works), `event_type`, `from`, `to`. A malformed date is a 400. Each event carries `shop: { shop_domain, primary_domain }` and the page renders it with `AdminMerchant`, plus the actor's id. The page debounces its filters (a partial UUID per keystroke used to hit Postgres, 500, and crash the page on `.map` of the error body) and shows load errors. `format=csv` uses `lib/admin/csv.ts` (`toCsv`): every cell quoted, quotes doubled, cells starting `= + - @ tab CR` prefixed with `'` so spreadsheets do not execute merchant-controlled text as a formula.
+
+### Merchant display in admin (`AdminMerchant`)
+
+Admin pages print a merchant as the **storefront domain on line 1 and the myshopify alias on line 2** via `components/admin/AdminMerchant.tsx` (`displayShopDomain()` underneath; the alias line is omitted only when there is no distinct storefront domain). List routes hand pages the labels with `loadShopLabels` (`lib/admin/shopLabels.ts`) or a `shops(shop_domain, primary_domain)` join. Plain-text spots (e.g. `<option>`) use `domain (alias)`. `tests/unit/adminMerchantDisplayGuard.test.ts` enforces it: a bare `{…shop_domain}` JSX child outside the allowlist fails the build.
+
+### Admin team and passkeys: audited access changes
+
+Granting, deactivating, reactivating and revoking an admin (`team.granted` / `team.deactivated` / `team.reactivated` / `team.revoked`) and revoking a passkey (`passkey.revoked`) are written to `admin_audit_events` via `logAdminAction` (visible in the Audit Log with the operator's email). `logAdminAction` never throws, including when the service client cannot be constructed. `PATCH /api/admin/team/:id` returns 404 for an unknown user (it was a 500: `.single()` errored before the 404 branch could run); `DELETE` returns 404 when nothing was removed; malformed bodies are 400. The Team page shows load failures and failed activate/deactivate instead of an empty list or a silent no-op. The self-lockout rules (cannot deactivate/revoke yourself; cannot delete your last passkey) are unchanged.
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline
@@ -1334,7 +1392,7 @@ The `/admin` overview renders both as separate tiles, **"Win Rate (all disputes)
 
 Two pure helpers wrap the existing `lib/billing/plans.ts → PLANS` map for the admin metrics:
 
-- `monthlyRevenueForPlan(plan)` → `{ planId, planName, monthlyUsd }`. Used by the shops list MRR column and the detail-page Quick Stats footer.
+- `monthlyRevenueForPlan(plan)` → `{ planId, planName, monthlyUsd }`. Used by the detail-page Quick Stats footer (plan-rate display); the shops list MRR column now uses `paidMonthlyUsd` (actually-paid only — see above).
 - `totalInvoicedForPeriod(plan, windowDays)` → `{ totalUsd, monthsInPeriod, isApproximate: true, … }`. **Approximation**: `monthlyPrice × (windowDays / 30)`. Doesn't account for plan changes mid-window, trial periods, or top-up purchases. Replace with real invoice records when a `billing_invoices` table is built.
 
 Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabase CLI** (tracks migrations in the remote `supabase_migrations` history — this is what the project uses day to day).

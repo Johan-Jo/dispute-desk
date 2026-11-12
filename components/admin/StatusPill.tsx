@@ -19,6 +19,12 @@ const DEFAULT_COLORS: Record<string, { bg: string; text: string }> = {
   starter: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
   trial: { bg: "bg-[#F1F5F9]", text: "text-[#475569]" },
   free: { bg: "bg-[#F1F5F9]", text: "text-[#475569]" },
+  growth: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
+  scale: { bg: "bg-[#EDE9FE]", text: "text-[#6B21A8]" },
+  paid: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
+  trialing: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
+  grace: { bg: "bg-[#FEF3C7]", text: "text-[#92400E]" },
+  unconfirmed: { bg: "bg-[#FEF3C7]", text: "text-[#92400E]" },
 };
 
 interface StatusPillProps {

@@ -6,21 +6,51 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 
 interface BillingData {
+  /** Revenue from shops that have actually paid (see lib/admin/paidSubscriptions). */
   mrr: number;
+  /** What the plan labels alone would claim — shown so the gap is visible. */
+  labelMrr: number;
+  paidShops: number;
+  trialingShops: number;
+  graceShops: number;
+  unconfirmedShops: number;
   distribution: Record<string, number>;
-  perShop: { shop_id: string; domain: string; plan: string; used: number; limit: number }[];
+  perShop: {
+    shop_id: string;
+    domain: string;
+    primary_domain: string | null;
+    plan: string;
+    billing_state: string;
+    trial_ends_at: string | null;
+    used: number;
+    limit: number;
+  }[];
 }
 
 export default function AdminBillingPage() {
   const [data, setData] = useState<BillingData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/billing")
-      .then((r) => r.json())
-      .then(setData);
+      .then((r) => {
+        if (!r.ok) throw new Error(`Billing request failed (${r.status})`);
+        return r.json();
+      })
+      .then(setData)
+      .catch((e: Error) => setError(e.message));
   }, []);
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="text-[#991B1B] py-12 text-center">{error}</div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -31,6 +61,7 @@ export default function AdminBillingPage() {
   }
 
   const totalShops = Object.values(data.distribution).reduce((a, b) => a + b, 0);
+  const paid = data.paidShops;
 
   const planColors: Record<string, string> = {
     enterprise: "#8B5CF6",
@@ -39,6 +70,9 @@ export default function AdminBillingPage() {
     growth: "#3B82F6",
     starter: "#22C55E",
     trial: "#94A3B8",
+    trialing: "#38BDF8",
+    grace: "#F59E0B",
+    unconfirmed: "#F59E0B",
     free: "#94A3B8",
   };
 
@@ -62,15 +96,22 @@ export default function AdminBillingPage() {
             valueColor: "text-[#22C55E]",
           },
           {
-            label: "Active Subscriptions",
-            value: totalShops,
+            label: "Paying Subscribers",
+            value: paid,
             icon: Users,
             iconBg: "bg-[#DBEAFE]",
             iconColor: "text-[#3B82F6]",
           },
           {
-            label: "Average Revenue Per Shop",
-            value: totalShops > 0 ? `$${(data.mrr / totalShops).toFixed(0)}` : "$0",
+            label: "On Trial",
+            value: data.trialingShops,
+            icon: Users,
+            iconBg: "bg-[#E0F2FE]",
+            iconColor: "text-[#0284C7]",
+          },
+          {
+            label: "Avg Revenue Per Paying Shop",
+            value: paid > 0 ? `$${(data.mrr / paid).toFixed(0)}` : "$0",
             icon: TrendingUp,
             iconBg: "bg-[#FEF3C7]",
             iconColor: "text-[#F59E0B]",
@@ -137,22 +178,29 @@ export default function AdminBillingPage() {
               <span className="text-lg font-bold text-[#0F172A]">${data.mrr.toFixed(2)}</span>
             </div>
             <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-lg">
-              <span className="text-sm text-[#64748B]">Total Shops</span>
+              <span className="text-sm text-[#64748B]">Installed shops</span>
               <span className="text-lg font-bold text-[#0F172A]">{totalShops}</span>
             </div>
             <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-lg">
-              <span className="text-sm text-[#64748B]">ARPS</span>
+              <span className="text-sm text-[#64748B]">ARPU (paying shops)</span>
               <span className="text-lg font-bold text-[#0F172A]">
-                ${totalShops > 0 ? (data.mrr / totalShops).toFixed(2) : "0.00"}
+                ${paid > 0 ? (data.mrr / paid).toFixed(2) : "0.00"}
               </span>
             </div>
+            {data.unconfirmedShops > 0 && (
+              <div className="p-4 bg-[#FEF3C7] rounded-lg text-sm text-[#92400E]">
+                {data.unconfirmedShops} shop{data.unconfirmedShops === 1 ? "" : "s"} carry a paid plan
+                label with no recorded payment (label-based MRR would be ${data.labelMrr.toFixed(2)}).
+                They are not counted as revenue.
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Per-Shop Usage */}
       <AdminTable
-        headers={["Shop", "Plan", "Packs Used", "Usage"]}
+        headers={["Shop", "Plan", "Billing", "Packs Used", "Usage"]}
         isEmpty={data.perShop.length === 0}
         emptyTitle="No usage data"
         emptyMessage="No shops have active pack usage this month"
@@ -162,10 +210,20 @@ export default function AdminBillingPage() {
           return (
             <tr key={s.shop_id} className="hover:bg-[#F8FAFC] transition-colors">
               <td className="px-6 py-4">
-                <span className="text-sm font-medium text-[#0F172A]">{s.domain}</span>
+                <span className="text-sm font-medium text-[#0F172A]">
+                  <AdminMerchant shopDomain={s.domain} primaryDomain={s.primary_domain} />
+                </span>
               </td>
               <td className="px-6 py-4">
                 <StatusPill status={s.plan ?? "free"} />
+              </td>
+              <td className="px-6 py-4">
+                <StatusPill status={s.billing_state} />
+                {s.billing_state === "trialing" && s.trial_ends_at && (
+                  <div className="text-xs text-[#64748B] mt-1">
+                    ends {new Date(s.trial_ends_at).toLocaleDateString()}
+                  </div>
+                )}
               </td>
               <td className="px-6 py-4">
                 <span className="text-sm text-[#0F172A] font-semibold">{s.used}</span>

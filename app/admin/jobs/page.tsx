@@ -7,6 +7,7 @@ import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 
 interface Job {
   id: string;
@@ -16,6 +17,7 @@ interface Job {
   created_at: string;
   error: string | null;
   stale: boolean;
+  shop?: { shop_domain: string; primary_domain: string | null } | null;
 }
 
 interface JobTotals {
@@ -30,19 +32,31 @@ export default function AdminJobsPage() {
   const [totals, setTotals] = useState<JobTotals>({ queued: 0, running: 0, failed: 0, succeeded: 0 });
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filter !== "all") params.set("status", filter);
-    const [jobsRes, metricsRes] = await Promise.all([
-      fetch(`/api/admin/jobs?${params}`),
-      fetch(`/api/admin/metrics`),
-    ]);
-    setJobs(await jobsRes.json());
-    const metrics = await metricsRes.json();
-    if (metrics?.jobs) setTotals(metrics.jobs);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (filter !== "all") params.set("status", filter);
+      const [jobsRes, metricsRes] = await Promise.all([
+        fetch(`/api/admin/jobs?${params}`),
+        fetch(`/api/admin/metrics`),
+      ]);
+      // An error body is an object; feeding it to jobs.map() blanked the page.
+      if (!jobsRes.ok) throw new Error(`Loading jobs failed (${jobsRes.status})`);
+      const list = await jobsRes.json();
+      setJobs(Array.isArray(list) ? list : []);
+      if (metricsRes.ok) {
+        const metrics = await metricsRes.json();
+        if (metrics?.jobs) setTotals(metrics.jobs);
+      }
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load jobs");
+    } finally {
+      setLoading(false);
+    }
   }, [filter]);
 
   useEffect(() => {
@@ -50,11 +64,20 @@ export default function AdminJobsPage() {
   }, [fetchJobs]);
 
   const handleAction = async (jobId: string, action: string) => {
-    await fetch(`/api/admin/jobs/${jobId}`, {
+    const res = await fetch(`/api/admin/jobs/${jobId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
     });
+    if (!res.ok) {
+      let detail = "";
+      try {
+        detail = (await res.json())?.error ?? "";
+      } catch {
+        /* non-JSON */
+      }
+      setError(`${action === "retry" ? "Retry" : "Cancel"} failed (${res.status})${detail ? `: ${detail}` : ""}`);
+    }
     fetchJobs();
   };
 
@@ -84,14 +107,21 @@ export default function AdminJobsPage() {
           { label: "Running", value: "running" },
           { label: "Failed", value: "failed" },
           { label: "Succeeded", value: "succeeded" },
+          { label: "Cancelled", value: "cancelled" },
         ]}
         activeFilter={filter}
         onFilterChange={setFilter}
       />
 
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
+
       <AdminTable
-        headers={["Type", "Status", "Created", "Error", "Actions"]}
-        headerAlign={{ 4: "right" }}
+        headers={["Type", "Shop", "Status", "Created", "Error", "Actions"]}
+        headerAlign={{ 5: "right" }}
         loading={loading}
         isEmpty={!loading && jobs.length === 0}
         emptyTitle="No jobs found"
@@ -104,6 +134,13 @@ export default function AdminJobsPage() {
           >
             <td className="px-6 py-4">
               <span className="text-sm font-mono text-[#64748B]">{j.job_type}</span>
+            </td>
+            <td className="px-6 py-4 text-sm font-medium text-[#0F172A] max-w-[220px]">
+              {j.shop ? (
+                <AdminMerchant shopDomain={j.shop.shop_domain} primaryDomain={j.shop.primary_domain} />
+              ) : (
+                <span className="text-[#94A3B8]">—</span>
+              )}
             </td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-2">

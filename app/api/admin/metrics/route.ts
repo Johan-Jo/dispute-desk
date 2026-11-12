@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
+import { fetchAllRows } from "@/lib/admin/fetchAllRows";
+import { packHealth, isFailingStatus } from "@/lib/admin/packHealth";
+import { summarizeBilling, classifyBillingState, type EntitlementEvidence } from "@/lib/admin/paidSubscriptions";
 
 export const runtime = "nodejs";
 
@@ -18,36 +21,56 @@ export async function GET(req: NextRequest) {
     ? new Date(Date.now() - periodMs).toISOString()
     : undefined;
 
-  const [shops, disputes, packs, jobs, templateRows, mappingRows] = await Promise.all([
-    sb.from("shops").select("id, shop_domain, plan, uninstalled_at"),
+  // Un-ranged selects truncate silently at 1000 rows (PostgREST) — page the
+  // large tables, and count jobs by status instead of fetching every row.
+  const jobCount = (status: string) =>
+    sb.from("jobs").select("id", { count: "exact", head: true }).eq("status", status);
+  const [shopList, disputes, packRows, jq, jr, js, jf, templateRows, mappingRows, entitlements] = await Promise.all([
+    fetchAllRows<{ id: string; shop_domain: string; primary_domain: string | null; plan: string | null; uninstalled_at: string | null }>(
+      (from, to) => sb.from("shops").select("id, shop_domain, primary_domain, plan, uninstalled_at").order("id").range(from, to),
+    ),
     sb.from("disputes").select("id", { count: "exact", head: true }),
-    sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_type, saved_to_shopify_at"),
-    sb.from("jobs").select("id, status"),
+    fetchAllRows<Record<string, unknown>>(
+      (from, to) => sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_id, saved_to_shopify_at").order("id").range(from, to),
+    ),
+    jobCount("queued"),
+    jobCount("running"),
+    jobCount("succeeded"),
+    jobCount("failed"),
     sb.from("pack_templates").select("id, name, status"),
     sb.from("reason_template_mappings").select("id, template_id, dispute_phase, reason_code"),
+    fetchAllRows<EntitlementEvidence>(
+      (from, to) => sb.from("plan_entitlements").select("shop_id, plan_key, subscription_state, first_paid_cycle_started_at").order("shop_id").range(from, to),
+    ),
   ]);
 
-  const shopList = shops.data ?? [];
   const active = shopList.filter((s) => !s.uninstalled_at).length;
   const uninstalled = shopList.filter((s) => s.uninstalled_at).length;
 
+  // Billing by payment evidence, not by the `shops.plan` label.
+  const billing = summarizeBilling(shopList, entitlements);
+  const entByShop = new Map(entitlements.map((e) => [e.shop_id, e]));
   const plans: Record<string, number> = {};
   for (const s of shopList) {
-    plans[s.plan ?? "free"] = (plans[s.plan ?? "free"] ?? 0) + 1;
+    if (s.uninstalled_at) continue;
+    const st = classifyBillingState(s, entByShop.get(s.id));
+    const label = st === "paid" ? (entByShop.get(s.id)?.plan_key ?? s.plan ?? "free") : st;
+    plans[label] = (plans[label] ?? 0) + 1;
   }
 
-  const packList = (packs.data ?? []) as Record<string, unknown>[];
+  const packList = packRows;
   const byStatus: Record<string, number> = {};
   for (const p of packList) {
     const st = (p.status as string) ?? "unknown";
     byStatus[st] = (byStatus[st] ?? 0) + 1;
   }
 
-  const jobList = jobs.data ?? [];
-  const jobCounts = { queued: 0, running: 0, succeeded: 0, failed: 0 };
-  for (const j of jobList) {
-    if (j.status in jobCounts) jobCounts[j.status as keyof typeof jobCounts]++;
-  }
+  const jobCounts = {
+    queued: jq.count ?? 0,
+    running: jr.count ?? 0,
+    succeeded: js.count ?? 0,
+    failed: jf.count ?? 0,
+  };
 
   // Template stats
   const tplList = templateRows.data ?? [];
@@ -70,16 +93,10 @@ export async function GET(req: NextRequest) {
 
   // ── Platform health metrics ───────────────────────────────────────────
 
-  // Automation success rate: packs that reached ready/saved vs total built
-  const builtStatuses = ["ready", "saved_to_shopify", "blocked", "failed"];
-  const totalBuilt = packList.filter((p) => builtStatuses.includes(p.status as string)).length;
-  const successBuilt = packList.filter((p) => p.status === "ready" || p.status === "saved_to_shopify").length;
-  const automationSuccessRate = totalBuilt > 0 ? Math.round((successBuilt / totalBuilt) * 100) : 0;
-
-  // Save-to-Shopify success rate
-  const savedCount = packList.filter((p) => p.saved_to_shopify_at != null).length;
-  const saveAttempts = packList.filter((p) => ["saved_to_shopify", "ready", "failed"].includes(p.status as string)).length;
-  const saveSuccessRate = saveAttempts > 0 ? Math.round((savedCount / saveAttempts) * 100) : 0;
+  // Pack-health rates (see lib/admin/packHealth.ts: status names have drifted).
+  const { automationSuccessRate, saveSuccessRate } = packHealth(
+    packList as Array<{ status: string | null; saved_to_shopify_at: string | null }>,
+  );
 
   // Manual intervention rate
   const manualCount = disputeMetrics.needsAttentionCount + (disputeMetrics.overriddenCount ?? 0);
@@ -111,11 +128,32 @@ export async function GET(req: NextRequest) {
     .slice(0, 8)
     .map(([blocker, count]) => ({ blocker, count }));
 
-  // Top failing dispute types (packs with status=failed or blocked, grouped by dispute_type)
+  // Top failing dispute types: failing packs grouped by the dispute's reason.
+  // evidence_packs has no dispute_type column (selecting it returned an error that
+  // was ignored, so this and the pack rates above were silently empty); the
+  // reason lives on disputes, reached through dispute_id.
+  const failingDisputeIds = [
+    ...new Set(
+      packList
+        .filter((p) => isFailingStatus(p.status as string | null))
+        .map((p) => p.dispute_id as string | null)
+        .filter((x): x is string => !!x),
+    ),
+  ];
+  const reasonByDispute = new Map<string, string>();
+  for (let i = 0; i < failingDisputeIds.length; i += 100) {
+    const { data: rs } = await sb
+      .from("disputes")
+      .select("id, reason")
+      .in("id", failingDisputeIds.slice(i, i + 100));
+    for (const d of (rs ?? []) as Array<{ id: string; reason: string | null }>) {
+      reasonByDispute.set(d.id, d.reason ?? "unknown");
+    }
+  }
   const failingTypes: Record<string, number> = {};
   for (const p of packList) {
-    if (p.status === "failed" || p.status === "blocked") {
-      const dt = (p.dispute_type as string) ?? "unknown";
+    if (isFailingStatus(p.status as string | null)) {
+      const dt = reasonByDispute.get(p.dispute_id as string) ?? "unknown";
       failingTypes[dt] = (failingTypes[dt] ?? 0) + 1;
     }
   }
@@ -141,18 +179,24 @@ export async function GET(req: NextRequest) {
 
   // Shop domain map
   const shopDomainMap: Record<string, string> = {};
+  const shopPrimaryMap: Record<string, string | null> = {};
   for (const s of shopList) {
     shopDomainMap[s.id] = s.shop_domain ?? s.id.slice(0, 8);
+    shopPrimaryMap[s.id] = s.primary_domain ?? null;
   }
 
   // Shops needing intervention
-  const { data: problemRows } = await sb
-    .from("disputes")
-    .select("shop_id, needs_attention, sync_health, has_admin_override, submission_state, last_event_at, closed_at")
-    .is("closed_at", null);
+  const problemRows = await fetchAllRows<Record<string, unknown>>(
+    (from, to) => sb
+      .from("disputes")
+      .select("id, shop_id, needs_attention, sync_health, has_admin_override, submission_state, last_event_at, closed_at")
+      .is("closed_at", null)
+      .order("id")
+      .range(from, to),
+  );
 
   const shopProblems: Record<string, { attention: number; syncFail: number; overridden: number; stale: number; uncertain: number }> = {};
-  for (const d of (problemRows ?? []) as Record<string, unknown>[]) {
+  for (const d of problemRows) {
     const sid = d.shop_id as string;
     if (!shopProblems[sid]) shopProblems[sid] = { attention: 0, syncFail: 0, overridden: 0, stale: 0, uncertain: 0 };
     if (d.needs_attention) shopProblems[sid].attention++;
@@ -166,6 +210,7 @@ export async function GET(req: NextRequest) {
     .map(([shopId, counts]) => ({
       shopId,
       domain: shopDomainMap[shopId] ?? shopId.slice(0, 8),
+      primaryDomain: shopPrimaryMap[shopId] ?? null,
       ...counts,
       total: counts.attention + counts.syncFail + counts.overridden + counts.stale + counts.uncertain,
     }))
@@ -207,6 +252,7 @@ export async function GET(req: NextRequest) {
       disputeId: row.dispute_id,
       shopId: row.shop_id,
       shopDomain: shopDomainMap[row.shop_id as string] ?? (row.shop_id as string)?.slice(0, 8),
+      primaryDomain: shopPrimaryMap[row.shop_id as string] ?? null,
       orderName: opsDisputeNames[row.dispute_id as string] ?? (row.dispute_id as string)?.slice(0, 8).toUpperCase(),
       eventType,
       description: row.description,
@@ -223,6 +269,7 @@ export async function GET(req: NextRequest) {
     packs: { total: packList.length, byStatus },
     jobs: jobCounts,
     plans,
+    billing,
     templates: { total: tplList.length, ...tplByStatus },
     reasonMappings: mappingStats,
     disputeMetrics,

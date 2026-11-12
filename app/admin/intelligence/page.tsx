@@ -7,6 +7,7 @@
    every control reads, explains, simulates, exports, or records a human decision. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { displayShopDomain } from "@/lib/shopify/domainHost";
 import type { CSSProperties, ReactNode } from "react";
 
 /* ───────────────────────── data contracts ───────────────────────── */
@@ -101,7 +102,13 @@ interface SimulationResult {
   confidence: Confidence; evidenceGrade: EvidenceGrade; assumptions: string[]; limitations: string[];
 }
 
-interface ShopRow { id: string; shop_domain: string; [k: string]: unknown }
+interface ShopRow { id: string; shop_domain: string; primary_domain?: string | null; [k: string]: unknown }
+
+/** Plain-text merchant label for <option> / headings: storefront domain, alias in brackets. */
+function shopLabel(s: ShopRow): string {
+  const shown = displayShopDomain({ shop_domain: s.shop_domain, primary_domain: s.primary_domain });
+  return shown !== s.shop_domain ? `${shown} (${s.shop_domain})` : s.shop_domain;
+}
 interface TemplateOpt { key: string; label: string; description: string }
 
 type Section = "overview" | "data" | "baseline" | "opps" | "sim" | "model" | "method";
@@ -311,12 +318,16 @@ export default function IntelligencePage() {
   /* ── initial loads: shops + simulator templates ── */
   useEffect(() => {
     fetch("/api/admin/shops?search=")
-      .then((r) => (r.ok ? r.json() : []))
+      .then((r) => {
+        // An empty picker with no message reads as "no merchants exist".
+        if (!r.ok) throw new Error(`Could not load merchants (${r.status})`);
+        return r.json();
+      })
       .then((d: ShopRow[]) => {
         setShops(d || []);
         if (d && d[0] && !shopId) setShopId(d[0].id);
       })
-      .catch(() => {});
+      .catch((e: Error) => setNotice(e.message));
     fetch("/api/admin/intelligence/simulate")
       .then((r) => (r.ok ? r.json() : { templates: [] }))
       .then((d) => { setTemplates(d.templates || []); if (d.templates?.[0]) setSim((s) => ({ ...s, template: d.templates[0].key })); })
@@ -428,7 +439,10 @@ export default function IntelligencePage() {
   const modelReport = run?.model_report || null;
   const leakage = dq ? !dq.riskPreventionSupported : false;
 
-  const merchantName = shops.find((s) => s.id === shopId)?.shop_domain || "—";
+  const merchantName = (() => {
+    const m = shops.find((s) => s.id === shopId);
+    return m ? shopLabel(m) : "—";
+  })();
   const disputeCount = dq?.facts.disputes.count ?? baseline?.portfolio.totalDisputes ?? 0;
 
   const runOptions = useMemo(
@@ -495,7 +509,7 @@ export default function IntelligencePage() {
                 <select value={shopId} onChange={(e) => setShopId(e.target.value)}
                   style={{ appearance: "none", background: "#fff", border: "1px solid #E2E8F0", borderRadius: "9px", padding: "8px 34px 8px 12px", fontSize: "13.5px", fontWeight: 600, color: "#0F172A", minWidth: "230px", cursor: "pointer", fontFamily: "inherit" }}>
                   {shops.length === 0 && <option value="">No clients</option>}
-                  {shops.map((s) => <option key={s.id} value={s.id}>{s.shop_domain}</option>)}
+                  {shops.map((s) => <option key={s.id} value={s.id}>{shopLabel(s)}</option>)}
                 </select>
                 {selArrow}
               </div>

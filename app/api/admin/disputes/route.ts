@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   let query = sb
     .from("disputes")
-    .select("*, shops(shop_domain)", { count: "exact" })
+    .select("*, shops(shop_domain, primary_domain)", { count: "exact" })
     .order("last_event_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
@@ -85,9 +85,10 @@ export async function GET(req: NextRequest) {
 
   const disputes = (data ?? []).map((row) => {
     const shop = Array.isArray(row.shops) ? row.shops[0] : row.shops;
-    const shopDomain = (shop as { shop_domain?: string } | null)?.shop_domain ?? null;
+    const shopInfo = shop as { shop_domain?: string; primary_domain?: string | null } | null;
+    const shopDomain = shopInfo?.shop_domain ?? null;
     const { shops: _s, ...dispute } = row as typeof row & { shops?: unknown };
-    return { ...dispute, shop_domain: shopDomain };
+    return { ...dispute, shop_domain: shopDomain, primary_domain: shopInfo?.primary_domain ?? null };
   });
 
   // Get note counts for these disputes

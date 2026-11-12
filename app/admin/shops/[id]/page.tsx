@@ -26,6 +26,7 @@ import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
 import { ShopMerchantMessages } from "@/components/admin/ShopMerchantMessages";
 import { ShopActivity } from "@/components/admin/ShopActivity";
 import { displayShopDomain } from "@/lib/shopify/domainHost";
+import { StatusPill } from "@/components/admin/StatusPill";
 
 interface ShopDetail {
   shop: {
@@ -47,6 +48,12 @@ interface ShopDetail {
   disputes: number;
   packs: number;
   storeRevenue?: { total: number; currency: string; orderCount: number };
+  billing?: {
+    state: string;
+    subscriptionState: string | null;
+    trialEndsAt: string | null;
+    firstPaidAt: string | null;
+  };
 }
 
 /**
@@ -100,33 +107,67 @@ export default function AdminShopDetailPage({
   const [overridePlan, setOverridePlan] = useState("");
   const [overridePackLimit, setOverridePackLimit] = useState("");
   const [notes, setNotes] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     fetch(`/api/admin/shops/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(r.status === 404 ? "Shop not found" : `Loading shop failed (${r.status})`);
+        return r.json();
+      })
       .then((d) => {
         setData(d);
         setOverridePlan(d.shop?.plan ?? "free");
         setOverridePackLimit(d.shop?.pack_limit_override?.toString() ?? "");
         setNotes(d.shop?.admin_notes ?? "");
-      });
+      })
+      .catch((e: Error) => setLoadError(e.message));
   }, [id]);
 
   const handleSave = async () => {
     setSaving(true);
-    await fetch(`/api/admin/shops/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        plan: overridePlan,
-        pack_limit_override: overridePackLimit
-          ? parseInt(overridePackLimit)
-          : null,
-        admin_notes: notes || null,
-      }),
-    });
-    setSaving(false);
+    setSaveMsg(null);
+    try {
+      const res = await fetch(`/api/admin/shops/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: overridePlan,
+          pack_limit_override: overridePackLimit
+            ? parseInt(overridePackLimit)
+            : null,
+          admin_notes: notes || null,
+        }),
+      });
+      if (!res.ok) {
+        let detail = "";
+        try {
+          detail = (await res.json())?.error ?? "";
+        } catch {
+          /* non-JSON */
+        }
+        setSaveMsg({ ok: false, text: `Save failed (${res.status})${detail ? `: ${detail}` : ""}` });
+        return;
+      }
+      setSaveMsg({ ok: true, text: "Saved" });
+    } catch (e) {
+      setSaveMsg({ ok: false, text: e instanceof Error ? e.message : "Save failed" });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loadError) {
+    return (
+      <div className="p-8">
+        <Link href="/admin/shops" className="text-sm text-[#64748B] hover:text-[#0F172A]">
+          ← Back to Shops
+        </Link>
+        <div className="text-[#991B1B] py-12 text-center">{loadError}</div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -180,6 +221,14 @@ export default function AdminShopDetailPage({
                 >
                   {planLabel}
                 </span>
+                {data.billing && data.billing.state !== "uninstalled" && data.billing.state !== "free" && (
+                  <StatusPill status={data.billing.state} />
+                )}
+                {data.billing?.state === "trialing" && data.billing.trialEndsAt && (
+                  <span className="text-xs text-[#64748B]">
+                    trial ends {new Date(data.billing.trialEndsAt).toLocaleDateString()}
+                  </span>
+                )}
                 <span
                   className={`px-2.5 py-1 ${
                     isActive
@@ -348,6 +397,14 @@ export default function AdminShopDetailPage({
               >
                 {saving ? "Saving..." : "Save Overrides"}
               </button>
+              {saveMsg && (
+                <p
+                  role="status"
+                  className={`mt-2 text-sm ${saveMsg.ok ? "text-[#15803D]" : "text-[#991B1B]"}`}
+                >
+                  {saveMsg.text}
+                </p>
+              )}
             </div>
           </div>
 

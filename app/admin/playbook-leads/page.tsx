@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { csvCell } from "@/lib/admin/csv";
 import { Mail, Download } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
@@ -68,7 +69,7 @@ function toCsv(leads: Lead[]): string {
       String(l.nurture_step),
       utm,
       l.created_at,
-    ].map((c) => `"${String(c).replace(/"/g, '""')}"`);
+    ].map(csvCell);
     return cells.join(",");
   });
   return [header, ...rows].join("\n");

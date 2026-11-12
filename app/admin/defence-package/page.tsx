@@ -12,10 +12,23 @@ export default async function DefencePackageAdminPage() {
   if (!(await hasAdminSession())) {
     redirect("/admin/login");
   }
-  const [stats, driftRows] = await Promise.all([
-    getDashboardStats(),
+  const [statsResult, driftRows] = await Promise.all([
+    getDashboardStats().then(
+      (stats) => ({ stats, error: null as string | null }),
+      (e: unknown) => ({ stats: null, error: e instanceof Error ? e.message : "could not read run telemetry" }),
+    ),
     detectPromptModuleDrift(),
   ]);
+  // A failed telemetry read used to render as "0 runs · 0% OK"; say so instead.
+  const stats = statsResult.stats ?? {
+    totalRuns7d: 0,
+    okRate7d: 0,
+    failedCount7d: 0,
+    avgPromptTokens: 0,
+    avgCompletionTokens: 0,
+    avgDurationMs: 0,
+    modulesActive: driftRows.length,
+  };
   const undeclaredDrift = driftRows.filter(
     (r) => r.drifted && !r.intentionalOverride,
   );
@@ -29,6 +42,12 @@ export default async function DefencePackageAdminPage() {
         icon={ShieldCheck}
         iconGradient="from-[#1D4ED8] to-[#3B82F6]"
       />
+
+      {statsResult.error && (
+        <div role="alert" className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-4 text-sm text-[#991B1B]">
+          Run telemetry could not be read ({statsResult.error}). The 7-day figures below are not valid.
+        </div>
+      )}
 
       <div className={`rounded-lg border p-4 ${flagOn ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
         <p className="text-sm text-[#0F172A]">

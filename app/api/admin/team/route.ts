@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAdminAction } from "@/lib/admin/auditAction";
 import { hasAdminSession, getAdminSessionUser } from "@/lib/admin/auth";
 import { getServiceClient } from "@/lib/supabase/server";
 
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
   }
 
   const caller = await getAdminSessionUser();
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const email = body?.email;
 
   if (!email || typeof email !== "string") {
@@ -107,6 +108,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "That user already has admin access" }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (caller) {
+    await logAdminAction({
+      actor: { id: caller.id, email: caller.email },
+      eventType: "team.granted",
+      payload: { target_user_id: data.user_id, target_email: data.email },
+    });
   }
 
   return NextResponse.json(

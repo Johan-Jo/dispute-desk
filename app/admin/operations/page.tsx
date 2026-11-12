@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
@@ -28,6 +29,7 @@ interface DisputeMetrics {
 interface ShopLeaderboardEntry {
   shopId: string;
   domain: string;
+  primaryDomain?: string | null;
   attention: number;
   syncFail: number;
   overridden: number;
@@ -41,6 +43,7 @@ interface OpsEvent {
   disputeId: string;
   shopId: string;
   shopDomain: string;
+  primaryDomain?: string | null;
   orderName: string;
   eventType: string;
   description: string | null;
@@ -89,13 +92,35 @@ function relativeTime(iso: string): string {
 
 export default function OperationsPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    setError(null);
     fetch("/api/admin/metrics")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Metrics request failed (${r.status})`);
+        return r.json();
+      })
       .then(setMetrics)
-      .catch(() => {});
-  }, []);
+      .catch((e: Error) => setError(e.message));
+  }, [attempt]);
+
+  if (error && !metrics) {
+    return (
+      <div className="p-8">
+        <div className="py-12 text-center">
+          <p className="text-[#991B1B] mb-4">{error}</p>
+          <button
+            onClick={() => setAttempt((n) => n + 1)}
+            className="px-4 py-2 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!metrics) {
     return (
@@ -266,7 +291,7 @@ function ShopLeaderboard({ entries }: { entries: ShopLeaderboardEntry[] }) {
           {entries.map((shop) => (
             <Link key={shop.shopId} href={`/admin/disputes?shop_id=${shop.shopId}`} className="px-6 py-3 flex items-center justify-between hover:bg-[#F8FAFC] transition-colors block">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#0F172A] truncate">{shop.domain}</p>
+                <p className="text-sm font-medium text-[#0F172A]"><AdminMerchant shopDomain={shop.domain} primaryDomain={shop.primaryDomain} /></p>
                 <div className="flex gap-3 mt-1">
                   {shop.attention > 0 && <Tag color="#EF4444" label={`${shop.attention} attn`} />}
                   {shop.syncFail > 0 && <Tag color="#D97706" label={`${shop.syncFail} sync`} />}
@@ -327,9 +352,11 @@ function OpsActivityFeed({ events }: { events: OpsEvent[] }) {
                     <span className="text-sm font-medium text-[#0F172A]">{EVENT_LABELS[event.eventType] ?? event.eventType.replace(/_/g, " ")}</span>
                     <span className="text-xs text-[#64748B]">{event.orderName}</span>
                   </div>
+                  <div className="text-xs text-[#64748B]">
+                    <AdminMerchant shopDomain={event.shopDomain} primaryDomain={event.primaryDomain} />
+                  </div>
                   <div className="text-xs text-[#64748B] truncate">
-                    {event.shopDomain}
-                    {event.actorRef ? ` · ${event.actorRef}` : ` · ${event.actorType}`}
+                    {event.actorRef ? event.actorRef : event.actorType}
                     {event.description ? ` — ${event.description}` : ""}
                   </div>
                 </div>

@@ -41,34 +41,63 @@ export default function TemplateDetailPage({ params }: { params: Promise<{ id: s
   const [tpl, setTpl] = useState<TemplateDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/admin/templates/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(r.status === 404 ? "Template not found" : `Loading template failed (${r.status})`);
+        return r.json();
+      })
       .then((data) => {
         setTpl(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e: Error) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, [id]);
 
   const handleStatusChange = async (status: string) => {
     setSaving(true);
-    await fetch(`/api/admin/templates/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    // Refetch
-    const res = await fetch(`/api/admin/templates/${id}`);
-    setTpl(await res.json());
-    setSaving(false);
+    setError(null);
+    try {
+      const patch = await fetch(`/api/admin/templates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!patch.ok) {
+        let detail = "";
+        try {
+          detail = (await patch.json())?.error ?? "";
+        } catch {
+          /* non-JSON */
+        }
+        setError(`Status change failed (${patch.status})${detail ? `: ${detail}` : ""}`);
+        return;
+      }
+      const res = await fetch(`/api/admin/templates/${id}`);
+      if (res.ok) setTpl(await res.json());
+      else setError(`Reloading the template failed (${res.status})`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
     return (
       <div className="p-8">
         <div className="text-[#64748B] py-12 text-center">Loading template...</div>
+      </div>
+    );
+  }
+
+  if (!tpl) {
+    return (
+      <div className="p-8">
+        <div className="text-[#991B1B] py-12 text-center">{error ?? "Template not found"}</div>
       </div>
     );
   }
@@ -108,6 +137,12 @@ export default function TemplateDetailPage({ params }: { params: Promise<{ id: s
       />
 
       {/* Metadata */}
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
+
       <AdminStatsRow
         cards={[
           { label: "Dispute Type", value: tpl.dispute_type },

@@ -52,6 +52,16 @@ interface Metrics {
   packs: { total: number; byStatus: Record<string, number> };
   jobs: { queued: number; running: number; succeeded: number; failed: number };
   plans: Record<string, number>;
+  /** Payment-evidence billing summary (lib/admin/paidSubscriptions). */
+  billing: {
+    paid: number;
+    trialing: number;
+    grace: number;
+    unconfirmed: number;
+    free: number;
+    mrr: number;
+    labelMrr: number;
+  };
   templates: { total: number; active: number; draft: number; archived: number };
   reasonMappings: { total: number; mapped: number; unmapped: number };
   disputeMetrics: DisputeMetrics;
@@ -103,13 +113,35 @@ const OUTCOME_COLORS: Record<string, string> = {
 
 export default function AdminDashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    setError(null);
     fetch("/api/admin/metrics")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Metrics request failed (${r.status})`);
+        return r.json();
+      })
       .then(setMetrics)
-      .catch(() => {});
-  }, []);
+      .catch((e: Error) => setError(e.message));
+  }, [attempt]);
+
+  if (error && !metrics) {
+    return (
+      <div className="p-8">
+        <div className="py-12 text-center">
+          <p className="text-[#991B1B] mb-4">{error}</p>
+          <button
+            onClick={() => setAttempt((n) => n + 1)}
+            className="px-4 py-2 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!metrics) {
     return (
@@ -151,7 +183,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── 1. Health Status Bar ────────────────────────────────────────── */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         {healthSignals.map((sig) => (
           <div
             key={sig.label}
@@ -165,8 +197,24 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── 2. Platform KPIs ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <KpiCard icon={Store} label="Active Shops" value={String(metrics.shops.active)} />
+        <KpiCard
+          icon={DollarSign}
+          label="Paying Subscribers"
+          value={String(metrics.billing.paid)}
+          tone={metrics.billing.paid > 0 ? "good" : "neutral"}
+          hint={`${metrics.billing.trialing} on trial`}
+          title="Shops with a recorded first paid billing cycle and an active subscription — not just a paid plan label."
+        />
+        <KpiCard
+          icon={DollarSign}
+          label="MRR (paid)"
+          value={formatCurrency(metrics.billing.mrr, "USD")}
+          tone="good"
+          hint={metrics.billing.unconfirmed > 0 ? `${metrics.billing.unconfirmed} unconfirmed` : undefined}
+          title="Monthly recurring revenue from shops that have actually paid. Trials and plan labels with no recorded payment are excluded."
+        />
         <KpiCard icon={FileText} label="Disputes Processed" value={String(metrics.disputes)} />
         <KpiCard icon={Zap} label="Automation Success" value={`${metrics.automationSuccessRate}%`} tone={metrics.automationSuccessRate >= 80 ? "good" : "warn"} />
         <KpiCard icon={RefreshCw} label="Save-to-Shopify Rate" value={`${metrics.saveSuccessRate}%`} tone={metrics.saveSuccessRate >= 80 ? "good" : "warn"} />
@@ -346,7 +394,7 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          <PlanDistribution plans={metrics.plans} total={metrics.shops.total} />
+          <PlanDistribution plans={metrics.plans} total={metrics.shops.active} />
 
           <div className="bg-white border border-[#E2E8F0] rounded-lg p-4">
             <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Financials</h4>
@@ -464,7 +512,7 @@ function PlanDistribution({ plans, total }: { plans: Record<string, number>; tot
   const t = total || 1;
   const planColors: Record<string, string> = {
     enterprise: "#8B5CF6", scale: "#8B5CF6", professional: "#3B82F6",
-    growth: "#3B82F6", starter: "#22C55E", trial: "#94A3B8", free: "#94A3B8",
+    growth: "#3B82F6", starter: "#22C55E", trial: "#94A3B8", trialing: "#38BDF8", grace: "#F59E0B", unconfirmed: "#F59E0B", free: "#94A3B8",
   };
 
   return (
