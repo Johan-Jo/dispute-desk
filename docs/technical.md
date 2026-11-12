@@ -1119,7 +1119,11 @@ The Shops list shows a billing pill under the plan (`paid | trialing | grace | u
 
 ### Admin top-bar bell (`AdminNotifications`)
 
-The bell was a decorative button with a hard-coded red dot (no click handler). It is now `components/admin/AdminNotifications.tsx`, backed by `GET /api/admin/notifications`: exact head-count queries for open disputes needing attention, with sync issues, with uncertain submissions, and failed jobs (the same signals as the Operations queue). The badge shows the total only when above zero; clicking opens a list linking to `/admin/operations` or `/admin/jobs`; it refreshes every 60 s and on open, closes on outside click / Esc, and shows an error instead of zero if the request fails. The top-bar search box is still a read-only placeholder.
+The bell was a decorative button with a hard-coded red dot (no click handler). It is now `components/admin/AdminNotifications.tsx`, backed by `GET /api/admin/notifications`: exact head-count queries for open disputes needing attention, with sync issues, with uncertain submissions, and failed jobs (the same signals as the Operations queue). The badge shows the total only when above zero; clicking opens a list linking to `/admin/operations` or `/admin/jobs`; it refreshes every 60 s and on open, closes on outside click / Esc, and shows an error instead of zero if the request fails. The top-bar search is `components/admin/AdminSearch.tsx`, backed by `GET /api/admin/search?q=` (below).
+
+### Admin multi-search (`AdminSearch`, `/api/admin/search`)
+
+The top-bar search (previously a read-only placeholder) searches **shops** (storefront domain, myshopify domain, shop name), **disputes** (order number with or without `#`, Shopify dispute id, or the dispute uuid), **templates** (slug, dispute type) and **jobs** (type, or the job uuid) in one request, returning the top 5 per group and omitting empty groups. A shop row prints the storefront domain with the myshopify alias beneath it; dispute and job rows show the merchant. A uuid is looked up exactly. Characters that would break PostgREST's `or()` syntax (`% , ( ) * \`) are stripped; a query under 2 characters returns nothing; a database error is a 500 (the box shows it). UI: debounced (250 ms, stale responses discarded), `/` focuses the box, Up/Down move, Enter opens, Esc closes, click outside closes; hidden below the `md` breakpoint like before.
 
 ### Shop detail "Total invoiced"
 
