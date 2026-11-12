@@ -1,5 +1,18 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Bestellung {order}: Jetzt erstatten, damit aus der Anfrage keine Rückbuchung wird",
+      "preheader": "Der Kunde gibt an, eine Gutschrift sei nie verarbeitet worden, und es wurde nichts erstattet.",
+      "title": "Erstatten Sie Bestellung {order}, um diese Anfrage zu lösen",
+      "body": "Der Karteninhaber der Bestellung {order} hat seiner Bank mitgeteilt, dass eine Gutschrift über {amount} nie verarbeitet wurde. Die Bestellung zeigt eine Retoure, und es wurde keine Rückerstattung vorgenommen. Wir haben Shopify soeben geprüft.\n\nUm die Anfrage zu lösen, **erstatten Sie den strittigen Betrag ({amount}) im Shopify-Admin**. Ob Sie erstatten, entscheiden Sie selbst; DisputeDesk erstattet nicht für Sie.\n\nDie Rückerstattung kann etwa einen Tag brauchen, bis sie beim Zahlungsanbieter abgeschlossen ist. Danach wird die Anfrage meist kurz darauf geschlossen.\n\nEs lohnt sich, das vor dem Fälligkeitsdatum ({dueDate}) zu tun. Eine offene Anfrage kann zu einer Rückbuchung werden. Dann werden der strittige Betrag und eine Rückbuchungsgebühr abgebucht, Shopify sperrt Rückerstattungen dafür, und sie zählt zu Ihrer Rückbuchungsquote. Anfragen zählen nicht zu dieser Quote.",
+      "subjectFailed": "Bestellung {order}: Ihre Rückerstattung ist fehlgeschlagen",
+      "preheaderFailed": "Die Anfrage ist weiterhin offen und es wurde nichts zurückgezahlt.",
+      "titleFailed": "Die Rückerstattung für Bestellung {order} ist fehlgeschlagen",
+      "bodyFailed": "Eine Rückerstattung für Bestellung {order} wurde in Shopify gestartet, ist aber fehlgeschlagen. Es wurde nichts zurückgezahlt, und die Anfrage über {amount} ist weiterhin offen. Die Bestellung zeigt eine Retoure.\n\n**Erstatten Sie den strittigen Betrag ({amount}) im Shopify-Admin erneut** und prüfen Sie den Status der Rückerstattung im Verlauf der Bestellung. Ob Sie erstatten, entscheiden Sie selbst; DisputeDesk erstattet nicht für Sie.\n\nEs lohnt sich, das vor dem Fälligkeitsdatum ({dueDate}) zu tun. Eine offene Anfrage kann zu einer Rückbuchung werden. Dann werden der strittige Betrag und eine Rückbuchungsgebühr abgebucht, Shopify sperrt Rückerstattungen dafür, und sie zählt zu Ihrer Rückbuchungsquote. Anfragen zählen nicht zu dieser Quote.",
+      "cta": "Streitfall öffnen",
+      "footer": "DisputeDesk · Erinnerung zur Rückerstattung",
+      "eyebrow": "Erinnerung zur Rückerstattung"
+    },
     "billing": {
       "trialStarted": {
         "subject": "DisputeDesk {planName}-Testphase aktiviert",
@@ -3806,6 +3819,8 @@
     "notifNewDisputeDesc": "Benachrichtigung, wenn ein neuer Streitfall Ihre Aufmerksamkeit braucht. Bei Routing zur Prüfung erfolgt die E-Mail nach automatischer Beweisaufnahme.",
     "notifOutcome": "Ergebnis gemeldet",
     "notifOutcomeDesc": "Erhalten Sie eine E-Mail, sobald das Kartennetzwerk eine endgültige Entscheidung gemeldet hat — gewonnen, verloren oder ohne Einspruch geschlossen.",
+    "notifRefundAdvice": "Erinnerungen zur Rückerstattung",
+    "notifRefundAdviceDesc": "Erhalten Sie eine E-Mail, wenn sich eine Anfrage durch die Rückerstattung einer retournierten Bestellung lösen lässt, bevor daraus eine Rückbuchung wird.",
     "notifBeforeDue": "Vor Fälligkeit",
     "notifBeforeDueDesc": "Erinnerung 24 Stunden vor dem Abgabetermin",
     "notifEvidenceReady": "Beweise bereit",

@@ -28,6 +28,7 @@
  * tell a merchant "it is on its way" for it.
  */
 
+import { isRefundTransaction, refundTransactionStatus } from "@/lib/shopify/transactions/refundTransactions";
 import {
   REFUND_STATE_ORDER_TX_CAP,
   REFUND_STATE_REFUNDS_CAP,
@@ -122,11 +123,11 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
   const owned = new Set<string>();
   for (const r of refunds) {
     for (const t of r.transactions?.nodes ?? []) {
-      if (t.kind === "REFUND" && t.id) owned.add(t.id);
+      if (isRefundTransaction(t) && t.id) owned.add(t.id);
     }
   }
   for (const t of orderTx) {
-    if (t.kind === "REFUND" && (!t.id || !owned.has(t.id))) return unknown("unattributed_refund_transaction", base);
+    if (isRefundTransaction(t) && (!t.id || !owned.has(t.id))) return unknown("unattributed_refund_transaction", base);
   }
 
   let pending = 0;
@@ -139,23 +140,23 @@ export function resolveRefundState(raw: RawOrderRefundState | null | undefined, 
   const nowMs = typeof now === "string" ? Date.parse(now) : now.getTime();
 
   for (const r of refunds) {
-    const money = (r.transactions?.nodes ?? []).filter((t) => t.kind === "REFUND");
+    const money = (r.transactions?.nodes ?? []).filter(isRefundTransaction);
     if (money.length === 0) continue; // a Refund with no money: not a refund
 
     let refundHasPending = false;
     let refundHasSuccess = false;
     for (const t of money) {
-      const status = (t.status ?? "").toUpperCase();
+      const status = refundTransactionStatus(t);
       const amount = amountOf(t.amountSet);
       if (!Number.isFinite(amount)) return unknown("malformed_amount", base);
       currency = currency ?? t.amountSet?.shopMoney?.currencyCode ?? null;
-      if (status === "PENDING") {
+      if (status === "pending") {
         pending += amount;
         refundHasPending = true;
-      } else if (status === "SUCCESS") {
+      } else if (status === "settled") {
         settled += amount;
         refundHasSuccess = true;
-      } else if (status === "FAILURE") {
+      } else if (status === "failed") {
         failed += amount;
       } else {
         return unknown("unrecognised_status", base);

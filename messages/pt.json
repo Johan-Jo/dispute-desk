@@ -1,5 +1,18 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Encomenda {order}: reembolse agora para o pedido de informação não se tornar um estorno",
+      "preheader": "O cliente diz que um crédito nunca foi processado e não foi feito qualquer reembolso.",
+      "title": "Reembolse a encomenda {order} para resolver este pedido de informação",
+      "body": "O titular do cartão da encomenda {order} disse ao seu banco que um crédito de {amount} nunca foi processado. A encomenda mostra uma devolução e não foi feito qualquer reembolso. Verificámos o Shopify há instantes.\n\nPara o resolver, **reembolse o valor contestado ({amount}) no Shopify Admin**. Reembolsar é uma decisão sua; a DisputeDesk não o fará por si.\n\nO reembolso pode demorar cerca de um dia a ser concluído junto do prestador de pagamentos. Depois de concluído, o pedido costuma ser encerrado pouco depois.\n\nVale a pena fazê-lo antes do prazo ({dueDate}). Um pedido que fica em aberto pode tornar-se um estorno. Nesse caso, o valor contestado e uma taxa de estorno são debitados, o Shopify bloqueia os reembolsos e conta para a sua taxa de estornos. Os pedidos de informação não contam para essa taxa.",
+      "subjectFailed": "Encomenda {order}: o seu reembolso não foi concluído",
+      "preheaderFailed": "O pedido continua em aberto e nada foi devolvido.",
+      "titleFailed": "O reembolso da encomenda {order} não foi concluído",
+      "bodyFailed": "Foi iniciado um reembolso da encomenda {order} no Shopify, mas falhou: nada foi devolvido e o pedido de {amount} continua em aberto. A encomenda mostra uma devolução.\n\n**Reembolse novamente o valor contestado ({amount}) no Shopify Admin** e verifique o estado do reembolso na cronologia da encomenda. Reembolsar é uma decisão sua; a DisputeDesk não o fará por si.\n\nVale a pena fazê-lo antes do prazo ({dueDate}). Um pedido que fica em aberto pode tornar-se um estorno. Nesse caso, o valor contestado e uma taxa de estorno são debitados, o Shopify bloqueia os reembolsos e conta para a sua taxa de estornos. Os pedidos de informação não contam para essa taxa.",
+      "cta": "Abrir a disputa",
+      "footer": "DisputeDesk · lembrete de reembolso",
+      "eyebrow": "Lembrete de reembolso"
+    },
     "billing": {
       "trialStarted": {
         "subject": "Teste do DisputeDesk {planName} ativado",
@@ -3806,6 +3819,8 @@
     "notifNewDisputeDesc": "Seja notificado quando uma nova disputa precisar de atenção. Se suas regras enviarem para revisão, o e-mail é enviado após a coleta automática de evidências.",
     "notifOutcome": "Resultado publicado",
     "notifOutcomeDesc": "Receba um e-mail no momento em que a rede de cartões emitir uma decisão final — vencida, perdida ou encerrada sem contestação.",
+    "notifRefundAdvice": "Lembretes de reembolso",
+    "notifRefundAdviceDesc": "Receba um e-mail quando um pedido de informação puder ser resolvido reembolsando uma encomenda devolvida pelo cliente, antes de se tornar um estorno.",
     "notifBeforeDue": "Antes do prazo",
     "notifBeforeDueDesc": "Lembrete 24 horas antes do prazo da disputa",
     "notifEvidenceReady": "Evidência pronta",

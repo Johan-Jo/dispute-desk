@@ -1,5 +1,18 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Pedido {order}: reembólsalo ahora para que la consulta no se convierta en un contracargo",
+      "preheader": "El cliente dice que nunca se procesó un abono y no se ha emitido ningún reembolso.",
+      "title": "Reembolsa el pedido {order} para resolver esta consulta",
+      "body": "El titular de la tarjeta del pedido {order} le dijo a su banco que nunca se procesó un abono de {amount}. El pedido muestra una devolución y no se ha emitido ningún reembolso. Acabamos de comprobarlo en Shopify.\n\nPara resolverla, **reembolsa el importe en disputa ({amount}) desde Shopify Admin**. Reembolsar es decisión tuya; DisputeDesk no lo hará por ti.\n\nEl reembolso puede tardar aproximadamente un día en completarse con el proveedor de pagos. Cuando se complete, la consulta suele cerrarse poco después.\n\nConviene hacerlo antes de la fecha límite ({dueDate}). Una consulta que sigue abierta puede convertirse en un contracargo. Entonces se cargan el importe en disputa y una tarifa de contracargo, Shopify bloquea los reembolsos y cuenta para tu tasa de contracargos. Las consultas no cuentan para esa tasa.",
+      "subjectFailed": "Pedido {order}: tu reembolso no se completó",
+      "preheaderFailed": "La consulta sigue abierta y no se ha devuelto nada.",
+      "titleFailed": "El reembolso del pedido {order} no se completó",
+      "bodyFailed": "Se inició un reembolso del pedido {order} en Shopify, pero falló: no se ha devuelto nada y la consulta por {amount} sigue abierta. El pedido muestra una devolución.\n\n**Vuelve a reembolsar el importe en disputa ({amount}) desde Shopify Admin** y comprueba el estado del reembolso en el historial del pedido. Reembolsar es decisión tuya; DisputeDesk no lo hará por ti.\n\nConviene hacerlo antes de la fecha límite ({dueDate}). Una consulta que sigue abierta puede convertirse en un contracargo. Entonces se cargan el importe en disputa y una tarifa de contracargo, Shopify bloquea los reembolsos y cuenta para tu tasa de contracargos. Las consultas no cuentan para esa tasa.",
+      "cta": "Abrir la disputa",
+      "footer": "DisputeDesk · recordatorio de reembolso",
+      "eyebrow": "Recordatorio de reembolso"
+    },
     "billing": {
       "trialStarted": {
         "subject": "Prueba de DisputeDesk {planName} activada",
@@ -3806,6 +3819,8 @@
     "notifNewDisputeDesc": "Recibe un aviso cuando una disputa nueva requiera tu atención. Si tus reglas la envían a revisión, el correo se envía tras recopilar la evidencia automáticamente.",
     "notifOutcome": "Resultado publicado",
     "notifOutcomeDesc": "Recibe un correo en el momento en que la red de tarjetas emita una decisión final — ganada, perdida o cerrada sin disputa.",
+    "notifRefundAdvice": "Recordatorios de reembolso",
+    "notifRefundAdviceDesc": "Recibe un correo cuando una consulta pueda resolverse reembolsando un pedido devuelto por el cliente, antes de que se convierta en un contracargo.",
     "notifBeforeDue": "Antes del vencimiento",
     "notifBeforeDueDesc": "Recordatorio 24 horas antes del plazo de la disputa",
     "notifEvidenceReady": "Evidencia lista",

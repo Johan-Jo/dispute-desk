@@ -1,5 +1,18 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Order {order}: återbetala nu så att förfrågan inte blir en chargeback",
+      "preheader": "Kunden säger att en kredit aldrig behandlades, och ingen återbetalning har gjorts.",
+      "title": "Återbetala order {order} för att lösa den här förfrågan",
+      "body": "Kortinnehavaren för order {order} sa till sin bank att en kredit på {amount} aldrig behandlades. Ordern har en retur och ingen återbetalning har gjorts. Vi kontrollerade Shopify alldeles nyss.\n\nFör att lösa den: **återbetala det omtvistade beloppet ({amount}) i Shopify Admin**. Det är ditt beslut om du återbetalar; DisputeDesk gör det inte åt dig.\n\nÅterbetalningen kan ta ungefär ett dygn att slutföras hos betalningsleverantören. När den har slutförts stängs förfrågan oftast kort därefter.\n\nDet lönar sig att göra det före förfallodatumet ({dueDate}). En förfrågan som förblir öppen kan bli en chargeback. Då dras det omtvistade beloppet och en chargeback-avgift, Shopify blockerar återbetalningar på den, och den räknas in i din chargeback-frekvens. Förfrågningar räknas inte in i den frekvensen.",
+      "subjectFailed": "Order {order}: din återbetalning gick inte igenom",
+      "preheaderFailed": "Förfrågan är fortfarande öppen och inget har betalats tillbaka.",
+      "titleFailed": "Återbetalningen för order {order} gick inte igenom",
+      "bodyFailed": "En återbetalning för order {order} startades i Shopify men misslyckades, så inget har betalats tillbaka och förfrågan på {amount} är fortfarande öppen. Ordern har en retur.\n\n**Återbetala det omtvistade beloppet ({amount}) igen i Shopify Admin** och kontrollera återbetalningens status i orderns tidslinje. Det är ditt beslut om du återbetalar; DisputeDesk gör det inte åt dig.\n\nDet lönar sig att göra det före förfallodatumet ({dueDate}). En förfrågan som förblir öppen kan bli en chargeback. Då dras det omtvistade beloppet och en chargeback-avgift, Shopify blockerar återbetalningar på den, och den räknas in i din chargeback-frekvens. Förfrågningar räknas inte in i den frekvensen.",
+      "cta": "Öppna tvisten",
+      "footer": "DisputeDesk · påminnelse om återbetalning",
+      "eyebrow": "Påminnelse om återbetalning"
+    },
     "billing": {
       "trialStarted": {
         "subject": "DisputeDesk {planName}-provperiod aktiverad",
@@ -3807,6 +3820,8 @@
     "notifNewDisputeDesc": "Få avisering när en ny tvist behöver din uppmärksamhet. Om dina regler skickar den till granskning skickas mejlet när automatiska bevis har samlats in.",
     "notifOutcome": "Resultat publicerat",
     "notifOutcomeDesc": "Få ett mejl i det ögonblick kortnätverket fattar ett slutligt beslut — vunnen, förlorad eller avslutad utan bestridande.",
+    "notifRefundAdvice": "Påminnelser om återbetalning",
+    "notifRefundAdviceDesc": "Få ett e-postmeddelande när en förfrågan kan lösas genom att återbetala en order som kunden har returnerat, innan den blir en chargeback.",
     "notifBeforeDue": "Innan förfallodatum",
     "notifBeforeDueDesc": "Påminnelse 24 timmar innan tvisttiden löper ut",
     "notifEvidenceReady": "Bevis klart",

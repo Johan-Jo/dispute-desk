@@ -45,6 +45,8 @@ interface NotificationPrefs {
    *  closed (won / lost / accepted). Default-on, opt-out. Surfaced
    *  in Team settings as of 2026-05-20. */
   outcome: boolean;
+  /** Refund reminder: an open inquiry that a refund would resolve. Default-on, opt-out. */
+  refundAdvice: boolean;
 }
 
 interface AutomationSettings {
@@ -173,6 +175,7 @@ export default function EmbeddedSettingsPage() {
   // Outcome-posted email — default ON (opt-out semantics matching the
   // helper at lib/email/sendOutcomePostedAlert.ts:206).
   const [notifOutcome, setNotifOutcome] = useState(true);
+  const [notifRefundAdvice, setNotifRefundAdvice] = useState(true);
   // Monthly Chargeback Exposure digest. Default ON — opt-out only.
   const [notifMonthlyDigest, setNotifMonthlyDigest] = useState(true);
 
@@ -316,6 +319,7 @@ export default function EmbeddedSettingsPage() {
           // Same opt-out semantics for the outcome email — the helper
           // sends unless explicitly `outcome === false`.
           setNotifOutcome(n.outcome ?? true);
+          setNotifRefundAdvice(n.refundAdvice ?? true);
         }
         if (prefs.teamEmail) {
           setTeamEmail(prefs.teamEmail);
@@ -603,6 +607,20 @@ export default function EmbeddedSettingsPage() {
                       label=""
                       checked={notifOutcome}
                       onChange={(v) => { setNotifOutcome(v); void persistNotification("outcome", v); }}
+                      labelHidden
+                    />
+                  </InlineStack>
+                </div>
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifRefundAdvice")}</Text>
+                      <Text as="span" variant="bodySm" tone="subdued">{t("notifRefundAdviceDesc")}</Text>
+                    </BlockStack>
+                    <Checkbox
+                      label=""
+                      checked={notifRefundAdvice}
+                      onChange={(v) => { setNotifRefundAdvice(v); void persistNotification("refundAdvice", v); }}
                       labelHidden
                     />
                   </InlineStack>
