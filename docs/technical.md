@@ -1107,6 +1107,10 @@ Admin MRR, "Paying Subscribers", the Billing page and the Shops-list MRR column 
 
 `/admin/disputes/[id]` talks to `GET /api/admin/disputes/:id/timeline`, `GET|POST …/notes` and `POST …/resync`, **not** the merchant routes `/api/disputes/:id/*`. Those require a `Bearer` token whose `app_metadata.role` is `admin|support`, which the admin UI never sends, so the page used to get 401/403, show an empty timeline and silently drop notes and resyncs. The admin routes sit under `/api/admin/*`, so the middleware enforces session + `internal_admin_grants` + passkey cookie before they run (do **not** loosen the merchant routes to accept a bare cookie session — that would skip the passkey factor). Both route sets are thin wrappers over `lib/disputes/internal/{timeline,notes,resync}.ts`, which take the caller as a parameter. The page now shows any failed load/action in an alert instead of swallowing it. `/admin/disputes?shop_id=<uuid>` (the Operations leaderboard link) filters to that shop, with a "Show all shops" chip.
 
+### Admin shops: billing state, validated overrides
+
+The Shops list shows a billing pill under the plan (`paid | trialing | grace | unconfirmed`) and has **Paying** / **On trial** filters (client-side on `billingState`). `GET /api/admin/shops/:id` returns `billing: { state, subscriptionState, trialEndsAt, firstPaidAt }` from `plan_entitlements`; the detail header shows the same pill and the trial end date. `PATCH /api/admin/shops/:id` validates `plan` against `PLANS` and `pack_limit_override` (non-negative integer or null), returns 400 on a malformed body, and audits as `actorType: "admin"` with the operator's email (it used to log `system`). A plan override changes the label only: if it diverges from `plan_entitlements`, the shop shows as `unconfirmed` and contributes no MRR. List/detail/activity loads and the Save button surface failures instead of rendering an empty list or a fake "Saved".
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

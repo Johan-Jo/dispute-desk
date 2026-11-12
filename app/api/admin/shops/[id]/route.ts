@@ -3,6 +3,8 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { computeStoreRevenue } from "@/lib/admin/storeRevenue";
 import { getAdminSessionUser } from "@/lib/admin/auth";
+import { PLANS } from "@/lib/billing/plans";
+import { classifyBillingState } from "@/lib/admin/paidSubscriptions";
 
 export const runtime = "nodejs";
 
@@ -10,19 +12,35 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const sb = getServiceClient();
 
-  const [shop, disputeCount, packCount, storeRevenue] = await Promise.all([
+  const [shop, disputeCount, packCount, storeRevenue, entitlement] = await Promise.all([
     sb.from("shops").select("*").eq("id", id).single(),
     sb.from("disputes").select("id", { count: "exact", head: true }).eq("shop_id", id),
     sb.from("evidence_packs").select("id", { count: "exact", head: true }).eq("shop_id", id),
     computeStoreRevenue(id),
+    sb
+      .from("plan_entitlements")
+      .select("shop_id, plan_key, subscription_state, first_paid_cycle_started_at, trial_ends_at")
+      .eq("shop_id", id)
+      .maybeSingle(),
   ]);
 
   if (!shop.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const ent = entitlement.data ?? null;
 
   return NextResponse.json({
     shop: shop.data,
     disputes: disputeCount.count ?? 0,
     packs: packCount.count ?? 0,
+    // Payment evidence, not the plan label (lib/admin/paidSubscriptions.ts).
+    billing: {
+      state: classifyBillingState(
+        { plan: (shop.data.plan as string | null) ?? null, uninstalled_at: (shop.data.uninstalled_at as string | null) ?? null },
+        ent,
+      ),
+      subscriptionState: ent?.subscription_state ?? null,
+      trialEndsAt: ent?.trial_ends_at ?? null,
+      firstPaidAt: ent?.first_paid_cycle_started_at ?? null,
+    },
     // Merchant's own store revenue (GMV) over trailing 30 days — the
     // "Monthly Revenue" card shows this, not our subscription revenue.
     storeRevenue: {
@@ -36,8 +54,28 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 /** PATCH — admin overrides (plan, pack_limit_override, admin_notes) */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const sb = getServiceClient();
+  const admin = await getAdminSessionUser();
+
+  // `shops.plan` feeds plan gating everywhere; an arbitrary string here would
+  // silently break it for that shop.
+  if (body.plan && !(body.plan in PLANS)) {
+    return NextResponse.json(
+      { error: `Unknown plan "${String(body.plan)}". Valid: ${Object.keys(PLANS).join(", ")}` },
+      { status: 400 },
+    );
+  }
+  if (
+    body.pack_limit_override !== undefined &&
+    body.pack_limit_override !== null &&
+    !(Number.isInteger(body.pack_limit_override) && body.pack_limit_override >= 0)
+  ) {
+    return NextResponse.json({ error: "pack_limit_override must be a non-negative integer or null" }, { status: 400 });
+  }
 
   const updates: Record<string, unknown> = {};
   if (body.plan) updates.plan = body.plan;
@@ -51,9 +89,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   await logAuditEvent({
     shopId: id,
-    actorType: "system",
+    actorType: "admin",
+    actorId: admin?.email ?? null,
     eventType: "admin_override",
-    eventPayload: { updates: body, admin: true },
+    eventPayload: { updates: body, admin: true, admin_email: admin?.email ?? null },
   });
 
   return NextResponse.json({ ok: true });
