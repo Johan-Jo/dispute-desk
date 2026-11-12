@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   const disputesBase = sb
     .from("disputes")
-    .select("id, order_name, reason, phase, normalized_status, shop_id")
+    .select("id, order_name, dispute_gid, reason, phase, normalized_status, shop_id")
     .order("last_event_at", { ascending: false, nullsFirst: false })
     .limit(PER_GROUP);
   const disputesQ = isUuid
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       label: "Disputes",
       items: (disputes.data ?? []).map((d) => ({
         id: d.id as string,
-        title: `${(d.order_name as string | null) ?? "Order"} · ${String(d.reason ?? d.phase ?? "dispute").replace(/_/g, " ")}`,
+        title: `${(d.order_name as string | null) ?? `Dispute ${String(d.dispute_gid ?? "").split("/").pop() || String(d.id).slice(0, 8)}`} · ${String(d.reason ?? d.phase ?? "dispute").replace(/_/g, " ")}`,
         subtitle: merchantOf(d.shop_id as string | null),
         href: `/admin/disputes/${d.id}`,
         badge: ((d.normalized_status as string | null) ?? "").replace(/_/g, " ") || null,
