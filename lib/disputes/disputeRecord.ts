@@ -45,7 +45,8 @@ import {
 import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
 import { utcDaysUntil, type RecordFormat } from "@/lib/disputes/recordFormat";
 import { askActionKey, isAskOffered, primaryAsk, type Ask } from "@/lib/disputes/merchantAsks";
-import { composeStatusCopy, type StatusCopy } from "@/lib/disputes/presentation/statusCopy";
+import { composeStatusCopy, type StatusCopy, type StatusCopyInput } from "@/lib/disputes/presentation/statusCopy";
+import { REFUND_STATE_FRESH_MS, type PageRefundState } from "@/lib/disputes/refundStateStore";
 import { resolveSaveAttempt } from "@/lib/disputes/presentation/resolveSaveAttempt";
 import type { BuildAttemptState } from "@/lib/disputes/presentation/resolveBuildAttempt";
 import type { OperationalLifecycle } from "@/lib/disputes/presentation/types";
@@ -302,6 +303,10 @@ export interface RecordInputs {
   fatalReason: string | null;
   /** Shopify's return situation for the order. */
   returns: "none" | "requested" | "in_progress" | "returned" | "failed" | "unknown";
+  /** When the order's return was created (`orderSituation.returnOpenedAt`); null when the order's events do not say. */
+  returnOpenedAt?: string | null;
+  /** The live refund state (`dispute_refund_state`) as the page payload carries it; null = never read. */
+  refundState?: PageRefundState | null;
   /** A customer message in the support inbox asks to return this order (read-time, Gorgias). */
   customerAskedInSupport?: boolean;
   canDecide: boolean;
@@ -765,6 +770,34 @@ function paymentInCurrency(facts: Record<string, Record<string, unknown>>, curre
 
 const PREPARED_STAGES: readonly RecordStage[] = ["prepared", "prepared_review", "held", "needs_attention", "fatal"];
 
+/**
+ * The live refund state as the status block reads it. A snapshot older than REFUND_STATE_FRESH_MS (the cron runs
+ * every 3 h) no longer describes the present, so it becomes null: every refund line is dropped rather than risk
+ * telling a merchant "refund this" about an order they refunded since.
+ */
+function refundLiveFor(
+  s: PageRefundState | null,
+  now: string,
+  fmt: RecordFormat,
+  date: (iso: string | null | undefined) => string | null,
+): StatusCopyInput["refundLive"] {
+  if (!s) return null;
+  const age = Date.parse(now) - Date.parse(s.checkedAt);
+  if (!Number.isFinite(age) || age > REFUND_STATE_FRESH_MS) return null;
+  const cur = s.currency ?? "";
+  switch (s.kind) {
+    case "pending":
+      return { kind: s.kind, amount: fmt.money(s.pendingAmount, cur), day: date(s.firstRefundAt), stalled: s.stalledPending };
+    case "failed":
+      return { kind: s.kind, amount: fmt.money(s.failedAmount, cur), day: date(s.firstRefundAt), stalled: false };
+    case "settled":
+    case "mixed":
+      return { kind: s.kind, amount: fmt.money(s.settledAmount, cur), day: date(s.settledAt), stalled: false };
+    default:
+      return { kind: s.kind, amount: null, day: null, stalled: false };
+  }
+}
+
 export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeRecord {
   const v = i.view;
   const facts = v.facts;
@@ -1066,6 +1099,15 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
   if (dl?.confirmed && dl.deliveredAt && deliveryItem) {
     timeline.push({ at: dl.deliveredAt, title: tk("timeline.t.delivered"), text: deliveryItem.detail, kind: "done" });
   }
+  // The return the store has in Shopify belongs on the same line as the order and the dispute. Dated only when the order's events say when.
+  if (i.returnOpenedAt && i.returns !== "none" && i.returns !== "unknown") {
+    timeline.push({
+      at: i.returnOpenedAt,
+      title: tk("timeline.t.returnOpened"),
+      text: tk(RETURN_DETAIL_KEY[i.returns]),
+      kind: "done",
+    });
+  }
   if (v.openedAt) timeline.push({ at: v.openedAt, title: tk("timeline.t.opened"), text: f.claim, kind: "done" });
   if (i.escalatedAt && f.escalated) timeline.push({ at: i.escalatedAt, title: tk("timeline.t.escalated"), text: f.escalated, kind: "done" });
   if (i.reopenedAt && f.reopened) timeline.push({ at: i.reopenedAt, title: tk("timeline.t.reopened"), text: f.reopened, kind: "done" });
@@ -1164,6 +1206,8 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
     ackFits,
     returnedToSender: i.returnedToSender === true,
     recordSituation: returnOnRecord ? "return" : i.refund === "some" ? "refund" : null,
+    returns: i.returns,
+    refundLive: refundLiveFor(i.refundState ?? null, i.now, fmt, date),
     claim: f.claim as I18nToken,
     caseFact,
     citedList: citedListToken ? nestFrom(citedListToken) : null,

@@ -255,6 +255,9 @@ describe("copy and wiring invariants", () => {
     "disputes.decidedView.checklist.item.refundRecord": "checklist label naming a document ('why no refund was due'), not a claim",
     "disputes.whyText.no_return_initiated": "explains what the evidence field is for ('no refund was owed' argument), not a claim",
     "disputes.signalLabelValue.noRefundOwed": "names the argument the evidence supports ('no refund was owed'), not a record of the order",
+    "disputes.record.status.can.refundInquiry": "refund advice on the status block; shown only when the LIVE refund state (dispute_refund_state, read from Shopify within 12 h) says none (lib/disputes/presentation/statusCopy.ts shouldAdviseRefund), never from the pack",
+    "email.refundAdvice.preheader": "refund-reminder email; asserted only after a LIVE read of Refund.transactions moments before sending (lib/disputes/refundState.ts, decideRefundAdvice), never from the stored pack",
+    "email.refundAdvice.body": "refund-reminder email; asserted only after a LIVE read of Refund.transactions moments before sending (lib/disputes/refundState.ts, decideRefundAdvice), never from the stored pack",
   };
 
   it("no sentence outside disputes.refundStatement says 'no refund' (existing offenders are a reasoned baseline)", () => {

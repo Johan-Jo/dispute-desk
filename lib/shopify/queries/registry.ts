@@ -28,6 +28,7 @@ import { ORDER_DETAIL_QUERY } from "./orders";
 import { CUSTOMER_ORDERS_FOR_CE30_QUERY } from "./customerOrdersForCE30";
 import { ORDERS_FOR_BACKFILL_QUERY } from "./ordersForBackfill";
 import { ORDER_FOR_INGEST_QUERY } from "./orderForIngest";
+import { ORDER_REFUND_STATE_QUERY } from "./orderRefundState";
 import { ORDERS_FOR_SNAPSHOT_QUERY } from "./ordersForSnapshot";
 import { APP_CHARGE_STATUS_QUERY } from "./appChargeStatus";
 import { ACTIVE_SUBSCRIPTIONS_QUERY } from "./activeSubscriptions";
@@ -99,6 +100,14 @@ export const PRODUCTION_GRAPHQL: ProductionGraphQL[] = [
     name: "ORDER_DETAIL_QUERY",
     type: "query",
     body: ORDER_DETAIL_QUERY,
+    stubVariables: { id: STUB.orderGid },
+    dryRun: true,
+  },
+  {
+    // Pending-refund advice plan PR A — live refund state (Refund.transactions) for open inquiries.
+    name: "ORDER_REFUND_STATE_QUERY",
+    type: "query",
+    body: ORDER_REFUND_STATE_QUERY,
     stubVariables: { id: STUB.orderGid },
     dryRun: true,
   },

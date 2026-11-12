@@ -588,6 +588,10 @@ async function sendManualEvidenceAlert(
     disputeId: dispute.id,
     disputeReason: dispute.reason,
     disputeAmount: amount,
+    disputeCurrency: (dispute.currency_code as string | null | undefined) ?? null,
+    locale:
+      ((setup?.steps as Record<string, { payload?: Record<string, unknown> }> | undefined)?.store_profile?.payload
+        ?.storeLocale as string | undefined) ?? null,
     packId,
     storeTypes,
     hasRealDeliveryProof,

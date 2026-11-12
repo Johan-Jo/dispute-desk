@@ -1,5 +1,20 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Order {order}: återbetala nu så att förfrågan inte blir en chargeback",
+      "preheader": "Kunden säger att en kredit aldrig behandlades, och ingen återbetalning har gjorts.",
+      "title": "Återbetala order {order} för att lösa den här förfrågan",
+      "body": "Kortinnehavaren för order {order} sa till sin bank att en kredit på {amount} aldrig behandlades. Ordern har en retur och ingen återbetalning har gjorts. Vi kontrollerade Shopify alldeles nyss.\n\nFör att lösa den: **återbetala det omtvistade beloppet ({amount}) i Shopify Admin**. Det är ditt beslut om du återbetalar; DisputeDesk gör det inte åt dig.\n\nÅterbetalningen kan ta ungefär ett dygn att slutföras hos betalningsleverantören. När den har slutförts stängs förfrågan oftast kort därefter.\n\nDet lönar sig att göra det före förfallodatumet ({dueDate}). En förfrågan som förblir öppen kan bli en chargeback. Då dras det omtvistade beloppet och en chargeback-avgift, Shopify blockerar återbetalningar på den, och den räknas in i din chargeback-frekvens. Förfrågningar räknas inte in i den frekvensen.",
+      "subjectFailed": "Order {order}: din återbetalning gick inte igenom",
+      "preheaderFailed": "Förfrågan är fortfarande öppen och inget har betalats tillbaka.",
+      "titleFailed": "Återbetalningen för order {order} gick inte igenom",
+      "bodyFailed": "En återbetalning för order {order} startades i Shopify men misslyckades, så inget har betalats tillbaka och förfrågan på {amount} är fortfarande öppen. Ordern har en retur.\n\n**Återbetala det omtvistade beloppet ({amount}) igen i Shopify Admin** och kontrollera återbetalningens status i orderns tidslinje. Det är ditt beslut om du återbetalar; DisputeDesk gör det inte åt dig.\n\nDet lönar sig att göra det före förfallodatumet ({dueDate}). En förfrågan som förblir öppen kan bli en chargeback. Då dras det omtvistade beloppet och en chargeback-avgift, Shopify blockerar återbetalningar på den, och den räknas in i din chargeback-frekvens. Förfrågningar räknas inte in i den frekvensen.",
+      "cta": "Öppna tvisten",
+      "footer": "DisputeDesk · påminnelse om återbetalning",
+      "eyebrow": "Påminnelse om återbetalning",
+      "storeResultsRefunded": "I din butik avslutades {won} av {decided} förfrågningar där en återbetalning gjordes till din fördel.",
+      "storeResultsUnrefunded": "Av {total} förfrågningar som avslutades utan återbetalning blev {escalated} chargebacks."
+    },
     "billing": {
       "trialStarted": {
         "subject": "DisputeDesk {planName}-provperiod aktiverad",
@@ -58,6 +73,53 @@
         "body": "Utkast är fortfarande obegränsade — men att lämna in bevis till banken kräver en kredit, och du har använt alla dina kostnadsfria inlämningar.\n\nEn återvunnen chargeback är oftast värd långt mer än en plan för $29/mån, så en enda vunnen tvist betalar sig i månader. Uppgradera nu för att fortsätta svara före din deadline.",
         "cta": "Uppgradera plan"
       }
+    },
+    "fatalLoss": {
+      "subjectInrInquiry": "Åtgärd krävs: förfrågan för order {order} kan inte försvaras utan spårning",
+      "subjectInrChargeback": "Åtgärd krävs: chargebacken för order {order} kan inte försvaras utan spårning",
+      "subjectRefundedInquiry": "Ingen åtgärd krävs: förfrågan för order {order} är redan återbetald",
+      "subjectRefundedChargeback": "Ingen åtgärd krävs: chargebacken för order {order} är redan återbetald",
+      "greeting": "Hej,",
+      "lead": "{phase, select, inquiry {Förfrågan} other {Chargebacken}} för order **{order}**{amountSuffix} kan inte vinnas som det ser ut nu. {situation}",
+      "situationInr": "Kunden säger att varan aldrig kom fram, och ordern har ingen försändelse registrerad.",
+      "situationRefunded": "En återbetalning som täcker den här debiteringen har redan gjorts.",
+      "whatToDo": "Vad du kan göra",
+      "actionShipped": "**Om den skickades:** lägg till spårningsnumret på ordern i Shopify. DisputeDesk bygger om försvaret automatiskt när försändelsen dyker upp, och ärendet blir möjligt att försvara.",
+      "actionNeverShippedInquiry": "**Om den aldrig skickades:** kontrollera i Shopify Admin om ordern redan har återbetalats. Om inte kan en återbetalning av det omtvistade beloppet lösa förfrågan innan den blir en chargeback med avgift.",
+      "actionNeverShippedChargeback": "**Om den aldrig skickades:** det finns inget att göra och inget att återbetala. Det omtvistade beloppet och chargeback-avgiften har redan dragits, och Shopify blockerar återbetalningar medan en chargeback är öppen. Låt den avslutas.",
+      "actionWithdraw": "**Bara om kunden erkänner att det blev fel:** be kunden kontakta sin bank och dra tillbaka tvisten, och skicka oss bankens återkallelsebrev. Det är den enda vägen som upphäver en chargeback.",
+      "actionNoAction": "**Ingen åtgärd krävs:** låt det här ärendet avslutas. Att bestrida det skulle säga till banken att pengarna är skyldiga.",
+      "actionRefundedBefore": "**Om du återbetalade INNAN kunden öppnade tvisten**, säg till oss. En kredit före tvisten är ett av de starkaste argumenten, och vi bygger om försvaret kring den.",
+      "notSentInr": "DisputeDesk har **inte** skickat något försvar för den här tvisten: det finns inget faktabaserat att argumentera med än. När tidsfristen löper ut skickar Shopify vidare de grundläggande orderuppgifterna den har. Det vinner sällan, och på en order utan registrerad försändelse argumenterar det mot dig.",
+      "notSentRefunded": "DisputeDesk har **inte** skickat något försvar för den här tvisten. När tidsfristen löper ut skickar Shopify vidare de grundläggande orderuppgifterna den har. Det vinner sällan.",
+      "openDispute": "Öppna den här tvisten i DisputeDesk",
+      "reasonLabel": "Orsak till tvisten",
+      "deadlineLabel": "Tidsfrist",
+      "shopLabel": "Butik",
+      "signoff": "– DisputeDesk"
+    },
+    "evidenceNeeded": {
+      "subjectReview": "{hasOrder, select, yes {Bevispaket redo att granska: order {order} — tvist ”{reason}”{amountPart}} other {Bevispaket redo att granska — tvist ”{reason}”{amountPart}}}",
+      "subjectAsk": "{hasOrder, select, yes {Åtgärd krävs: ladda upp bevis, order {order} — tvist ”{reason}”{amountPart}} other {Åtgärd krävs: ladda upp bevis — tvist ”{reason}”{amountPart}}}",
+      "headingReview": "Ditt bevispaket är redo att granska",
+      "headingAsk": "Manuella bevis behövs",
+      "introReview": "En tvist om **{reason}**{amountPart}{hasOrder, select, yes { för order {order}} other {}} för {shop} har behandlats. DisputeDesk har samlat alla bevis som går att hämta från Shopify{withTools, select, yes { och dina anslutna verktyg} other {}} – inget behöver laddas upp. Granska paketet när du har en stund.",
+      "introAsk": "En tvist om **{reason}**{amountPart}{hasOrder, select, yes { för order {order}} other {}} för {shop} har behandlats. DisputeDesk har samlat de tillgängliga Shopify-uppgifterna, men den här typen av tvist tjänar på ytterligare bevis som måste laddas upp manuellt.",
+      "attachedTitle": "Redan bifogat:",
+      "attachedDelivery": "Leveransbekräftelse och spårning",
+      "attachedComms": "Kundsupportkonversationer",
+      "askTitleUpload": "Ladda upp följande:",
+      "askTitleReview": "Väntar på din granskning:",
+      "typeCarrierLabel": "Fraktbolagets leveransbevis",
+      "typeCarrierHint": "Signerad leveransbekräftelse, fraktbolagets leveransbevis eller leveransfoto",
+      "typeReviewLabel": "Granska matchade supportkonversationer",
+      "typeReviewHintCount": "{count, plural, one {# matchad supportkonversation väntar} other {# matchade supportkonversationer väntar}} på din granskning – godkänn de som stödjer ditt försvar.",
+      "typeReviewHintNone": "Matchade supportkonversationer väntar på din granskning – godkänn de som stödjer ditt försvar.",
+      "ctaReview": "Granska tvisten →",
+      "ctaReviewConversations": "Granska matchade konversationer →",
+      "ctaUpload": "Visa tvisten och ladda upp bevis →",
+      "footer": "Det här e-postmeddelandet skickades eftersom du aktiverade bevisaviseringar i DisputeDesk-inställningarna. Du kan ändra aviseringsinställningarna under Inställningar.",
+      "shopFallback": "din butik"
     }
   },
   "nav": {
@@ -2553,7 +2615,7 @@
         },
         "can": {
           "evidence": "Har du bevis som vi inte kan se, till exempel en leveransbekräftelse från transportören, lägger du till dem på fliken Bevis.",
-          "refundInquiry": "Återbetala hela ordern i Shopify Admin. Det här är fortfarande en förfrågan, så inga pengar har dragits och en full återbetalning avslutar den. Om den blir en chargeback blockerar Shopify återbetalningar och beloppet är förlorat."
+          "refundInquiry": "Shopify visar ingen återbetalning på den här ordern. Att återbetala det omtvistade beloppet ({amount}) i Shopify Admin kan lösa förfrågan innan den blir en chargeback. Blir den en chargeback blockerar Shopify återbetalningar och beloppet är förlorat."
         },
         "optional": {
           "ack": "Kortinnehavarens bekräftelse skulle stärka ärendet."
@@ -2596,6 +2658,11 @@
         "done": {
           "drafted": "Underlaget är insamlat och ett svar är skrivet. Inget har lämnats in.",
           "evidence": "Underlaget är insamlat. Inget har lämnats in."
+        },
+        "refund": {
+          "pending": "En återbetalning på {amount} startades den {date} och behandlas fortfarande. Inget mer behövs; förfrågan stängs oftast när den har slutförts.",
+          "failed": "En återbetalning på {amount} startades den {date} men misslyckades, så inget har betalats tillbaka. Återbetala det omtvistade beloppet igen i Shopify Admin.",
+          "settledOpen": "En återbetalning på {amount} slutfördes den {date}. Förfrågan är fortfarande öppen."
         }
       },
       "claim": {
@@ -2936,6 +3003,7 @@
           "placedPaid": "Order lagd och betald",
           "shipped": "Order skickad",
           "delivered": "Levererad",
+          "returnOpened": "Retur påbörjad",
           "opened": "Tvist öppnad",
           "prepared": "Försvarspaket förberett",
           "deadline": "Frist",
@@ -3806,6 +3874,8 @@
     "notifNewDisputeDesc": "Få avisering när en ny tvist behöver din uppmärksamhet. Om dina regler skickar den till granskning skickas mejlet när automatiska bevis har samlats in.",
     "notifOutcome": "Resultat publicerat",
     "notifOutcomeDesc": "Få ett mejl i det ögonblick kortnätverket fattar ett slutligt beslut — vunnen, förlorad eller avslutad utan bestridande.",
+    "notifRefundAdvice": "Påminnelser om återbetalning",
+    "notifRefundAdviceDesc": "Få ett e-postmeddelande när en förfrågan kan lösas genom att återbetala en order som kunden har returnerat, innan den blir en chargeback.",
     "notifBeforeDue": "Innan förfallodatum",
     "notifBeforeDueDesc": "Påminnelse 24 timmar innan tvisttiden löper ut",
     "notifEvidenceReady": "Bevis klart",

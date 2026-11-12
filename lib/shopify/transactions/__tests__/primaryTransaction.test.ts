@@ -246,6 +246,9 @@ describe("no successful payment → unknown, never card", () => {
 describe("guard: one primary-transaction picker", () => {
   const repoRoot = join(__dirname, "..", "..", "..", "..");
   const canonical = join("lib", "shopify", "transactions", "primaryTransaction.ts");
+  // The one sibling allowed to compare transaction kind/status: REFUND transactions are a different question from
+  // "which transaction is the payment", and keeping their comparisons in a single file serves the same purpose.
+  const refundSibling = join("lib", "shopify", "transactions", "refundTransactions.ts");
 
   function walk(dir: string): string[] {
     const out: string[] = [];
@@ -270,7 +273,7 @@ describe("guard: one primary-transaction picker", () => {
       ...walk(join(repoRoot, "app")),
     ]) {
       const rel = relative(repoRoot, file).split(sep).join("/");
-      if (rel === canonical.split(sep).join("/")) continue;
+      if (rel === canonical.split(sep).join("/") || rel === refundSibling.split(sep).join("/")) continue;
       const src = readFileSync(file, "utf8");
       // `.status === "SUCCESS"` is common for unrelated records
       // (fulfillments, carrier results); only treat it as a transaction

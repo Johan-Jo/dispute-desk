@@ -18,6 +18,9 @@ export interface NotificationPreferences {
    *  alongside the outcome email helper at
    *  lib/email/sendOutcomePostedAlert.ts. */
   outcome: boolean;
+  /** Refund reminder email (lib/email/sendRefundAdviceAlert.ts): an open inquiry a refund would
+   *  resolve. Opt-out (default true); senders suppress it only when explicitly false. */
+  refundAdvice: boolean;
 }
 
 /** Merchant involvement preference (design-alignment plan §12S).
@@ -34,6 +37,7 @@ const DEFAULTS: NotificationPreferences = {
   evidenceReady: false,
   monthlyDigest: true,
   outcome: true,
+  refundAdvice: true,
 };
 
 /**
@@ -74,6 +78,7 @@ export async function GET(req: NextRequest) {
     evidenceReady: notifs?.evidenceReady ?? stayInvolved,
     monthlyDigest: notifs?.monthlyDigest ?? stayInvolved,
     outcome: notifs?.outcome ?? DEFAULTS.outcome,
+    refundAdvice: notifs?.refundAdvice ?? DEFAULTS.refundAdvice,
   };
 
   const teamEmail = (team?.payload as Record<string, unknown>)?.teamEmail as string | undefined;

@@ -1,5 +1,20 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Commande {order} : remboursez-la maintenant pour éviter que la demande ne devienne une rétrofacturation",
+      "preheader": "Le client affirme qu’un crédit n’a jamais été traité, et aucun remboursement n’a été effectué.",
+      "title": "Remboursez la commande {order} pour résoudre cette demande",
+      "body": "Le titulaire de la carte de la commande {order} a indiqué à sa banque qu’un crédit de {amount} n’a jamais été traité. La commande comporte un retour et aucun remboursement n’a été effectué. Nous venons de vérifier dans Shopify.\n\nPour la résoudre, **remboursez le montant contesté ({amount}) dans Shopify Admin**. Rembourser reste votre décision ; DisputeDesk ne le fera pas à votre place.\n\nLe remboursement peut mettre environ un jour à aboutir auprès du prestataire de paiement. Une fois abouti, la demande se clôture généralement peu après.\n\nIl vaut mieux le faire avant l’échéance ({dueDate}). Une demande qui reste ouverte peut devenir une rétrofacturation. Le montant contesté et des frais de rétrofacturation sont alors prélevés, Shopify bloque les remboursements, et elle compte dans votre taux de rétrofacturations. Les demandes ne comptent pas dans ce taux.",
+      "subjectFailed": "Commande {order} : votre remboursement n’a pas abouti",
+      "preheaderFailed": "La demande est toujours ouverte et rien n’a été remboursé.",
+      "titleFailed": "Le remboursement de la commande {order} n’a pas abouti",
+      "bodyFailed": "Un remboursement de la commande {order} a été lancé dans Shopify mais a échoué : rien n’a été remboursé et la demande de {amount} est toujours ouverte. La commande comporte un retour.\n\n**Remboursez à nouveau le montant contesté ({amount}) dans Shopify Admin** et vérifiez l’état du remboursement dans la chronologie de la commande. Rembourser reste votre décision ; DisputeDesk ne le fera pas à votre place.\n\nIl vaut mieux le faire avant l’échéance ({dueDate}). Une demande qui reste ouverte peut devenir une rétrofacturation. Le montant contesté et des frais de rétrofacturation sont alors prélevés, Shopify bloque les remboursements, et elle compte dans votre taux de rétrofacturations. Les demandes ne comptent pas dans ce taux.",
+      "cta": "Ouvrir le litige",
+      "footer": "DisputeDesk · rappel de remboursement",
+      "eyebrow": "Rappel de remboursement",
+      "storeResultsRefunded": "Dans votre boutique, {won} demandes sur {decided} ayant donné lieu à un remboursement se sont clôturées en votre faveur.",
+      "storeResultsUnrefunded": "Sur {total} demandes terminées sans remboursement, {escalated} sont devenues des rétrofacturations."
+    },
     "billing": {
       "trialStarted": {
         "subject": "Essai DisputeDesk {planName} activé",
@@ -58,6 +73,53 @@
         "body": "Les brouillons restent illimités — mais soumettre des preuves à la banque nécessite un crédit, et vous avez utilisé toutes vos soumissions gratuites.\n\nUn rejet de débit récupéré vaut généralement bien plus qu'un plan à 29 $/mois, un seul litige gagné se rembourse donc sur plusieurs mois. Passez à un plan supérieur maintenant pour continuer à répondre avant votre échéance.",
         "cta": "Changer de plan"
       }
+    },
+    "fatalLoss": {
+      "subjectInrInquiry": "Action requise : la demande pour la commande {order} ne peut pas être défendue sans suivi",
+      "subjectInrChargeback": "Action requise : la rétrofacturation pour la commande {order} ne peut pas être défendue sans suivi",
+      "subjectRefundedInquiry": "Aucune action requise : la demande pour la commande {order} a déjà été remboursée",
+      "subjectRefundedChargeback": "Aucune action requise : la rétrofacturation pour la commande {order} a déjà été remboursée",
+      "greeting": "Bonjour,",
+      "lead": "{phase, select, inquiry {La demande} other {La rétrofacturation}} pour la commande **{order}**{amountSuffix} ne peut pas être gagnée en l’état. {situation}",
+      "situationInr": "Le client affirme que l’article n’est jamais arrivé, et cette commande n’a aucune expédition enregistrée.",
+      "situationRefunded": "Un remboursement couvrant ce débit a déjà été effectué.",
+      "whatToDo": "Ce qu’il faut faire",
+      "actionShipped": "**Si elle a été expédiée :** ajoutez le numéro de suivi à la commande dans Shopify. DisputeDesk reconstruit automatiquement la défense dès que l’expédition apparaît, et le dossier devient défendable.",
+      "actionNeverShippedInquiry": "**Si elle n’a jamais été expédiée :** vérifiez dans Shopify Admin si la commande a déjà été remboursée. Sinon, rembourser le montant contesté peut résoudre cette demande avant qu’elle ne devienne une rétrofacturation avec frais.",
+      "actionNeverShippedChargeback": "**Si elle n’a jamais été expédiée :** il n’y a rien à faire et rien à rembourser. Le montant contesté et les frais de rétrofacturation ont déjà été prélevés, et Shopify bloque les remboursements tant qu’une rétrofacturation est ouverte. Laissez-la se clôturer.",
+      "actionWithdraw": "**Uniquement si le client reconnaît s’être trompé :** demandez-lui de contacter sa banque pour retirer le litige, puis envoyez-nous la lettre de retrait de la banque. C’est la seule voie qui annule une rétrofacturation.",
+      "actionNoAction": "**Aucune action requise :** laissez ce dossier se clôturer. Le contester indiquerait à la banque que l’argent est dû.",
+      "actionRefundedBefore": "**Si vous avez remboursé AVANT que le client n’ouvre le litige**, dites-le-nous. Un crédit antérieur au litige est l’un des arguments les plus solides, et nous reconstruirons la défense autour.",
+      "notSentInr": "DisputeDesk n’a **pas** envoyé de défense pour ce litige : il n’y a encore rien de factuel pour argumenter. À l’échéance, Shopify transmettra les informations de base de la commande dont il dispose. Cela gagne rarement, et pour une commande sans expédition enregistrée, cela argumente contre vous.",
+      "notSentRefunded": "DisputeDesk n’a **pas** envoyé de défense pour ce litige. À l’échéance, Shopify transmettra les informations de base de la commande dont il dispose. Cela gagne rarement.",
+      "openDispute": "Ouvrir ce litige dans DisputeDesk",
+      "reasonLabel": "Motif du litige",
+      "deadlineLabel": "Échéance",
+      "shopLabel": "Boutique",
+      "signoff": "— DisputeDesk"
+    },
+    "evidenceNeeded": {
+      "subjectReview": "{hasOrder, select, yes {Dossier de preuves prêt à être examiné : commande {order} — litige « {reason} »{amountPart}} other {Dossier de preuves prêt à être examiné — litige « {reason} »{amountPart}}}",
+      "subjectAsk": "{hasOrder, select, yes {Action requise : ajoutez des preuves, commande {order} — litige « {reason} »{amountPart}} other {Action requise : ajoutez des preuves — litige « {reason} »{amountPart}}}",
+      "headingReview": "Votre dossier de preuves est prêt à être examiné",
+      "headingAsk": "Preuves manuelles requises",
+      "introReview": "Un litige **{reason}**{amountPart}{hasOrder, select, yes { pour la commande {order}} other {}} de {shop} a été traité. DisputeDesk a rassemblé toutes les preuves qu’il peut obtenir de Shopify{withTools, select, yes { et de vos outils connectés} other {}} : aucun envoi n’est nécessaire. Examinez le dossier quand vous aurez un moment.",
+      "introAsk": "Un litige **{reason}**{amountPart}{hasOrder, select, yes { pour la commande {order}} other {}} de {shop} a été traité. DisputeDesk a rassemblé les données Shopify disponibles, mais ce type de litige gagne à être complété par des preuves qui doivent être ajoutées manuellement.",
+      "attachedTitle": "Déjà jointes :",
+      "attachedDelivery": "Confirmation de livraison et suivi",
+      "attachedComms": "Conversations avec le support client",
+      "askTitleUpload": "Veuillez ajouter les éléments suivants :",
+      "askTitleReview": "En attente de votre examen :",
+      "typeCarrierLabel": "Preuve de livraison du transporteur",
+      "typeCarrierHint": "Confirmation de livraison signée, document de preuve de livraison du transporteur ou photo de livraison",
+      "typeReviewLabel": "Examiner les conversations du support associées",
+      "typeReviewHintCount": "{count, plural, one {# conversation du support associée attend} other {# conversations du support associées attendent}} votre examen : approuvez celles qui appuient votre défense.",
+      "typeReviewHintNone": "Des conversations du support associées attendent votre examen : approuvez celles qui appuient votre défense.",
+      "ctaReview": "Examiner le litige →",
+      "ctaReviewConversations": "Examiner les conversations associées →",
+      "ctaUpload": "Voir le litige et ajouter des preuves →",
+      "footer": "Cet e-mail vous est envoyé parce que vous avez activé les alertes de preuves dans la configuration de DisputeDesk. Vous pouvez modifier les préférences de notification dans les Paramètres.",
+      "shopFallback": "votre boutique"
     }
   },
   "nav": {
@@ -2553,7 +2615,7 @@
         },
         "can": {
           "evidence": "Si vous avez des preuves que nous ne voyons pas, comme une confirmation de livraison du transporteur, ajoutez-les dans l'onglet Preuves.",
-          "refundInquiry": "Remboursez la commande intégralement depuis Shopify Admin. Il s'agit encore d'une demande d'information : aucun argent n'a été prélevé et un remboursement intégral la clôt. Si elle devient une rétrofacturation, Shopify bloque les remboursements et le montant est perdu."
+          "refundInquiry": "Shopify n’affiche aucun remboursement sur cette commande. Rembourser le montant contesté ({amount}) dans Shopify Admin peut résoudre cette demande avant qu’elle ne devienne une rétrofacturation. Si elle en devient une, Shopify bloque les remboursements et le montant est perdu."
         },
         "optional": {
           "ack": "La reconnaissance du titulaire de la carte renforcerait le dossier."
@@ -2596,6 +2658,11 @@
         "done": {
           "drafted": "Les preuves sont réunies et une réponse est rédigée. Rien n'a été déposé.",
           "evidence": "Les preuves sont réunies. Rien n'a été déposé."
+        },
+        "refund": {
+          "pending": "Un remboursement de {amount} a été lancé le {date} et est encore en cours de traitement. Rien d’autre n’est nécessaire ; la demande se clôture généralement une fois le remboursement abouti.",
+          "failed": "Un remboursement de {amount} a été lancé le {date} mais a échoué, donc rien n’a été remboursé. Remboursez à nouveau le montant contesté dans Shopify Admin.",
+          "settledOpen": "Un remboursement de {amount} a abouti le {date}. La demande est toujours ouverte."
         }
       },
       "claim": {
@@ -2936,6 +3003,7 @@
           "placedPaid": "Commande passée et payée",
           "shipped": "Commande expédiée",
           "delivered": "Livrée",
+          "returnOpened": "Retour ouvert",
           "opened": "Litige ouvert",
           "prepared": "Dossier de défense préparé",
           "deadline": "Date limite",
@@ -3805,6 +3873,8 @@
     "notifNewDisputeDesc": "Soyez notifié lorsqu'un nouveau litige requiert votre attention. Si vos règles l'envoient en validation, l'e-mail part après la collecte automatique des preuves.",
     "notifOutcome": "Résultat publié",
     "notifOutcomeDesc": "Recevez un e-mail dès que le réseau de cartes publie une décision finale — gagné, perdu ou clôturé sans contestation.",
+    "notifRefundAdvice": "Rappels de remboursement",
+    "notifRefundAdviceDesc": "Recevez un e-mail lorsqu’une demande peut être résolue en remboursant une commande retournée par le client, avant qu’elle ne devienne une rétrofacturation.",
     "notifBeforeDue": "Avant l'échéance",
     "notifBeforeDueDesc": "Rappel 24 heures avant la date limite",
     "notifEvidenceReady": "Preuves prêtes",
