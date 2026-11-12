@@ -2842,6 +2842,7 @@
           "placedPaid": "Order placed and paid",
           "shipped": "Order shipped",
           "delivered": "Delivered",
+          "returnOpened": "Return opened",
           "opened": "Dispute opened",
           "prepared": "Defence package prepared",
           "deadline": "Deadline",

@@ -141,6 +141,8 @@ export interface StatusCopyInput {
   returnedToSender: boolean;
   /** An order refund / return is on the record (names the true reason nothing is argued). */
   recordSituation: "return" | "refund" | null;
+  /** Shopify's return state on the order (`orderSituation.returns`): the store's own return, not a carrier bounce. */
+  returns: "none" | "requested" | "in_progress" | "returned" | "failed" | "unknown";
   claim: I18nToken;
   /** The ONE fact that decides the case, when there is one (record tokens). */
   caseFact: I18nToken | null;
@@ -212,16 +214,19 @@ const DONE_NOT_FILED_EVIDENCE = "done.evidence";
 /**
  * Refunding is only on the table while the dispute is an INQUIRY: no money has moved, and a full refund
  * closes it. Once it is a chargeback the amount is already debited and Shopify blocks refunds, so this
- * advice must never appear there. It applies when the carrier returned the parcel and the order is not
- * already refunded in full. States where a response is already filed, or the dispute is decided, never
+ * advice must never appear there. It applies when the parcel is coming back (the carrier returned it, or
+ * the store has a return open or received in Shopify) and the order is not already refunded in full. States where a response is already filed, or the dispute is decided, never
  * carry it.
  */
 const REFUND_ADVICE_STATES: ReadonlySet<StatusState> = new Set<StatusState>([
   "ask", "approval", "scheduled", "conceded", "nothing_to_argue", "attention", "build_failed", "build_paused", "preparing",
 ]);
 
-export function shouldAdviseRefund(i: Pick<StatusCopyInput, "status" | "phase" | "returnedToSender" | "fatalReason">): boolean {
-  return i.status === "open" && i.phase === "inquiry" && i.returnedToSender && i.fatalReason !== "refund_issued";
+export function shouldAdviseRefund(
+  i: Pick<StatusCopyInput, "status" | "phase" | "returnedToSender" | "returns" | "fatalReason">,
+): boolean {
+  const goodsComingBack = i.returnedToSender || i.returns === "in_progress" || i.returns === "returned";
+  return i.status === "open" && i.phase === "inquiry" && goodsComingBack && i.fatalReason !== "refund_issued";
 }
 
 export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
@@ -408,8 +413,9 @@ export function composeStatusCopy(i: StatusCopyInput): StatusCopy {
     const refundOnly = fatal && i.fatalReason === "refund_issued";
     return make("nothing_to_argue", s("headline.nothingToArgue"), [
       happened(why),
-      // A returned parcel can never have a delivery confirmation: "proof we cannot see" would point at nothing.
-      refundOnly || i.returnedToSender
+      // A returned parcel can never have a delivery confirmation, and a return on record means the goods are
+      // not "delivered and kept": "proof we cannot see" would point at nothing.
+      refundOnly || i.returnedToSender || i.recordSituation === "return"
         ? null
         : part("can", [s("can.evidence")], [{ id: "tab:evidence", label: s("action.evidence") }]),
       // One coherent sentence: the deadline-rebuild cron (06:00 UTC, every open unfiled dispute due in the window)

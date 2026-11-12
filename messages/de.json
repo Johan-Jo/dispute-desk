@@ -2936,6 +2936,7 @@
           "placedPaid": "Bestellung aufgegeben und bezahlt",
           "shipped": "Bestellung versendet",
           "delivered": "Zugestellt",
+          "returnOpened": "Rückgabe eröffnet",
           "opened": "Fall eröffnet",
           "prepared": "Verteidigungspaket vorbereitet",
           "deadline": "Frist",

@@ -237,6 +237,7 @@ export function recordInputsFromWorkspace(data: WorkspaceWithPatterns, nowIso: s
     attentionKey,
     fatalReason: data.workspaceAssessment?.caseStrength?.fatalLoss?.reason ?? null,
     returns: (sit?.returns as RecordInputs["returns"] | undefined) ?? "unknown",
+    returnOpenedAt: sit?.returnOpenedAt ?? null,
     customerAskedInSupport: data.returnSignals?.customerAskedInSupport === true,
     canDecide:
       !decided &&

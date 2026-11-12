@@ -56,6 +56,7 @@ function base(phase: "inquiry" | "chargeback", patch: Partial<StatusCopyInput> =
     ackFits: true,
     returnedToSender: false,
     recordSituation: null,
+    returns: "none",
     claim,
     caseFact: { key: "disputes.record.item.delivery.dateOnly", params: { date: "22 Oct 2026" } },
     citedList: list,
@@ -207,6 +208,40 @@ describe("composeStatusCopy: every state x phase", () => {
       expect(keysOf(composeStatusCopy(base("inquiry", { stage: "held" })))).not.toContain(refundKey);
       expect(keysOf(composeStatusCopy(base("inquiry", { ...returned, stage: "fatal", fatalReason: "refund_issued" })))).not.toContain(refundKey);
       expect(keysOf(composeStatusCopy(base("inquiry", { ...returned, status: "won", stage: "decided" })))).not.toContain(refundKey);
+    });
+
+    describe("a return the store has in Shopify (credit not processed, no refund)", () => {
+      const evidenceKey = "disputes.record.status.can.evidence";
+      const nothing = {
+        stage: "needs_attention" as const,
+        build: { state: "declined" as const, cause: "no_bank_eligible_facts", packageWritten: false },
+        recordSituation: "return" as const,
+      };
+
+      it.each(["in_progress", "returned"] as const)("advises the refund and asks for no evidence when the return is %s", (returns) => {
+        const out = composeStatusCopy(base("inquiry", { ...nothing, returns }));
+        expect(out.state).toBe("nothing_to_argue");
+        expect(keysOf(out)).toContain(refundKey);
+        expect(keysOf(out)).not.toContain(evidenceKey);
+        expect(out.parts.flatMap((p) => p.actions.map((a) => a.id))).not.toContain("tab:evidence");
+      });
+
+      it("never advises it on a chargeback", () => {
+        expect(keysOf(composeStatusCopy(base("chargeback", { ...nothing, returns: "returned" })))).not.toContain(refundKey);
+      });
+
+      it("does not advise it for a requested or failed return, or when a full refund is already issued", () => {
+        for (const returns of ["requested", "failed", "none", "unknown"] as const) {
+          expect(keysOf(composeStatusCopy(base("inquiry", { ...nothing, returns })))).not.toContain(refundKey);
+        }
+        const refunded = base("inquiry", { ...nothing, returns: "returned", stage: "fatal", fatalReason: "refund_issued" });
+        expect(keysOf(composeStatusCopy(refunded))).not.toContain(refundKey);
+      });
+
+      it("with no return on record the evidence ask is unchanged", () => {
+        const out = composeStatusCopy(base("inquiry", { ...nothing, recordSituation: null, returns: "none" }));
+        expect(keysOf(out)).toContain(evidenceKey);
+      });
     });
 
     it("is not shown once the response is filed", () => {
