@@ -61,6 +61,6 @@ const summary = await runRefundStateCheck(
     send: async () => { throw new Error("dry run must not send"); },
     recordSent: async () => { throw new Error("dry run must not write"); },
   },
-  { emailsEnabled: true, dryRun: true, budgetMs: 240_000, perShopCap: 5, minRecheckMs: 0 },
+  { dryRun: true, budgetMs: 240_000, perShopCap: 5, minRecheckMs: 0 },
 );
 console.log(JSON.stringify(summary, null, 2));
