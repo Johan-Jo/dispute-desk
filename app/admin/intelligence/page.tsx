@@ -318,12 +318,16 @@ export default function IntelligencePage() {
   /* ── initial loads: shops + simulator templates ── */
   useEffect(() => {
     fetch("/api/admin/shops?search=")
-      .then((r) => (r.ok ? r.json() : []))
+      .then((r) => {
+        // An empty picker with no message reads as "no merchants exist".
+        if (!r.ok) throw new Error(`Could not load merchants (${r.status})`);
+        return r.json();
+      })
       .then((d: ShopRow[]) => {
         setShops(d || []);
         if (d && d[0] && !shopId) setShopId(d[0].id);
       })
-      .catch(() => {});
+      .catch((e: Error) => setNotice(e.message));
     fetch("/api/admin/intelligence/simulate")
       .then((r) => (r.ok ? r.json() : { templates: [] }))
       .then((d) => { setTemplates(d.templates || []); if (d.templates?.[0]) setSim((s) => ({ ...s, template: d.templates[0].key })); })
