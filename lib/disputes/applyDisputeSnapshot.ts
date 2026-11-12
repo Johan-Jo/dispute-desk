@@ -203,6 +203,7 @@ export async function applyDisputeSnapshot(
     reopened_at?: string | null;
     escalated_from_inquiry_at?: string | null;
     reopened_after_close_at?: string | null;
+    closed_at?: string | null;
   }
 
   const existingQuery = await sb
@@ -211,7 +212,7 @@ export async function applyDisputeSnapshot(
       "id, status, due_at, submitted_at, final_outcome, submission_state, " +
         "new_dispute_alert_sent_at, shopify_updated_at, dispute_evidence_gid, " +
         "phase, evidence_saved_to_shopify_at, response_cycle, reopened_at, " +
-        "escalated_from_inquiry_at, reopened_after_close_at",
+        "escalated_from_inquiry_at, reopened_after_close_at, closed_at",
     )
     .eq("shop_id", shopId)
     .eq("dispute_gid", snapshot.disputeGid)
@@ -660,6 +661,23 @@ export async function applyDisputeSnapshot(
         );
       }
     }
+  }
+
+  // Self-heal: a terminal dispute with no closed_at is read as OPEN by the
+  // list sort (closed_at IS NULL first) and floats to the top. closed_at is
+  // otherwise written only on insert or on a status transition, so a row that
+  // missed it once never recovered (2026-11-12, inquiry #10296).
+  if (
+    newStatus &&
+    TERMINAL_STATUSES.has(newStatus) &&
+    existing.status === newStatus &&
+    !existing.closed_at
+  ) {
+    await sb
+      .from("disputes")
+      .update({ closed_at: snapshot.finalizedOn ?? nowIso })
+      .eq("id", disputeId)
+      .is("closed_at", null);
   }
 
   if (existing.status !== newStatus && newStatus) {
