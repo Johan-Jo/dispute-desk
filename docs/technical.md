@@ -1108,6 +1108,18 @@ Job retention: terminal jobs (`succeeded` | `failed`) older than 30 days are pru
 
 `/api/admin/metrics` returns `jobs: { queued, running, succeeded, failed }` (totals across the table — no `LIMIT`). The `/admin/jobs` page reads `succeeded` from this endpoint for its stats row, while still rendering only the most recent 200 rows in the table for performance. The job status enum on disk is `queued | running | succeeded | failed` (per `007_jobs.sql`); the dashboard uses these names verbatim — never label them as "Completed" (a non-existent enum value).
 
+### Admin revenue = actually-paid subscriptions (`lib/admin/paidSubscriptions.ts`)
+
+Admin MRR, "Paying Subscribers", the Billing page and the Shops-list MRR column count **only shops with payment evidence**, never the `shops.plan` label (2026-11-12 prod measurement: label-based MRR showed 4 × Growth = $516 while only 2 shops had a recorded first paid cycle = $258). `classifyBillingState(shop, entitlement)` → `paid | trialing | grace | unconfirmed | free | uninstalled`:
+
+- `paid` = installed AND `plan_entitlements.subscription_state='active'` AND `first_paid_cycle_started_at` set (stamped by `sendFirstPaidCycleEmail` when the first real charge cycle starts) AND `plan_key ≠ free`.
+- `trialing` / `grace` mirror `subscription_state`; neither is revenue.
+- `unconfirmed` = paid-tier label with no payment evidence (no entitlement row, or `active` without a first paid cycle). Surfaced to the operator, never counted.
+
+`/api/admin/metrics` returns `billing: { paid, trialing, grace, unconfirmed, free, mrr, labelMrr }`; `/api/admin/billing` returns `mrr, labelMrr, paidShops, trialingShops, graceShops, unconfirmedShops` and a per-shop `billing_state`; `/api/admin/shops` rows carry `billingState` and `monthlyRevenueUsd` (0 unless `paid`).
+
+**Row-cap rule for admin aggregates.** PostgREST truncates an un-ranged select at 1000 rows with no error. Admin routes that aggregate whole tables (shops, evidence_packs, open disputes, entitlements, per-shop dispute/pack counts) page through `fetchAllRows` (`lib/admin/fetchAllRows.ts`); job counts use per-status `count: exact, head: true` queries. `AdminMerchant` (`components/admin/AdminMerchant.tsx`) is the one way admin pages print a merchant: storefront domain on line 1, myshopify alias beneath.
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline
@@ -1351,7 +1363,7 @@ The `/admin` overview renders both as separate tiles, **"Win Rate (all disputes)
 
 Two pure helpers wrap the existing `lib/billing/plans.ts → PLANS` map for the admin metrics:
 
-- `monthlyRevenueForPlan(plan)` → `{ planId, planName, monthlyUsd }`. Used by the shops list MRR column and the detail-page Quick Stats footer.
+- `monthlyRevenueForPlan(plan)` → `{ planId, planName, monthlyUsd }`. Used by the detail-page Quick Stats footer (plan-rate display); the shops list MRR column now uses `paidMonthlyUsd` (actually-paid only — see above).
 - `totalInvoicedForPeriod(plan, windowDays)` → `{ totalUsd, monthsInPeriod, isApproximate: true, … }`. **Approximation**: `monthlyPrice × (windowDays / 30)`. Doesn't account for plan changes mid-window, trial periods, or top-up purchases. Replace with real invoice records when a `billing_invoices` table is built.
 
 Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabase CLI** (tracks migrations in the remote `supabase_migrations` history — this is what the project uses day to day).
