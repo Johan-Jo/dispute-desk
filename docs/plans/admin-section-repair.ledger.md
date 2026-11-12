@@ -123,6 +123,17 @@ Note: `GET /api/admin/audit` response shape changed from an array to `{ events, 
 
 Audited, no defect found: Resources hub (client code checks `res.ok`; tables are small — 72 content items, 219 queue rows, 251 archive items on prod — so the 1000-row cap does not bite; covered by existing route tests and an e2e spec), Signal Radar client components (their empty `catch {}` blocks only wrap `sessionStorage`, the correct pattern), Passkeys page and routes (checked responses; last-passkey lock-out guard; existing tests), Help.
 
+## Follow-up — Overview 500 on dev (found by the owner)
+
+| # | Page / route | Symptom | Evidence | Root cause | Status |
+|---|---|---|---|---|---|
+| 61 | Overview `/api/admin/metrics` | 500 "column evidence_packs.dispute_type does not exist" on dev after batch 1 | Vercel runtime log; column absent on dev AND prod | the select named a nonexistent column; the old code ignored the error so the Overview's pack-based KPIs (automation success, save rate, top blockers, failing types) were silently 0/empty everywhere, and batch 1's paged read exposed it | fixed (`packHealth`, dispute reason via `disputes`) |
+| 62 | Overview | Status lists missed `saved_to_shopify_verified` (124 prod packs), `save_failed` | prod status counts | status names drifted from the code | fixed |
+
+Regression I introduced: batch 1 replaced an ignored-error read with one that throws, which turned this latent bug into a visible 500 on dev. Verified before this fix that every other column my batches select exists on dev and prod (only `disputes.primary_domain` was absent, and that was a mistake in the check list: the API derives it from the `shops` join).
+
+Definition to confirm: the save rate counts packs parked in `ready` (awaiting approval) as not-yet-saved, so it reads ~24% on prod. That is the pre-existing formula; say if you want parked packs excluded.
+
 ## Merchant display (R2) — closed
 
 Every admin page now prints a merchant as storefront domain with the myshopify alias beneath (`AdminMerchant`): Overview/Operations (leaderboard + recent events), Disputes, Shops (reference), Shop detail, Jobs, Webhooks, Billing, Audit, Outcome Analysis, Defence Package runs, Gorgias (3 tables), Intelligence (picker label `domain (alias)`). `tests/unit/adminMerchantDisplayGuard.test.ts` fails if a page renders a bare `shop_domain` as JSX text outside a documented allowlist (the renderer, the delete dialog, the Shops list, the shop-detail header).
