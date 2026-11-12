@@ -55,7 +55,6 @@ export interface RefundCheckDeps {
 }
 
 export interface RefundCheckOptions {
-  emailsEnabled: boolean;
   dryRun: boolean;
   /** Stop starting new candidates after this many ms. */
   budgetMs: number;
@@ -108,7 +107,6 @@ export async function runRefundStateCheck(
 
   const decide = (c: RefundCheckCandidate, state: RefundState): RefundAdviceDecision =>
     decideRefundAdvice({
-      emailsEnabled: opts.emailsEnabled,
       phase: c.phase,
       status: c.status,
       reason: c.reason,
