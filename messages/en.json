@@ -1,5 +1,18 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Order {order}: refund it now to stop this inquiry becoming a chargeback",
+      "preheader": "The customer says a credit was never processed, and no refund has been issued.",
+      "title": "Refund order {order} to resolve this inquiry",
+      "body": "The cardholder on order {order} told their bank that a credit of {amount} was never processed. The order shows a return, and no refund has been issued. We checked Shopify a moment ago.\n\nTo resolve it, **refund the disputed amount ({amount}) in Shopify Admin**. Whether to refund is your decision; DisputeDesk will not do it for you.\n\nThe refund can take about a day to settle with the payment provider. Once it has settled, the inquiry usually closes shortly afterwards.\n\nIt is worth doing before the due date ({dueDate}). An inquiry that stays open can become a chargeback. Then the disputed amount and a chargeback fee are debited, Shopify blocks refunds on it, and it counts toward your chargeback rate. Inquiries do not count toward that rate.",
+      "subjectFailed": "Order {order}: your refund did not go through",
+      "preheaderFailed": "The inquiry is still open and nothing has been paid back.",
+      "titleFailed": "The refund on order {order} did not go through",
+      "bodyFailed": "A refund on order {order} was started in Shopify but failed, so nothing has been paid back and the inquiry about {amount} is still open. The order shows a return.\n\n**Refund the disputed amount ({amount}) again in Shopify Admin**, and check the refund’s status in the order’s timeline. Whether to refund is your decision; DisputeDesk will not do it for you.\n\nIt is worth doing before the due date ({dueDate}). An inquiry that stays open can become a chargeback. Then the disputed amount and a chargeback fee are debited, Shopify blocks refunds on it, and it counts toward your chargeback rate. Inquiries do not count toward that rate.",
+      "cta": "Open the dispute",
+      "footer": "DisputeDesk · refund reminder",
+      "eyebrow": "Refund reminder"
+    },
     "billing": {
       "trialStarted": {
         "subject": "DisputeDesk {planName} trial activated",
@@ -3754,6 +3767,8 @@
     "notifNewDisputeDesc": "Get notified when a new dispute needs your attention. If your rules send a dispute to review, the email is sent after automated evidence is collected.",
     "notifOutcome": "Outcome posted",
     "notifOutcomeDesc": "Get an email the moment the card network posts a final decision — won, lost, or closed without contest.",
+    "notifRefundAdvice": "Refund reminders",
+    "notifRefundAdviceDesc": "Get an email when an inquiry could be resolved by refunding an order the customer has returned, before it can become a chargeback.",
     "notifBeforeDue": "Before due date",
     "notifBeforeDueDesc": "Reminder 24 hours before dispute deadline",
     "notifEvidenceReady": "Evidence ready",

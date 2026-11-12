@@ -89,3 +89,20 @@ export async function loadRefundState(sb: SupabaseClient, disputeId: string): Pr
   if (error) throw new Error(`dispute_refund_state read failed: ${error.message}`);
   return (data as StoredRefundState | null) ?? null;
 }
+
+/** Stored states for many disputes at once, keyed by dispute id (chunked: PostgREST caps `in` lists and rows). */
+export async function loadRefundStateRows(
+  sb: SupabaseClient,
+  disputeIds: string[],
+): Promise<Map<string, StoredRefundState>> {
+  const out = new Map<string, StoredRefundState>();
+  for (let i = 0; i < disputeIds.length; i += 100) {
+    const { data, error } = await sb
+      .from("dispute_refund_state")
+      .select("*")
+      .in("dispute_id", disputeIds.slice(i, i + 100));
+    if (error) throw new Error(`dispute_refund_state read failed: ${error.message}`);
+    for (const row of (data ?? []) as StoredRefundState[]) out.set(row.dispute_id, row);
+  }
+  return out;
+}

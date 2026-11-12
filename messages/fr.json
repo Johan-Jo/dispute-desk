@@ -1,5 +1,18 @@
 {
   "email": {
+    "refundAdvice": {
+      "subject": "Commande {order} : remboursez-la maintenant pour éviter que la demande ne devienne une rétrofacturation",
+      "preheader": "Le client affirme qu’un crédit n’a jamais été traité, et aucun remboursement n’a été effectué.",
+      "title": "Remboursez la commande {order} pour résoudre cette demande",
+      "body": "Le titulaire de la carte de la commande {order} a indiqué à sa banque qu’un crédit de {amount} n’a jamais été traité. La commande comporte un retour et aucun remboursement n’a été effectué. Nous venons de vérifier dans Shopify.\n\nPour la résoudre, **remboursez le montant contesté ({amount}) dans Shopify Admin**. Rembourser reste votre décision ; DisputeDesk ne le fera pas à votre place.\n\nLe remboursement peut mettre environ un jour à aboutir auprès du prestataire de paiement. Une fois abouti, la demande se clôture généralement peu après.\n\nIl vaut mieux le faire avant l’échéance ({dueDate}). Une demande qui reste ouverte peut devenir une rétrofacturation. Le montant contesté et des frais de rétrofacturation sont alors prélevés, Shopify bloque les remboursements, et elle compte dans votre taux de rétrofacturations. Les demandes ne comptent pas dans ce taux.",
+      "subjectFailed": "Commande {order} : votre remboursement n’a pas abouti",
+      "preheaderFailed": "La demande est toujours ouverte et rien n’a été remboursé.",
+      "titleFailed": "Le remboursement de la commande {order} n’a pas abouti",
+      "bodyFailed": "Un remboursement de la commande {order} a été lancé dans Shopify mais a échoué : rien n’a été remboursé et la demande de {amount} est toujours ouverte. La commande comporte un retour.\n\n**Remboursez à nouveau le montant contesté ({amount}) dans Shopify Admin** et vérifiez l’état du remboursement dans la chronologie de la commande. Rembourser reste votre décision ; DisputeDesk ne le fera pas à votre place.\n\nIl vaut mieux le faire avant l’échéance ({dueDate}). Une demande qui reste ouverte peut devenir une rétrofacturation. Le montant contesté et des frais de rétrofacturation sont alors prélevés, Shopify bloque les remboursements, et elle compte dans votre taux de rétrofacturations. Les demandes ne comptent pas dans ce taux.",
+      "cta": "Ouvrir le litige",
+      "footer": "DisputeDesk · rappel de remboursement",
+      "eyebrow": "Rappel de remboursement"
+    },
     "billing": {
       "trialStarted": {
         "subject": "Essai DisputeDesk {planName} activé",
@@ -3806,6 +3819,8 @@
     "notifNewDisputeDesc": "Soyez notifié lorsqu'un nouveau litige requiert votre attention. Si vos règles l'envoient en validation, l'e-mail part après la collecte automatique des preuves.",
     "notifOutcome": "Résultat publié",
     "notifOutcomeDesc": "Recevez un e-mail dès que le réseau de cartes publie une décision finale — gagné, perdu ou clôturé sans contestation.",
+    "notifRefundAdvice": "Rappels de remboursement",
+    "notifRefundAdviceDesc": "Recevez un e-mail lorsqu’une demande peut être résolue en remboursant une commande retournée par le client, avant qu’elle ne devienne une rétrofacturation.",
     "notifBeforeDue": "Avant l'échéance",
     "notifBeforeDueDesc": "Rappel 24 heures avant la date limite",
     "notifEvidenceReady": "Preuves prêtes",
