@@ -28,6 +28,19 @@ Sources so far: static audit + read-only prod measurement (`db:query:prod --read
 | 14 | Operations | Metrics failure = infinite "Loading operations..." | swallowed error | fixed (error + Retry) |
 | 15 | Disputes list | Merchant shown as raw alias | — | fixed (`AdminMerchant`, route returns `primary_domain`) |
 
+## Batch 3 — Shops (this PR)
+
+| # | Page / route | Symptom | Root cause | Status |
+|---|---|---|---|---|
+| 16 | Shops list | A failed load looked like "No shops found" | error body (object) coerced to `[]`; no `res.ok` | fixed (alert + title) |
+| 17 | Shops list | No way to see paying / trial merchants | plan filter was the label only | fixed (billing pill, Paying / On trial filters) |
+| 18 | Shop detail | Save Overrides never reported success or failure | response ignored | fixed (inline status message) |
+| 19 | Shop detail API | `PATCH` wrote any string to `shops.plan`; bad body = 500 | no validation | fixed (PLANS check, integer limit, 400s) |
+| 20 | Shop detail API | Plan override audited as `system`, no operator | `actorType: "system"` | fixed (`admin` + email) |
+| 21 | Shop detail | Load failure = permanent "Loading..." | no `res.ok`/catch | fixed (error + back link) |
+| 22 | Shop detail | Trial / paid status not shown | not in GET | fixed (`billing` in GET + header pill, trial end date) |
+| 23 | Shop activity panel | Failed load showed "No recorded activity" | `.catch(() => setRows([]))` | fixed (error message) |
+
 ## Open — merchant display (R2) still on raw `shop_domain`
 `gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
 

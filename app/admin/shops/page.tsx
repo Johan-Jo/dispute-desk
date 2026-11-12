@@ -32,7 +32,10 @@ interface Shop {
   chargebackRate90dAvailable: boolean;
   disputeCount: number;
   packCount: number;
+  /** Revenue actually being paid (0 for trials / unconfirmed plan labels). */
   monthlyRevenueUsd: number;
+  /** paid | trialing | grace | unconfirmed | free | uninstalled */
+  billingState?: string;
   /** Most recent verified embedded-app page load. Null until a merchant
    *  opens the app after this column shipped. */
   last_login_at: string | null;
@@ -58,6 +61,7 @@ export default function AdminShopsPage() {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   /** Sort state for the chargeback rate column. Null = default API
    *  order (created_at desc). Click toggles desc → asc → null. */
   const [chargebackSort, setChargebackSort] = useState<SortDirection | null>(null);
@@ -67,12 +71,21 @@ export default function AdminShopsPage() {
 
   const fetchShops = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    const res = await fetch(`/api/admin/shops?${params}`);
-    const data = await res.json();
-    setShops(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/admin/shops?${params}`);
+      // An error body is an object, not an array — treating it as "no shops"
+      // made a failed load look like an empty install base.
+      if (!res.ok) throw new Error(`Loading shops failed (${res.status})`);
+      const data = await res.json();
+      setShops(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load shops");
+    } finally {
+      setLoading(false);
+    }
   }, [search]);
 
   useEffect(() => {
@@ -80,6 +93,8 @@ export default function AdminShopsPage() {
   }, [fetchShops]);
 
   const filtered = shops.filter((s) => {
+    if (planFilter === "paying") return s.billingState === "paid";
+    if (planFilter === "trial") return s.billingState === "trialing" || s.billingState === "grace";
     if (planFilter !== "all" && (s.plan ?? "free") !== planFilter) return false;
     return true;
   });
@@ -160,6 +175,8 @@ export default function AdminShopsPage() {
         searchPlaceholder="Search by domain..."
         filters={[
           { label: "All Plans", value: "all" },
+          { label: "Paying", value: "paying" },
+          { label: "On trial", value: "trial" },
           { label: "Scale", value: "scale" },
           { label: "Growth", value: "growth" },
           { label: "Starter", value: "starter" },
@@ -168,6 +185,12 @@ export default function AdminShopsPage() {
         activeFilter={planFilter}
         onFilterChange={setPlanFilter}
       />
+
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">
+          {error}
+        </div>
+      )}
 
       <AdminTable
         headers={[
@@ -194,8 +217,8 @@ export default function AdminShopsPage() {
         ] as AdminTableHeader[]}
         loading={loading}
         isEmpty={!loading && sorted.length === 0}
-        emptyTitle="No shops found"
-        emptyMessage="Try adjusting your search or plan filter"
+        emptyTitle={error ? "Could not load shops" : "No shops found"}
+        emptyMessage={error ? "Shops could not be loaded" : "Try adjusting your search or plan filter"}
       >
         {sorted.map((s) => {
           const plan = (s.plan ?? "free").toLowerCase();
@@ -221,6 +244,11 @@ export default function AdminShopsPage() {
               </td>
               <td className="px-6 py-4">
                 <StatusPill status={plan} colorMap={planColors} />
+                {s.billingState && s.billingState !== "uninstalled" && s.billingState !== "free" && (
+                  <div className="mt-1">
+                    <StatusPill status={s.billingState} />
+                  </div>
+                )}
               </td>
               <td className="px-6 py-4">
                 <StatusPill status={s.uninstalled_at ? "uninstalled" : "active"} />
