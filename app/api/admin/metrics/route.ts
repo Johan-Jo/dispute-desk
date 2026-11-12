@@ -236,6 +236,7 @@ export async function GET(req: NextRequest) {
       disputeId: row.dispute_id,
       shopId: row.shop_id,
       shopDomain: shopDomainMap[row.shop_id as string] ?? (row.shop_id as string)?.slice(0, 8),
+      primaryDomain: shopPrimaryMap[row.shop_id as string] ?? null,
       orderName: opsDisputeNames[row.dispute_id as string] ?? (row.dispute_id as string)?.slice(0, 8).toUpperCase(),
       eventType,
       description: row.description,

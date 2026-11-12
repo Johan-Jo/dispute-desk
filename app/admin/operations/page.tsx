@@ -43,6 +43,7 @@ interface OpsEvent {
   disputeId: string;
   shopId: string;
   shopDomain: string;
+  primaryDomain?: string | null;
   orderName: string;
   eventType: string;
   description: string | null;
@@ -351,9 +352,11 @@ function OpsActivityFeed({ events }: { events: OpsEvent[] }) {
                     <span className="text-sm font-medium text-[#0F172A]">{EVENT_LABELS[event.eventType] ?? event.eventType.replace(/_/g, " ")}</span>
                     <span className="text-xs text-[#64748B]">{event.orderName}</span>
                   </div>
+                  <div className="text-xs text-[#64748B]">
+                    <AdminMerchant shopDomain={event.shopDomain} primaryDomain={event.primaryDomain} />
+                  </div>
                   <div className="text-xs text-[#64748B] truncate">
-                    {event.shopDomain}
-                    {event.actorRef ? ` · ${event.actorRef}` : ` · ${event.actorType}`}
+                    {event.actorRef ? event.actorRef : event.actorType}
                     {event.description ? ` — ${event.description}` : ""}
                   </div>
                 </div>

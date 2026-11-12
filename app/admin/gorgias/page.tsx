@@ -12,6 +12,7 @@
  */
 
 import { redirect } from "next/navigation";
+import { AdminMerchant } from "@/components/admin/AdminMerchant";
 import { MessagesSquare } from "lucide-react";
 import { getServiceClient } from "@/lib/supabase/server";
 import { hasAdminSession } from "@/lib/admin/auth";
@@ -25,7 +26,7 @@ interface IntegrationRow {
   status: string;
   meta: Record<string, unknown> | null;
   updated_at: string;
-  shops: { shop_domain: string | null } | null;
+  shops: { shop_domain: string | null; primary_domain: string | null } | null;
 }
 
 interface RunRow {
@@ -49,7 +50,7 @@ interface RunRow {
   error_code: string | null;
   started_at: string;
   completed_at: string | null;
-  shops: { shop_domain: string | null } | null;
+  shops: { shop_domain: string | null; primary_domain: string | null } | null;
   disputes: { order_name: string | null } | null;
 }
 
@@ -60,7 +61,7 @@ interface ReportRow {
   match_score_at_report: number;
   matching_algorithm_version: number;
   created_at: string;
-  shops: { shop_domain: string | null } | null;
+  shops: { shop_domain: string | null; primary_domain: string | null } | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -87,21 +88,21 @@ export default async function AdminGorgiasPage() {
   const [integrationsRes, runsRes, reportsRes] = await Promise.all([
     sb
       .from("integrations")
-      .select("id, status, meta, updated_at, shops(shop_domain)")
+      .select("id, status, meta, updated_at, shops(shop_domain, primary_domain)")
       .eq("type", "gorgias")
       .order("updated_at", { ascending: false })
       .limit(100),
     sb
       .from("gorgias_enrichment_runs")
       .select(
-        "id, run_number, status, trigger_source, attempt_count, tickets_scanned, tickets_high, tickets_medium, tickets_low, messages_stored, proposal_count, approved_count, analyzer_model, analyzer_version, prompt_tokens, completion_tokens, duration_ms, error_code, started_at, completed_at, shops(shop_domain), disputes(order_name)",
+        "id, run_number, status, trigger_source, attempt_count, tickets_scanned, tickets_high, tickets_medium, tickets_low, messages_stored, proposal_count, approved_count, analyzer_model, analyzer_version, prompt_tokens, completion_tokens, duration_ms, error_code, started_at, completed_at, shops(shop_domain, primary_domain), disputes(order_name)",
       )
       .order("started_at", { ascending: false })
       .limit(50),
     sb
       .from("gorgias_match_reports")
       .select(
-        "id, scope, merchant_reason, match_score_at_report, matching_algorithm_version, created_at, shops(shop_domain)",
+        "id, scope, merchant_reason, match_score_at_report, matching_algorithm_version, created_at, shops(shop_domain, primary_domain)",
       )
       .order("created_at", { ascending: false })
       .limit(25),
@@ -147,7 +148,7 @@ export default async function AdminGorgiasPage() {
               )}
               {integrations.map((row) => (
                 <tr key={row.id} className="border-b border-slate-50">
-                  <td className="px-5 py-2">{row.shops?.shop_domain ?? "—"}</td>
+                  <td className="px-5 py-2">{row.shops?.shop_domain ? <AdminMerchant shopDomain={row.shops.shop_domain} primaryDomain={row.shops.primary_domain} /> : "—"}</td>
                   <td className="px-5 py-2">
                     <span
                       className={
@@ -213,7 +214,7 @@ export default async function AdminGorgiasPage() {
                   <td className="px-5 py-2 text-slate-500 whitespace-nowrap">
                     {fmtDate(r.started_at)}
                   </td>
-                  <td className="px-5 py-2">{r.shops?.shop_domain ?? "—"}</td>
+                  <td className="px-5 py-2">{r.shops?.shop_domain ? <AdminMerchant shopDomain={r.shops.shop_domain} primaryDomain={r.shops.primary_domain} /> : "—"}</td>
                   <td className="px-5 py-2">{r.disputes?.order_name ?? "—"}</td>
                   <td className="px-5 py-2">{r.run_number}</td>
                   <td className={`px-5 py-2 ${STATUS_COLORS[r.status] ?? "text-slate-700"}`}>
@@ -275,7 +276,7 @@ export default async function AdminGorgiasPage() {
                   <td className="px-5 py-2 text-slate-500 whitespace-nowrap">
                     {fmtDate(r.created_at)}
                   </td>
-                  <td className="px-5 py-2">{r.shops?.shop_domain ?? "—"}</td>
+                  <td className="px-5 py-2">{r.shops?.shop_domain ? <AdminMerchant shopDomain={r.shops.shop_domain} primaryDomain={r.shops.primary_domain} /> : "—"}</td>
                   <td className="px-5 py-2">{r.scope}</td>
                   <td className="px-5 py-2">{r.match_score_at_report}</td>
                   <td className="px-5 py-2">v{r.matching_algorithm_version}</td>

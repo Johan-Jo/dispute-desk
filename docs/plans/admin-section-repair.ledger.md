@@ -92,8 +92,26 @@ Finding for the owner (not a bug): in prod, 19,232 of 34,284 window orders have 
 
 Checked, no defect found: prompt-module editor (checks `res.ok`, surfaces errors), prompts list, settings page, run telemetry PDF route.
 
-## Open — merchant display (R2) still on raw `shop_domain`
-`gorgias/page.tsx`, `intelligence/page.tsx` (+ any route not yet returning `primary_domain`). Guard test lands with the last of these.
+## Batch 8 — Audit Log (this PR)
+
+| # | Page / route | Symptom | Root cause | Status |
+|---|---|---|---|---|
+| 47 | Audit page | Typing a shop id crashed the page | every keystroke queried Postgres; a partial UUID → 500; page called `.map` on the error object | fixed (debounce, 400 validation, ok check, error banner) |
+| 48 | Audit page/route | Merchant shown as a raw UUID; could only filter by UUID | — | fixed (domain filter, `AdminMerchant`) |
+| 49 | Audit page | Operator who acted was never shown | `actor_id` not selected/rendered | fixed |
+| 50 | Audit CSV | Columns shifted on any comma; spreadsheet formula injection from merchant-controlled payload text | values joined with raw `,` | fixed (`lib/admin/csv.ts`) |
+| 51 | Audit page | Claimed to be the "complete forensic trail of all admin operations" but showed no platform-wide actions | read `audit_events` only | fixed (merges `admin_audit_events`; subtitle corrected) |
+| 52 | Audit route | Silent 500-row cut-off | `.limit(500)` unannounced | fixed (`truncated` + notice) |
+
+| 53 | Playbook / Winnability leads CSV | Cells starting `= + - @` executed as formulas when opened in a spreadsheet; `email`/`store` come from public forms | quoted but not neutralised | fixed (shared `csvCell`) |
+
+Known, not changed: both lead lists load at most 1000 rows (`limit(1000)`), so the export is the loaded rows, not necessarily all leads; the stats cards use exact counts.
+
+Note: `GET /api/admin/audit` response shape changed from an array to `{ events, limit, truncated }`; the audit page was its only caller.
+
+## Merchant display (R2) — closed
+
+Every admin page now prints a merchant as storefront domain with the myshopify alias beneath (`AdminMerchant`): Overview/Operations (leaderboard + recent events), Disputes, Shops (reference), Shop detail, Jobs, Webhooks, Billing, Audit, Outcome Analysis, Defence Package runs, Gorgias (3 tables), Intelligence (picker label `domain (alias)`). `tests/unit/adminMerchantDisplayGuard.test.ts` fails if a page renders a bare `shop_domain` as JSX text outside a documented allowlist (the renderer, the delete dialog, the Shops list, the shop-detail header).
 
 ## Open — to confirm
 - Prod entitlement row `active` + subscription GID + no `first_paid_cycle_started_at` (1 shop): genuinely never charged, or `sendFirstPaidCycleEmail` never fired? Currently shown as `unconfirmed`, not revenue. Needs owner's knowledge of that merchant.
