@@ -52,6 +52,7 @@ import { omitDeniedSections } from "@/lib/defence/sectionVisibility";
 import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
 import { fetchCandidateRows, latestCandidate } from "@/lib/defence/candidateVersions";
 import { isStaleCycle } from "@/lib/disputes/responseCycle";
+import { isShopifyObservedResponseState } from "@/lib/disputes/respondedViaShopify";
 import {
   validateNarrative,
   validateComposedDocument,
@@ -1908,7 +1909,7 @@ async function notifyDefencePackageFailed(
     const [{ data: dispute }, { data: shop }] = await Promise.all([
       sb
         .from("disputes")
-        .select("order_name, due_at, response_cycle")
+        .select("order_name, due_at, response_cycle, submission_state")
         .eq("id", pkg.dispute_id)
         .maybeSingle(),
       sb.from("shops").select("shop_domain").eq("id", pkg.shop_id).maybeSingle(),
@@ -1945,6 +1946,9 @@ async function notifyDefencePackageFailed(
       promptVersion: promptVersion ?? null,
       validatorVersion: VALIDATOR_VERSION,
       earlierBuiltVersion,
+      alreadyResponded: isShopifyObservedResponseState(
+        (dispute?.submission_state as string | null) ?? null,
+      ),
     });
   } catch (err) {
     console.error("[defence] failed-package alert could not be sent", err);
