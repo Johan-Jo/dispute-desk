@@ -43,7 +43,7 @@ import {
   type DecidedViewInputs,
 } from "@/lib/disputes/decidedView";
 import { RETURN_EVIDENCE_FIELD } from "@/lib/packs/returnEvidenceField";
-import { utcDaysUntil, type RecordFormat } from "@/lib/disputes/recordFormat";
+import { parseRecordInstant, utcDaysUntil, type RecordFormat } from "@/lib/disputes/recordFormat";
 import { askActionKey, isAskOffered, primaryAsk, type Ask } from "@/lib/disputes/merchantAsks";
 import { composeStatusCopy, type StatusCopy, type StatusCopyInput } from "@/lib/disputes/presentation/statusCopy";
 import { REFUND_STATE_FRESH_MS, type PageRefundState } from "@/lib/disputes/refundStateStore";
@@ -1149,7 +1149,7 @@ export function buildDisputeRecord(i: RecordInputs, fmt: RecordFormat): DisputeR
       });
     }
   }
-  timeline.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  timeline.sort((a, b) => parseRecordInstant(a.at) - parseRecordInstant(b.at));
 
   const daysLeft = !decided && v.dueAt && stage !== "saved" && stage !== "under_review" ? utcDaysUntil(v.dueAt, i.now) : null;
 
