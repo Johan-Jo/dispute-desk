@@ -258,6 +258,7 @@ describe("copy and wiring invariants", () => {
     "disputes.record.status.can.refundInquiry": "refund advice on the status block; shown only when the LIVE refund state (dispute_refund_state, read from Shopify within 12 h) says none (lib/disputes/presentation/statusCopy.ts shouldAdviseRefund), never from the pack",
     "email.refundAdvice.preheader": "refund-reminder email; asserted only after a LIVE read of Refund.transactions moments before sending (lib/disputes/refundState.ts, decideRefundAdvice), never from the stored pack",
     "email.refundAdvice.body": "refund-reminder email; asserted only after a LIVE read of Refund.transactions moments before sending (lib/disputes/refundState.ts, decideRefundAdvice), never from the stored pack",
+    "help.articles.understandingInquiries.body": "help article; says the refund advice appears only when no refund exists on a LIVE read, and explains that a pending refund reads as zero until it settles, so it describes the rule, not an order"
   };
 
   it("no sentence outside disputes.refundStatement says 'no refund' (existing offenders are a reasoned baseline)", () => {
