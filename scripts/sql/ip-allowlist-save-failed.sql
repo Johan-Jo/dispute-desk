@@ -3,10 +3,13 @@
 -- Run: npm run db:query:prod -- --file scripts/sql/ip-allowlist-save-failed.sql --output table
 -- Change the interval below to the enforcement window.
 --
--- Re-queue only rows where: dispute status is still open (needs_response), due_at is in
--- the future, and saved_to_shopify_at is null. The save_to_shopify handler itself refuses
--- to call Shopify when the response window is closed, and a pack already saved is not
--- re-filed, so a re-queue is safe to repeat.
+-- Re-queue only rows returned here, soonest deadline first, ONE AT A TIME. The filters
+-- below keep out anything already filed or closed: saved_to_shopify_at is null (never
+-- saved), the dispute is not closed, and its evidence has not already gone to the bank
+-- (submission_state <> 'submitted_confirmed'). The handler also refuses a stale response
+-- cycle and a dispute whose evidence was already forwarded, but it does NOT stop a pack
+-- that was already saved from being saved again, so never re-queue outside this list.
+-- Saves have no automatic deadline priority: order by due_at yourself.
 select
   p.id            as pack_id,
   p.shop_id,
@@ -15,6 +18,7 @@ select
   p.saved_to_shopify_at,
   d.status        as dispute_status,
   d.due_at,
+  d.submission_state,
   (d.due_at - now()) as time_left,
   j.attempts,
   j.max_attempts,
@@ -29,5 +33,9 @@ left join lateral (
   order by updated_at desc limit 1
 ) j on true
 where p.status = 'save_failed'
+  and p.saved_to_shopify_at is null
+  and d.closed_at is null
+  and d.submission_state is distinct from 'submitted_confirmed'
+  and (d.due_at is null or d.due_at > now())
   and p.updated_at > now() - interval '24 hours'
 order by d.due_at asc nulls last;
