@@ -1,3 +1,4 @@
+import { classifyShopify403 } from "@/lib/shopify/ipAllowlist403";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession, loadSession } from "@/lib/shopify/sessionStorage";
@@ -177,6 +178,10 @@ export async function GET(req: NextRequest) {
       if (!exchangeRes.ok) {
         const body = await exchangeRes.text();
         console.error("[token-exchange] Shopify rejected exchange:", exchangeRes.status, body);
+        // Visibility only: tags a possible IP-allowlist 403 for log search.
+        if (exchangeRes.status === 403) {
+          classifyShopify403(`https://${shop}/admin/oauth/access_token`, body);
+        }
         // A legacy session that failed to upgrade still has its (soon
         // to be fully rejected) token — don't error the whole request
         // out from under an otherwise-working install; only hard-fail

@@ -1,3 +1,4 @@
+import { classifyShopify403 } from "./ipAllowlist403";
 import crypto from "crypto";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
@@ -75,6 +76,8 @@ export async function exchangeCodeForToken(
 
   if (!res.ok) {
     const body = await res.text();
+    // Visibility only: tags a possible IP-allowlist 403 for log search.
+    if (res.status === 403) classifyShopify403(`https://${shop}/admin/oauth/access_token`, body);
     throw new Error(`Token exchange failed (${res.status}): ${body}`);
   }
 
