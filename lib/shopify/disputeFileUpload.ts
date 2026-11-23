@@ -18,6 +18,8 @@
  * (`docs/plans/conditional_file_evidence_layer.plan.md`) gates production
  * use behind the `file_evidence_attachments_enabled` flag in Phase 3.
  */
+import { classifyShopify403 } from "./ipAllowlist403";
+
 /** Default Shopify Admin API version. Match `lib/shopify/client.ts`. */
 const DEFAULT_API_VERSION = "2026-01";
 
@@ -105,6 +107,7 @@ export class DisputeFileUploadError extends Error {
       | "validation_size"
       | "validation_mime"
       | "http_error"
+      | "possible_ip_allowlist_403"
       | "shopify_rejection"
       | "missing_id_in_response",
     message: string,
@@ -206,6 +209,18 @@ export async function uploadDisputeFile(
     parsed = JSON.parse(text);
   } catch {
     parsed = text;
+  }
+
+  if (res.status === 403 && classifyShopify403(url, text)) {
+    // Possibly the app's IP allowlist, not a verdict on the file: a distinct
+    // code so the save job treats it as retriable (see ipAllowlist403.ts).
+    throw new DisputeFileUploadError(
+      "possible_ip_allowlist_403",
+      `Shopify HTTP 403 on dispute_file_uploads.json (possible IP allowlist block): ${text.slice(0, 400)}`,
+      res.status,
+      requestId,
+      parsed,
+    );
   }
 
   if (!res.ok) {

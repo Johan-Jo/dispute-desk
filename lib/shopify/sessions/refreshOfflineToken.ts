@@ -11,6 +11,7 @@
  * (app/api/auth/shopify/token-exchange/route.ts Stage 3).
  */
 
+import { classifyShopify403 } from "../ipAllowlist403";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   loadSession,
@@ -71,6 +72,8 @@ async function exchangeRefreshToken(
   });
   if (!res.ok) {
     const body = await res.text();
+    // Visibility only: tags a possible IP-allowlist 403 for log search.
+    if (res.status === 403) classifyShopify403(`https://${shopDomain}/admin/oauth/access_token`, body);
     throw new Error(`${res.status}: ${body.slice(0, 300)}`);
   }
   return res.json() as Promise<ShopifyRefreshResponse>;
