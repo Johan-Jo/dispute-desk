@@ -179,3 +179,22 @@ describe("uploadDisputeFile — Shopify response handling", () => {
     );
   });
 });
+
+describe("uploadDisputeFile — 403 handling", () => {
+  it("raises possible_ip_allowlist_403 for a 403 and puts no response body in the message", async () => {
+    mockShopify(403, "customer jane.doe@example.com blocked shpat_leak");
+    const e = await uploadDisputeFile(VALID_INPUT).catch((x) => x);
+    expect(e).toBeInstanceOf(DisputeFileUploadError);
+    expect(e.code).toBe("possible_ip_allowlist_403");
+    expect(e.httpStatus).toBe(403);
+    expect(e.message).not.toContain("jane.doe");
+    expect(e.message).not.toContain("shpat_");
+    expect(e.responseBody).toBeUndefined();
+  });
+
+  it("leaves a scope-verdict 403 as an ordinary shopify_rejection", async () => {
+    mockShopify(403, "This action requires merchant approval for write_shopify_payments_dispute_file_uploads");
+    const e = await uploadDisputeFile(VALID_INPUT).catch((x) => x);
+    expect(e.code).toBe("shopify_rejection");
+  });
+});

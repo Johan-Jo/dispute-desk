@@ -7012,6 +7012,24 @@ Two `SECURITY DEFINER` RPCs are reachable through PostgREST by default:
 
 Both are only called server-side via `getServiceClient()` ([middleware.ts:221,395](middleware.ts), [app/api/admin/team/route.ts:74](app/api/admin/team/route.ts)). The migration revokes `EXECUTE` from `public`, `anon`, and `authenticated`, so they're only callable through the service role. Any new `dd_admin_*` RPC should follow the same pattern: define with `SECURITY DEFINER`, then revoke from non-service roles in the same migration.
 
+### 4. Shopify IP allowlist (public-app requirement, enforced from 2026-11-20)
+
+Shopify delisted public apps without an enforced IP allowlist on 2026-11-20 (new installs blocked; relisting is automatic once an allowlist is enforced). The allowlist is configured **only in the Dev Dashboard** (app → Settings → IP allowlist; up to 250 IP/CIDR entries, 10 ASNs, 10 countries that narrow ASNs; "Run test" replays the last 30 days of our traffic; there is no report-only mode). It covers Admin GraphQL + REST requests made with the app's tokens; a request from a non-listed or unresolvable source gets **HTTP 403**. Disabling "Enforce IP allowlist" is the only rollback, and probably re-delists the app.
+
+Every Admin API caller runs on Vercel Node serverless (both Vercel projects deploy to `iad1`, AWS us-east-1), which has no published egress IPs/ASNs. Decision (2026-11-23): use Shopify's free ASN allowlist; **no paid infrastructure** (Vercel Static IPs are not approved). The entries are NOT assumed — they come from the Dev Dashboard's Run test and request logs for the prod app. Maintenance scripts that call merchant stores from a laptop are NOT accommodated; one that is genuinely needed should run on Vercel.
+
+**How the code reads a 403** (`lib/shopify/ipAllowlist403.ts`): classified on STATUS, because the real body has never been observed. Every 403 is logged as `[shopify-ip-403] status=403 host=… path=…` (never the token) — one log search covers the fleet. Except for bodies that are plainly a scope verdict ("requires merchant approval"…), a 403 is treated as a *possible allowlist block*, never as a bad token or a verdict on a file:
+
+- `requestShopifyGraphQL` throws `ShopifyIpNotAllowlistedError` **before** any body parsing. Before this, a JSON `{"errors":"Access denied"}` body matched the auth-invalid pattern (→ non-retriable `shopify_auth_invalid` plus a pointless forced token refresh), and an HTML body threw a bare `SyntaxError`. A throw is retriable by default in the job worker, and `makeAuthedRequest` never reaches its refresh branch.
+- `uploadDisputeFile` throws `DisputeFileUploadError("possible_ip_allowlist_403")`, and `classifyUploadError` in `saveToShopifyJob` maps it to the **retriable** class `shopify_ip_403` (previously any 4xx except 408/429 was "a verdict on the file" and non-retriable — an allowlist block would have failed a deadline save for good).
+- The OAuth endpoint callers (`auth.ts`, `refreshOfflineToken.ts`, `token-exchange/route.ts`) and `backfillClientDetails.ts` only log the tag; their behaviour is unchanged.
+
+Retries are short (`attempts × 30s`, up to `max_attempts`), so a retriable class does not outlast a long outage. When a save runs out of retries the pack becomes `save_failed` and `saveFailure.ts` emails an admin once per shop and error class per day; the class is `shopify_ip_403` for an allowlist block.
+
+**Rollback decision:** based on confirmed operational impact, never on a count of ambiguous 403s. Before disabling enforcement confirm that a legitimate production path is actually blocked: a `save_to_shopify` or file upload failed with `[shopify-ip-403]` for an open dispute, or `ip-allowlist-save-failed.sql` shows `save_failed` packs with `looks_like_ip_403` and a deadline still ahead. A tagged 403 on a non-essential path (analytics snapshot, backfill) is fixed by adding the missing source, not by rolling back. 403s that predate enforcement never count.
+
+**Recovery after a configuration correction:** run `npm run db:query:prod -- --read-only --file scripts/sql/ip-allowlist-save-failed.sql --output table`. Re-queue only rows whose dispute is still open (`needs_response`), `due_at` is in the future and `saved_to_shopify_at` is null, one at a time and never against a live merchant dispute without the owner's approval. The `save_to_shopify` handler itself refuses to call Shopify when the response window is closed and does not re-file a pack already saved, so a repeated re-queue is safe. After each one confirm the final submission state in Shopify (the pack reaches `saved_to_shopify_verified`) before moving to the next.
+
 ## Testing
 
 ### Unit Tests (Vitest)
