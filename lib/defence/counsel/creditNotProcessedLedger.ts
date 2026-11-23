@@ -78,8 +78,23 @@ export function buildCreditNotProcessedLedger(input: LedgerInput, extras: Credit
       mustNot: [
         "State it in the claim's own words, in a sentence of its own with no date or timing word. It belongs in the summary and, at most once more, in the conclusion; never in a section.",
         "Never say the customer did not return, did not try to return, never asked to return or did not request a return: Shopify does not see requests made by email or chat.",
+        "Never say it in other words either (\"before any return was sought\", \"no return was requested\"): a paraphrase counts as stating it again.",
       ],
     });
+    // The writer hung the absence on the dispute date ("opened three days after
+    // delivery, before any return was sought"), which stated it a third time
+    // beside a timing clause in the shipping section (whj8db-1q #25884,
+    // 2026-11-23: three rejected rules, no letter). With the absence in the
+    // ledger, the two sequence claims carry dates and nothing else.
+    for (const id of ["carrier_delivered", "dispute_after_delivery"]) {
+      const c = claims.find((x) => x.id === id);
+      if (c) {
+        c.mustNot = [
+          ...c.mustNot,
+          "State the dates only. Never connect them to a return, a refund or the refund policy (\"before any return was sought\", \"before a refund was requested\").",
+        ];
+      }
+    }
     // The merchant confirmed on this dispute that no request came in:
     // verbatim, attributed to the merchant, right after the no-return sentence.
     if (sections.some((s) => obj(s?.data)?.merchantConfirmedNoRequest === true)) {
