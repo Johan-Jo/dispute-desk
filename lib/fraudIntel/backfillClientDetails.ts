@@ -19,6 +19,7 @@
  * covers full-history backfills; this module is the recurring top-up.
  */
 
+import { classifyShopify403 } from "@/lib/shopify/ipAllowlist403";
 import { getServiceClient } from "@/lib/supabase/server";
 import { loadSession } from "@/lib/shopify/sessionStorage";
 import { ensureFreshSession } from "@/lib/shopify/sessions/refreshOfflineToken";
@@ -99,6 +100,8 @@ export async function topUpClientDetailsForShop(
       continue; // re-fetch same url next loop
     }
     if (!res.ok) {
+      // Visibility only: tags a possible IP-allowlist 403 for log search.
+      if (res.status === 403) classifyShopify403(url, await res.text());
       return { ...base, error: `http_${res.status}` };
     }
     const orders: RestOrder[] = ((await res.json()) as { orders?: RestOrder[] })

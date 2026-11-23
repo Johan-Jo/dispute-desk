@@ -114,6 +114,11 @@ function classifyUploadError(err: unknown): {
   }
   const httpStatus = err.httpStatus ?? null;
   const requestId = err.requestId ?? null;
+  if (err.code === "possible_ip_allowlist_403") {
+    // Our network address may be off Shopify's IP allowlist — nothing is wrong
+    // with the file or the token, so this stays retriable (and visible).
+    return { errorClass: "shopify_ip_403", retriable: true, httpStatus, requestId };
+  }
   if (err.code.startsWith("validation_")) {
     return { errorClass: "defence_pdf_upload_invalid", retriable: false, httpStatus, requestId };
   }

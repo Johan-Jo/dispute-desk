@@ -1,4 +1,5 @@
 import { shopifyGraphQLEndpoint } from "./client";
+import { classifyShopify403 } from "./ipAllowlist403";
 
 interface ShopifySession {
   shopDomain: string;
@@ -139,7 +140,23 @@ export async function requestShopifyGraphQL<T = unknown>(
       }
     }
 
-    const rawJson = await res.json();
+    // A 403 is read by STATUS before any body parsing: it may be Shopify's
+    // IP-allowlist block, which must neither parse as an auth-invalid
+    // envelope (permanent failure + a pointless token refresh) nor throw a
+    // bare SyntaxError. See ipAllowlist403.ts.
+    let rawJson: any;
+    if (res.status === 403) {
+      const text = await res.text();
+      const blocked = classifyShopify403(url, text, correlationId);
+      if (blocked) throw blocked;
+      try {
+        rawJson = JSON.parse(text);
+      } catch {
+        rawJson = { errors: [{ message: text.slice(0, 500) || "HTTP 403" }] };
+      }
+    } else {
+      rawJson = await res.json();
+    }
 
     // Shopify's GraphQL response sometimes returns `errors` as a string
     // (e.g. "Access denied" on scope/token failures) instead of the

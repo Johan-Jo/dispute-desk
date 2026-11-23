@@ -7012,6 +7012,22 @@ Two `SECURITY DEFINER` RPCs are reachable through PostgREST by default:
 
 Both are only called server-side via `getServiceClient()` ([middleware.ts:221,395](middleware.ts), [app/api/admin/team/route.ts:74](app/api/admin/team/route.ts)). The migration revokes `EXECUTE` from `public`, `anon`, and `authenticated`, so they're only callable through the service role. Any new `dd_admin_*` RPC should follow the same pattern: define with `SECURITY DEFINER`, then revoke from non-service roles in the same migration.
 
+### 4. Shopify IP allowlist (public-app requirement, enforced from 2026-11-20)
+
+Shopify delisted public apps without an enforced IP allowlist on 2026-11-20 (new installs blocked; relisting is automatic once an allowlist is enforced). The allowlist is configured **only in the Dev Dashboard** (app → Settings → IP allowlist; up to 250 IP/CIDR entries, 10 ASNs, 10 countries that narrow ASNs; "Run test" replays the last 30 days of our traffic; there is no report-only mode). It covers Admin GraphQL + REST requests made with the app's tokens; a request from a non-listed or unresolvable source gets **HTTP 403**. Disabling "Enforce IP allowlist" is the only rollback, and probably re-delists the app.
+
+Every Admin API caller runs on Vercel Node serverless, which has no published egress IPs/ASNs (Vercel Static IPs are a paid option: Pro, $100/mo per project). Laptop ops scripts call merchant stores from the developer's own IP and need that IP (IPv4 /32 and IPv6 prefix) on the list.
+
+**How the code reads a 403** (`lib/shopify/ipAllowlist403.ts`): classified on STATUS, because the real body has never been observed. Every 403 is logged as `[shopify-ip-403] status=403 host=… path=…` (never the token) — one log search covers the fleet. Except for bodies that are plainly a scope verdict ("requires merchant approval"…), a 403 is treated as a *possible allowlist block*, never as a bad token or a verdict on a file:
+
+- `requestShopifyGraphQL` throws `ShopifyIpNotAllowlistedError` **before** any body parsing. Before this, a JSON `{"errors":"Access denied"}` body matched the auth-invalid pattern (→ non-retriable `shopify_auth_invalid` plus a pointless forced token refresh), and an HTML body threw a bare `SyntaxError`. A throw is retriable by default in the job worker, and `makeAuthedRequest` never reaches its refresh branch.
+- `uploadDisputeFile` throws `DisputeFileUploadError("possible_ip_allowlist_403")`, and `classifyUploadError` in `saveToShopifyJob` maps it to the **retriable** class `shopify_ip_403` (previously any 4xx except 408/429 was "a verdict on the file" and non-retriable — an allowlist block would have failed a deadline save for good).
+- The OAuth endpoint callers (`auth.ts`, `refreshOfflineToken.ts`, `token-exchange/route.ts`) and `backfillClientDetails.ts` only log the tag; their behaviour is unchanged.
+
+Retries are short (`attempts × 30s`, up to `max_attempts`), so a retriable class does not outlast a long outage: after enforcing the allowlist, re-queue any pack that reached `save_failed` during the window.
+
+**Rollback threshold:** disable enforcement only if a `save_to_shopify` or file upload fails with `[shopify-ip-403]`, or there are ≥3 tagged 403s in 15 minutes. 403s that predate enforcement never count. **Follow-up:** Vercel Static IPs by 2026-12-07, then shrink the list to /32s and remove the wide ASN entries.
+
 ## Testing
 
 ### Unit Tests (Vitest)
