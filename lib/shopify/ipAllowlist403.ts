@@ -14,31 +14,57 @@
  * Both silently and permanently failed a dispute save because of OUR network
  * address, not the merchant's token or file.
  *
- * Every 403 from Shopify is therefore tagged `[shopify-ip-403]` (one grep for
- * the whole fleet) and treated as retriable, unless the body is plainly a
- * scope/permission verdict.
+ * Every 403 is therefore tagged `[shopify-ip-403]` (one grep for the whole
+ * fleet) and treated as retriable, unless the body is plainly a scope or
+ * permission verdict.
+ *
+ * LOGGING CONTRACT: nothing from Shopify's response body is ever logged or put
+ * in an error message — a body can echo merchant data or request details. Only
+ * structured, non-sensitive fields are emitted: status, classification, shop
+ * host, the endpoint with numeric ids masked, an optional correlation id, and
+ * the body's size and coarse kind (so a first real allowlist response can be
+ * recognised without its content being stored).
  */
 
 export const SHOPIFY_IP_403_TAG = "[shopify-ip-403]";
+
+/** Machine class carried by the log line and the typed error. */
+export const SHOPIFY_IP_403_CLASS = "possible_ip_allowlist_403";
 
 /** Bodies that are a genuine permission verdict, not a network-source block. */
 const SCOPE_VERDICT_PATTERN =
   /requires merchant approval|required access scope|access scope|not approved|needs? the .* scope|merchant approval/i;
 
+export type Shopify403BodyKind = "empty" | "json" | "html" | "text";
+
+export interface Shopify403Details {
+  status: 403;
+  classification: typeof SHOPIFY_IP_403_CLASS;
+  shop: string;
+  endpoint: string;
+  bodyBytes: number;
+  bodyKind: Shopify403BodyKind;
+  correlationId?: string;
+}
+
 export class ShopifyIpNotAllowlistedError extends Error {
   readonly status = 403;
-  readonly host: string;
-  readonly path: string;
-  readonly bodySnippet: string;
-  constructor(host: string, path: string, bodySnippet: string) {
+  readonly classification = SHOPIFY_IP_403_CLASS;
+  readonly shop: string;
+  readonly endpoint: string;
+  readonly bodyBytes: number;
+  readonly bodyKind: Shopify403BodyKind;
+  constructor(d: Pick<Shopify403Details, "shop" | "endpoint" | "bodyBytes" | "bodyKind">) {
+    // No response-body text: see the logging contract above.
     super(
-      `${SHOPIFY_IP_403_TAG} Shopify answered 403 for ${host}${path}: ` +
-        `${bodySnippet || "(empty body)"} — likely this server's IP is not on the app's IP allowlist`,
+      `${SHOPIFY_IP_403_TAG} Shopify answered 403 for ${d.shop} ${d.endpoint} ` +
+        `(${d.bodyKind}, ${d.bodyBytes} bytes) — likely this server's IP is not on the app's IP allowlist`,
     );
     this.name = "ShopifyIpNotAllowlistedError";
-    this.host = host;
-    this.path = path;
-    this.bodySnippet = bodySnippet;
+    this.shop = d.shop;
+    this.endpoint = d.endpoint;
+    this.bodyBytes = d.bodyBytes;
+    this.bodyKind = d.bodyKind;
   }
 }
 
@@ -47,32 +73,32 @@ export function isPossibleAllowlist403(status: number, body: string): boolean {
   return status === 403 && !SCOPE_VERDICT_PATTERN.test(body);
 }
 
-/** Never includes the token: only status, host, path and a short body prefix. */
-export function logShopifyIp403(ctx: {
-  host: string;
-  path: string;
-  body: string;
-  correlationId?: string;
-}): void {
-  console.warn(`${SHOPIFY_IP_403_TAG} status=403 host=${ctx.host} path=${ctx.path}`, {
-    body: ctx.body.slice(0, 500),
-    correlationId: ctx.correlationId,
-  });
+function bodyKindOf(body: string): Shopify403BodyKind {
+  const t = body.trimStart();
+  if (t.length === 0) return "empty";
+  if (t.startsWith("{") || t.startsWith("[")) return "json";
+  if (t.startsWith("<")) return "html";
+  return "text";
 }
 
-function splitUrl(url: string): { host: string; path: string } {
+/** Mask numeric ids so a merchant's dispute/order id never reaches the logs. */
+function maskedEndpoint(pathname: string): string {
+  return pathname.replace(/\/\d+(?=\/|\.|$)/g, "/:id");
+}
+
+function splitUrl(url: string): { shop: string; endpoint: string } {
   try {
     const u = new URL(url);
-    return { host: u.host, path: u.pathname };
+    return { shop: u.host, endpoint: maskedEndpoint(u.pathname) };
   } catch {
-    return { host: "unknown", path: url.slice(0, 120) };
+    return { shop: "unknown", endpoint: "unknown" };
   }
 }
 
 /**
- * Build the typed error (and log it) for a 403 response whose body has already
- * been read. Returns null when the body is a scope verdict — the caller then
- * continues with its normal 4xx handling.
+ * Build the typed error (and emit one structured log line) for a 403 response
+ * whose body has already been read. Returns null when the body is a scope
+ * verdict — the caller then continues with its normal 4xx handling.
  */
 export function classifyShopify403(
   url: string,
@@ -80,7 +106,16 @@ export function classifyShopify403(
   correlationId?: string,
 ): ShopifyIpNotAllowlistedError | null {
   if (!isPossibleAllowlist403(403, body)) return null;
-  const { host, path } = splitUrl(url);
-  logShopifyIp403({ host, path, body, correlationId });
-  return new ShopifyIpNotAllowlistedError(host, path, body.slice(0, 500));
+  const { shop, endpoint } = splitUrl(url);
+  const details: Shopify403Details = {
+    status: 403,
+    classification: SHOPIFY_IP_403_CLASS,
+    shop,
+    endpoint,
+    bodyBytes: body.length,
+    bodyKind: bodyKindOf(body),
+    ...(correlationId ? { correlationId } : {}),
+  };
+  console.warn(SHOPIFY_IP_403_TAG, JSON.stringify(details));
+  return new ShopifyIpNotAllowlistedError(details);
 }
