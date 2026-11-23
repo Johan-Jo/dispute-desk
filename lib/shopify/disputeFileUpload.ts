@@ -216,10 +216,10 @@ export async function uploadDisputeFile(
     // code so the save job treats it as retriable (see ipAllowlist403.ts).
     throw new DisputeFileUploadError(
       "possible_ip_allowlist_403",
-      `Shopify HTTP 403 on dispute_file_uploads.json (possible IP allowlist block): ${text.slice(0, 400)}`,
+      // No response-body text: it can echo merchant data (see ipAllowlist403.ts).
+      "Shopify HTTP 403 on dispute_file_uploads.json (possible IP allowlist block)",
       res.status,
       requestId,
-      parsed,
     );
   }
 

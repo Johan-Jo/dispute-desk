@@ -144,6 +144,7 @@ export async function requestShopifyGraphQL<T = unknown>(
     // IP-allowlist block, which must neither parse as an auth-invalid
     // envelope (permanent failure + a pointless token refresh) nor throw a
     // bare SyntaxError. See ipAllowlist403.ts.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- res.json() is untyped; normalised below
     let rawJson: any;
     if (res.status === 403) {
       const text = await res.text();
@@ -152,7 +153,7 @@ export async function requestShopifyGraphQL<T = unknown>(
       try {
         rawJson = JSON.parse(text);
       } catch {
-        rawJson = { errors: [{ message: text.slice(0, 500) || "HTTP 403" }] };
+        rawJson = { errors: [{ message: "HTTP 403 (non-JSON body)" }] };
       }
     } else {
       rawJson = await res.json();

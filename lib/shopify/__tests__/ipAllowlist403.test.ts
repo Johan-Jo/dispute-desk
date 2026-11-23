@@ -38,13 +38,39 @@ describe("ipAllowlist403 classifier", () => {
     expect(isPossibleAllowlist403(200, "")).toBe(false);
   });
 
-  it("logs the tag without ever including the access token", () => {
+  it("logs one structured line with status, class, shop, endpoint and correlation id", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const err = classifyShopify403("https://demo.myshopify.com/admin/api/2026-01/graphql.json", "nope");
+    const err = classifyShopify403(
+      "https://demo.myshopify.com/admin/api/2026-01/shopify_payments/disputes/12345/dispute_file_uploads.json",
+      "<html>blocked</html>",
+      "save-job-9",
+    );
     expect(err).toBeInstanceOf(ShopifyIpNotAllowlistedError);
-    const logged = JSON.stringify(warn.mock.calls);
-    expect(logged).toContain(SHOPIFY_IP_403_TAG);
-    expect(logged).not.toContain("shpat_");
+    expect(warn).toHaveBeenCalledTimes(1);
+    const [tag, json] = warn.mock.calls[0] as [string, string];
+    expect(tag).toBe(SHOPIFY_IP_403_TAG);
+    expect(JSON.parse(json)).toEqual({
+      status: 403,
+      classification: "possible_ip_allowlist_403",
+      shop: "demo.myshopify.com",
+      endpoint: "/admin/api/2026-01/shopify_payments/disputes/:id/dispute_file_uploads.json",
+      bodyBytes: 20,
+      bodyKind: "html",
+      correlationId: "save-job-9",
+    });
+  });
+
+  it("never puts Shopify's response body, a token, or a numeric id in the log or the error", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const body = JSON.stringify({ errors: "jane.doe@example.com order #98765 shpat_secret_token" });
+    const err = classifyShopify403(
+      "https://demo.myshopify.com/admin/api/2026-01/orders/98765.json",
+      body,
+    ) as ShopifyIpNotAllowlistedError;
+    const everything = JSON.stringify(warn.mock.calls) + err.message + JSON.stringify(err);
+    expect(everything).not.toContain("jane.doe");
+    expect(everything).not.toContain("shpat_");
+    expect(everything).not.toContain("98765");
   });
 });
 
