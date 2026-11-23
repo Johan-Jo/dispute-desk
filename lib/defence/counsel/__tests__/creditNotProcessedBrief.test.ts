@@ -92,6 +92,16 @@ describe("the ledger", () => {
     expect(c.sources).toContain("no_return_initiated#0");
   });
 
+  it("keeps the sequence claims to dates when the absence is argued (#25884: 'before any return was sought')", () => {
+    const claims = buildCreditNotProcessedLedger(input())!;
+    for (const id of ["carrier_delivered", "dispute_after_delivery"]) {
+      const c = claims.find((x) => x.id === id)!;
+      expect(c.mustNot.join(" ")).toMatch(/dates only[^]*return/i);
+    }
+    const absence = claims.find((x) => x.id === "no_return_recorded")!;
+    expect(absence.mustNot.join(" ")).toMatch(/other words/i);
+  });
+
   it("makes no absence claim without the collector's no_return_initiated fact (a refund may exist)", () => {
     const withoutFact = input({ facts: FACTS.filter((f) => f.category !== "no_return_initiated") });
     expect(ids(withoutFact)).not.toContain("no_return_recorded");
